@@ -1,0 +1,2726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MIU – Modern International University</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            miu: {
+              primary: "#0F2A44",
+              secondary: "#1D4ED8",
+              accent: "#FACC15",
+              light: "#F0F7FF",
+              gradientStart: "#0F2A44",
+              gradientEnd: "#1D4ED8"
+            }
+          },
+          fontFamily: {
+            'serif': ['Georgia', 'Times New Roman', 'serif'],
+          },
+          backgroundImage: {
+            'gradient-miu': 'linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%)',
+            'gradient-light': 'linear-gradient(135deg, #F0F7FF 0%, #E6F0FF 100%)',
+            'gradient-card-1': 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)',
+            'gradient-card-2': 'linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%)',
+            'gradient-card-3': 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
+            'gradient-card-hover': 'linear-gradient(135deg, #FFECB3 0%, #FFE082 100%)',
+            'gradient-mobile': 'linear-gradient(135deg, #0F2A44 0%, #1E40AF 50%, #3B82F6 100%)'
+          }
+        }
+      }
+    }
+    </script>
+
+    <style>
+        :focus-visible {
+            outline: 3px solid #FACC15;
+            outline-offset: 3px;
+        }
+
+        .slide {
+            background-size: cover;
+            background-position: center;
+            background-blend-mode: overlay;
+        }
+
+        .hero-slide-1 {
+            background-image: linear-gradient(rgba(15, 42, 68, 0.85), rgba(15, 42, 68, 0.75)), url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+        }
+
+        .hero-slide-2 {
+            background-image: linear-gradient(rgba(29, 78, 216, 0.85), rgba(29, 78, 216, 0.75)), url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+        }
+
+        .hero-slide-3 {
+            background-image: linear-gradient(rgba(15, 42, 68, 0.85), rgba(15, 42, 68, 0.75)), url('https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+        }
+
+        .program-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .program-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+                z-index: 1;
+            }
+
+            .program-card > * {
+                position: relative;
+                z-index: 2;
+            }
+
+            .program-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+
+                .program-card:hover::before {
+                    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
+                }
+
+        .testimonial-bg {
+            background-image: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), url('https://images.unsplash.com/photo-1450101499163-c8848c66ca85?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .dropdown-enter {
+            animation: dropdownEnter 0.2s ease-out;
+        }
+
+        .dropdown-exit {
+            animation: dropdownExit 0.2s ease-in;
+        }
+
+        @keyframes dropdownEnter {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes dropdownExit {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+
+            .video-container iframe {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+            }
+
+        .mobile-menu-gradient {
+            background: linear-gradient(135deg, rgba(15, 42, 68, 0.98) 0%, rgba(29, 78, 216, 0.95) 50%, rgba(59, 130, 246, 0.92) 100%);
+            backdrop-filter: blur(10px);
+        }
+
+        .mobile-menu-item {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+            .mobile-menu-item:hover {
+                border-left-color: #FACC15;
+                background: rgba(255, 255, 255, 0.1);
+                transform: translateX(5px);
+            }
+
+        .program-icon {
+            transition: all 0.3s ease;
+        }
+
+        .program-card:hover .program-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
+        }
+
+        .map-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio for map */
+            height: 0;
+            overflow: hidden;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+            .map-container iframe {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 0;
+                filter: grayscale(20%) contrast(1.1);
+            }
+
+        .map-overlay {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(15, 42, 68, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 0.75rem;
+            backdrop-filter: blur(5px);
+            z-index: 10;
+            border-left: 4px solid #FACC15;
+        }
+
+        .campus-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            background: linear-gradient(white, white) padding-box, linear-gradient(135deg, #0F2A44, #1D4ED8) border-box;
+        }
+
+            .campus-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            }
+        
+
+    </style>
+
+    <!-- Chatbot Styles -->
+    <style>
+        .chat-message {
+            animation: messageAppear 0.3s ease-out;
+        }
+
+        .user-message .message-content {
+            background: linear-gradient(135deg, #0F2A44, #1D4ED8);
+            color: white;
+            border-radius: 18px;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message .message-content {
+            background: #F3F4F6;
+            color: #1F2937;
+            border-radius: 18px;
+            border-top-left-radius: 4px;
+        }
+
+        @keyframes messageAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chatbot-enter {
+            animation: chatbotEnter 0.3s ease-out;
+        }
+
+        .chatbot-exit {
+            animation: chatbotExit 0.3s ease-in;
+        }
+
+        @keyframes chatbotEnter {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes chatbotExit {
+            from {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(0.9) translateY(10px);
+            }
+        }
+
+        #chatMessages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chatMessages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        #chatMessages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+            #chatMessages::-webkit-scrollbar-thumb:hover {
+                background: #a1a1a1;
+            }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #9CA3AF;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+
+            .typing-dot:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+
+            .typing-dot:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .message-content a {
+            color: #1D4ED8;
+            text-decoration: underline;
+        }
+
+        .message-content ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .message-content li {
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 640px) {
+            #studentLifeChatbot {
+                bottom: 4;
+                right: 4;
+            }
+
+            #chatbotWindow {
+                width: calc(100vw - 32px);
+                height: 70vh;
+                right: 0;
+                bottom: 80px;
+            }
+
+            #quickMenu {
+                width: calc(100vw - 32px);
+                right: 0;
+                bottom: 80px;
+            }
+        }
+        .border-t.border-gray-200.p-4 {
+            margin-bottom: 1rem;
+        }
+
+        #chatbotWindow {
+            padding-bottom: 1.25rem;
+        }
+
+    </style>
+
+</head>
+
+<body class="font-sans text-gray-800">
+
+    <!-- ================= NAVBAR ================= -->
+    <header class="fixed top-0 w-full bg-white shadow-lg z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 bg-miu-primary rounded-full flex items-center justify-center glow-effect">
+                    <span class="text-white font-bold text-xl">MIU</span>
+                </div>
+                <span class="text-2xl font-bold text-miu-primary">Modern International University</span>
+            </div>
+
+            <ul class="hidden lg:flex items-center space-x-8">
+                <li><a href="#about" class="hover:text-miu-secondary font-medium transition-colors">About</a></li>
+
+                <!-- Programs Dropdown for Desktop -->
+                <li class="relative">
+                    <button id="programsBtnDesktop" class="hover:text-miu-secondary font-medium transition-colors flex items-center focus:outline-none">
+                        Programs ▾
+                    </button>
+                    <ul id="programsMenuDesktop" class="absolute hidden mt-2 bg-white shadow-xl rounded-lg w-56 py-2 z-10 dropdown-enter">
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="course-detail.html">Business Administration</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="#" data-program="cs">Computer Science</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="#" data-program="data">Data Science</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="#" data-program="health">Health Sciences</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="#" data-program="engineering">Engineering</a></li>
+                    </ul>
+                </li>
+
+                <li><a href="admission-course.html" class="hover:text-miu-secondary font-medium transition-colors">Admissions</a></li>
+                <li><a href="#" class="hover:text-miu-secondary font-medium transition-colors">Research</a></li>
+                <li><a href="#" class="hover:text-miu-secondary font-medium transition-colors">Campus Life</a></li>
+                <li><a href="#contact" class="hover:text-miu-secondary font-medium transition-colors">Contact</a></li>
+                <li><a href="applicationform.html" class="bg-gradient-miu text-white px-6 py-2 rounded-lg hover:opacity-90 transition-all font-medium shadow-lg">Apply Now</a></li>
+            </ul>
+
+            <button id="menuBtn" class="lg:hidden text-2xl text-miu-primary focus:outline-none hover:text-miu-secondary transition-colors">☰</button>
+        </div>
+
+        <!-- Mobile Menu with Beautiful Gradient Background -->
+        <div id="mobileMenu" class="hidden lg:hidden mobile-menu-gradient text-white shadow-2xl">
+            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#about">
+                <span class="flex items-center">
+                    <span class="mr-3">🏛️</span> About
+                </span>
+            </a>
+
+            <!-- Programs Dropdown for Mobile -->
+            <div class="border-b border-white/20">
+                <button id="programsBtnMobile" class="mobile-menu-item w-full text-left px-6 py-5 hover:text-miu-accent transition-all flex justify-between items-center">
+                    <span class="flex items-center">
+                        <span class="mr-3">📚</span> Programs
+                    </span>
+                    <span id="programsArrowMobile" class="transform transition-transform">▾</span>
+                </button>
+                <ul id="programsMenuMobile" class="hidden bg-gradient-to-b from-white/10 to-white/5 dropdown-enter">
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="business">Business Administration</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="cs">Computer Science</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="data">Data Science</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="health">Health Sciences</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="engineering">Engineering</a></li>
+                </ul>
+            </div>
+
+            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#">
+                <span class="flex items-center">
+                    <span class="mr-3">🎓</span> Admissions
+                </span>
+            </a>
+            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#">
+                <span class="flex items-center">
+                    <span class="mr-3">🏫</span> Campus Life
+                </span>
+            </a>
+            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#contact">
+                <span class="flex items-center">
+                    <span class="mr-3">📞</span> Contact
+                </span>
+            </a>
+            <a class="block px-6 py-5 bg-gradient-to-r from-miu-accent to-yellow-400 text-miu-primary font-bold text-center hover:from-yellow-400 hover:to-miu-accent transition-all shadow-lg" href="#">
+                Apply Now 🚀
+            </a>
+        </div>
+    </header>
+
+    <!-- ================= HERO CAROUSEL ================= -->
+    <section class="pt-24 relative overflow-hidden">
+        <div id="carousel" class="relative h-[600px]">
+
+            <!-- Slide 1 -->
+            <div class="slide hero-slide-1 absolute inset-0 text-white flex items-center">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="max-w-2xl">
+                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                            Empowering Global Education
+                        </h1>
+                        <p class="mb-8 text-xl text-gray-200">World-class online education with flexibility and excellence. Join students from 120+ countries.</p>
+                        <div class="flex flex-wrap gap-4">
+                            <button class="bg-miu-accent text-miu-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-yellow-400 transition-colors shadow-lg">
+                                Apply Now
+                            </button>
+                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-primary transition-colors">
+                                Explore Programs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2 -->
+            <div class="slide hero-slide-2 hidden absolute inset-0 text-white flex items-center">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="max-w-2xl">
+                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                            Learn From Anywhere
+                        </h1>
+                        <p class="mb-8 text-xl text-gray-200">Study at your pace with expert faculty and cutting-edge digital platforms.</p>
+                        <div class="flex flex-wrap gap-4">
+                            <button class="bg-white text-miu-secondary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg">
+                                Virtual Tour
+                            </button>
+                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-secondary transition-colors">
+                                Meet Our Faculty
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 3 -->
+            <div class="slide hero-slide-3 hidden absolute inset-0 text-white flex items-center">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="max-w-2xl">
+                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                            Build Your Future
+                        </h1>
+                        <p class="mb-8 text-xl text-gray-200">Career-focused programs designed for success in today's global marketplace.</p>
+                        <div class="flex flex-wrap gap-4">
+                            <button class="bg-miu-accent text-miu-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-yellow-400 transition-colors shadow-lg">
+                                View Careers
+                            </button>
+                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-primary transition-colors">
+                                Alumni Network
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Carousel Indicators -->
+            <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3">
+                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="0"></button>
+                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="1"></button>
+                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="2"></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= STATS ================= -->
+    <section class="py-16 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div class="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <div class="text-4xl font-bold text-miu-primary mb-2">25,000+</div>
+                    <div class="text-gray-600">Students Worldwide</div>
+                </div>
+                <div class="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <div class="text-4xl font-bold text-miu-primary mb-2">120+</div>
+                    <div class="text-gray-600">Countries Represented</div>
+                </div>
+                <div class="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <div class="text-4xl font-bold text-miu-primary mb-2">95%</div>
+                    <div class="text-gray-600">Graduate Employment Rate</div>
+                </div>
+                <div class="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <div class="text-4xl font-bold text-miu-primary mb-2">50+</div>
+                    <div class="text-gray-600">Academic Programs</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ABOUT ================= -->
+    <section id="about" class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-4xl font-bold mb-6 text-miu-primary font-serif">About MIU</h2>
+                    <p class="text-gray-600 mb-6 text-lg">
+                        Modern International University is a globally recognized institution delivering
+                        high-quality, innovative education with flexibility and excellence. Founded in 1995,
+                        we've been at the forefront of digital education transformation.
+                    </p>
+                    <p class="text-gray-600 mb-8">
+                        Our mission is to provide accessible, world-class education that empowers students
+                        to achieve their personal and professional goals, regardless of geographic location.
+                    </p>
+                    <button class="bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg">
+                        Learn More About Us
+                    </button>
+                </div>
+                <div class="bg-gray-100 h-80 rounded-2xl overflow-hidden shadow-xl">
+                    <!-- Video Section -->
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ?modestbranding=1&rel=0&showinfo=0"
+                                title="MIU Global Learning Community"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen>
+                        </iframe>
+                    </div>
+                    <!-- Fallback content if video fails to load -->
+                    <div id="videoFallback" class="hidden w-full h-full bg-gradient-to-br from-miu-primary to-miu-secondary opacity-90 flex items-center justify-center flex-col p-4">
+                        <span class="text-white text-2xl font-serif font-bold text-center mb-4">Global Learning Community</span>
+                        <p class="text-white text-center">Experience our international campus and diverse community of learners</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= PROGRAMS ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Popular Programs</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Choose from our extensive range of accredited programs designed for the modern workforce</p>
+            </div>
+
+            <div class="grid gap-8 md:grid-cols-3">
+                <!-- Business Administration Card -->
+                <div class="program-card bg-gradient-card-1 p-8 rounded-2xl shadow-lg border border-blue-100">
+                    <div class="program-icon w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                        <span class="text-3xl text-blue-600">📊</span>
+                    </div>
+                    <h3 class="font-bold text-2xl mb-4 text-miu-primary">Business Administration</h3>
+                    <p class="text-gray-600 mb-6">Develop leadership skills for global organizations with our AACSB-accredited program.</p>
+                    <a href="#" class="text-blue-600 font-semibold hover:text-blue-800 transition-colors inline-flex items-center">
+                        Learn More
+                        <span class="ml-2 transform transition-transform group-hover:translate-x-2">→</span>
+                    </a>
+                </div>
+
+                <!-- Computer Science Card -->
+                <div class="program-card bg-gradient-card-2 p-8 rounded-2xl shadow-lg border border-purple-100">
+                    <div class="program-icon w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                        <span class="text-3xl text-purple-600">💻</span>
+                    </div>
+                    <h3 class="font-bold text-2xl mb-4 text-miu-primary">Computer Science</h3>
+                    <p class="text-gray-600 mb-6">Master modern software engineering, AI, and cybersecurity with industry-focused curriculum.</p>
+                    <a href="#" class="text-purple-600 font-semibold hover:text-purple-800 transition-colors inline-flex items-center">
+                        Learn More
+                        <span class="ml-2 transform transition-transform group-hover:translate-x-2">→</span>
+                    </a>
+                </div>
+
+                <!-- Data Science Card -->
+                <div class="program-card bg-gradient-card-3 p-8 rounded-2xl shadow-lg border border-green-100">
+                    <div class="program-icon w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                        <span class="text-3xl text-green-600">📈</span>
+                    </div>
+                    <h3 class="font-bold text-2xl mb-4 text-miu-primary">Data Science</h3>
+                    <p class="text-gray-600 mb-6">Become an expert in analytics, machine learning, and big data with hands-on projects.</p>
+                    <a href="#" class="text-green-600 font-semibold hover:text-green-800 transition-colors inline-flex items-center">
+                        Learn More
+                        <span class="ml-2 transform transition-transform group-hover:translate-x-2">→</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="text-center mt-12">
+                <button class="border-2 border-miu-secondary text-miu-secondary px-8 py-3 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all shadow-lg hover:shadow-xl">
+                    View All Programs
+                </button>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- ================= ACADEMICS / FACULTIES ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Academics & Faculties</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Our academic structure is designed to foster interdisciplinary collaboration and innovation</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="p-6">
+                        <div class="w-14 h-14 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">🏛️</span>
+                        </div>
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Faculty of Business & Economics</h3>
+                        <p class="text-gray-600 mb-4">AACSB-accredited programs in business administration, economics, finance, and entrepreneurship.</p>
+                        <ul class="space-y-2 text-sm text-gray-500">
+                            <li>• Department of Business Administration</li>
+                            <li>• Department of Economics</li>
+                            <li>• Department of Finance</li>
+                            <li>• Department of Marketing</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="p-6">
+                        <div class="w-14 h-14 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">💻</span>
+                        </div>
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Faculty of Engineering & Technology</h3>
+                        <p class="text-gray-600 mb-4">ABET-accredited programs in computer science, software engineering, and information systems.</p>
+                        <ul class="space-y-2 text-sm text-gray-500">
+                            <li>• Department of Computer Science</li>
+                            <li>• Department of Software Engineering</li>
+                            <li>• Department of Data Science</li>
+                            <li>• Department of Cybersecurity</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="p-6">
+                        <div class="w-14 h-14 bg-gradient-to-r from-green-100 to-green-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">🔬</span>
+                        </div>
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Faculty of Health & Life Sciences</h3>
+                        <p class="text-gray-600 mb-4">ACPE-accredited programs in nursing, public health, and biomedical sciences.</p>
+                        <ul class="space-y-2 text-sm text-gray-500">
+                            <li>• Department of Nursing</li>
+                            <li>• Department of Public Health</li>
+                            <li>• Department of Biomedical Sciences</li>
+                            <li>• Department of Nutrition</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button class="bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg">
+                    Explore All Faculties
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ADMISSIONS & FINANCIAL AID ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Admissions & Financial Aid</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Making quality education accessible through comprehensive financial support</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="font-bold text-2xl mb-6 text-miu-primary border-b pb-4">Application Process</h3>
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">1</span>
+                            <span class="text-gray-700">Submit online application with required documents</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">2</span>
+                            <span class="text-gray-700">Academic evaluation and review (2-3 weeks)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">3</span>
+                            <span class="text-gray-700">Interview (if required for your program)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">4</span>
+                            <span class="text-gray-700">Admission decision and enrollment</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="font-bold text-2xl mb-6 text-miu-primary border-b pb-4">Financial Aid Options</h3>
+                    <div class="space-y-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-lg text-blue-800 mb-2">Scholarships</h4>
+                            <p class="text-sm text-gray-700">Merit-based awards up to full tuition for exceptional students</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-lg text-green-800 mb-2">Grants</h4>
+                            <p class="text-sm text-gray-700">Need-based financial assistance that doesn't require repayment</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-lg text-purple-800 mb-2">Student Loans</h4>
+                            <p class="text-sm text-gray-700">Low-interest government and private loan options</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="font-bold text-2xl mb-6 text-miu-primary border-b pb-4">Important Dates</h3>
+                    <div class="space-y-6">
+                        <div class="border-l-4 border-miu-accent pl-4">
+                            <h4 class="font-bold text-lg text-gray-800">Fall Semester 2025</h4>
+                            <p class="text-sm text-gray-600">Application Deadline: June 15, 2025</p>
+                        </div>
+                        <div class="border-l-4 border-miu-secondary pl-4">
+                            <h4 class="font-bold text-lg text-gray-800">Spring Semester 2026</h4>
+                            <p class="text-sm text-gray-600">Application Deadline: November 1, 2025</p>
+                        </div>
+                        <div class="border-l-4 border-blue-400 pl-4">
+                            <h4 class="font-bold text-lg text-gray-800">Scholarship Deadline</h4>
+                            <p class="text-sm text-gray-600">Priority Consideration: March 31, 2025</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="#" class="inline-block bg-gradient-miu text-white px-8 py-4 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg mr-4">
+                    Calculate Your Aid
+                </a>
+                <a href="#" class="inline-block border-2 border-miu-secondary text-miu-secondary px-8 py-4 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all shadow-lg">
+                    Start Application
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= STUDENT LIFE & SERVICES ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Student Life & Services</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Comprehensive support services and vibrant campus life for holistic student development</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <div class="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🏠</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2 text-miu-primary">Housing & Residential Life</h3>
+                    <p class="text-gray-600 text-sm">Modern on-campus housing with 24/7 security and community support</p>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-r from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">💼</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2 text-miu-primary">Career Services</h3>
+                    <p class="text-gray-600 text-sm">Career counseling, internship placements, and job fairs with top employers</p>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">❤️</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2 text-miu-primary">Health & Wellness</h3>
+                    <p class="text-gray-600 text-sm">24/7 health center, counseling services, and wellness programs</p>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🎭</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2 text-miu-primary">Student Organizations</h3>
+                    <p class="text-gray-600 text-sm">100+ clubs, cultural associations, and leadership opportunities</p>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-miu-light to-blue-50 rounded-2xl p-8">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="font-bold text-2xl mb-4 text-miu-primary">Campus Facilities</h3>
+                        <p class="text-gray-600 mb-6">State-of-the-art facilities designed to enhance your learning experience and campus life.</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-center"><span class="text-miu-accent mr-2">✓</span> Modern Library with 500,000+ resources</li>
+                            <li class="flex items-center"><span class="text-miu-accent mr-2">✓</span> Olympic-sized Recreation Center</li>
+                            <li class="flex items-center"><span class="text-miu-accent mr-2">✓</span> Innovation Labs & Makerspaces</li>
+                            <li class="flex items-center"><span class="text-miu-accent mr-2">✓</span> Performing Arts Center</li>
+                        </ul>
+                    </div>
+                    <div class="bg-gray-100 h-64 rounded-xl overflow-hidden shadow-lg">
+                        <img src="https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                             alt="MIU Campus Facilities"
+                             class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= RESEARCH & INNOVATION ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Research & Innovation</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Pushing boundaries through cutting-edge research and innovative solutions</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-48 bg-gradient-to-r from-blue-500 to-blue-700 flex items-center justify-center">
+                        <span class="text-4xl text-white">🔬</span>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Research Centers</h3>
+                        <p class="text-gray-600 mb-4">15 interdisciplinary research centers focusing on global challenges</p>
+                        <div class="text-sm text-gray-500 space-y-2">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                <span>Center for AI & Machine Learning</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                <span>Climate Change Research Institute</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                                <span>Biomedical Innovation Hub</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-48 bg-gradient-to-r from-green-500 to-green-700 flex items-center justify-center">
+                        <span class="text-4xl text-white">💰</span>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Funding & Grants</h3>
+                        <p class="text-gray-600 mb-4">$45M+ in annual research funding from government and industry partners</p>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">NSF Grants</span>
+                                <span class="font-bold text-blue-600">$18.2M</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Industry Partnerships</span>
+                                <span class="font-bold text-green-600">$22.5M</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Private Foundations</span>
+                                <span class="font-bold text-purple-600">$4.8M</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-48 bg-gradient-to-r from-purple-500 to-purple-700 flex items-center justify-center">
+                        <span class="text-4xl text-white">🏆</span>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Innovation Impact</h3>
+                        <p class="text-gray-600 mb-4">Transforming research into real-world solutions and startups</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-blue-600">25+</span>
+                                </div>
+                                <span class="text-sm">Startups launched</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-green-600">150+</span>
+                                </div>
+                                <span class="text-sm">Patents filed</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-purple-600">500+</span>
+                                </div>
+                                <span class="text-sm">Research publications</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="#" class="inline-block bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg mr-4">
+                    Research Opportunities
+                </a>
+                <a href="#" class="inline-block border-2 border-miu-secondary text-miu-secondary px-8 py-3 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all shadow-lg">
+                    Partner With Us
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= NEWS & EVENTS ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center mb-12">
+                <div>
+                    <h2 class="text-4xl font-bold text-miu-primary mb-2 font-serif">News & Events</h2>
+                    <p class="text-gray-600">Stay updated with campus happenings and achievements</p>
+                </div>
+                <a href="#" class="text-miu-secondary font-semibold hover:text-miu-primary transition-colors">
+                    View All →
+                </a>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-8">
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="h-48 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                             alt="MIU Research Symposium"
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    </div>
+                    <div class="p-6">
+                        <div class="text-sm text-miu-secondary font-semibold mb-2">March 15, 2025</div>
+                        <h3 class="font-bold text-xl mb-3 text-gray-800">Annual Research Symposium Showcases Innovation</h3>
+                        <p class="text-gray-600 mb-4">Student and faculty research projects addressing global challenges featured in week-long event.</p>
+                        <a href="#" class="text-miu-secondary font-medium hover:text-miu-primary transition-colors inline-flex items-center">
+                            Read More
+                            <span class="ml-2">→</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="h-48 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                             alt="MIU Career Fair"
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    </div>
+                    <div class="p-6">
+                        <div class="text-sm text-miu-secondary font-semibold mb-2">April 3, 2025</div>
+                        <h3 class="font-bold text-xl mb-3 text-gray-800">Spring Career Fair Connects Students with Top Employers</h3>
+                        <p class="text-gray-600 mb-4">150+ companies recruiting MIU talent for internships and full-time positions.</p>
+                        <a href="#" class="text-miu-secondary font-medium hover:text-miu-primary transition-colors inline-flex items-center">
+                            Register Now
+                            <span class="ml-2">→</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="h-48 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                             alt="MIU Alumni Event"
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    </div>
+                    <div class="p-6">
+                        <div class="text-sm text-miu-secondary font-semibold mb-2">Ongoing</div>
+                        <h3 class="font-bold text-xl mb-3 text-gray-800">Global Alumni Reunion Events Scheduled Worldwide</h3>
+                        <p class="text-gray-600 mb-4">Connect with fellow alumni at events across 20 countries throughout the year.</p>
+                        <a href="#" class="text-miu-secondary font-medium hover:text-miu-primary transition-colors inline-flex items-center">
+                            Find Events
+                            <span class="ml-2">→</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-miu-primary to-miu-secondary rounded-2xl p-8 text-white">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="font-bold text-2xl mb-4">Upcoming Events Calendar</h3>
+                        <p class="mb-6 text-blue-100">Mark your calendar for these important campus events</p>
+                        <a href="#" class="inline-block bg-white text-miu-primary px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg">
+                            View Full Calendar
+                        </a>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center bg-white/10 p-4 rounded-lg backdrop-blur-sm">
+                            <div class="text-center border-r border-white/30 pr-4 mr-4">
+                                <div class="text-2xl font-bold">MAY</div>
+                                <div class="text-lg">15-17</div>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Commencement Ceremony 2025</h4>
+                                <p class="text-sm text-blue-100">Main Quadrangle, 10:00 AM</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center bg-white/10 p-4 rounded-lg backdrop-blur-sm">
+                            <div class="text-center border-r border-white/30 pr-4 mr-4">
+                                <div class="text-2xl font-bold">JUN</div>
+                                <div class="text-lg">5</div>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">International Student Orientation</h4>
+                                <p class="text-sm text-blue-100">International Center, 9:00 AM</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ALUMNI & GIVING ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Alumni & Giving</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Join our global network of 50,000+ alumni and support the next generation of leaders</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 items-center mb-12">
+                <div>
+                    <h3 class="text-2xl font-bold mb-6 text-miu-primary">Alumni Network</h3>
+                    <p class="text-gray-600 mb-6">Our alumni are making an impact in every industry worldwide. Stay connected through regional chapters, mentorship programs, and exclusive events.</p>
+
+                    <div class="grid grid-cols-2 gap-4 mb-8">
+                        <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="text-3xl font-bold text-miu-primary mb-2">50K+</div>
+                            <div class="text-sm text-gray-600">Alumni Worldwide</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="text-3xl font-bold text-miu-primary mb-2">40+</div>
+                            <div class="text-sm text-gray-600">Regional Chapters</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="text-3xl font-bold text-miu-primary mb-2">85%</div>
+                            <div class="text-sm text-gray-600">Career Satisfaction</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="text-3xl font-bold text-miu-primary mb-2">$2.5M</div>
+                            <div class="text-sm text-gray-600">Annual Scholarships Funded</div>
+                        </div>
+                    </div>
+
+                    <a href="#" class="inline-block bg-miu-secondary text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-lg">
+                        Join Alumni Network
+                    </a>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="text-2xl font-bold mb-6 text-miu-primary">Ways to Give</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-start border-b pb-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <span class="text-blue-600 text-xl">🎓</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg mb-1">Student Scholarships</h4>
+                                <p class="text-gray-600 text-sm">Support deserving students with financial need</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start border-b pb-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <span class="text-green-600 text-xl">🏛️</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg mb-1">Facility Enhancement</h4>
+                                <p class="text-gray-600 text-sm">Modernize classrooms and research facilities</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <span class="text-purple-600 text-xl">🔬</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg mb-1">Research Funds</h4>
+                                <p class="text-gray-600 text-sm">Advance groundbreaking research initiatives</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-miu-primary to-blue-900 rounded-2xl p-8 text-white">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="mb-6 md:mb-0">
+                        <h3 class="font-bold text-2xl mb-2">Make an Impact Today</h3>
+                        <p class="text-blue-100">Your support transforms lives and shapes futures</p>
+                    </div>
+                    <div class="flex flex-wrap gap-4">
+                        <button class="bg-white text-miu-primary px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg">
+                            Make a Gift
+                        </button>
+                        <button class="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-miu-primary transition-all">
+                            Planned Giving
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= INTERNATIONAL STUDENTS ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">International Students</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Welcome to our diverse community of students from 120+ countries</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 mb-12">
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-bold mb-6 text-miu-primary">Global Community</h3>
+                        <p class="text-gray-600 mb-6">At MIU, we celebrate diversity and provide comprehensive support for international students throughout their educational journey.</p>
+
+                        <div class="bg-blue-50 rounded-xl p-6">
+                            <h4 class="font-bold text-lg mb-4 text-blue-800">International Student Support</h4>
+                            <ul class="space-y-3">
+                                <li class="flex items-center">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 text-sm">✓</span>
+                                    </span>
+                                    <span>Visa and immigration assistance</span>
+                                </li>
+                                <li class="flex items-center">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 text-sm">✓</span>
+                                    </span>
+                                    <span>Airport pickup and arrival services</span>
+                                </li>
+                                <li class="flex items-center">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 text-sm">✓</span>
+                                    </span>
+                                    <span>International student orientation</span>
+                                </li>
+                                <li class="flex items-center">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 text-sm">✓</span>
+                                    </span>
+                                    <span>Cultural adjustment workshops</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-lg mb-4 text-miu-primary">Top Countries of Origin</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex items-center bg-white p-3 rounded-lg shadow-sm">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-blue-600">🇮🇳</span>
+                                </div>
+                                <span>India (18%)</span>
+                            </div>
+                            <div class="flex items-center bg-white p-3 rounded-lg shadow-sm">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-green-600">🇨🇳</span>
+                                </div>
+                                <span>China (15%)</span>
+                            </div>
+                            <div class="flex items-center bg-white p-3 rounded-lg shadow-sm">
+                                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-purple-600">🇳🇬</span>
+                                </div>
+                                <span>Nigeria (12%)</span>
+                            </div>
+                            <div class="flex items-center bg-white p-3 rounded-lg shadow-sm">
+                                <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-yellow-600">🇧🇷</span>
+                                </div>
+                                <span>Brazil (8%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="text-2xl font-bold mb-6 text-miu-primary">Application Requirements</h3>
+
+                    <div class="space-y-6">
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h4 class="font-bold text-lg mb-2">Academic Documents</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Official transcripts (translated if not in English)</li>
+                                <li>• Proof of English proficiency (TOEFL/IELTS)</li>
+                                <li>• Standardized test scores (if required)</li>
+                            </ul>
+                        </div>
+
+                        <div class="border-l-4 border-green-500 pl-4">
+                            <h4 class="font-bold text-lg mb-2">Visa Requirements</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Valid passport (6+ months validity)</li>
+                                <li>• Proof of financial support</li>
+                                <li>• I-20 form (for F-1 visa applicants)</li>
+                            </ul>
+                        </div>
+
+                        <div class="border-l-4 border-purple-500 pl-4">
+                            <h4 class="font-bold text-lg mb-2">Support Services</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Dedicated international student advisors</li>
+                                <li>• Cross-cultural training programs</li>
+                                <li>• Language support services</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-8 border-t">
+                        <h4 class="font-bold text-lg mb-4 text-miu-primary">Important Deadlines</h4>
+                        <div class="flex items-center justify-between bg-blue-50 p-4 rounded-lg">
+                            <div>
+                                <div class="font-bold">Fall Intake</div>
+                                <div class="text-sm text-gray-600">Application Deadline</div>
+                            </div>
+                            <div class="text-lg font-bold text-blue-700">June 1, 2025</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="#" class="inline-block bg-gradient-miu text-white px-8 py-4 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg mr-4">
+                    International Admissions
+                </a>
+                <a href="#" class="inline-block border-2 border-miu-secondary text-miu-secondary px-8 py-4 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all shadow-lg">
+                    Contact International Office
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ACCREDITATION & RANKINGS ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Accreditation & Rankings</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Recognized excellence in higher education</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center campus-card">
+                    <div class="w-20 h-20 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="text-3xl">🏆</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-miu-primary">National Rankings</h3>
+                    <div class="space-y-4">
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-blue-600 mb-2">#25</div>
+                            <div class="text-gray-600">Best Online Programs<br>(U.S. News & World Report)</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-green-600 mb-2">#42</div>
+                            <div class="text-gray-600">Top Universities for<br>Career Outcomes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center campus-card">
+                    <div class="w-20 h-20 bg-gradient-to-r from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="text-3xl">✓</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-miu-primary">Accreditation</h3>
+                    <div class="space-y-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-blue-800 mb-2">Regional Accreditation</h4>
+                            <p class="text-sm text-gray-700">Accredited by the Higher Learning Commission (HLC)</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-green-800 mb-2">Program Accreditation</h4>
+                            <p class="text-sm text-gray-700">AACSB, ABET, and CCNE accredited programs</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center campus-card">
+                    <div class="w-20 h-20 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="text-3xl">🌍</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-miu-primary">Global Recognition</h3>
+                    <div class="space-y-4">
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-purple-600 mb-2">Top 200</div>
+                            <div class="text-gray-600">World University Rankings<br>(Times Higher Education)</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-yellow-600 mb-2">5 Stars</div>
+                            <div class="text-gray-600">QS Stars Rating for<br>Teaching & Facilities</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h3 class="text-2xl font-bold mb-6 text-center text-miu-primary">Quality Assurance</h3>
+                <div class="grid md:grid-cols-3 gap-6 text-center">
+                    <div class="p-4">
+                        <div class="text-3xl font-bold text-blue-600 mb-2">95%</div>
+                        <div class="font-medium text-gray-800">Student Satisfaction Rate</div>
+                        <div class="text-sm text-gray-600 mt-1">Based on annual surveys</div>
+                    </div>
+                    <div class="p-4">
+                        <div class="text-3xl font-bold text-green-600 mb-2">94%</div>
+                        <div class="font-medium text-gray-800">Graduation Rate</div>
+                        <div class="text-sm text-gray-600 mt-1">Within 6 years</div>
+                    </div>
+                    <div class="p-4">
+                        <div class="text-3xl font-bold text-purple-600 mb-2">92%</div>
+                        <div class="font-medium text-gray-800">Employer Satisfaction</div>
+                        <div class="text-sm text-gray-600 mt-1">With MIU graduates</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= GOVERNANCE & LEADERSHIP ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Governance & Leadership</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Guided by experienced leaders committed to educational excellence</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-64 bg-gradient-to-r from-blue-500 to-blue-700 flex items-center justify-center">
+                        <span class="text-5xl text-white">👨‍🎓</span>
+                    </div>
+                    <div class="p-6 text-center">
+                        <h3 class="font-bold text-xl mb-2 text-miu-primary">Dr. Michael Rodriguez</h3>
+                        <p class="text-miu-secondary font-semibold mb-3">University President</p>
+                        <p class="text-gray-600 text-sm">Former Dean of Harvard Graduate School of Education with 25+ years in academic leadership.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-64 bg-gradient-to-r from-green-500 to-green-700 flex items-center justify-center">
+                        <span class="text-5xl text-white">👩‍🏫</span>
+                    </div>
+                    <div class="p-6 text-center">
+                        <h3 class="font-bold text-xl mb-2 text-miu-primary">Dr. Sarah Chen</h3>
+                        <p class="text-miu-secondary font-semibold mb-3">Provost & Chief Academic Officer</p>
+                        <p class="text-gray-600 text-sm">Expert in curriculum development and online education with a PhD from Stanford University.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-64 bg-gradient-to-r from-purple-500 to-purple-700 flex items-center justify-center">
+                        <span class="text-5xl text-white">👨‍💼</span>
+                    </div>
+                    <div class="p-6 text-center">
+                        <h3 class="font-bold text-xl mb-2 text-miu-primary">Robert Johnson</h3>
+                        <p class="text-miu-secondary font-semibold mb-3">Chair, Board of Trustees</p>
+                        <p class="text-gray-600 text-sm">Technology entrepreneur and philanthropist dedicated to educational innovation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-miu-primary to-blue-900 rounded-2xl p-8 text-white">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="font-bold text-2xl mb-4">Governance Structure</h3>
+                        <p class="mb-6 text-blue-100">MIU operates under a shared governance model with representation from faculty, staff, students, and alumni.</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">✓</span>
+                                </span>
+                                <span>Board of Trustees (15 members)</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">✓</span>
+                                </span>
+                                <span>Academic Senate (Faculty Governance)</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">✓</span>
+                                </span>
+                                <span>Student Government Association</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">✓</span>
+                                </span>
+                                <span>Alumni Advisory Council</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="bg-white/10 rounded-xl p-6 backdrop-blur-sm">
+                        <h4 class="font-bold text-xl mb-4">Strategic Priorities</h4>
+                        <div class="space-y-4">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-miu-accent rounded-full mr-3"></div>
+                                <span>Enhance Global Learning Opportunities</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-miu-accent rounded-full mr-3"></div>
+                                <span>Advance Research and Innovation</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-miu-accent rounded-full mr-3"></div>
+                                <span>Promote Diversity and Inclusion</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-miu-accent rounded-full mr-3"></div>
+                                <span>Expand Community Engagement</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+
+    <!-- ================= TESTIMONIAL CAROUSEL ================= -->
+    <section class="py-20 testimonial-bg">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">What Our Students Say</h2>
+                <p class="text-gray-600">Hear from our global community of learners</p>
+            </div>
+
+            <div id="testimonial" class="bg-white shadow-2xl rounded-2xl p-12 relative">
+                <div class="text-6xl text-miu-accent mb-6">"</div>
+                <p id="quote" class="italic text-gray-700 text-xl mb-8 leading-relaxed">
+                    "MIU's flexible online platform allowed me to complete my MBA while working full-time. The faculty support was exceptional, and I've already seen career advancement."
+                </p>
+                <div class="flex items-center">
+                    <div class="w-16 h-16 bg-gradient-to-r from-miu-primary to-miu-secondary rounded-full flex items-center justify-center text-white font-bold text-xl mr-4">
+                        SK
+                    </div>
+                    <div>
+                        <p id="author" class="font-bold text-lg">
+                            Sarah K.
+                        </p>
+                        <p class="text-gray-600">MBA Graduate, 2023</p>
+                    </div>
+                </div>
+
+                <!-- Testimonial Indicators -->
+                <div class="flex justify-center mt-8 space-x-2">
+                    <button class="testimonial-indicator w-2 h-2 rounded-full bg-gray-300 hover:bg-miu-secondary transition-colors" data-index="0"></button>
+                    <button class="testimonial-indicator w-2 h-2 rounded-full bg-gray-300 hover:bg-miu-secondary transition-colors" data-index="1"></button>
+                    <button class="testimonial-indicator w-2 h-2 rounded-full bg-gray-300 hover:bg-miu-secondary transition-colors" data-index="2"></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= CONTACT ================= -->
+    <section id="contact" class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Contact MIU</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Reach out to us for admissions, program information, or campus visits</p>
+            </div>
+
+            <!-- Contact Form and Info -->
+            <div class="grid md:grid-cols-2 gap-12 mb-16">
+                <div>
+                    <h3 class="text-2xl font-bold mb-6 text-miu-primary">Send a Message</h3>
+                    <form id="contactForm" class="space-y-6">
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Your Name</label>
+                            <input required class="w-full p-4 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition" placeholder="John Smith" />
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Your Email</label>
+                            <input required type="email" class="w-full p-4 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition" placeholder="john@example.com" />
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Subject</label>
+                            <select class="w-full p-4 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white">
+                                <option value="">Select a topic</option>
+                                <option value="admissions">Admissions Inquiry</option>
+                                <option value="programs">Program Information</option>
+                                <option value="campus">Campus Visit</option>
+                                <option value="financial">Financial Aid</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 mb-2 font-medium">Your Message</label>
+                            <textarea required rows="4" class="w-full p-4 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition" placeholder="I'm interested in learning more about..."></textarea>
+                        </div>
+                        <button class="w-full bg-gradient-miu text-white py-4 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg">
+                            Send Message
+                        </button>
+                    </form>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-bold mb-6 text-miu-primary">Contact Information</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-start bg-white p-5 rounded-xl shadow-lg campus-card">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mr-4">
+                                <span class="text-xl text-blue-600">📍</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg">Main Campus</h4>
+                                <p class="text-gray-600">123 University Avenue<br>Knowledge City, KC 10101<br>United States</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start bg-white p-5 rounded-xl shadow-lg campus-card">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mr-4">
+                                <span class="text-xl text-blue-600">📧</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg">Email Us</h4>
+                                <p class="text-gray-600">admissions@miu.edu<br>info@miu.edu<br>international@miu.edu</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start bg-white p-5 rounded-xl shadow-lg campus-card">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mr-4">
+                                <span class="text-xl text-blue-600">📞</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg">Call Us</h4>
+                                <p class="text-gray-600">+1 (555) 123-4567 (Admissions)<br>+1 (555) 123-4568 (General)<br>+1 (555) 123-4569 (International)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start bg-white p-5 rounded-xl shadow-lg campus-card">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mr-4">
+                                <span class="text-xl text-blue-600">🕒</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg">Office Hours</h4>
+                                <p class="text-gray-600">Monday - Friday: 8:00 AM - 6:00 PM<br>Saturday: 9:00 AM - 1:00 PM<br>Sunday: Closed</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= LOCATION MAP ================= -->
+            <div class="mt-20">
+                <h3 class="text-3xl font-bold text-center mb-12 text-miu-primary font-serif">Find Our Campus</h3>
+
+                <div class="grid md:grid-cols-3 gap-8 mb-12">
+                    <div class="campus-card bg-white p-6 rounded-2xl shadow-lg">
+                        <div class="w-14 h-14 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">🏛️</span>
+                        </div>
+                        <h4 class="font-bold text-xl mb-3 text-miu-primary">Main Campus</h4>
+                        <p class="text-gray-600 mb-4">Our flagship campus featuring state-of-the-art facilities, libraries, and research centers.</p>
+                        <div class="text-sm text-gray-500">
+                            <p>📍 123 University Avenue</p>
+                            <p>Knowledge City, KC 10101</p>
+                        </div>
+                    </div>
+
+                    <div class="campus-card bg-white p-6 rounded-2xl shadow-lg">
+                        <div class="w-14 h-14 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">💻</span>
+                        </div>
+                        <h4 class="font-bold text-xl mb-3 text-miu-primary">Technology Center</h4>
+                        <p class="text-gray-600 mb-4">Dedicated facility for computer science, engineering, and innovation labs.</p>
+                        <div class="text-sm text-gray-500">
+                            <p>📍 456 Innovation Drive</p>
+                            <p>Tech Park, TP 20202</p>
+                        </div>
+                    </div>
+
+                    <div class="campus-card bg-white p-6 rounded-2xl shadow-lg">
+                        <div class="w-14 h-14 bg-gradient-to-r from-green-100 to-green-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">🌍</span>
+                        </div>
+                        <h4 class="font-bold text-xl mb-3 text-miu-primary">International Center</h4>
+                        <p class="text-gray-600 mb-4">Global affairs office and support center for international students.</p>
+                        <div class="text-sm text-gray-500">
+                            <p>📍 789 Global Plaza</p>
+                            <p>International District, ID 30303</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Map -->
+                <div class="relative rounded-2xl overflow-hidden shadow-2xl">
+                    <div class="map-container">
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.177858804427!2d-73.98784468459426!3d40.70555167933205!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a315cdf4c9b%3A0x8b934de5cae6f7a!2sFinancial%20District%2C%20New%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s!4v1648561234567!5m2!1sen!2s"
+                                style="border:0;"
+                                allowfullscreen=""
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                title="MIU Main Campus Location Map">
+                        </iframe>
+                        <div class="map-overlay">
+                            <h4 class="font-bold text-lg mb-1">MIU Main Campus</h4>
+                            <p class="text-sm text-gray-300">123 University Avenue<br>Knowledge City, KC 10101</p>
+                            <a href="https://maps.google.com/?q=123+University+Avenue+Knowledge+City"
+                               target="_blank"
+                               class="inline-block mt-2 text-miu-accent font-medium hover:text-yellow-300 transition-colors text-sm">
+                                Get Directions →
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Map Controls -->
+                    <div class="absolute top-4 left-4 z-10 flex space-x-2">
+                        <button class="bg-white p-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors" title="Zoom In">
+                            <span class="text-lg">➕</span>
+                        </button>
+                        <button class="bg-white p-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors" title="Zoom Out">
+                            <span class="text-lg">➖</span>
+                        </button>
+                        <button class="bg-white p-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors" title="Reset View">
+                            <span class="text-lg">🔄</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Transportation Info -->
+                <div class="mt-8 grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-5 rounded-xl shadow-lg">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-blue-600">🚇</span>
+                            </div>
+                            <h4 class="font-bold text-lg">Public Transit</h4>
+                        </div>
+                        <p class="text-gray-600 text-sm">Take Metro Line 1 to University Station. Campus is a 5-minute walk from exit B.</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-lg">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-green-600">🚗</span>
+                            </div>
+                            <h4 class="font-bold text-lg">Parking</h4>
+                        </div>
+                        <p class="text-gray-600 text-sm">Visitor parking available in Lot A. Daily parking pass: $10. Free on weekends.</p>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-lg">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-purple-600">✈️</span>
+                            </div>
+                            <h4 class="font-bold text-lg">From Airport</h4>
+                        </div>
+                        <p class="text-gray-600 text-sm">25 minutes from International Airport. Taxi/Uber available. Airport shuttle every 30 mins.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="bg-gradient-miu text-white py-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-6">
+                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center glow-effect">
+                            <span class="text-miu-primary font-bold text-xl">MIU</span>
+                        </div>
+                        <span class="text-2xl font-bold">MIU</span>
+                    </div>
+                    <p class="text-gray-300">
+                        Modern International University - Empowering global education since 1995.
+                    </p>
+                    <div class="mt-4 flex items-center text-gray-300">
+                        <span class="mr-2">📍</span>
+                        <span class="text-sm">123 University Avenue, Knowledge City</span>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Quick Links</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-gray-300 hover:text-miu-accent transition-colors">About MIU</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-miu-accent transition-colors">Programs</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-miu-accent transition-colors">Admissions</a></li>
+                        <li><a href="#contact" class="text-gray-300 hover:text-miu-accent transition-colors">Contact & Map</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Resources</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="text-gray-300 hover:text-miu-accent transition-colors">Library</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-miu-accent transition-colors">Career Services</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-miu-accent transition-colors">Student Portal</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-miu-accent transition-colors">Campus Map</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Connect With Us</h4>
+                    <div class="flex space-x-4 mb-6">
+                        <a href="#" class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors hover:scale-110">f</a>
+                        <a href="#" class="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center hover:bg-blue-500 transition-colors hover:scale-110">t</a>
+                        <a href="#" class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors hover:scale-110">in</a>
+                        <a href="#" class="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors hover:scale-110">yt</a>
+                    </div>
+                    <p class="text-gray-300 text-sm">
+                        Follow us for campus updates, events, and student stories.
+                    </p>
+                </div>
+            </div>
+            <div class="border-t border-white/20 pt-8 text-center text-gray-300">
+                <p>&copy; 2025 Modern International University (MIU). All rights reserved.</p>
+                <p class="mt-2 text-sm">123 University Avenue, Knowledge City, KC 10101 | +1 (555) 123-4567</p>
+            </div>
+        </div>
+    </footer>
+
+
+
+    <!-- ================= STUDENT LIFE CHATBOT ================= -->
+    <!-- Add this HTML at the end of the body, just before closing </body> tag -->
+    <div id="studentLifeChatbot" class="fixed bottom-6 right-6 z-50">
+        <!-- Chatbot Toggle Button -->
+        <button id="chatbotToggle" class="w-16 h-16 bg-gradient-miu rounded-full flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110">
+            <div id="chatbotIcon" class="text-white text-2xl transition-transform duration-300">💬</div>
+            <div id="notificationBadge" class="absolute -top-1 -right-1 w-6 h-6 bg-miu-accent rounded-full flex items-center justify-center text-xs font-bold text-miu-primary hidden">
+                3
+            </div>
+        </button>
+
+        <!-- Chatbot Window -->
+        <div id="chatbotWindow" class="hidden absolute bottom-20 right-0 w-96 h-[600px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+            <!-- Chat Header -->
+            <div class="bg-gradient-miu text-white p-4 flex justify-between items-center">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center mr-3">
+                        <span class="text-miu-primary font-bold">MIU</span>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg">Student Life Assistant</h3>
+                        <div class="flex items-center text-sm">
+                            <div class="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                            <span>Online</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="chatbotMinimize" class="text-white hover:text-gray-200 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"></path>
+                        </svg>
+                    </button>
+                    <button id="chatbotClose" class="text-white hover:text-gray-200 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Body -->
+            <div class="h-[calc(100%-140px)] flex flex-col">
+                <!-- Messages Container -->
+                <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                    <!-- Initial Welcome Message -->
+                    <div class="chat-message bot-message">
+                        <div class="flex items-start space-x-2">
+                            <div class="w-8 h-8 bg-gradient-to-r from-miu-primary to-miu-secondary rounded-full flex items-center justify-center text-white text-sm">
+                                AI
+                            </div>
+                            <div>
+                                <div class="bg-gray-100 rounded-2xl rounded-tl-none p-4 max-w-[80%]">
+                                    <p class="text-gray-800">👋 Welcome to MIU Student Life Assistant! I'm here to help you explore campus life, academic support, extracurricular activities, career services, and wellbeing resources. How can I assist you today?</p>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1 ml-1">Just now</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Action Buttons -->
+                    <div class="chat-message bot-message">
+                        <div class="flex items-start space-x-2">
+                            <div class="w-8 h-8 bg-gradient-to-r from-miu-primary to-miu-secondary rounded-full flex items-center justify-center text-white text-sm">
+                                AI
+                            </div>
+                            <div>
+                                <div class="max-w-[80%]">
+                                    <p class="text-gray-800 mb-2">Quickly explore popular topics:</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button class="quick-action bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-2 rounded-lg text-sm transition-colors" data-action="academic">
+                                            📚 Academic Support
+                                        </button>
+                                        <button class="quick-action bg-green-100 hover:bg-green-200 text-green-800 px-3 py-2 rounded-lg text-sm transition-colors" data-action="community">
+                                            🌍 Virtual Community
+                                        </button>
+                                        <button class="quick-action bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-2 rounded-lg text-sm transition-colors" data-action="activities">
+                                            🎭 Extracurriculars
+                                        </button>
+                                        <button class="quick-action bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-2 rounded-lg text-sm transition-colors" data-action="career">
+                                            💼 Career Services
+                                        </button>
+                                        <button class="quick-action bg-pink-100 hover:bg-pink-200 text-pink-800 px-3 py-2 rounded-lg text-sm transition-colors" data-action="wellbeing">
+                                            ❤️ Wellbeing Resources
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="hidden px-4 py-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gradient-to-r from-miu-primary to-miu-secondary rounded-full flex items-center justify-center text-white text-sm">
+                            AI
+                        </div>
+                        <div class="flex space-x-1">
+                            <div class="w-2 h-2 bg-gray-300 rounded-full animate-pulse"></div>
+                            <div class="w-2 h-2 bg-gray-300 rounded-full animate-pulse delay-75"></div>
+                            <div class="w-2 h-2 bg-gray-300 rounded-full animate-pulse delay-150"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="border-t border-gray-200 p-4">
+                <div class="flex space-x-2 mb-3">
+                    <input type="text"
+                           id="chatInput"
+                           placeholder="Ask about student life, support services, or activities..."
+                           class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-miu-secondary focus:border-transparent"
+                           maxlength="500" />
+                    <button id="sendMessage" class="bg-gradient-miu text-white rounded-lg px-4 hover:opacity-90 transition-opacity flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="text-xs text-gray-500">
+                        <span id="charCount">0/500</span> characters
+                    </div>
+                    <button id="voiceInput" class="text-gray-500 hover:text-miu-secondary transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Menu (Minimized State) -->
+        <div id="quickMenu" class="hidden absolute bottom-20 right-0 w-64 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 p-4">
+            <h4 class="font-bold text-miu-primary mb-3">Student Life Topics</h4>
+            <div class="space-y-2">
+                <button class="quick-topic w-full text-left px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors flex items-center" data-action="academic">
+                    <span class="mr-2">📚</span> Academic Support
+                </button>
+                <button class="quick-topic w-full text-left px-3 py-2 rounded-lg hover:bg-green-50 transition-colors flex items-center" data-action="community">
+                    <span class="mr-2">🌍</span> Virtual Community
+                </button>
+                <button class="quick-topic w-full text-left px-3 py-2 rounded-lg hover:bg-purple-50 transition-colors flex items-center" data-action="activities">
+                    <span class="mr-2">🎭</span> Activities & Clubs
+                </button>
+                <button class="quick-topic w-full text-left px-3 py-2 rounded-lg hover:bg-yellow-50 transition-colors flex items-center" data-action="career">
+                    <span class="mr-2">💼</span> Career Services
+                </button>
+                <button class="quick-topic w-full text-left px-3 py-2 rounded-lg hover:bg-pink-50 transition-colors flex items-center" data-action="wellbeing">
+                    <span class="mr-2">❤️</span> Wellbeing Resources
+                </button>
+            </div>
+            <button id="openFullChat" class="w-full bg-gradient-miu text-white rounded-lg py-2 mt-3 hover:opacity-90 transition-opacity">
+                Open Full Chat
+            </button>
+        </div>
+    </div>
+
+
+
+
+
+    <!-- ================= JAVASCRIPT ================= -->
+    <script>
+  // Mobile menu toggle
+  const menuBtn = document.getElementById('menuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+
+  menuBtn.onclick = () => {
+    mobileMenu.classList.toggle("hidden");
+    // Close programs menu when mobile menu closes
+    programsMenuMobile.classList.add("hidden");
+    programsArrowMobile.style.transform = "";
+  };
+
+  // Programs dropdown functionality for desktop
+  const programsBtnDesktop = document.getElementById('programsBtnDesktop');
+  const programsMenuDesktop = document.getElementById('programsMenuDesktop');
+
+  // Programs dropdown functionality for mobile
+  const programsBtnMobile = document.getElementById('programsBtnMobile');
+  const programsMenuMobile = document.getElementById('programsMenuMobile');
+  const programsArrowMobile = document.getElementById('programsArrowMobile');
+
+  let programsMenuOpen = false;
+
+  // Toggle desktop programs menu
+  programsBtnDesktop.addEventListener('click', (e) => {
+    e.stopPropagation();
+    programsMenuOpen = !programsMenuOpen;
+    if (programsMenuOpen) {
+      programsMenuDesktop.classList.remove("hidden");
+      programsMenuDesktop.classList.add("dropdown-enter");
+    } else {
+      programsMenuDesktop.classList.add("hidden");
+    }
+  });
+
+  // Toggle mobile programs menu
+  programsBtnMobile.addEventListener('click', (e) => {
+    e.stopPropagation();
+    programsMenuOpen = !programsMenuOpen;
+    if (programsMenuOpen) {
+      programsMenuMobile.classList.remove("hidden");
+      programsMenuMobile.classList.add("dropdown-enter");
+      programsArrowMobile.style.transform = "rotate(180deg)";
+    } else {
+      programsMenuMobile.classList.add("hidden");
+      programsArrowMobile.style.transform = "";
+    }
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    // Check if click is outside desktop programs dropdown
+    if (!programsBtnDesktop.contains(e.target) && !programsMenuDesktop.contains(e.target)) {
+      programsMenuDesktop.classList.add("hidden");
+      programsMenuOpen = false;
+    }
+
+    // For mobile, only close if clicking outside both menu button and mobile menu itself
+    if (window.innerWidth < 1024) {
+      if (!programsBtnMobile.contains(e.target) && !programsMenuMobile.contains(e.target) &&
+          !menuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+        mobileMenu.classList.add("hidden");
+        programsMenuMobile.classList.add("hidden");
+        programsMenuOpen = false;
+        programsArrowMobile.style.transform = "";
+      }
+    }
+  });
+
+  // Close dropdown when a program is selected
+  const programLinks = document.querySelectorAll('[data-program]');
+  programLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+
+      // Get the program type
+      const programType = link.getAttribute('data-program');
+
+      // Show selected program (in a real site, this would navigate to program page)
+      alert(`You selected: ${link.textContent}`);
+
+      // Close all dropdowns
+      programsMenuDesktop.classList.add("hidden");
+      programsMenuMobile.classList.add("hidden");
+      programsMenuOpen = false;
+      programsArrowMobile.style.transform = "";
+
+      // Also close mobile menu on mobile
+      if (window.innerWidth < 1024) {
+        mobileMenu.classList.add("hidden");
+      }
+    });
+  });
+
+  // Hero carousel
+  let slides = document.querySelectorAll(".slide");
+  let indicators = document.querySelectorAll(".carousel-indicator");
+  let index = 0;
+
+  function showSlide(n) {
+    slides.forEach(slide => slide.classList.add("hidden"));
+    indicators.forEach(ind => ind.classList.remove("bg-white", "opacity-100"));
+    indicators.forEach(ind => ind.classList.add("opacity-50"));
+
+    index = n;
+    slides[index].classList.remove("hidden");
+    indicators[index].classList.remove("opacity-50");
+    indicators[index].classList.add("bg-white", "opacity-100");
+  }
+
+  // Add click events to indicators
+  indicators.forEach((indicator, i) => {
+    indicator.onclick = () => showSlide(i);
+  });
+
+  setInterval(() => {
+    let nextIndex = (index + 1) % slides.length;
+    showSlide(nextIndex);
+  }, 5000);
+
+  // Testimonials carousel
+  const testimonials = [
+    ["MIU's flexible online platform allowed me to complete my MBA while working full-time. The faculty support was exceptional, and I've already seen career advancement.", "Sarah K.", "MBA Graduate, 2023"],
+    ["The Data Science program gave me practical skills that landed me a job at a tech giant before graduation. The curriculum is perfectly aligned with industry needs.", "Daniel P.", "Data Science Graduate, 2024"],
+    ["As an international student, MIU provided the support I needed to succeed. The global community here is incredible.", "Amina R.", "Computer Science Student"]
+  ];
+
+  let t = 0;
+  const quote = document.getElementById('quote');
+  const author = document.getElementById('author');
+  const testimonialIndicators = document.querySelectorAll('.testimonial-indicator');
+
+  function showTestimonial(n) {
+    t = n;
+    quote.textContent = testimonials[t][0];
+    author.innerHTML = `<span class="font-bold text-lg">${testimonials[t][1]}</span><br><span class="text-gray-600">${testimonials[t][2]}</span>`;
+
+    testimonialIndicators.forEach((ind, i) => {
+      ind.classList.toggle('bg-gray-300', i !== n);
+      ind.classList.toggle('bg-miu-secondary', i === n);
+      ind.classList.toggle('w-2', i !== n);
+      ind.classList.toggle('w-6', i === n);
+    });
+  }
+
+  // Add click events to testimonial indicators
+  testimonialIndicators.forEach((indicator, i) => {
+    indicator.onclick = () => showTestimonial(i);
+  });
+
+  setInterval(() => {
+    let nextT = (t + 1) % testimonials.length;
+    showTestimonial(nextT);
+  }, 6000);
+
+  // Form submission
+  const contactForm = document.getElementById('contactForm');
+  contactForm.onsubmit = (e) => {
+    e.preventDefault();
+    alert("Thank you for your message! We'll contact you soon.");
+    contactForm.reset();
+  };
+
+  // Video fallback if iframe fails
+  window.addEventListener('load', () => {
+    const videoFallback = document.getElementById('videoFallback');
+    setTimeout(() => {
+      // Check if iframe loaded properly (simplified check)
+      const iframe = document.querySelector('iframe');
+      if (iframe && iframe.offsetHeight === 0) {
+        videoFallback.classList.remove('hidden');
+      }
+    }, 2000);
+  });
+
+  // Map controls (simulated - in a real implementation these would interact with the map API)
+  document.querySelectorAll('.map-container + div button').forEach(button => {
+    button.addEventListener('click', function() {
+      const action = this.innerHTML.includes('➕') ? 'Zoom In' :
+                     this.innerHTML.includes('➖') ? 'Zoom Out' : 'Reset View';
+      console.log(`Map action: ${action}`);
+      // In a real implementation, this would call the map API
+    });
+  });
+    </script>
+
+
+    <script>
+
+
+
+    // ================= CHATBOT JAVASCRIPT =================
+// Add this JavaScript at the end of your existing <script> section
+
+// Chatbot State Management
+let chatbotState = {
+  isOpen: false,
+  isMinimized: false,
+  conversationHistory: [],
+  currentTopic: null,
+  userPreferences: {
+    name: null,
+    studentId: null,
+    interests: []
+  }
+};
+
+// Sample responses for different topics (in production, these would come from your LLM API)
+const topicResponses = {
+  academic: {
+    title: "📚 Academic Support",
+    response: `I can help you with various academic support services at MIU:
+
+**Available Resources:**
+• **24/7 Online Tutoring** - Get help with any course via our virtual tutoring platform
+• **Writing Center** - Assistance with essays, research papers, and citations
+• **Math Lab** - Drop-in help for calculus, statistics, and programming
+• **Study Groups** - Connect with peers in your courses
+
+**Upcoming Workshops:**
+- Time Management for Online Learners (Tomorrow, 3 PM EST)
+- Research Paper Writing (Friday, 2 PM EST)
+- Exam Preparation Strategies (Next Monday, 4 PM EST)
+
+**Need immediate help?** Visit the Academic Support Portal: https://miu.edu/academic-support`,
+    quickActions: [
+      { text: "Schedule Tutoring", action: "tutoring" },
+      { text: "Find Study Groups", action: "study_groups" },
+      { text: "View Workshop Calendar", action: "workshops" }
+    ]
+  },
+  community: {
+    title: "🌍 Virtual Community",
+    response: `Welcome to our global MIU community! Here's how to connect:
+
+**Virtual Campus Hub:**
+• **Discord Server** - Join 5,000+ students in course-specific channels
+• **Student Forums** - Discuss topics, share resources, ask questions
+• **Virtual Lounges** - Hang out with peers in themed virtual spaces
+• **Cultural Exchange** - Connect with students from 120+ countries
+
+**Monthly Events:**
+- International Food Night (1st Friday)
+- Virtual Game Night (Every Wednesday)
+- Study With Me Sessions (Daily, various times)
+
+**Clubs & Organizations:**
+We have 50+ student-run clubs including:
+• Coding Club • Debate Society • Photography Club
+• Environmental Club • Music Appreciation Society
+
+Would you like me to connect you with any specific community?`,
+    quickActions: [
+      { text: "Join Discord", action: "discord" },
+      { text: "View Club Directory", action: "clubs" },
+      { text: "Upcoming Events", action: "events" }
+    ]
+  },
+  activities: {
+    title: "🎭 Extracurricular Activities",
+    response: `Stay engaged with these extracurricular opportunities:
+
+**Virtual Activities:**
+• **Esports Team** - Compete in collegiate gaming tournaments
+• **Virtual Book Club** - Monthly readings and discussions
+• **Podcast Studio** - Create and host your own show
+• **Digital Art Gallery** - Showcase your creative work
+
+**Leadership Opportunities:**
+- Student Government (elections in October)
+- Club Executive Positions
+- Peer Mentor Program
+- Campus Ambassador Program
+
+**Competitions & Hackathons:**
+- Annual MIU Hackathon (March)
+- Business Plan Competition
+- Research Symposium
+- Creative Writing Contest
+
+Interested in any specific activity? I can provide more details!`,
+    quickActions: [
+      { text: "Join a Club", action: "join_club" },
+      { text: "Leadership Roles", action: "leadership" },
+      { text: "Upcoming Competitions", action: "competitions" }
+    ]
+  },
+  career: {
+    title: "💼 Career Services",
+    response: `Your career success is our priority. Here's what we offer:
+
+**Career Development Services:**
+• **Resume Review** - Get personalized feedback from career coaches
+• **Mock Interviews** - Practice with industry professionals
+• **Career Counseling** - One-on-one guidance sessions
+• **Job Portal** - Exclusive access to 500+ employer partners
+
+**Upcoming Events:**
+- Tech Industry Panel (Next Tuesday, 6 PM EST)
+- Resume Workshop (Thursday, 4 PM EST)
+- Virtual Career Fair (October 15-16)
+
+**Internship Programs:**
+We partner with companies like Google, Amazon, Microsoft, and local startups for semester-long internships.
+
+**Alumni Network:**
+Connect with 50,000+ alumni for mentorship and networking.
+
+Ready to boost your career prospects?`,
+    quickActions: [
+      { text: "Book Career Coaching", action: "coaching" },
+      { text: "View Job Postings", action: "jobs" },
+      { text: "Register for Career Fair", action: "career_fair" }
+    ]
+  },
+  wellbeing: {
+    title: "❤️ Wellbeing Resources",
+    response: `Your wellbeing matters. Here are our support services:
+
+**24/7 Support Services:**
+• **Counseling Center** - Free confidential sessions with licensed therapists
+• **Crisis Hotline** - Immediate support: 1-800-MIU-HELP
+• **Wellness Workshops** - Mindfulness, stress management, sleep hygiene
+• **Peer Support** - Connect with trained student volunteers
+
+**Health & Wellness:**
+- Virtual Fitness Classes (Yoga, HIIT, Meditation)
+- Nutrition Counseling
+- Mental Health First Aid Training
+- Substance Abuse Prevention Programs
+
+**Accessibility Services:**
+We provide accommodations for students with disabilities, including:
+- Extended test times
+- Note-taking assistance
+- Accessible digital materials
+
+**Emergency Resources:**
+If you're experiencing a crisis, please contact our 24/7 support line immediately.
+
+Remember: Your mental health is just as important as your academic success.`,
+    quickActions: [
+      { text: "Schedule Counseling", action: "counseling" },
+      { text: "Wellness Workshops", action: "wellness" },
+      { text: "Accessibility Services", action: "accessibility" }
+    ]
+  }
+};
+
+// Initialize Chatbot
+document.addEventListener('DOMContentLoaded', function() {
+  // DOM Elements
+  const chatbotToggle = document.getElementById('chatbotToggle');
+  const chatbotWindow = document.getElementById('chatbotWindow');
+  const quickMenu = document.getElementById('quickMenu');
+  const chatbotClose = document.getElementById('chatbotClose');
+  const chatbotMinimize = document.getElementById('chatbotMinimize');
+  const chatInput = document.getElementById('chatInput');
+  const sendMessage = document.getElementById('sendMessage');
+  const chatMessages = document.getElementById('chatMessages');
+  const typingIndicator = document.getElementById('typingIndicator');
+  const quickActions = document.querySelectorAll('.quick-action, .quick-topic');
+  const openFullChat = document.getElementById('openFullChat');
+  const voiceInput = document.getElementById('voiceInput');
+  const charCount = document.getElementById('charCount');
+  const notificationBadge = document.getElementById('notificationBadge');
+
+  // Toggle Chatbot Window
+  chatbotToggle.addEventListener('click', function() {
+    if (!chatbotState.isOpen) {
+      openChatbot();
+    } else if (chatbotState.isMinimized) {
+      openChatbot();
+    } else {
+      minimizeChatbot();
+    }
+  });
+
+  // Open Chatbot
+  function openChatbot() {
+    chatbotState.isOpen = true;
+    chatbotState.isMinimized = false;
+    chatbotWindow.classList.remove('hidden');
+    quickMenu.classList.add('hidden');
+    chatbotWindow.classList.add('chatbot-enter');
+
+    // Hide notification badge
+    notificationBadge.classList.add('hidden');
+
+    // Focus input
+    setTimeout(() => {
+      chatInput.focus();
+    }, 300);
+
+    // Update icon
+    document.getElementById('chatbotIcon').textContent = '💬';
+  }
+
+  // Minimize Chatbot
+  function minimizeChatbot() {
+    chatbotState.isMinimized = true;
+    chatbotWindow.classList.add('hidden');
+    quickMenu.classList.remove('hidden');
+    quickMenu.classList.add('chatbot-enter');
+  }
+
+  // Close Chatbot
+  chatbotClose.addEventListener('click', function() {
+    chatbotState.isOpen = false;
+    chatbotState.isMinimized = false;
+    chatbotWindow.classList.add('hidden');
+    quickMenu.classList.add('hidden');
+    document.getElementById('chatbotIcon').textContent = '💬';
+  });
+
+  // Minimize button
+  chatbotMinimize.addEventListener('click', minimizeChatbot);
+
+  // Open full chat from quick menu
+  openFullChat.addEventListener('click', openChatbot);
+
+  // Character counter
+  chatInput.addEventListener('input', function() {
+    charCount.textContent = `${this.value.length}/500`;
+    if (this.value.length > 450) {
+      charCount.classList.add('text-red-500');
+    } else {
+      charCount.classList.remove('text-red-500');
+    }
+  });
+
+  // Send message function
+  function sendUserMessage() {
+    const message = chatInput.value.trim();
+    if (message === '') return;
+
+    // Add user message to chat
+    addMessageToChat(message, 'user');
+
+    // Clear input
+    chatInput.value = '';
+    charCount.textContent = '0/500';
+
+    // Show typing indicator
+    typingIndicator.classList.remove('hidden');
+
+    // Simulate API call to backend/LLM
+    setTimeout(() => {
+      typingIndicator.classList.add('hidden');
+      const response = getBotResponse(message);
+      addMessageToChat(response.text, 'bot', response.quickActions);
+
+      // Auto-scroll to bottom
+      scrollToBottom();
+    }, 1500);
+  }
+
+  // Send message on button click
+  sendMessage.addEventListener('click', sendUserMessage);
+
+  // Send message on Enter key (but allow Shift+Enter for new line)
+  chatInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendUserMessage();
+    }
+  });
+
+  // Quick action buttons
+  quickActions.forEach(button => {
+    button.addEventListener('click', function() {
+      const action = this.getAttribute('data-action');
+      handleQuickAction(action);
+    });
+  });
+
+  // Handle quick actions
+  function handleQuickAction(action) {
+    if (topicResponses[action]) {
+      const topic = topicResponses[action];
+      addMessageToChat(`Tell me about ${topic.title.toLowerCase()}`, 'user');
+
+      // Show typing indicator
+      typingIndicator.classList.remove('hidden');
+
+      setTimeout(() => {
+        typingIndicator.classList.add('hidden');
+        addMessageToChat(topic.response, 'bot', topic.quickActions);
+        scrollToBottom();
+      }, 1000);
+    }
+  }
+
+  // Add message to chat
+  function addMessageToChat(text, sender, quickActions = null) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${sender}-message`;
+
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (sender === 'user') {
+      messageDiv.innerHTML = `
+        <div class="flex items-start justify-end space-x-2">
+          <div class="text-right">
+            <div class="message-content inline-block px-4 py-3 rounded-2xl rounded-br-none bg-gradient-miu text-white max-w-[80%]">
+              <p>${escapeHtml(text)}</p>
+            </div>
+            <div class="text-xs text-gray-500 mt-1 mr-1">${timestamp}</div>
+          </div>
+          <div class="w-8 h-8 bg-gradient-to-r from-miu-accent to-yellow-400 rounded-full flex items-center justify-center text-miu-primary font-bold text-sm">
+            You
+          </div>
+        </div>
+      `;
+    } else {
+      messageDiv.innerHTML = `
+        <div class="flex items-start space-x-2">
+          <div class="w-8 h-8 bg-gradient-to-r from-miu-primary to-miu-secondary rounded-full flex items-center justify-center text-white text-sm">
+            AI
+          </div>
+          <div>
+            <div class="message-content bg-gray-100 rounded-2xl rounded-tl-none p-4 max-w-[80%]">
+              ${formatBotResponse(text)}
+            </div>
+            ${quickActions ? `
+              <div class="mt-3 flex flex-wrap gap-2">
+                ${quickActions.map(action => `
+                  <button class="quick-followup bg-white border border-gray-300 hover:border-miu-secondary text-gray-700 hover:text-miu-secondary px-3 py-2 rounded-lg text-sm transition-colors" data-action="${action.action}">
+                    ${action.text}
+                  </button>
+                `).join('')}
+              </div>
+            ` : ''}
+            <div class="text-xs text-gray-500 mt-1 ml-1">${timestamp}</div>
+          </div>
+        </div>
+      `;
+
+      // Add event listeners to follow-up buttons
+      if (quickActions) {
+        setTimeout(() => {
+          const followupButtons = messageDiv.querySelectorAll('.quick-followup');
+          followupButtons.forEach(button => {
+            button.addEventListener('click', function() {
+              const action = this.getAttribute('data-action');
+              handleFollowUpAction(action);
+            });
+          });
+        }, 100);
+      }
+    }
+
+    chatMessages.appendChild(messageDiv);
+    scrollToBottom();
+
+    // Add to conversation history
+    chatbotState.conversationHistory.push({
+      sender,
+      text,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Format bot response with markdown-like syntax
+  function formatBotResponse(text) {
+    // Convert **bold** to <strong>
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // Convert *italic* to <em>
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+    // Convert lists
+    text = text.replace(/^•\s+(.*)$/gm, '<li>$1</li>');
+    text = text.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+
+    // Convert line breaks
+    text = text.replace(/\n\n/g, '<br><br>');
+
+    // Convert URLs to links
+    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-miu-secondary hover:underline">$1</a>');
+
+    return text;
+  }
+
+  // Escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Handle follow-up actions
+  function handleFollowUpAction(action) {
+    const responses = {
+      tutoring: "I'll help you schedule a tutoring session. What subject do you need help with?",
+      study_groups: "Great! I can connect you with study groups. Which course are you taking?",
+      workshops: "Here are the upcoming workshops...",
+      discord: "Join our Discord server: https://discord.gg/miu",
+      clubs: "View our club directory: https://miu.edu/clubs",
+      events: "Check out upcoming events: https://miu.edu/events",
+      join_club: "Which type of club are you interested in?",
+      leadership: "Here are available leadership positions...",
+      competitions: "Upcoming competitions include...",
+      coaching: "Book career coaching: https://miu.edu/career/coaching",
+      jobs: "View job postings: https://miu.edu/career/jobs",
+      career_fair: "Register for career fair: https://miu.edu/career/fair",
+      counseling: "Schedule counseling: https://miu.edu/wellbeing/counseling",
+      wellness: "Wellness workshops: https://miu.edu/wellbeing/workshops",
+      accessibility: "Accessibility services: https://miu.edu/accessibility"
+    };
+
+    if (responses[action]) {
+      addMessageToChat(responses[action], 'bot');
+      scrollToBottom();
+    }
+  }
+
+  // Get bot response (simulated - in production, this would call your LLM API)
+  function getBotResponse(userMessage) {
+    const lowerMessage = userMessage.toLowerCase();
+
+    // Check for specific topics
+    if (lowerMessage.includes('academic') || lowerMessage.includes('tutor') || lowerMessage.includes('study')) {
+      return {
+        text: topicResponses.academic.response,
+        quickActions: topicResponses.academic.quickActions
+      };
+    } else if (lowerMessage.includes('community') || lowerMessage.includes('social') || lowerMessage.includes('friend')) {
+      return {
+        text: topicResponses.community.response,
+        quickActions: topicResponses.community.quickActions
+      };
+    } else if (lowerMessage.includes('activity') || lowerMessage.includes('club') || lowerMessage.includes('extracurricular')) {
+      return {
+        text: topicResponses.activities.response,
+        quickActions: topicResponses.activities.quickActions
+      };
+    } else if (lowerMessage.includes('career') || lowerMessage.includes('job') || lowerMessage.includes('intern')) {
+      return {
+        text: topicResponses.career.response,
+        quickActions: topicResponses.career.quickActions
+      };
+    } else if (lowerMessage.includes('wellbeing') || lowerMessage.includes('health') || lowerMessage.includes('mental')) {
+      return {
+        text: topicResponses.wellbeing.response,
+        quickActions: topicResponses.wellbeing.quickActions
+      };
+    }
+
+    // Default response
+    return {
+      text: `I understand you're asking about "${userMessage}". As your Student Life Assistant, I can help you with:\n\n1. **Academic Support** - Tutoring, workshops, study groups\n2. **Virtual Community** - Clubs, events, social connections\n3. **Career Services** - Internships, job search, resume help\n4. **Wellbeing Resources** - Counseling, health services, support\n\nWhat specific area would you like to explore?`,
+      quickActions: [
+        { text: "Academic Support", action: "academic" },
+        { text: "Virtual Community", action: "community" },
+        { text: "Career Services", action: "career" }
+      ]
+    };
+  }
+
+  // Scroll to bottom of chat
+  function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // Voice input simulation
+  voiceInput.addEventListener('click', function() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        chatInput.value = transcript;
+        charCount.textContent = `${transcript.length}/500`;
+      };
+
+      recognition.onspeechend = function() {
+        recognition.stop();
+      };
+
+      recognition.onerror = function(event) {
+        console.error('Speech recognition error', event.error);
+      };
+    } else {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+    }
+  });
+
+  // Simulate new message notification
+  function simulateNotification() {
+    if (!chatbotState.isOpen) {
+      notificationBadge.classList.remove('hidden');
+      document.getElementById('chatbotIcon').textContent = '🔔';
+
+      // Add welcome back message when opened
+      setTimeout(() => {
+        if (!chatbotState.conversationHistory.some(msg =>
+          msg.text.includes('Welcome back') && msg.sender === 'bot')) {
+          const welcomeBackMessage = "Welcome back! While you were away:\n\n• 3 new study groups formed\n• Career fair registration opened\n• New wellness workshop scheduled\n\nHow can I help you today?";
+          addMessageToChat(welcomeBackMessage, 'bot');
+        }
+      }, 1000);
+    }
+  }
+
+  // Simulate initial notifications after page load
+  setTimeout(simulateNotification, 10000);
+
+  // API Integration Functions (for connecting to your backend/LLM)
+  window.chatbotAPI = {
+    // Send message to your LLM backend
+    async sendToLLM(message, context = {}) {
+      // This is where you would integrate with your actual LLM API
+      const response = await fetch('/api/chatbot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          context: {
+            ...context,
+            conversationHistory: chatbotState.conversationHistory.slice(-10), // Send last 10 messages
+            userPreferences: chatbotState.userPreferences,
+            currentTopic: chatbotState.currentTopic
+          }
+        })
+      });
+
+      return await response.json();
+    },
+
+    // Update user preferences
+    updatePreferences(preferences) {
+      chatbotState.userPreferences = { ...chatbotState.userPreferences, ...preferences };
+      localStorage.setItem('miuChatbotPreferences', JSON.stringify(chatbotState.userPreferences));
+    },
+
+    // Get chatbot state
+    getState() {
+      return { ...chatbotState };
+    },
+
+    // Clear conversation
+    clearConversation() {
+      chatbotState.conversationHistory = [];
+      chatMessages.innerHTML = `
+        <div class="chat-message bot-message">
+          <div class="flex items-start space-x-2">
+            <div class="w-8 h-8 bg-gradient-to-r from-miu-primary to-miu-secondary rounded-full flex items-center justify-center text-white text-sm">
+              AI
+            </div>
+            <div>
+              <div class="bg-gray-100 rounded-2xl rounded-tl-none p-4 max-w-[80%]">
+                <p class="text-gray-800">👋 Welcome to MIU Student Life Assistant! I'm here to help you explore campus life, academic support, extracurricular activities, career services, and wellbeing resources. How can I assist you today?</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  };
+
+  // Load saved preferences
+  const savedPreferences = localStorage.getItem('miuChatbotPreferences');
+  if (savedPreferences) {
+    chatbotState.userPreferences = JSON.parse(savedPreferences);
+  }
+});
+    </script>
+
+
+
+</body>
+
+
+</html>

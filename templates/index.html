@@ -1,0 +1,1054 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- ================= HERO CAROUSEL ================= -->
+    <section class="pt-24 relative overflow-hidden">
+        <div id="carousel" class="relative h-[600px]">
+
+            <!-- Slide 1 -->
+            <div class="slide hero-slide-1 absolute inset-0 text-white flex items-center">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="max-w-2xl">
+                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                            Empowering Global Education
+                        </h1>
+                        <p class="mb-8 text-xl text-gray-200">World-class online education with flexibility and excellence. Join students from 120+ countries.</p>
+                        <div class="flex flex-wrap gap-4">
+                            <button class="bg-miu-accent text-miu-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-yellow-400 transition-colors shadow-lg">
+                                Apply Now
+                            </button>
+                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-primary transition-colors">
+                                Explore Programs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2 -->
+            <div class="slide hero-slide-2 hidden absolute inset-0 text-white flex items-center">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="max-w-2xl">
+                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                            Learn From Anywhere
+                        </h1>
+                        <p class="mb-8 text-xl text-gray-200">Study at your pace with expert faculty and cutting-edge digital platforms.</p>
+                        <div class="flex flex-wrap gap-4">
+                            <button class="bg-white text-miu-secondary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg">
+                                Virtual Tour
+                            </button>
+                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-secondary transition-colors">
+                                Meet Our Faculty
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 3 -->
+            <div class="slide hero-slide-3 hidden absolute inset-0 text-white flex items-center">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="max-w-2xl">
+                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                            Build Your Future
+                        </h1>
+                        <p class="mb-8 text-xl text-gray-200">Career-focused programs designed for success in today's global marketplace.</p>
+                        <div class="flex flex-wrap gap-4">
+                            <button class="bg-miu-accent text-miu-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-yellow-400 transition-colors shadow-lg">
+                                View Careers
+                            </button>
+                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-primary transition-colors">
+                                Alumni Network
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Carousel Indicators -->
+            <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3">
+                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="0"></button>
+                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="1"></button>
+                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="2"></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= STATS ================= -->
+    <section class="py-16 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div class="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <div class="text-4xl font-bold text-miu-primary mb-2">25,000+</div>
+                    <div class="text-gray-600">Students Worldwide</div>
+                </div>
+                <div class="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <div class="text-4xl font-bold text-miu-primary mb-2">120+</div>
+                    <div class="text-gray-600">Countries Represented</div>
+                </div>
+                <div class="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <div class="text-4xl font-bold text-miu-primary mb-2">95%</div>
+                    <div class="text-gray-600">Graduate Employment Rate</div>
+                </div>
+                <div class="p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
+                    <div class="text-4xl font-bold text-miu-primary mb-2">50+</div>
+                    <div class="text-gray-600">Academic Programs</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ABOUT ================= -->
+    <section id="about" class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-4xl font-bold mb-6 text-miu-primary font-serif">About MIU</h2>
+                    <p class="text-gray-600 mb-6 text-lg">
+                        Modern International University is a globally recognized institution delivering
+                        high-quality, innovative education with flexibility and excellence. Founded in 1995,
+                        we've been at the forefront of digital education transformation.
+                    </p>
+                    <p class="text-gray-600 mb-8">
+                        Our mission is to provide accessible, world-class education that empowers students
+                        to achieve their personal and professional goals, regardless of geographic location.
+                    </p>
+                    <button class="bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg">
+                        Learn More About Us
+                    </button>
+                </div>
+                <div class="bg-gray-100 h-80 rounded-2xl overflow-hidden shadow-xl">
+                    <!-- Video Section -->
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ?modestbranding=1&rel=0&showinfo=0"
+                                title="MIU Global Learning Community"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen>
+                        </iframe>
+                    </div>
+                    <!-- Fallback content if video fails to load -->
+                    <div id="videoFallback" class="hidden w-full h-full bg-gradient-to-br from-miu-primary to-miu-secondary opacity-90 flex items-center justify-center flex-col p-4">
+                        <span class="text-white text-2xl font-serif font-bold text-center mb-4">Global Learning Community</span>
+                        <p class="text-white text-center">Experience our international campus and diverse community of learners</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= PROGRAMS ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Popular Programs</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Choose from our extensive range of accredited programs designed for the modern workforce</p>
+            </div>
+
+            <div class="grid gap-8 md:grid-cols-3">
+                <!-- Business Administration Card -->
+                <div class="program-card bg-gradient-card-1 p-8 rounded-2xl shadow-lg border border-blue-100">
+                    <div class="program-icon w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                        <span class="text-3xl text-blue-600">📊</span>
+                    </div>
+                    <h3 class="font-bold text-2xl mb-4 text-miu-primary">Business Administration</h3>
+                    <p class="text-gray-600 mb-6">Develop leadership skills for global organizations with our AACSB-accredited program.</p>
+                    <a href="#" class="text-blue-600 font-semibold hover:text-blue-800 transition-colors inline-flex items-center">
+                        Learn More
+                        <span class="ml-2 transform transition-transform group-hover:translate-x-2">→</span>
+                    </a>
+                </div>
+
+                <!-- Computer Science Card -->
+                <div class="program-card bg-gradient-card-2 p-8 rounded-2xl shadow-lg border border-purple-100">
+                    <div class="program-icon w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                        <span class="text-3xl text-purple-600">💻</span>
+                    </div>
+                    <h3 class="font-bold text-2xl mb-4 text-miu-primary">Computer Science</h3>
+                    <p class="text-gray-600 mb-6">Master modern software engineering, AI, and cybersecurity with industry-focused curriculum.</p>
+                    <a href="#" class="text-purple-600 font-semibold hover:text-purple-800 transition-colors inline-flex items-center">
+                        Learn More
+                        <span class="ml-2 transform transition-transform group-hover:translate-x-2">→</span>
+                    </a>
+                </div>
+
+                <!-- Data Science Card -->
+                <div class="program-card bg-gradient-card-3 p-8 rounded-2xl shadow-lg border border-green-100">
+                    <div class="program-icon w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                        <span class="text-3xl text-green-600">📈</span>
+                    </div>
+                    <h3 class="font-bold text-2xl mb-4 text-miu-primary">Data Science</h3>
+                    <p class="text-gray-600 mb-6">Become an expert in analytics, machine learning, and big data with hands-on projects.</p>
+                    <a href="#" class="text-green-600 font-semibold hover:text-green-800 transition-colors inline-flex items-center">
+                        Learn More
+                        <span class="ml-2 transform transition-transform group-hover:translate-x-2">→</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="text-center mt-12">
+                <button class="border-2 border-miu-secondary text-miu-secondary px-8 py-3 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all shadow-lg hover:shadow-xl">
+                    View All Programs
+                </button>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- ================= ACADEMICS / FACULTIES ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Academics & Faculties</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Our academic structure is designed to foster interdisciplinary collaboration and innovation</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="p-6">
+                        <div class="w-14 h-14 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">🏛️</span>
+                        </div>
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Faculty of Business & Economics</h3>
+                        <p class="text-gray-600 mb-4">AACSB-accredited programs in business administration, economics, finance, and entrepreneurship.</p>
+                        <ul class="space-y-2 text-sm text-gray-500">
+                            <li>• Department of Business Administration</li>
+                            <li>• Department of Economics</li>
+                            <li>• Department of Finance</li>
+                            <li>• Department of Marketing</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="p-6">
+                        <div class="w-14 h-14 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">💻</span>
+                        </div>
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Faculty of Engineering & Technology</h3>
+                        <p class="text-gray-600 mb-4">ABET-accredited programs in computer science, software engineering, and information systems.</p>
+                        <ul class="space-y-2 text-sm text-gray-500">
+                            <li>• Department of Computer Science</li>
+                            <li>• Department of Software Engineering</li>
+                            <li>• Department of Data Science</li>
+                            <li>• Department of Cybersecurity</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="p-6">
+                        <div class="w-14 h-14 bg-gradient-to-r from-green-100 to-green-200 rounded-xl flex items-center justify-center mb-4">
+                            <span class="text-2xl">🔬</span>
+                        </div>
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Faculty of Health & Life Sciences</h3>
+                        <p class="text-gray-600 mb-4">ACPE-accredited programs in nursing, public health, and biomedical sciences.</p>
+                        <ul class="space-y-2 text-sm text-gray-500">
+                            <li>• Department of Nursing</li>
+                            <li>• Department of Public Health</li>
+                            <li>• Department of Biomedical Sciences</li>
+                            <li>• Department of Nutrition</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button class="bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg">
+                    Explore All Faculties
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ADMISSIONS & FINANCIAL AID ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Admissions & Financial Aid</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Making quality education accessible through comprehensive financial support</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="font-bold text-2xl mb-6 text-miu-primary border-b pb-4">Application Process</h3>
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">1</span>
+                            <span class="text-gray-700">Submit online application with required documents</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">2</span>
+                            <span class="text-gray-700">Academic evaluation and review (2-3 weeks)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">3</span>
+                            <span class="text-gray-700">Interview (if required for your program)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 flex-shrink-0">4</span>
+                            <span class="text-gray-700">Admission decision and enrollment</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="font-bold text-2xl mb-6 text-miu-primary border-b pb-4">Financial Aid Options</h3>
+                    <div class="space-y-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-lg text-blue-800 mb-2">Scholarships</h4>
+                            <p class="text-sm text-gray-700">Merit-based awards up to full tuition for exceptional students</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-lg text-green-800 mb-2">Grants</h4>
+                            <p class="text-sm text-gray-700">Need-based financial assistance that doesn't require repayment</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-lg text-purple-800 mb-2">Student Loans</h4>
+                            <p class="text-sm text-gray-700">Low-interest government and private loan options</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="font-bold text-2xl mb-6 text-miu-primary border-b pb-4">Important Dates</h3>
+                    <div class="space-y-6">
+                        <div class="border-l-4 border-miu-accent pl-4">
+                            <h4 class="font-bold text-lg text-gray-800">Fall Semester 2025</h4>
+                            <p class="text-sm text-gray-600">Application Deadline: June 15, 2025</p>
+                        </div>
+                        <div class="border-l-4 border-miu-secondary pl-4">
+                            <h4 class="font-bold text-lg text-gray-800">Spring Semester 2026</h4>
+                            <p class="text-sm text-gray-600">Application Deadline: November 1, 2025</p>
+                        </div>
+                        <div class="border-l-4 border-blue-400 pl-4">
+                            <h4 class="font-bold text-lg text-gray-800">Scholarship Deadline</h4>
+                            <p class="text-sm text-gray-600">Priority Consideration: March 31, 2025</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="#" class="inline-block bg-gradient-miu text-white px-8 py-4 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg mr-4">
+                    Calculate Your Aid
+                </a>
+                <a href="#" class="inline-block border-2 border-miu-secondary text-miu-secondary px-8 py-4 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all shadow-lg">
+                    Start Application
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= STUDENT LIFE & SERVICES ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Student Life & Services</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Comprehensive support services and vibrant campus life for holistic student development</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <div class="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🏠</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2 text-miu-primary">Housing & Residential Life</h3>
+                    <p class="text-gray-600 text-sm">Modern on-campus housing with 24/7 security and community support</p>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-r from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">💼</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2 text-miu-primary">Career Services</h3>
+                    <p class="text-gray-600 text-sm">Career counseling, internship placements, and job fairs with top employers</p>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">❤️</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2 text-miu-primary">Health & Wellness</h3>
+                    <p class="text-gray-600 text-sm">24/7 health center, counseling services, and wellness programs</p>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🎭</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2 text-miu-primary">Student Organizations</h3>
+                    <p class="text-gray-600 text-sm">100+ clubs, cultural associations, and leadership opportunities</p>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-miu-light to-blue-50 rounded-2xl p-8">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="font-bold text-2xl mb-4 text-miu-primary">Campus Facilities</h3>
+                        <p class="text-gray-600 mb-6">State-of-the-art facilities designed to enhance your learning experience and campus life.</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-center"><span class="text-miu-accent mr-2">✓</span> Modern Library with 500,000+ resources</li>
+                            <li class="flex items-center"><span class="text-miu-accent mr-2">✓</span> Olympic-sized Recreation Center</li>
+                            <li class="flex items-center"><span class="text-miu-accent mr-2">✓</span> Innovation Labs & Makerspaces</li>
+                            <li class="flex items-center"><span class="text-miu-accent mr-2">✓</span> Performing Arts Center</li>
+                        </ul>
+                    </div>
+                    <div class="bg-gray-100 h-64 rounded-xl overflow-hidden shadow-lg">
+                        <img src="https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                             alt="MIU Campus Facilities"
+                             class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= RESEARCH & INNOVATION ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Research & Innovation</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Pushing boundaries through cutting-edge research and innovative solutions</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-48 bg-gradient-to-r from-blue-500 to-blue-700 flex items-center justify-center">
+                        <span class="text-4xl text-white">🔬</span>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Research Centers</h3>
+                        <p class="text-gray-600 mb-4">15 interdisciplinary research centers focusing on global challenges</p>
+                        <div class="text-sm text-gray-500 space-y-2">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                <span>Center for AI & Machine Learning</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                <span>Climate Change Research Institute</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                                <span>Biomedical Innovation Hub</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-48 bg-gradient-to-r from-green-500 to-green-700 flex items-center justify-center">
+                        <span class="text-4xl text-white">💰</span>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Funding & Grants</h3>
+                        <p class="text-gray-600 mb-4">$45M+ in annual research funding from government and industry partners</p>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">NSF Grants</span>
+                                <span class="font-bold text-blue-600">$18.2M</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Industry Partnerships</span>
+                                <span class="font-bold text-green-600">$22.5M</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Private Foundations</span>
+                                <span class="font-bold text-purple-600">$4.8M</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-48 bg-gradient-to-r from-purple-500 to-purple-700 flex items-center justify-center">
+                        <span class="text-4xl text-white">🏆</span>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-bold text-xl mb-3 text-miu-primary">Innovation Impact</h3>
+                        <p class="text-gray-600 mb-4">Transforming research into real-world solutions and startups</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-blue-600">25+</span>
+                                </div>
+                                <span class="text-sm">Startups launched</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-green-600">150+</span>
+                                </div>
+                                <span class="text-sm">Patents filed</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                    <span class="text-purple-600">500+</span>
+                                </div>
+                                <span class="text-sm">Research publications</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="#" class="inline-block bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg mr-4">
+                    Research Opportunities
+                </a>
+                <a href="#" class="inline-block border-2 border-miu-secondary text-miu-secondary px-8 py-3 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all shadow-lg">
+                    Partner With Us
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= NEWS & EVENTS ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center mb-12">
+                <div>
+                    <h2 class="text-4xl font-bold text-miu-primary mb-2 font-serif">News & Events</h2>
+                    <p class="text-gray-600">Stay updated with campus happenings and achievements</p>
+                </div>
+                <a href="#" class="text-miu-secondary font-semibold hover:text-miu-primary transition-colors">
+                    View All →
+                </a>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-8">
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="h-48 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                             alt="MIU Research Symposium"
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    </div>
+                    <div class="p-6">
+                        <div class="text-sm text-miu-secondary font-semibold mb-2">March 15, 2025</div>
+                        <h3 class="font-bold text-xl mb-3 text-gray-800">Annual Research Symposium Showcases Innovation</h3>
+                        <p class="text-gray-600 mb-4">Student and faculty research projects addressing global challenges featured in week-long event.</p>
+                        <a href="#" class="text-miu-secondary font-medium hover:text-miu-primary transition-colors inline-flex items-center">
+                            Read More
+                            <span class="ml-2">→</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="h-48 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                             alt="MIU Career Fair"
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    </div>
+                    <div class="p-6">
+                        <div class="text-sm text-miu-secondary font-semibold mb-2">April 3, 2025</div>
+                        <h3 class="font-bold text-xl mb-3 text-gray-800">Spring Career Fair Connects Students with Top Employers</h3>
+                        <p class="text-gray-600 mb-4">150+ companies recruiting MIU talent for internships and full-time positions.</p>
+                        <a href="#" class="text-miu-secondary font-medium hover:text-miu-primary transition-colors inline-flex items-center">
+                            Register Now
+                            <span class="ml-2">→</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden campus-card">
+                    <div class="h-48 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                             alt="MIU Alumni Event"
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    </div>
+                    <div class="p-6">
+                        <div class="text-sm text-miu-secondary font-semibold mb-2">Ongoing</div>
+                        <h3 class="font-bold text-xl mb-3 text-gray-800">Global Alumni Reunion Events Scheduled Worldwide</h3>
+                        <p class="text-gray-600 mb-4">Connect with fellow alumni at events across 20 countries throughout the year.</p>
+                        <a href="#" class="text-miu-secondary font-medium hover:text-miu-primary transition-colors inline-flex items-center">
+                            Find Events
+                            <span class="ml-2">→</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-miu-primary to-miu-secondary rounded-2xl p-8 text-white">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="font-bold text-2xl mb-4">Upcoming Events Calendar</h3>
+                        <p class="mb-6 text-blue-100">Mark your calendar for these important campus events</p>
+                        <a href="#" class="inline-block bg-white text-miu-primary px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg">
+                            View Full Calendar
+                        </a>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center bg-white/10 p-4 rounded-lg backdrop-blur-sm">
+                            <div class="text-center border-r border-white/30 pr-4 mr-4">
+                                <div class="text-2xl font-bold">MAY</div>
+                                <div class="text-lg">15-17</div>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">Commencement Ceremony 2025</h4>
+                                <p class="text-sm text-blue-100">Main Quadrangle, 10:00 AM</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center bg-white/10 p-4 rounded-lg backdrop-blur-sm">
+                            <div class="text-center border-r border-white/30 pr-4 mr-4">
+                                <div class="text-2xl font-bold">JUN</div>
+                                <div class="text-lg">5</div>
+                            </div>
+                            <div>
+                                <h4 class="font-bold">International Student Orientation</h4>
+                                <p class="text-sm text-blue-100">International Center, 9:00 AM</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ALUMNI & GIVING ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Alumni & Giving</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Join our global network of 50,000+ alumni and support the next generation of leaders</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 items-center mb-12">
+                <div>
+                    <h3 class="text-2xl font-bold mb-6 text-miu-primary">Alumni Network</h3>
+                    <p class="text-gray-600 mb-6">Our alumni are making an impact in every industry worldwide. Stay connected through regional chapters, mentorship programs, and exclusive events.</p>
+
+                    <div class="grid grid-cols-2 gap-4 mb-8">
+                        <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="text-3xl font-bold text-miu-primary mb-2">50K+</div>
+                            <div class="text-sm text-gray-600">Alumni Worldwide</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="text-3xl font-bold text-miu-primary mb-2">40+</div>
+                            <div class="text-sm text-gray-600">Regional Chapters</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="text-3xl font-bold text-miu-primary mb-2">85%</div>
+                            <div class="text-sm text-gray-600">Career Satisfaction</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-md">
+                            <div class="text-3xl font-bold text-miu-primary mb-2">$2.5M</div>
+                            <div class="text-sm text-gray-600">Annual Scholarships Funded</div>
+                        </div>
+                    </div>
+
+                    <a href="#" class="inline-block bg-miu-secondary text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-lg">
+                        Join Alumni Network
+                    </a>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="text-2xl font-bold mb-6 text-miu-primary">Ways to Give</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-start border-b pb-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <span class="text-blue-600 text-xl">🎓</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg mb-1">Student Scholarships</h4>
+                                <p class="text-gray-600 text-sm">Support deserving students with financial need</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start border-b pb-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <span class="text-green-600 text-xl">🏛️</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg mb-1">Facility Enhancement</h4>
+                                <p class="text-gray-600 text-sm">Modernize classrooms and research facilities</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                                <span class="text-purple-600 text-xl">🔬</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg mb-1">Research Funds</h4>
+                                <p class="text-gray-600 text-sm">Advance groundbreaking research initiatives</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-miu-primary to-blue-900 rounded-2xl p-8 text-white">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="mb-6 md:mb-0">
+                        <h3 class="font-bold text-2xl mb-2">Make an Impact Today</h3>
+                        <p class="text-blue-100">Your support transforms lives and shapes futures</p>
+                    </div>
+                    <div class="flex flex-wrap gap-4">
+                        <button class="bg-white text-miu-primary px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg">
+                            Make a Gift
+                        </button>
+                        <button class="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-miu-primary transition-all">
+                            Planned Giving
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= INTERNATIONAL STUDENTS ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">International Students</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Welcome to our diverse community of students from 120+ countries</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 mb-12">
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-bold mb-6 text-miu-primary">Global Community</h3>
+                        <p class="text-gray-600 mb-6">At MIU, we celebrate diversity and provide comprehensive support for international students throughout their educational journey.</p>
+
+                        <div class="bg-blue-50 rounded-xl p-6">
+                            <h4 class="font-bold text-lg mb-4 text-blue-800">International Student Support</h4>
+                            <ul class="space-y-3">
+                                <li class="flex items-center">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 text-sm">✓</span>
+                                    </span>
+                                    <span>Visa and immigration assistance</span>
+                                </li>
+                                <li class="flex items-center">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 text-sm">✓</span>
+                                    </span>
+                                    <span>Airport pickup and arrival services</span>
+                                </li>
+                                <li class="flex items-center">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 text-sm">✓</span>
+                                    </span>
+                                    <span>International student orientation</span>
+                                </li>
+                                <li class="flex items-center">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                        <span class="text-blue-600 text-sm">✓</span>
+                                    </span>
+                                    <span>Cultural adjustment workshops</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-lg mb-4 text-miu-primary">Top Countries of Origin</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex items-center bg-white p-3 rounded-lg shadow-sm">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-blue-600">🇮🇳</span>
+                                </div>
+                                <span>India (18%)</span>
+                            </div>
+                            <div class="flex items-center bg-white p-3 rounded-lg shadow-sm">
+                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-green-600">🇨🇳</span>
+                                </div>
+                                <span>China (15%)</span>
+                            </div>
+                            <div class="flex items-center bg-white p-3 rounded-lg shadow-sm">
+                                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-purple-600">🇳🇬</span>
+                                </div>
+                                <span>Nigeria (12%)</span>
+                            </div>
+                            <div class="flex items-center bg-white p-3 rounded-lg shadow-sm">
+                                <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-yellow-600">🇧🇷</span>
+                                </div>
+                                <span>Brazil (8%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 campus-card">
+                    <h3 class="text-2xl font-bold mb-6 text-miu-primary">Application Requirements</h3>
+
+                    <div class="space-y-6">
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h4 class="font-bold text-lg mb-2">Academic Documents</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Official transcripts (translated if not in English)</li>
+                                <li>• Proof of English proficiency (TOEFL/IELTS)</li>
+                                <li>• Standardized test scores (if required)</li>
+                            </ul>
+                        </div>
+
+                        <div class="border-l-4 border-green-500 pl-4">
+                            <h4 class="font-bold text-lg mb-2">Visa Requirements</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Valid passport (6+ months validity)</li>
+                                <li>• Proof of financial support</li>
+                                <li>• I-20 form (for F-1 visa applicants)</li>
+                            </ul>
+                        </div>
+
+                        <div class="border-l-4 border-purple-500 pl-4">
+                            <h4 class="font-bold text-lg mb-2">Support Services</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Dedicated international student advisors</li>
+                                <li>• Cross-cultural training programs</li>
+                                <li>• Language support services</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-8 border-t">
+                        <h4 class="font-bold text-lg mb-4 text-miu-primary">Important Deadlines</h4>
+                        <div class="flex items-center justify-between bg-blue-50 p-4 rounded-lg">
+                            <div>
+                                <div class="font-bold">Fall Intake</div>
+                                <div class="text-sm text-gray-600">Application Deadline</div>
+                            </div>
+                            <div class="text-lg font-bold text-blue-700">June 1, 2025</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="#" class="inline-block bg-gradient-miu text-white px-8 py-4 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg mr-4">
+                    International Admissions
+                </a>
+                <a href="#" class="inline-block border-2 border-miu-secondary text-miu-secondary px-8 py-4 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all shadow-lg">
+                    Contact International Office
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= ACCREDITATION & RANKINGS ================= -->
+    <section class="py-20 bg-gradient-light">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Accreditation & Rankings</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Recognized excellence in higher education</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center campus-card">
+                    <div class="w-20 h-20 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="text-3xl">🏆</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-miu-primary">National Rankings</h3>
+                    <div class="space-y-4">
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-blue-600 mb-2">#25</div>
+                            <div class="text-gray-600">Best Online Programs<br>(U.S. News & World Report)</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-green-600 mb-2">#42</div>
+                            <div class="text-gray-600">Top Universities for<br>Career Outcomes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center campus-card">
+                    <div class="w-20 h-20 bg-gradient-to-r from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="text-3xl">✓</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-miu-primary">Accreditation</h3>
+                    <div class="space-y-6">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-blue-800 mb-2">Regional Accreditation</h4>
+                            <p class="text-sm text-gray-700">Accredited by the Higher Learning Commission (HLC)</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="font-bold text-green-800 mb-2">Program Accreditation</h4>
+                            <p class="text-sm text-gray-700">AACSB, ABET, and CCNE accredited programs</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center campus-card">
+                    <div class="w-20 h-20 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="text-3xl">🌍</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-4 text-miu-primary">Global Recognition</h3>
+                    <div class="space-y-4">
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-purple-600 mb-2">Top 200</div>
+                            <div class="text-gray-600">World University Rankings<br>(Times Higher Education)</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-yellow-600 mb-2">5 Stars</div>
+                            <div class="text-gray-600">QS Stars Rating for<br>Teaching & Facilities</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h3 class="text-2xl font-bold mb-6 text-center text-miu-primary">Quality Assurance</h3>
+                <div class="grid md:grid-cols-3 gap-6 text-center">
+                    <div class="p-4">
+                        <div class="text-3xl font-bold text-blue-600 mb-2">95%</div>
+                        <div class="font-medium text-gray-800">Student Satisfaction Rate</div>
+                        <div class="text-sm text-gray-600 mt-1">Based on annual surveys</div>
+                    </div>
+                    <div class="p-4">
+                        <div class="text-3xl font-bold text-green-600 mb-2">94%</div>
+                        <div class="font-medium text-gray-800">Graduation Rate</div>
+                        <div class="text-sm text-gray-600 mt-1">Within 6 years</div>
+                    </div>
+                    <div class="p-4">
+                        <div class="text-3xl font-bold text-purple-600 mb-2">92%</div>
+                        <div class="font-medium text-gray-800">Employer Satisfaction</div>
+                        <div class="text-sm text-gray-600 mt-1">With MIU graduates</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= GOVERNANCE & LEADERSHIP ================= -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">Governance & Leadership</h2>
+                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Guided by experienced leaders committed to educational excellence</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 mb-12">
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-64 bg-gradient-to-r from-blue-500 to-blue-700 flex items-center justify-center">
+                        <span class="text-5xl text-white">👨‍🎓</span>
+                    </div>
+                    <div class="p-6 text-center">
+                        <h3 class="font-bold text-xl mb-2 text-miu-primary">Dr. Michael Rodriguez</h3>
+                        <p class="text-miu-secondary font-semibold mb-3">University President</p>
+                        <p class="text-gray-600 text-sm">Former Dean of Harvard Graduate School of Education with 25+ years in academic leadership.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-64 bg-gradient-to-r from-green-500 to-green-700 flex items-center justify-center">
+                        <span class="text-5xl text-white">👩‍🏫</span>
+                    </div>
+                    <div class="p-6 text-center">
+                        <h3 class="font-bold text-xl mb-2 text-miu-primary">Dr. Sarah Chen</h3>
+                        <p class="text-miu-secondary font-semibold mb-3">Provost & Chief Academic Officer</p>
+                        <p class="text-gray-600 text-sm">Expert in curriculum development and online education with a PhD from Stanford University.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden campus-card">
+                    <div class="h-64 bg-gradient-to-r from-purple-500 to-purple-700 flex items-center justify-center">
+                        <span class="text-5xl text-white">👨‍💼</span>
+                    </div>
+                    <div class="p-6 text-center">
+                        <h3 class="font-bold text-xl mb-2 text-miu-primary">Robert Johnson</h3>
+                        <p class="text-miu-secondary font-semibold mb-3">Chair, Board of Trustees</p>
+                        <p class="text-gray-600 text-sm">Technology entrepreneur and philanthropist dedicated to educational innovation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-miu-primary to-blue-900 rounded-2xl p-8 text-white">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h3 class="font-bold text-2xl mb-4">Governance Structure</h3>
+                        <p class="mb-6 text-blue-100">MIU operates under a shared governance model with representation from faculty, staff, students, and alumni.</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">✓</span>
+                                </span>
+                                <span>Board of Trustees (15 members)</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">✓</span>
+                                </span>
+                                <span>Academic Senate (Faculty Governance)</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">✓</span>
+                                </span>
+                                <span>Student Government Association</span>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-white text-sm">✓</span>
+                                </span>
+                                <span>Alumni Advisory Council</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="bg-white/10 rounded-xl p-6 backdrop-blur-sm">
+                        <h4 class="font-bold text-xl mb-4">Strategic Priorities</h4>
+                        <div class="space-y-4">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-miu-accent rounded-full mr-3"></div>
+                                <span>Enhance Global Learning Opportunities</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-miu-accent rounded-full mr-3"></div>
+                                <span>Advance Research and Innovation</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-miu-accent rounded-full mr-3"></div>
+                                <span>Promote Diversity and Inclusion</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 bg-miu-accent rounded-full mr-3"></div>
+                                <span>Expand Community Engagement</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+
+    <!-- ================= TESTIMONIAL CAROUSEL ================= -->
+    <section class="py-20 testimonial-bg">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-miu-primary mb-4 font-serif">What Our Students Say</h2>
+                <p class="text-gray-600">Hear from our global community of learners</p>
+            </div>
+
+            <div id="testimonial" class="bg-white shadow-2xl rounded-2xl p-12 relative">
+                <div class="text-6xl text-miu-accent mb-6">"</div>
+                <p id="quote" class="italic text-gray-700 text-xl mb-8 leading-relaxed">
+                    "MIU's flexible online platform allowed me to complete my MBA while working full-time. The faculty support was exceptional, and I've already seen career advancement."
+                </p>
+                <div class="flex items-center">
+                    <div class="w-16 h-16 bg-gradient-to-r from-miu-primary to-miu-secondary rounded-full flex items-center justify-center text-white font-bold text-xl mr-4">
+                        SK
+                    </div>
+                    <div>
+                        <p id="author" class="font-bold text-lg">
+                            Sarah K.
+                        </p>
+                        <p class="text-gray-600">MBA Graduate, 2023</p>
+                    </div>
+                </div>
+
+                <!-- Testimonial Indicators -->
+                <div class="flex justify-center mt-8 space-x-2">
+                    <button class="testimonial-indicator w-2 h-2 rounded-full bg-gray-300 hover:bg-miu-secondary transition-colors" data-index="0"></button>
+                    <button class="testimonial-indicator w-2 h-2 rounded-full bg-gray-300 hover:bg-miu-secondary transition-colors" data-index="1"></button>
+                    <button class="testimonial-indicator w-2 h-2 rounded-full bg-gray-300 hover:bg-miu-secondary transition-colors" data-index="2"></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+{% endblock %}

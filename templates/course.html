@@ -1,5 +1,15 @@
 {% extends 'base.html' %}
 
+{% load static %}
+
+{% block style %}
+    <link rel="stylesheet" href="{% static 'css/course.css' %}">
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'js/course.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 <!-- ================= ADMISSION HERO ================= -->
 <section class="pt-24 pb-16 admission-hero text-white">

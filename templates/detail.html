@@ -1,5 +1,15 @@
 {% extends 'base.html' %}
 
+{% load static %}
+
+{% block style %}
+    <link rel="stylesheet" href="{% static 'css/detail.css' %}">
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'js/detail.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 
 <!-- ================= COURSE HEADER ================= -->

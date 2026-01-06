@@ -1,0 +1,159 @@
+.chat-message {
+    animation: messageAppear 0.3s ease-out;
+}
+
+.user-message .message-content {
+    background: linear-gradient(135deg, #0F2A44, #1D4ED8);
+    color: white;
+    border-radius: 18px;
+    border-bottom-right-radius: 4px;
+}
+
+.bot-message .message-content {
+    background: #F3F4F6;
+    color: #1F2937;
+    border-radius: 18px;
+    border-top-left-radius: 4px;
+}
+
+@keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chatbot-enter {
+    animation: chatbotEnter 0.3s ease-out;
+}
+
+.chatbot-exit {
+    animation: chatbotExit 0.3s ease-in;
+}
+
+@keyframes chatbotEnter {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes chatbotExit {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+}
+
+#chatMessages::-webkit-scrollbar {
+    width: 6px;
+}
+
+#chatMessages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#chatMessages::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#chatMessages::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #9CA3AF;
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-10px);
+    }
+}
+
+.message-content a {
+    color: #1D4ED8;
+    text-decoration: underline;
+}
+
+.message-content ul {
+    list-style-type: disc;
+    margin-left: 20px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.message-content li {
+    margin-bottom: 4px;
+}
+
+@media (max-width: 640px) {
+    #studentLifeChatbot {
+        bottom: 4;
+        right: 4;
+    }
+
+    #chatbotWindow {
+        width: calc(100vw - 32px);
+        height: 70vh;
+        right: 0;
+        bottom: 80px;
+    }
+
+    #quickMenu {
+        width: calc(100vw - 32px);
+        right: 0;
+        bottom: 80px;
+    }
+}
+
+.border-t.border-gray-200.p-4 {
+    margin-bottom: 1rem;
+}
+
+#chatbotWindow {
+    padding-bottom: 1.25rem;
+}

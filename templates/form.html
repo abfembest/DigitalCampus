@@ -1,5 +1,15 @@
 {% extends 'base.html' %}
 
+{% load static %}
+
+{% block style %}
+    <link rel="stylesheet" href="{% static 'css/form.css' %}">
+{% endblock %}
+
+{% block js %}
+    <script src="{% static 'js/form.js' %}"></script>
+{% endblock %}
+
 {% block content %}
     <!-- ================= HERO CAROUSEL ================= -->
     <section class="pt-24 relative overflow-hidden">

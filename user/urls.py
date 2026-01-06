@@ -3,5 +3,8 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('course/', views.course, name='course'),
+    path('about/', views.about, name='about'),
+    path('admission/apply/', views.apply, name='apply'),
+    path('admission/course/', views.admission_course, name='admission_course'),
+    path('admission/detail/', views.detail, name='detail'),
 ]

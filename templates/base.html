@@ -397,7 +397,7 @@
             </div>
 
             <ul class="hidden lg:flex items-center space-x-8">
-                <li><a href="#about" class="hover:text-miu-secondary font-medium transition-colors">About</a></li>
+                <li><a href="{% url 'about' %}" class="hover:text-miu-secondary font-medium transition-colors">About</a></li>
 
                 <!-- Programs Dropdown for Desktop -->
                 <li class="relative">
@@ -405,19 +405,19 @@
                         Programs ▾
                     </button>
                     <ul id="programsMenuDesktop" class="absolute hidden mt-2 bg-white shadow-xl rounded-lg w-56 py-2 z-10 dropdown-enter">
-                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="course-detail.html">Business Administration</a></li>
-                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="#" data-program="cs">Computer Science</a></li>
-                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="#" data-program="data">Data Science</a></li>
-                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="#" data-program="health">Health Sciences</a></li>
-                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="#" data-program="engineering">Engineering</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="{% url 'detail' %}">Business Administration</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="{% url 'detail' %}" data-program="cs">Computer Science</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="{% url 'detail' %}" data-program="data">Data Science</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="{% url 'detail' %}" data-program="health">Health Sciences</a></li>
+                        <li><a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent" href="{% url 'detail' %}" data-program="engineering">Engineering</a></li>
                     </ul>
                 </li>
 
-                <li><a href="{% url 'course' %}" class="hover:text-miu-secondary font-medium transition-colors">Admissions</a></li>
+                <li><a href="{% url 'admission_course' %}" class="hover:text-miu-secondary font-medium transition-colors">Admissions</a></li>
                 <li><a href="#" class="hover:text-miu-secondary font-medium transition-colors">Research</a></li>
                 <li><a href="#" class="hover:text-miu-secondary font-medium transition-colors">Campus Life</a></li>
                 <li><a href="#contact" class="hover:text-miu-secondary font-medium transition-colors">Contact</a></li>
-                <li><a href="applicationform.html" class="bg-gradient-miu text-white px-6 py-2 rounded-lg hover:opacity-90 transition-all font-medium shadow-lg">Apply Now</a></li>
+                <li><a href="{% url 'apply' %}" class="bg-gradient-miu text-white px-6 py-2 rounded-lg hover:opacity-90 transition-all font-medium shadow-lg">Apply Now</a></li>
             </ul>
 
             <button id="menuBtn" class="lg:hidden text-2xl text-miu-primary focus:outline-none hover:text-miu-secondary transition-colors">☰</button>
@@ -425,7 +425,7 @@
 
         <!-- Mobile Menu with Beautiful Gradient Background -->
         <div id="mobileMenu" class="hidden lg:hidden mobile-menu-gradient text-white shadow-2xl">
-            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#about">
+            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="{% url 'about' %}">
                 <span class="flex items-center">
                     <span class="mr-3">🏛️</span> About
                 </span>

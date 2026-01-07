@@ -61,6 +61,7 @@
             </div>
 
             <ul class="hidden lg:flex items-center space-x-8">
+                <li><a href="{% url 'index' %}" class="hover:text-miu-secondary font-medium transition-colors">Home</a></li>
                 <li><a href="{% url 'about' %}" class="hover:text-miu-secondary font-medium transition-colors">About</a></li>
 
                 <!-- Programs Dropdown for Desktop -->
@@ -89,6 +90,11 @@
 
         <!-- Mobile Menu with Beautiful Gradient Background -->
         <div id="mobileMenu" class="hidden lg:hidden mobile-menu-gradient text-white shadow-2xl">
+            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="{% url 'index' %}">
+                <span class="flex items-center">
+                    <span class="mr-3">🏛️</span> Home
+                </span>
+            </a>
             <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="{% url 'about' %}">
                 <span class="flex items-center">
                     <span class="mr-3">🏛️</span> About
@@ -553,8 +559,7 @@
             </button>
         </div>
     </div>
-
-    {% block js %} <script src="{% static 'js/main.js' %}"></script> {% endblock %}
+ <script src="{% static 'js/main.js' %}"></script>
 
 </body>
 

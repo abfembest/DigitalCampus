@@ -105,14 +105,14 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // Form submission
-const contactForm = document.getElementById('contactForm');
-if (contactForm) {
-    contactForm.onsubmit = (e) => {
-        e.preventDefault();
-        alert("Thank you for your message! We'll contact you soon.");
-        contactForm.reset();
-    };
-}
+// const contactForm = document.getElementById('contactForm');
+// if (contactForm) {
+//     contactForm.onsubmit = (e) => {
+//         e.preventDefault();
+//         alert("Thank you for your message! We'll contact you soon.");
+//         contactForm.reset();
+//     };
+// }
 
 // Initialize first accordion as open
 if (accordionHeaders.length > 0) {

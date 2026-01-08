@@ -153,12 +153,12 @@ setInterval(() => {
 }, 6000);
 
 // Form submission
-const contactForm = document.getElementById('contactForm');
-contactForm.onsubmit = (e) => {
-    e.preventDefault();
-    alert("Thank you for your message! We'll contact you soon.");
-    contactForm.reset();
-};
+// const contactForm = document.getElementById('contactForm');
+// contactForm.onsubmit = (e) => {
+//     e.preventDefault();
+//     alert("Thank you for your message! We'll contact you soon.");
+//     contactForm.reset();
+// };
 
 // Video fallback if iframe fails
 window.addEventListener('load', () => {

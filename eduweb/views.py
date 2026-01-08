@@ -3,8 +3,12 @@ from django.contrib import messages
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
-from .forms import ContactForm
-from .models import ContactMessage
+from .forms import ContactForm, CourseApplicationForm
+from .models import ContactMessage, CourseApplication, CourseApplicationFile
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+import json
+from django.utils import timezone
 
 def index(request):
     return render(request, 'index.html')
@@ -12,8 +16,232 @@ def index(request):
 def about(request):
     return render(request, 'about.html')
 
+# REPLACE the apply function
+
 def apply(request):
-    return render(request, 'form.html')
+    if request.method == 'POST':
+        # Include request.FILES
+        form = CourseApplicationForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            try:
+                # 1. Save the main application data and individual files
+                application = form.save(commit=False)
+                
+                # Manually assign the single files from the form to the model
+                if request.FILES.get('transcripts_file'):
+                    application.transcripts_file = request.FILES['transcripts_file']
+                if request.FILES.get('english_proficiency_file'):
+                    application.english_proficiency_file = request.FILES['english_proficiency_file']
+                if request.FILES.get('personal_statement_file'):
+                    application.personal_statement_file = request.FILES['personal_statement_file']
+                if request.FILES.get('cv_file'):
+                    application.cv_file = request.FILES['cv_file']
+                
+                application.save()
+                
+                # 2. Handle the MULTIPLE additional files
+                additional_files = request.FILES.getlist('additional_files')
+                docs_meta = {
+                    'transcripts': application.transcripts_file.name if application.transcripts_file else None,
+                    'english': application.english_proficiency_file.name if application.english_proficiency_file else None,
+                    'statement': application.personal_statement_file.name if application.personal_statement_file else None,
+                    'cv': application.cv_file.name if application.cv_file else None,
+                    'additional': []
+                }
+
+                for f in additional_files:
+                    # Create a record for each file in the extra model
+                    CourseApplicationFile.objects.create(application=application, file=f)
+                    docs_meta['additional'].append(f.name)
+                
+                # Update the metadata JSON
+                application.documents_uploaded = docs_meta
+                application.save()
+                
+                # 3. Success logic
+                send_application_confirmation_email(application)
+                send_application_admin_notification(application)
+                
+                request.session['application_success'] = {
+                    'application_id': application.application_id,
+                    'name': application.get_full_name(),
+                }
+                return redirect('application_success')
+                
+            except Exception as e:
+                messages.error(request, f'Error submitting application: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CourseApplicationForm()
+    
+    return render(request, 'form.html', {'form': form})
+
+def application_success(request):
+    """Display application success page"""
+    success_data = request.session.get('application_success')
+    
+    if not success_data:
+        return redirect('apply')
+    
+    # Clear session data after retrieving
+    del request.session['application_success']
+    
+    return render(request, 'application_success.html', success_data)
+
+@require_POST
+def application_submit(request):
+    """Handle course application form submission via AJAX"""
+    try:
+        data = json.loads(request.body)
+        
+        # Parse academic history
+        academic_history = []
+        education_levels = data.get('educationLevel', [])
+        if not isinstance(education_levels, list):
+            education_levels = [education_levels] if education_levels else []
+        
+        institutions = data.get('institution', [])
+        if not isinstance(institutions, list):
+            institutions = [institutions] if institutions else []
+            
+        for i in range(len(education_levels)):
+            if education_levels[i]:
+                academic_history.append({
+                    'education_level': education_levels[i],
+                    'institution': institutions[i] if i < len(institutions) else '',
+                    'field_of_study': data.get('fieldOfStudy', [])[i] if isinstance(data.get('fieldOfStudy', []), list) and i < len(data.get('fieldOfStudy', [])) else '',
+                    'graduation_year': data.get('graduationYear', [])[i] if isinstance(data.get('graduationYear', []), list) and i < len(data.get('graduationYear', [])) else '',
+                    'gpa': data.get('gpa', [])[i] if isinstance(data.get('gpa', []), list) and i < len(data.get('gpa', [])) else '',
+                })
+        
+        # Get English proficiency data
+        english_proficiency = data.get('englishProficiency', '')
+        english_score = ''
+        if english_proficiency == 'toefl':
+            english_score = data.get('toeflScore', '')
+        elif english_proficiency == 'ielts':
+            english_score = data.get('ieltsScore', '')
+        elif english_proficiency == 'other':
+            english_score = data.get('otherTest', '')
+        
+        # Create application
+        application = CourseApplication.objects.create(
+            first_name=data.get('firstName', ''),
+            last_name=data.get('lastName', ''),
+            email=data.get('email', ''),
+            phone=data.get('phone', ''),
+            date_of_birth=data.get('dob', ''),
+            country=data.get('country', ''),
+            gender=data.get('gender', ''),
+            address=data.get('address', ''),
+            academic_history=academic_history,
+            english_proficiency=english_proficiency,
+            english_score=english_score,
+            additional_qualifications=data.get('additionalQualifications', ''),
+            program=data.get('program', ''),
+            degree_level=data.get('degreeLevel', ''),
+            study_mode=data.get('studyMode', ''),
+            intake=data.get('intake', ''),
+            scholarship=data.get('scholarship', False),
+            referral_source=data.get('referralSource', ''),
+            documents_uploaded=data.get('uploadedFiles', {}),
+            submitted=True,
+            submission_date=timezone.now()
+        )
+        
+        # Send confirmation emails
+        send_application_confirmation_email(application)
+        send_application_admin_notification(application)
+        
+        return JsonResponse({
+            'success': True,
+            'application_id': application.application_id,
+            'message': 'Application submitted successfully!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+    
+def send_application_confirmation_email(application):
+    """Send confirmation email to applicant"""
+    try:
+        subject = f'Application Received - {application.application_id}'
+        
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+                    <div style="background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%); padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">Application Received!</h1>
+                    </div>
+                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
+                        <p style="font-size: 16px;">Dear <strong>{application.first_name} {application.last_name}</strong>,</p>
+                        <p>Thank you for applying to Modern International University. We have received your application.</p>
+                        <div style="background-color: #E6F0FF; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                            <h3 style="color: #0F2A44; margin-top: 0;">Application Details</h3>
+                            <p><strong>Application ID:</strong> {application.application_id}</p>
+                            <p><strong>Program:</strong> {application.get_program_display_name()}</p>
+                            <p><strong>Degree Level:</strong> {application.get_degree_level_display_name()}</p>
+                            <p><strong>Submission Date:</strong> {application.submission_date.strftime('%B %d, %Y')}</p>
+                        </div>
+                        <p>Our admissions team will review your application and contact you within 5-7 business days.</p>
+                        <p>Best regards,<br><strong style="color: #0F2A44;">The MIU Admissions Team</strong></p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=f"Application ID: {application.application_id}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[application.email],
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        return True
+    except Exception as e:
+        print(f"Error sending confirmation email: {str(e)}")
+        return False
+
+
+def send_application_admin_notification(application):
+    """Send notification email to admin"""
+    try:
+        subject = f'New Application - {application.application_id}'
+        
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif;">
+                <h2>New Course Application Received</h2>
+                <p><strong>Application ID:</strong> {application.application_id}</p>
+                <p><strong>Name:</strong> {application.get_full_name()}</p>
+                <p><strong>Email:</strong> {application.email}</p>
+                <p><strong>Program:</strong> {application.get_program_display_name()}</p>
+                <p><strong>Degree Level:</strong> {application.get_degree_level_display_name()}</p>
+                <p><strong>Submitted:</strong> {application.submission_date.strftime('%Y-%m-%d %H:%M:%S')}</p>
+            </body>
+        </html>
+        """
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=f"New application from {application.get_full_name()}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[settings.CONTACT_EMAIL],
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        return True
+    except Exception as e:
+        print(f"Error sending admin notification: {str(e)}")
+        return False
 
 def detail(request):
     return render(request, 'detail.html')

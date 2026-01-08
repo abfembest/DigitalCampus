@@ -3,650 +3,589 @@
 {% load static %}
 
 {% block style %}
-    <link rel="stylesheet" href="{% static 'css/form.css' %}">
+<link rel="stylesheet" href="{% static 'css/form.css' %}">
 {% endblock %}
 
 {% block content %}
-    <!-- ================= HERO CAROUSEL ================= -->
-    <section class="pt-24 relative overflow-hidden">
-        <div id="carousel" class="relative h-[600px]">
+<!-- ================= HERO CAROUSEL ================= -->
+<section class="pt-24 relative overflow-hidden">
+    <div id="carousel" class="relative h-[600px]">
 
-            <!-- Slide 1 -->
-            <div class="slide hero-slide-1 absolute inset-0 text-white flex items-center">
-                <div class="max-w-7xl mx-auto px-4">
-                    <div class="max-w-2xl">
-                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
-                            Empowering Global Education
-                        </h1>
-                        <p class="mb-8 text-xl text-gray-200">World-class online education with flexibility and excellence. Join students from 120+ countries.</p>
-                        <div class="flex flex-wrap gap-4">
-                            <button class="bg-miu-accent text-miu-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-yellow-400 transition-colors shadow-lg">
-                                Apply Now
-                            </button>
-                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-primary transition-colors">
-                                Explore Programs
-                            </button>
-                        </div>
+        <!-- Slide 1 -->
+        <div class="slide hero-slide-1 absolute inset-0 text-white flex items-center">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="max-w-2xl">
+                    <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                        Empowering Global Education
+                    </h1>
+                    <p class="mb-8 text-xl text-gray-200">World-class online education with flexibility and excellence.
+                        Join students from 120+ countries.</p>
+                    <div class="flex flex-wrap gap-4">
+                        <button
+                            class="bg-miu-accent text-miu-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-yellow-400 transition-colors shadow-lg">
+                            Apply Now
+                        </button>
+                        <button
+                            class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-primary transition-colors">
+                            Explore Programs
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Slide 2 -->
-            <div class="slide hero-slide-2 hidden absolute inset-0 text-white flex items-center">
-                <div class="max-w-7xl mx-auto px-4">
-                    <div class="max-w-2xl">
-                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
-                            Learn From Anywhere
-                        </h1>
-                        <p class="mb-8 text-xl text-gray-200">Study at your pace with expert faculty and cutting-edge digital platforms.</p>
-                        <div class="flex flex-wrap gap-4">
-                            <button class="bg-white text-miu-secondary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg">
-                                Virtual Tour
-                            </button>
-                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-secondary transition-colors">
-                                Meet Our Faculty
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Slide 3 -->
-            <div class="slide hero-slide-3 hidden absolute inset-0 text-white flex items-center">
-                <div class="max-w-7xl mx-auto px-4">
-                    <div class="max-w-2xl">
-                        <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
-                            Build Your Future
-                        </h1>
-                        <p class="mb-8 text-xl text-gray-200">Career-focused programs designed for success in today's global marketplace.</p>
-                        <div class="flex flex-wrap gap-4">
-                            <button class="bg-miu-accent text-miu-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-yellow-400 transition-colors shadow-lg">
-                                View Careers
-                            </button>
-                            <button class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-primary transition-colors">
-                                Alumni Network
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Carousel Indicators -->
-            <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3">
-                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="0"></button>
-                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="1"></button>
-                <button class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity" data-index="2"></button>
             </div>
         </div>
-    </section>
 
-    
-    <!-- ================= APPLICATION FORM ================= -->
-    <section id="contact" class="py-10 bg-gradient-light">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="text-center mb-12">
-                <h1 class="text-4xl md:text-5xl font-bold text-miu-primary mb-4 font-serif">Course Application Form</h1>
-                <p class="text-gray-600 max-w-3xl mx-auto text-lg">Complete your application to Modern International University in 5 simple steps. Your progress will be saved automatically.</p>
-            </div>
-
-            <!-- Mobile Progress Indicator -->
-            <div class="mobile-progress-indicator">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="font-medium text-gray-800">Step <span id="mobileCurrentStep">1</span> of 5</span>
-                    <span class="text-sm font-bold text-miu-primary" id="mobileProgressPercentage">20%</span>
-                </div>
-                <div class="progress-bar-container">
-                    <div id="mobileProgressBar" class="progress-bar-fill" style="width: 20%"></div>
-                </div>
-                <div class="text-center">
-                    <span id="mobileStepTitle" class="text-miu-primary font-medium">Personal Information</span>
+        <!-- Slide 2 -->
+        <div class="slide hero-slide-2 hidden absolute inset-0 text-white flex items-center">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="max-w-2xl">
+                    <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                        Learn From Anywhere
+                    </h1>
+                    <p class="mb-8 text-xl text-gray-200">Study at your pace with expert faculty and cutting-edge
+                        digital platforms.</p>
+                    <div class="flex flex-wrap gap-4">
+                        <button
+                            class="bg-white text-miu-secondary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg">
+                            Virtual Tour
+                        </button>
+                        <button
+                            class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-secondary transition-colors">
+                            Meet Our Faculty
+                        </button>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <div class="flex flex-col lg:flex-row gap-8">
-                <!-- Progress Side Menu -->
-                <div class="progress-side-menu lg:w-1/4">
-                    <div class="bg-white rounded-xl shadow-lg p-6 sticky top-32">
-                        <h3 class="font-bold text-xl mb-6 text-miu-primary border-b pb-3">Application Stages</h3>
+        <!-- Slide 3 -->
+        <div class="slide hero-slide-3 hidden absolute inset-0 text-white flex items-center">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="max-w-2xl">
+                    <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight font-serif">
+                        Build Your Future
+                    </h1>
+                    <p class="mb-8 text-xl text-gray-200">Career-focused programs designed for success in today's global
+                        marketplace.</p>
+                    <div class="flex flex-wrap gap-4">
+                        <button
+                            class="bg-miu-accent text-miu-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-yellow-400 transition-colors shadow-lg">
+                            View Careers
+                        </button>
+                        <button
+                            class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-miu-primary transition-colors">
+                            Alumni Network
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <div class="space-y-2">
-                            <!-- Step 1 -->
-                            <div class="progress-step active flex items-start" data-step="1">
-                                <div class="step-number mr-3">1</div>
-                                <div>
-                                    <h4 class="font-bold text-gray-800">Personal Information</h4>
-                                    <p class="text-sm text-gray-500">Basic details & contact</p>
-                                </div>
-                            </div>
+        <!-- Carousel Indicators -->
+        <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3">
+            <button
+                class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity"
+                data-index="0"></button>
+            <button
+                class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity"
+                data-index="1"></button>
+            <button
+                class="carousel-indicator w-3 h-3 rounded-full bg-white opacity-50 hover:opacity-100 transition-opacity"
+                data-index="2"></button>
+        </div>
+    </div>
+</section>
 
-                            <!-- Step 2 -->
-                            <div class="progress-step flex items-start" data-step="2">
-                                <div class="step-number mr-3">2</div>
-                                <div>
-                                    <h4 class="font-bold text-gray-800">Academic History</h4>
-                                    <p class="text-sm text-gray-500">Education background</p>
-                                </div>
-                            </div>
 
-                            <!-- Step 3 -->
-                            <div class="progress-step flex items-start" data-step="3">
-                                <div class="step-number mr-3">3</div>
-                                <div>
-                                    <h4 class="font-bold text-gray-800">Course Selection</h4>
-                                    <p class="text-sm text-gray-500">Program & preferences</p>
-                                </div>
-                            </div>
+<!-- ================= APPLICATION FORM ================= -->
+<section id="contact" class="py-10 bg-gradient-light">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-miu-primary mb-4 font-serif">Course Application Form</h1>
+            <p class="text-gray-600 max-w-3xl mx-auto text-lg">Complete your application to Modern International
+                University in 5 simple steps. Your progress will be saved automatically.</p>
+        </div>
 
-                            <!-- Step 4 -->
-                            <div class="progress-step flex items-start" data-step="4">
-                                <div class="step-number mr-3">4</div>
-                                <div>
-                                    <h4 class="font-bold text-gray-800">Documents</h4>
-                                    <p class="text-sm text-gray-500">Upload supporting files</p>
-                                </div>
-                            </div>
+        <!-- Mobile Progress Indicator -->
+        <div class="mobile-progress-indicator">
+            <div class="flex justify-between items-center mb-2">
+                <span class="font-medium text-gray-800">Step <span id="mobileCurrentStep">1</span> of 5</span>
+                <span class="text-sm font-bold text-miu-primary" id="mobileProgressPercentage">20%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div id="mobileProgressBar" class="progress-bar-fill" style="width: 20%"></div>
+            </div>
+            <div class="text-center">
+                <span id="mobileStepTitle" class="text-miu-primary font-medium">Personal Information</span>
+            </div>
+        </div>
 
-                            <!-- Step 5 -->
-                            <div class="progress-step flex items-start" data-step="5">
-                                <div class="step-number mr-3">5</div>
-                                <div>
-                                    <h4 class="font-bold text-gray-800">Review & Submit</h4>
-                                    <p class="text-sm text-gray-500">Finalize application</p>
-                                </div>
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Progress Side Menu -->
+            <div class="progress-side-menu lg:w-1/4">
+                <div class="bg-white rounded-xl shadow-lg p-6 sticky top-32">
+                    <h3 class="font-bold text-xl mb-6 text-miu-primary border-b pb-3">Application Stages</h3>
+
+                    <div class="space-y-2">
+                        <!-- Step 1 -->
+                        <div class="progress-step active flex items-start" data-step="1">
+                            <div class="step-number mr-3">1</div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Personal Information</h4>
+                                <p class="text-sm text-gray-500">Basic details & contact</p>
                             </div>
                         </div>
 
-                        <div class="mt-8 pt-6 border-t">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm text-gray-600">Overall Progress</span>
-                                <span class="text-sm font-bold text-miu-primary" id="progressPercentage">20%</span>
+                        <!-- Step 2 -->
+                        <div class="progress-step flex items-start" data-step="2">
+                            <div class="step-number mr-3">2</div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Academic History</h4>
+                                <p class="text-sm text-gray-500">Education background</p>
                             </div>
-                            <div class="progress-bar-container">
-                                <div id="progressBar" class="progress-bar-fill" style="width: 20%"></div>
-                            </div>
+                        </div>
 
-                            <div class="mt-6 text-center">
-                                <button id="saveProgressBtn" class="text-miu-secondary hover:text-miu-primary font-medium text-sm">
-                                    💾 Save Progress & Continue Later
-                                </button>
+                        <!-- Step 3 -->
+                        <div class="progress-step flex items-start" data-step="3">
+                            <div class="step-number mr-3">3</div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Course Selection</h4>
+                                <p class="text-sm text-gray-500">Program & preferences</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="progress-step flex items-start" data-step="4">
+                            <div class="step-number mr-3">4</div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Documents</h4>
+                                <p class="text-sm text-gray-500">Upload supporting files</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 5 -->
+                        <div class="progress-step flex items-start" data-step="5">
+                            <div class="step-number mr-3">5</div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Review & Submit</h4>
+                                <p class="text-sm text-gray-500">Finalize application</p>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Form Content -->
-                <div class="form-content lg:w-3/4">
-                    <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
-                        <!-- Top Progress Bar -->
-                        <div class="mb-8">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="font-medium text-gray-800">Step <span id="currentStep">1</span> of 5</span>
-                                <span class="text-sm font-bold text-miu-primary" id="stepProgressPercentage">20%</span>
+                    <div class="mt-8 pt-6 border-t">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-600">Overall Progress</span>
+                            <span class="text-sm font-bold text-miu-primary" id="progressPercentage">20%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="progressBar" class="progress-bar-fill" style="width: 20%"></div>
+                        </div>
+
+                        <div class="mt-6 text-center">
+                            <button id="saveProgressBtn"
+                                class="text-miu-secondary hover:text-miu-primary font-medium text-sm">
+                                💾 Save Progress & Continue Later
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Content -->
+            <div class="form-content lg:w-3/4">
+                <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                    <!-- Top Progress Bar -->
+                    <div class="mb-8">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-gray-800">Step <span id="currentStep">1</span> of 5</span>
+                            <span class="text-sm font-bold text-miu-primary" id="stepProgressPercentage">20%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="stepProgressBar" class="progress-bar-fill" style="width: 20%"></div>
+                        </div>
+                        <div class="mt-2">
+                            <span id="stepTitle" class="text-miu-primary font-medium text-lg">Personal
+                                Information</span>
+                        </div>
+                    </div>
+
+                    <form id="applicationForm" method="POST" enctype="multipart/form-data" action="{% url 'apply' %}">
+                        {% csrf_token %}
+
+                        <!-- Hidden field to track current step -->
+                        <input type="hidden" name="current_step" id="currentStepInput" value="1">
+
+                        <!-- Step 1: Personal Information -->
+                        <div class="form-step active" id="step1">
+                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Personal Information</h2>
+                            <p class="text-gray-600 mb-6">Please provide your personal details and contact information.
+                            </p>
+
+                            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.first_name.label }}
+                                        <span class="text-red-500">*</span></label>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.first_name.errors.0 }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.last_name.label }} <span
+                                            class="text-red-500">*</span></label>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.last_name.errors.0 }}</p>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="progress-bar-container">
-                                <div id="stepProgressBar" class="progress-bar-fill" style="width: 20%"></div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">{{ form.email.label }} <span
+                                        class="text-red-500">*</span></label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.email.errors.0 }}</p>
+                                {% endif %}
                             </div>
-                            <div class="mt-2">
-                                <span id="stepTitle" class="text-miu-primary font-medium text-lg">Personal Information</span>
+
+                            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.phone.label }} <span
+                                            class="text-red-500">*</span></label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.phone.errors.0 }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.date_of_birth.label }}
+                                        <span class="text-red-500">*</span></label>
+                                    {{ form.date_of_birth }}
+                                    {% if form.date_of_birth.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.date_of_birth.errors.0 }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.country.label }} <span
+                                            class="text-red-500">*</span></label>
+                                    {{ form.country }}
+                                    {% if form.country.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.country.errors.0 }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.gender.label }} <span
+                                            class="text-red-500">*</span></label>
+                                    {{ form.gender }}
+                                    {% if form.gender.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.gender.errors.0 }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">{{ form.address.label }} <span
+                                        class="text-red-500">*</span></label>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.address.errors.0 }}</p>
+                                {% endif %}
                             </div>
                         </div>
 
-                        <form id="applicationForm">
-                            <!-- Step 1: Personal Information -->
-                            <div class="form-step active" id="step1">
-                                <h2 class="text-2xl font-bold text-miu-primary mb-2">Personal Information</h2>
-                                <p class="text-gray-600 mb-6">Please provide your personal details and contact information.</p>
+                        <!-- Step 2: Academic History - KEEP AS IS but update field names -->
+                        <div class="form-step" id="step2">
+                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Academic History</h2>
+                            <p class="text-gray-600 mb-6">Please provide details of your previous education. Click "Add
+                                More" to include multiple academic entries.</p>
 
-                                <div class="grid md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label class="block text-gray-700 mb-2 font-medium">First Name <span class="text-red-500">*</span></label>
-                                        <input type="text" name="firstName" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition">
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-gray-700 mb-2 font-medium">Last Name <span class="text-red-500">*</span></label>
-                                        <input type="text" name="lastName" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition">
-                                    </div>
-                                </div>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">Email Address <span class="text-red-500">*</span></label>
-                                    <input type="email" name="email" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition">
-                                </div>
-
-                                <div class="grid md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label class="block text-gray-700 mb-2 font-medium">Phone Number <span class="text-red-500">*</span></label>
-                                        <input type="tel" name="phone" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition">
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-gray-700 mb-2 font-medium">Date of Birth <span class="text-red-500">*</span></label>
-                                        <input type="date" name="dob" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition">
-                                    </div>
-                                </div>
-
-                                <div class="grid md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label class="block text-gray-700 mb-2 font-medium">Country of Citizenship <span class="text-red-500">*</span></label>
-                                        <select name="country" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white">
-                                            <option value="">Select Country</option>
-                                            <option value="US">United States</option>
-                                            <option value="UK">United Kingdom</option>
-                                            <option value="CA">Canada</option>
-                                            <option value="AU">Australia</option>
-                                            <option value="IN">India</option>
-                                            <option value="CN">China</option>
-                                            <option value="NG">Nigeria</option>
-                                            <option value="BR">Brazil</option>
-                                            <option value="OTHER">Other</option>
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-gray-700 mb-2 font-medium">Gender <span class="text-red-500">*</span></label>
-                                        <select name="gender" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white">
-                                            <option value="">Select Gender</option>
-                                            <option value="male">Male</option>
-                                            <option value="female">Female</option>
-                                            <option value="non-binary">Non-binary</option>
-                                            <option value="prefer-not-to-say">Prefer not to say</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">Current Address <span class="text-red-500">*</span></label>
-                                    <textarea name="address" rows="3" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition"></textarea>
-                                </div>
+                            <!-- Academic Entries Container -->
+                            <div id="academicEntriesContainer" class="mb-6">
+                                <!-- Entries added by JavaScript -->
                             </div>
 
-                            <!-- Step 2: Academic History -->
-                            <div class="form-step" id="step2">
-                                <h2 class="text-2xl font-bold text-miu-primary mb-2">Academic History</h2>
-                                <p class="text-gray-600 mb-6">Please provide details of your previous education. Click "Add More" to include multiple academic entries.</p>
-
-                                <!-- Academic Entries Container -->
-                                <div id="academicEntriesContainer" class="mb-6">
-                                    <!-- First entry will be added here by JavaScript -->
-                                </div>
-
-                                <!-- Add More Button -->
-                                <div class="text-center mb-6">
-                                    <button type="button" id="addAcademicEntryBtn" class="border-2 border-dashed border-miu-secondary text-miu-secondary px-6 py-3 rounded-lg font-medium hover:bg-miu-secondary hover:text-white transition-all">
-                                        + Add Another Academic Entry
-                                    </button>
-                                </div>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">English Language Proficiency <span class="text-red-500">*</span></label>
-                                    <div class="grid md:grid-cols-2 gap-4">
-                                        <div class="flex items-center">
-                                            <input type="radio" id="toefl" name="englishProficiency" value="toefl" class="mr-2">
-                                            <label for="toefl">TOEFL</label>
-                                            <input type="text" name="toeflScore" placeholder="Score" class="ml-2 p-2 border border-gray-300 rounded w-20">
-                                        </div>
-                                        <div class="flex items-center">
-                                            <input type="radio" id="ielts" name="englishProficiency" value="ielts" class="mr-2">
-                                            <label for="ielts">IELTS</label>
-                                            <input type="text" name="ieltsScore" placeholder="Score" class="ml-2 p-2 border border-gray-300 rounded w-20">
-                                        </div>
-                                        <div class="flex items-center">
-                                            <input type="radio" id="other-test" name="englishProficiency" value="other" class="mr-2">
-                                            <label for="other-test">Other</label>
-                                            <input type="text" name="otherTest" placeholder="Test name" class="ml-2 p-2 border border-gray-300 rounded w-32">
-                                        </div>
-                                        <div class="flex items-center">
-                                            <input type="radio" id="native" name="englishProficiency" value="native" class="mr-2">
-                                            <label for="native">Native Speaker</label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">Additional Qualifications or Certifications</label>
-                                    <textarea name="additionalQualifications" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition" placeholder="List any additional qualifications, certifications, or relevant coursework"></textarea>
-                                </div>
+                            <div class="text-center mb-6">
+                                <button type="button" id="addAcademicEntryBtn"
+                                    class="border-2 border-dashed border-miu-secondary text-miu-secondary px-6 py-3 rounded-lg font-medium hover:bg-miu-secondary hover:text-white transition-all">
+                                    + Add Another Academic Entry
+                                </button>
                             </div>
 
-                            <!-- Step 3: Course Selection -->
-                            <div class="form-step" id="step3">
-                                <h2 class="text-2xl font-bold text-miu-primary mb-2">Course Selection</h2>
-                                <p class="text-gray-600 mb-6">Select your preferred program and study options.</p>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">Program of Interest <span class="text-red-500">*</span></label>
-                                    <select name="program" required class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white">
-                                        <option value="">Select a Program</option>
-                                        <option value="business">Business Administration (MBA)</option>
-                                        <option value="computer-science">Computer Science</option>
-                                        <option value="data-science">Data Science</option>
-                                        <option value="engineering">Engineering</option>
-                                        <option value="health-sciences">Health Sciences</option>
-                                        <option value="psychology">Psychology</option>
-                                        <option value="economics">Economics</option>
-                                        <option value="law">Law</option>
-                                        <option value="arts">Arts & Humanities</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">Degree Level <span class="text-red-500">*</span></label>
-                                    <div class="grid md:grid-cols-3 gap-4">
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="bachelor" name="degreeLevel" value="bachelor" class="mr-3">
-                                            <div>
-                                                <label for="bachelor" class="font-medium cursor-pointer">Bachelor's</label>
-                                                <p class="text-sm text-gray-500">Undergraduate degree</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="master" name="degreeLevel" value="master" class="mr-3">
-                                            <div>
-                                                <label for="master" class="font-medium cursor-pointer">Master's</label>
-                                                <p class="text-sm text-gray-500">Graduate degree</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="phd" name="degreeLevel" value="phd" class="mr-3">
-                                            <div>
-                                                <label for="phd" class="font-medium cursor-pointer">PhD/Doctorate</label>
-                                                <p class="text-sm text-gray-500">Research degree</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">Study Mode <span class="text-red-500">*</span></label>
-                                    <div class="grid md:grid-cols-2 gap-4">
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="full-time" name="studyMode" value="full-time" class="mr-3">
-                                            <div>
-                                                <label for="full-time" class="font-medium cursor-pointer">Full-time</label>
-                                                <p class="text-sm text-gray-500">On campus</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="part-time" name="studyMode" value="part-time" class="mr-3">
-                                            <div>
-                                                <label for="part-time" class="font-medium cursor-pointer">Part-time</label>
-                                                <p class="text-sm text-gray-500">Flexible schedule</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="online" name="studyMode" value="online" class="mr-3">
-                                            <div>
-                                                <label for="online" class="font-medium cursor-pointer">Online</label>
-                                                <p class="text-sm text-gray-500">Remote learning</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="hybrid" name="studyMode" value="hybrid" class="mr-3">
-                                            <div>
-                                                <label for="hybrid" class="font-medium cursor-pointer">Hybrid</label>
-                                                <p class="text-sm text-gray-500">Mix of online & on-campus</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">Intake Semester <span class="text-red-500">*</span></label>
-                                    <div class="grid md:grid-cols-3 gap-4">
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="fall-2025" name="intake" value="fall-2025" class="mr-3">
-                                            <label for="fall-2025" class="font-medium cursor-pointer">Fall 2025</label>
-                                        </div>
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="spring-2026" name="intake" value="spring-2026" class="mr-3">
-                                            <label for="spring-2026" class="font-medium cursor-pointer">Spring 2026</label>
-                                        </div>
-                                        <div class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
-                                            <input type="radio" id="fall-2026" name="intake" value="fall-2026" class="mr-3">
-                                            <label for="fall-2026" class="font-medium cursor-pointer">Fall 2026</label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">Scholarship Consideration</label>
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">English Language Proficiency <span
+                                        class="text-red-500">*</span></label>
+                                <div class="grid md:grid-cols-2 gap-4">
                                     <div class="flex items-center">
-                                        <input type="checkbox" id="scholarship" name="scholarship" class="mr-3 h-5 w-5">
-                                        <label for="scholarship" class="font-medium">I would like to be considered for scholarships and financial aid</label>
+                                        <input type="radio" id="toefl" name="english_proficiency_type" value="toefl"
+                                            class="mr-2">
+                                        <label for="toefl">TOEFL</label>
+                                        <input type="text" name="toefl_score" placeholder="Score"
+                                            class="ml-2 p-2 border border-gray-300 rounded w-20">
                                     </div>
-                                    <p class="text-sm text-gray-500 mt-2">Check this box if you wish to be considered for merit-based scholarships and financial assistance programs.</p>
+                                    <div class="flex items-center">
+                                        <input type="radio" id="ielts" name="english_proficiency_type" value="ielts"
+                                            class="mr-2">
+                                        <label for="ielts">IELTS</label>
+                                        <input type="text" name="ielts_score" placeholder="Score"
+                                            class="ml-2 p-2 border border-gray-300 rounded w-20">
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="radio" id="other-test" name="english_proficiency_type"
+                                            value="other" class="mr-2">
+                                        <label for="other-test">Other</label>
+                                        <input type="text" name="other_test" placeholder="Test name"
+                                            class="ml-2 p-2 border border-gray-300 rounded w-32">
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="radio" id="native" name="english_proficiency_type" value="native"
+                                            class="mr-2">
+                                        <label for="native">Native Speaker</label>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Step 4: Documents -->
-                            <div class="form-step" id="step4">
-                                <h2 class="text-2xl font-bold text-miu-primary mb-2">Supporting Documents</h2>
-                                <p class="text-gray-600 mb-6">Click on any document below to upload it. All documents should be in PDF, DOC, DOCX, JPG, or PNG format.</p>
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">{{
+                                    form.additional_qualifications.label }}</label>
+                                {{ form.additional_qualifications }}
+                            </div>
+                        </div>
 
-                                <div class="mb-8">
-                                    <div class="file-upload-area p-8 text-center cursor-pointer" id="dropArea">
-                                        <div class="text-4xl mb-4">📄</div>
-                                        <h3 class="font-bold text-lg mb-2">Drag & drop files here</h3>
-                                        <p class="text-gray-500 mb-4">or click to browse all files</p>
-                                        <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.jpg,.png" class="hidden">
-                                        <button type="button" id="browseFilesBtn" class="bg-gradient-miu text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all">Browse Files</button>
-                                        <p class="text-sm text-gray-500 mt-4">Maximum file size: 10MB per file</p>
+                        <!-- Step 3: Course Selection -->
+                        <div class="form-step" id="step3">
+                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Course Selection</h2>
+                            <p class="text-gray-600 mb-6">Select your preferred program and study options.</p>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">{{ form.program.label }} <span
+                                        class="text-red-500">*</span></label>
+                                {{ form.program }}
+                                {% if form.program.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.program.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">{{ form.degree_level.label }} <span
+                                        class="text-red-500">*</span></label>
+                                <div class="grid md:grid-cols-3 gap-4">
+                                    {% for radio in form.degree_level %}
+                                    <div
+                                        class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
+                                        {{ radio.tag }}
+                                        <div class="ml-3">
+                                            <label for="{{ radio.id_for_label }}" class="font-medium cursor-pointer">{{
+                                                radio.choice_label }}</label>
+                                            <p class="text-sm text-gray-500">
+                                                {% if radio.choice_value == 'bachelor' %}Undergraduate degree
+                                                {% elif radio.choice_value == 'master' %}Graduate degree
+                                                {% else %}Research degree{% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.degree_level.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.degree_level.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">{{ form.study_mode.label }} <span
+                                        class="text-red-500">*</span></label>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    {% for radio in form.study_mode %}
+                                    <div
+                                        class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
+                                        {{ radio.tag }}
+                                        <div class="ml-3">
+                                            <label for="{{ radio.id_for_label }}" class="font-medium cursor-pointer">{{
+                                                radio.choice_label }}</label>
+                                            <p class="text-sm text-gray-500">
+                                                {% if radio.choice_value == 'full-time' %}On campus
+                                                {% elif radio.choice_value == 'part-time' %}Flexible schedule
+                                                {% elif radio.choice_value == 'online' %}Remote learning
+                                                {% else %}Mix of online & on-campus{% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.study_mode.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.study_mode.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">{{ form.intake.label }} <span
+                                        class="text-red-500">*</span></label>
+                                <div class="grid md:grid-cols-3 gap-4">
+                                    {% for radio in form.intake %}
+                                    <div
+                                        class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
+                                        {{ radio.tag }}
+                                        <label for="{{ radio.id_for_label }}" class="font-medium cursor-pointer ml-3">{{
+                                            radio.choice_label }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.intake.errors %}
+                                <p class="text-red-500 text-sm mt-1">{{ form.intake.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-6">
+                                <div class="flex items-center">
+                                    {{ form.scholarship }}
+                                    <label for="{{ form.scholarship.id_for_label }}" class="font-medium ml-3">{{
+                                        form.scholarship.label }}</label>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-2">Check this box if you wish to be considered for
+                                    merit-based scholarships and financial assistance programs.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Documents -->
+                        <div class="form-step" id="step4">
+                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Supporting Documents</h2>
+                            <p class="text-gray-600 mb-6">Upload your supporting documents. All files should be in PDF,
+                                DOC, DOCX, JPG, or PNG format.</p>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">Academic Transcripts <span
+                                        class="text-red-500">*</span></label>
+                                <input type="file" name="transcripts_file" accept=".pdf,.doc,.docx,.jpg,.png"
+                                    class="w-full p-3 border border-gray-300 rounded-lg">
+                                <p class="text-sm text-gray-500 mt-1">Official transcripts from all previous
+                                    institutions</p>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">Proof of English Proficiency</label>
+                                <input type="file" name="english_proficiency_file" accept=".pdf,.doc,.docx,.jpg,.png"
+                                    class="w-full p-3 border border-gray-300 rounded-lg">
+                                <p class="text-sm text-gray-500 mt-1">TOEFL, IELTS, or equivalent test scores</p>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">Personal Statement <span
+                                        class="text-red-500">*</span></label>
+                                <input type="file" name="personal_statement_file" accept=".pdf,.doc,.docx"
+                                    class="w-full p-3 border border-gray-300 rounded-lg">
+                                <p class="text-sm text-gray-500 mt-1">Statement of purpose (500-1000 words)</p>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">Curriculum Vitae / Resume</label>
+                                <input type="file" name="cv_file" accept=".pdf,.doc,.docx"
+                                    class="w-full p-3 border border-gray-300 rounded-lg">
+                                <p class="text-sm text-gray-500 mt-1">Detailed CV highlighting experience & achievements
+                                </p>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 mb-2 font-medium">Additional Documents
+                                    (Optional)</label>
+                                <input type="file" name="additional_files" accept=".pdf,.doc,.docx,.jpg,.png" multiple
+                                    class="w-full p-3 border border-gray-300 rounded-lg">
+                                <p class="text-sm text-gray-500 mt-1">You can select multiple files</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 5: Review & Submit -->
+                        <div class="form-step" id="step5">
+                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Review & Submit</h2>
+                            <p class="text-gray-600 mb-6">Please review your application details before submission.</p>
+
+                            <div class="mb-8">
+                                <div class="bg-blue-50 p-6 rounded-xl mb-6">
+                                    <h3 class="font-bold text-lg mb-4 text-blue-800">Application Summary</h3>
+                                    <div id="reviewSummary" class="text-sm text-gray-700">
+                                        <!-- Summary will be populated by JavaScript -->
                                     </div>
                                 </div>
 
                                 <div class="mb-6">
-                                    <h3 class="font-bold text-lg mb-4 text-miu-primary">Required Documents (Click to Upload)</h3>
-                                    <div class="space-y-4">
-                                        <!-- Transcripts -->
-                                        <div class="document-item p-4 border rounded-lg" data-doc-type="transcripts" onclick="uploadSpecificDocument('transcripts')">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center">
-                                                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                                                        <span class="text-blue-600 text-xl">📑</span>
-                                                    </div>
-                                                    <div>
-                                                        <span class="font-medium">Academic Transcripts</span>
-                                                        <p class="text-sm text-gray-500">Official transcripts from all previous institutions</p>
-                                                    </div>
-                                                </div>
-                                                <div class="flex items-center">
-                                                    <span class="text-sm text-gray-500 mr-4" id="transcriptStatus">Click to upload</span>
-                                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                                        <span class="text-gray-400">📄</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- English Proficiency -->
-                                        <div class="document-item p-4 border rounded-lg" data-doc-type="english" onclick="uploadSpecificDocument('english')">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center">
-                                                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                                                        <span class="text-green-600 text-xl">🇬🇧</span>
-                                                    </div>
-                                                    <div>
-                                                        <span class="font-medium">Proof of English Proficiency</span>
-                                                        <p class="text-sm text-gray-500">TOEFL, IELTS, or equivalent test scores</p>
-                                                    </div>
-                                                </div>
-                                                <div class="flex items-center">
-                                                    <span class="text-sm text-gray-500 mr-4" id="englishStatus">Click to upload</span>
-                                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                                        <span class="text-gray-400">📄</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Personal Statement -->
-                                        <div class="document-item p-4 border rounded-lg" data-doc-type="statement" onclick="uploadSpecificDocument('statement')">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center">
-                                                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-                                                        <span class="text-purple-600 text-xl">📝</span>
-                                                    </div>
-                                                    <div>
-                                                        <span class="font-medium">Personal Statement</span>
-                                                        <p class="text-sm text-gray-500">Statement of purpose (500-1000 words)</p>
-                                                    </div>
-                                                </div>
-                                                <div class="flex items-center">
-                                                    <span class="text-sm text-gray-500 mr-4" id="statementStatus">Click to upload</span>
-                                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                                        <span class="text-gray-400">📄</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- CV/Resume -->
-                                        <div class="document-item p-4 border rounded-lg" data-doc-type="cv" onclick="uploadSpecificDocument('cv')">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center">
-                                                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
-                                                        <span class="text-yellow-600 text-xl">📋</span>
-                                                    </div>
-                                                    <div>
-                                                        <span class="font-medium">Curriculum Vitae / Resume</span>
-                                                        <p class="text-sm text-gray-500">Detailed CV highlighting experience & achievements</p>
-                                                    </div>
-                                                </div>
-                                                <div class="flex items-center">
-                                                    <span class="text-sm text-gray-500 mr-4" id="cvStatus">Click to upload</span>
-                                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                                        <span class="text-gray-400">📄</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.referral_source.label
+                                        }}</label>
+                                    {{ form.referral_source }}
                                 </div>
 
                                 <div class="mb-6">
-                                    <h3 class="font-bold text-lg mb-4 text-miu-primary">Additional Documents (Optional)</h3>
-                                    <div class="space-y-4" id="additionalFiles">
-                                        <p class="text-gray-500 text-sm">No additional documents uploaded yet. Use the upload area above or click "Browse Files" to add additional documents.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Step 5: Review & Submit -->
-                            <div class="form-step" id="step5">
-                                <h2 class="text-2xl font-bold text-miu-primary mb-2">Review & Submit</h2>
-                                <p class="text-gray-600 mb-6">Please review your application details before submission.</p>
-
-                                <div class="mb-8">
-                                    <div class="bg-blue-50 p-6 rounded-xl mb-6">
-                                        <h3 class="font-bold text-lg mb-4 text-blue-800">Application Summary</h3>
-
-                                        <div class="grid md:grid-cols-2 gap-4">
-                                            <div>
-                                                <h4 class="font-medium text-gray-700 mb-2">Personal Information</h4>
-                                                <div id="reviewPersonal" class="text-sm text-gray-600">
-                                                    <!-- Filled by JavaScript -->
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <h4 class="font-medium text-gray-700 mb-2">Academic History</h4>
-                                                <div id="reviewAcademic" class="text-sm text-gray-600">
-                                                    <!-- Filled by JavaScript -->
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <h4 class="font-medium text-gray-700 mb-2">Course Selection</h4>
-                                                <div id="reviewCourse" class="text-sm text-gray-600">
-                                                    <!-- Filled by JavaScript -->
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <h4 class="font-medium text-gray-700 mb-2">Documents</h4>
-                                                <div id="reviewDocuments" class="text-sm text-gray-600">
-                                                    <!-- Filled by JavaScript -->
-                                                </div>
-                                            </div>
+                                    <div class="flex items-start">{{ form.declaration }}
+                                        <div class="ml-3">
+                                            <label for="{{ form.declaration.id_for_label }}"
+                                                class="font-medium">Declaration <span
+                                                    class="text-red-500">*</span></label>
+                                            <p class="text-sm text-gray-600 mt-1">I certify that the information
+                                                provided in this application is true, complete, and accurate to the best
+                                                of my knowledge.</p>
                                         </div>
                                     </div>
-
-                                    <div class="mb-6">
-                                        <label class="block text-gray-700 mb-2 font-medium">How did you hear about MIU?</label>
-                                        <select name="referralSource" class="w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white">
-                                            <option value="">Select an option</option>
-                                            <option value="search-engine">Search Engine (Google, etc.)</option>
-                                            <option value="social-media">Social Media</option>
-                                            <option value="friend-family">Friend or Family</option>
-                                            <option value="education-fair">Education Fair</option>
-                                            <option value="school-counselor">School Counselor</option>
-                                            <option value="alumni">MIU Alumni</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="mb-6">
-                                        <div class="flex items-start">
-                                            <input type="checkbox" id="declaration" name="declaration" required class="mr-3 mt-1 h-5 w-5">
-                                            <div>
-                                                <label for="declaration" class="font-medium">Declaration <span class="text-red-500">*</span></label>
-                                                <p class="text-sm text-gray-600 mt-1">I certify that the information provided in this application is true, complete, and accurate to the best of my knowledge. I understand that any misrepresentation may result in rejection of my application or termination of enrollment.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-6">
-                                        <div class="flex items-start">
-                                            <input type="checkbox" id="privacy" name="privacy" required class="mr-3 mt-1 h-5 w-5">
-                                            <div>
-                                                <label for="privacy" class="font-medium">Privacy Policy <span class="text-red-500">*</span></label>
-                                                <p class="text-sm text-gray-600 mt-1">I have read and agree to the MIU Privacy Policy and understand that my data will be processed in accordance with this policy.</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {% if form.declaration.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.declaration.errors.0 }}</p>
+                                    {% endif %}
                                 </div>
 
-                                <!-- Success Message (Initially Hidden) -->
-                                <div id="successMessage" class="hidden text-center p-8 bg-green-50 rounded-xl border border-green-200">
-                                    <div class="success-checkmark mb-6">
-                                        <span class="text-white text-3xl">✓</span>
+                                <div class="mb-6">
+                                    <div class="flex items-start">
+                                        {{ form.privacy }}
+                                        <div class="ml-3">
+                                            <label for="{{ form.privacy.id_for_label }}" class="font-medium">Privacy
+                                                Policy <span class="text-red-500">*</span></label>
+                                            <p class="text-sm text-gray-600 mt-1">I have read and agree to the MIU
+                                                Privacy Policy.</p>
+                                        </div>
                                     </div>
-                                    <h3 class="text-2xl font-bold text-green-800 mb-2">Application Submitted Successfully!</h3>
-                                    <p class="text-green-700 mb-6">Thank you for applying to Modern International University. Your application has been received and is under review.</p>
-                                    <div class="bg-white p-6 rounded-lg inline-block">
-                                        <p class="font-medium mb-2">Your Application ID: <span id="applicationId" class="text-miu-primary">MIU-2025-#####</span></p>
-                                        <p class="text-sm text-gray-600">Please save this ID for future reference. You will receive a confirmation email shortly.</p>
-                                    </div>
-                                    <div class="mt-8">
-                                        <a href="#" class="bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg mr-4">Return to Homepage</a>
-                                        <a href="#" class="border-2 border-miu-secondary text-miu-secondary px-8 py-3 rounded-lg font-semibold hover:bg-miu-secondary hover:text-white transition-all">Download Application Copy</a>
-                                    </div>
+                                    {% if form.privacy.errors %}
+                                    <p class="text-red-500 text-sm mt-1">{{ form.privacy.errors.0 }}</p>
+                                    {% endif %}
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Navigation Buttons -->
-                            <div class="flex justify-between pt-8 border-t mt-8">
-                                <button type="button" id="prevBtn" class="border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all hidden">
-                                    ← Previous Step
-                                </button>
+                        <!-- Display form-level errors -->
+                        {% if form.non_field_errors %}
+                        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <ul class="list-disc list-inside text-red-700">
+                                {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
 
-                                <button type="button" id="nextBtn" class="bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg ml-auto">
-                                    Next Step →
-                                </button>
+                        <!-- Navigation Buttons -->
+                        <div class="flex justify-between pt-8 border-t mt-8">
+                            <button type="button" id="prevBtn"
+                                class="border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all hidden">
+                                ← Previous Step
+                            </button>
 
-                                <button type="submit" id="submitBtn" class="bg-green-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all shadow-lg hidden">
-                                    Submit Application
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                            <button type="button" id="nextBtn"
+                                class="bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg ml-auto">
+                                Next Step →
+                            </button>
+
+                            <button type="submit" id="submitBtn"
+                                class="bg-green-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all shadow-lg hidden">
+                                Submit Application
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </section>
-{% endblock %}
+    </div>
+</section>
 
-{% block js %}
-    <script src="{% static 'js/form.js' %}"></script>
+<!-- <script src="{% static 'js/form.js' %}"></script> -->
+
 {% endblock %}

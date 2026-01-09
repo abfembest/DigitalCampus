@@ -123,20 +123,31 @@
                     </button>
                 </div>
                 <div class="bg-gray-100 h-80 rounded-2xl overflow-hidden shadow-xl">
+
                     <!-- Video Section -->
-                    <div class="video-container">
-                        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ?modestbranding=1&rel=0&showinfo=0"
+                    <div class="video-container w-full h-full">
+                        <iframe class="w-full h-full"
+                                src="https://www.youtube.com/embed/wzcQ5_XU58I?start=4"
                                 title="MIU Global Learning Community"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                frameborder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                referrerpolicy="strict-origin-when-cross-origin"
                                 allowfullscreen>
                         </iframe>
                     </div>
+
                     <!-- Fallback content if video fails to load -->
                     <div id="videoFallback" class="hidden w-full h-full bg-gradient-to-br from-miu-primary to-miu-secondary opacity-90 flex items-center justify-center flex-col p-4">
-                        <span class="text-white text-2xl font-serif font-bold text-center mb-4">Global Learning Community</span>
-                        <p class="text-white text-center">Experience our international campus and diverse community of learners</p>
+                        <span class="text-white text-2xl font-serif font-bold text-center mb-4">
+                            Global Learning Community
+                        </span>
+                        <p class="text-white text-center">
+                            Experience our international campus and diverse community of learners
+                        </p>
                     </div>
+
                 </div>
+
             </div>
         </div>
     </section>

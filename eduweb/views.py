@@ -249,6 +249,13 @@ def detail(request):
 def admission_course(request):
     return render(request, 'course.html')
 
+def admission_requirement(request):
+    return render(request, 'admission_requirement.html')
+
+
+def blank_page(request):
+    return render(request, 'blank_page.html')
+
 def contact_submit(request):
     if request.method == 'POST':
         form = ContactForm(request.POST)

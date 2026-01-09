@@ -1,0 +1,136 @@
+{% load static %}
+
+<div id="studentLifeChatbot" class="fixed bottom-6 right-6 z-50">
+    <button id="chatbotToggle"
+            class="w-16 h-16 bg-gradient-miu rounded-full flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-miu-accent">
+        <div id="chatbotIcon" class="text-white text-2xl transition-transform duration-300">💬</div>
+        <div id="notificationBadge"
+             class="absolute -top-1 -right-1 w-6 h-6 bg-miu-accent rounded-full flex items-center justify-center text-xs font-bold text-miu-primary hidden">
+            3
+        </div>
+    </button>
+
+    <div id="chatbotWindow"
+         class="hidden absolute bottom-20 right-0 w-[calc(100vw-2rem)] md:w-96 h-[550px] md:h-[600px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 chatbot-enter">
+        
+        <div class="bg-gradient-miu text-white p-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-miu-primary mr-3 shadow-inner">
+                    <i data-lucide="bot" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm">MIU Student Assistant</h3>
+                    <div class="flex items-center">
+                        <span class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                        <span class="text-xs text-blue-100">Always Online</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <button id="chatbotMinimize" class="hover:bg-white/20 p-1.5 rounded-lg transition-colors" title="Minimize">
+                    <i data-lucide="minus" class="w-5 h-5"></i>
+                </button>
+                <button id="chatbotClose" class="hover:bg-white/20 p-1.5 rounded-lg transition-colors" title="Close">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="quickMenu" class="p-4 bg-gray-50 border-b border-gray-100">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-1">How can I help you today?</p>
+            <div class="grid grid-cols-2 gap-2">
+                <button class="quick-action p-2 text-left bg-white border border-gray-200 rounded-xl hover:border-miu-secondary hover:shadow-md transition-all group" data-action="explore">
+                    <span class="block text-lg mb-1 group-hover:scale-110 transition-transform">🎓</span>
+                    <span class="text-xs font-medium text-gray-700">Explore Campus</span>
+                </button>
+                <button class="quick-action p-2 text-left bg-white border border-gray-200 rounded-xl hover:border-miu-secondary hover:shadow-md transition-all group" data-action="support">
+                    <span class="block text-lg mb-1 group-hover:scale-110 transition-transform">📚</span>
+                    <span class="text-xs font-medium text-gray-700">Academic Help</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="chatMessages" class="flex-grow overflow-y-auto p-4 space-y-4 bg-white" style="height: calc(100% - 220px);">
+            <div class="chat-message bot-message">
+                <div class="flex items-start space-x-2">
+                    <div class="w-8 h-8 bg-gradient-miu rounded-full flex items-center justify-center text-white text-xs">AI</div>
+                    <div class="bg-gray-100 rounded-2xl rounded-tl-none p-3 max-w-[85%]">
+                        <p class="text-sm text-gray-800">👋 Welcome to MIU! I'm your Student Life Assistant. Feel free to ask me anything about campus life!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 bg-white border-t border-gray-100">
+            <div class="relative flex items-center space-x-2">
+                <input type="text" id="chatInput" 
+                       placeholder="Type your message..." 
+                       class="w-full bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-miu-secondary transition-all">
+                <button id="sendMessage" class="p-2 bg-gradient-miu text-white rounded-full hover:shadow-lg hover:scale-105 transition-all">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom MIU Colors & Gradients if not loaded via config */
+    .bg-gradient-miu { background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%); }
+    .text-miu-primary { color: #0F2A44; }
+    .bg-miu-accent { background-color: #FACC15; }
+
+    /* Animations from style.css */
+    @keyframes chatbotEnter {
+        from { opacity: 0; transform: scale(0.9) translateY(20px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .chatbot-enter { animation: chatbotEnter 0.3s ease-out forwards; }
+    
+    .chat-message { animation: messageAppear 0.3s ease-out; }
+    @keyframes messageAppear {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    // Initialize icons if standalone
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+</script>
+<script src="{% static 'js/main.js' %}"></script>
+
+<script>// Add this to your main.js if it's missing or update existing:
+document.addEventListener('DOMContentLoaded', function() {
+    const chatbotToggle = document.getElementById('chatbotToggle');
+    const chatbotWindow = document.getElementById('chatbotWindow');
+    const chatbotClose = document.getElementById('chatbotClose');
+    const chatbotMinimize = document.getElementById('chatbotMinimize');
+
+    function openChatbot() {
+        chatbotWindow.classList.remove('hidden');
+        chatbotWindow.classList.add('chatbot-enter');
+        document.getElementById('chatbotIcon').textContent = '×';
+    }
+
+    function closeChatbot() {
+        chatbotWindow.classList.add('hidden');
+        document.getElementById('chatbotIcon').textContent = '💬';
+    }
+
+    if (chatbotToggle) {
+        chatbotToggle.addEventListener('click', () => {
+            if (chatbotWindow.classList.contains('hidden')) {
+                openChatbot();
+            } else {
+                closeChatbot();
+            }
+        });
+    }
+
+    if (chatbotClose) chatbotClose.onclick = closeChatbot;
+    if (chatbotMinimize) chatbotMinimize.onclick = closeChatbot;
+});</script>

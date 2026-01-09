@@ -1,12 +1,17 @@
+
 // Mobile menu toggle
 const menuBtn = document.getElementById('menuBtn');
 const mobileMenu = document.getElementById('mobileMenu');
 
 menuBtn.onclick = () => {
     mobileMenu.classList.toggle("hidden");
-    // Close programs menu when mobile menu closes
+    // Close all dropdown menus when mobile menu closes
     programsMenuMobile.classList.add("hidden");
     programsArrowMobile.style.transform = "";
+    facultiesMenuMobile.classList.add("hidden");
+    facultiesArrowMobile.style.transform = "";
+    moreMenuMobile.classList.add("hidden");
+    moreArrowMobile.style.transform = "";
 };
 
 // Programs dropdown functionality for desktop
@@ -46,6 +51,46 @@ programsBtnMobile.addEventListener('click', (e) => {
     }
 });
 
+// Faculties dropdown functionality for mobile
+const facultiesBtnMobile = document.getElementById('facultiesBtnMobile');
+const facultiesMenuMobile = document.getElementById('facultiesMenuMobile');
+const facultiesArrowMobile = document.getElementById('facultiesArrowMobile');
+let facultiesMenuOpen = false;
+
+// Toggle mobile faculties menu
+facultiesBtnMobile.addEventListener('click', (e) => {
+    e.stopPropagation();
+    facultiesMenuOpen = !facultiesMenuOpen;
+    if (facultiesMenuOpen) {
+        facultiesMenuMobile.classList.remove("hidden");
+        facultiesMenuMobile.classList.add("dropdown-enter");
+        facultiesArrowMobile.style.transform = "rotate(180deg)";
+    } else {
+        facultiesMenuMobile.classList.add("hidden");
+        facultiesArrowMobile.style.transform = "";
+    }
+});
+
+// More dropdown functionality for mobile
+const moreBtnMobile = document.getElementById('moreBtnMobile');
+const moreMenuMobile = document.getElementById('moreMenuMobile');
+const moreArrowMobile = document.getElementById('moreArrowMobile');
+let moreMenuOpen = false;
+
+// Toggle mobile more menu
+moreBtnMobile.addEventListener('click', (e) => {
+    e.stopPropagation();
+    moreMenuOpen = !moreMenuOpen;
+    if (moreMenuOpen) {
+        moreMenuMobile.classList.remove("hidden");
+        moreMenuMobile.classList.add("dropdown-enter");
+        moreArrowMobile.style.transform = "rotate(180deg)";
+    } else {
+        moreMenuMobile.classList.add("hidden");
+        moreArrowMobile.style.transform = "";
+    }
+});
+
 // Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
     // Check if click is outside desktop programs dropdown
@@ -54,42 +99,36 @@ document.addEventListener('click', (e) => {
         programsMenuOpen = false;
     }
 
-    // For mobile, only close if clicking outside both menu button and mobile menu itself
+    // For mobile, close if clicking outside any mobile menu element
     if (window.innerWidth < 1024) {
-        if (!programsBtnMobile.contains(e.target) && !programsMenuMobile.contains(e.target) &&
-            !menuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+        const mobileMenuElements = [
+            programsBtnMobile, programsMenuMobile,
+            facultiesBtnMobile, facultiesMenuMobile,
+            moreBtnMobile, moreMenuMobile,
+            menuBtn, mobileMenu
+        ];
+
+        const isClickInside = mobileMenuElements.some(element =>
+            element && element.contains(e.target)
+        );
+
+        if (!isClickInside) {
             mobileMenu.classList.add("hidden");
             programsMenuMobile.classList.add("hidden");
             programsMenuOpen = false;
             programsArrowMobile.style.transform = "";
+            facultiesMenuMobile.classList.add("hidden");
+            facultiesMenuOpen = false;
+            facultiesArrowMobile.style.transform = "";
+            moreMenuMobile.classList.add("hidden");
+            moreMenuOpen = false;
+            moreArrowMobile.style.transform = "";
         }
     }
 });
 
-// Close dropdown when a program is selected
-const programLinks = document.querySelectorAll('[data-program]');
-programLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
-        e.preventDefault();
 
-        // Get the program type
-        const programType = link.getAttribute('data-program');
 
-        // Show selected program (in a real site, this would navigate to program page)
-        alert(`You selected: ${link.textContent}`);
-
-        // Close all dropdowns
-        programsMenuDesktop.classList.add("hidden");
-        programsMenuMobile.classList.add("hidden");
-        programsMenuOpen = false;
-        programsArrowMobile.style.transform = "";
-
-        // Also close mobile menu on mobile
-        if (window.innerWidth < 1024) {
-            mobileMenu.classList.add("hidden");
-        }
-    });
-});
 
 // Hero carousel
 let slides = document.querySelectorAll(".slide");

@@ -136,38 +136,140 @@
     box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
 }
 
-.map-container {
-    position: relative;
-    padding-bottom: 56.25%;
-    /* 16:9 aspect ratio for map */
-    height: 0;
-    overflow: hidden;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+
+/*Top nave CSS*/
+
+
+
+/* ========== ENHANCED DROPDOWN STYLES ========== */
+/* Enhanced dropdown animations */
+.group:hover .group-hover\:block {
+    display: block;
+    animation: dropdownEnter 0.25s ease-out;
 }
 
-.map-container iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-    filter: grayscale(20%) contrast(1.1);
+.group:hover .group-hover\:rotate-180 {
+    transform: rotate(180deg);
 }
 
-.map-overlay {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(15, 42, 68, 0.9);
-    color: white;
-    padding: 15px 25px;
-    border-radius: 0.75rem;
-    backdrop-filter: blur(5px);
-    z-index: 10;
-    border-left: 4px solid #FACC15;
+/* Purple gradient dropdown enhancement */
+.bg-gradient-to-br.from-purple-500.to-purple-700 {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    backdrop-filter: blur(10px);
 }
+
+/* Dropdown item hover effect enhancement */
+.hover\:bg-gradient-to-r.hover\:from-purple-400.hover\:to-purple-600:hover {
+    background: linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%);
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Enhanced dropdown shadow */
+.shadow-2xl {
+    box-shadow: 0 20px 40px rgba(139, 92, 246, 0.15), 0 10px 20px rgba(139, 92, 246, 0.1);
+}
+
+/* Reduce spacing between main menu items */
+.space-x-3 > * + * {
+    margin-left: 0.75rem;
+}
+
+/* Smaller text for main menu */
+.lg\\:flex .text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+/* Smooth transition for dropdown arrow */
+.transform.transition-transform {
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Desktop dropdown specific styles */
+@media (min-width: 1024px) {
+    /* Keep original focus style for desktop */
+    :focus-visible {
+        outline: 3px solid #FACC15;
+        outline-offset: 3px;
+    }
+
+    /* Compact header spacing */
+    header .max-w-7xl.mx-auto.px-4.py-4 {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    /* Enhanced dropdown item padding */
+    .group ul li a {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+}
+
+/* Ensure mobile menu remains unchanged */
+@media (max-width: 1023px) {
+    .mobile-menu-item {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+        padding-top: 1.25rem;
+        padding-bottom: 1.25rem;
+    }
+}
+
+/* Dropdown animation keyframes */
+.dropdown-enter {
+    animation: dropdownEnter 0.2s ease-out;
+}
+
+.dropdown-exit {
+    animation: dropdownExit 0.2s ease-in;
+}
+
+@keyframes dropdownEnter {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes dropdownExit {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Mobile menu gradient */
+.mobile-menu-gradient {
+    background: linear-gradient(135deg, rgba(15, 42, 68, 0.98) 0%, rgba(29, 78, 216, 0.95) 50%, rgba(59, 130, 246, 0.92) 100%);
+    backdrop-filter: blur(10px);
+}
+
+.mobile-menu-item {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+    .mobile-menu-item:hover {
+        border-left-color: #FACC15;
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(5px);
+    }
+
+    /*TOP NAV ENDS HERE*/
 
 .campus-card {
     transition: all 0.3s ease;
@@ -179,3 +281,16 @@
     transform: translateY(-5px);
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
 }
+
+.map-container {
+    width: 100%;
+    height: 50vh; /* reduced by half */
+    max-width: 100%;
+}
+
+    .map-container iframe,
+    .map-container embed {
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }

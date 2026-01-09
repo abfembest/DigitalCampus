@@ -61,134 +61,139 @@
                 <span class="text-2xl font-bold text-miu-primary">Modern International University</span>
             </div>
 
-            <ul class="hidden lg:flex items-center space-x-8">
-                <li>
-                    <a href="{% url 'index' %}" class="hover:text-miu-secondary font-medium transition-colors">Home</a>
-                </li>
-                <li>
-                    <a href="{% url 'about' %}" class="hover:text-miu-secondary font-medium transition-colors">About</a>
-                </li>
+            <!-- ================= ENHANCED NAVIGATION FOR LARGE SCREENS ================= -->
+            <ul class="hidden lg:flex items-center space-x-3">
+                <li><a href="#" class="hover:text-miu-secondary font-medium transition-colors px-2 py-1 text-sm">Home</a></li>
+                <li><a href="#about" class="hover:text-miu-secondary font-medium transition-colors px-2 py-1 text-sm">About Us</a></li>
 
                 <!-- Programs Dropdown for Desktop -->
-                <li class="relative">
-                    <button id="programsBtnDesktop"
-                            class="hover:text-miu-secondary font-medium transition-colors flex items-center focus:outline-none">
-                        Programs ▾
+                <li class="relative group">
+                    <button id="programsBtnDesktop" class="hover:text-miu-secondary font-medium transition-colors flex items-center focus:outline-none px-2 py-1 text-sm group">
+                        Programs <span class="ml-1 transform transition-transform group-hover:rotate-180">▾</span>
                     </button>
-                    <ul id="programsMenuDesktop"
-                        class="absolute hidden mt-2 bg-white shadow-xl rounded-lg w-56 py-2 z-10 dropdown-enter">
-                        <li>
-                            <a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent"
-                               href="{% url 'detail' %}">Business Administration</a>
-                        </li>
-                        <li>
-                            <a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent"
-                               href="{% url 'detail' %}" data-program="cs">Computer Science</a>
-                        </li>
-                        <li>
-                            <a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent"
-                               href="{% url 'detail' %}" data-program="data">Data Science</a>
-                        </li>
-                        <li>
-                            <a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent"
-                               href="{% url 'detail' %}" data-program="health">Health Sciences</a>
-                        </li>
-                        <li>
-                            <a class="block px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-colors border-l-4 border-transparent hover:border-miu-accent"
-                               href="{% url 'detail' %}" data-program="engineering">Engineering</a>
-                        </li>
+                    <ul id="programsMenuDesktop" class="absolute hidden group-hover:block mt-1 bg-gradient-to-br from-pink-50 via-rose-50 to-fuchsia-50 shadow-2xl rounded-xl w-64 py-3 z-10 dropdown-enter border border-pink-200">
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="course-detail.html">Business Administration</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#" data-program="cs">Computer Science</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#" data-program="data">Data Science</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#" data-program="health">Health Sciences</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#" data-program="engineering">Engineering</a></li>
                     </ul>
                 </li>
 
-                <li>
-                    <a href="{% url 'admission_course' %}"
-                       class="hover:text-miu-secondary font-medium transition-colors">Admissions</a>
+                <!-- Faculties Dropdown for Desktop -->
+                <li class="relative group">
+                    <button id="facultiesBtnDesktop" class="hover:text-miu-secondary font-medium transition-colors flex items-center focus:outline-none px-2 py-1 text-sm group">
+                        Faculties <span class="ml-1 transform transition-transform group-hover:rotate-180">▾</span>
+                    </button>
+                    <ul id="facultiesMenuDesktop" class="absolute hidden group-hover:block mt-1 bg-gradient-to-br from-pink-50 via-rose-50 to-fuchsia-50 shadow-2xl rounded-xl w-64 py-3 z-10 dropdown-enter border border-pink-200">
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Faculty of Science</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Faculty of Engineering</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Faculty of Business</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Faculty of Arts</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Faculty of Health Sciences</a></li>
+                    </ul>
                 </li>
-                <li><a href="#" class="hover:text-miu-secondary font-medium transition-colors">Research</a></li>
-                <li><a href="#" class="hover:text-miu-secondary font-medium transition-colors">Campus Life</a></li>
-                <li><a href="#contact" class="hover:text-miu-secondary font-medium transition-colors">Contact</a></li>
-                <li>
-                    <a href="{% url 'apply' %}"
-                       class="bg-gradient-miu text-white px-6 py-2 rounded-lg hover:opacity-90 transition-all font-medium shadow-lg">
-                        Apply
-                        Now
-                    </a>
+
+                <li><a href="admission-course.html" class="hover:text-miu-secondary font-medium transition-colors px-2 py-1 text-sm">Admissions</a></li>
+
+                <!-- More Dropdown for Desktop -->
+                <li class="relative group">
+                    <button id="moreBtnDesktop" class="hover:text-miu-secondary font-medium transition-colors flex items-center focus:outline-none px-2 py-1 text-sm group">
+                        More <span class="ml-1 transform transition-transform group-hover:rotate-180">▾</span>
+                    </button>
+                    <ul id="moreMenuDesktop" class="absolute hidden group-hover:block mt-1 bg-gradient-to-br from-pink-50 via-rose-50 to-fuchsia-50 shadow-2xl rounded-xl w-64 py-3 z-10 dropdown-enter border border-pink-200">
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Research</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Campus Life</a></li>
+                        <li><a href="#contact" class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm">Contact Us</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Blogs</a></li>
+                        <li><a class="block px-5 py-3 hover:bg-gradient-to-r hover:from-white hover:to-pink-100 transition-all duration-200 border-l-3 border-transparent hover:border-miu-accent hover:shadow-sm text-gray-700 text-sm" href="#">Login</a></li>
+                    </ul>
                 </li>
+
+                <li><a href="applicationform.html" class="bg-gradient-miu text-white px-5 py-2 rounded-lg hover:opacity-90 transition-all font-medium shadow-lg hover:shadow-xl ml-2 text-sm">Apply Now</a></li>
             </ul>
 
-            <button id="menuBtn"
-                    class="lg:hidden text-2xl text-miu-primary focus:outline-none hover:text-miu-secondary transition-colors">
-                ☰
-            </button>
+            <button id="menuBtn" class="lg:hidden text-2xl text-miu-primary focus:outline-none hover:text-miu-secondary transition-colors">☰</button>
         </div>
-
         <!-- Mobile Menu with Beautiful Gradient Background -->
         <div id="mobileMenu" class="hidden lg:hidden mobile-menu-gradient text-white shadow-2xl">
-            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="{% url 'index' %}">
+            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#">
                 <span class="flex items-center">
-                    <span class="mr-3">🏛️</span> Home
+                    <span class="mr-3">🏠</span> Home
                 </span>
             </a>
-            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="{% url 'about' %}">
+
+            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#about">
                 <span class="flex items-center">
-                    <span class="mr-3">🏛️</span> About
+                    <span class="mr-3">🏛️</span> About Us
                 </span>
             </a>
 
             <!-- Programs Dropdown for Mobile -->
             <div class="border-b border-white/20">
-                <button id="programsBtnMobile"
-                        class="mobile-menu-item w-full text-left px-6 py-5 hover:text-miu-accent transition-all flex justify-between items-center">
+                <button id="programsBtnMobile" class="mobile-menu-item w-full text-left px-6 py-5 hover:text-miu-accent transition-all flex justify-between items-center">
                     <span class="flex items-center">
                         <span class="mr-3">📚</span> Programs
                     </span>
                     <span id="programsArrowMobile" class="transform transition-transform">▾</span>
                 </button>
                 <ul id="programsMenuMobile" class="hidden bg-gradient-to-b from-white/10 to-white/5 dropdown-enter">
-                    <li>
-                        <a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10"
-                           href="#" data-program="business">Business Administration</a>
-                    </li>
-                    <li>
-                        <a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10"
-                           href="#" data-program="cs">Computer Science</a>
-                    </li>
-                    <li>
-                        <a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10"
-                           href="#" data-program="data">Data Science</a>
-                    </li>
-                    <li>
-                        <a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10"
-                           href="#" data-program="health">Health Sciences</a>
-                    </li>
-                    <li>
-                        <a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10"
-                           href="#" data-program="engineering">Engineering</a>
-                    </li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="business">Business Administration</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="cs">Computer Science</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="data">Data Science</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="health">Health Sciences</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#" data-program="engineering">Engineering</a></li>
+                </ul>
+            </div>
+
+
+
+            <!-- Faculties Dropdown for Mobile -->
+            <div class="border-b border-white/20">
+                <button id="facultiesBtnMobile" class="mobile-menu-item w-full text-left px-6 py-5 hover:text-miu-accent transition-all flex justify-between items-center">
+                    <span class="flex items-center">
+                        <span class="mr-3">🎓</span> Faculties
+                    </span>
+                    <span id="facultiesArrowMobile" class="transform transition-transform">▾</span>
+                </button>
+                <ul id="facultiesMenuMobile" class="hidden bg-gradient-to-b from-white/10 to-white/5 dropdown-enter">
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Faculty of Science</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Faculty of Engineering</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Faculty of Business</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Faculty of Arts</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Faculty of Health Sciences</a></li>
                 </ul>
             </div>
 
             <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#">
                 <span class="flex items-center">
-                    <span class="mr-3">🎓</span> Admissions
+                    <span class="mr-3">📋</span> Admissions
                 </span>
             </a>
-            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#">
-                <span class="flex items-center">
-                    <span class="mr-3">🏫</span> Campus Life
-                </span>
-            </a>
-            <a class="mobile-menu-item block px-6 py-5 hover:text-miu-accent transition-all" href="#contact">
-                <span class="flex items-center">
-                    <span class="mr-3">📞</span> Contact
-                </span>
-            </a>
-            <a class="block px-6 py-5 bg-gradient-to-r from-miu-accent to-yellow-400 text-miu-primary font-bold text-center hover:from-yellow-400 hover:to-miu-accent transition-all shadow-lg"
-               href="{% url 'apply' %}">
+
+            <!-- More Dropdown for Mobile -->
+            <div class="border-b border-white/20">
+                <button id="moreBtnMobile" class="mobile-menu-item w-full text-left px-6 py-5 hover:text-miu-accent transition-all flex justify-between items-center">
+                    <span class="flex items-center">
+                        <span class="mr-3">📌</span> More
+                    </span>
+                    <span id="moreArrowMobile" class="transform transition-transform">▾</span>
+                </button>
+                <ul id="moreMenuMobile" class="hidden bg-gradient-to-b from-white/10 to-white/5 dropdown-enter">
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Research</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Campus Life</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#contact">Contact Us</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Blogs</a></li>
+                    <li><a class="block px-6 py-4 hover:text-miu-accent transition-colors pl-14 hover:pl-16 bg-gradient-to-r from-transparent to-white/5 hover:to-white/10" href="#">Login</a></li>
+                </ul>
+            </div>
+
+            <a class="block px-6 py-5 bg-gradient-to-r from-miu-accent to-yellow-400 text-miu-primary font-bold text-center hover:from-yellow-400 hover:to-miu-accent transition-all shadow-lg" href="applicationform.html">
                 Apply Now 🚀
             </a>
         </div>
     </header>
+
 
 
     <!-- ================= HERO CAROUSEL ================= -->

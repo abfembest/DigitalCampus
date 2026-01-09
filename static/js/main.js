@@ -808,3 +808,75 @@ document.addEventListener('DOMContentLoaded', function () {
         chatbotState.userPreferences = JSON.parse(savedPreferences);
     }
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+    const chatbotToggle = document.getElementById('chatbotToggle');
+    const chatbotWindow = document.getElementById('chatbotWindow');
+    const chatbotClose = document.getElementById('chatbotClose');
+    const chatInput = document.getElementById('chatInput');
+    const sendMessage = document.getElementById('sendMessage');
+    const chatMessages = document.getElementById('chatMessages');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    // 1. Toggle Chatbot Visibility
+    chatbotToggle.addEventListener('click', () => {
+        const isHidden = chatbotWindow.classList.contains('hidden');
+        if (isHidden) {
+            chatbotWindow.classList.remove('hidden');
+            chatbotWindow.classList.add('chatbot-enter');
+        } else {
+            chatbotWindow.classList.add('hidden');
+        }
+    });
+
+    chatbotClose.onclick = () => chatbotWindow.classList.add('hidden');
+
+    // 2. Handle Sending Message
+    function handleSend() {
+        const text = chatInput.value.trim();
+        if (text) {
+            addMessage(text, 'user');
+            chatInput.value = '';
+            simulateBotReply(text);
+        }
+    }
+
+    sendMessage.onclick = handleSend;
+    chatInput.onkeypress = (e) => { if (e.key === 'Enter') handleSend(); };
+
+    // 3. Add Message to UI
+    function addMessage(text, sender) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${sender}-message flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+        
+        const contentClass = sender === 'user' 
+            ? 'bg-gradient-to-r from-[#0F2A44] to-[#1D4ED8] text-white rounded-br-none' 
+            : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none shadow-sm';
+
+        msgDiv.innerHTML = `
+            <div class="max-w-[85%] p-3 rounded-2xl text-sm ${contentClass}">
+                ${text}
+            </div>
+        `;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // 4. Simulated Dummy Bot Logic
+    function simulateBotReply(userText) {
+        typingIndicator.classList.remove('hidden');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        setTimeout(() => {
+            typingIndicator.classList.add('hidden');
+            let response = "I'm not sure how to help with that specifically, but I can guide you to Academic Support or Career Services!";
+            
+            const lower = userText.toLowerCase();
+            if (lower.includes('academic')) response = "Our Academic Support includes 24/7 online tutoring and writing assistance.";
+            if (lower.includes('career')) response = "Career Services offers resume reviews and mock interviews for all MIU students.";
+            if (lower.includes('hi') || lower.includes('hello')) response = "Hello! How can I assist you with student life today?";
+
+            addMessage(response, 'bot');
+        }, 1500);
+    }
+});

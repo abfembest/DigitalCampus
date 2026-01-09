@@ -1,136 +1,376 @@
 {% load static %}
 
-<div id="studentLifeChatbot" class="fixed bottom-6 right-6 z-50">
+<!-- Chatbot Container -->
+<div id="studentLifeChatbot" class="fixed bottom-6 right-6 z-50" role="complementary" aria-label="Student Life Chatbot">
+    <!-- Toggle Button -->
     <button id="chatbotToggle"
-            class="w-16 h-16 bg-gradient-miu rounded-full flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-miu-accent">
-        <div id="chatbotIcon" class="text-white text-2xl transition-transform duration-300">💬</div>
-        <div id="notificationBadge"
-             class="absolute -top-1 -right-1 w-6 h-6 bg-miu-accent rounded-full flex items-center justify-center text-xs font-bold text-miu-primary hidden">
-            3
-        </div>
+            class="w-16 h-16 bg-gradient-to-br from-primary-950 to-primary-700 rounded-full flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-accent-400 focus:ring-offset-2"
+            aria-label="Toggle chatbot"
+            aria-expanded="false">
+        <i data-lucide="message-circle" class="w-8 h-8 text-white" id="chatbotIcon"></i>
+        <span id="notificationBadge"
+              class="absolute -top-1 -right-1 w-6 h-6 bg-accent-400 rounded-full flex items-center justify-center text-xs font-bold text-primary-950 opacity-0 scale-0 transition-all duration-300"
+              aria-live="polite">
+            1
+        </span>
     </button>
 
+    <!-- Chatbot Window -->
     <div id="chatbotWindow"
-         class="hidden absolute bottom-20 right-0 w-[calc(100vw-2rem)] md:w-96 h-[550px] md:h-[600px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200 chatbot-enter">
+         class="fixed sm:absolute bottom-0 sm:bottom-20 left-0 sm:left-auto right-0 w-full sm:w-96 h-[100vh] sm:h-[36rem] md:h-[40rem] bg-white sm:rounded-2xl shadow-2xl border-0 sm:border border-gray-200 opacity-0 scale-95 pointer-events-none transition-all duration-300 flex flex-col"
+         role="dialog"
+         aria-labelledby="chatbotTitle"
+         aria-modal="true">
         
-        <div class="bg-gradient-miu text-white p-4 flex justify-between items-center">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-miu-primary mr-3 shadow-inner">
+        <!-- Header -->
+        <div class="bg-gradient-to-br from-primary-950 to-primary-700 text-white p-4 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-primary-700 shadow-lg">
                     <i data-lucide="bot" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-sm">MIU Student Assistant</h3>
-                    <div class="flex items-center">
-                        <span class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                        <span class="text-xs text-blue-100">Always Online</span>
+                    <h3 id="chatbotTitle" class="font-bold text-sm">MIU Student Assistant</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse" aria-hidden="true"></span>
+                        <span class="text-xs text-blue-100">Online</span>
                     </div>
                 </div>
             </div>
-            <div class="flex space-x-2">
-                <button id="chatbotMinimize" class="hover:bg-white/20 p-1.5 rounded-lg transition-colors" title="Minimize">
+            <div class="flex gap-2">
+                <button id="chatbotMinimize" 
+                        class="hover:bg-white/20 p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/50" 
+                        aria-label="Minimize chat">
                     <i data-lucide="minus" class="w-5 h-5"></i>
                 </button>
-                <button id="chatbotClose" class="hover:bg-white/20 p-1.5 rounded-lg transition-colors" title="Close">
+                <button id="chatbotClose" 
+                        class="hover:bg-white/20 p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/50" 
+                        aria-label="Close chat">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
         </div>
 
-        <div id="quickMenu" class="p-4 bg-gray-50 border-b border-gray-100">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-1">How can I help you today?</p>
+        <!-- Quick Actions -->
+        <div class="p-4 bg-gradient-to-br from-gray-50 to-blue-50 border-b border-gray-200 shrink-0">
+            <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Quick Actions</p>
             <div class="grid grid-cols-2 gap-2">
-                <button class="quick-action p-2 text-left bg-white border border-gray-200 rounded-xl hover:border-miu-secondary hover:shadow-md transition-all group" data-action="explore">
-                    <span class="block text-lg mb-1 group-hover:scale-110 transition-transform">🎓</span>
-                    <span class="text-xs font-medium text-gray-700">Explore Campus</span>
+                <button class="quick-topic p-3 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500" 
+                        data-action="programs"
+                        aria-label="Learn about programs">
+                    <span class="block text-2xl mb-1 group-hover:scale-110 transition-transform" aria-hidden="true">🎓</span>
+                    <span class="text-xs font-medium text-gray-700">Programs</span>
                 </button>
-                <button class="quick-action p-2 text-left bg-white border border-gray-200 rounded-xl hover:border-miu-secondary hover:shadow-md transition-all group" data-action="support">
-                    <span class="block text-lg mb-1 group-hover:scale-110 transition-transform">📚</span>
-                    <span class="text-xs font-medium text-gray-700">Academic Help</span>
+                <button class="quick-topic p-3 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500" 
+                        data-action="admissions"
+                        aria-label="Learn about admissions">
+                    <span class="block text-2xl mb-1 group-hover:scale-110 transition-transform" aria-hidden="true">📋</span>
+                    <span class="text-xs font-medium text-gray-700">Admissions</span>
+                </button>
+                <button class="quick-topic p-3 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500" 
+                        data-action="campus"
+                        aria-label="Learn about campus life">
+                    <span class="block text-2xl mb-1 group-hover:scale-110 transition-transform" aria-hidden="true">🏫</span>
+                    <span class="text-xs font-medium text-gray-700">Campus Life</span>
+                </button>
+                <button class="quick-topic p-3 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500" 
+                        data-action="support"
+                        aria-label="Get academic support">
+                    <span class="block text-2xl mb-1 group-hover:scale-110 transition-transform" aria-hidden="true">💡</span>
+                    <span class="text-xs font-medium text-gray-700">Support</span>
                 </button>
             </div>
         </div>
 
-        <div id="chatMessages" class="flex-grow overflow-y-auto p-4 space-y-4 bg-white" style="height: calc(100% - 220px);">
-            <div class="chat-message bot-message">
-                <div class="flex items-start space-x-2">
-                    <div class="w-8 h-8 bg-gradient-miu rounded-full flex items-center justify-center text-white text-xs">AI</div>
-                    <div class="bg-gray-100 rounded-2xl rounded-tl-none p-3 max-w-[85%]">
-                        <p class="text-sm text-gray-800">👋 Welcome to MIU! I'm your Student Life Assistant. Feel free to ask me anything about campus life!</p>
+        <!-- Messages Container -->
+        <div id="chatMessages" 
+             class="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-white to-gray-50 scroll-smooth overscroll-contain"
+             role="log"
+             aria-live="polite"
+             aria-atomic="false">
+            <!-- Welcome message -->
+            <div class="flex items-start gap-2 opacity-0 translate-y-4 animate-[slideIn_0.5s_ease-out_forwards]">
+                <div class="w-8 h-8 bg-gradient-to-br from-primary-700 to-primary-900 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+                    AI
+                </div>
+                <div class="bg-white rounded-2xl rounded-tl-sm p-3 max-w-[85%] shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-800">👋 Welcome to MIU! I'm your Student Life Assistant. How can I help you today?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typingIndicator" class="hidden px-4 pb-2">
+            <div class="flex items-start gap-2">
+                <div class="w-8 h-8 bg-gradient-to-br from-primary-700 to-primary-900 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+                    AI
+                </div>
+                <div class="bg-white rounded-2xl rounded-tl-sm p-3 shadow-sm border border-gray-100">
+                    <div class="flex gap-1">
+                        <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s"></span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="p-4 bg-white border-t border-gray-100">
-            <div class="relative flex items-center space-x-2">
-                <input type="text" id="chatInput" 
-                       placeholder="Type your message..." 
-                       class="w-full bg-gray-50 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-miu-secondary transition-all">
-                <button id="sendMessage" class="p-2 bg-gradient-miu text-white rounded-full hover:shadow-lg hover:scale-105 transition-all">
-                    <i data-lucide="send" class="w-4 h-4"></i>
+        <!-- Input Area -->
+        <div class="p-4 bg-white border-t border-gray-200 shrink-0">
+            <form id="chatForm" class="flex items-end gap-2">
+                <div class="flex-1">
+                    <label for="chatInput" class="sr-only">Type your message</label>
+                    <textarea id="chatInput" 
+                           rows="1"
+                           placeholder="Type your message..." 
+                           class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
+                           maxlength="500"
+                           aria-label="Message input"></textarea>
+                    <p class="text-xs text-gray-400 mt-1 px-1" id="charCount">0/500</p>
+                </div>
+                <button type="submit"
+                        id="sendMessage" 
+                        class="p-3 bg-gradient-to-br from-primary-700 to-primary-900 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                        aria-label="Send message">
+                    <i data-lucide="send" class="w-5 h-5"></i>
                 </button>
-            </div>
+            </form>
         </div>
     </div>
 </div>
 
 <style>
-    /* Custom MIU Colors & Gradients if not loaded via config */
-    .bg-gradient-miu { background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%); }
-    .text-miu-primary { color: #0F2A44; }
-    .bg-miu-accent { background-color: #FACC15; }
-
-    /* Animations from style.css */
-    @keyframes chatbotEnter {
-        from { opacity: 0; transform: scale(0.9) translateY(20px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
+/* Minimal custom animations that Tailwind doesn't provide */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
     }
-    .chatbot-enter { animation: chatbotEnter 0.3s ease-out forwards; }
-    
-    .chat-message { animation: messageAppear 0.3s ease-out; }
-    @keyframes messageAppear {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
+}
 </style>
 
-<script src="https://unpkg.com/lucide@latest"></script>
 <script>
-    // Initialize icons if standalone
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    });
-</script>
-<script src="{% static 'js/main.js' %}"></script>
-
-<script>// Add this to your main.js if it's missing or update existing:
+// Chatbot Functionality
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+
+    // Elements
     const chatbotToggle = document.getElementById('chatbotToggle');
     const chatbotWindow = document.getElementById('chatbotWindow');
     const chatbotClose = document.getElementById('chatbotClose');
     const chatbotMinimize = document.getElementById('chatbotMinimize');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const sendMessage = document.getElementById('sendMessage');
+    const chatMessages = document.getElementById('chatMessages');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const charCount = document.getElementById('charCount');
+    const notificationBadge = document.getElementById('notificationBadge');
+    const quickTopics = document.querySelectorAll('.quick-topic');
 
+    let messageCount = 0;
+
+    // Simulated responses for testing
+    const responses = {
+        programs: "We offer various programs including:\n\n• Business Administration (MBA)\n• Computer Science (BS/MS)\n• Data Science (MS)\n• Engineering (Various)\n• Health Sciences\n\nWhich program interests you?",
+        admissions: "Our admission process is simple:\n\n1. Submit online application\n2. Provide transcripts\n3. Letters of recommendation\n4. Personal statement\n5. Application fee\n\nDeadlines vary by program. Would you like specific details?",
+        campus: "MIU offers a vibrant virtual campus with:\n\n• Online library access 24/7\n• Virtual student clubs\n• Career services\n• Academic counseling\n• Tech support\n\nWhat would you like to know more about?",
+        support: "We provide comprehensive support:\n\n• 24/7 Technical Help Desk\n• Academic Advisors\n• Tutoring Services\n• Writing Center\n• Career Counseling\n\nHow can we assist you today?",
+        default: "I'm here to help! I can provide information about:\n\n• Programs & Courses\n• Admissions Process\n• Campus Life & Resources\n• Academic Support\n• Student Services\n\nWhat would you like to know?"
+    };
+
+    // Open/Close Functions
     function openChatbot() {
-        chatbotWindow.classList.remove('hidden');
-        chatbotWindow.classList.add('chatbot-enter');
-        document.getElementById('chatbotIcon').textContent = '×';
+        chatbotWindow.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+        chatbotWindow.classList.add('opacity-100', 'scale-100');
+        chatbotToggle.setAttribute('aria-expanded', 'true');
+        notificationBadge.classList.remove('opacity-100', 'scale-100');
+        notificationBadge.classList.add('opacity-0', 'scale-0');
+        
+        // Focus input
+        setTimeout(() => {
+            chatInput.focus();
+        }, 300);
     }
 
     function closeChatbot() {
-        chatbotWindow.classList.add('hidden');
-        document.getElementById('chatbotIcon').textContent = '💬';
+        chatbotWindow.classList.remove('opacity-100', 'scale-100');
+        chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        chatbotToggle.setAttribute('aria-expanded', 'false');
     }
 
-    if (chatbotToggle) {
-        chatbotToggle.addEventListener('click', () => {
-            if (chatbotWindow.classList.contains('hidden')) {
-                openChatbot();
-            } else {
-                closeChatbot();
-            }
+    // Event Listeners
+    chatbotToggle.addEventListener('click', () => {
+        if (chatbotWindow.classList.contains('pointer-events-none')) {
+            openChatbot();
+        } else {
+            closeChatbot();
+        }
+    });
+
+    chatbotClose.addEventListener('click', closeChatbot);
+    chatbotMinimize.addEventListener('click', closeChatbot);
+
+    // Character counter
+    chatInput.addEventListener('input', function() {
+        const length = this.value.length;
+        charCount.textContent = `${length}/500`;
+        
+        // Auto-resize textarea
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        
+        // Enable/disable send button
+        sendMessage.disabled = length === 0;
+    });
+
+    // Send message on Enter (but allow Shift+Enter for new line)
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // Handle form submission
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        
+        if (message) {
+            addMessage(message, 'user');
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            charCount.textContent = '0/500';
+            sendMessage.disabled = true;
+            
+            // Simulate bot response
+            simulateResponse(message);
+        }
+    });
+
+    // Quick topic buttons
+    quickTopics.forEach(button => {
+        button.addEventListener('click', function() {
+            const action = this.getAttribute('data-action');
+            const topic = this.querySelector('.text-xs').textContent;
+            
+            addMessage(`Tell me about ${topic}`, 'user');
+            simulateResponse(action);
         });
+    });
+
+    // Add message to chat
+    function addMessage(text, sender) {
+        messageCount++;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex items-start gap-2 opacity-0 translate-y-4`;
+        
+        if (sender === 'user') {
+            messageDiv.classList.add('justify-end');
+            messageDiv.innerHTML = `
+                <div class="bg-gradient-to-br from-primary-700 to-primary-900 text-white rounded-2xl rounded-br-sm p-3 max-w-[85%] shadow-md">
+                    <p class="text-sm whitespace-pre-wrap break-words">${escapeHtml(text)}</p>
+                </div>
+                <div class="w-8 h-8 bg-gradient-to-br from-accent-400 to-accent-500 rounded-full flex items-center justify-center text-primary-950 text-xs font-bold shrink-0">
+                    You
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="w-8 h-8 bg-gradient-to-br from-primary-700 to-primary-900 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+                    AI
+                </div>
+                <div class="bg-white rounded-2xl rounded-tl-sm p-3 max-w-[85%] shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-800 whitespace-pre-wrap break-words">${formatMessage(text)}</p>
+                </div>
+            `;
+        }
+        
+        chatMessages.appendChild(messageDiv);
+        
+        // Animate message in
+        setTimeout(() => {
+            messageDiv.classList.remove('opacity-0', 'translate-y-4');
+            messageDiv.classList.add('transition-all', 'duration-500');
+        }, 50);
+        
+        // Scroll to bottom
+        setTimeout(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }, 100);
     }
 
-    if (chatbotClose) chatbotClose.onclick = closeChatbot;
-    if (chatbotMinimize) chatbotMinimize.onclick = closeChatbot;
-});</script>
+    // Simulate bot response
+    function simulateResponse(messageOrAction) {
+        // Show typing indicator
+        typingIndicator.classList.remove('hidden');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Simulate delay
+        setTimeout(() => {
+            typingIndicator.classList.add('hidden');
+            
+            // Determine response
+            let response = responses.default;
+            
+            if (responses[messageOrAction]) {
+                response = responses[messageOrAction];
+            } else {
+                const lowerMessage = messageOrAction.toLowerCase();
+                if (lowerMessage.includes('program') || lowerMessage.includes('course')) {
+                    response = responses.programs;
+                } else if (lowerMessage.includes('admission') || lowerMessage.includes('apply')) {
+                    response = responses.admissions;
+                } else if (lowerMessage.includes('campus') || lowerMessage.includes('life')) {
+                    response = responses.campus;
+                } else if (lowerMessage.includes('support') || lowerMessage.includes('help')) {
+                    response = responses.support;
+                }
+            }
+            
+            addMessage(response, 'bot');
+            
+            // Reinitialize icons for new messages
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }, 1000 + Math.random() * 1000); // Random delay between 1-2 seconds
+    }
+
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Helper function to format bot messages
+    function formatMessage(text) {
+        // Convert line breaks to <br>
+        text = escapeHtml(text).replace(/\n/g, '<br>');
+        return text;
+    }
+
+    // Show notification after 5 seconds (demo)
+    setTimeout(() => {
+        if (chatbotWindow.classList.contains('pointer-events-none')) {
+            notificationBadge.classList.remove('opacity-0', 'scale-0');
+            notificationBadge.classList.add('opacity-100', 'scale-100');
+        }
+    }, 5000);
+
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !chatbotWindow.classList.contains('pointer-events-none')) {
+            closeChatbot();
+        }
+    });
+});
+</script>

@@ -7,27 +7,27 @@
 {% block content %}
 
 <!-- Hero Carousel Section -->
-<section class="relative overflow-hidden bg-gray-900" aria-label="Hero Carousel">
+<section class="relative overflow-hidden" aria-label="Hero Carousel">
     <div id="carousel" class="relative h-[calc(100vh-5rem)] lg:h-[calc(100vh-6rem)]">
         
         <!-- Slide 1 -->
         <div class="slide absolute inset-0 flex items-center justify-center transition-opacity duration-700" 
-             style="background-image: linear-gradient(to bottom right, rgba(15, 42, 68, 0.9), rgba(2, 114, 199, 0.8)), url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80'); background-size: cover; background-position: center;"
+             style="background: linear-gradient(to bottom right, rgba(132, 3, 132, 0.92), rgba(168, 85, 247, 0.88)), url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80') center/cover no-repeat;"
              aria-hidden="false">
-            <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
+            <div class="container mx-auto">
                 <div class="max-w-4xl">
                     <h1 class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-tight font-display text-white animate-fade-in">
                         Empowering Global Education
                     </h1>
-                    <p class="mb-8 text-lg sm:text-xl lg:text-2xl text-gray-100 animate-slide-up max-w-3xl leading-relaxed">
+                    <p class="mb-8 text-lg sm:text-xl lg:text-2xl text-white animate-slide-up max-w-3xl leading-relaxed">
                         World-class online education with flexibility and excellence. Join students from 120+ countries pursuing their dreams.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 animate-slide-up">
-                        <a href="{% url 'apply' %}" class="inline-flex items-center justify-center gap-2 bg-accent-400 text-primary-950 px-8 py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-accent-500 transition-all shadow-xl hover:shadow-2xl hover:scale-105">
+                        <a href="{% url 'apply' %}" class="inline-flex items-center justify-center gap-2 bg-white text-primary-950 px-8 py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl hover:shadow-2xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
                             Apply Now
                             <i data-lucide="arrow-right" class="w-5 h-5"></i>
                         </a>
-                        <a href="#programs" class="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-base sm:text-lg hover:bg-white hover:text-primary-950 transition-all">
+                        <a href="#programs" class="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-base sm:text-lg hover:bg-white hover:text-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
                             Explore Programs
                         </a>
                     </div>
@@ -37,22 +37,22 @@
 
         <!-- Slide 2 -->
         <div class="slide hidden absolute inset-0 flex items-center justify-center transition-opacity duration-700" 
-             style="background-image: linear-gradient(to bottom right, rgba(2, 114, 199, 0.85), rgba(3, 90, 161, 0.75)), url('https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1920&q=80'); background-size: cover; background-position: center;"
+             style="background: linear-gradient(to bottom right, rgba(132, 3, 132, 0.90), rgba(147, 51, 234, 0.85)), url('https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1920&q=80') center/cover no-repeat;"
              aria-hidden="true">
-            <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
+            <div class="container mx-auto">
                 <div class="max-w-4xl">
                     <h1 class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-tight font-display text-white">
                         Learn From Anywhere
                     </h1>
-                    <p class="mb-8 text-lg sm:text-xl lg:text-2xl text-gray-100 max-w-3xl leading-relaxed">
+                    <p class="mb-8 text-lg sm:text-xl lg:text-2xl text-white max-w-3xl leading-relaxed">
                         Study at your pace with expert faculty and cutting-edge digital platforms designed for your success.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="{% url 'about' %}" class="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl hover:shadow-2xl hover:scale-105">
+                        <a href="{% url 'about' %}" class="inline-flex items-center justify-center gap-2 bg-white text-primary-950 px-8 py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl hover:shadow-2xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
                             About Us
                             <i data-lucide="info" class="w-5 h-5"></i>
                         </a>
-                        <a href="#academics" class="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-base sm:text-lg hover:bg-white hover:text-primary-700 transition-all">
+                        <a href="#academics" class="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-base sm:text-lg hover:bg-white hover:text-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
                             Meet Our Faculty
                         </a>
                     </div>
@@ -62,22 +62,22 @@
 
         <!-- Slide 3 -->
         <div class="slide hidden absolute inset-0 flex items-center justify-center transition-opacity duration-700"
-             style="background-image: linear-gradient(to bottom right, rgba(15, 42, 68, 0.88), rgba(7, 77, 133, 0.78)), url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1920&q=80'); background-size: cover; background-position: center;"
+             style="background: linear-gradient(to bottom right, rgba(132, 3, 132, 0.88), rgba(126, 34, 206, 0.82)), url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1920&q=80') center/cover no-repeat;"
              aria-hidden="true">
-            <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
+            <div class="container mx-auto">
                 <div class="max-w-4xl">
                     <h1 class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-tight font-display text-white">
                         Build Your Future
                     </h1>
-                    <p class="mb-8 text-lg sm:text-xl lg:text-2xl text-gray-100 max-w-3xl leading-relaxed">
+                    <p class="mb-8 text-lg sm:text-xl lg:text-2xl text-white max-w-3xl leading-relaxed">
                         Career-focused programs designed for success in today's global marketplace and tomorrow's innovations.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="{% url 'admission_requirement' %}" class="inline-flex items-center justify-center gap-2 bg-accent-400 text-primary-950 px-8 py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-accent-500 transition-all shadow-xl hover:shadow-2xl hover:scale-105">
+                        <a href="{% url 'admission_requirement' %}" class="inline-flex items-center justify-center gap-2 bg-white text-primary-950 px-8 py-4 rounded-xl font-bold text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl hover:shadow-2xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
                             View Requirements
                             <i data-lucide="clipboard-check" class="w-5 h-5"></i>
                         </a>
-                        <a href="#contact" class="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-base sm:text-lg hover:bg-white hover:text-primary-950 transition-all">
+                        <a href="#contact" class="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-base sm:text-lg hover:bg-white hover:text-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
                             Contact Us
                         </a>
                     </div>
@@ -87,43 +87,43 @@
 
         <!-- Carousel Indicators -->
         <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20" role="tablist" aria-label="Carousel navigation">
-            <button class="carousel-indicator w-3 h-3 rounded-full bg-white transition-all active scale-125 shadow-lg" data-index="0" aria-label="Go to slide 1" role="tab" aria-selected="true"></button>
-            <button class="carousel-indicator w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-lg" data-index="1" aria-label="Go to slide 2" role="tab" aria-selected="false"></button>
-            <button class="carousel-indicator w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-lg" data-index="2" aria-label="Go to slide 3" role="tab" aria-selected="false"></button>
+            <button class="carousel-indicator w-3 h-3 rounded-full bg-white transition-all active scale-125 shadow-lg focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2" data-index="0" aria-label="Go to slide 1" role="tab" aria-selected="true"></button>
+            <button class="carousel-indicator w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-lg focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2" data-index="1" aria-label="Go to slide 2" role="tab" aria-selected="false"></button>
+            <button class="carousel-indicator w-3 h-3 rounded-full bg-white/50 hover:bg-white transition-all shadow-lg focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2" data-index="2" aria-label="Go to slide 3" role="tab" aria-selected="false"></button>
         </div>
     </div>
 </section>
 
 <!-- Stats Section -->
-<section class="py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-blue-50" aria-label="University Statistics">
-    <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
+<section class="py-16 lg:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100" aria-label="University Statistics">
+    <div class="container mx-auto">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            <article class="p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105">
+            <article class="p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-4">
-                    <i data-lucide="users" class="w-10 h-10 text-primary-600"></i>
+                    <i data-lucide="users" class="w-10 h-10 text-primary-950 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <div class="text-3xl md:text-4xl font-bold text-primary-700 mb-2 text-center font-display">25,000+</div>
+                <div class="text-3xl md:text-4xl font-bold text-primary-950 mb-2 text-center font-display">25,000+</div>
                 <div class="text-gray-600 text-sm md:text-base text-center">Students Worldwide</div>
             </article>
-            <article class="p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105">
+            <article class="p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-4">
-                    <i data-lucide="globe" class="w-10 h-10 text-primary-600"></i>
+                    <i data-lucide="globe" class="w-10 h-10 text-primary-950 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <div class="text-3xl md:text-4xl font-bold text-primary-700 mb-2 text-center font-display">120+</div>
+                <div class="text-3xl md:text-4xl font-bold text-primary-950 mb-2 text-center font-display">120+</div>
                 <div class="text-gray-600 text-sm md:text-base text-center">Countries Represented</div>
             </article>
-            <article class="p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105">
+            <article class="p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-4">
-                    <i data-lucide="trending-up" class="w-10 h-10 text-primary-600"></i>
+                    <i data-lucide="trending-up" class="w-10 h-10 text-primary-950 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <div class="text-3xl md:text-4xl font-bold text-primary-700 mb-2 text-center font-display">95%</div>
+                <div class="text-3xl md:text-4xl font-bold text-primary-950 mb-2 text-center font-display">95%</div>
                 <div class="text-gray-600 text-sm md:text-base text-center">Graduate Employment</div>
             </article>
-            <article class="p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105">
+            <article class="p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-4">
-                    <i data-lucide="book-open" class="w-10 h-10 text-primary-600"></i>
+                    <i data-lucide="book-open" class="w-10 h-10 text-primary-950 group-hover:scale-110 transition-transform"></i>
                 </div>
-                <div class="text-3xl md:text-4xl font-bold text-primary-700 mb-2 text-center font-display">50+</div>
+                <div class="text-3xl md:text-4xl font-bold text-primary-950 mb-2 text-center font-display">50+</div>
                 <div class="text-gray-600 text-sm md:text-base text-center">Academic Programs</div>
             </article>
         </div>
@@ -132,7 +132,7 @@
 
 <!-- About Section -->
 <section id="about" class="py-16 lg:py-24 bg-white" aria-labelledby="about-heading">
-    <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
+    <div class="container mx-auto">
         <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div>
                 <h2 id="about-heading" class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-primary-950 font-display">
@@ -144,7 +144,7 @@
                 <p class="text-gray-600 mb-8 text-base lg:text-lg leading-relaxed">
                     Our mission is to provide accessible, world-class education that empowers students to achieve their personal and professional goals, regardless of geographic location.
                 </p>
-                <a href="{% url 'about' %}" class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all">
+                <a href="{% url 'about' %}" class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                     Learn More About Us
                     <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 </a>
@@ -157,8 +157,8 @@
 </section>
 
 <!-- Programs Section -->
-<section id="programs" class="py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-blue-50" aria-labelledby="programs-heading">
-    <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
+<section id="programs" class="py-16 lg:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100" aria-labelledby="programs-heading">
+    <div class="container mx-auto">
         <div class="text-center mb-12 lg:mb-16">
             <h2 id="programs-heading" class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-display">
                 Popular Programs
@@ -170,53 +170,53 @@
 
         <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             <!-- Business Administration -->
-            <article class="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-2xl shadow-lg border border-blue-100 hover:shadow-2xl transition-all hover:scale-105">
-                <div class="w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
-                    <i data-lucide="trending-up" class="w-8 h-8 text-blue-600"></i>
+            <article class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105 group">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
+                    <i data-lucide="trending-up" class="w-8 h-8 text-primary-950"></i>
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Business Administration</h3>
                 <p class="text-gray-700 mb-6 text-base leading-relaxed">
                     Develop leadership skills for global organizations with our AACSB-accredited program.
                 </p>
-                <a href="#" class="text-blue-600 font-semibold hover:text-blue-800 transition-colors inline-flex items-center group">
+                <a href="#" class="text-primary-950 font-semibold hover:text-primary-700 transition-colors inline-flex items-center group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
                     Learn More
-                    <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"></i>
+                    <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover/link:translate-x-1 transition-transform"></i>
                 </a>
             </article>
 
             <!-- Computer Science -->
-            <article class="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-2xl shadow-lg border border-purple-100 hover:shadow-2xl transition-all hover:scale-105">
-                <div class="w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
-                    <i data-lucide="code-2" class="w-8 h-8 text-purple-600"></i>
+            <article class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105 group">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
+                    <i data-lucide="code-2" class="w-8 h-8 text-primary-950"></i>
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Computer Science</h3>
                 <p class="text-gray-700 mb-6 text-base leading-relaxed">
                     Master modern software engineering, AI, and cybersecurity with industry-focused curriculum.
                 </p>
-                <a href="#" class="text-purple-600 font-semibold hover:text-purple-800 transition-colors inline-flex items-center group">
+                <a href="#" class="text-primary-950 font-semibold hover:text-primary-700 transition-colors inline-flex items-center group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
                     Learn More
-                    <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"></i>
+                    <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover/link:translate-x-1 transition-transform"></i>
                 </a>
             </article>
 
             <!-- Data Science -->
-            <article class="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-2xl shadow-lg border border-green-100 hover:shadow-2xl transition-all hover:scale-105">
-                <div class="w-16 h-16 bg-white/80 rounded-xl flex items-center justify-center mb-6 shadow-lg">
-                    <i data-lucide="database" class="w-8 h-8 text-green-600"></i>
+            <article class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105 group">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
+                    <i data-lucide="database" class="w-8 h-8 text-primary-950"></i>
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Data Science</h3>
                 <p class="text-gray-700 mb-6 text-base leading-relaxed">
                     Become an expert in analytics, machine learning, and big data with hands-on projects.
                 </p>
-                <a href="#" class="text-green-600 font-semibold hover:text-green-800 transition-colors inline-flex items-center group">
+                <a href="#" class="text-primary-950 font-semibold hover:text-primary-700 transition-colors inline-flex items-center group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
                     Learn More
-                    <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"></i>
+                    <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover/link:translate-x-1 transition-transform"></i>
                 </a>
             </article>
         </div>
 
         <div class="text-center mt-12">
-            <a href="#" class="inline-flex items-center gap-2 border-2 border-primary-700 text-primary-700 px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:bg-primary-700 hover:text-white transition-all shadow-lg hover:shadow-xl">
+            <a href="#" class="inline-flex items-center gap-2 border-2 border-primary-950 text-primary-950 px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:bg-primary-950 hover:text-white transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                 View All Programs
                 <i data-lucide="grid-3x3" class="w-5 h-5"></i>
             </a>
@@ -226,7 +226,7 @@
 
 <!-- Academics Section -->
 <section id="academics" class="py-16 lg:py-24 bg-white" aria-labelledby="academics-heading">
-    <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
+    <div class="container mx-auto">
         <div class="text-center mb-12 lg:mb-16">
             <h2 id="academics-heading" class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-display">
                 Academics & Faculties
@@ -237,10 +237,10 @@
         </div>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100">
+            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100 group">
                 <div class="p-8">
-                    <div class="w-16 h-16 bg-gradient-to-r from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-6">
-                        <i data-lucide="briefcase" class="w-8 h-8 text-blue-600"></i>
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="briefcase" class="w-8 h-8 text-primary-950"></i>
                     </div>
                     <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Faculty of Business & Economics</h3>
                     <p class="text-gray-600 mb-6 text-base leading-relaxed">
@@ -248,21 +248,21 @@
                     </p>
                     <ul class="space-y-3 text-sm text-gray-600">
                         <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-blue-600 mt-0.5"></i>
+                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
                             <span>Business Administration</span>
                         </li>
                         <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-blue-600 mt-0.5"></i>
+                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
                             <span>Economics & Finance</span>
                         </li>
                     </ul>
                 </div>
             </article>
 
-            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100">
+            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100 group">
                 <div class="p-8">
-                    <div class="w-16 h-16 bg-gradient-to-r from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-6">
-                        <i data-lucide="cpu" class="w-8 h-8 text-purple-600"></i>
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="cpu" class="w-8 h-8 text-primary-950"></i>
                     </div>
                     <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Faculty of Engineering & Technology</h3>
                     <p class="text-gray-600 mb-6 text-base leading-relaxed">
@@ -270,21 +270,21 @@
                     </p>
                     <ul class="space-y-3 text-sm text-gray-600">
                         <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-purple-600 mt-0.5"></i>
+                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
                             <span>Computer Science</span>
                         </li>
                         <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-purple-600 mt-0.5"></i>
+                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
                             <span>Software Engineering</span>
                         </li>
                     </ul>
                 </div>
             </article>
 
-            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100">
+            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100 group">
                 <div class="p-8">
-                    <div class="w-16 h-16 bg-gradient-to-r from-green-100 to-green-200 rounded-xl flex items-center justify-center mb-6">
-                        <i data-lucide="heart-pulse" class="w-8 h-8 text-green-600"></i>
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i data-lucide="heart-pulse" class="w-8 h-8 text-primary-950"></i>
                     </div>
                     <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Faculty of Health & Life Sciences</h3>
                     <p class="text-gray-600 mb-6 text-base leading-relaxed">
@@ -292,11 +292,11 @@
                     </p>
                     <ul class="space-y-3 text-sm text-gray-600">
                         <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
+                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
                             <span>Nursing & Public Health</span>
                         </li>
                         <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
+                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
                             <span>Biomedical Sciences</span>
                         </li>
                     </ul>
@@ -305,7 +305,7 @@
         </div>
 
         <div class="text-center">
-            <a href="#" class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all">
+            <a href="#" class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                 Explore All Faculties
                 <i data-lucide="graduation-cap" class="w-5 h-5"></i>
             </a>
@@ -313,263 +313,282 @@
     </div>
 </section>
 
-
-<!-- Admissions Section - Redesigned -->
-<section id="admissions" class="relative py-20 lg:py-32 bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 overflow-hidden" aria-labelledby="admissions-heading">
-    <!-- Decorative Background Elements -->
+<!-- Admissions Section -->
+<section id="admissions" class="relative py-20 lg:py-32 bg-gradient-to-br from-primary-950 via-purple-900 to-purple-800 overflow-hidden" aria-labelledby="admissions-heading">
     <div class="absolute inset-0 opacity-10">
-        <div class="absolute top-20 left-10 w-72 h-72 bg-accent-400 rounded-full blur-3xl"></div>
-        <div class="absolute bottom-20 right-10 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+        <div class="absolute top-20 left-10 w-72 h-72 bg-purple-400 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-pink-400 rounded-full blur-3xl"></div>
     </div>
 
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-8 relative z-10">
-        <!-- Section Header -->
+    <div class="container mx-auto relative z-10">
         <div class="text-center mb-16 lg:mb-20">
-            <div class="inline-flex items-center gap-2 bg-accent-400/20 backdrop-blur-sm text-accent-300 px-5 py-2.5 rounded-full text-sm font-semibold mb-6 border border-accent-400/30">
+            <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-5 py-2.5 rounded-full text-sm font-semibold mb-6 border border-white/30">
                 <i data-lucide="graduation-cap" class="w-4 h-4"></i>
                 <span>Start Your Journey</span>
             </div>
             <h2 id="admissions-heading" class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-6 font-display leading-tight">
-                Admissions & <span class="text-accent-400">Financial Aid</span>
+                Admissions & Financial Aid
             </h2>
             <p class="text-gray-300 max-w-3xl mx-auto text-lg lg:text-xl leading-relaxed">
                 Making quality education accessible through comprehensive financial support and a streamlined application process
             </p>
         </div>
 
-        <!-- Main Content Grid -->
-        <div class="grid lg:grid-cols-3 gap-6 lg:gap-8 mb-12 lg:mb-16 items-start">
-            
-            <!-- Application Process Card -->
-            <article class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden hover:shadow-accent-400/20 transition-all duration-300 hover:-translate-y-2 group">
-                <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-8 text-white relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                    <div class="relative">
-                        <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <i data-lucide="clipboard-check" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="font-bold text-2xl lg:text-3xl mb-2 font-display">Application Process</h3>
-                        <p class="text-blue-100 text-sm">Simple steps to your future</p>
-                    </div>
-                </div>
+        <!-- Main Content Grid - 2 cards per row, last one full width -->
+        <div class="mb-12 lg:mb-16">
+            <!-- First Row - 2 Cards -->
+            <div class="grid lg:grid-cols-2 gap-6 lg:gap-8 mb-6 lg:mb-8 items-start">
                 
-                <div class="p-8">
-                    <ol class="space-y-6">
-                        <li class="flex gap-4 group/item">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg group-hover/item:scale-110 transition-transform">
-                                    1
+                <!-- Application Process Card -->
+                <article class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden hover:shadow-white/20 transition-all duration-300 hover:-translate-y-2 group">
+                    <div class="bg-gradient-to-br from-primary-950 to-primary-700 p-8 text-white relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                        <div class="relative">
+                            <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i data-lucide="clipboard-check" class="w-8 h-8"></i>
+                            </div>
+                            <h3 class="font-bold text-2xl lg:text-3xl mb-2 font-display">Application Process</h3>
+                            <p class="text-purple-200 text-sm">Simple steps to your future</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-8">
+                        <ol class="space-y-6">
+                            <li class="flex gap-4 group/item">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg group-hover/item:scale-110 transition-transform">
+                                        1
+                                    </div>
                                 </div>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-lg text-gray-900 mb-1">Submit Application</h4>
-                                <p class="text-gray-600 text-sm leading-relaxed">Complete our online form with your academic records and personal statement</p>
-                            </div>
-                        </li>
-                        
-                        <li class="flex gap-4 group/item">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg group-hover/item:scale-110 transition-transform">
-                                    2
-                                </div>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-lg text-gray-900 mb-1">Academic Review</h4>
-                                <p class="text-gray-600 text-sm leading-relaxed">Our admissions team evaluates your credentials (2-3 weeks)</p>
-                            </div>
-                        </li>
-                        
-                        <li class="flex gap-4 group/item">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg group-hover/item:scale-110 transition-transform">
-                                    3
-                                </div>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-lg text-gray-900 mb-1">Interview Stage</h4>
-                                <p class="text-gray-600 text-sm leading-relaxed">Virtual or in-person interview for select programs</p>
-                            </div>
-                        </li>
-                        
-                        <li class="flex gap-4 group/item">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg group-hover/item:scale-110 transition-transform">
-                                    4
-                                </div>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-lg text-gray-900 mb-1">Decision & Enrollment</h4>
-                                <p class="text-gray-600 text-sm leading-relaxed">Receive your decision and begin enrollment process</p>
-                            </div>
-                        </li>
-                    </ol>
-
-                    <div class="mt-8 pt-8 border-t border-gray-200">
-                        <a href="#" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 transition-colors group/link">
-                            <span>View Detailed Guide</span>
-                            <i data-lucide="arrow-right" class="w-4 h-4 group-hover/link:translate-x-1 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Financial Aid Options Card -->
-            <article class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden hover:shadow-accent-400/20 transition-all duration-300 hover:-translate-y-2 group">
-                <div class="bg-gradient-to-br from-green-500 to-emerald-600 p-8 text-white relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                    <div class="relative">
-                        <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <i data-lucide="piggy-bank" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="font-bold text-2xl lg:text-3xl mb-2 font-display">Financial Aid</h3>
-                        <p class="text-green-100 text-sm">Multiple funding options</p>
-                    </div>
-                </div>
-                
-                <div class="p-8 space-y-6">
-                    <!-- Scholarships -->
-                    <div class="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-2xl border-2 border-amber-200 hover:border-amber-300 transition-all group/aid">
-                        <div class="flex items-start gap-4 mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0 group-hover/aid:scale-110 transition-transform">
-                                <i data-lucide="award" class="w-6 h-6 text-white"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-xl text-amber-900 mb-1">Scholarships</h4>
-                                <p class="text-amber-700 text-sm font-semibold">Up to 100% tuition coverage</p>
-                            </div>
-                        </div>
-                        <p class="text-gray-700 text-sm leading-relaxed mb-3">
-                            Merit-based awards for exceptional academic achievement, leadership, and community service
-                        </p>
-                        <ul class="space-y-2">
-                            <li class="flex items-start gap-2 text-sm text-gray-600">
-                                <i data-lucide="check-circle" class="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"></i>
-                                <span>Presidential Scholarship: Full tuition</span>
-                            </li>
-                            <li class="flex items-start gap-2 text-sm text-gray-600">
-                                <i data-lucide="check-circle" class="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"></i>
-                                <span>Dean's Award: 50% tuition</span>
-                            </li>
-                            <li class="flex items-start gap-2 text-sm text-gray-600">
-                                <i data-lucide="check-circle" class="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0"></i>
-                                <span>Excellence Grant: 25% tuition</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Grants -->
-                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border-2 border-blue-200 hover:border-blue-300 transition-all group/aid">
-                        <div class="flex items-start gap-4 mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 group-hover/aid:scale-110 transition-transform">
-                                <i data-lucide="gift" class="w-6 h-6 text-white"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-xl text-blue-900 mb-1">Grants</h4>
-                                <p class="text-blue-700 text-sm font-semibold">Need-based assistance</p>
-                            </div>
-                        </div>
-                        <p class="text-gray-700 text-sm leading-relaxed">
-                            Financial aid that doesn't require repayment, awarded based on demonstrated financial need
-                        </p>
-                    </div>
-
-                    <!-- Student Loans -->
-                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-purple-200 hover:border-purple-300 transition-all group/aid">
-                        <div class="flex items-start gap-4 mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0 group-hover/aid:scale-110 transition-transform">
-                                <i data-lucide="landmark" class="w-6 h-6 text-white"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-xl text-purple-900 mb-1">Student Loans</h4>
-                                <p class="text-purple-700 text-sm font-semibold">Low-interest options</p>
-                            </div>
-                        </div>
-                        <p class="text-gray-700 text-sm leading-relaxed">
-                            Flexible government and private loan programs with competitive rates and deferred payment plans
-                        </p>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Important Dates & Deadlines Card -->
-            <article class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden hover:shadow-accent-400/20 transition-all duration-300 hover:-translate-y-2 group">
-                <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-8 text-white relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                    <div class="relative">
-                        <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <i data-lucide="calendar" class="w-8 h-8"></i>
-                        </div>
-                        <h3 class="font-bold text-2xl lg:text-3xl mb-2 font-display">Important Dates</h3>
-                        <p class="text-purple-100 text-sm">Mark your calendar</p>
-                    </div>
-                </div>
-                
-                <div class="p-8 space-y-6">
-                    <!-- Fall Semester -->
-                    <div class="relative pl-6 pb-8 border-l-4 border-accent-400 hover:border-accent-500 transition-colors group/date">
-                        <div class="absolute -left-3 top-0 w-6 h-6 bg-accent-400 rounded-full group-hover/date:scale-125 transition-transform"></div>
-                        <div class="bg-gradient-to-br from-gray-50 to-blue-50 p-5 rounded-xl border border-gray-200">
-                            <div class="flex items-start justify-between mb-3">
                                 <div>
-                                    <h4 class="font-bold text-xl text-gray-900 mb-1 font-display">Fall 2025</h4>
-                                    <p class="text-sm text-gray-500">Semester Start: September 2025</p>
+                                    <h4 class="font-bold text-lg text-gray-900 mb-1">Submit Application</h4>
+                                    <p class="text-gray-600 text-sm leading-relaxed">Complete our online form with your academic records and personal statement</p>
                                 </div>
-                                <div class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">
-                                    Priority
+                            </li>
+                            
+                            <li class="flex gap-4 group/item">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg group-hover/item:scale-110 transition-transform">
+                                        2
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-lg text-gray-900 mb-1">Academic Review</h4>
+                                    <p class="text-gray-600 text-sm leading-relaxed">Our admissions team evaluates your credentials (2-3 weeks)</p>
+                                </div>
+                            </li>
+                            
+                            <li class="flex gap-4 group/item">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg group-hover/item:scale-110 transition-transform">
+                                        3
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-lg text-gray-900 mb-1">Interview Stage</h4>
+                                    <p class="text-gray-600 text-sm leading-relaxed">Virtual or in-person interview for select programs</p>
+                                </div>
+                            </li>
+                            
+                            <li class="flex gap-4 group/item">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg group-hover/item:scale-110 transition-transform">
+                                        4
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-lg text-gray-900 mb-1">Decision & Enrollment</h4>
+                                    <p class="text-gray-600 text-sm leading-relaxed">Receive your decision and begin enrollment process</p>
+                                </div>
+                            </li>
+                        </ol>
+
+                        <div class="mt-8 pt-8 border-t border-gray-200">
+                            <a href="#" class="inline-flex items-center gap-2 text-primary-950 font-semibold hover:text-primary-700 transition-colors group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
+                                <span>View Detailed Guide</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4 group-hover/link:translate-x-1 transition-transform"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Financial Aid Options Card -->
+                <article class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden hover:shadow-white/20 transition-all duration-300 hover:-translate-y-2 group">
+                    <div class="bg-gradient-to-br from-primary-700 to-purple-700 p-8 text-white relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                        <div class="relative">
+                            <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i data-lucide="piggy-bank" class="w-8 h-8"></i>
+                            </div>
+                            <h3 class="font-bold text-2xl lg:text-3xl mb-2 font-display">Financial Aid</h3>
+                            <p class="text-purple-200 text-sm">Multiple funding options</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-8 space-y-6">
+                        <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-purple-200 hover:border-purple-300 transition-all group/aid">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 rounded-xl flex items-center justify-center flex-shrink-0 group-hover/aid:scale-110 transition-transform">
+                                    <i data-lucide="award" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-xl text-primary-950 mb-1">Scholarships</h4>
+                                    <p class="text-purple-700 text-sm font-semibold">Up to 100% tuition coverage</p>
                                 </div>
                             </div>
-                            <div class="space-y-2">
-                                <div class="flex items-center gap-2 text-sm">
-                                    <i data-lucide="calendar-check" class="w-4 h-4 text-blue-600"></i>
-                                    <span class="text-gray-700"><strong>Early Decision:</strong> March 15, 2025</span>
+                            <p class="text-gray-700 text-sm leading-relaxed mb-3">
+                                Merit-based awards for exceptional academic achievement, leadership, and community service
+                            </p>
+                            <ul class="space-y-2">
+                                <li class="flex items-start gap-2 text-sm text-gray-600">
+                                    <i data-lucide="check-circle" class="w-4 h-4 text-primary-950 mt-0.5 flex-shrink-0"></i>
+                                    <span>Presidential Scholarship: Full tuition</span>
+                                </li>
+                                <li class="flex items-start gap-2 text-sm text-gray-600">
+                                    <i data-lucide="check-circle" class="w-4 h-4 text-primary-950 mt-0.5 flex-shrink-0"></i>
+                                    <span>Dean's Award: 50% tuition</span>
+                                </li>
+                                <li class="flex items-start gap-2 text-sm text-gray-600">
+                                    <i data-lucide="check-circle" class="w-4 h-4 text-primary-950 mt-0.5 flex-shrink-0"></i>
+                                    <span>Excellence Grant: 25% tuition</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-purple-200 hover:border-purple-300 transition-all group/aid">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 rounded-xl flex items-center justify-center flex-shrink-0 group-hover/aid:scale-110 transition-transform">
+                                    <i data-lucide="gift" class="w-6 h-6 text-white"></i>
                                 </div>
-                                <div class="flex items-center gap-2 text-sm">
-                                    <i data-lucide="calendar-x" class="w-4 h-4 text-orange-600"></i>
-                                    <span class="text-gray-700"><strong>Final Deadline:</strong> June 15, 2025</span>
+                                <div>
+                                    <h4 class="font-bold text-xl text-primary-950 mb-1">Grants</h4>
+                                    <p class="text-purple-700 text-sm font-semibold">Need-based assistance</p>
+                                </div>
+                            </div>
+                            <p class="text-gray-700 text-sm leading-relaxed">
+                                Financial aid that doesn't require repayment, awarded based on demonstrated financial need
+                            </p>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl border-2 border-purple-200 hover:border-purple-300 transition-all group/aid">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 rounded-xl flex items-center justify-center flex-shrink-0 group-hover/aid:scale-110 transition-transform">
+                                    <i data-lucide="landmark" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-xl text-primary-950 mb-1">Student Loans</h4>
+                                    <p class="text-purple-700 text-sm font-semibold">Low-interest options</p>
+                                </div>
+                            </div>
+                            <p class="text-gray-700 text-sm leading-relaxed">
+                                Flexible government and private loan programs with competitive rates and deferred payment plans
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Second Row - Important Dates Full Width -->
+            <article class="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden hover:shadow-white/20 transition-all duration-300 hover:-translate-y-2 group">
+                <div class="grid lg:grid-cols-2">
+                    <!-- Header Section -->
+                    <div class="bg-gradient-to-br from-purple-600 to-pink-600 p-8 text-white relative overflow-hidden lg:rounded-l-3xl">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                        <div class="relative">
+                            <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <i data-lucide="calendar" class="w-8 h-8"></i>
+                            </div>
+                            <h3 class="font-bold text-2xl lg:text-3xl mb-2 font-display">Important Dates</h3>
+                            <p class="text-purple-100 text-sm mb-6">Mark your calendar</p>
+                            
+                            <div class="space-y-4 mt-8">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="bell" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold">Application Deadlines</p>
+                                        <p class="text-sm text-purple-200">Don't miss out on your semester</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="star" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold">Scholarship Priority</p>
+                                        <p class="text-sm text-purple-200">Early birds get the best funding</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Spring Semester -->
-                    <div class="relative pl-6 pb-8 border-l-4 border-primary-400 hover:border-primary-500 transition-colors group/date">
-                        <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-400 rounded-full group-hover/date:scale-125 transition-transform"></div>
-                        <div class="bg-gradient-to-br from-gray-50 to-indigo-50 p-5 rounded-xl border border-gray-200">
-                            <div class="flex items-start justify-between mb-3">
-                                <div>
-                                    <h4 class="font-bold text-xl text-gray-900 mb-1 font-display">Spring 2026</h4>
-                                    <p class="text-sm text-gray-500">Semester Start: January 2026</p>
+                    
+                    <!-- Dates Content Section -->
+                    <div class="p-8 space-y-6">
+                        <div class="relative pl-6 pb-6 border-l-4 border-primary-950 hover:border-primary-700 transition-colors group/date">
+                            <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-950 rounded-full group-hover/date:scale-125 transition-transform"></div>
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border border-purple-200">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div>
+                                        <h4 class="font-bold text-xl text-primary-950 mb-1 font-display">Fall 2025</h4>
+                                        <p class="text-sm text-gray-500">Semester Start: September 2025</p>
+                                    </div>
+                                    <div class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold">
+                                        Priority
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="space-y-2">
-                                <div class="flex items-center gap-2 text-sm">
-                                    <i data-lucide="calendar-check" class="w-4 h-4 text-blue-600"></i>
-                                    <span class="text-gray-700"><strong>Early Decision:</strong> September 1, 2025</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-sm">
-                                    <i data-lucide="calendar-x" class="w-4 h-4 text-orange-600"></i>
-                                    <span class="text-gray-700"><strong>Final Deadline:</strong> November 1, 2025</span>
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <i data-lucide="calendar-check" class="w-4 h-4 text-primary-950"></i>
+                                        <span class="text-gray-700"><strong>Early Decision:</strong> March 15, 2025</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <i data-lucide="calendar-x" class="w-4 h-4 text-primary-950"></i>
+                                        <span class="text-gray-700"><strong>Final Deadline:</strong> June 15, 2025</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Scholarship Deadline -->
-                    <div class="relative pl-6 border-l-4 border-green-400 hover:border-green-500 transition-colors group/date">
-                        <div class="absolute -left-3 top-0 w-6 h-6 bg-green-400 rounded-full group-hover/date:scale-125 transition-transform"></div>
-                        <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-xl border border-green-200">
-                            <div class="flex items-start justify-between mb-3">
-                                <div>
-                                    <h4 class="font-bold text-xl text-gray-900 mb-1 font-display">Scholarship Priority</h4>
-                                    <p class="text-sm text-gray-500">For maximum consideration</p>
+                        <div class="relative pl-6 pb-6 border-l-4 border-primary-700 hover:border-primary-800 transition-colors group/date">
+                            <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-700 rounded-full group-hover/date:scale-125 transition-transform"></div>
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border border-purple-200">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div>
+                                        <h4 class="font-bold text-xl text-primary-950 mb-1 font-display">Spring 2026</h4>
+                                        <p class="text-sm text-gray-500">Semester Start: January 2026</p>
+                                    </div>
                                 </div>
-                                <div class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
-                                    Funding
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <i data-lucide="calendar-check" class="w-4 h-4 text-primary-950"></i>
+                                        <span class="text-gray-700"><strong>Early Decision:</strong> September 1, 2025</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <i data-lucide="calendar-x" class="w-4 h-4 text-primary-950"></i>
+                                        <span class="text-gray-700"><strong>Final Deadline:</strong> November 1, 2025</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2 text-sm">
-                                <i data-lucide="star" class="w-4 h-4 text-amber-600"></i>
-                                <span class="text-gray-700"><strong>Deadline:</strong> March 31, 2025</span>
+                        </div>
+
+                        <div class="relative pl-6 border-l-4 border-purple-500 hover:border-purple-600 transition-colors group/date">
+                            <div class="absolute -left-3 top-0 w-6 h-6 bg-purple-500 rounded-full group-hover/date:scale-125 transition-transform"></div>
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border border-purple-200">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div>
+                                        <h4 class="font-bold text-xl text-primary-950 mb-1 font-display">Scholarship Priority</h4>
+                                        <p class="text-sm text-gray-500">For maximum consideration</p>
+                                    </div>
+                                    <div class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">
+                                        Funding
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm">
+                                    <i data-lucide="star" class="w-4 h-4 text-purple-600"></i>
+                                    <span class="text-gray-700"><strong>Deadline:</strong> March 31, 2025</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -577,41 +596,39 @@
             </article>
         </div>
 
-        <!-- Call-to-Action Buttons -->
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 lg:gap-6">
-            <a href="#contact" class="group inline-flex items-center gap-3 bg-accent-400 hover:bg-accent-500 text-primary-950 px-8 lg:px-10 py-4 lg:py-5 rounded-2xl font-bold text-base lg:text-lg shadow-2xl hover:shadow-accent-400/50 transition-all hover:scale-105">
+            <a href="#contact" class="group inline-flex items-center gap-3 bg-white hover:bg-gray-100 text-primary-950 px-8 lg:px-10 py-4 lg:py-5 rounded-2xl font-bold text-base lg:text-lg shadow-2xl hover:shadow-white/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
                 <i data-lucide="calculator" class="w-6 h-6 group-hover:rotate-12 transition-transform"></i>
                 <span>Calculate Your Aid</span>
             </a>
             
-            <a href="{% url 'apply' %}" class="group inline-flex items-center gap-3 bg-white hover:bg-gray-50 text-primary-950 px-8 lg:px-10 py-4 lg:py-5 rounded-2xl font-bold text-base lg:text-lg shadow-2xl hover:shadow-white/30 transition-all hover:scale-105 border-2 border-white/20">
+            <a href="{% url 'apply' %}" class="group inline-flex items-center gap-3 border-2 border-white text-white hover:bg-white hover:text-primary-950 px-8 lg:px-10 py-4 lg:py-5 rounded-2xl font-bold text-base lg:text-lg shadow-2xl transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
                 <i data-lucide="file-text" class="w-6 h-6 group-hover:scale-110 transition-transform"></i>
                 <span>Start Application</span>
                 <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
             </a>
         </div>
 
-        <!-- Additional Info Bar -->
         <div class="mt-12 lg:mt-16 grid sm:grid-cols-3 gap-6">
             <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-center hover:bg-white/15 transition-all group">
-                <div class="w-12 h-12 bg-accent-400/20 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <i data-lucide="users" class="w-6 h-6 text-accent-400"></i>
+                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <i data-lucide="users" class="w-6 h-6 text-white"></i>
                 </div>
                 <h4 class="font-bold text-white text-lg mb-2">Admissions Team</h4>
                 <p class="text-gray-300 text-sm">Our team is here to guide you through every step</p>
             </div>
             
             <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-center hover:bg-white/15 transition-all group">
-                <div class="w-12 h-12 bg-accent-400/20 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <i data-lucide="headphones" class="w-6 h-6 text-accent-400"></i>
+                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <i data-lucide="headphones" class="w-6 h-6 text-white"></i>
                 </div>
                 <h4 class="font-bold text-white text-lg mb-2">24/7 Support</h4>
                 <p class="text-gray-300 text-sm">Get answers to your questions anytime</p>
             </div>
             
             <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-center hover:bg-white/15 transition-all group">
-                <div class="w-12 h-12 bg-accent-400/20 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <i data-lucide="shield-check" class="w-6 h-6 text-accent-400"></i>
+                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
                 </div>
                 <h4 class="font-bold text-white text-lg mb-2">Secure Process</h4>
                 <p class="text-gray-300 text-sm">Your information is protected and confidential</p>
@@ -621,16 +638,16 @@
 </section>
 
 <!-- Testimonials Section -->
-<section class="py-16 lg:py-24 bg-primary-950" aria-labelledby="testimonials-heading">
-    <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
+<section class="py-16 lg:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100" aria-labelledby="testimonials-heading">
+    <div class="container mx-auto">
         <div class="text-center mb-12">
-            <h2 id="testimonials-heading" class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 font-display">
+            <h2 id="testimonials-heading" class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-display">
                 What Our Students Say
             </h2>
-            <p class="text-gray-300 text-base lg:text-lg">Hear from our global community of learners</p>
+            <p class="text-gray-600 text-base lg:text-lg">Hear from our global community of learners</p>
         </div>
         <div id="testimonial" class="bg-white shadow-2xl rounded-2xl p-8 md:p-12 max-w-4xl mx-auto relative">
-            <i data-lucide="quote" class="w-16 h-16 text-accent-400 mb-6"></i>
+            <i data-lucide="quote" class="w-16 h-16 text-primary-950 mb-6"></i>
             <blockquote>
                 <p id="testimonialQuote" class="italic text-gray-700 text-lg md:text-xl mb-8 leading-relaxed">
                     MIU's flexible online platform allowed me to complete my MBA while working full-time. The faculty support was exceptional, and I've already seen career advancement.
@@ -647,38 +664,36 @@
             </div>
 
             <div class="flex justify-center mt-8 space-x-2">
-                <button class="testimonial-indicator w-3 h-3 rounded-full bg-primary-600 transition-all active" data-index="0" aria-label="Testimonial 1"></button>
-                <button class="testimonial-indicator w-3 h-3 rounded-full bg-primary-300 hover:bg-primary-600 transition-all" data-index="1" aria-label="Testimonial 2"></button>
-                <button class="testimonial-indicator w-3 h-3 rounded-full bg-primary-300 hover:bg-primary-600 transition-all" data-index="2" aria-label="Testimonial 3"></button>
+                <button class="testimonial-indicator w-3 h-3 rounded-full bg-primary-950 transition-all active focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="0" aria-label="Testimonial 1"></button>
+                <button class="testimonial-indicator w-3 h-3 rounded-full bg-purple-300 hover:bg-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="1" aria-label="Testimonial 2"></button>
+                <button class="testimonial-indicator w-3 h-3 rounded-full bg-purple-300 hover:bg-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="2" aria-label="Testimonial 3"></button>
             </div>
         </div>
     </div>
 </section>
 
 <!-- Contact Form Section -->
-<section id="contact" class="py-16 lg:py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50" aria-labelledby="contact-heading">
-    <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
-        <!-- Section Header -->
+<section id="contact" class="py-16 lg:py-24 bg-white" aria-labelledby="contact-heading">
+    <div class="container mx-auto">
         <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-950 px-4 py-2 rounded-full text-sm font-semibold mb-4">
                 <i data-lucide="mail" class="w-4 h-4"></i>
                 <span>Get In Touch</span>
             </div>
             <h2 id="contact-heading" class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-display">
-                Contact <span class="bg-gradient-to-r from-primary-950 to-primary-700 bg-clip-text text-transparent">MIU</span>
+                Contact MIU
             </h2>
             <p class="text-gray-600 max-w-2xl mx-auto text-base lg:text-lg leading-relaxed">
                 We're here to help you start your educational journey. Reach out for admissions, programs, or campus information.
             </p>
         </div>
 
-        <!-- Contact Form and Quick Info Grid -->
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
 
             <!-- Contact Form -->
-            <div class="bg-white rounded-2xl lg:rounded-3xl shadow-xl p-6 sm:p-8 lg:p-10">
+            <div class="bg-white rounded-2xl lg:rounded-3xl shadow-xl p-6 sm:p-8 lg:p-10 border border-gray-100">
                 <div class="flex items-center gap-3 mb-6">
-                    <div class="w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-800 rounded-xl flex items-center justify-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 rounded-xl flex items-center justify-center">
                         <i data-lucide="send" class="w-6 h-6 text-white"></i>
                     </div>
                     <h3 class="text-xl lg:text-2xl font-bold text-primary-950 font-display">Send a Message</h3>
@@ -702,21 +717,21 @@
                         <label for="contactName" class="block text-sm font-semibold text-gray-700 mb-2">
                             Your Name <span class="text-red-500">*</span>
                         </label>
-                        <input id="contactName" name="name" required type="text" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all outline-none" placeholder="John Smith" />
+                        <input id="contactName" name="name" required type="text" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-950 focus:ring-4 focus:ring-purple-100 transition-all outline-none" placeholder="John Smith" />
                     </div>
 
                     <div>
                         <label for="contactEmail" class="block text-sm font-semibold text-gray-700 mb-2">
                             Your Email <span class="text-red-500">*</span>
                         </label>
-                        <input id="contactEmail" name="email" required type="email" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all outline-none" placeholder="john@example.com" />
+                        <input id="contactEmail" name="email" required type="email" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-950 focus:ring-4 focus:ring-purple-100 transition-all outline-none" placeholder="john@example.com" />
                     </div>
 
                     <div>
                         <label for="contactSubject" class="block text-sm font-semibold text-gray-700 mb-2">
                             Subject
                         </label>
-                        <select id="contactSubject" name="subject" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all outline-none bg-white">
+                        <select id="contactSubject" name="subject" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-950 focus:ring-4 focus:ring-purple-100 transition-all outline-none bg-white">
                             <option value="">Select a topic</option>
                             <option value="admissions">Admissions Inquiry</option>
                             <option value="programs">Program Information</option>
@@ -730,10 +745,10 @@
                         <label for="contactMessage" class="block text-sm font-semibold text-gray-700 mb-2">
                             Your Message <span class="text-red-500">*</span>
                         </label>
-                        <textarea id="contactMessage" name="message" required rows="5" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition-all outline-none resize-none" placeholder="I'm interested in learning more about..."></textarea>
+                        <textarea id="contactMessage" name="message" required rows="5" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-950 focus:ring-4 focus:ring-purple-100 transition-all outline-none resize-none" placeholder="I'm interested in learning more about..."></textarea>
                     </div>
 
-                    <button type="submit" class="w-full bg-gradient-to-r from-primary-950 to-primary-700 text-white py-4 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group">
+                    <button type="submit" class="w-full bg-gradient-to-r from-primary-950 to-primary-700 text-white py-4 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                         <i data-lucide="send" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
                         Send Message
                     </button>
@@ -743,17 +758,16 @@
             <!-- Contact Information Cards -->
             <div class="space-y-6">
                 <div class="flex items-center gap-3 mb-8">
-                    <div class="w-12 h-12 bg-gradient-to-br from-accent-400 to-accent-600 rounded-xl flex items-center justify-center">
-                        <i data-lucide="info" class="w-6 h-6 text-primary-950"></i>
+                    <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-primary-700 rounded-xl flex items-center justify-center">
+                        <i data-lucide="info" class="w-6 h-6 text-white"></i>
                     </div>
                     <h3 class="text-xl lg:text-2xl font-bold text-primary-950 font-display">Contact Information</h3>
                 </div>
 
-                <!-- Address Card -->
-                <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group">
+                <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <i data-lucide="map-pin" class="w-6 h-6 text-blue-600"></i>
+                        <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="map-pin" class="w-6 h-6 text-primary-950"></i>
                         </div>
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Main Campus</h4>
@@ -766,16 +780,15 @@
                     </div>
                 </div>
 
-                <!-- Email Card -->
-                <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group">
+                <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <i data-lucide="mail" class="w-6 h-6 text-purple-600"></i>
+                        <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="mail" class="w-6 h-6 text-primary-950"></i>
                         </div>
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Email Us</h4>
                             <div class="space-y-1 text-gray-600">
-                                <p><a href="mailto:admissions@miu.edu" class="hover:text-primary-600 transition-colors">admissions@miu.edu</a></p>
+                                <p><a href="mailto:admissionsiu.edu" class="hover:text-primary-600 transition-colors">admissions@miu.edu</a></p>
                                 <p><a href="mailto:info@miu.edu" class="hover:text-primary-600 transition-colors">info@miu.edu</a></p>
                                 <p><a href="mailto:international@miu.edu" class="hover:text-primary-600 transition-colors">international@miu.edu</a></p>
                             </div>
@@ -783,11 +796,10 @@
                     </div>
                 </div>
 
-                <!-- Phone Card -->
-                <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group">
+                <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <i data-lucide="phone" class="w-6 h-6 text-green-600"></i>
+                        <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="phone" class="w-6 h-6 text-primary-950"></i>
                         </div>
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Call Us</h4>
@@ -800,11 +812,10 @@
                     </div>
                 </div>
 
-                <!-- Office Hours Card -->
-                <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group">
+                <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <i data-lucide="clock" class="w-6 h-6 text-orange-600"></i>
+                        <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="clock" class="w-6 h-6 text-primary-950"></i>
                         </div>
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Office Hours</h4>
@@ -821,12 +832,11 @@
     </div>
 </section>
 
-<!-- Campus Map & Locations Section -->
-<section id="campus-map" class="py-16 lg:py-24 bg-white" aria-labelledby="campus-heading">
-    <div class="container mx-auto px-6 sm:px-12 lg:px-24 xl:px-32 2xl:px-40">
-        <!-- Section Header -->
+<!-- Campus Map Section -->
+<section id="campus-map" class="py-16 lg:py-24 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100" aria-labelledby="campus-heading">
+    <div class="container mx-auto">
         <div class="text-center mb-12">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-950 px-4 py-2 rounded-full text-sm font-semibold mb-4">
                 <i data-lucide="map" class="w-4 h-4"></i>
                 <span>Our Locations</span>
             </div>
@@ -836,14 +846,12 @@
             </p>
         </div>
 
-        <!-- Campus Cards Grid -->
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            <!-- Main Campus -->
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all group border border-gray-100">
-                <div class="h-2 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                <div class="h-2 bg-gradient-to-r from-primary-950 to-primary-700"></div>
                 <div class="p-6">
-                    <div class="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i data-lucide="building" class="w-7 h-7 text-blue-600"></i>
+                    <div class="w-14 h-14 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="building" class="w-7 h-7 text-primary-950"></i>
                     </div>
                     <h3 class="font-bold text-xl text-primary-950 mb-3 font-display">Main Campus</h3>
                     <p class="text-gray-600 mb-4 text-sm leading-relaxed">
@@ -851,7 +859,7 @@
                     </p>
                     <div class="space-y-2 text-sm text-gray-500">
                         <div class="flex items-start gap-2">
-                            <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600"></i>
+                            <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 flex-shrink-0 text-primary-950"></i>
                             <div>
                                 <p class="font-medium text-gray-700">123 University Avenue</p>
                                 <p>Knowledge City, KC 10101</p>
@@ -861,9 +869,8 @@
                 </div>
             </div>
 
-            <!-- Technology Center -->
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all group border border-gray-100">
-                <div class="h-2 bg-gradient-to-r from-purple-500 to-purple-600"></div>
+                <div class="h-2 bg-gradient-to-r from-purple-600 to-purple-700"></div>
                 <div class="p-6">
                     <div class="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <i data-lucide="laptop" class="w-7 h-7 text-purple-600"></i>
@@ -884,12 +891,11 @@
                 </div>
             </div>
 
-            <!-- International Center -->
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all group sm:col-span-2 lg:col-span-1 border border-gray-100">
-                <div class="h-2 bg-gradient-to-r from-green-500 to-green-600"></div>
+                <div class="h-2 bg-gradient-to-r from-pink-500 to-pink-600"></div>
                 <div class="p-6">
-                    <div class="w-14 h-14 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i data-lucide="globe" class="w-7 h-7 text-green-600"></i>
+                    <div class="w-14 h-14 bg-gradient-to-br from-pink-100 to-pink-200 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="globe" class="w-7 h-7 text-pink-600"></i>
                     </div>
                     <h3 class="font-bold text-xl text-primary-950 mb-3 font-display">International Center</h3>
                     <p class="text-gray-600 mb-4 text-sm leading-relaxed">
@@ -897,7 +903,7 @@
                     </p>
                     <div class="space-y-2 text-sm text-gray-500">
                         <div class="flex items-start gap-2">
-                            <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 flex-shrink-0 text-green-600"></i>
+                            <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 flex-shrink-0 text-pink-600"></i>
                             <div>
                                 <p class="font-medium text-gray-700">789 Global Plaza</p>
                                 <p>International District, ID 30303</p>
@@ -908,15 +914,13 @@
             </div>
         </div>
 
-        <!-- Interactive Map -->
         <div class="relative rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl">
             <div class="relative w-full h-96 sm:h-[500px] lg:h-[600px]">
                 <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.177858804427!2d-73.98784468459426!3d40.70555167933205!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a315cdf4c9b%3A0x8b934de5cae6f7a!2sFinancial%20District%2C%20New%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s!4v1648561234567!5m2!1sen!2s" class="absolute inset-0 w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="MIU Main Campus Location Map" aria-label="Google Map showing MIU Main Campus location"></iframe>
 
-                <!-- Map Overlay Info Card -->
                 <div class="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto sm:max-w-sm bg-primary-950/95 backdrop-blur-md text-white p-5 sm:p-6 rounded-xl shadow-2xl">
                     <div class="flex items-start gap-3 mb-4">
-                        <div class="w-10 h-10 bg-accent-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                             <i data-lucide="map-pin" class="w-5 h-5 text-primary-950"></i>
                         </div>
                         <div>
@@ -924,7 +928,7 @@
                             <p class="text-sm text-gray-200">123 University Avenue<br>Knowledge City, KC 10101</p>
                         </div>
                     </div>
-                    <a href="https://maps.google.com/?q=123+University+Avenue+Knowledge+City" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-accent-400 font-semibold hover:text-accent-300 transition-colors text-sm group">
+                    <a href="https://maps.google.com/?q=123+University+Avenue+Knowledge+City" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-white font-semibold hover:text-gray-200 transition-colors text-sm group">
                         <i data-lucide="navigation" class="w-4 h-4"></i>
                         Get Directions
                         <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
@@ -933,13 +937,11 @@
             </div>
         </div>
 
-        <!-- Transportation Options -->
         <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Public Transit -->
-            <div class="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all group border border-blue-100">
+            <div class="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                 <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <i data-lucide="train" class="w-6 h-6 text-blue-600"></i>
+                    <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="train" class="w-6 h-6 text-primary-950"></i>
                     </div>
                     <div>
                         <h4 class="font-bold text-lg text-primary-950 mb-2">Public Transit</h4>
@@ -950,11 +952,10 @@
                 </div>
             </div>
 
-            <!-- Parking -->
-            <div class="bg-gradient-to-br from-gray-50 to-green-50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all group border border-green-100">
+            <div class="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                 <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <i data-lucide="car" class="w-6 h-6 text-green-600"></i>
+                    <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="car" class="w-6 h-6 text-primary-950"></i>
                     </div>
                     <div>
                         <h4 class="font-bold text-lg text-primary-950 mb-2">Parking</h4>
@@ -965,11 +966,10 @@
                 </div>
             </div>
 
-            <!-- From Airport -->
-            <div class="bg-gradient-to-br from-gray-50 to-purple-50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all group sm:col-span-2 lg:col-span-1 border border-purple-100">
+            <div class="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all group sm:col-span-2 lg:col-span-1 border border-gray-100">
                 <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <i data-lucide="plane" class="w-6 h-6 text-purple-600"></i>
+                    <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="plane" class="w-6 h-6 text-primary-950"></i>
                     </div>
                     <div>
                         <h4 class="font-bold text-lg text-primary-950 mb-2">From Airport</h4>
@@ -1060,7 +1060,7 @@
     ];
 
     let currentTestimonial = 0;
-    const testimonialInterval = 7000; // 7 seconds
+    const testimonialInterval = 7000;
 
     function showTestimonial(index) {
         const testimonial = testimonials[index];
@@ -1071,11 +1071,11 @@
 
         document.querySelectorAll('.testimonial-indicator').forEach((indicator, i) => {
             if (i === index) {
-                indicator.classList.remove('bg-primary-300');
-                indicator.classList.add('bg-primary-600', 'active');
+                indicator.classList.remove('bg-purple-300');
+                indicator.classList.add('bg-primary-950', 'active');
             } else {
-                indicator.classList.remove('bg-primary-600', 'active');
-                indicator.classList.add('bg-primary-300');
+                indicator.classList.remove('bg-primary-950', 'active');
+                indicator.classList.add('bg-purple-300');
             }
         });
     }
@@ -1085,10 +1085,8 @@
         showTestimonial(currentTestimonial);
     }
 
-    // Auto-rotate testimonials
     let testimonialTimer = setInterval(nextTestimonial, testimonialInterval);
 
-    // Manual controls
     document.querySelectorAll('.testimonial-indicator').forEach((indicator, index) => {
         indicator.addEventListener('click', () => {
             currentTestimonial = index;
@@ -1098,14 +1096,12 @@
         });
     });
 
-    // Pause testimonial rotation on hover
     const testimonialSection = document.getElementById('testimonial');
     testimonialSection.addEventListener('mouseenter', () => clearInterval(testimonialTimer));
     testimonialSection.addEventListener('mouseleave', () => {
         testimonialTimer = setInterval(nextTestimonial, testimonialInterval);
     });
 
-    // Initialize Lucide icons for dynamically loaded content
     lucide.createIcons();
 </script>
 {% endblock %}

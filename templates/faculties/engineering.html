@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Faculty of Engineering - MIU | Modern International University{% endblock %}
+
+{% block extra_css %}
+<meta name="description" content="Shape the future with MIU's Faculty of Engineering. Programs in Mechanical, Electrical, Civil, Computer, and Chemical Engineering with cutting-edge facilities.">
+<meta name="keywords" content="engineering faculty, mechanical engineering, electrical engineering, civil engineering, computer engineering, MIU">
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 text-white py-24 lg:py-32 overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-20 left-10 w-64 h-64 bg-blue-300 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-cyan-300 rounded-full blur-3xl"></div>
+    </div>
+    
+    <div class="container mx-auto relative z-10">
+        <div class="max-w-4xl">
+            <nav class="flex mb-8 text-sm" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-2">
+                    <li><a href="{% url 'index' %}" class="text-blue-200 hover:text-white transition-colors">Home</a></li>
+                    <li><i data-lucide="chevron-right" class="w-4 h-4 text-blue-300"></i></li>
+                    <li><span class="text-blue-200">Faculties</span></li>
+                    <li><i data-lucide="chevron-right" class="w-4 h-4 text-blue-300"></i></li>
+                    <li><span class="text-white font-medium">Faculty of Engineering</span></li>
+                </ol>
+            </nav>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-xl">
+                    <i data-lucide="cog" class="w-8 h-8 text-white"></i>
+                </div>
+                <div>
+                    <p class="text-blue-200 text-sm font-medium mb-1">Design. Build. Innovate.</p>
+                    <h1 class="text-4xl lg:text-6xl font-bold font-display">Faculty of Engineering</h1>
+                </div>
+            </div>
+            
+            <p class="text-xl text-blue-100 mb-8 leading-relaxed max-w-3xl">
+                Engineering tomorrow's solutions today through innovation, sustainability, and technological excellence.
+            </p>
+            
+            <div class="flex flex-wrap gap-4">
+                <a href="{% url 'apply' %}" class="px-8 py-4 bg-white text-gray-900 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
+                    Apply Now
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+                <a href="#programs" class="px-8 py-4 border-2 border-white text-white rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all duration-300 inline-flex items-center gap-2">
+                    Explore Programs
+                    <i data-lucide="wrench" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Stats -->
+<section class="py-16 bg-gradient-to-br from-blue-50 to-cyan-50">
+    <div class="container mx-auto">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i data-lucide="users" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 mb-2">3,200+</h3>
+                <p class="text-gray-600">Engineering Students</p>
+            </div>
+            <div class="text-center">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i data-lucide="award" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 mb-2">98%</h3>
+                <p class="text-gray-600">Graduate Employment</p>
+            </div>
+            <div class="text-center">
+                <div class="w-16 h-16 bg-gradient-to-br from-cyan-600 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i data-lucide="building" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 mb-2">250+</h3>
+                <p class="text-gray-600">Industry Partners</p>
+            </div>
+            <div class="text-center">
+                <div class="w-16 h-16 bg-gradient-to-br from-teal-600 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i data-lucide="lightbulb" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-3xl font-bold text-gray-900 mb-2">1,500+</h3>
+                <p class="text-gray-600">Patents Filed</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Faculty -->
+<section class="py-20 bg-white">
+    <div class="container mx-auto">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <div class="relative order-2 lg:order-1">
+                <div class="aspect-[4/3] bg-gradient-to-br from-blue-200 to-cyan-200 rounded-3xl overflow-hidden shadow-2xl">
+                    <img src="{% static 'images/engineering-lab.jpg' %}" alt="Engineering laboratory" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                </div>
+                <div class="absolute -bottom-8 -right-8 w-48 h-48 bg-blue-600 rounded-3xl opacity-10"></div>
+                <div class="absolute -top-8 -left-8 w-32 h-32 bg-cyan-500 rounded-3xl opacity-10"></div>
+            </div>
+            
+            <div class="order-1 lg:order-2">
+                <h2 class="text-4xl font-bold text-gray-900 mb-6 font-display">Engineering the Future</h2>
+                <div class="h-1 w-24 bg-gradient-to-r from-blue-600 to-cyan-500 mb-6"></div>
+                <p class="text-lg text-gray-700 mb-6 leading-relaxed">
+                    The Faculty of Engineering at MIU prepares students to tackle the world's most pressing challenges through innovative design, sustainable practices, and cutting-edge technology.
+                </p>
+                <p class="text-lg text-gray-700 mb-8 leading-relaxed">
+                    Our hands-on curriculum, combined with industry partnerships and state-of-the-art facilities, ensures graduates are ready to lead in their chosen engineering disciplines.
+                </p>
+                
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-6 h-6 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-1">ABET Accredited</h4>
+                            <p class="text-sm text-gray-600">All programs meet global standards</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-6 h-6 text-cyan-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-1">Real-World Projects</h4>
+                            <p class="text-sm text-gray-600">Work on actual industry challenges</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-6 h-6 text-indigo-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-1">Co-op Programs</h4>
+                            <p class="text-sm text-gray-600">Gain paid work experience</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="check" class="w-6 h-6 text-teal-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-1">Innovation Labs</h4>
+                            <p class="text-sm text-gray-600">Access to cutting-edge tools</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Programs Section -->
+<section id="programs" class="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+    <div class="container mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-gray-900 mb-4 font-display">Engineering Programs</h2>
+            <div class="h-1 w-24 bg-gradient-to-r from-blue-600 to-cyan-500 mx-auto mb-6"></div>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Choose from our comprehensive range of accredited engineering programs.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Mechanical Engineering -->
+            <div class="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-blue-100">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                    <i data-lucide="cog" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Mechanical Engineering</h3>
+                <p class="text-gray-600 mb-6 leading-relaxed">
+                    Design, analyze, and manufacture mechanical systems for diverse applications.
+                </p>
+                <ul class="space-y-3 mb-6">
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        BEng in Mechanical Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        MEng in Advanced Manufacturing
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        PhD in Mechanical Engineering
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
+                    Learn More
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+            </div>
+
+            <!-- Electrical Engineering -->
+            <div class="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-blue-100">
+                <div class="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                    <i data-lucide="zap" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Electrical Engineering</h3>
+                <p class="text-gray-600 mb-6 leading-relaxed">
+                    Master electrical systems, power generation, and electronic circuit design.
+                </p>
+                <ul class="space-y-3 mb-6">
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        BEng in Electrical Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        MEng in Power Systems
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        PhD in Electrical Engineering
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
+                    Learn More
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+            </div>
+
+            <!-- Civil Engineering -->
+            <div class="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-blue-100">
+                <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                    <i data-lucide="building" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Civil Engineering</h3>
+                <p class="text-gray-600 mb-6 leading-relaxed">
+                    Build sustainable infrastructure and shape the cities of tomorrow.
+                </p>
+                <ul class="space-y-3 mb-6">
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        BEng in Civil Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        MEng in Structural Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        PhD in Civil Engineering
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
+                    Learn More
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+            </div>
+
+            <!-- Computer Engineering -->
+            <div class="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-blue-100">
+                <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                    <i data-lucide="cpu" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Computer Engineering</h3>
+                <p class="text-gray-600 mb-6 leading-relaxed">
+                    Develop advanced computing systems and embedded technologies.
+                </p>
+                <ul class="space-y-3 mb-6">
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        BEng in Computer Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        MEng in Embedded Systems
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        PhD in Computer Engineering
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
+                    Learn More
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+            </div>
+
+            <!-- Chemical Engineering -->
+            <div class="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-blue-100">
+                <div class="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                    <i data-lucide="flask-conical" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Chemical Engineering</h3>
+                <p class="text-gray-600 mb-6 leading-relaxed">
+                    Transform raw materials into valuable products through process engineering.
+                </p>
+                <ul class="space-y-3 mb-6">
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        BEng in Chemical Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        MEng in Process Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        PhD in Chemical Engineering
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
+                    Learn More
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+            </div>
+
+            <!-- Aerospace Engineering -->
+            <div class="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-blue-100">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                    <i data-lucide="plane" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Aerospace Engineering</h3>
+                <p class="text-gray-600 mb-6 leading-relaxed">
+                    Design aircraft and spacecraft for the future of aviation and space exploration.
+                </p>
+                <ul class="space-y-3 mb-6">
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        BEng in Aerospace Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        MEng in Aeronautical Engineering
+                    </li>
+                    <li class="flex items-center gap-2 text-gray-700">
+                        <i data-lucide="circle-check" class="w-5 h-5 text-blue-600"></i>
+                        PhD in Aerospace Engineering
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
+                    Learn More
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Facilities -->
+<section class="py-20 bg-white">
+    <div class="container mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-gray-900 mb-4 font-display">World-Class Facilities</h2>
+            <div class="h-1 w-24 bg-gradient-to-r from-blue-600 to-cyan-500 mx-auto mb-6"></div>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Learn and innovate in our state-of-the-art laboratories and research centers.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border border-blue-100">
+                <div class="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="cpu" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">Innovation Lab</h3>
+                <p class="text-gray-700 leading-relaxed">3D printing, CNC machining, laser cutting, and rapid prototyping equipment for bringing ideas to life.</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-cyan-50 to-teal-50 rounded-2xl p-8 border border-cyan-100">
+                <div class="w-14 h-14 bg-cyan-600 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="zap" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">Power Systems Lab</h3>
+                <p class="text-gray-700 leading-relaxed">Advanced electrical systems testing, renewable energy research, and smart grid technology development.</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-8 border border-indigo-100">
+                <div class="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="microscope" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3">Materials Lab</h3>
+                <p class="text-gray-700 leading-relaxed">Testing and analysis of materials properties, nanotechnology research, and composite development.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% comment %} <!-- CTA Section -->
+<section class="py-20 bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 text-white">
+    <div class="container mx-auto text-center">
+        <h2 class="text-4xl font-bold mb-6 font-display">Build Your Engineering Career</h2>
+        <p class="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
+            Join thousands of successful engineers who started their journey at MIU. Your future in engineering begins here.
+        </p>
+        <div class="flex flex-wrap justify-center gap-6">
+            <a href="{% url 'apply' %}" class="px-8 py-4 bg-white text-gray-900 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
+                Apply Now
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </a>
+            <a href="#contact" class="px-8 py-4 border-2 border-white text-white rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all duration-300 inline-flex items-center gap-2">
+                Request Information
+                <i data-lucide="mail" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </div>
+</section> {% endcomment %}
+
+{% endblock %}

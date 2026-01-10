@@ -1,7 +1,6 @@
 from django import forms
 from .models import ContactMessage, CourseApplication
 from django.utils import timezone
-import json
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -43,18 +42,8 @@ class ContactForm(forms.ModelForm):
         if len(message) < 10:
             raise forms.ValidationError('Message must be at least 10 characters long.')
         return message
-    
+
 class CourseApplicationForm(forms.ModelForm):
-    # Additional fields not in model but needed for form
-    education_level = forms.MultipleChoiceField(
-        required=False,
-        widget=forms.SelectMultiple(attrs={'class': 'hidden'})
-    )
-    institution = forms.CharField(required=False, widget=forms.HiddenInput())
-    field_of_study = forms.CharField(required=False, widget=forms.HiddenInput())
-    graduation_year = forms.CharField(required=False, widget=forms.HiddenInput())
-    gpa = forms.CharField(required=False, widget=forms.HiddenInput())
-    
     # English proficiency fields
     english_proficiency_type = forms.ChoiceField(
         choices=[
@@ -65,28 +54,53 @@ class CourseApplicationForm(forms.ModelForm):
             ('native', 'Native Speaker'),
         ],
         required=False,
-        widget=forms.RadioSelect(attrs={'class': 'mr-2'})
+        widget=forms.RadioSelect(attrs={'class': 'mr-2 h-5 w-5'})
     )
-    toefl_score = forms.CharField(required=False, max_length=20)
-    ielts_score = forms.CharField(required=False, max_length=20)
-    other_test = forms.CharField(required=False, max_length=100)
+    toefl_score = forms.CharField(required=False, max_length=20, widget=forms.TextInput(attrs={
+        'class': 'w-32 px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500',
+        'placeholder': 'Score'
+    }))
+    ielts_score = forms.CharField(required=False, max_length=20, widget=forms.TextInput(attrs={
+        'class': 'w-32 px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500',
+        'placeholder': 'Score'
+    }))
+    other_test = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'w-40 px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500',
+        'placeholder': 'Test name'
+    }))
     
     # File upload fields
-    transcripts_file = forms.FileField(required=False)
-    english_proficiency_file = forms.FileField(required=False)
-    personal_statement_file = forms.FileField(required=False)
-    cv_file = forms.FileField(required=False)
+    transcripts_file = forms.FileField(required=False, widget=forms.FileInput(attrs={
+        'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
+        'accept': '.pdf,.doc,.docx,.jpg,.png'
+    }))
+    english_proficiency_file = forms.FileField(required=False, widget=forms.FileInput(attrs={
+        'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
+        'accept': '.pdf,.doc,.docx,.jpg,.png'
+    }))
+    personal_statement_file = forms.FileField(required=False, widget=forms.FileInput(attrs={
+        'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
+        'accept': '.pdf,.doc,.docx'
+    }))
+    cv_file = forms.FileField(required=False, widget=forms.FileInput(attrs={
+        'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
+        'accept': '.pdf,.doc,.docx'
+    }))
     additional_files = forms.FileField(
         required=False, 
         widget=MultipleFileInput(attrs={
-            'multiple': True,
-            'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition'
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
+            'accept': '.pdf,.doc,.docx,.jpg,.png'
         })
     )
     
     # Declaration checkboxes
-    declaration = forms.BooleanField(required=True)
-    privacy = forms.BooleanField(required=True)
+    declaration = forms.BooleanField(required=True, widget=forms.CheckboxInput(attrs={
+        'class': 'mr-3 h-5 w-5'
+    }))
+    privacy = forms.BooleanField(required=True, widget=forms.CheckboxInput(attrs={
+        'class': 'mr-3 h-5 w-5'
+    }))
     
     class Meta:
         model = CourseApplication
@@ -99,50 +113,59 @@ class CourseApplicationForm(forms.ModelForm):
         
         widgets = {
             'first_name': forms.TextInput(attrs={
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition',
-                'placeholder': 'John'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all',
+                'placeholder': 'John',
+                'required': True
             }),
             'last_name': forms.TextInput(attrs={
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition',
-                'placeholder': 'Smith'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all',
+                'placeholder': 'Smith',
+                'required': True
             }),
             'email': forms.EmailInput(attrs={
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition',
-                'placeholder': 'john@example.com'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all',
+                'placeholder': 'john@example.com',
+                'required': True
             }),
             'phone': forms.TextInput(attrs={
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition',
-                'placeholder': '+1 (555) 123-4567'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all',
+                'placeholder': '+1 (555) 123-4567',
+                'required': True
             }),
             'date_of_birth': forms.DateInput(attrs={
                 'type': 'date',
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all',
+                'required': True
             }),
             'country': forms.Select(attrs={
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white',
+                'required': True
             }),
             'gender': forms.Select(attrs={
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white',
+                'required': True
             }),
             'address': forms.Textarea(attrs={
                 'rows': 3,
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition',
-                'placeholder': 'Enter your full address'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all',
+                'placeholder': 'Enter your full address',
+                'required': True
             }),
             'additional_qualifications': forms.Textarea(attrs={
                 'rows': 3,
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition',
-                'placeholder': 'List any additional qualifications, certifications, or relevant coursework'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all',
+                'placeholder': 'List any certifications, awards, or relevant coursework'
             }),
             'program': forms.Select(attrs={
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white',
+                'required': True
             }),
-            'degree_level': forms.RadioSelect(attrs={'class': 'mr-3'}),
-            'study_mode': forms.RadioSelect(attrs={'class': 'mr-3'}),
-            'intake': forms.RadioSelect(attrs={'class': 'mr-3'}),
+            'degree_level': forms.RadioSelect(attrs={'class': 'mr-3 h-5 w-5'}),
+            'study_mode': forms.RadioSelect(attrs={'class': 'mr-3 h-5 w-5'}),
+            'intake': forms.RadioSelect(attrs={'class': 'mr-3 h-5 w-5'}),
             'scholarship': forms.CheckboxInput(attrs={'class': 'mr-3 h-5 w-5'}),
             'referral_source': forms.Select(attrs={
-                'class': 'w-full p-3 border border-gray-300 rounded-lg focus:border-miu-secondary focus:ring-2 focus:ring-blue-100 transition bg-white'
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white'
             }),
         }
         
@@ -169,13 +192,14 @@ class CourseApplicationForm(forms.ModelForm):
         
         # Validate academic history
         education_levels = self.data.getlist('educationLevel[]')
-        institutions = self.data.getlist('institution[]')
-        
         if not education_levels or not any(education_levels):
             raise forms.ValidationError('Please provide at least one academic history entry.')
         
         # Validate English proficiency
         english_type = cleaned_data.get('english_proficiency_type')
+        if not english_type:
+            raise forms.ValidationError('Please select your English proficiency type.')
+        
         if english_type == 'toefl' and not cleaned_data.get('toefl_score'):
             raise forms.ValidationError('Please provide your TOEFL score.')
         elif english_type == 'ielts' and not cleaned_data.get('ielts_score'):
@@ -183,12 +207,12 @@ class CourseApplicationForm(forms.ModelForm):
         elif english_type == 'other' and not cleaned_data.get('other_test'):
             raise forms.ValidationError('Please specify your English proficiency test.')
         
-        return super().clean()
+        return cleaned_data
     
     def save(self, commit=True):
         instance = super().save(commit=False)
         
-        # Process academic history (exact names from your file)
+        # Process academic history
         education_levels = self.data.getlist('educationLevel[]')
         institutions = self.data.getlist('institution[]')
         fields_of_study = self.data.getlist('fieldOfStudy[]')

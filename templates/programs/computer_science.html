@@ -1,0 +1,453 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Computer Science Program - MIU | Modern International University{% endblock %}
+
+{% block extra_css %}
+<meta name="description" content="Earn your Computer Science degree at MIU. Master programming, algorithms, AI, and software development with hands-on projects and industry partnerships.">
+<meta name="keywords" content="computer science degree, programming, software engineering, AI, machine learning, web development, MIU">
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-blue-900 via-primary-950 to-indigo-900 text-white py-24 lg:py-32 overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-20 left-10 w-64 h-64 bg-blue-300 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-indigo-300 rounded-full blur-3xl"></div>
+    </div>
+    
+    <div class="container mx-auto relative z-10">
+        <div class="max-w-4xl">
+            <nav class="flex mb-8 text-sm" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-2">
+                    <li><a href="{% url 'index' %}" class="text-blue-200 hover:text-white transition-colors">Home</a></li>
+                    <li><i data-lucide="chevron-right" class="w-4 h-4 text-blue-300"></i></li>
+                    <li><span class="text-blue-200">Programs</span></li>
+                    <li><i data-lucide="chevron-right" class="w-4 h-4 text-blue-300"></i></li>
+                    <li><span class="text-white font-medium">Computer Science</span></li>
+                </ol>
+            </nav>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center shadow-xl">
+                    <i data-lucide="code-2" class="w-8 h-8 text-white"></i>
+                </div>
+                <div>
+                    <p class="text-blue-200 text-sm font-medium mb-1">Program Overview</p>
+                    <h1 class="text-4xl lg:text-6xl font-bold font-display">Computer Science</h1>
+                </div>
+            </div>
+            
+            <p class="text-xl text-blue-100 mb-8 leading-relaxed max-w-3xl">
+                Shape the future of technology through innovative software development, artificial intelligence, and cutting-edge computing solutions.
+            </p>
+            
+            <div class="flex flex-wrap gap-4">
+                <a href="{% url 'apply' %}" class="px-8 py-4 bg-white text-primary-950 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
+                    Apply Now
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+                <a href="#curriculum" class="px-8 py-4 border-2 border-white text-white rounded-xl font-semibold hover:bg-white hover:text-primary-950 transition-all duration-300 inline-flex items-center gap-2">
+                    View Curriculum
+                    <i data-lucide="book-open" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Program Info -->
+<section class="py-16 bg-gradient-to-br from-blue-50 to-indigo-50">
+    <div class="container mx-auto">
+        <div class="grid md:grid-cols-4 gap-8">
+            <div class="bg-white rounded-2xl p-6 shadow-lg text-center">
+                <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="clock" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">4 Years</h3>
+                <p class="text-gray-600">Duration (BSc)</p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-lg text-center">
+                <div class="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="calendar" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Fall & Spring</h3>
+                <p class="text-gray-600">Intake Terms</p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-lg text-center">
+                <div class="w-14 h-14 bg-gradient-to-br from-purple-600 to-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="award" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">ABET</h3>
+                <p class="text-gray-600">Accredited</p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-lg text-center">
+                <div class="w-14 h-14 bg-gradient-to-br from-primary-600 to-pink-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="briefcase" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">97%</h3>
+                <p class="text-gray-600">Job Placement</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Program Overview -->
+<section class="py-20 bg-white">
+    <div class="container mx-auto">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-4xl font-bold text-primary-950 mb-6 font-display">Program Overview</h2>
+            <div class="h-1 w-24 bg-gradient-to-r from-blue-600 to-indigo-500 mb-8"></div>
+            
+            <div class="prose prose-lg max-w-none">
+                <p class="text-lg text-gray-700 leading-relaxed mb-6">
+                    Our Computer Science program provides a comprehensive foundation in computing theory, software development, and emerging technologies. You'll learn to design, develop, and optimize software systems while gaining expertise in areas like artificial intelligence, cybersecurity, and cloud computing.
+                </p>
+                
+                <p class="text-lg text-gray-700 leading-relaxed mb-8">
+                    Through hands-on projects, internships, and industry partnerships, you'll build a strong portfolio and gain real-world experience that prepares you for success in the rapidly evolving tech industry.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 mt-10">
+                <div class="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
+                        <i data-lucide="target" class="w-6 h-6 text-blue-600"></i>
+                        Learning Outcomes
+                    </h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-2 text-gray-700">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"></i>
+                            <span>Advanced programming in multiple languages</span>
+                        </li>
+                        <li class="flex items-start gap-2 text-gray-700">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"></i>
+                            <span>Algorithm design and data structures</span>
+                        </li>
+                        <li class="flex items-start gap-2 text-gray-700">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"></i>
+                            <span>Software engineering best practices</span>
+                        </li>
+                        <li class="flex items-start gap-2 text-gray-700">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"></i>
+                            <span>AI and machine learning fundamentals</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
+                        <i data-lucide="briefcase" class="w-6 h-6 text-indigo-600"></i>
+                        Career Paths
+                    </h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-2 text-gray-700">
+                            <i data-lucide="arrow-right" class="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0"></i>
+                            <span>Software Engineer</span>
+                        </li>
+                        <li class="flex items-start gap-2 text-gray-700">
+                            <i data-lucide="arrow-right" class="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0"></i>
+                            <span>Full-Stack Developer</span>
+                        </li>
+                        <li class="flex items-start gap-2 text-gray-700">
+                            <i data-lucide="arrow-right" class="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0"></i>
+                            <span>AI/ML Engineer</span>
+                        </li>
+                        <li class="flex items-start gap-2 text-gray-700">
+                            <i data-lucide="arrow-right" class="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0"></i>
+                            <span>Systems Architect</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Curriculum -->
+<section id="curriculum" class="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+    <div class="container mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-primary-950 mb-4 font-display">Curriculum Highlights</h2>
+            <div class="h-1 w-24 bg-gradient-to-r from-blue-600 to-indigo-500 mx-auto mb-6"></div>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Build a solid foundation in computer science fundamentals and specialized skills.
+            </p>
+        </div>
+
+        <div class="max-w-5xl mx-auto">
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Core Courses -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-blue-100">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
+                        </div>
+                        Core Courses
+                    </h3>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-dot" class="w-5 h-5 text-blue-600 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Data Structures & Algorithms</h4>
+                                <p class="text-sm text-gray-600">Advanced problem solving, complexity analysis</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-dot" class="w-5 h-5 text-blue-600 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Software Engineering</h4>
+                                <p class="text-sm text-gray-600">Design patterns, testing, agile methodologies</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-dot" class="w-5 h-5 text-blue-600 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Database Systems</h4>
+                                <p class="text-sm text-gray-600">SQL, NoSQL, database design and optimization</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-dot" class="w-5 h-5 text-blue-600 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Operating Systems</h4>
+                                <p class="text-sm text-gray-600">Process management, memory, concurrency</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Electives -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-indigo-100">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+                        </div>
+                        Specialization Tracks
+                    </h3>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-dot" class="w-5 h-5 text-indigo-600 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Artificial Intelligence</h4>
+                                <p class="text-sm text-gray-600">Machine learning, neural networks, NLP</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-dot" class="w-5 h-5 text-indigo-600 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Cybersecurity</h4>
+                                <p class="text-sm text-gray-600">Network security, cryptography, ethical hacking</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-dot" class="w-5 h-5 text-indigo-600 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Web Development</h4>
+                                <p class="text-sm text-gray-600">Full-stack development, cloud computing</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="circle-dot" class="w-5 h-5 text-indigo-600 mt-1 flex-shrink-0"></i>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Mobile Development</h4>
+                                <p class="text-sm text-gray-600">iOS, Android, cross-platform applications</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Degree Options -->
+<section class="py-20 bg-white">
+    <div class="container mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-primary-950 mb-4 font-display">Degree Options</h2>
+            <div class="h-1 w-24 bg-gradient-to-r from-blue-600 to-indigo-500 mx-auto mb-6"></div>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Choose the degree level that matches your career aspirations.
+            </p>
+        </div>
+
+        <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-8">
+            <!-- BSc -->
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-100">
+                <div class="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mb-6">
+                    <i data-lucide="graduation-cap" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-3">BSc</h3>
+                <p class="text-gray-600 mb-4">Bachelor of Science in Computer Science</p>
+                <ul class="space-y-2 mb-6">
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-blue-600"></i>
+                        4 years, 120 credits
+                    </li>
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-blue-600"></i>
+                        ABET accredited
+                    </li>
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-blue-600"></i>
+                        Industry internships
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
+                    Apply Now
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+
+            <!-- MSc -->
+            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-8 border-2 border-indigo-600 relative">
+                <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                    Most Popular
+                </div>
+                <div class="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center mb-6">
+                    <i data-lucide="code" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-3">MSc</h3>
+                <p class="text-gray-600 mb-4">Master of Science in Computer Science</p>
+                <ul class="space-y-2 mb-6">
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>
+                        1-2 years, 30-36 credits
+                    </li>
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>
+                        Research opportunities
+                    </li>
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-indigo-600"></i>
+                        Thesis or project option
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-indigo-600 font-semibold hover:gap-3 transition-all">
+                    Apply Now
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+
+            <!-- PhD -->
+            <div class="bg-gradient-to-br from-purple-50 to-primary-50 rounded-2xl p-8 border border-purple-100">
+                <div class="w-14 h-14 bg-primary-600 rounded-xl flex items-center justify-center mb-6">
+                    <i data-lucide="award" class="w-7 h-7 text-white"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-3">PhD</h3>
+                <p class="text-gray-600 mb-4">Doctor of Philosophy in Computer Science</p>
+                <ul class="space-y-2 mb-6">
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-primary-600"></i>
+                        4-6 years
+                    </li>
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-primary-600"></i>
+                        Original research
+                    </li>
+                    <li class="flex items-center gap-2 text-sm text-gray-700">
+                        <i data-lucide="check" class="w-4 h-4 text-primary-600"></i>
+                        Teaching assistantships
+                    </li>
+                </ul>
+                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 text-primary-600 font-semibold hover:gap-3 transition-all">
+                    Apply Now
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Admission Requirements -->
+<section class="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+    <div class="container mx-auto">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-4xl font-bold text-primary-950 mb-6 font-display">Admission Requirements</h2>
+            <div class="h-1 w-24 bg-gradient-to-r from-blue-600 to-indigo-500 mb-8"></div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-blue-100">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">Undergraduate (BSc)</h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-2 text-gray-700">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <span>High school diploma with math/science focus</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-gray-700">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <span>Minimum GPA of 3.2</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-gray-700">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <span>SAT/ACT scores recommended</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-gray-700">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <span>Programming portfolio (optional)</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">Graduate (MSc/PhD)</h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-2 text-gray-700">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <span>Bachelor's in CS or related field</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-gray-700">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <span>Minimum GPA of 3.0</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-gray-700">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <span>GRE scores</span>
+                            </li>
+                            <li class="flex items-start gap-2 text-gray-700">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <span>Programming experience required</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-8 pt-8 border-t border-blue-100">
+                    <a href="{% url 'admission_requirement' %}" class="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all">
+                        View Complete Requirements
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% comment %} <!-- CTA -->
+<section class="py-20 bg-gradient-to-br from-blue-900 via-primary-950 to-indigo-900 text-white relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 right-0 w-96 h-96 bg-indigo-400 rounded-full blur-3xl"></div>
+    </div>
+    <div class="container mx-auto text-center relative z-10">
+        <h2 class="text-4xl font-bold mb-6 font-display">Ready to Code Your Future?</h2>
+        <p class="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
+            Join our Computer Science program and transform your passion for technology into a rewarding career.
+        </p>
+        <div class="flex flex-wrap justify-center gap-6">
+            <a href="{% url 'apply' %}" class="px-8 py-4 bg-white text-primary-950 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
+                Apply Now
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </a>
+            <a href="#contact" class="px-8 py-4 border-2 border-white text-white rounded-xl font-semibold hover:bg-white hover:text-primary-950 transition-all duration-300 inline-flex items-center gap-2">
+                Request Information
+                <i data-lucide="mail" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </div>
+</section> {% endcomment %}
+
+{% endblock %}

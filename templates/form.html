@@ -1,506 +1,561 @@
-{% extends 'formbase.html' %}
-
+{% extends 'base.html' %}
 {% load static %}
 
-{% block style %}
-<link rel="stylesheet" href="{% static 'css/form.css' %}">
-<link rel="stylesheet" href="{% static 'css/style.css' %}">
+{% block title %}Apply Now - Modern International University{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Minimal custom styles for animations only */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .form-step {
+        display: none;
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .form-step.active {
+        display: block;
+    }
+    
+    .progress-step {
+        transition: all 0.3s ease;
+    }
+    
+    .progress-step.active {
+        background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
+        color: white;
+        border-color: #840384;
+        box-shadow: 0 4px 15px rgba(132, 3, 132, 0.3);
+    }
+    
+    .progress-step.active .step-number {
+        background-color: white;
+        color: #840384;
+        border-color: white;
+    }
+    
+    .progress-step.active h3,
+    .progress-step.active p {
+        color: white;
+    }
+    
+    .progress-step.completed {
+        background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+        color: white;
+        border-color: #10B981;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+    
+    .progress-step.completed .step-number {
+        background-color: white;
+        color: #10B981;
+        border-color: white;
+    }
+    
+    .progress-step.completed h3,
+    .progress-step.completed p {
+        color: white;
+    }
+    
+    @keyframes scale-in {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    .animate-scale-in {
+        animation: scale-in 0.5s ease-out;
+    }
+
+</style>
 {% endblock %}
 
 {% block content %}
-
-
-
-<!-- ================= APPLICATION FORM ================= -->
-<section id="contact" class="py-10 bg-gradient-light">
-    <div class="max-w-7xl mx-auto px-4">
+<section class="py-20 bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header -->
         <div class="text-center mb-12">
-            <h1 class="text-4xl md:text-5xl font-bold text-miu-primary mb-4 font-serif">Course Application Form</h1>
-            <p class="text-gray-600 max-w-3xl mx-auto text-lg">Complete your application to Modern International
-                University in 5 simple steps. Your progress will be saved automatically.</p>
+            <h1 class="text-4xl md:text-5xl font-bold mb-4" style="color: #840384;">
+                Course Application Form
+            </h1>
+            <p class="text-gray-600 text-lg max-w-3xl mx-auto">
+                Complete your application to Modern International University in 5 simple steps. 
+                Your progress will be saved automatically.
+            </p>
         </div>
+
+        <!-- Success/Error Messages -->
+        <div id="formMessages" class="max-w-4xl mx-auto mb-6"></div>
 
         <!-- Mobile Progress Indicator -->
-        <div class="mobile-progress-indicator">
-            <div class="flex justify-between items-center mb-2">
-                <span class="font-medium text-gray-800">Step <span id="mobileCurrentStep">1</span> of 5</span>
-                <span class="text-sm font-bold text-miu-primary" id="mobileProgressPercentage">20%</span>
+        <div class="lg:hidden bg-white rounded-xl shadow-lg p-6 mb-6 max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-3">
+                <span class="font-semibold text-gray-800">
+                    Step <span id="mobileCurrentStep">1</span> of 5
+                </span>
+                <span class="font-bold text-sm" style="color: #840384;">
+                    <span id="mobileProgressPercentage">0</span>%
+                </span>
             </div>
-            <div class="progress-bar-container">
-                <div id="mobileProgressBar" class="progress-bar-fill" style="width: 20%"></div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div id="mobileProgressBar" class="h-2 rounded-full transition-all duration-300" 
+                     style="width: 0%; background-color: #840384;"></div>
             </div>
-            <div class="text-center">
-                <span id="mobileStepTitle" class="text-miu-primary font-medium">Personal Information</span>
-            </div>
+            <p id="mobileStepTitle" class="text-center mt-3 font-medium" style="color: #840384;">
+                Personal Information
+            </p>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-8">
-            <!-- Progress Side Menu -->
-            <div class="progress-side-menu lg:w-1/4">
-                <div class="bg-white rounded-xl shadow-lg p-6 sticky top-32">
-                    <h3 class="font-bold text-xl mb-6 text-miu-primary border-b pb-3">Application Stages</h3>
-
-                    <div class="space-y-2">
+        <div class="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto">
+            
+            <!-- Desktop Progress Sidebar -->
+            <aside class="hidden lg:block lg:w-1/4">
+                <div class="bg-white rounded-xl shadow-lg p-6 sticky top-24">
+                    <h2 class="text-xl font-bold mb-6 pb-3 border-b" style="color: #840384;">
+                        Application Progress
+                    </h2>
+                    
+                    <div class="space-y-3" id="progressSteps">
                         <!-- Step 1 -->
-                        <div class="progress-step active flex items-start" data-step="1">
-                            <div class="step-number mr-3">1</div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Personal Information</h4>
-                                <p class="text-sm text-gray-500">Basic details & contact</p>
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" 
+                             data-step="1">
+                            <div class="w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
+                                1
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-gray-900">Personal Information</h3>
+                                <p class="text-xs text-gray-600 mt-0.5">Basic details</p>
                             </div>
                         </div>
 
                         <!-- Step 2 -->
-                        <div class="progress-step flex items-start" data-step="2">
-                            <div class="step-number mr-3">2</div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Academic History</h4>
-                                <p class="text-sm text-gray-500">Education background</p>
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" 
+                             data-step="2">
+                            <div class="w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
+                                2
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-gray-900">Academic History</h3>
+                                <p class="text-xs text-gray-600 mt-0.5">Education background</p>
                             </div>
                         </div>
 
                         <!-- Step 3 -->
-                        <div class="progress-step flex items-start" data-step="3">
-                            <div class="step-number mr-3">3</div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Course Selection</h4>
-                                <p class="text-sm text-gray-500">Program & preferences</p>
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" 
+                             data-step="3">
+                            <div class="w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
+                                3
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-gray-900">Course Selection</h3>
+                                <p class="text-xs text-gray-600 mt-0.5">Program preferences</p>
                             </div>
                         </div>
 
                         <!-- Step 4 -->
-                        <div class="progress-step flex items-start" data-step="4">
-                            <div class="step-number mr-3">4</div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Documents</h4>
-                                <p class="text-sm text-gray-500">Upload supporting files</p>
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" 
+                             data-step="4">
+                            <div class="w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
+                                4
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-gray-900">Documents</h3>
+                                <p class="text-xs text-gray-600 mt-0.5">Upload files</p>
                             </div>
                         </div>
 
                         <!-- Step 5 -->
-                        <div class="progress-step flex items-start" data-step="5">
-                            <div class="step-number mr-3">5</div>
-                            <div>
-                                <h4 class="font-bold text-gray-800">Review & Submit</h4>
-                                <p class="text-sm text-gray-500">Finalize application</p>
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" 
+                             data-step="5">
+                            <div class="w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
+                                5
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-gray-900">Review & Submit</h3>
+                                <p class="text-xs text-gray-600 mt-0.5">Final check</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-8 pt-6 border-t">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm text-gray-600">Overall Progress</span>
-                            <span class="text-sm font-bold text-miu-primary" id="progressPercentage">20%</span>
+                    <!-- Overall Progress Bar -->
+                    <div class="mt-8 pt-6 border-t border-gray-300">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-sm font-semibold text-gray-900">Overall Progress</span>
+                            <span class="font-bold text-lg" style="color: #840384;">
+                                <span id="progressPercentage">0</span>%
+                            </span>
                         </div>
-                        <div class="progress-bar-container">
-                            <div id="progressBar" class="progress-bar-fill" style="width: 20%"></div>
-                        </div>
-
-                        <div class="mt-6 text-center">
-                            <button id="saveProgressBtn"
-                                class="text-miu-secondary hover:text-miu-primary font-medium text-sm">
-                                💾 Save Progress & Continue Later
-                            </button>
+                        <div class="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                            <div id="progressBar" class="h-3 rounded-full transition-all duration-300 shadow-sm" 
+                                 style="width: 0%; background-color: #840384;"></div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </aside>
 
-            <!-- Form Content -->
-            <div class="form-content lg:w-3/4">
+            <!-- Main Form Content -->
+            <main class="flex-1">
                 <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
-                    <!-- Top Progress Bar -->
+                    
+                    <!-- Form Header -->
                     <div class="mb-8">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-medium text-gray-800">Step <span id="currentStep">1</span> of 5</span>
-                            <span class="text-sm font-bold text-miu-primary" id="stepProgressPercentage">20%</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div id="stepProgressBar" class="progress-bar-fill" style="width: 20%"></div>
-                        </div>
-                        <div class="mt-2">
-                            <span id="stepTitle" class="text-miu-primary font-medium text-lg">Personal
-                                Information</span>
+                        <h2 id="stepTitle" class="text-2xl font-bold mb-2" style="color: #840384;">
+                            Personal Information
+                        </h2>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mt-4">
+                            <div id="stepProgressBar" class="h-2 rounded-full transition-all duration-300" 
+                                 style="width: 0%; background-color: #840384;"></div>
                         </div>
                     </div>
 
-                    <form id="applicationForm" method="POST" enctype="multipart/form-data" action="{% url 'apply' %}">
+                    <!-- Application Form -->
+                    <form id="applicationForm" method="POST" enctype="multipart/form-data">
                         {% csrf_token %}
-
-                        <!-- Hidden field to track current step -->
-                        <input type="hidden" name="current_step" id="currentStepInput" value="1">
 
                         <!-- Step 1: Personal Information -->
                         <div class="form-step active" id="step1">
-                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Personal Information</h2>
-                            <p class="text-gray-600 mb-6">Please provide your personal details and contact information.
-                            </p>
+                            <p class="text-gray-600 mb-6">Please provide your personal details and contact information.</p>
 
                             <div class="grid md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.first_name.label }}
-                                        <span class="text-red-500">*</span></label>
+                                    <label for="id_first_name" class="block text-gray-700 font-medium mb-2">
+                                        First Name <span class="text-red-500">*</span>
+                                    </label>
                                     {{ form.first_name }}
-                                    {% if form.first_name.errors %}
-                                    <p class="text-red-500 text-sm mt-1">{{ form.first_name.errors.0 }}</p>
-                                    {% endif %}
+                                    <div class="error-message text-red-500 text-sm mt-1"></div>
                                 </div>
-
                                 <div>
-                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.last_name.label }} <span
-                                            class="text-red-500">*</span></label>
+                                    <label for="id_last_name" class="block text-gray-700 font-medium mb-2">
+                                        Last Name <span class="text-red-500">*</span>
+                                    </label>
                                     {{ form.last_name }}
-                                    {% if form.last_name.errors %}
-                                    <p class="text-red-500 text-sm mt-1">{{ form.last_name.errors.0 }}</p>
-                                    {% endif %}
+                                    <div class="error-message text-red-500 text-sm mt-1"></div>
                                 </div>
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">{{ form.email.label }} <span
-                                        class="text-red-500">*</span></label>
+                                <label for="id_email" class="block text-gray-700 font-medium mb-2">
+                                    Email Address <span class="text-red-500">*</span>
+                                </label>
                                 {{ form.email }}
-                                {% if form.email.errors %}
-                                <p class="text-red-500 text-sm mt-1">{{ form.email.errors.0 }}</p>
-                                {% endif %}
+                                <div class="error-message text-red-500 text-sm mt-1"></div>
                             </div>
 
                             <div class="grid md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.phone.label }} <span
-                                            class="text-red-500">*</span></label>
+                                    <label for="id_phone" class="block text-gray-700 font-medium mb-2">
+                                        Phone Number <span class="text-red-500">*</span>
+                                    </label>
                                     {{ form.phone }}
-                                    {% if form.phone.errors %}
-                                    <p class="text-red-500 text-sm mt-1">{{ form.phone.errors.0 }}</p>
-                                    {% endif %}
+                                    <div class="error-message text-red-500 text-sm mt-1"></div>
                                 </div>
-
                                 <div>
-                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.date_of_birth.label }}
-                                        <span class="text-red-500">*</span></label>
+                                    <label for="id_date_of_birth" class="block text-gray-700 font-medium mb-2">
+                                        Date of Birth <span class="text-red-500">*</span>
+                                    </label>
                                     {{ form.date_of_birth }}
-                                    {% if form.date_of_birth.errors %}
-                                    <p class="text-red-500 text-sm mt-1">{{ form.date_of_birth.errors.0 }}</p>
-                                    {% endif %}
+                                    <div class="error-message text-red-500 text-sm mt-1"></div>
                                 </div>
                             </div>
 
                             <div class="grid md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.country.label }} <span
-                                            class="text-red-500">*</span></label>
+                                    <label for="id_country" class="block text-gray-700 font-medium mb-2">
+                                        Country <span class="text-red-500">*</span>
+                                    </label>
                                     {{ form.country }}
-                                    {% if form.country.errors %}
-                                    <p class="text-red-500 text-sm mt-1">{{ form.country.errors.0 }}</p>
-                                    {% endif %}
+                                    <div class="error-message text-red-500 text-sm mt-1"></div>
                                 </div>
-
                                 <div>
-                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.gender.label }} <span
-                                            class="text-red-500">*</span></label>
+                                    <label for="id_gender" class="block text-gray-700 font-medium mb-2">
+                                        Gender <span class="text-red-500">*</span>
+                                    </label>
                                     {{ form.gender }}
-                                    {% if form.gender.errors %}
-                                    <p class="text-red-500 text-sm mt-1">{{ form.gender.errors.0 }}</p>
-                                    {% endif %}
+                                    <div class="error-message text-red-500 text-sm mt-1"></div>
                                 </div>
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">{{ form.address.label }} <span
-                                        class="text-red-500">*</span></label>
+                                <label for="id_address" class="block text-gray-700 font-medium mb-2">
+                                    Current Address <span class="text-red-500">*</span>
+                                </label>
                                 {{ form.address }}
-                                {% if form.address.errors %}
-                                <p class="text-red-500 text-sm mt-1">{{ form.address.errors.0 }}</p>
-                                {% endif %}
+                                <div class="error-message text-red-500 text-sm mt-1"></div>
                             </div>
                         </div>
 
-                        <!-- Step 2: Academic History - KEEP AS IS but update field names -->
+                        <!-- Step 2: Academic History -->
                         <div class="form-step" id="step2">
-                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Academic History</h2>
-                            <p class="text-gray-600 mb-6">Please provide details of your previous education. Click "Add
-                                More" to include multiple academic entries.</p>
+                            <p class="text-gray-600 mb-6">Please provide details of your previous education.</p>
 
-                            <!-- Academic Entries Container -->
-                            <div id="academicEntriesContainer" class="mb-6">
-                                <!-- Entries added by JavaScript -->
+                            <div id="academicEntriesContainer" class="space-y-6 mb-6">
+                                <!-- Academic entries will be added by JavaScript -->
                             </div>
 
-                            <div class="text-center mb-6">
+                            <div class="text-center mb-8">
                                 <button type="button" id="addAcademicEntryBtn"
-                                    class="border-2 border-dashed border-miu-secondary text-miu-secondary px-6 py-3 rounded-lg font-medium hover:bg-miu-secondary hover:text-white transition-all">
+                                        class="px-6 py-3 border-2 border-dashed rounded-lg font-medium transition-all hover:bg-purple-50"
+                                        style="border-color: #840384; color: #840384;">
                                     + Add Another Academic Entry
                                 </button>
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">English Language Proficiency <span
-                                        class="text-red-500">*</span></label>
+                                <label class="block text-gray-700 font-medium mb-3">
+                                    English Language Proficiency <span class="text-red-500">*</span>
+                                </label>
                                 <div class="grid md:grid-cols-2 gap-4">
-                                    <div class="flex items-center">
-                                        <input type="radio" id="toefl" name="english_proficiency_type" value="toefl"
-                                            class="mr-2">
-                                        <label for="toefl">TOEFL</label>
-                                        <input type="text" name="toefl_score" placeholder="Score"
-                                            class="ml-2 p-2 border border-gray-300 rounded w-20">
+                                    {% for radio in form.english_proficiency_type %}
+                                    <div class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg hover:border-purple-400 transition-colors">
+                                        {{ radio.tag }}
+                                        <label for="{{ radio.id_for_label }}" class="cursor-pointer flex-1">
+                                            {{ radio.choice_label }}
+                                        </label>
+                                        {% if radio.choice_value == 'toefl' %}
+                                        <input type="text" name="toefl_score" placeholder="Score" 
+                                               class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                        {% elif radio.choice_value == 'ielts' %}
+                                        <input type="text" name="ielts_score" placeholder="Score" 
+                                               class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                        {% elif radio.choice_value == 'other' %}
+                                        <input type="text" name="other_test" placeholder="Test name" 
+                                               class="w-32 px-2 py-1 border border-gray-300 rounded">
+                                        {% endif %}
                                     </div>
-                                    <div class="flex items-center">
-                                        <input type="radio" id="ielts" name="english_proficiency_type" value="ielts"
-                                            class="mr-2">
-                                        <label for="ielts">IELTS</label>
-                                        <input type="text" name="ielts_score" placeholder="Score"
-                                            class="ml-2 p-2 border border-gray-300 rounded w-20">
-                                    </div>
-                                    <div class="flex items-center">
-                                        <input type="radio" id="other-test" name="english_proficiency_type"
-                                            value="other" class="mr-2">
-                                        <label for="other-test">Other</label>
-                                        <input type="text" name="other_test" placeholder="Test name"
-                                            class="ml-2 p-2 border border-gray-300 rounded w-32">
-                                    </div>
-                                    <div class="flex items-center">
-                                        <input type="radio" id="native" name="english_proficiency_type" value="native"
-                                            class="mr-2">
-                                        <label for="native">Native Speaker</label>
-                                    </div>
+                                    {% endfor %}
                                 </div>
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">{{
-                                    form.additional_qualifications.label }}</label>
+                                <label for="id_additional_qualifications" class="block text-gray-700 font-medium mb-2">
+                                    Additional Qualifications or Certifications
+                                </label>
                                 {{ form.additional_qualifications }}
                             </div>
                         </div>
 
                         <!-- Step 3: Course Selection -->
                         <div class="form-step" id="step3">
-                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Course Selection</h2>
                             <p class="text-gray-600 mb-6">Select your preferred program and study options.</p>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">{{ form.program.label }} <span
-                                        class="text-red-500">*</span></label>
+                                <label for="id_program" class="block text-gray-700 font-medium mb-2">
+                                    Program of Interest <span class="text-red-500">*</span>
+                                </label>
                                 {{ form.program }}
-                                {% if form.program.errors %}
-                                <p class="text-red-500 text-sm mt-1">{{ form.program.errors.0 }}</p>
-                                {% endif %}
+                                <div class="error-message text-red-500 text-sm mt-1"></div>
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">{{ form.degree_level.label }} <span
-                                        class="text-red-500">*</span></label>
+                                <label class="block text-gray-700 font-medium mb-3">
+                                    Degree Level <span class="text-red-500">*</span>
+                                </label>
                                 <div class="grid md:grid-cols-3 gap-4">
                                     {% for radio in form.degree_level %}
-                                    <div
-                                        class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
+                                    <label for="{{ radio.id_for_label }}" 
+                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
                                         {{ radio.tag }}
-                                        <div class="ml-3">
-                                            <label for="{{ radio.id_for_label }}" class="font-medium cursor-pointer">{{
-                                                radio.choice_label }}</label>
-                                            <p class="text-sm text-gray-500">
-                                                {% if radio.choice_value == 'bachelor' %}Undergraduate degree
-                                                {% elif radio.choice_value == 'master' %}Graduate degree
-                                                {% else %}Research degree{% endif %}
-                                            </p>
+                                        <div>
+                                            <div class="font-medium">{{ radio.choice_label }}</div>
+                                            <div class="text-sm text-gray-500">
+                                                {% if radio.choice_value == 'bachelor' %}Undergraduate
+                                                {% elif radio.choice_value == 'master' %}Graduate
+                                                {% else %}Research{% endif %}
+                                            </div>
                                         </div>
-                                    </div>
+                                    </label>
                                     {% endfor %}
                                 </div>
-                                {% if form.degree_level.errors %}
-                                <p class="text-red-500 text-sm mt-1">{{ form.degree_level.errors.0 }}</p>
-                                {% endif %}
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">{{ form.study_mode.label }} <span
-                                        class="text-red-500">*</span></label>
+                                <label class="block text-gray-700 font-medium mb-3">
+                                    Study Mode <span class="text-red-500">*</span>
+                                </label>
                                 <div class="grid md:grid-cols-2 gap-4">
                                     {% for radio in form.study_mode %}
-                                    <div
-                                        class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
+                                    <label for="{{ radio.id_for_label }}" 
+                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
                                         {{ radio.tag }}
-                                        <div class="ml-3">
-                                            <label for="{{ radio.id_for_label }}" class="font-medium cursor-pointer">{{
-                                                radio.choice_label }}</label>
-                                            <p class="text-sm text-gray-500">
+                                        <div>
+                                            <div class="font-medium">{{ radio.choice_label }}</div>
+                                            <div class="text-sm text-gray-500">
                                                 {% if radio.choice_value == 'full-time' %}On campus
-                                                {% elif radio.choice_value == 'part-time' %}Flexible schedule
-                                                {% elif radio.choice_value == 'online' %}Remote learning
-                                                {% else %}Mix of online & on-campus{% endif %}
-                                            </p>
+                                                {% elif radio.choice_value == 'part-time' %}Flexible
+                                                {% elif radio.choice_value == 'online' %}Remote
+                                                {% else %}Hybrid{% endif %}
+                                            </div>
                                         </div>
-                                    </div>
+                                    </label>
                                     {% endfor %}
                                 </div>
-                                {% if form.study_mode.errors %}
-                                <p class="text-red-500 text-sm mt-1">{{ form.study_mode.errors.0 }}</p>
-                                {% endif %}
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">{{ form.intake.label }} <span
-                                        class="text-red-500">*</span></label>
+                                <label class="block text-gray-700 font-medium mb-3">
+                                    Intake Semester <span class="text-red-500">*</span>
+                                </label>
                                 <div class="grid md:grid-cols-3 gap-4">
                                     {% for radio in form.intake %}
-                                    <div
-                                        class="flex items-center p-3 border border-gray-300 rounded-lg hover:border-miu-secondary cursor-pointer">
+                                    <label for="{{ radio.id_for_label }}" 
+                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
                                         {{ radio.tag }}
-                                        <label for="{{ radio.id_for_label }}" class="font-medium cursor-pointer ml-3">{{
-                                            radio.choice_label }}</label>
-                                    </div>
+                                        <span class="font-medium">{{ radio.choice_label }}</span>
+                                    </label>
                                     {% endfor %}
                                 </div>
-                                {% if form.intake.errors %}
-                                <p class="text-red-500 text-sm mt-1">{{ form.intake.errors.0 }}</p>
-                                {% endif %}
                             </div>
 
-                            <div class="mb-6">
-                                <div class="flex items-center">
+                            <div class="mb-6 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
+                                <label class="flex items-start gap-3 cursor-pointer">
                                     {{ form.scholarship }}
-                                    <label for="{{ form.scholarship.id_for_label }}" class="font-medium ml-3">{{
-                                        form.scholarship.label }}</label>
-                                </div>
-                                <p class="text-sm text-gray-500 mt-2">Check this box if you wish to be considered for
-                                    merit-based scholarships and financial assistance programs.</p>
+                                    <div>
+                                        <div class="font-medium" style="color: #840384;">
+                                            Apply for Scholarship Consideration
+                                        </div>
+                                        <p class="text-sm text-gray-600 mt-1">
+                                            Check this to be considered for merit-based scholarships
+                                        </p>
+                                    </div>
+                                </label>
                             </div>
                         </div>
 
                         <!-- Step 4: Documents -->
                         <div class="form-step" id="step4">
-                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Supporting Documents</h2>
-                            <p class="text-gray-600 mb-6">Upload your supporting documents. All files should be in PDF,
-                                DOC, DOCX, JPG, or PNG format.</p>
+                            <p class="text-gray-600 mb-6">
+                                Upload your supporting documents. Accepted formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB each)
+                            </p>
 
-                            <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">Academic Transcripts <span
-                                        class="text-red-500">*</span></label>
-                                <input type="file" name="transcripts_file" accept=".pdf,.doc,.docx,.jpg,.png"
-                                    class="w-full p-3 border border-gray-300 rounded-lg">
-                                <p class="text-sm text-gray-500 mt-1">Official transcripts from all previous
-                                    institutions</p>
-                            </div>
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        Academic Transcripts <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="file" name="transcripts_file" 
+                                           accept=".pdf,.doc,.docx,.jpg,.png"
+                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
+                                    <p class="text-sm text-gray-500 mt-1">Official transcripts from all institutions</p>
+                                </div>
 
-                            <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">Proof of English Proficiency</label>
-                                <input type="file" name="english_proficiency_file" accept=".pdf,.doc,.docx,.jpg,.png"
-                                    class="w-full p-3 border border-gray-300 rounded-lg">
-                                <p class="text-sm text-gray-500 mt-1">TOEFL, IELTS, or equivalent test scores</p>
-                            </div>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        English Proficiency Certificate
+                                    </label>
+                                    <input type="file" name="english_proficiency_file" 
+                                           accept=".pdf,.doc,.docx,.jpg,.png"
+                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
+                                    <p class="text-sm text-gray-500 mt-1">TOEFL, IELTS, or equivalent scores</p>
+                                </div>
 
-                            <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">Personal Statement <span
-                                        class="text-red-500">*</span></label>
-                                <input type="file" name="personal_statement_file" accept=".pdf,.doc,.docx"
-                                    class="w-full p-3 border border-gray-300 rounded-lg">
-                                <p class="text-sm text-gray-500 mt-1">Statement of purpose (500-1000 words)</p>
-                            </div>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        Personal Statement <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="file" name="personal_statement_file" 
+                                           accept=".pdf,.doc,.docx"
+                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
+                                    <p class="text-sm text-gray-500 mt-1">500-1000 words</p>
+                                </div>
 
-                            <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">Curriculum Vitae / Resume</label>
-                                <input type="file" name="cv_file" accept=".pdf,.doc,.docx"
-                                    class="w-full p-3 border border-gray-300 rounded-lg">
-                                <p class="text-sm text-gray-500 mt-1">Detailed CV highlighting experience & achievements
-                                </p>
-                            </div>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        Curriculum Vitae / Resume
+                                    </label>
+                                    <input type="file" name="cv_file" 
+                                           accept=".pdf,.doc,.docx"
+                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
+                                    <p class="text-sm text-gray-500 mt-1">Detailed CV with experience</p>
+                                </div>
 
-                            <div class="mb-6">
-                                <label class="block text-gray-700 mb-2 font-medium">Additional Documents
-                                    (Optional)</label>
-                                <input type="file" name="additional_files" accept=".pdf,.doc,.docx,.jpg,.png" multiple
-                                    class="w-full p-3 border border-gray-300 rounded-lg">
-                                <p class="text-sm text-gray-500 mt-1">You can select multiple files</p>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        Additional Documents (Optional)
+                                    </label>
+                                    <input type="file" name="additional_files" 
+                                           accept=".pdf,.doc,.docx,.jpg,.png" multiple
+                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
+                                    <p class="text-sm text-gray-500 mt-1">You can select multiple files</p>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Step 5: Review & Submit -->
                         <div class="form-step" id="step5">
-                            <h2 class="text-2xl font-bold text-miu-primary mb-2">Review & Submit</h2>
-                            <p class="text-gray-600 mb-6">Please review your application details before submission.</p>
+                            <p class="text-gray-600 mb-6">Please review your application before submission.</p>
 
-                            <div class="mb-8">
-                                <div class="bg-blue-50 p-6 rounded-xl mb-6">
-                                    <h3 class="font-bold text-lg mb-4 text-blue-800">Application Summary</h3>
-                                    <div id="reviewSummary" class="text-sm text-gray-700">
-                                        <!-- Summary will be populated by JavaScript -->
+                            <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mb-6">
+                                <h3 class="text-lg font-bold mb-4" style="color: #840384;">
+                                    Application Summary
+                                </h3>
+                                <div id="reviewSummary" class="space-y-3 text-sm">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <label for="id_referral_source" class="block text-gray-700 font-medium mb-2">
+                                    How did you hear about MIU?
+                                </label>
+                                {{ form.referral_source }}
+                            </div>
+
+                            <div class="space-y-4 mb-6">
+                                <label class="flex items-start gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer">
+                                    {{ form.declaration }}
+                                    <div>
+                                        <div class="font-medium">Declaration <span class="text-red-500">*</span></div>
+                                        <p class="text-sm text-gray-600 mt-1">
+                                            I certify that all information provided is true and accurate
+                                        </p>
                                     </div>
-                                </div>
+                                </label>
 
-                                <div class="mb-6">
-                                    <label class="block text-gray-700 mb-2 font-medium">{{ form.referral_source.label
-                                        }}</label>
-                                    {{ form.referral_source }}
-                                </div>
-
-                                <div class="mb-6">
-                                    <div class="flex items-start">{{ form.declaration }}
-                                        <div class="ml-3">
-                                            <label for="{{ form.declaration.id_for_label }}"
-                                                class="font-medium">Declaration <span
-                                                    class="text-red-500">*</span></label>
-                                            <p class="text-sm text-gray-600 mt-1">I certify that the information
-                                                provided in this application is true, complete, and accurate to the best
-                                                of my knowledge.</p>
-                                        </div>
+                                <label class="flex items-start gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer">
+                                    {{ form.privacy }}
+                                    <div>
+                                        <div class="font-medium">Privacy Policy <span class="text-red-500">*</span></div>
+                                        <p class="text-sm text-gray-600 mt-1">
+                                            I have read and agree to the MIU Privacy Policy
+                                        </p>
                                     </div>
-                                    {% if form.declaration.errors %}
-                                    <p class="text-red-500 text-sm mt-1">{{ form.declaration.errors.0 }}</p>
-                                    {% endif %}
-                                </div>
-
-                                <div class="mb-6">
-                                    <div class="flex items-start">
-                                        {{ form.privacy }}
-                                        <div class="ml-3">
-                                            <label for="{{ form.privacy.id_for_label }}" class="font-medium">Privacy
-                                                Policy <span class="text-red-500">*</span></label>
-                                            <p class="text-sm text-gray-600 mt-1">I have read and agree to the MIU
-                                                Privacy Policy.</p>
-                                        </div>
-                                    </div>
-                                    {% if form.privacy.errors %}
-                                    <p class="text-red-500 text-sm mt-1">{{ form.privacy.errors.0 }}</p>
-                                    {% endif %}
-                                </div>
+                                </label>
                             </div>
                         </div>
 
-                        <!-- Display form-level errors -->
-                        {% if form.non_field_errors %}
-                        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <ul class="list-disc list-inside text-red-700">
-                                {% for error in form.non_field_errors %}
-                                <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        {% endif %}
-
                         <!-- Navigation Buttons -->
-                        <div class="flex justify-between pt-8 border-t mt-8">
+                        <div class="flex justify-between items-center pt-8 border-t mt-8">
                             <button type="button" id="prevBtn"
-                                class="border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-all hidden">
-                                ← Previous Step
+                                    class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all hidden">
+                                ← Previous
                             </button>
 
                             <button type="button" id="nextBtn"
-                                class="bg-gradient-miu text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg ml-auto">
+                                    class="px-8 py-3 text-white rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg ml-auto"
+                                    style="background-color: #840384;">
                                 Next Step →
                             </button>
 
                             <button type="submit" id="submitBtn"
-                                class="bg-green-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all shadow-lg hidden">
+                                    class="px-8 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all shadow-lg hidden">
                                 Submit Application
                             </button>
                         </div>
                     </form>
                 </div>
-            </div>
+            </main>
         </div>
     </div>
 </section>
 
 <script src="{% static 'js/form.js' %}"></script>
-
 {% endblock %}

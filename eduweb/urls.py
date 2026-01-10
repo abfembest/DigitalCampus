@@ -3,17 +3,30 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('aboutus/', views.about, name='about'),
+    path('about-us/', views.about, name='about'),
     path('admission/apply/', views.apply, name='apply'),
-    path('admission/apply/success/', views.application_success, name='application_success'),
     path('admission/course/', views.admission_course, name='admission_course'),
-    path('adrequirements/', views.admission_requirement, name='admission_requirement'),
+    path('admission/requirements/', views.admission_requirement, name='admission_requirement'),
     path('admission/detail/', views.detail, name='detail'),
     path('contact/submit/', views.contact_submit, name='contact_submit'),
-    path('admission/apply/submit/', views.application_submit, name='application_submit'),
     path('blank_page/', views.blank_page, name='blank_page'),
 
-    
+    # Faculty Pages
+    path('faculties/science/', views.faculty_science, name='faculty_science'),
+    path('faculties/engineering/', views.faculty_engineering, name='faculty_engineering'),
+    path('faculties/business/', views.faculty_business, name='faculty_business'),
+    path('faculties/arts/', views.faculty_arts, name='faculty_arts'),
+    path('faculties/health-sciences/', views.faculty_health, name='faculty_health'),
+
+    # Program Pages
+    path('programs/business-administration/', views.program_business_admin, name='program_business_admin'),
+    path('programs/computer-science/', views.program_computer_science, name='program_computer_science'),
+    path('programs/data-science/', views.program_data_science, name='program_data_science'),
+    path('programs/health-sciences/', views.program_health_sciences, name='program_health_sciences'),
+    path('programs/engineering/', views.program_engineering, name='program_engineering'),
+
+    # Additional Pages
+    path('research/', views.research, name='research'),
+    path('campus-life/', views.campus_life, name='campus_life'),
+    path('blog/', views.blog, name='blog'),
 ]
-
-

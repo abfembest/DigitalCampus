@@ -193,19 +193,19 @@
                 <!-- Desktop Navigation -->
                 <div class="hidden lg:flex items-center space-x-1">
                     <a href="{% url 'index' %}"
-                        class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-primary-950 hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'index' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         Home
                     </a>
 
                     <a href="{% url 'about' %}"
-                        class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-primary-950 hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'about' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         About
                     </a>
 
                     <!-- Faculties Dropdown -->
                     <div class="relative group">
                         <button
-                            class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-primary-950 hover:bg-purple-50 transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'faculty_' in request.resolver_match.url_name %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}"
                             aria-haspopup="true" aria-expanded="false">
                             Faculties
                             <i data-lucide="chevron-down"
@@ -214,30 +214,29 @@
                         <div class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 animate-slide-down"
                             role="menu">
                             <div class="p-2">
-                                <!-- In Desktop Navigation -->
-                                <a href="{% url 'faculty_science' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item">
+                                <a href="{% url 'faculty_science' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_science' %}bg-purple-100{% endif %}">
                                     <i data-lucide="atom" class="w-5 h-5 text-primary-950"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-primary-950">Faculty of Science</span>
+                                    <span class="text-sm font-medium group-hover/item:text-primary-950 {% if request.resolver_match.url_name == 'faculty_science' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Faculty of Science</span>
                                 </a>
 
-                                <a href="{% url 'faculty_engineering' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item">
+                                <a href="{% url 'faculty_engineering' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_engineering' %}bg-purple-100{% endif %}">
                                     <i data-lucide="cog" class="w-5 h-5 text-primary-950"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-primary-950">Faculty of Engineering</span>
+                                    <span class="text-sm font-medium group-hover/item:text-primary-950 {% if request.resolver_match.url_name == 'faculty_engineering' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Faculty of Engineering</span>
                                 </a>
 
-                                <a href="{% url 'faculty_business' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item">
+                                <a href="{% url 'faculty_business' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_business' %}bg-purple-100{% endif %}">
                                     <i data-lucide="briefcase" class="w-5 h-5 text-primary-950"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-primary-950">Faculty of Business</span>
+                                    <span class="text-sm font-medium group-hover/item:text-primary-950 {% if request.resolver_match.url_name == 'faculty_business' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Faculty of Business</span>
                                 </a>
 
-                                <a href="{% url 'faculty_arts' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item">
+                                <a href="{% url 'faculty_arts' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_arts' %}bg-purple-100{% endif %}">
                                     <i data-lucide="palette" class="w-5 h-5 text-primary-950"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-primary-950">Faculty of Arts</span>
+                                    <span class="text-sm font-medium group-hover/item:text-primary-950 {% if request.resolver_match.url_name == 'faculty_arts' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Faculty of Arts</span>
                                 </a>
 
-                                <a href="{% url 'faculty_health' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item">
+                                <a href="{% url 'faculty_health' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_health' %}bg-purple-100{% endif %}">
                                     <i data-lucide="heart-pulse" class="w-5 h-5 text-primary-950"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-primary-950">Faculty of Health Sciences</span>
+                                    <span class="text-sm font-medium group-hover/item:text-primary-950 {% if request.resolver_match.url_name == 'faculty_health' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Faculty of Health Sciences</span>
                                 </a>
                             </div>
                         </div>
@@ -245,46 +244,46 @@
 
                     <!-- Programs Dropdown -->
                     <div class="relative group">
-                        <button class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-primary-950 hover:bg-purple-50 transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950"
+                        <button class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'program_' in request.resolver_match.url_name %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}"
                             aria-haspopup="true" aria-expanded="false">
                             Programs
                             <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"></i>
                         </button>
                         <div class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 animate-slide-down" role="menu">
                             <div class="p-2">
-                                <a href="{% url 'program_business_admin' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600" role="menuitem">
+                                <a href="{% url 'program_business_admin' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_business_admin' %}bg-orange-100{% endif %}" role="menuitem">
                                     <i data-lucide="trending-up" class="w-5 h-5 text-accent-600"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-accent-700">Business Administration</span>
+                                    <span class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_business_admin' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Business Administration</span>
                                 </a>
-                                <a href="{% url 'program_computer_science' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600" role="menuitem">
+                                <a href="{% url 'program_computer_science' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_computer_science' %}bg-orange-100{% endif %}" role="menuitem">
                                     <i data-lucide="code-2" class="w-5 h-5 text-accent-600"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-accent-700">Computer Science</span>
+                                    <span class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_computer_science' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Computer Science</span>
                                 </a>
-                                <a href="{% url 'program_data_science' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600" role="menuitem">
+                                <a href="{% url 'program_data_science' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_data_science' %}bg-orange-100{% endif %}" role="menuitem">
                                     <i data-lucide="database" class="w-5 h-5 text-accent-600"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-accent-700">Data Science</span>
+                                    <span class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_data_science' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Data Science</span>
                                 </a>
-                                <a href="{% url 'program_health_sciences' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600" role="menuitem">
+                                <a href="{% url 'program_health_sciences' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_health_sciences' %}bg-orange-100{% endif %}" role="menuitem">
                                     <i data-lucide="stethoscope" class="w-5 h-5 text-accent-600"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-accent-700">Health Sciences</span>
+                                    <span class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_health_sciences' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Health Sciences</span>
                                 </a>
-                                <a href="{% url 'program_engineering' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600" role="menuitem">
+                                <a href="{% url 'program_engineering' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_engineering' %}bg-orange-100{% endif %}" role="menuitem">
                                     <i data-lucide="wrench" class="w-5 h-5 text-accent-600"></i>
-                                    <span class="text-sm font-medium text-gray-700 group-hover/item:text-accent-700">Engineering</span>
+                                    <span class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_engineering' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Engineering</span>
                                 </a>
                             </div>
                         </div>
                     </div>
 
                     <a href="{% url 'admission_requirement' %}"
-                        class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-primary-950 hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'admission' in request.resolver_match.url_name %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         Admissions
                     </a>
 
                     <!-- More Dropdown -->
                     <div class="relative group">
                         <button
-                            class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-primary-950 hover:bg-purple-50 transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950"
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name in 'research,campus_life,blog' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}"
                             aria-haspopup="true" aria-expanded="false">
                             More
                             <i data-lucide="chevron-down"
@@ -294,16 +293,16 @@
                             role="menu">
                             <div class="p-2">
                                 <a href="{% url 'research' %}"
-                                    class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
+                                    class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'research' %}bg-purple-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="flask-conical" class="w-5 h-5 text-gray-600"></i>
-                                    <span class="text-sm font-medium text-gray-700">Research</span>
+                                    <span class="text-sm font-medium {% if request.resolver_match.url_name == 'research' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Research</span>
                                 </a>
                                 <a href="{% url 'campus_life' %}"
-                                    class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
+                                    class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'campus_life' %}bg-purple-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="users" class="w-5 h-5 text-gray-600"></i>
-                                    <span class="text-sm font-medium text-gray-700">Campus Life</span>
+                                    <span class="text-sm font-medium {% if request.resolver_match.url_name == 'campus_life' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Campus Life</span>
                                 </a>
                                 <a href="#contact"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
@@ -312,10 +311,10 @@
                                     <span class="text-sm font-medium text-gray-700">Contact Us</span>
                                 </a>
                                 <a href="{% url 'blog' %}"
-                                    class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
+                                    class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'blog' %}bg-purple-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="newspaper" class="w-5 h-5 text-gray-600"></i>
-                                    <span class="text-sm font-medium text-gray-700">Blog</span>
+                                    <span class="text-sm font-medium {% if request.resolver_match.url_name == 'blog' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Blog</span>
                                 </a>
                                 <div class="border-t border-gray-100 my-2"></div>
                                 <a href="#"
@@ -336,166 +335,158 @@
                     </a>
                 </div>
 
-                <!-- Mobile Menu Button -->
-                <button id="mobileMenuBtn"
-                    class="lg:hidden p-2 rounded-lg hover:bg-purple-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
-                    aria-label="Toggle mobile menu" aria-expanded="false">
-                    <i data-lucide="menu" class="w-6 h-6 text-primary-950" id="menuIcon"></i>
-                </button>
-            </div>
-
-            <!-- Mobile Navigation -->
-            <div id="mobileMenu" class="lg:hidden hidden bg-white border-t border-purple-100 animate-slide-down">
-                <div class="py-4 space-y-1 px-4">
-                    <a href="{% url 'index' %}"
-                        class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-primary-950 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                        <i data-lucide="home" class="w-5 h-5"></i>
-                        <span class="font-medium">Home</span>
-                    </a>
-
-                    <a href="{% url 'about' %}"
-                        class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-primary-950 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                        <i data-lucide="info" class="w-5 h-5"></i>
-                        <span class="font-medium">About Us</span>
-                    </a>
-
-                    <!-- Mobile Faculties Dropdown -->
-                    <div>
-                        <button
-                            class="w-full flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-purple-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
-                            id="mobileFacultiesBtn" aria-expanded="false">
-                            <div class="flex items-center gap-3">
-                                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
-                                <span class="font-medium">Faculties</span>
-                            </div>
-                            <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200"
-                                id="facultiesChevron"></i>
-                        </button>
-                        <div id="mobileFacultiesMenu" class="hidden bg-purple-50 space-y-1 py-2 mt-1 rounded-lg">
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="atom" class="w-4 h-4"></i>
-                                Faculty of Science
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="cog" class="w-4 h-4"></i>
-                                Faculty of Engineering
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="briefcase" class="w-4 h-4"></i>
-                                Faculty of Business
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="palette" class="w-4 h-4"></i>
-                                Faculty of Arts
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="heart-pulse" class="w-4 h-4"></i>
-                                Faculty of Health Sciences
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Mobile Programs Dropdown -->
-                    <div>
-                        <button
-                            class="w-full flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-purple-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
-                            id="mobileProgramsBtn" aria-expanded="false">
-                            <div class="flex items-center gap-3">
-                                <i data-lucide="book-open" class="w-5 h-5"></i>
-                                <span class="font-medium">Programs</span>
-                            </div>
-                            <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200"
-                                id="programsChevron"></i>
-                        </button>
-                        <div id="mobileProgramsMenu" class="hidden bg-orange-50 space-y-1 py-2 mt-1 rounded-lg">
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-accent-700 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600">
-                                <i data-lucide="trending-up" class="w-4 h-4"></i>
-                                Business Administration
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-accent-700 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600">
-                                <i data-lucide="code-2" class="w-4 h-4"></i>
-                                Computer Science
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-accent-700 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600">
-                                <i data-lucide="database" class="w-4 h-4"></i>
-                                Data Science
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-accent-700 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600">
-                                <i data-lucide="stethoscope" class="w-4 h-4"></i>
-                                Health Sciences
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-accent-700 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600">
-                                <i data-lucide="wrench" class="w-4 h-4"></i>
-                                Engineering
-                            </a>
-                        </div>
-                    </div>
-
-                    <a href="{% url 'admission_requirement' %}"
-                        class="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-purple-50 hover:text-primary-950 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
-                        <span class="font-medium">Admissions</span>
-                    </a>
-
-                    <!-- Mobile More Dropdown -->
-                    <div>
-                        <button
-                            class="w-full flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-purple-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
-                            id="mobileMoreBtn" aria-expanded="false">
-                            <div class="flex items-center gap-3">
-                                <i data-lucide="more-horizontal" class="w-5 h-5"></i>
-                                <span class="font-medium">More</span>
-                            </div>
-                            <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200"
-                                id="moreChevron"></i>
-                        </button>
-                        <div id="mobileMoreMenu" class="hidden bg-gray-50 space-y-1 py-2 mt-1 rounded-lg">
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="flask-conical" class="w-4 h-4"></i>
-                                Research
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="users" class="w-4 h-4"></i>
-                                Campus Life
-                            </a>
-                            <a href="#contact"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="mail" class="w-4 h-4"></i>
-                                Contact Us
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="newspaper" class="w-4 h-4"></i>
-                                Blog
-                            </a>
-                            <a href="#"
-                                class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
-                                <i data-lucide="log-in" class="w-4 h-4"></i>
-                                Login
-                            </a>
-                        </div>
-                    </div>
-                    <div class="pt-4">
-                        <a href="{% url 'apply' %}"
-                            class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-accent-600 text-white rounded-lg font-bold hover:shadow-lg hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
-                            Apply Now
-                            <i data-lucide="rocket" class="w-5 h-5"></i>
+                <!-- Mobile Navigation -->
+                <div id="mobileMenu" class="lg:hidden hidden bg-white border-t border-purple-100 animate-slide-down">
+                    <div class="py-4 space-y-1 px-4">
+                        <a href="{% url 'index' %}"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'index' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                            <i data-lucide="home" class="w-5 h-5"></i>
+                            <span class="font-medium">Home</span>
                         </a>
+
+                        <a href="{% url 'about' %}"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'about' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                            <i data-lucide="info" class="w-5 h-5"></i>
+                            <span class="font-medium">About Us</span>
+                        </a>
+
+                        <!-- Mobile Faculties Dropdown -->
+                        <div>
+                            <button
+                                class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'faculty_' in request.resolver_match.url_name %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50{% endif %}"
+                                id="mobileFacultiesBtn" aria-expanded="false">
+                                <div class="flex items-center gap-3">
+                                    <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                                    <span class="font-medium">Faculties</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200"
+                                    id="facultiesChevron"></i>
+                            </button>
+                            <div id="mobileFacultiesMenu" class="hidden bg-purple-50 space-y-1 py-2 mt-1 rounded-lg">
+                                <a href="{% url 'faculty_science' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_science' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
+                                    <i data-lucide="atom" class="w-4 h-4"></i>
+                                    Faculty of Science
+                                </a>
+                                <a href="{% url 'faculty_engineering' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_engineering' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
+                                    <i data-lucide="cog" class="w-4 h-4"></i>
+                                    Faculty of Engineering
+                                </a>
+                                <a href="{% url 'faculty_business' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_business' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
+                                    <i data-lucide="briefcase" class="w-4 h-4"></i>
+                                    Faculty of Business
+                                </a>
+                                <a href="{% url 'faculty_arts' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_arts' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
+                                    <i data-lucide="palette" class="w-4 h-4"></i>
+                                    Faculty of Arts
+                                </a>
+                                <a href="{% url 'faculty_health' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_health' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
+                                    <i data-lucide="heart-pulse" class="w-4 h-4"></i>
+                                    Faculty of Health Sciences
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Mobile Programs Dropdown -->
+                        <div>
+                            <button
+                                class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'program_' in request.resolver_match.url_name %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50{% endif %}"
+                                id="mobileProgramsBtn" aria-expanded="false">
+                                <div class="flex items-center gap-3">
+                                    <i data-lucide="book-open" class="w-5 h-5"></i>
+                                    <span class="font-medium">Programs</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200"
+                                    id="programsChevron"></i>
+                            </button>
+                            <div id="mobileProgramsMenu" class="hidden bg-orange-50 space-y-1 py-2 mt-1 rounded-lg">
+                                <a href="{% url 'program_business_admin' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_business_admin' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
+                                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                    Business Administration
+                                </a>
+                                <a href="{% url 'program_computer_science' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_computer_science' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
+                                    <i data-lucide="code-2" class="w-4 h-4"></i>
+                                    Computer Science
+                                </a>
+                                <a href="{% url 'program_data_science' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_data_science' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
+                                    <i data-lucide="database" class="w-4 h-4"></i>
+                                    Data Science
+                                </a>
+                                <a href="{% url 'program_health_sciences' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_health_sciences' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
+                                    <i data-lucide="stethoscope" class="w-4 h-4"></i>
+                                    Health Sciences
+                                </a>
+                                <a href="{% url 'program_engineering' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_engineering' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
+                                    <i data-lucide="wrench" class="w-4 h-4"></i>
+                                    Engineering
+                                </a>
+                            </div>
+                        </div>
+
+                        <a href="{% url 'admission_requirement' %}"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'admission' in request.resolver_match.url_name %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                            <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                            <span class="font-medium">Admissions</span>
+                        </a>
+
+                        <!-- Mobile More Dropdown -->
+                        <div>
+                            <button
+                                class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name in 'research,campus_life,blog' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50{% endif %}"
+                                id="mobileMoreBtn" aria-expanded="false">
+                                <div class="flex items-center gap-3">
+                                    <i data-lucide="more-horizontal" class="w-5 h-5"></i>
+                                    <span class="font-medium">More</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200"
+                                    id="moreChevron"></i>
+                            </button>
+                            <div id="mobileMoreMenu" class="hidden bg-gray-50 space-y-1 py-2 mt-1 rounded-lg">
+                                <a href="{% url 'research' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'research' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
+                                    <i data-lucide="flask-conical" class="w-4 h-4"></i>
+                                    Research
+                                </a>
+                                <a href="{% url 'campus_life' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'campus_life' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
+                                    <i data-lucide="users" class="w-4 h-4"></i>
+                                    Campus Life
+                                </a>
+                                <a href="#contact"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
+                                    <i data-lucide="mail" class="w-4 h-4"></i>
+                                    Contact Us
+                                </a>
+                                <a href="{% url 'blog' %}"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'blog' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
+                                    <i data-lucide="newspaper" class="w-4 h-4"></i>
+                                    Blog
+                                </a>
+                                <a href="#"
+                                    class="flex items-center gap-3 px-10 py-2.5 text-sm text-gray-600 hover:text-primary-950 hover:bg-white rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950">
+                                    <i data-lucide="log-in" class="w-4 h-4"></i>
+                                    Login
+                                </a>
+                            </div>
+                        </div>
+                        <div class="pt-4">
+                            <a href="{% url 'apply' %}"
+                                class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-accent-600 text-white rounded-lg font-bold hover:shadow-lg hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                                Apply Now
+                                <i data-lucide="rocket" class="w-5 h-5"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </div>
         </nav>
     </header><!-- Main Content -->
 

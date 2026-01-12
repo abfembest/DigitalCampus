@@ -695,3 +695,8 @@ def campus_life(request):
 def blog(request):
     """Blog page view"""
     return render(request, 'blog.html')
+
+
+def application_status(request):
+    """application status"""
+    return render(request, 'applications/application_status.html')

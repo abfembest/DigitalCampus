@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>University Application Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .progress-step {
+            transition: all 0.3s ease;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .glow {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="mb-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Application Dashboard</h1>
+                    <p class="text-gray-600 mt-2">Track your university application progress in real-time</p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <button id="refreshBtn" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200 flex items-center">
+                        <i class="fas fa-sync-alt mr-2"></i> Refresh Status
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Alert -->
+            <div id="statusAlert" class="rounded-xl p-4 mb-8 fade-in">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Progress Tracker and Summary -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Progress Tracker -->
+                <section class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-map-marked-alt text-blue-500 mr-3"></i> Application Progress
+                    </h2>
+
+                    <div id="progressTracker" class="relative">
+                        <!-- Progress steps will be populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Application Summary -->
+                <section class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-file-alt text-blue-500 mr-3"></i> Application Summary
+                    </h2>
+
+                    <div id="applicationSummary" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Activity Timeline -->
+                <section class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-history text-blue-500 mr-3"></i> Activity Timeline
+                    </h2>
+
+                    <div id="activityTimeline" class="relative">
+                        <!-- Timeline items will be populated by JavaScript -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Payment and Decision -->
+            <div class="space-y-8">
+                <!-- Payment Panel -->
+                <section class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-credit-card text-blue-500 mr-3"></i> Payment Details
+                    </h2>
+
+                    <div id="paymentPanel">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Decision Panel -->
+                <section class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fas fa-graduation-cap text-blue-500 mr-3"></i> Application Decision
+                    </h2>
+
+                    <div id="decisionPanel">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Help Section -->
+                <section class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-question-circle text-blue-500 mr-2"></i> Need Help?
+                    </h3>
+                    <p class="text-gray-600 mb-4">If you have questions about your application, contact our admissions team:</p>
+                    <div class="space-y-2">
+                        <p class="text-sm"><i class="fas fa-envelope text-blue-500 mr-2"></i> admissions@university.edu</p>
+                        <p class="text-sm"><i class="fas fa-phone text-blue-500 mr-2"></i> +1 (555) 123-4567</p>
+                        <p class="text-sm"><i class="fas fa-clock text-blue-500 mr-2"></i> Mon-Fri, 9 AM - 5 PM EST</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 pt-8 border-t border-gray-200 text-center text-gray-500 text-sm">
+            <p>University Application Portal • Your application is secure and confidential</p>
+            <p class="mt-2">© 2023 University Admissions. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Status Selector Modal -->
+    <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Change Application Status</h3>
+            <p class="text-gray-600 mb-6">Select a new status to simulate application progress:</p>
+
+            <div id="statusOptions" class="space-y-3 mb-6">
+                <!-- Status options will be populated by JavaScript -->
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button id="cancelModalBtn" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button id="applyStatusBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Apply Status
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Application Data Model
+        let applicationData = {
+            id: "APP2023001",
+            applicantName: "Alex Johnson",
+            program: "MSc Computer Science",
+            intake: "Fall 2024",
+            currentStatus: "Under Review",
+            submittedDate: "2023-10-15",
+            payment: {
+                amount: 85,
+                currency: "USD",
+                status: "Paid",
+                transactionId: "TXN7890123",
+                date: "2023-10-16",
+                method: "Credit Card"
+            },
+            decision: {
+                released: false,
+                outcome: null,
+                releaseDate: null,
+                notes: null
+            },
+            activity: [
+                { date: "2023-10-15", time: "14:30", event: "Application submitted", description: "Application form and documents uploaded" },
+                { date: "2023-10-16", time: "09:15", event: "Payment received", description: "Application fee processed successfully" },
+                { date: "2023-10-20", time: "11:45", event: "Documents verified", description: "Academic transcripts and references verified" },
+                { date: "2023-10-25", time: "16:20", event: "Under review", description: "Application forwarded to admissions committee" }
+            ],
+            documents: {
+                transcripts: "Verified",
+                references: "Verified",
+                statement: "Verified",
+                resume: "Verified"
+            }
+        };
+
+        // All possible statuses in order
+        const statuses = [
+            { id: "submitted", name: "Application Submitted", icon: "fas fa-paper-plane", color: "green" },
+            { id: "payment", name: "Payment Made", icon: "fas fa-credit-card", color: "green" },
+            { id: "documents", name: "Documents Verified", icon: "fas fa-check-circle", color: "green" },
+            { id: "more-docs", name: "More Documents Required", icon: "fas fa-exclamation-circle", color: "yellow" },
+            { id: "review", name: "Under Review", icon: "fas fa-search", color: "blue" },
+            { id: "decision", name: "Decision Released", icon: "fas fa-envelope-open-text", color: "purple" }
+        ];
+
+        // Decision outcomes
+        const decisionOutcomes = {
+            accepted: { name: "Accepted", color: "green", icon: "fas fa-check-circle" },
+            rejected: { name: "Rejected", color: "red", icon: "fas fa-times-circle" },
+            waitlisted: { name: "Waitlisted", color: "yellow", icon: "fas fa-clock" }
+        };
+
+        // DOM elements
+        const progressTracker = document.getElementById('progressTracker');
+        const applicationSummary = document.getElementById('applicationSummary');
+        const activityTimeline = document.getElementById('activityTimeline');
+        const paymentPanel = document.getElementById('paymentPanel');
+        const decisionPanel = document.getElementById('decisionPanel');
+        const statusAlert = document.getElementById('statusAlert');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const statusModal = document.getElementById('statusModal');
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
+        const applyStatusBtn = document.getElementById('applyStatusBtn');
+        const statusOptions = document.getElementById('statusOptions');
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function () {
+            renderDashboard();
+
+            // Set up event listeners
+            refreshBtn.addEventListener('click', simulateStatusUpdate);
+
+            // Status modal functionality
+            document.addEventListener('click', function (e) {
+                if (e.target.id === 'changeStatusBtn') {
+                    openStatusModal();
+                }
+            });
+
+            cancelModalBtn.addEventListener('click', closeStatusModal);
+            applyStatusBtn.addEventListener('click', applyNewStatus);
+        });
+
+        // Render the entire dashboard
+        function renderDashboard() {
+            renderStatusAlert();
+            renderProgressTracker();
+            renderApplicationSummary();
+            renderActivityTimeline();
+            renderPaymentPanel();
+            renderDecisionPanel();
+        }
+
+        // Render status alert at the top
+        function renderStatusAlert() {
+            let alertColor, alertIcon, alertMessage;
+
+            switch (applicationData.currentStatus) {
+                case "Application Submitted":
+                    alertColor = "bg-blue-50 border-blue-200";
+                    alertIcon = "fas fa-info-circle text-blue-500";
+                    alertMessage = "Your application has been submitted. Please complete payment to proceed.";
+                    break;
+                case "Payment Made":
+                    alertColor = "bg-green-50 border-green-200";
+                    alertIcon = "fas fa-check-circle text-green-500";
+                    alertMessage = "Payment received! Your documents are now being verified.";
+                    break;
+                case "Documents Verified":
+                    alertColor = "bg-green-50 border-green-200";
+                    alertIcon = "fas fa-check-circle text-green-500";
+                    alertMessage = "All documents verified! Your application is now under review.";
+                    break;
+                case "More Documents Required":
+                    alertColor = "bg-yellow-50 border-yellow-200";
+                    alertIcon = "fas fa-exclamation-triangle text-yellow-500";
+                    alertMessage = "Additional documents are required. Please check your email for details.";
+                    break;
+                case "Under Review":
+                    alertColor = "bg-blue-50 border-blue-200";
+                    alertIcon = "fas fa-search text-blue-500";
+                    alertMessage = "Your application is currently under review by the admissions committee.";
+                    break;
+                case "Decision Released":
+                    alertColor = applicationData.decision.outcome === "Accepted"
+                        ? "bg-green-50 border-green-200"
+                        : applicationData.decision.outcome === "Rejected"
+                            ? "bg-red-50 border-red-200"
+                            : "bg-yellow-50 border-yellow-200";
+                    alertIcon = applicationData.decision.outcome === "Accepted"
+                        ? "fas fa-check-circle text-green-500"
+                        : applicationData.decision.outcome === "Rejected"
+                            ? "fas fa-times-circle text-red-500"
+                            : "fas fa-clock text-yellow-500";
+                    alertMessage = applicationData.decision.outcome === "Accepted"
+                        ? "Congratulations! Your application has been accepted."
+                        : applicationData.decision.outcome === "Rejected"
+                            ? "A decision has been made on your application."
+                            : "Your application has been waitlisted.";
+                    break;
+                default:
+                    alertColor = "bg-gray-50 border-gray-200";
+                    alertIcon = "fas fa-info-circle text-gray-500";
+                    alertMessage = "Your application is being processed.";
+            }
+
+            statusAlert.innerHTML = `
+                    <div class="flex items-start">
+                        <i class="${alertIcon} text-xl mt-1 mr-3"></i>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-gray-800">Current Status: ${applicationData.currentStatus}</h3>
+                            <p class="text-gray-600 mt-1">${alertMessage}</p>
+                        </div>
+                        <button id="changeStatusBtn" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                            Change Status
+                        </button>
+                    </div>
+                `;
+
+            statusAlert.className = `rounded-xl p-4 mb-8 fade-in border ${alertColor}`;
+        }
+
+        // Render progress tracker
+        function renderProgressTracker() {
+            let progressHTML = '';
+
+            // Determine which step is current
+            let currentStepIndex = statuses.findIndex(s => s.name === applicationData.currentStatus);
+
+            statuses.forEach((status, index) => {
+                let stepStatus = '';
+                let iconClass = '';
+                let stepColor = '';
+
+                if (index < currentStepIndex) {
+                    stepStatus = 'completed';
+                    stepColor = 'bg-green-500 text-white';
+                    iconClass = 'fas fa-check';
+                } else if (index === currentStepIndex) {
+                    stepStatus = 'current';
+                    stepColor = 'bg-blue-500 text-white glow';
+                    iconClass = status.icon;
+                } else {
+                    stepStatus = 'upcoming';
+                    stepColor = 'bg-gray-300 text-gray-500';
+                    iconClass = status.icon;
+                }
+
+                // Special handling for "More Documents Required"
+                if (status.name === "More Documents Required" && applicationData.currentStatus === "More Documents Required" && index === currentStepIndex) {
+                    stepColor = 'bg-yellow-500 text-white glow';
+                }
+
+                // Special handling for decision status
+                if (status.name === "Decision Released" && applicationData.currentStatus === "Decision Released") {
+                    if (applicationData.decision.outcome === "Accepted") {
+                        stepColor = 'bg-green-500 text-white glow';
+                    } else if (applicationData.decision.outcome === "Rejected") {
+                        stepColor = 'bg-red-500 text-white glow';
+                    } else if (applicationData.decision.outcome === "Waitlisted") {
+                        stepColor = 'bg-yellow-500 text-white glow';
+                    }
+                }
+
+                progressHTML += `
+                        <div class="progress-step flex flex-col items-center relative ${index === statuses.length - 1 ? '' : 'flex-1'}">
+                            <div class="flex flex-col items-center">
+                                <div class="w-14 h-14 rounded-full ${stepColor} flex items-center justify-center text-lg mb-2 transition-all duration-300 z-10">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <span class="text-sm font-medium text-center ${stepStatus === 'upcoming' ? 'text-gray-400' : 'text-gray-800'}">${status.name}</span>
+                            </div>
+
+                            ${index < statuses.length - 1 ? `
+                                <div class="absolute top-7 left-3/4 w-full h-1 ${index < currentStepIndex ? 'bg-green-500' : 'bg-gray-300'} z-0"></div>
+                            ` : ''}
+                        </div>
+                    `;
+            });
+
+            progressTracker.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        ${progressHTML}
+                    </div>
+                `;
+        }
+
+        // Render application summary
+        function renderApplicationSummary() {
+            const submittedDate = new Date(applicationData.submittedDate);
+            const formattedDate = submittedDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            applicationSummary.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Applicant Name</p>
+                            <p class="font-medium text-gray-800">${applicationData.applicantName}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Application ID</p>
+                            <p class="font-medium text-gray-800">${applicationData.id}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Program Applied</p>
+                            <p class="font-medium text-gray-800">${applicationData.program}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Intake Term</p>
+                            <p class="font-medium text-gray-800">${applicationData.intake}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Application Date</p>
+                            <p class="font-medium text-gray-800">${formattedDate}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Current Status</p>
+                            <p class="font-medium ${getStatusColorClass(applicationData.currentStatus)}">${applicationData.currentStatus}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-lg p-5">
+                        <h3 class="font-bold text-gray-800 mb-3">Document Status</h3>
+                        <div class="space-y-3">
+                            ${Object.entries(applicationData.documents).map(([doc, status]) => `
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-700 capitalize">${doc}</span>
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium ${status === 'Verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                        ${status}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+        }
+
+        // Render activity timeline
+        function renderActivityTimeline() {
+            let timelineHTML = '';
+
+            applicationData.activity.forEach((activity, index) => {
+                const activityDate = new Date(activity.date);
+                const formattedDate = activityDate.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+
+                timelineHTML += `
+                        <div class="flex mb-8 relative ${index < applicationData.activity.length - 1 ? '' : 'last'}">
+                            <div class="flex flex-col items-center mr-6">
+                                <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                ${index < applicationData.activity.length - 1 ? `
+                                    <div class="h-full w-0.5 bg-blue-200 mt-2"></div>
+                                ` : ''}
+                            </div>
+                            <div class="flex-1 pb-8">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2">
+                                    <h4 class="font-bold text-gray-800">${activity.event}</h4>
+                                    <span class="text-sm text-gray-500">${formattedDate} at ${activity.time}</span>
+                                </div>
+                                <p class="text-gray-600">${activity.description}</p>
+                            </div>
+                        </div>
+                    `;
+            });
+
+            activityTimeline.innerHTML = timelineHTML;
+        }
+
+        // Render payment panel
+        function renderPaymentPanel() {
+            const paymentDate = new Date(applicationData.payment.date);
+            const formattedDate = paymentDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            paymentPanel.innerHTML = `
+                    <div class="space-y-5">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Application Fee</span>
+                            <span class="text-2xl font-bold text-gray-800">$${applicationData.payment.amount}</span>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Status</span>
+                                <span class="px-3 py-1 rounded-full text-sm font-medium ${applicationData.payment.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                                    ${applicationData.payment.status}
+                                </span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Transaction ID</span>
+                                <span class="font-medium">${applicationData.payment.transactionId}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Date Paid</span>
+                                <span class="font-medium">${formattedDate}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Payment Method</span>
+                                <span class="font-medium">${applicationData.payment.method}</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-200">
+                            <button class="w-full py-3 bg-blue-50 text-blue-700 font-medium rounded-lg hover:bg-blue-100 transition duration-200 flex items-center justify-center">
+                                <i class="fas fa-receipt mr-2"></i> Download Receipt
+                            </button>
+                        </div>
+                    </div>
+                `;
+        }
+
+        // Render decision panel
+        function renderDecisionPanel() {
+            let decisionHTML = '';
+
+            if (applicationData.decision.released && applicationData.decision.outcome) {
+                const outcome = decisionOutcomes[applicationData.decision.outcome.toLowerCase()];
+                const releaseDate = new Date(applicationData.decision.releaseDate);
+                const formattedDate = releaseDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+
+                decisionHTML = `
+                        <div class="text-center py-6">
+                            <div class="w-20 h-20 ${outcome.color === 'green' ? 'bg-green-100 text-green-600' : outcome.color === 'red' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'} rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                                <i class="${outcome.icon}"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">${outcome.name}</h3>
+                            <p class="text-gray-600 mb-4">Decision released on ${formattedDate}</p>
+
+                            ${applicationData.decision.notes ? `
+                                <div class="bg-gray-50 rounded-lg p-4 text-left">
+                                    <p class="text-gray-700">${applicationData.decision.notes}</p>
+                                </div>
+                            ` : ''}
+
+                            <div class="mt-6 space-y-3">
+                                ${outcome.color === 'green' ? `
+                                    <button class="w-full py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition duration-200">
+                                        Accept Offer
+                                    </button>
+                                    <button class="w-full py-3 border border-green-600 text-green-600 font-medium rounded-lg hover:bg-green-50 transition duration-200">
+                                        Defer Admission
+                                    </button>
+                                ` : outcome.color === 'yellow' ? `
+                                    <button class="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition duration-200">
+                                        Confirm Waitlist Position
+                                    </button>
+                                ` : `
+                                    <button class="w-full py-3 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900 transition duration-200">
+                                        View Appeal Process
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+            } else {
+                decisionHTML = `
+                        <div class="text-center py-8">
+                            <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Under Review</h3>
+                            <p class="text-gray-600 mb-6">Your application is currently being reviewed by the admissions committee. Decision will be released within 4-6 weeks.</p>
+
+                            <div class="animate-pulse flex justify-center mb-4">
+                                <div class="h-2 bg-blue-200 rounded w-3/4"></div>
+                            </div>
+                            <p class="text-sm text-gray-500">Estimated decision date: December 15, 2023</p>
+                        </div>
+                    `;
+            }
+
+            decisionPanel.innerHTML = decisionHTML;
+        }
+
+        // Helper function to get status color class
+        function getStatusColorClass(status) {
+            switch (status) {
+                case "Application Submitted":
+                    return "text-blue-600";
+                case "Payment Made":
+                    return "text-green-600";
+                case "Documents Verified":
+                    return "text-green-600";
+                case "More Documents Required":
+                    return "text-yellow-600";
+                case "Under Review":
+                    return "text-blue-600";
+                case "Decision Released":
+                    if (applicationData.decision.outcome === "Accepted") return "text-green-600";
+                    if (applicationData.decision.outcome === "Rejected") return "text-red-600";
+                    if (applicationData.decision.outcome === "Waitlisted") return "text-yellow-600";
+                    return "text-purple-600";
+                default:
+                    return "text-gray-600";
+            }
+        }
+
+        // Simulate status update
+        function simulateStatusUpdate() {
+            // Add a loading effect to the refresh button
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Refreshing...';
+            refreshBtn.disabled = true;
+
+            // Simulate network delay
+            setTimeout(() => {
+                // In a real app, this would fetch new data from the server
+                // For this demo, we'll just update the UI
+                renderDashboard();
+
+                // Restore refresh button
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+
+                // Show notification
+                showNotification('Application status updated successfully!');
+            }, 800);
+        }
+
+        // Open status modal
+        function openStatusModal() {
+            // Populate status options
+            let optionsHTML = '';
+
+            statuses.forEach(status => {
+                const isCurrent = status.name === applicationData.currentStatus;
+
+                optionsHTML += `
+                        <div class="flex items-center p-3 rounded-lg border ${isCurrent ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} cursor-pointer transition duration-200 status-option" data-status="${status.name}">
+                            <div class="w-10 h-10 rounded-full ${isCurrent ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'} flex items-center justify-center mr-3">
+                                <i class="${status.icon}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium ${isCurrent ? 'text-blue-700' : 'text-gray-800'}">${status.name}</h4>
+                            </div>
+                            ${isCurrent ? '<span class="text-blue-600 font-medium">Current</span>' : ''}
+                        </div>
+                    `;
+            });
+
+            statusOptions.innerHTML = optionsHTML;
+
+            // Set up option selection
+            document.querySelectorAll('.status-option').forEach(option => {
+                option.addEventListener('click', function () {
+                    // Remove selected class from all options
+                    document.querySelectorAll('.status-option').forEach(opt => {
+                        opt.classList.remove('border-blue-300', 'bg-blue-50');
+                        opt.classList.add('border-gray-200');
+                    });
+
+                    // Add selected class to clicked option
+                    this.classList.remove('border-gray-200');
+                    this.classList.add('border-blue-300', 'bg-blue-50');
+
+                    // Update apply button
+                    applyStatusBtn.dataset.selectedStatus = this.dataset.status;
+                });
+            });
+
+            // Show modal
+            statusModal.classList.remove('hidden');
+        }
+
+        // Close status modal
+        function closeStatusModal() {
+            statusModal.classList.add('hidden');
+        }
+
+        // Apply new status
+        function applyNewStatus() {
+            const selectedStatus = applyStatusBtn.dataset.selectedStatus;
+
+            if (!selectedStatus) {
+                showNotification('Please select a status first!', 'error');
+                return;
+            }
+
+            // Update application data
+            applicationData.currentStatus = selectedStatus;
+
+            // Add activity log entry
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            applicationData.activity.push({
+                date: dateStr,
+                time: timeStr,
+                event: `Status changed to ${selectedStatus}`,
+                description: 'Application status updated'
+            });
+
+            // If decision is being released, simulate a decision outcome
+            if (selectedStatus === "Decision Released") {
+                applicationData.decision.released = true;
+                applicationData.decision.releaseDate = dateStr;
+
+                // Randomly assign a decision outcome for demo purposes
+                const outcomes = ['accepted', 'rejected', 'waitlisted'];
+                const randomOutcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+                applicationData.decision.outcome = randomOutcome.charAt(0).toUpperCase() + randomOutcome.slice(1);
+
+                if (randomOutcome === 'accepted') {
+                    applicationData.decision.notes = "Congratulations! We are pleased to offer you admission to our program.";
+                } else if (randomOutcome === 'waitlisted') {
+                    applicationData.decision.notes = "Your application has been placed on our waitlist. We will notify you if a spot becomes available.";
+                } else {
+                    applicationData.decision.notes = "After careful consideration, we regret to inform you that we cannot offer you admission at this time.";
+                }
+            }
+
+            // Update dashboard
+            renderDashboard();
+            closeStatusModal();
+            showNotification(`Application status updated to: ${selectedStatus}`);
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-6 right-6 px-6 py-4 rounded-lg shadow-lg z-50 fade-in ${type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`;
+            notification.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-3"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+
+            // Add to page
+            document.body.appendChild(notification);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

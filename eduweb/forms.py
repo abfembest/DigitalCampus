@@ -1,6 +1,140 @@
 from django import forms
 from .models import ContactMessage, CourseApplication
 from django.utils import timezone
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+import re
+
+class SignUpForm(UserCreationForm):
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'your.email@example.com',
+            'autocomplete': 'email'
+        })
+    )
+    first_name = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'John',
+            'autocomplete': 'given-name'
+        })
+    )
+    last_name = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'Smith',
+            'autocomplete': 'family-name'
+        })
+    )
+    captcha = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'Enter the result',
+            'autocomplete': 'off'
+        })
+    )
+    
+    class Meta:
+        model = User
+        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
+        widgets = {
+            'username': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+                'placeholder': 'Choose a username',
+                'autocomplete': 'username'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.captcha_answer = kwargs.pop('captcha_answer', None)
+        super().__init__(*args, **kwargs)
+        
+        # Update password field widgets
+        self.fields['password1'].widget.attrs.update({
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'Create a strong password',
+            'autocomplete': 'new-password'
+        })
+        self.fields['password2'].widget.attrs.update({
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'Confirm your password',
+            'autocomplete': 'new-password'
+        })
+        
+        # Update labels
+        self.fields['username'].label = 'Username'
+        self.fields['first_name'].label = 'First Name'
+        self.fields['last_name'].label = 'Last Name'
+        self.fields['email'].label = 'Email Address'
+        self.fields['password1'].label = 'Password'
+        self.fields['password2'].label = 'Confirm Password'
+        self.fields['captcha'].label = 'Security Check'
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise ValidationError('This email address is already registered.')
+        return email
+    
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            raise ValidationError('Username can only contain letters, numbers, and underscores.')
+        if len(username) < 3:
+            raise ValidationError('Username must be at least 3 characters long.')
+        return username
+    
+    def clean_captcha(self):
+        captcha = self.cleaned_data.get('captcha')
+        if self.captcha_answer and str(captcha) != str(self.captcha_answer):
+            raise ValidationError('Incorrect answer. Please try again.')
+        return captcha
+
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'Enter your username or email',
+            'autocomplete': 'username'
+        })
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'Enter your password',
+            'autocomplete': 'current-password'
+        })
+    )
+    captcha = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
+            'placeholder': 'Enter the result',
+            'autocomplete': 'off'
+        })
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.captcha_answer = kwargs.pop('captcha_answer', None)
+        super().__init__(*args, **kwargs)
+        self.fields['username'].label = 'Username or Email'
+        self.fields['password'].label = 'Password'
+        self.fields['captcha'].label = 'Security Check'
+    
+    def clean_captcha(self):
+        captcha = self.cleaned_data.get('captcha')
+        if self.captcha_answer and str(captcha) != str(self.captcha_answer):
+            raise ValidationError('Incorrect answer. Please try again.')
+        return captcha
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True

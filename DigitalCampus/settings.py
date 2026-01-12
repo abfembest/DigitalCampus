@@ -34,8 +34,6 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=lambda v: v.split(','))
 
-
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -98,6 +96,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -143,6 +144,21 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='MIU <noreply@miu.edu>')
 CONTACT_EMAIL = config('CONTACT_EMAIL', default='admin@miu.edu')
+
+# Authentication settings
+LOGIN_URL = 'auth_page'
+LOGIN_REDIRECT_URL = 'apply'
+LOGOUT_REDIRECT_URL = 'index'
+
+# Session settings
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_SECURE = not DEBUG  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Email verification token expiry (in hours)
+EMAIL_VERIFICATION_EXPIRY = 24
 
 
 

@@ -369,11 +369,19 @@
                     </div>
 
                     <!-- CTA Button -->
+                    {% if user.is_authenticated %}
                     <a href="{% url 'apply' %}"
                         class="ml-4 px-6 py-2.5 bg-gradient-to-r from-primary-950 to-primary-700 text-white rounded-lg font-semibold text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                         Apply Now
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </a>
+                    {% else %}
+                    <a href="{% url 'auth_page' %}"
+                    class="ml-4 px-6 py-2.5 bg-gradient-to-r from-primary-950 to-primary-700 text-white rounded-lg font-semibold text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                        Sign In to Apply
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                    {% endif %}
                 </div>
 
                 <!-- Mobile Menu Button -->
@@ -528,11 +536,19 @@
                         </div>
                     </div>
                     <div class="pt-4">
+                        {% if user.is_authenticated %}
                         <a href="{% url 'apply' %}"
                             class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-accent-600 text-white rounded-lg font-bold hover:shadow-lg hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                             Apply Now
                             <i data-lucide="rocket" class="w-5 h-5"></i>
                         </a>
+                        {% else %}
+                        <a href="{% url 'auth_page' %}"
+                            class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-accent-600 text-white rounded-lg font-bold hover:shadow-lg hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            Sign In to Apply
+                            <i data-lucide="rocket" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

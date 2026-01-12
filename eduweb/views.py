@@ -7,6 +7,255 @@ from .models import ContactMessage, CourseApplication, CourseApplicationFile
 from django.http import JsonResponse
 from django.utils import timezone
 
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.urls import reverse
+from django.contrib.sites.shortcuts import get_current_site
+from .forms import SignUpForm, LoginForm
+from .models import UserProfile
+import random
+
+def generate_captcha():
+    """Generate a simple math captcha"""
+    num1 = random.randint(1, 10)
+    num2 = random.randint(1, 10)
+    operations = ['+', '-', '*']
+    operation = random.choice(operations)
+    
+    if operation == '+':
+        answer = num1 + num2
+    elif operation == '-':
+        answer = num1 - num2
+    else:  # multiplication
+        answer = num1 * num2
+    
+    question = f"{num1} {operation} {num2}"
+    return question, answer
+
+
+def auth_page(request):
+    """Combined authentication page for login and signup"""
+    # Generate captcha for both forms
+    captcha_question, captcha_answer = generate_captcha()
+    request.session['captcha_answer'] = captcha_answer
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'signup':
+            signup_form = SignUpForm(
+                request.POST, 
+                captcha_answer=request.session.get('captcha_answer')
+            )
+            
+            if signup_form.is_valid():
+                user = signup_form.save(commit=False)
+                user.is_active = False  # Deactivate until email verification
+                user.save()
+                
+                # Send verification email
+                send_verification_email(request, user)
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Account created successfully! Please check your email to verify your account.',
+                    'email': user.email
+                })
+            else:
+                errors = {}
+                for field, error_list in signup_form.errors.items():
+                    errors[field] = [str(e) for e in error_list]
+                
+                # Generate new captcha on error
+                new_question, new_answer = generate_captcha()
+                request.session['captcha_answer'] = new_answer
+                
+                return JsonResponse({
+                    'success': False,
+                    'errors': errors,
+                    'captcha_question': new_question
+                }, status=400)
+        
+        elif action == 'login':
+            # Try to authenticate with username or email
+            username_or_email = request.POST.get('username')
+            password = request.POST.get('password')
+            captcha = request.POST.get('captcha')
+            
+            # Verify captcha
+            if str(captcha) != str(request.session.get('captcha_answer')):
+                new_question, new_answer = generate_captcha()
+                request.session['captcha_answer'] = new_answer
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'captcha': ['Incorrect answer. Please try again.']},
+                    'captcha_question': new_question
+                }, status=400)
+            
+            # Check if input is email
+            user = None
+            if '@' in username_or_email:
+                try:
+                    user_obj = User.objects.get(email=username_or_email)
+                    username_or_email = user_obj.username
+                except User.DoesNotExist:
+                    pass
+            
+            user = authenticate(request, username=username_or_email, password=password)
+            
+            if user is not None:
+                if not user.is_active:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'__all__': ['Please verify your email before logging in. Check your inbox for the verification link.']},
+                        'captcha_question': captcha_question
+                    }, status=400)
+                
+                login(request, user)
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Login successful! Redirecting...',
+                    'redirect_url': reverse('apply')
+                })
+            else:
+                new_question, new_answer = generate_captcha()
+                request.session['captcha_answer'] = new_answer
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'__all__': ['Invalid username/email or password.']},
+                    'captcha_question': new_question
+                }, status=400)
+    
+    # GET request - show forms
+    signup_form = SignUpForm()
+    login_form = LoginForm()
+    
+    context = {
+        'signup_form': signup_form,
+        'login_form': login_form,
+        'captcha_question': captcha_question,
+    }
+    
+    return render(request, 'auth/auth.html', context)
+
+
+def send_verification_email(request, user):
+    """Send email verification link to user"""
+    try:
+        profile = user.profile
+        token = profile.verification_token
+        current_site = get_current_site(request)
+        verification_url = request.build_absolute_uri(
+            reverse('verify_email', kwargs={'token': str(token)})
+        )
+        
+        subject = 'Verify Your MIU Account'
+        
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+                    <div style="background: linear-gradient(135deg, #840384 0%, #a855f7 100%); padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">Welcome to MIU!</h1>
+                    </div>
+                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
+                        <p style="font-size: 16px;">Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                        <p>Thank you for creating an account with Modern International University. Please verify your email address to complete your registration.</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{verification_url}" style="display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #840384 0%, #a855f7 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                                Verify Email Address
+                            </a>
+                        </div>
+                        <p style="font-size: 14px; color: #666;">Or copy and paste this link into your browser:</p>
+                        <p style="font-size: 14px; color: #1D4ED8; word-break: break-all;">{verification_url}</p>
+                        <p style="font-size: 14px; color: #666; margin-top: 30px;">This link will expire in 24 hours.</p>
+                        <p>Best regards,<br><strong style="color: #840384;">The MIU Team</strong></p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        text_content = f"""
+Welcome to Modern International University!
+
+Dear {user.get_full_name() or user.username},
+
+Thank you for creating an account. Please verify your email address by clicking the link below:
+
+{verification_url}
+
+This link will expire in 24 hours.
+
+Best regards,
+The MIU Team
+        """
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        return True
+    except Exception as e:
+        print(f"Error sending verification email: {str(e)}")
+        return False
+
+
+def verify_email(request, token):
+    """Verify user email with token"""
+    try:
+        profile = UserProfile.objects.get(verification_token=token)
+        user = profile.user
+        
+        if not user.is_active:
+            user.is_active = True
+            user.save()
+            profile.email_verified = True
+            profile.save()
+            
+            messages.success(request, 'Your email has been verified! You can now log in.')
+        else:
+            messages.info(request, 'Your email is already verified.')
+        
+        return redirect('auth_page')
+        
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'Invalid verification link.')
+        return redirect('auth_page')
+
+
+@login_required
+def user_logout(request):
+    """Logout user"""
+    logout(request)
+    messages.success(request, 'You have been logged out successfully.')
+    return redirect('index')
+
+
+@login_required
+def resend_verification(request):
+    """Resend verification email"""
+    if request.method == 'POST':
+        user = request.user
+        if not user.profile.email_verified:
+            user.profile.generate_verification_token()
+            send_verification_email(request, user)
+            return JsonResponse({
+                'success': True,
+                'message': 'Verification email has been resent. Please check your inbox.'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Your email is already verified.'
+            })
+    return JsonResponse({'success': False, 'message': 'Invalid request.'}, status=400)
+
 def index(request):
     return render(request, 'index.html')
 
@@ -14,6 +263,11 @@ def about(request):
     return render(request, 'about.html')
 
 def apply(request):
+    # Check if email is verified
+    if not request.user.profile.email_verified:
+        messages.warning(request, 'Please verify your email before applying.')
+        return redirect('auth_page')
+    
     if request.method == 'POST':
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         

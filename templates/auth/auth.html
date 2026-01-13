@@ -142,9 +142,6 @@
 <div class="auth-container">
     <div class="container mx-auto">
         
-        <!-- Success/Error Messages -->
-        <div id="messageContainer" class="mb-4 max-w-4xl mx-auto"></div>
-        
         <div class="auth-card rounded-2xl overflow-hidden">
             <div class="grid lg:grid-cols-5 gap-0">
                 
@@ -417,7 +414,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     lucide.createIcons();
     
-    // Tab Switching
+    // ========== TAB SWITCHING ==========
     const tabs = document.querySelectorAll('.auth-tab');
     const forms = document.querySelectorAll('.form-container');
     
@@ -425,11 +422,9 @@ document.addEventListener('DOMContentLoaded', function() {
         tab.addEventListener('click', () => {
             const targetTab = tab.dataset.tab;
             
-            // Update tabs
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             
-            // Update forms
             forms.forEach(form => {
                 if (form.id === targetTab + 'Form') {
                     form.classList.add('active');
@@ -438,28 +433,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            // Clear errors
             clearAllErrors();
+            setTimeout(() => lucide.createIcons(), 50);
         });
     });
     
-    // Password Toggle
-    document.querySelectorAll('.password-toggle').forEach(toggle => {
-        toggle.addEventListener('click', function() {
-            const targetId = this.dataset.target;
+    // ========== PASSWORD TOGGLE (FIXED VERSION) ==========
+    document.body.addEventListener('click', function(e) {
+        // Check if clicked element IS the toggle or is inside it
+        const toggle = e.target.classList.contains('password-toggle') ? e.target : e.target.closest('.password-toggle');
+        
+        if (toggle) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const targetId = toggle.dataset.target;
             const input = document.getElementById(targetId);
-            const isPassword = input.type === 'password';
             
-            input.type = isPassword ? 'text' : 'password';
-            this.outerHTML = `<i data-lucide="${isPassword ? 'eye-off' : 'eye'}" class="password-toggle w-5 h-5" data-target="${targetId}"></i>`;
-            lucide.createIcons();
-            
-            // Re-attach event listener
-            document.querySelector(`[data-target="${targetId}"]`).addEventListener('click', arguments.callee);
-        });
+            if (input) {
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                
+                // Update the icon
+                toggle.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+                lucide.createIcons();
+            }
+        }
     });
     
-    // Login Form Submission
+    // ========== LOGIN FORM ==========
     document.getElementById('loginFormElement').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -475,18 +477,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('{% url "auth_page" %}', {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             
             const data = await response.json();
             
             if (data.success) {
                 showMessage('success', data.message);
-                setTimeout(() => {
-                    window.location.href = data.redirect_url;
-                }, 1500);
+                setTimeout(() => window.location.href = data.redirect_url, 1500);
             } else {
                 handleFormErrors('login', data.errors);
                 if (data.captcha_question) {
@@ -505,7 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Signup Form Submission
+    // ========== SIGNUP FORM ==========
     document.getElementById('signupFormElement').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -521,18 +519,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('{% url "auth_page" %}', {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             
             const data = await response.json();
             
             if (data.success) {
                 showMessage('success', data.message);
-                setTimeout(() => {
-                    this.reset();
-                }, 2000);
+                setTimeout(() => this.reset(), 2000);
             } else {
                 handleFormErrors('signup', data.errors);
                 if (data.captcha_question) {
@@ -552,6 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // ========== HELPER FUNCTIONS ==========
     function handleFormErrors(formType, errors) {
         for (const [field, messages] of Object.entries(errors)) {
             const errorElement = document.getElementById(`${formType === 'login' ? 'login_' : ''}${field}_error`);
@@ -568,21 +563,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showMessage(type, message) {
-        const container = document.getElementById('messageContainer');
-        const bgColor = type === 'success' ? 'bg-green-100 border-green-500 text-green-800' : 'bg-red-100 border-red-500 text-red-800';
-        const icon = type === 'success' ? 'check-circle' : 'alert-circle';
-        
-        container.innerHTML = `
-            <div class="success-message ${bgColor} border-l-4 p-4 rounded-lg flex items-center gap-3">
-                <i data-lucide="${icon}" class="w-5 h-5"></i>
-                <span>${message}</span>
-            </div>
-        `;
-        lucide.createIcons();
-        
-        setTimeout(() => {
-            container.innerHTML = '';
-        }, 5000);
+        window.showToast(type, message);
     }
 });
 </script>

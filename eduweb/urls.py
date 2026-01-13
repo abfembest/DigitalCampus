@@ -15,6 +15,7 @@ urlpatterns = [
     path('admission/detail/', views.detail, name='detail'),
     path('contact/submit/', views.contact_submit, name='contact_submit'),
     path('blank_page/', views.blank_page, name='blank_page'),
+    path('application_status/', views.application_status, name='application_status'),
 
     # Faculty Pages
     path('faculties/science/', views.faculty_science, name='faculty_science'),

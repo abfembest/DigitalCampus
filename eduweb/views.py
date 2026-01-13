@@ -36,20 +36,48 @@ def generate_captcha():
 
 def auth_page(request):
     """Combined authentication page for login and signup"""
-    # Generate captcha for both forms
-    captcha_question, captcha_answer = generate_captcha()
-    request.session['captcha_answer'] = captcha_answer
+    
+    # Generate captcha only on GET request (initial page load)
+    # This prevents the captcha from changing when the form is submitted
+    if request.method == 'GET':
+        captcha_question, captcha_answer = generate_captcha()
+        request.session['captcha_answer'] = captcha_answer
+    else:
+        # On POST, retrieve the existing captcha from session
+        captcha_answer = request.session.get('captcha_answer')
+        if captcha_answer is None:
+            # Session expired, generate new captcha and return error
+            captcha_question, captcha_answer = generate_captcha()
+            request.session['captcha_answer'] = captcha_answer
+            return JsonResponse({
+                'success': False,
+                'errors': {'captcha': ['Session expired. Please try again.']},
+                'captcha_question': captcha_question
+            }, status=400)
+        else:
+            # Reconstruct question for display (we'll generate a new one on error)
+            captcha_question = None  # Will be generated on error if needed
     
     if request.method == 'POST':
         action = request.POST.get('action')
         
         if action == 'signup':
+            # Get captcha from session
+            session_captcha = request.session.get('captcha_answer')
+
+            print(f"DEBUG - Session captcha: {session_captcha} (type: {type(session_captcha)})")
+            print(f"DEBUG - Posted captcha: {request.POST.get('captcha')} (type: {type(request.POST.get('captcha'))})")
+            
             signup_form = SignUpForm(
                 request.POST, 
-                captcha_answer=request.session.get('captcha_answer')
+                captcha_answer=session_captcha
             )
             
             if signup_form.is_valid():
+                # Clear the captcha from session after successful validation
+                if 'captcha_answer' in request.session:
+                    del request.session['captcha_answer']
+                    
                 user = signup_form.save(commit=False)
                 user.is_active = False  # Deactivate until email verification
                 user.save()
@@ -84,12 +112,26 @@ def auth_page(request):
             captcha = request.POST.get('captcha')
             
             # Verify captcha
-            if str(captcha) != str(request.session.get('captcha_answer')):
+            session_answer = request.session.get('captcha_answer')
+            try:
+                # TYPE CAST BOTH TO INT FOR COMPARISON
+                captcha_int = int(captcha) if captcha else None
+                session_answer_int = int(session_answer) if session_answer is not None else None
+                
+                if session_answer_int is None or captcha_int != session_answer_int:
+                    new_question, new_answer = generate_captcha()
+                    request.session['captcha_answer'] = new_answer
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'captcha': ['Incorrect answer. Please try again.']},
+                        'captcha_question': new_question
+                    }, status=400)
+            except (ValueError, TypeError):
                 new_question, new_answer = generate_captcha()
                 request.session['captcha_answer'] = new_answer
                 return JsonResponse({
                     'success': False,
-                    'errors': {'captcha': ['Incorrect answer. Please try again.']},
+                    'errors': {'captcha': ['Invalid answer. Please enter a number.']},
                     'captcha_question': new_question
                 }, status=400)
             
@@ -106,12 +148,19 @@ def auth_page(request):
             
             if user is not None:
                 if not user.is_active:
+                    # Generate new captcha for retry
+                    new_question, new_answer = generate_captcha()
+                    request.session['captcha_answer'] = new_answer
                     return JsonResponse({
                         'success': False,
                         'errors': {'__all__': ['Please verify your email before logging in. Check your inbox for the verification link.']},
-                        'captcha_question': captcha_question
+                        'captcha_question': new_question
                     }, status=400)
                 
+                # Clear captcha on successful login
+                if 'captcha_answer' in request.session:
+                    del request.session['captcha_answer']
+                    
                 login(request, user)
                 return JsonResponse({
                     'success': True,
@@ -138,7 +187,6 @@ def auth_page(request):
     }
     
     return render(request, 'auth/auth.html', context)
-
 
 def send_verification_email(request, user):
     """Send email verification link to user"""
@@ -949,3 +997,8 @@ def campus_life(request):
 def blog(request):
     """Blog page view"""
     return render(request, 'blog.html')
+
+
+def application_status(request):
+    """application status"""
+    return render(request, 'applications/application_status.html')

@@ -33,12 +33,13 @@ class SignUpForm(UserCreationForm):
             'autocomplete': 'family-name'
         })
     )
-    captcha = forms.CharField(
+    captcha = forms.IntegerField(
         required=True,
-        widget=forms.TextInput(attrs={
+        widget=forms.NumberInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
             'placeholder': 'Enter the result',
-            'autocomplete': 'off'
+            'autocomplete': 'off',
+            'type': 'number'
         })
     )
     
@@ -94,8 +95,18 @@ class SignUpForm(UserCreationForm):
     
     def clean_captcha(self):
         captcha = self.cleaned_data.get('captcha')
-        if self.captcha_answer and str(captcha) != str(self.captcha_answer):
-            raise ValidationError('Incorrect answer. Please try again.')
+        if self.captcha_answer is None:
+            raise ValidationError('Captcha session expired. Please refresh the page.')
+        
+        try:
+            captcha_int = int(captcha) if captcha is not None else None
+            answer_int = int(self.captcha_answer) if self.captcha_answer is not None else None
+            
+            if captcha_int != answer_int:
+                raise ValidationError('Incorrect answer. Please try again.')
+        except (ValueError, TypeError):
+            raise ValidationError('Invalid captcha answer format.')
+        
         return captcha
 
 
@@ -114,12 +125,13 @@ class LoginForm(AuthenticationForm):
             'autocomplete': 'current-password'
         })
     )
-    captcha = forms.CharField(
+    captcha = forms.IntegerField(
         required=True,
-        widget=forms.TextInput(attrs={
+        widget=forms.NumberInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-950 focus:ring-2 focus:ring-purple-200 transition-all',
             'placeholder': 'Enter the result',
-            'autocomplete': 'off'
+            'autocomplete': 'off',
+            'type': 'number'
         })
     )
     
@@ -132,8 +144,12 @@ class LoginForm(AuthenticationForm):
     
     def clean_captcha(self):
         captcha = self.cleaned_data.get('captcha')
-        if self.captcha_answer and str(captcha) != str(self.captcha_answer):
+        if self.captcha_answer is None:
+            raise ValidationError('Captcha session expired. Please refresh the page.')
+        
+        if captcha != self.captcha_answer:
             raise ValidationError('Incorrect answer. Please try again.')
+        
         return captcha
 
 class MultipleFileInput(forms.ClearableFileInput):

@@ -160,6 +160,10 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # Email verification token expiry (in hours)
 EMAIL_VERIFICATION_EXPIRY = 24
 
+# Add these lines after SESSION_COOKIE_SAMESITE
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+CSRF_COOKIE_HTTPONLY = False
+
 
 
 

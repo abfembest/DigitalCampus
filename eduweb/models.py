@@ -119,7 +119,7 @@ class CourseApplication(models.Model):
     ]
     
     REFERRAL_CHOICES = [
-        ('', 'Select an option'),
+        ('website', 'University Website'),
         ('search-engine', 'Search Engine (Google, etc.)'),
         ('social-media', 'Social Media'),
         ('friend-family', 'Friend or Family'),

@@ -315,24 +315,27 @@
                                 </label>
                                 <div class="grid md:grid-cols-2 gap-4">
                                     {% for radio in form.english_proficiency_type %}
-                                    <div class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg hover:border-purple-400 transition-colors">
-                                        {{ radio.tag }}
-                                        <label for="{{ radio.id_for_label }}" class="cursor-pointer flex-1">
-                                            {{ radio.choice_label }}
-                                        </label>
-                                        {% if radio.choice_value == 'toefl' %}
-                                        <input type="text" name="toefl_score" placeholder="Score" 
-                                               class="w-20 px-2 py-1 border border-gray-300 rounded">
-                                        {% elif radio.choice_value == 'ielts' %}
-                                        <input type="text" name="ielts_score" placeholder="Score" 
-                                               class="w-20 px-2 py-1 border border-gray-300 rounded">
-                                        {% elif radio.choice_value == 'other' %}
-                                        <input type="text" name="other_test" placeholder="Test name" 
-                                               class="w-32 px-2 py-1 border border-gray-300 rounded">
+                                        {% if radio.choice_value != '' %}
+                                        <div class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg hover:border-purple-400 transition-colors">
+                                            {{ radio.tag }}
+                                            <label for="{{ radio.id_for_label }}" class="cursor-pointer flex-1">
+                                                {{ radio.choice_label }}
+                                            </label>
+                                            {% if radio.choice_value == 'toefl' %}
+                                            <input type="text" name="toefl_score" placeholder="Score" 
+                                                class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                            {% elif radio.choice_value == 'ielts' %}
+                                            <input type="text" name="ielts_score" placeholder="Score" 
+                                                class="w-20 px-2 py-1 border border-gray-300 rounded">
+                                            {% elif radio.choice_value == 'other' %}
+                                            <input type="text" name="other_test" placeholder="Test name" 
+                                                class="w-32 px-2 py-1 border border-gray-300 rounded">
+                                            {% endif %}
+                                        </div>
                                         {% endif %}
-                                    </div>
                                     {% endfor %}
                                 </div>
+                                <div class="error-message text-red-500 text-sm mt-1"></div>
                             </div>
 
                             <div class="mb-6">
@@ -365,7 +368,7 @@
                                            class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
                                         {{ radio.tag }}
                                         <div>
-                                            <div class="font-medium">{{ radio.choice_label }}</div>
+                                            <div class="font-medium" disabled>{{ radio.choice_label }}</div>
                                             <div class="text-sm text-gray-500">
                                                 {% if radio.choice_value == 'bachelor' %}Undergraduate
                                                 {% elif radio.choice_value == 'master' %}Graduate

@@ -69,9 +69,6 @@ def auth_page(request):
         if action == 'signup':
             # Get captcha from session
             session_captcha = request.session.get('captcha_answer')
-
-            print(f"DEBUG - Session captcha: {session_captcha} (type: {type(session_captcha)})")
-            print(f"DEBUG - Posted captcha: {request.POST.get('captcha')} (type: {type(request.POST.get('captcha'))})")
             
             signup_form = SignUpForm(
                 request.POST, 
@@ -423,13 +420,21 @@ def apply(request):
                     print("⚠️ No documents were uploaded")
                 
                 print("=== APPLICATION SUBMISSION COMPLETED ===")
-                
-                # Send emails
-                try:
-                    send_application_confirmation_email(application)
-                    send_application_admin_notification(application)
-                except Exception as email_error:
-                    print(f"Email error (non-critical): {str(email_error)}")
+
+                # Send emails asynchronously (non-blocking)
+                from threading import Thread
+
+                def send_emails_async():
+                    try:
+                        send_application_confirmation_email(application)
+                        send_application_admin_notification(application)
+                    except Exception as email_error:
+                        print(f"Email error (non-critical): {str(email_error)}")
+
+                # Start email sending in background thread
+                email_thread = Thread(target=send_emails_async)
+                email_thread.daemon = True
+                email_thread.start()
                 
                 # Return JSON for AJAX
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':

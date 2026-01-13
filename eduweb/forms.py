@@ -170,36 +170,16 @@ class CourseApplicationForm(forms.ModelForm):
     english_proficiency_type = forms.ChoiceField(
         required=True,
         choices=[
+            ('', '-- Select English Proficiency --'),  # Placeholder
             ('toefl', 'TOEFL'),
             ('ielts', 'IELTS'),
             ('other', 'Other'),
             ('native', 'Native Speaker'),
         ],
-        widget=forms.RadioSelect(attrs={'class': 'mr-2 h-5 w-5'})
-    )
-    toefl_score = forms.CharField(
-        required=False,
-        max_length=20,
-        widget=forms.TextInput(attrs={
-            'class': 'w-20 px-2 py-1 border border-gray-300 rounded',
-            'placeholder': 'Score'
-        })
-    )
-    ielts_score = forms.CharField(
-        required=False,
-        max_length=20,
-        widget=forms.TextInput(attrs={
-            'class': 'w-20 px-2 py-1 border border-gray-300 rounded',
-            'placeholder': 'Score'
-        })
-    )
-    other_test = forms.CharField(
-        required=False,
-        max_length=100,
-        widget=forms.TextInput(attrs={
-            'class': 'w-32 px-2 py-1 border border-gray-300 rounded',
-            'placeholder': 'Test name'
-        })
+        widget=forms.RadioSelect(attrs={'class': 'mr-2 h-5 w-5'}),
+        error_messages={
+            'required': 'Please select your English proficiency type'
+        }
     )
     
     # File uploads
@@ -208,38 +188,56 @@ class CourseApplicationForm(forms.ModelForm):
         widget=forms.FileInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
             'accept': '.pdf,.doc,.docx,.jpg,.png'
-        })
+        }),
+        error_messages={
+            'invalid': 'Please upload a valid file (PDF, DOC, DOCX, JPG, or PNG)'
+        }
     )
     english_proficiency_file = forms.FileField(
         required=False,
         widget=forms.FileInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
             'accept': '.pdf,.doc,.docx,.jpg,.png'
-        })
+        }),
+        error_messages={
+            'invalid': 'Please upload a valid file (PDF, DOC, DOCX, JPG, or PNG)'
+        }
     )
     personal_statement_file = forms.FileField(
         required=False,
         widget=forms.FileInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
             'accept': '.pdf,.doc,.docx'
-        })
+        }),
+        error_messages={
+            'invalid': 'Please upload a valid document (PDF, DOC, or DOCX)'
+        }
     )
     cv_file = forms.FileField(
         required=False,
         widget=forms.FileInput(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
             'accept': '.pdf,.doc,.docx'
-        })
+        }),
+        error_messages={
+            'invalid': 'Please upload a valid document (PDF, DOC, or DOCX)'
+        }
     )
     
     # Declarations
     declaration = forms.BooleanField(
         required=True,
-        widget=forms.CheckboxInput(attrs={'class': 'mr-3 h-5 w-5'})
+        widget=forms.CheckboxInput(attrs={'class': 'mr-3 h-5 w-5'}),
+        error_messages={
+            'required': 'You must accept the declaration to submit your application'
+        }
     )
     privacy = forms.BooleanField(
         required=True,
-        widget=forms.CheckboxInput(attrs={'class': 'mr-3 h-5 w-5'})
+        widget=forms.CheckboxInput(attrs={'class': 'mr-3 h-5 w-5'}),
+        error_messages={
+            'required': 'You must accept the privacy policy to continue'
+        }
     )
     
     class Meta:
@@ -274,7 +272,7 @@ class CourseApplicationForm(forms.ModelForm):
             }),
             'country': forms.Select(attrs={
                 'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white'
-            }, choices=[('', '-- Select Country --')] + CourseApplication.COUNTRY_CHOICES),
+            }),
             'gender': forms.Select(attrs={
                 'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white'
             }),
@@ -290,27 +288,83 @@ class CourseApplicationForm(forms.ModelForm):
             }),
             'program': forms.Select(attrs={
                 'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white'
-            }, choices=[('', '-- Select a Program --')] + CourseApplication.PROGRAM_CHOICES),
+            }),
             'degree_level': forms.RadioSelect(attrs={'class': 'mr-3 h-5 w-5'}),
             'study_mode': forms.RadioSelect(attrs={'class': 'mr-3 h-5 w-5'}),
             'intake': forms.RadioSelect(attrs={'class': 'mr-3 h-5 w-5'}),
             'scholarship': forms.CheckboxInput(attrs={'class': 'mr-3 h-5 w-5'}),
             'referral_source': forms.Select(attrs={
                 'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white'
-            }, choices=[('', '-- How did you hear about us? --')] + CourseApplication.REFERRAL_CHOICES),
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Add placeholder options to Select fields
+        self.fields['country'].choices = [('', '-- Select Your Country --')] + list(self.fields['country'].choices)[1:]
+        self.fields['gender'].choices = [('', '-- Select Gender --')] + list(self.fields['gender'].choices)[1:]
+        self.fields['program'].choices = [('', '-- Select a Program --')] + list(self.fields['program'].choices)[1:]
+        self.fields['referral_source'].choices = [('', '-- Select an Option --')] + list(self.fields['referral_source'].choices)[1:]
+        
+        # Add custom error messages for all required fields
+        self.fields['first_name'].error_messages = {
+            'required': 'Please enter your first name'
+        }
+        self.fields['last_name'].error_messages = {
+            'required': 'Please enter your last name'
+        }
+        self.fields['email'].error_messages = {
+            'required': 'Please enter your email address',
+            'invalid': 'Please enter a valid email address'
+        }
+        self.fields['phone'].error_messages = {
+            'required': 'Please enter your phone number'
+        }
+        self.fields['date_of_birth'].error_messages = {
+            'required': 'Please enter your date of birth',
+            'invalid': 'Please enter a valid date'
+        }
+        self.fields['country'].error_messages = {
+            'required': 'Please select your country',
+            'invalid_choice': 'Please select a valid country from the list'
+        }
+        self.fields['gender'].error_messages = {
+            'required': 'Please select your gender',
+            'invalid_choice': 'Please select a valid option'
+        }
+        self.fields['address'].error_messages = {
+            'required': 'Please enter your address'
+        }
+        self.fields['program'].error_messages = {
+            'required': 'Please select a program',
+            'invalid_choice': 'Please select a valid program from the list'
+        }
+        self.fields['degree_level'].error_messages = {
+            'required': 'Please select your desired degree level'
+        }
+        self.fields['study_mode'].error_messages = {
+            'required': 'Please select your preferred study mode'
+        }
+        self.fields['intake'].error_messages = {
+            'required': 'Please select your intake semester'
         }
     
     def clean(self):
         cleaned_data = super().clean()
         
-        # Validate English proficiency
+        # Validate English proficiency type
         english_type = cleaned_data.get('english_proficiency_type')
-        if english_type == 'toefl' and not cleaned_data.get('toefl_score'):
-            raise forms.ValidationError('Please provide your TOEFL score.')
-        elif english_type == 'ielts' and not cleaned_data.get('ielts_score'):
-            raise forms.ValidationError('Please provide your IELTS score.')
-        elif english_type == 'other' and not cleaned_data.get('other_test'):
-            raise forms.ValidationError('Please specify your English proficiency test.')
+        if not english_type or english_type == '':
+            self.add_error('english_proficiency_type', 'Please select your English proficiency type')
+        
+        # Validate that placeholders weren't selected for select fields
+        if cleaned_data.get('country') == '':
+            self.add_error('country', 'Please select your country')
+        if cleaned_data.get('gender') == '':
+            self.add_error('gender', 'Please select your gender')
+        if cleaned_data.get('program') == '':
+            self.add_error('program', 'Please select a program')
         
         return cleaned_data
     
@@ -326,11 +380,11 @@ class CourseApplicationForm(forms.ModelForm):
         instance.english_proficiency = english_type
         
         if english_type == 'toefl':
-            instance.english_score = self.cleaned_data.get('toefl_score', '')
+            instance.english_score = self.data.get('toefl_score', '')
         elif english_type == 'ielts':
-            instance.english_score = self.cleaned_data.get('ielts_score', '')
+            instance.english_score = self.data.get('ielts_score', '')
         elif english_type == 'other':
-            instance.english_score = self.cleaned_data.get('other_test', '')
+            instance.english_score = self.data.get('other_test', '')
         else:
             instance.english_score = 'Native Speaker'
         

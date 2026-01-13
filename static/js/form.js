@@ -199,12 +199,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!activeStep) return false;
         
         let isValid = true;
+        let errorMessages = [];
         
         // Clear previous errors
         activeStep.querySelectorAll('.error-message').forEach(el => el.textContent = '');
         activeStep.querySelectorAll('.border-red-500').forEach(el => {
             el.classList.remove('border-red-500');
         });
+        
+        // Remove any existing validation error box
+        const existingError = activeStep.querySelector('.validation-errors');
+        if (existingError) {
+            existingError.remove();
+        }
         
         // Get all required inputs in current step
         const inputs = activeStep.querySelectorAll('input[required], select[required], textarea[required]');
@@ -214,6 +221,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (input.closest('.academic-entry') && !input.closest('.academic-entry').offsetParent) {
                 return;
             }
+            
+            // Get field label
+            const labelElement = input.closest('div').querySelector('label');
+            const label = labelElement ? labelElement.textContent.replace('*', '').trim() : input.name;
             
             // Check if field has value
             if (input.type === 'checkbox' || input.type === 'radio') {
@@ -225,68 +236,85 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (firstInput) {
                         firstInput.classList.add('border-red-500');
                         const errorDiv = firstInput.closest('.mb-6')?.querySelector('.error-message');
-                        if (errorDiv) errorDiv.textContent = 'This field is required';
+                        const errorMsg = `Please select ${label}`;
+                        if (errorDiv) errorDiv.textContent = errorMsg;
+                        errorMessages.push(errorMsg);
                     }
                 }
-            } else if (!input.value.trim()) {
+            } else if (input.tagName === 'SELECT') {
+                // Check for empty or placeholder value in select fields
+                if (!input.value || input.value === '' || input.value === '--------') {
+                    isValid = false;
+                    input.classList.add('border-red-500');
+                    const errorDiv = input.parentElement.querySelector('.error-message');
+                    const errorMsg = `Please select ${label}`;
+                    if (errorDiv) errorDiv.textContent = errorMsg;
+                    errorMessages.push(errorMsg);
+                }
+            } else if (!input.value || !input.value.trim()) {
                 isValid = false;
                 input.classList.add('border-red-500');
                 const errorDiv = input.parentElement.querySelector('.error-message') || 
-                               input.closest('div').querySelector('.error-message');
-                if (errorDiv) errorDiv.textContent = 'This field is required';
+                            input.closest('div').querySelector('.error-message');
+                const errorMsg = `${label} is required`;
+                if (errorDiv) errorDiv.textContent = errorMsg;
+                errorMessages.push(errorMsg);
             }
         });
         
-        // Step 2 specific validation
+        // Step-specific validation
         if (step === 2) {
             const englishType = activeStep.querySelector('input[name="english_proficiency_type"]:checked');
-            if (!englishType) {
-                window.showToast('error', 'Please select your English proficiency type');
+            if (!englishType || englishType.value === '') {
+                errorMessages.push('Please select your English proficiency type');
                 isValid = false;
-            } else {
-                const typeValue = englishType.value;
-                if (typeValue === 'toefl') {
-                    const toeflScore = activeStep.querySelector('input[name="toefl_score"]');
-                    if (toeflScore && toeflScore.value && !toeflScore.value.trim()) {
-                        toeflScore.classList.add('border-red-500');
-                        window.showToast('error', 'Please provide your TOEFL score');
-                        isValid = false;
-                    }
-                } else if (typeValue === 'ielts') {
-                    const ieltsScore = activeStep.querySelector('input[name="ielts_score"]');
-                    if (ieltsScore && ieltsScore.value && !ieltsScore.value.trim()) {
-                        ieltsScore.classList.add('border-red-500');
-                        window.showToast('error', 'Please provide your IELTS score');
-                        isValid = false;
-                    }
-                } else if (typeValue === 'other') {
-                    const otherTest = activeStep.querySelector('input[name="other_test"]');
-                    if (otherTest && otherTest.value && !otherTest.value.trim()) {
-                        otherTest.classList.add('border-red-500');
-                        window.showToast('error', 'Please specify your English proficiency test');
-                        isValid = false;
-                    }
-                }
             }
         }
         
-        // Step 5 validation
         if (step === 5) {
             const declaration = form.querySelector('input[name="declaration"]');
             const privacy = form.querySelector('input[name="privacy"]');
             
             if (declaration && !declaration.checked) {
-                window.showToast('error', 'Please accept the declaration');
+                errorMessages.push('Please accept the declaration to continue');
                 isValid = false;
             }
             if (privacy && !privacy.checked) {
-                window.showToast('error', 'Please accept the privacy policy');
+                errorMessages.push('Please accept the privacy policy to continue');
                 isValid = false;
             }
         }
         
-        if (!isValid) {
-            window.showToast('error', 'Please complete all required fields');
+        // Show consolidated error message
+        if (!isValid && errorMessages.length > 0) {
+            const uniqueErrors = [...new Set(errorMessages)];
+            
+            // Create a detailed error message box
+            let errorHTML = '<div class="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6 animate-scale-in">';
+            errorHTML += '<div class="flex items-start gap-3">';
+            errorHTML += '<i data-lucide="alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"></i>';
+            errorHTML += '<div class="flex-1">';
+            errorHTML += '<h4 class="font-bold text-red-800 mb-2">Please fix the following errors:</h4>';
+            errorHTML += '<ul class="list-disc list-inside space-y-1 text-sm text-red-700">';
+            
+            uniqueErrors.forEach(error => {
+                errorHTML += `<li>${error}</li>`;
+            });
+            
+            errorHTML += '</ul></div></div></div>';
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'validation-errors';
+            errorDiv.innerHTML = errorHTML;
+            activeStep.insertBefore(errorDiv, activeStep.firstChild);
+            
+            // Re-initialize lucide icons
+            lucide.createIcons();
+            
+            // Scroll to error
+            setTimeout(() => {
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+            }, 100);
         }
         
         return isValid;

@@ -36,6 +36,11 @@ def generate_captcha():
 
 def auth_page(request):
     """Combined authentication page for login and signup"""
+
+    # Redirect if user is already logged in
+    if request.user.is_authenticated:
+        messages.info(request, 'You are already logged in.')
+        return redirect('apply')
     
     # Generate captcha only on GET request (initial page load)
     # This prevents the captcha from changing when the form is submitted
@@ -188,6 +193,7 @@ def auth_page(request):
     
     return render(request, 'auth/auth.html', context)
 
+
 def send_verification_email(request, user):
     """Send email verification link to user"""
     try:
@@ -304,59 +310,171 @@ def resend_verification(request):
             })
     return JsonResponse({'success': False, 'message': 'Invalid request.'}, status=400)
 
+
 def index(request):
     return render(request, 'index.html')
+
 
 def about(request):
     return render(request, 'about.html')
 
+
+@login_required
 def apply(request):
     # Check if email is verified
     if not request.user.profile.email_verified:
         messages.warning(request, 'Please verify your email before applying.')
         return redirect('auth_page')
     
+    # Check if user already has a pending application
+    existing_application = CourseApplication.objects.filter(
+        user=request.user,
+        submitted=True
+    ).first()
+    
+    if existing_application:
+        messages.info(request, 'You already have an application in progress.')
+        return redirect('application_status')
+    
     if request.method == 'POST':
-        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        
         form = CourseApplicationForm(request.POST, request.FILES)
         
         if form.is_valid():
             try:
-                application = form.save()
+                print("=== APPLICATION SUBMISSION STARTED ===")
+                print(f"User: {request.user.username}")
+                print(f"Files received: {list(request.FILES.keys())}")
                 
-                # Handle multiple additional files
-                additional_files = request.FILES.getlist('additional_files')
-                for f in additional_files:
-                    CourseApplicationFile.objects.create(application=application, file=f)
+                # Collect academic history from all entries
+                academic_history = []
+                entry_count = 1
+                while True:
+                    education_level = request.POST.get(f'education_level_{entry_count}')
+                    if not education_level:
+                        break
+                    
+                    academic_history.append({
+                        'education_level': education_level,
+                        'institution': request.POST.get(f'institution_{entry_count}', ''),
+                        'field_of_study': request.POST.get(f'field_of_study_{entry_count}', ''),
+                        'graduation_year': request.POST.get(f'graduation_year_{entry_count}', ''),
+                        'gpa': request.POST.get(f'gpa_{entry_count}', ''),
+                    })
+                    entry_count += 1
+                
+                # Save application first (without files)
+                application = form.save(commit=False, user=request.user)
+                application.academic_history = academic_history
+                application.save()
+                
+                print(f"Application saved: {application.application_id}")
+                
+                # Handle file uploads with detailed tracking
+                documents = {}
+                file_field_mapping = {
+                    'transcripts_file': ('transcripts', 'Transcripts'),
+                    'english_proficiency_file': ('english_proficiency', 'English Proficiency Certificate'),
+                    'personal_statement_file': ('personal_statement', 'Personal Statement'),
+                    'cv_file': ('cv', 'CV/Resume')
+                }
+                
+                for form_field, (file_type, doc_name) in file_field_mapping.items():
+                    if form_field in request.FILES:
+                        try:
+                            file_obj = request.FILES[form_field]
+                            print(f"Processing {form_field}: {file_obj.name} ({file_obj.size} bytes)")
+                            
+                            # Create CourseApplicationFile entry with file type
+                            app_file = CourseApplicationFile.objects.create(
+                                application=application,
+                                file=file_obj,
+                                file_type=file_type,
+                                original_filename=file_obj.name,
+                                file_size=file_obj.size
+                            )
+                            
+                            # Store metadata in documents_uploaded JSON
+                            documents[doc_name] = {
+                                'file_id': app_file.id,
+                                'file_name': file_obj.name,
+                                'file_type': file_type,
+                                'file_size': app_file.get_file_size_display(),
+                                'file_path': app_file.file.name,
+                                'uploaded_at': timezone.now().isoformat()
+                            }
+                            
+                            print(f"✅ Successfully saved {doc_name}: ID {app_file.id}")
+                            
+                        except Exception as file_error:
+                            print(f"❌ Error uploading {form_field}: {str(file_error)}")
+                            import traceback
+                            traceback.print_exc()
+                            # Continue with other files even if one fails
+                            continue
+                    else:
+                        print(f"⚠️ No file uploaded for {form_field}")
+                
+                # Update documents_uploaded field if any documents were uploaded
+                if documents:
+                    application.documents_uploaded = documents
+                    application.save()
+                    print(f"Documents metadata saved: {list(documents.keys())}")
+                else:
+                    print("⚠️ No documents were uploaded")
+                
+                print("=== APPLICATION SUBMISSION COMPLETED ===")
                 
                 # Send emails
-                send_application_confirmation_email(application)
-                send_application_admin_notification(application)
+                try:
+                    send_application_confirmation_email(application)
+                    send_application_admin_notification(application)
+                except Exception as email_error:
+                    print(f"Email error (non-critical): {str(email_error)}")
                 
-                # Always return JSON for AJAX
-                return JsonResponse({
-                    'success': True,
-                    'application_id': application.application_id,
-                    'message': 'Application submitted successfully!'
-                })
+                # Return JSON for AJAX
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'application_id': application.application_id,
+                        'message': 'Application submitted successfully!',
+                        'files_uploaded': len(documents),
+                        'redirect_url': reverse('application_status')
+                    })
+                else:
+                    messages.success(request, f'Application submitted successfully! Your ID: {application.application_id}')
+                    return redirect('application_status')
                     
             except Exception as e:
+                print(f"=== ERROR IN APPLICATION SUBMISSION ===")
+                print(f"Error type: {type(e).__name__}")
+                print(f"Error message: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'{type(e).__name__}: {str(e)}'
+                    }, status=500)
+                else:
+                    messages.error(request, f'Error: {str(e)}')
+        else:
+            print("=== FORM VALIDATION ERRORS ===")
+            for field, errors in form.errors.items():
+                print(f"{field}: {errors}")
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                errors = {}
+                for field, error_list in form.errors.items():
+                    errors[field] = [str(e) for e in error_list]
+                
                 return JsonResponse({
                     'success': False,
-                    'error': str(e)
+                    'errors': errors,
+                    'error': 'Please correct the errors in the form.'
                 }, status=400)
-        else:
-            # Format errors for JSON response
-            errors = {}
-            for field, error_list in form.errors.items():
-                errors[field] = [str(e) for e in error_list]
-            
-            return JsonResponse({
-                'success': False,
-                'errors': errors,
-                'error': 'Please correct the errors in the form.'
-            }, status=400)
+            else:
+                messages.error(request, 'Please correct the errors in the form.')
     else:
         form = CourseApplicationForm()
     
@@ -405,152 +523,6 @@ def send_application_confirmation_email(application):
         print(f"Error sending confirmation email: {str(e)}")
         return False
 
-def send_application_admin_notification(application):
-    """Send notification email to admin"""
-    try:
-        subject = f'New Application - {application.application_id}'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif;">
-                <h2>New Course Application Received</h2>
-                <p><strong>Application ID:</strong> {application.application_id}</p>
-                <p><strong>Name:</strong> {application.get_full_name()}</p>
-                <p><strong>Email:</strong> {application.email}</p>
-                <p><strong>Program:</strong> {application.get_program_display_name()}</p>
-                <p><strong>Degree Level:</strong> {application.get_degree_level_display_name()}</p>
-                <p><strong>Submitted:</strong> {application.submission_date.strftime('%Y-%m-%d %H:%M:%S')}</p>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"New application from {application.get_full_name()}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[settings.CONTACT_EMAIL],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending admin notification: {str(e)}")
-        return False
-
-def detail(request):
-    return render(request, 'detail.html')
-
-def admission_course(request):
-    return render(request, 'course.html')
-
-def admission_requirement(request):
-    return render(request, 'admission_requirement.html')
-
-def blank_page(request):
-    return render(request, 'blank_page.html')
-
-def contact_submit(request):
-    if request.method == 'POST':
-        form = ContactForm(request.POST)
-        if form.is_valid():
-            contact_message = form.save()
-            send_admin_email(contact_message)
-            send_user_confirmation_email(contact_message)
-            messages.success(request, 'Thank you for contacting us! We will get back to you soon.')
-            return redirect('index')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-            return render(request, 'index.html', {'form': form})
-    else:
-        return redirect('index')
-
-def send_admin_email(contact_message):
-    """Send notification email to admin"""
-    try:
-        subject = f'New Contact - {contact_message.get_subject_display()}'
-        html_content = f"""
-        <html><body style="font-family: Arial, sans-serif;">
-            <h2>New Contact Form Submission</h2>
-            <p><strong>Name:</strong> {contact_message.name}</p>
-            <p><strong>Email:</strong> {contact_message.email}</p>
-            <p><strong>Subject:</strong> {contact_message.get_subject_display()}</p>
-            <p><strong>Message:</strong><br>{contact_message.message}</p>
-        </body></html>
-        """
-        email = EmailMultiAlternatives(subject=subject, body="New message", 
-                                      from_email=settings.DEFAULT_FROM_EMAIL, 
-                                      to=[settings.CONTACT_EMAIL])
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending admin email: {str(e)}")
-        return False
-
-def send_user_confirmation_email(contact_message):
-    """Send confirmation email to user"""
-    try:
-        subject = 'Thank you for contacting MIU'
-        html_content = f"""
-        <html><body style="font-family: Arial, sans-serif;">
-            <h2>Thank You!</h2>
-            <p>Dear <strong>{contact_message.name}</strong>,</p>
-            <p>Thank you for contacting Modern International University. We will respond within 1-2 business days.</p>
-            <p>Best regards,<br><strong>The MIU Team</strong></p>
-        </body></html>
-        """
-        email = EmailMultiAlternatives(subject=subject, body="Thank you", 
-                                      from_email=settings.DEFAULT_FROM_EMAIL, 
-                                      to=[contact_message.email])
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending confirmation email: {str(e)}")
-        return False
-
-def send_application_confirmation_email(application):
-    """Send confirmation email to applicant"""
-    try:
-        subject = f'Application Received - {application.application_id}'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-                    <div style="background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%); padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">Application Received!</h1>
-                    </div>
-                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
-                        <p style="font-size: 16px;">Dear <strong>{application.first_name} {application.last_name}</strong>,</p>
-                        <p>Thank you for applying to Modern International University. We have received your application.</p>
-                        <div style="background-color: #E6F0FF; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                            <h3 style="color: #0F2A44; margin-top: 0;">Application Details</h3>
-                            <p><strong>Application ID:</strong> {application.application_id}</p>
-                            <p><strong>Program:</strong> {application.get_program_display_name()}</p>
-                            <p><strong>Degree Level:</strong> {application.get_degree_level_display_name()}</p>
-                            <p><strong>Submission Date:</strong> {application.submission_date.strftime('%B %d, %Y')}</p>
-                        </div>
-                        <p>Our admissions team will review your application and contact you within 5-7 business days.</p>
-                        <p>Best regards,<br><strong style="color: #0F2A44;">The MIU Admissions Team</strong></p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"Application ID: {application.application_id}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[application.email],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending confirmation email: {str(e)}")
-        return False
 
 def send_application_admin_notification(application):
     """Send notification email to admin"""
@@ -584,197 +556,22 @@ def send_application_admin_notification(application):
         print(f"Error sending admin notification: {str(e)}")
         return False
 
-def detail(request):
-    return render(request, 'detail.html')
-
-def admission_course(request):
-    return render(request, 'course.html')
-
-def admission_requirement(request):
-    return render(request, 'admission_requirement.html')
-
-def blank_page(request):
-    return render(request, 'blank_page.html')
-
-def contact_submit(request):
-    if request.method == 'POST':
-        form = ContactForm(request.POST)
-        if form.is_valid():
-            contact_message = form.save()
-            
-            # Send emails
-            send_admin_email(contact_message)
-            send_user_confirmation_email(contact_message)
-            
-            messages.success(request, 'Thank you for contacting us! We will get back to you soon.')
-            return redirect('index')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-            return render(request, 'index.html', {'form': form})
-    else:
-        return redirect('index')
-
-def send_admin_email(contact_message):
-    """Send notification email to admin"""
-    try:
-        subject = f'New Contact Form Submission - {contact_message.get_subject_display()}'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-                    <div style="background-color: #0F2A44; padding: 20px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">New Contact Form Submission</h1>
-                    </div>
-                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
-                        <h2 style="color: #0F2A44;">Contact Details</h2>
-                        <p><strong>Name:</strong> {contact_message.name}</p>
-                        <p><strong>Email:</strong> {contact_message.email}</p>
-                        <p><strong>Subject:</strong> {contact_message.get_subject_display()}</p>
-                        <h3 style="color: #0F2A44;">Message</h3>
-                        <div style="background-color: #f9f9f9; padding: 20px; border-left: 4px solid #1D4ED8;">
-                            {contact_message.message}
-                        </div>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"New message from {contact_message.name}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[settings.CONTACT_EMAIL],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending admin email: {str(e)}")
-        return False
-
-def send_user_confirmation_email(contact_message):
-    """Send confirmation email to user"""
-    try:
-        subject = 'Thank you for contacting MIU'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-                    <div style="background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%); padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">Thank You!</h1>
-                    </div>
-                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
-                        <p>Dear <strong>{contact_message.name}</strong>,</p>
-                        <p>Thank you for contacting Modern International University. We have received your message and will respond within 1-2 business days.</p>
-                        <p>Best regards,<br><strong style="color: #0F2A44;">The MIU Team</strong></p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body="Thank you for contacting us.",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[contact_message.email],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending confirmation email: {str(e)}")
-        return False
-
-def send_application_confirmation_email(application):
-    """Send confirmation email to applicant"""
-    try:
-        subject = f'Application Received - {application.application_id}'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-                    <div style="background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%); padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">Application Received!</h1>
-                    </div>
-                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
-                        <p style="font-size: 16px;">Dear <strong>{application.first_name} {application.last_name}</strong>,</p>
-                        <p>Thank you for applying to Modern International University. We have received your application.</p>
-                        <div style="background-color: #E6F0FF; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                            <h3 style="color: #0F2A44; margin-top: 0;">Application Details</h3>
-                            <p><strong>Application ID:</strong> {application.application_id}</p>
-                            <p><strong>Program:</strong> {application.get_program_display_name()}</p>
-                            <p><strong>Degree Level:</strong> {application.get_degree_level_display_name()}</p>
-                            <p><strong>Submission Date:</strong> {application.submission_date.strftime('%B %d, %Y')}</p>
-                        </div>
-                        <p>Our admissions team will review your application and contact you within 5-7 business days.</p>
-                        <p>Best regards,<br><strong style="color: #0F2A44;">The MIU Admissions Team</strong></p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"Application ID: {application.application_id}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[application.email],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending confirmation email: {str(e)}")
-        return False
-
-def send_application_admin_notification(application):
-    """Send notification email to admin"""
-    try:
-        subject = f'New Application - {application.application_id}'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif;">
-                <h2>New Course Application Received</h2>
-                <p><strong>Application ID:</strong> {application.application_id}</p>
-                <p><strong>Name:</strong> {application.get_full_name()}</p>
-                <p><strong>Email:</strong> {application.email}</p>
-                <p><strong>Program:</strong> {application.get_program_display_name()}</p>
-                <p><strong>Degree Level:</strong> {application.get_degree_level_display_name()}</p>
-                <p><strong>Submitted:</strong> {application.submission_date.strftime('%Y-%m-%d %H:%M:%S')}</p>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"New application from {application.get_full_name()}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[settings.CONTACT_EMAIL],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending admin notification: {str(e)}")
-        return False
 
 def detail(request):
     return render(request, 'detail.html')
 
+
 def admission_course(request):
     return render(request, 'course.html')
+
 
 def admission_requirement(request):
     return render(request, 'admission_requirement.html')
 
+
 def blank_page(request):
     return render(request, 'blank_page.html')
+
 
 def contact_submit(request):
     if request.method == 'POST':
@@ -800,6 +597,7 @@ def contact_submit(request):
             return render(request, 'index.html', {'form': form})
     else:
         return redirect('index')
+
 
 def send_admin_email(contact_message):
     """Send notification email to admin"""
@@ -881,6 +679,7 @@ Submitted at: {contact_message.created_at.strftime('%Y-%m-%d %H:%M:%S')}
         print(f"❌ Error sending admin email: {str(e)}")
         return False
 
+
 def send_user_confirmation_email(contact_message):
     """Send confirmation email to user"""
     try:
@@ -944,61 +743,85 @@ The MIU Admissions Team
         print(f"❌ Error sending user confirmation email: {str(e)}")
         return False
 
+
+# Faculty Pages
 def faculty_science(request):
     """Faculty of Science page"""
     return render(request, 'faculties/science.html')
+
 
 def faculty_engineering(request):
     """Faculty of Engineering page"""
     return render(request, 'faculties/engineering.html')
 
+
 def faculty_business(request):
     """Faculty of Business page"""
     return render(request, 'faculties/business.html')
 
+
 def faculty_arts(request):
     """Faculty of Arts page"""
     return render(request, 'faculties/arts.html')
+
 
 def faculty_health(request):
     """Faculty of Health Sciences page"""
     return render(request, 'faculties/health.html')
 
 
+# Program Pages
 def program_business_admin(request):
     """Business Administration program page"""
     return render(request, 'programs/business_administration.html')
+
 
 def program_computer_science(request):
     """Computer Science program page"""
     return render(request, 'programs/computer_science.html')
 
+
 def program_data_science(request):
     """Data Science program page"""
     return render(request, 'programs/data_science.html')
+
 
 def program_health_sciences(request):
     """Health Sciences program page"""
     return render(request, 'programs/health_sciences.html')
 
+
 def program_engineering(request):
     """Engineering program page"""
     return render(request, 'programs/engineering.html')
 
-# Additional Pages Views
+
+# Additional Pages
 def research(request):
     """Research page view"""
     return render(request, 'research.html')
 
+
 def campus_life(request):
     """Campus Life page view"""
     return render(request, 'campus_life.html')
+
 
 def blog(request):
     """Blog page view"""
     return render(request, 'blog.html')
 
 
+@login_required
 def application_status(request):
-    """application status"""
-    return render(request, 'applications/application_status.html')
+    """Display user's application status"""
+    # Get the most recent application for this user
+    application = CourseApplication.objects.filter(
+        user=request.user
+    ).order_by('-created_at').first()
+    
+    context = {
+        'application': application
+    }
+    
+    return render(request, 'applications/application_status.html', context)

@@ -130,6 +130,16 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Media files (User uploaded files)
+# CRITICAL: These settings are required for file uploads to work
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+FILE_UPLOAD_PERMISSIONS = 0o644
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -160,13 +170,6 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # Email verification token expiry (in hours)
 EMAIL_VERIFICATION_EXPIRY = 24
 
-# Add these lines after SESSION_COOKIE_SAMESITE
+# Session engine
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 CSRF_COOKIE_HTTPONLY = False
-
-
-
-
-
-
-

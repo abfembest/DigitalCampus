@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('auth/', views.auth_page, name='auth_page'),
@@ -14,7 +16,6 @@ urlpatterns = [
     path('admission/requirements/', views.admission_requirement, name='admission_requirement'),
     path('admission/detail/', views.detail, name='detail'),
     path('contact/submit/', views.contact_submit, name='contact_submit'),
-    path('blank_page/', views.blank_page, name='blank_page'),
     path('application_status/', views.application_status, name='application_status'),
 
     # Faculty Pages
@@ -36,3 +37,8 @@ urlpatterns = [
     path('campus-life/', views.campus_life, name='campus_life'),
     path('blog/', views.blog, name='blog'),
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

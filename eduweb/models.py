@@ -1,10 +1,10 @@
 from django.db import models
 from django.utils import timezone
-
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 import uuid
+import os
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -40,6 +40,7 @@ def save_user_profile(sender, instance, **kwargs):
     if hasattr(instance, 'profile'):
         instance.profile.save()
 
+
 class ContactMessage(models.Model):
     SUBJECT_CHOICES = [
         ('admissions', 'Admissions Inquiry'),
@@ -64,7 +65,8 @@ class ContactMessage(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.subject} ({self.created_at.strftime('%Y-%m-%d')})"
-    
+
+
 class CourseApplication(models.Model):
     DEGREE_LEVEL_CHOICES = [
         ('bachelor', "Bachelor's Degree"),
@@ -129,13 +131,14 @@ class CourseApplication(models.Model):
     
     # Personal Information
     application_id = models.CharField(max_length=50, unique=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField()
     phone = models.CharField(max_length=20)
     date_of_birth = models.DateField()
-    country = models.CharField(max_length=100)
-    gender = models.CharField(max_length=50)
+    country = models.CharField(max_length=100, choices=COUNTRY_CHOICES)
+    gender = models.CharField(max_length=50, choices=GENDER_CHOICES)
     address = models.TextField()
     
     # Academic History (stored as JSON)
@@ -152,7 +155,7 @@ class CourseApplication(models.Model):
     scholarship = models.BooleanField(default=False)
     
     # Additional Information
-    referral_source = models.CharField(max_length=100, blank=True)
+    referral_source = models.CharField(max_length=100, blank=True, choices=REFERRAL_CHOICES)
     
     # Document Upload Status (stored as JSON)
     documents_uploaded = models.JSONField(default=dict)
@@ -162,10 +165,6 @@ class CourseApplication(models.Model):
     submitted = models.BooleanField(default=False)
     submission_date = models.DateTimeField(null=True, blank=True)
     is_reviewed = models.BooleanField(default=False)
-
-    country = models.CharField(max_length=100, choices=COUNTRY_CHOICES)
-    gender = models.CharField(max_length=50, choices=GENDER_CHOICES)
-    referral_source = models.CharField(max_length=100, blank=True, choices=REFERRAL_CHOICES)
     
     class Meta:
         ordering = ['-created_at']
@@ -191,14 +190,71 @@ class CourseApplication(models.Model):
     
     def get_degree_level_display_name(self):
         return dict(self.DEGREE_LEVEL_CHOICES).get(self.degree_level, self.degree_level)
+
+
+def application_file_upload_path(instance, filename):
+    """
+    Generate upload path for application files
+    Format: applications/{application_id}/{file_type}/{filename}
+    """
+    # Clean the filename
+    name, ext = os.path.splitext(filename)
+    # Create safe filename
+    safe_filename = f"{name}{ext}"
     
+    # Get file type from instance
+    file_type = instance.file_type or 'other'
+    
+    return f'applications/{instance.application.application_id}/{file_type}/{safe_filename}'
+
+
 class CourseApplicationFile(models.Model):
+    FILE_TYPE_CHOICES = [
+        ('transcripts', 'Transcripts'),
+        ('english_proficiency', 'English Proficiency Certificate'),
+        ('personal_statement', 'Personal Statement'),
+        ('cv', 'CV/Resume'),
+        ('other', 'Other Document'),
+    ]
+    
     application = models.ForeignKey(
         CourseApplication, 
-        related_name='extra_files', 
+        related_name='files', 
         on_delete=models.CASCADE
     )
-    file = models.FileField(upload_to='applications/additional/')
-
+    file = models.FileField(upload_to=application_file_upload_path)
+    file_type = models.CharField(max_length=50, choices=FILE_TYPE_CHOICES, default='other')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    original_filename = models.CharField(max_length=255, blank=True)
+    file_size = models.IntegerField(default=0)  # in bytes
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = 'Application File'
+        verbose_name_plural = 'Application Files'
+    
     def __str__(self):
-        return f"File for {self.application.first_name} {self.application.last_name}"
+        return f"{self.get_file_type_display()} - {self.application.application_id}"
+    
+    def save(self, *args, **kwargs):
+        # Store original filename if not set
+        if not self.original_filename and self.file:
+            self.original_filename = self.file.name
+        
+        # Store file size if not set
+        if not self.file_size and self.file:
+            try:
+                self.file_size = self.file.size
+            except:
+                pass
+        
+        super().save(*args, **kwargs)
+    
+    def get_file_size_display(self):
+        """Return human-readable file size"""
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"

@@ -281,12 +281,11 @@ def verify_email(request, token):
         return redirect('auth_page')
 
 
-@login_required
 def user_logout(request):
     """Logout user"""
     logout(request)
     messages.success(request, 'You have been logged out successfully.')
-    return redirect('index')
+    return redirect('eduweb:index')
 
 
 @login_required

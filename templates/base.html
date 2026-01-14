@@ -182,7 +182,7 @@
             <div class="flex items-center justify-between h-20 lg:h-24 px-4 lg:px-0">
 
                 <!-- Logo -->
-                <a href="{% url 'index' %}"
+                <a href="{% url 'eduweb:index' %}"
                     class="flex items-center space-x-3 group focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2 rounded-lg"
                     aria-label="Modern International University Home">
                     <div class="relative">
@@ -194,12 +194,12 @@
 
                 <!-- Desktop Navigation -->
                 <div class="hidden lg:flex items-center space-x-1">
-                    <a href="{% url 'index' %}"
+                    <a href="{% url 'eduweb:index' %}"
                         class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'index' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         Home
                     </a>
 
-                    <a href="{% url 'about' %}"
+                    <a href="{% url 'eduweb:about' %}"
                         class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'about' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         About
                     </a>
@@ -216,7 +216,7 @@
                         <div class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 animate-slide-down"
                             role="menu">
                             <div class="p-2">
-                                <a href="{% url 'faculty_science' %}"
+                                <a href="{% url 'eduweb:faculty_science' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_science' %}bg-purple-100{% endif %}">
                                     <i data-lucide="atom" class="w-5 h-5 text-primary-950"></i>
                                     <span
@@ -224,7 +224,7 @@
                                         of Science</span>
                                 </a>
 
-                                <a href="{% url 'faculty_engineering' %}"
+                                <a href="{% url 'eduweb:faculty_engineering' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_engineering' %}bg-purple-100{% endif %}">
                                     <i data-lucide="cog" class="w-5 h-5 text-primary-950"></i>
                                     <span
@@ -232,7 +232,7 @@
                                         of Engineering</span>
                                 </a>
 
-                                <a href="{% url 'faculty_business' %}"
+                                <a href="{% url 'eduweb:faculty_business' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_business' %}bg-purple-100{% endif %}">
                                     <i data-lucide="briefcase" class="w-5 h-5 text-primary-950"></i>
                                     <span
@@ -240,7 +240,7 @@
                                         of Business</span>
                                 </a>
 
-                                <a href="{% url 'faculty_arts' %}"
+                                <a href="{% url 'eduweb:faculty_arts' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_arts' %}bg-purple-100{% endif %}">
                                     <i data-lucide="palette" class="w-5 h-5 text-primary-950"></i>
                                     <span
@@ -248,7 +248,7 @@
                                         of Arts</span>
                                 </a>
 
-                                <a href="{% url 'faculty_health' %}"
+                                <a href="{% url 'eduweb:faculty_health' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item {% if request.resolver_match.url_name == 'faculty_health' %}bg-purple-100{% endif %}">
                                     <i data-lucide="heart-pulse" class="w-5 h-5 text-primary-950"></i>
                                     <span
@@ -271,7 +271,7 @@
                         <div class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 animate-slide-down"
                             role="menu">
                             <div class="p-2">
-                                <a href="{% url 'program_business_admin' %}"
+                                <a href="{% url 'eduweb:program_business_admin' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_business_admin' %}bg-orange-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="trending-up" class="w-5 h-5 text-accent-600"></i>
@@ -279,7 +279,7 @@
                                         class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_business_admin' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Business
                                         Administration</span>
                                 </a>
-                                <a href="{% url 'program_computer_science' %}"
+                                <a href="{% url 'eduweb:program_computer_science' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_computer_science' %}bg-orange-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="code-2" class="w-5 h-5 text-accent-600"></i>
@@ -287,7 +287,7 @@
                                         class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_computer_science' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Computer
                                         Science</span>
                                 </a>
-                                <a href="{% url 'program_data_science' %}"
+                                <a href="{% url 'eduweb:program_data_science' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_data_science' %}bg-orange-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="database" class="w-5 h-5 text-accent-600"></i>
@@ -295,7 +295,7 @@
                                         class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_data_science' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Data
                                         Science</span>
                                 </a>
-                                <a href="{% url 'program_health_sciences' %}"
+                                <a href="{% url 'eduweb:program_health_sciences' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_health_sciences' %}bg-orange-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="stethoscope" class="w-5 h-5 text-accent-600"></i>
@@ -303,7 +303,7 @@
                                         class="text-sm font-medium group-hover/item:text-accent-700 {% if request.resolver_match.url_name == 'program_health_sciences' %}text-accent-700 font-semibold{% else %}text-gray-700{% endif %}">Health
                                         Sciences</span>
                                 </a>
-                                <a href="{% url 'program_engineering' %}"
+                                <a href="{% url 'eduweb:program_engineering' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_engineering' %}bg-orange-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="wrench" class="w-5 h-5 text-accent-600"></i>
@@ -314,7 +314,7 @@
                         </div>
                     </div>
 
-                    <a href="{% url 'admission_requirement' %}"
+                    <a href="{% url 'eduweb:admission_requirement' %}"
                         class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'admission' in request.resolver_match.url_name %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         Admissions
                     </a>
@@ -331,14 +331,14 @@
                         <div class="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 animate-slide-down"
                             role="menu">
                             <div class="p-2">
-                                <a href="{% url 'research' %}"
+                                <a href="{% url 'eduweb:research' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'research' %}bg-purple-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="flask-conical" class="w-5 h-5 text-gray-600"></i>
                                     <span
                                         class="text-sm font-medium {% if request.resolver_match.url_name == 'research' %}text-primary-950 font-semibold{% else %}text-gray-700{% endif %}">Research</span>
                                 </a>
-                                <a href="{% url 'campus_life' %}"
+                                <a href="{% url 'eduweb:campus_life' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'campus_life' %}bg-purple-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="users" class="w-5 h-5 text-gray-600"></i>
@@ -352,7 +352,7 @@
                                     <i data-lucide="mail" class="w-5 h-5 text-gray-600"></i>
                                     <span class="text-sm font-medium text-gray-700">Contact Us</span>
                                 </a>
-                                <a href="{% url 'blog' %}"
+                                <a href="{% url 'eduweb:blog' %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-purple-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'blog' %}bg-purple-100{% endif %}"
                                     role="menuitem">
                                     <i data-lucide="newspaper" class="w-5 h-5 text-gray-600"></i>
@@ -366,18 +366,18 @@
                     <!-- CTA Buttons -->
                     <div class="flex items-center gap-3 ml-4">
                         {% if user.is_authenticated %}
-                            <a href="{% url 'apply' %}"
+                            <a href="{% url 'eduweb:apply' %}"
                                 class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                                 Apply Now
                                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
                             </a>
-                            <a href="{% url 'logout' %}"
+                            <a href="{% url 'eduweb:logout' %}"
                                 class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm hover:shadow-lg transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
                                 <i data-lucide="log-out" class="w-4 h-4"></i>
                                 Logout
                             </a>
                         {% else %}
-                            <a href="{% url 'auth_page' %}"
+                            <a href="{% url 'eduweb:auth_page' %}"
                                 class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                                 Sign In / Apply
                                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
@@ -397,13 +397,13 @@
             <!-- Mobile Navigation -->
             <div id="mobileMenu" class="lg:hidden hidden bg-white border-t border-purple-100 animate-slide-down">
                 <div class="py-4 space-y-1 px-4">
-                    <a href="{% url 'index' %}"
+                    <a href="{% url 'eduweb:index' %}"
                         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'index' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
                         <i data-lucide="home" class="w-5 h-5"></i>
                         <span class="font-medium">Home</span>
                     </a>
 
-                    <a href="{% url 'about' %}"
+                    <a href="{% url 'eduweb:about' %}"
                         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'about' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
                         <i data-lucide="info" class="w-5 h-5"></i>
                         <span class="font-medium">About Us</span>
@@ -422,27 +422,27 @@
                                 id="facultiesChevron"></i>
                         </button>
                         <div id="mobileFacultiesMenu" class="hidden bg-purple-50 space-y-1 py-2 mt-1 rounded-lg">
-                            <a href="{% url 'faculty_science' %}"
+                            <a href="{% url 'eduweb:faculty_science' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_science' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
                                 <i data-lucide="atom" class="w-4 h-4"></i>
                                 Faculty of Science
                             </a>
-                            <a href="{% url 'faculty_engineering' %}"
+                            <a href="{% url 'eduweb:faculty_engineering' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_engineering' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
                                 <i data-lucide="cog" class="w-4 h-4"></i>
                                 Faculty of Engineering
                             </a>
-                            <a href="{% url 'faculty_business' %}"
+                            <a href="{% url 'eduweb:faculty_business' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_business' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
                                 <i data-lucide="briefcase" class="w-4 h-4"></i>
                                 Faculty of Business
                             </a>
-                            <a href="{% url 'faculty_arts' %}"
+                            <a href="{% url 'eduweb:faculty_arts' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_arts' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
                                 <i data-lucide="palette" class="w-4 h-4"></i>
                                 Faculty of Arts
                             </a>
-                            <a href="{% url 'faculty_health' %}"
+                            <a href="{% url 'eduweb:faculty_health' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'faculty_health' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
                                 <i data-lucide="heart-pulse" class="w-4 h-4"></i>
                                 Faculty of Health Sciences
@@ -463,27 +463,27 @@
                                 id="programsChevron"></i>
                         </button>
                         <div id="mobileProgramsMenu" class="hidden bg-orange-50 space-y-1 py-2 mt-1 rounded-lg">
-                            <a href="{% url 'program_business_admin' %}"
+                            <a href="{% url 'eduweb:program_business_admin' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_business_admin' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
                                 <i data-lucide="trending-up" class="w-4 h-4"></i>
                                 Business Administration
                             </a>
-                            <a href="{% url 'program_computer_science' %}"
+                            <a href="{% url 'eduweb:program_computer_science' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_computer_science' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
                                 <i data-lucide="code-2" class="w-4 h-4"></i>
                                 Computer Science
                             </a>
-                            <a href="{% url 'program_data_science' %}"
+                            <a href="{% url 'eduweb:program_data_science' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_data_science' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
                                 <i data-lucide="database" class="w-4 h-4"></i>
                                 Data Science
                             </a>
-                            <a href="{% url 'program_health_sciences' %}"
+                            <a href="{% url 'eduweb:program_health_sciences' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_health_sciences' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
                                 <i data-lucide="stethoscope" class="w-4 h-4"></i>
                                 Health Sciences
                             </a>
-                            <a href="{% url 'program_engineering' %}"
+                            <a href="{% url 'eduweb:program_engineering' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 {% if request.resolver_match.url_name == 'program_engineering' %}bg-white text-accent-700 font-semibold{% else %}text-gray-600 hover:text-accent-700 hover:bg-white{% endif %}">
                                 <i data-lucide="wrench" class="w-4 h-4"></i>
                                 Engineering
@@ -491,7 +491,7 @@
                         </div>
                     </div>
 
-                    <a href="{% url 'admission_requirement' %}"
+                    <a href="{% url 'eduweb:admission_requirement' %}"
                         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'admission' in request.resolver_match.url_name %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
                         <i data-lucide="clipboard-list" class="w-5 h-5"></i>
                         <span class="font-medium">Admissions</span>
@@ -510,12 +510,12 @@
                                 id="moreChevron"></i>
                         </button>
                         <div id="mobileMoreMenu" class="hidden bg-gray-50 space-y-1 py-2 mt-1 rounded-lg">
-                            <a href="{% url 'research' %}"
+                            <a href="{% url 'eduweb:research' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'research' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
                                 <i data-lucide="flask-conical" class="w-4 h-4"></i>
                                 Research
                             </a>
-                            <a href="{% url 'campus_life' %}"
+                            <a href="{% url 'eduweb:campus_life' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'campus_life' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
                                 <i data-lucide="users" class="w-4 h-4"></i>
                                 Campus Life
@@ -525,7 +525,7 @@
                                 <i data-lucide="mail" class="w-4 h-4"></i>
                                 Contact Us
                             </a>
-                            <a href="{% url 'blog' %}"
+                            <a href="{% url 'eduweb:blog' %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'blog' %}bg-white text-primary-950 font-semibold{% else %}text-gray-600 hover:text-primary-950 hover:bg-white{% endif %}">
                                 <i data-lucide="newspaper" class="w-4 h-4"></i>
                                 Blog
@@ -534,18 +534,18 @@
                     </div>
                     <div class="pt-4 space-y-3">
                         {% if user.is_authenticated %}
-                            <a href="{% url 'apply' %}"
+                            <a href="{% url 'eduweb:apply' %}"
                                 class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                                 Apply Now
                                 <i data-lucide="rocket" class="w-5 h-5"></i>
                             </a>
-                            <a href="{% url 'logout' %}"
+                            <a href="{% url 'eduweb:logout' %}"
                                 class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
                                 <i data-lucide="log-out" class="w-5 h-5"></i>
                                 Logout
                             </a>
                         {% else %}
-                            <a href="{% url 'auth_page' %}"
+                            <a href="{% url 'eduweb:auth_page' %}"
                                 class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                                 Sign In / Apply
                                 <i data-lucide="arrow-right" class="w-5 h-5"></i>
@@ -590,7 +590,7 @@
                     </h4>
                     <ul class="space-y-3">
                         <li>
-                            <a href="{% url 'about' %}"
+                            <a href="{% url 'eduweb:about' %}"
                                 class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
                                 <i data-lucide="chevron-right"
                                     class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
@@ -606,7 +606,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'admission_requirement' %}"
+                            <a href="{% url 'eduweb:admission_requirement' %}"
                                 class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
                                 <i data-lucide="chevron-right"
                                     class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>

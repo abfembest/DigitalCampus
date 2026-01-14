@@ -1,0 +1,283 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block title %}Application {{ application.application_id }} - MIU Admin Portal{% endblock %}
+
+{% block meta_description %}View and manage application details for {{ application.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center text-sm text-gray-600 mb-4">
+        <a href="{% url 'administrator:applications_list' %}" class="hover:text-primary-600 transition-colors">Applications</a>
+        <i class="fas fa-chevron-right mx-2 text-xs" aria-hidden="true"></i>
+        <span class="text-gray-800 font-medium">{{ application.application_id }}</span>
+    </div>
+    
+    <div class="flex flex-col md:flex-row md:items-center justify-between">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2 font-display">Application Details</h1>
+            <p class="text-gray-600">Review and manage application from {{ application.get_full_name }}</p>
+        </div>
+        
+        <div class="flex space-x-3 mt-4 md:mt-0">
+            <button onclick="window.print()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                <i class="fas fa-print mr-2" aria-hidden="true"></i>Print
+            </button>
+            <a href="{% url 'administrator:applications_list' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                <i class="fas fa-arrow-left mr-2" aria-hidden="true"></i>Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Status and Actions -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between">
+        <div class="mb-4 md:mb-0">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Application Status</h3>
+            <div class="flex items-center space-x-4">
+                {% if application.is_reviewed %}
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>Reviewed
+                </span>
+                {% else %}
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                    <i class="fas fa-clock mr-1" aria-hidden="true"></i>Pending Review
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+            {% if not application.is_reviewed %}
+            <form method="post" action="{% url 'administrator:mark_reviewed' application.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    <i class="fas fa-check mr-2" aria-hidden="true"></i>Mark as Reviewed
+                </button>
+            </form>
+            {% endif %}
+            <button class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                <i class="fas fa-envelope mr-2" aria-hidden="true"></i>Send Email
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="xl:col-span-2 space-y-6">
+        <!-- Personal Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800 font-display">Personal Information</h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">First Name</label>
+                        <p class="text-gray-800 font-medium">{{ application.first_name }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Last Name</label>
+                        <p class="text-gray-800 font-medium">{{ application.last_name }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Email</label>
+                        <p class="text-gray-800 font-medium">
+                            <a href="mailto:{{ application.email }}" class="text-primary-600 hover:text-primary-800">{{ application.email }}</a>
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Phone</label>
+                        <p class="text-gray-800 font-medium">
+                            <a href="tel:{{ application.phone }}" class="text-primary-600 hover:text-primary-800">{{ application.phone }}</a>
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
+                        <p class="text-gray-800 font-medium">{{ application.date_of_birth|date:"F d, Y" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Gender</label>
+                        <p class="text-gray-800 font-medium">{{ application.get_gender_display }}</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Country</label>
+                        <p class="text-gray-800 font-medium">{{ application.get_country_display }}</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Address</label>
+                        <p class="text-gray-800 font-medium">{{ application.address }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Academic Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800 font-display">Academic History</h3>
+            </div>
+            <div class="p-6">
+                {% if application.academic_history %}
+                <div class="space-y-4">
+                    {% for edu in application.academic_history %}
+                    <div class="border-l-4 border-primary-500 pl-4 py-2">
+                        <h4 class="font-semibold text-gray-800">{{ edu.institution }}</h4>
+                        <p class="text-sm text-gray-600">{{ edu.degree }} in {{ edu.field }}</p>
+                        <p class="text-sm text-gray-500">{{ edu.start_year }} - {{ edu.end_year }}{% if edu.gpa %} | GPA: {{ edu.gpa }}{% endif %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500">No academic history provided</p>
+                {% endif %}
+                
+                {% if application.english_proficiency %}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h4 class="font-semibold text-gray-800 mb-2">English Proficiency</h4>
+                    <p class="text-gray-700">{{ application.english_proficiency }}{% if application.english_score %}: {{ application.english_score }}{% endif %}</p>
+                </div>
+                {% endif %}
+                
+                {% if application.additional_qualifications %}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h4 class="font-semibold text-gray-800 mb-2">Additional Qualifications</h4>
+                    <p class="text-gray-700">{{ application.additional_qualifications }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Uploaded Documents -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800 font-display">Uploaded Documents</h3>
+            </div>
+            <div class="p-6">
+                {% if application.files.all %}
+                <div class="space-y-3">
+                    {% for file in application.files.all %}
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded bg-primary-100 flex items-center justify-center text-primary-600 mr-4">
+                                <i class="fas fa-file-pdf" aria-hidden="true"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-medium text-gray-800">{{ file.get_file_type_display }}</h5>
+                                <p class="text-sm text-gray-500">{{ file.get_file_size_display }} • Uploaded {{ file.uploaded_at|date:"M d, Y" }}</p>
+                            </div>
+                        </div>
+                        <a href="{{ file.file.url }}" target="_blank" class="text-primary-600 hover:text-primary-800 font-medium flex items-center" download>
+                            <i class="fas fa-download mr-2" aria-hidden="true"></i>Download
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500">No documents uploaded</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="xl:col-span-1 space-y-6">
+        <!-- Application Summary -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800 font-display">Application Summary</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Application ID</label>
+                    <p class="text-gray-800 font-mono font-medium">{{ application.application_id }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Program</label>
+                    <p class="text-gray-800 font-medium">{{ application.get_program_display_name }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Degree Level</label>
+                    <p class="text-gray-800 font-medium">{{ application.get_degree_level_display_name }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Study Mode</label>
+                    <p class="text-gray-800 font-medium">{{ application.get_study_mode_display }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Intake</label>
+                    <p class="text-gray-800 font-medium">{{ application.get_intake_display }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Scholarship</label>
+                    <p class="text-gray-800 font-medium">
+                        {% if application.scholarship %}
+                        <span class="text-green-600"><i class="fas fa-check-circle mr-1" aria-hidden="true"></i>Yes</span>
+                        {% else %}
+                        <span class="text-gray-500"><i class="fas fa-times-circle mr-1" aria-hidden="true"></i>No</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800 font-display">Timeline</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mr-3">
+                            <i class="fas fa-file-alt text-sm" aria-hidden="true"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">Application Submitted</p>
+                            <p class="text-xs text-gray-500">{{ application.created_at|date:"M d, Y, g:i A" }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if application.submission_date %}
+                    <div class="flex">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
+                            <i class="fas fa-check text-sm" aria-hidden="true"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">Documents Submitted</p>
+                            <p class="text-xs text-gray-500">{{ application.submission_date|date:"M d, Y, g:i A" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if application.is_reviewed %}
+                    <div class="flex">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
+                            <i class="fas fa-eye text-sm" aria-hidden="true"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-800">Application Reviewed</p>
+                            <p class="text-xs text-gray-500">By {{ request.user.get_full_name }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral Source -->
+        {% if application.referral_source %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800 font-display">Referral Information</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-700">{{ application.get_referral_source_display }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

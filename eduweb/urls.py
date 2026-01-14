@@ -3,6 +3,8 @@ from . import views
 from django.conf import settings
 from django.conf.urls.static import static
 
+app_name = 'eduweb'
+
 urlpatterns = [
     path('auth/', views.auth_page, name='auth_page'),
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),

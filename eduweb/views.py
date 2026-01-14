@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from .forms import ContactForm, CourseApplicationForm
-from .models import ContactMessage, CourseApplication, CourseApplicationFile
+from .models import ContactMessage, CourseApplication, CourseApplicationFile,Application,Payment
 from django.http import JsonResponse
 from django.utils import timezone
 
@@ -115,6 +115,7 @@ def auth_page(request):
             
             # Verify captcha
             session_answer = request.session.get('captcha_answer')
+            
             try:
                 # TYPE CAST BOTH TO INT FOR COMPARISON
                 captcha_int = int(captcha) if captcha else None
@@ -830,3 +831,157 @@ def application_status(request):
     }
     
     return render(request, 'applications/application_status.html', context)
+
+
+def payments(request):
+    """payments page"""
+    return render(request, 'payments.html')
+
+
+
+####### PAYMENT GATEWAY ###########
+
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST, require_GET
+from django.contrib.auth.decorators import login_required
+import json
+import stripe
+from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Initialize Stripe
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+@require_GET
+def get_payment_summary(request, application_id):
+    """Get payment summary for an application"""
+    try:
+        application = get_object_or_404(Application, id=application_id)
+        
+        # In production, verify user has permission to view this application
+        
+        summary = {
+            'application_id': str(application.id),
+            'full_name': application.full_name,
+            'email': application.email,
+            'amount': float(application.amount),
+            'description': 'Application Processing Fee',
+            'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
+        }
+        
+        return JsonResponse({'success': True, 'data': summary})
+    except Exception as e:
+        logger.error(f"Error getting payment summary: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Unable to load payment details'}, status=500)
+
+@require_POST
+@csrf_exempt
+def create_payment_intent(request):
+    """Create Stripe Payment Intent"""
+    try:
+        data = json.loads(request.body)
+        application_id = data.get('application_id')
+        
+        application = get_object_or_404(Application, id=application_id)
+        amount = int(application.amount * 100)  # Convert to cents
+        
+        # Create Payment Intent
+        intent = stripe.PaymentIntent.create(
+            amount=amount,
+            currency='usd',
+            metadata={
+                'application_id': str(application.id),
+                'user_email': application.email,
+            },
+            description=f'Application fee for {application.full_name}',
+        )
+        
+        # Create payment record
+        payment = Payment.objects.create(
+            application=application,
+            amount=application.amount,
+            stripe_payment_intent_id=intent.id,
+            status='created'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'clientSecret': intent.client_secret,
+            'payment_id': str(payment.id)
+        })
+    except Exception as e:
+        logger.error(f"Error creating payment intent: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@require_POST
+@csrf_exempt
+def confirm_payment(request):
+    """Confirm payment and update application status"""
+    try:
+        data = json.loads(request.body)
+        payment_intent_id = data.get('payment_intent_id')
+        
+        # Retrieve payment intent from Stripe
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.status == 'succeeded':
+            # Update payment record
+            payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
+            payment.status = 'completed'
+            payment.card_last4 = intent.charges.data[0].payment_method_details.card.last4
+            payment.card_brand = intent.charges.data[0].payment_method_details.card.brand
+            payment.processed_at = timezone.now()
+            payment.save()
+            
+            # Update application status
+            application = payment.application
+            application.status = 'payment_completed'
+            application.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Payment completed successfully',
+                'application_id': str(application.id)
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Payment not successful. Status: {intent.status}'
+            }, status=400)
+            
+    except Exception as e:
+        logger.error(f"Error confirming payment: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@require_POST
+@csrf_exempt
+def stripe_webhook(request):
+    """Handle Stripe webhooks for payment events"""
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        return JsonResponse({'error': 'Invalid payload'}, status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return JsonResponse({'error': 'Invalid signature'}, status=400)
+    
+    # Handle the event
+    if event['type'] == 'payment_intent.succeeded':
+        payment_intent = event['data']['object']
+        # Update your database here
+        logger.info(f"Payment succeeded for {payment_intent['id']}")
+    elif event['type'] == 'payment_intent.payment_failed':
+        payment_intent = event['data']['object']
+        logger.error(f"Payment failed for {payment_intent['id']}")
+    
+    return JsonResponse({'success': True})
+
+

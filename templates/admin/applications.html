@@ -124,7 +124,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr>
+                <tr class="empty-row">
                     <td colspan="7" class="py-12 px-6 text-center">
                         <div class="text-gray-400">
                             <i class="fas fa-inbox text-5xl mb-4" aria-hidden="true"></i>
@@ -175,54 +175,51 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize DataTables with correct selector
-    $('#applicationsTable').DataTable({
-        responsive: true,
-        pageLength: 15,
-        order: [[4, 'desc']], // Sort by date column
-        dom: 'Bfrtip',
-        buttons: [
-            {
-                extend: 'excel',
-                text: '<i class="fas fa-file-excel mr-2"></i>Excel',
-                className: 'px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5]
+    // Check if table has rows before initializing
+    const tableBody = document.querySelector('#applicationsTable tbody');
+    const hasRows = tableBody && tableBody.querySelectorAll('tr:not(.empty-row)').length > 0;
+    
+    if (hasRows) {
+        $('#applicationsTable').DataTable({
+            responsive: true,
+            pageLength: 15,
+            order: [[4, 'desc']], // Sort by date column
+            searching: false,  // Disable DataTables search (use Django filtering)
+            paging: false,     // Disable DataTables pagination (use Django pagination)
+            info: false,       // Disable DataTables info
+            columnDefs: [
+                { orderable: false, targets: [0, 6] } // Disable sorting on checkbox and actions
+            ],
+            dom: 'Bfrtip',
+            buttons: [
+                {
+                    extend: 'csv',
+                    text: '<i class="fas fa-file-csv mr-2"></i>CSV',
+                    className: 'px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm',
+                    exportOptions: {
+                        columns: [1, 2, 3, 4, 5]
+                    }
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fas fa-print mr-2"></i>Print',
+                    className: 'px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm',
+                    exportOptions: {
+                        columns: [1, 2, 3, 4, 5]
+                    }
                 }
-            },
-            {
-                extend: 'csv',
-                text: '<i class="fas fa-file-csv mr-2"></i>CSV',
-                className: 'px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5]
-                }
-            },
-            {
-                extend: 'pdf',
-                text: '<i class="fas fa-file-pdf mr-2"></i>PDF',
-                className: 'px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5]
-                }
-            },
-            {
-                extend: 'print',
-                text: '<i class="fas fa-print mr-2"></i>Print',
-                className: 'px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm',
-                exportOptions: {
-                    columns: [1, 2, 3, 4, 5]
-                }
+            ],
+            initComplete: function() {
+                this.api().buttons().container().appendTo('#datatableButtons');
             }
-        ],
-        language: {
-            search: "_INPUT_",
-            searchPlaceholder: "Search applications..."
-        },
-        initComplete: function() {
-            this.api().buttons().container().appendTo('#datatableButtons');
+        });
+    } else {
+        // No data - hide export buttons
+        const exportButtons = document.getElementById('datatableButtons');
+        if (exportButtons) {
+            exportButtons.style.display = 'none';
         }
-    });
+    }
     
     // Select all checkbox functionality
     const selectAll = document.getElementById('selectAll');

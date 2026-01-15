@@ -5,279 +5,791 @@
 
 {% block meta_description %}View and manage application details for {{ application.get_full_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* PDF Modal Styles */
+    .pdf-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.75);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .pdf-modal.active {
+        display: flex;
+        opacity: 1;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    
+    .pdf-modal-content {
+        background: white;
+        border-radius: 1rem;
+        width: 100%;
+        max-width: 1400px;
+        height: 95vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    }
+    
+    .pdf-modal.active .pdf-modal-content {
+        transform: scale(1);
+    }
+    
+    .pdf-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        border-radius: 1rem 1rem 0 0;
+        background: linear-gradient(135deg, #4a6bff 0%, #6c63ff 100%);
+        color: white;
+        flex-shrink: 0;
+    }
+    
+    .pdf-modal-header h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+    
+    .pdf-modal-close {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        font-size: 1.25rem;
+    }
+    
+    .pdf-modal-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(90deg);
+    }
+    
+    .pdf-modal-body {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        background: #525659;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
+    }
+    
+    .pdf-container {
+        width: 100%;
+        height: 100%;
+        display: none;
+        background: #525659;
+    }
+    
+    .pdf-container.active {
+        display: block;
+    }
+    
+    #pdfCanvas {
+        display: block;
+        margin: 0 auto;
+        max-width: 100%;
+        max-height: 100%;
+    }
+    
+    .pdf-controls {
+        position: absolute;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        padding: 0.75rem 1.5rem;
+        border-radius: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: white;
+        z-index: 10;
+    }
+    
+    .pdf-controls button {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    
+    .pdf-controls button:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+    
+    .pdf-controls button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .pdf-controls span {
+        font-size: 0.875rem;
+        min-width: 80px;
+        text-align: center;
+    }
+    
+    .pdf-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 1rem;
+        color: white;
+    }
+    
+    .pdf-loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .pdf-error {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 2rem;
+        text-align: center;
+        color: white;
+    }
+    
+    .pdf-error i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: #ef4444;
+    }
+    
+    .pdf-error h4 {
+        color: white;
+    }
+    
+    .pdf-error p {
+        color: rgba(255, 255, 255, 0.8);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="mb-6">
-    <div class="flex items-center text-sm text-gray-600 mb-4">
-        <a href="{% url 'administrator:applications_list' %}" class="hover:text-primary-600 transition-colors">Applications</a>
-        <i class="fas fa-chevron-right mx-2 text-xs" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">{{ application.application_id }}</span>
-    </div>
+    <nav class="flex items-center text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
+        <ol class="flex items-center">
+            <li>
+                <a href="{% url 'administrator:applications_list' %}" class="hover:text-primary-600 transition-colors">Applications</a>
+            </li>
+            <li class="mx-2" aria-hidden="true">
+                <i class="fas fa-chevron-right text-xs"></i>
+            </li>
+            <li>
+                <span class="text-gray-800 font-medium">{{ application.application_id }}</span>
+            </li>
+        </ol>
+    </nav>
     
-    <div class="flex flex-col md:flex-row md:items-center justify-between">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2 font-display">Application Details</h1>
             <p class="text-gray-600">Review and manage application from {{ application.get_full_name }}</p>
         </div>
         
-        <div class="flex space-x-3 mt-4 md:mt-0">
-            <button onclick="window.print()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-                <i class="fas fa-print mr-2" aria-hidden="true"></i>Print
+        <div class="flex flex-wrap gap-3">
+            <button onclick="window.print()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2" aria-label="Print application">
+                <i class="fas fa-print" aria-hidden="true"></i>
+                <span>Print</span>
             </button>
-            <a href="{% url 'administrator:applications_list' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-                <i class="fas fa-arrow-left mr-2" aria-hidden="true"></i>Back
+            <a href="{% url 'administrator:applications_list' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                <span>Back</span>
             </a>
         </div>
     </div>
 </div>
 
 <!-- Status and Actions -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-    <div class="flex flex-col md:flex-row md:items-center justify-between">
-        <div class="mb-4 md:mb-0">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Application Status</h3>
-            <div class="flex items-center space-x-4">
+<section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6" aria-labelledby="status-heading">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 id="status-heading" class="text-lg font-semibold text-gray-800 mb-3">Application Status</h2>
+            <div class="flex items-center gap-4">
                 {% if application.is_reviewed %}
-                <span class="px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                    <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>Reviewed
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800" role="status">
+                    <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
+                    <span>Reviewed</span>
                 </span>
                 {% else %}
-                <span class="px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                    <i class="fas fa-clock mr-1" aria-hidden="true"></i>Pending Review
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" role="status">
+                    <i class="fas fa-clock mr-1" aria-hidden="true"></i>
+                    <span>Pending Review</span>
                 </span>
                 {% endif %}
             </div>
         </div>
         
-        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+        <div class="flex flex-col sm:flex-row gap-3">
             {% if not application.is_reviewed %}
             <form method="post" action="{% url 'administrator:mark_reviewed' application.id %}" class="inline">
                 {% csrf_token %}
-                <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
-                    <i class="fas fa-check mr-2" aria-hidden="true"></i>Mark as Reviewed
+                <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2">
+                    <i class="fas fa-check" aria-hidden="true"></i>
+                    <span>Mark as Reviewed</span>
                 </button>
             </form>
             {% endif %}
-            <button class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                <i class="fas fa-envelope mr-2" aria-hidden="true"></i>Send Email
+            <button class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center justify-center gap-2">
+                <i class="fas fa-envelope" aria-hidden="true"></i>
+                <span>Send Email</span>
             </button>
         </div>
     </div>
-</div>
+</section>
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
     <!-- Main Content -->
     <div class="xl:col-span-2 space-y-6">
         <!-- Personal Information -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-6 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800 font-display">Personal Information</h3>
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="personal-info-heading">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h2 id="personal-info-heading" class="text-lg font-bold text-gray-800 font-display">Personal Information</h2>
             </div>
             <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">First Name</label>
-                        <p class="text-gray-800 font-medium">{{ application.first_name }}</p>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">First Name</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.first_name }}</dd>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Last Name</label>
-                        <p class="text-gray-800 font-medium">{{ application.last_name }}</p>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Last Name</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.last_name }}</dd>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Email</label>
-                        <p class="text-gray-800 font-medium">
-                            <a href="mailto:{{ application.email }}" class="text-primary-600 hover:text-primary-800">{{ application.email }}</a>
-                        </p>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Email</dt>
+                        <dd class="text-gray-800 font-medium">
+                            <a href="mailto:{{ application.email }}" class="text-primary-600 hover:text-primary-800 hover:underline">{{ application.email }}</a>
+                        </dd>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Phone</label>
-                        <p class="text-gray-800 font-medium">
-                            <a href="tel:{{ application.phone }}" class="text-primary-600 hover:text-primary-800">{{ application.phone }}</a>
-                        </p>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Phone</dt>
+                        <dd class="text-gray-800 font-medium">
+                            <a href="tel:{{ application.phone }}" class="text-primary-600 hover:text-primary-800 hover:underline">{{ application.phone }}</a>
+                        </dd>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Date of Birth</label>
-                        <p class="text-gray-800 font-medium">{{ application.date_of_birth|date:"F d, Y" }}</p>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Date of Birth</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.date_of_birth|date:"F d, Y" }}</dd>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Gender</label>
-                        <p class="text-gray-800 font-medium">{{ application.get_gender_display }}</p>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Gender</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.get_gender_display }}</dd>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Country</label>
-                        <p class="text-gray-800 font-medium">{{ application.get_country_display }}</p>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Country</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.get_country_display }}</dd>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Address</label>
-                        <p class="text-gray-800 font-medium">{{ application.address }}</p>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Address</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.address }}</dd>
                     </div>
-                </div>
+                </dl>
             </div>
-        </div>
+        </section>
 
         <!-- Academic Information -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-6 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800 font-display">Academic History</h3>
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="academic-info-heading">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h2 id="academic-info-heading" class="text-lg font-bold text-gray-800 font-display">Academic History</h2>
             </div>
             <div class="p-6">
                 {% if application.academic_history %}
                 <div class="space-y-4">
                     {% for edu in application.academic_history %}
-                    <div class="border-l-4 border-primary-500 pl-4 py-2">
-                        <h4 class="font-semibold text-gray-800">{{ edu.institution }}</h4>
-                        <p class="text-sm text-gray-600">{{ edu.degree }} in {{ edu.field }}</p>
-                        <p class="text-sm text-gray-500">{{ edu.start_year }} - {{ edu.end_year }}{% if edu.gpa %} | GPA: {{ edu.gpa }}{% endif %}</p>
-                    </div>
+                    <article class="border-l-4 border-primary-500 pl-4 py-2 hover:bg-gray-50 transition-colors rounded-r">
+                        <h3 class="font-semibold text-gray-800">{{ edu.institution }}</h3>
+                        <p class="text-sm text-gray-600 mt-1">{{ edu.degree }} in {{ edu.field }}</p>
+                        <p class="text-sm text-gray-500 mt-1">
+                            <time datetime="{{ edu.start_year }}">{{ edu.start_year }}</time> - <time datetime="{{ edu.end_year }}">{{ edu.end_year }}</time>
+                            {% if edu.gpa %}
+                            <span aria-label="GPA"> | GPA: {{ edu.gpa }}</span>
+                            {% endif %}
+                        </p>
+                    </article>
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-gray-500">No academic history provided</p>
+                <p class="text-gray-500 text-center py-4">No academic history provided</p>
                 {% endif %}
                 
                 {% if application.english_proficiency %}
                 <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h4 class="font-semibold text-gray-800 mb-2">English Proficiency</h4>
-                    <p class="text-gray-700">{{ application.english_proficiency }}{% if application.english_score %}: {{ application.english_score }}{% endif %}</p>
+                    <h3 class="font-semibold text-gray-800 mb-2">English Proficiency</h3>
+                    <p class="text-gray-700">{{ application.english_proficiency }}{% if application.english_score %}: <span class="font-medium">{{ application.english_score }}</span>{% endif %}</p>
                 </div>
                 {% endif %}
                 
                 {% if application.additional_qualifications %}
                 <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h4 class="font-semibold text-gray-800 mb-2">Additional Qualifications</h4>
+                    <h3 class="font-semibold text-gray-800 mb-2">Additional Qualifications</h3>
                     <p class="text-gray-700">{{ application.additional_qualifications }}</p>
                 </div>
                 {% endif %}
             </div>
-        </div>
+        </section>
 
         <!-- Uploaded Documents -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-6 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800 font-display">Uploaded Documents</h3>
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="documents-heading">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h2 id="documents-heading" class="text-lg font-bold text-gray-800 font-display">Uploaded Documents</h2>
             </div>
             <div class="p-6">
                 {% if application.files.all %}
-                <div class="space-y-3">
+                <ul class="space-y-3" role="list">
                     {% for file in application.files.all %}
-                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 rounded bg-primary-100 flex items-center justify-center text-primary-600 mr-4">
-                                <i class="fas fa-file-pdf" aria-hidden="true"></i>
+                    <li class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:shadow-md transition-all group">
+                        <div class="flex items-center flex-1 min-w-0">
+                            <div class="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0 mr-4">
+                                {% if file.original_filename|slice:"-4:" == ".pdf" or file.file.url|slice:"-4:" == ".pdf" %}
+                                <i class="fas fa-file-pdf text-xl" aria-hidden="true"></i>
+                                {% elif file.original_filename|slice:"-4:" == ".doc" or file.original_filename|slice:"-5:" == ".docx" %}
+                                <i class="fas fa-file-word text-xl text-blue-600" aria-hidden="true"></i>
+                                {% elif file.original_filename|slice:"-4:" == ".jpg" or file.original_filename|slice:"-4:" == ".png" or file.original_filename|slice:"-5:" == ".jpeg" %}
+                                <i class="fas fa-file-image text-xl text-green-600" aria-hidden="true"></i>
+                                {% else %}
+                                <i class="fas fa-file text-xl" aria-hidden="true"></i>
+                                {% endif %}
                             </div>
-                            <div>
-                                <h5 class="font-medium text-gray-800">{{ file.get_file_type_display }}</h5>
-                                <p class="text-sm text-gray-500">{{ file.get_file_size_display }} • Uploaded {{ file.uploaded_at|date:"M d, Y" }}</p>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-medium text-gray-800 truncate">{{ file.get_file_type_display }}</h3>
+                                <p class="text-sm text-gray-500 truncate mt-1">
+                                    <span>{{ file.original_filename|default:"Document" }}</span>
+                                    <span aria-hidden="true"> • </span>
+                                    <span>{{ file.get_file_size_display }}</span>
+                                    <span aria-hidden="true"> • </span>
+                                    <span>Uploaded <time datetime="{{ file.uploaded_at|date:'Y-m-d' }}">{{ file.uploaded_at|date:"M d, Y" }}</time></span>
+                                </p>
                             </div>
                         </div>
-                        <a href="{{ file.file.url }}" target="_blank" class="text-primary-600 hover:text-primary-800 font-medium flex items-center" download>
-                            <i class="fas fa-download mr-2" aria-hidden="true"></i>Download
-                        </a>
-                    </div>
+                        <div class="flex items-center gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {% if file.original_filename|slice:"-4:" == ".pdf" or file.file.url|slice:"-4:" == ".pdf" %}
+                            <button onclick="openPDFModal('{{ file.file.url }}', '{{ file.get_file_type_display }}')" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm flex items-center gap-2 whitespace-nowrap" aria-label="View {{ file.get_file_type_display }}">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                                <span>View</span>
+                            </button>
+                            {% endif %}
+                            <a href="{{ file.file.url }}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm flex items-center gap-2 whitespace-nowrap" download aria-label="Download {{ file.get_file_type_display }}">
+                                <i class="fas fa-download" aria-hidden="true"></i>
+                                <span>Download</span>
+                            </a>
+                        </div>
+                    </li>
                     {% endfor %}
-                </div>
+                </ul>
                 {% else %}
-                <p class="text-gray-500">No documents uploaded</p>
+                <div class="text-center py-12">
+                    <i class="fas fa-folder-open text-gray-300 text-6xl mb-4" aria-hidden="true"></i>
+                    <p class="text-gray-500 text-lg">No documents uploaded</p>
+                </div>
                 {% endif %}
             </div>
-        </div>
+        </section>
     </div>
 
     <!-- Sidebar -->
-    <div class="xl:col-span-1 space-y-6">
+    <aside class="xl:col-span-1 space-y-6">
         <!-- Application Summary -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-6 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800 font-display">Application Summary</h3>
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="summary-heading">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
+                <h2 id="summary-heading" class="text-lg font-bold text-gray-800 font-display">Application Summary</h2>
             </div>
             <div class="p-6 space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Application ID</label>
-                    <p class="text-gray-800 font-mono font-medium">{{ application.application_id }}</p>
+                    <dt class="block text-sm font-medium text-gray-600 mb-1">Application ID</dt>
+                    <dd class="text-gray-800 font-mono font-medium text-sm bg-gray-50 px-3 py-2 rounded">{{ application.application_id }}</dd>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Program</label>
-                    <p class="text-gray-800 font-medium">{{ application.get_program_display_name }}</p>
+                    <dt class="block text-sm font-medium text-gray-600 mb-1">Program</dt>
+                    <dd class="text-gray-800 font-medium">{{ application.get_program_display_name }}</dd>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Degree Level</label>
-                    <p class="text-gray-800 font-medium">{{ application.get_degree_level_display_name }}</p>
+                    <dt class="block text-sm font-medium text-gray-600 mb-1">Degree Level</dt>
+                    <dd class="text-gray-800 font-medium">{{ application.get_degree_level_display_name }}</dd>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Study Mode</label>
-                    <p class="text-gray-800 font-medium">{{ application.get_study_mode_display }}</p>
+                    <dt class="block text-sm font-medium text-gray-600 mb-1">Study Mode</dt>
+                    <dd class="text-gray-800 font-medium">{{ application.get_study_mode_display }}</dd>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Intake</label>
-                    <p class="text-gray-800 font-medium">{{ application.get_intake_display }}</p>
+                    <dt class="block text-sm font-medium text-gray-600 mb-1">Intake</dt>
+                    <dd class="text-gray-800 font-medium">{{ application.get_intake_display }}</dd>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Scholarship</label>
-                    <p class="text-gray-800 font-medium">
+                    <dt class="block text-sm font-medium text-gray-600 mb-1">Scholarship</dt>
+                    <dd class="text-gray-800 font-medium">
                         {% if application.scholarship %}
-                        <span class="text-green-600"><i class="fas fa-check-circle mr-1" aria-hidden="true"></i>Yes</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
+                            <span>Yes</span>
+                        </span>
                         {% else %}
-                        <span class="text-gray-500"><i class="fas fa-times-circle mr-1" aria-hidden="true"></i>No</span>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600">
+                            <i class="fas fa-times-circle mr-1" aria-hidden="true"></i>
+                            <span>No</span>
+                        </span>
                         {% endif %}
-                    </p>
+                    </dd>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- Timeline -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-6 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800 font-display">Timeline</h3>
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="timeline-heading">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
+                <h2 id="timeline-heading" class="text-lg font-bold text-gray-800 font-display">Timeline</h2>
             </div>
             <div class="p-6">
-                <div class="space-y-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mr-3">
-                            <i class="fas fa-file-alt text-sm" aria-hidden="true"></i>
+                <ol class="space-y-4" role="list">
+                    <li class="flex">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mr-3">
+                            <i class="fas fa-file-alt" aria-hidden="true"></i>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-medium text-gray-800">Application Submitted</p>
-                            <p class="text-xs text-gray-500">{{ application.created_at|date:"M d, Y, g:i A" }}</p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <time datetime="{{ application.created_at|date:'Y-m-d\TH:i' }}">{{ application.created_at|date:"M d, Y, g:i A" }}</time>
+                            </p>
                         </div>
-                    </div>
+                    </li>
                     
                     {% if application.submission_date %}
-                    <div class="flex">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
-                            <i class="fas fa-check text-sm" aria-hidden="true"></i>
+                    <li class="flex">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
+                            <i class="fas fa-check" aria-hidden="true"></i>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-medium text-gray-800">Documents Submitted</p>
-                            <p class="text-xs text-gray-500">{{ application.submission_date|date:"M d, Y, g:i A" }}</p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <time datetime="{{ application.submission_date|date:'Y-m-d\TH:i' }}">{{ application.submission_date|date:"M d, Y, g:i A" }}</time>
+                            </p>
                         </div>
-                    </div>
+                    </li>
                     {% endif %}
                     
                     {% if application.is_reviewed %}
-                    <div class="flex">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
-                            <i class="fas fa-eye text-sm" aria-hidden="true"></i>
+                    <li class="flex">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
+                            <i class="fas fa-eye" aria-hidden="true"></i>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-medium text-gray-800">Application Reviewed</p>
-                            <p class="text-xs text-gray-500">By {{ request.user.get_full_name }}</p>
+                            <p class="text-xs text-gray-500 mt-1">By {{ request.user.get_full_name }}</p>
                         </div>
-                    </div>
+                    </li>
                     {% endif %}
-                </div>
+                </ol>
             </div>
-        </div>
+        </section>
 
         <!-- Referral Source -->
         {% if application.referral_source %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="p-6 border-b border-gray-200 bg-gray-50">
-                <h3 class="text-lg font-bold text-gray-800 font-display">Referral Information</h3>
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="referral-heading">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
+                <h2 id="referral-heading" class="text-lg font-bold text-gray-800 font-display">Referral Information</h2>
             </div>
             <div class="p-6">
                 <p class="text-gray-700">{{ application.get_referral_source_display }}</p>
             </div>
-        </div>
+        </section>
         {% endif %}
+    </aside>
+</div>
+
+<!-- PDF Viewer Modal -->
+<div id="pdfModal" class="pdf-modal" role="dialog" aria-labelledby="pdfModalTitle" aria-modal="true">
+    <div class="pdf-modal-content">
+        <div class="pdf-modal-header">
+            <h3 id="pdfModalTitle">
+                <i class="fas fa-file-pdf" aria-hidden="true"></i>
+                <span id="pdfModalTitleText">Document Viewer</span>
+            </h3>
+            <button onclick="closePDFModal()" class="pdf-modal-close" aria-label="Close document viewer">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="pdf-modal-body">
+            <div id="pdfLoading" class="pdf-loading">
+                <div class="pdf-loading-spinner" role="status" aria-label="Loading document"></div>
+                <p>Loading document...</p>
+            </div>
+            <div id="pdfError" class="pdf-error" style="display: none;" role="alert">
+                <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                <h4 class="text-xl font-semibold mb-2">Unable to load document</h4>
+                <p>The document could not be displayed. Please try downloading it instead.</p>
+            </div>
+            <div id="pdfContainer" class="pdf-container">
+                <canvas id="pdfCanvas"></canvas>
+            </div>
+            <div class="pdf-controls" id="pdfControls" style="display: none;">
+                <button id="prevPage" aria-label="Previous page">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="pageInfo">Page <span id="pageNum">1</span> of <span id="pageCount">1</span></span>
+                <button id="nextPage" aria-label="Next page">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button id="zoomOut" aria-label="Zoom out">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button id="zoomIn" aria-label="Zoom in">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- PDF.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let pdfDoc = null;
+let pageNum = 1;
+let pageRendering = false;
+let pageNumPending = null;
+let scale = 1.5;
+const canvas = document.getElementById('pdfCanvas');
+const ctx = canvas.getContext('2d');
+
+/**
+ * Render a specific page of the PDF
+ */
+function renderPage(num) {
+    pageRendering = true;
+    
+    pdfDoc.getPage(num).then(function(page) {
+        const viewport = page.getViewport({scale: scale});
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+        };
+        
+        const renderTask = page.render(renderContext);
+
+        renderTask.promise.then(function() {
+            pageRendering = false;
+            if (pageNumPending !== null) {
+                renderPage(pageNumPending);
+                pageNumPending = null;
+            }
+        });
+    });
+
+    document.getElementById('pageNum').textContent = num;
+    updatePageButtons();
+}
+
+/**
+ * Queue page rendering if another page is being rendered
+ */
+function queueRenderPage(num) {
+    if (pageRendering) {
+        pageNumPending = num;
+    } else {
+        renderPage(num);
+    }
+}
+
+/**
+ * Update navigation button states
+ */
+function updatePageButtons() {
+    document.getElementById('prevPage').disabled = pageNum <= 1;
+    document.getElementById('nextPage').disabled = pageNum >= pdfDoc.numPages;
+}
+
+/**
+ * Navigate to previous page
+ */
+function onPrevPage() {
+    if (pageNum <= 1) return;
+    pageNum--;
+    queueRenderPage(pageNum);
+}
+
+/**
+ * Navigate to next page
+ */
+function onNextPage() {
+    if (pageNum >= pdfDoc.numPages) return;
+    pageNum++;
+    queueRenderPage(pageNum);
+}
+
+/**
+ * Zoom in
+ */
+function onZoomIn() {
+    scale += 0.25;
+    queueRenderPage(pageNum);
+}
+
+/**
+ * Zoom out
+ */
+function onZoomOut() {
+    if (scale <= 0.5) return;
+    scale -= 0.25;
+    queueRenderPage(pageNum);
+}
+
+/**
+ * Open PDF in modal
+ */
+function openPDFModal(pdfUrl, title) {
+    const modal = document.getElementById('pdfModal');
+    const loading = document.getElementById('pdfLoading');
+    const error = document.getElementById('pdfError');
+    const container = document.getElementById('pdfContainer');
+    const controls = document.getElementById('pdfControls');
+    const modalTitle = document.getElementById('pdfModalTitleText');
+    
+    // Reset states
+    loading.style.display = 'flex';
+    error.style.display = 'none';
+    container.classList.remove('active');
+    controls.style.display = 'none';
+    pageNum = 1;
+    scale = 1.5;
+    
+    // Set title
+    modalTitle.textContent = title || 'Document Viewer';
+    
+    // Show modal
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Load PDF
+    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    
+    loadingTask.promise.then(function(pdf) {
+        pdfDoc = pdf;
+        document.getElementById('pageCount').textContent = pdf.numPages;
+        
+        // Hide loading, show PDF
+        loading.style.display = 'none';
+        container.classList.add('active');
+        controls.style.display = 'flex';
+        
+        // Render first page
+        renderPage(pageNum);
+    }).catch(function(error) {
+        console.error('Error loading PDF:', error);
+        loading.style.display = 'none';
+        error.style.display = 'flex';
+    });
+}
+
+/**
+ * Close PDF modal
+ */
+function closePDFModal() {
+    const modal = document.getElementById('pdfModal');
+    const container = document.getElementById('pdfContainer');
+    
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Clear PDF after animation
+    setTimeout(function() {
+        pdfDoc = null;
+        container.classList.remove('active');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }, 300);
+}
+
+// Event listeners for controls
+document.getElementById('prevPage').addEventListener('click', onPrevPage);
+document.getElementById('nextPage').addEventListener('click', onNextPage);
+document.getElementById('zoomIn').addEventListener('click', onZoomIn);
+document.getElementById('zoomOut').addEventListener('click', onZoomOut);
+
+// Close modal when clicking outside
+document.getElementById('pdfModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePDFModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('pdfModal');
+        if (modal.classList.contains('active')) {
+            closePDFModal();
+        }
+    }
+});
+
+// Keyboard navigation for PDF
+document.addEventListener('keydown', function(e) {
+    const modal = document.getElementById('pdfModal');
+    if (modal.classList.contains('active') && pdfDoc) {
+        if (e.key === 'ArrowLeft') {
+            onPrevPage();
+        } else if (e.key === 'ArrowRight') {
+            onNextPage();
+        } else if (e.key === '+' || e.key === '=') {
+            onZoomIn();
+        } else if (e.key === '-') {
+            onZoomOut();
+        }
+    }
+});
+</script>
 {% endblock %}

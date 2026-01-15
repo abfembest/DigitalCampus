@@ -41,8 +41,8 @@ def auth_page(request):
     if request.user.is_authenticated:
         messages.info(request, 'You are already logged in.')
         # Redirect based on user type
-        if request.user.is_staff or request.user.is_superuser:
-            return redirect('administrator:dashboard')
+        if request.user.is_staff:
+            return redirect('management:dashboard')
         else:
             return redirect('eduweb:apply')
     
@@ -170,7 +170,7 @@ def auth_page(request):
                 
                 # Check if user is admin/staff and redirect accordingly
                 if user.is_staff or user.is_superuser:
-                    redirect_url = reverse('administrator:dashboard')
+                    redirect_url = reverse('management:dashboard')
                 else:
                     redirect_url = reverse('eduweb:apply')
                 

@@ -42,23 +42,43 @@
             </div>
 
             {% if application %}
-            <!-- Status Alert -->
-            <div class="rounded-xl p-6 mb-8 border-2 animate-slide-down {% if application.is_reviewed %}bg-gradient-to-r from-green-50 to-emerald-50 border-green-300{% else %}bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300{% endif %} shadow-lg">
+            <!-- Status Alert - Updated to show all decision types -->
+            <div class="rounded-xl p-6 mb-8 border-2 animate-slide-down 
+                {% if application.decision == 'accepted' %}bg-gradient-to-r from-green-50 to-emerald-50 border-green-300
+                {% elif application.decision == 'rejected' %}bg-gradient-to-r from-red-50 to-rose-50 border-red-300
+                {% elif application.decision == 'waitlisted' %}bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300
+                {% else %}bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300{% endif %} shadow-lg">
                 <div class="flex items-start">
                     <div class="flex-shrink-0">
-                        <div class="w-12 h-12 rounded-full {% if application.is_reviewed %}bg-green-500{% else %}bg-blue-500{% endif %} flex items-center justify-center shadow-md">
-                            <i data-lucide="{% if application.is_reviewed %}check-circle{% else %}clock{% endif %}" class="w-7 h-7 text-white"></i>
+                        <div class="w-12 h-12 rounded-full 
+                            {% if application.decision == 'accepted' %}bg-green-500
+                            {% elif application.decision == 'rejected' %}bg-red-500
+                            {% elif application.decision == 'waitlisted' %}bg-yellow-500
+                            {% else %}bg-blue-500{% endif %} flex items-center justify-center shadow-md">
+                            <i data-lucide="{% if application.decision == 'accepted' %}check-circle{% elif application.decision == 'rejected' %}x-circle{% elif application.decision == 'waitlisted' %}clock{% else %}clock{% endif %}" class="w-7 h-7 text-white"></i>
                         </div>
                     </div>
                     <div class="ml-4 flex-1">
                         <h3 class="text-xl font-bold text-gray-900 mb-2">
-                            Current Status: {% if application.is_reviewed %}Reviewed{% else %}Under Review{% endif %}
+                            Current Status: 
+                            {% if application.decision == 'accepted' %}Accepted
+                            {% elif application.decision == 'rejected' %}Not Accepted
+                            {% elif application.decision == 'waitlisted' %}Waitlisted
+                            {% else %}{{ application.get_status_display }}{% endif %}
                         </h3>
                         <p class="text-gray-700 leading-relaxed">
-                            {% if application.is_reviewed %}
-                                Your application has been reviewed. Check your email for the admission decision.
-                            {% else %}
+                            {% if application.decision == 'accepted' %}
+                                Congratulations! Your application has been accepted. Check your email for next steps.
+                            {% elif application.decision == 'rejected' %}
+                                Thank you for your interest. Unfortunately, we are unable to offer you admission at this time.
+                            {% elif application.decision == 'waitlisted' %}
+                                Your application has been placed on our waitlist. We will notify you if a spot becomes available.
+                            {% elif application.status == 'under_review' %}
                                 Your application is currently being reviewed by our admissions committee. We'll notify you within 4-6 weeks.
+                            {% elif application.status == 'reviewed' %}
+                                Your application has been reviewed. A decision will be communicated shortly.
+                            {% else %}
+                                Your application has been submitted and is awaiting review.
                             {% endif %}
                         </p>
                     </div>
@@ -72,7 +92,7 @@
                 </div>
                 <h3 class="text-2xl font-bold text-gray-900 mb-3">No Application Found</h3>
                 <p class="text-gray-700 mb-6 max-w-md mx-auto">You haven't submitted an application yet. Start your journey with us today!</p>
-                <a href="{% url 'apply' %}" class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold text-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
+                <a href="{% url 'eduweb:apply' %}" class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold text-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
                     <i data-lucide="rocket" class="w-6 h-6"></i>
                     Start Application
                 </a>
@@ -86,7 +106,7 @@
             <!-- Left Column: Progress & Summary -->
             <div class="lg:col-span-2 space-y-8">
                 
-                <!-- Progress Tracker -->
+                <!-- Progress Tracker - Updated -->
                 <section class="bg-white rounded-xl shadow-xl p-6 md:p-8 border border-gray-200 animate-slide-up">
                     <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center">
                         <div class="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-3 shadow-md">
@@ -100,8 +120,8 @@
                         <div class="relative">
                             <!-- Progress Line -->
                             <div class="absolute top-8 left-0 right-0 h-1 bg-gray-200 mx-8"></div>
-                            <div class="absolute top-8 left-0 h-1 bg-green-500 mx-8 transition-all duration-500" 
-                                style="width: {% if application.is_reviewed %}calc(100% - 4rem){% elif application.submitted %}calc(50% - 2rem){% else %}calc(25% - 1rem){% endif %}"></div>
+                            <div class="absolute top-8 left-0 h-1 {% if application.decision == 'rejected' %}bg-red-500{% else %}bg-green-500{% endif %} mx-8 transition-all duration-500" 
+                                style="width: {% if application.decision != 'pending' %}calc(100% - 4rem){% elif application.status == 'reviewed' or application.status == 'decision_made' %}calc(75% - 3rem){% elif application.status == 'under_review' %}calc(50% - 2rem){% elif application.submitted %}calc(25% - 1rem){% else %}0{% endif %}"></div>
                             
                             <!-- Steps -->
                             <div class="relative grid grid-cols-4 gap-4">
@@ -129,24 +149,46 @@
 
                                 <!-- Step 3: Under Review -->
                                 <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full {% if application.is_reviewed %}bg-green-500{% elif application.submitted %}bg-blue-500 shadow-xl animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 relative">
-                                        {% if application.is_reviewed %}
+                                    <div class="w-16 h-16 rounded-full {% if application.status in 'reviewed,decision_made' or application.decision != 'pending' %}bg-green-500{% elif application.status == 'under_review' %}bg-blue-500 shadow-xl animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 relative">
+                                        {% if application.status in 'reviewed,decision_made' or application.decision != 'pending' %}
                                         <i data-lucide="check" class="w-8 h-8"></i>
                                         {% else %}
                                         <i data-lucide="search" class="w-8 h-8"></i>
                                         {% endif %}
                                     </div>
-                                    <span class="text-sm font-semibold text-center {% if application.submitted %}text-gray-900{% else %}text-gray-500{% endif %}">Reviewing</span>
-                                    <span class="text-xs text-gray-500 text-center mt-1">{% if application.is_reviewed %}Completed{% elif application.submitted %}In progress{% else %}Not started{% endif %}</span>
+                                    <span class="text-sm font-semibold text-center {% if application.status in 'under_review,reviewed,decision_made' or application.decision != 'pending' %}text-gray-900{% else %}text-gray-500{% endif %}">Reviewing</span>
+                                    <span class="text-xs text-gray-500 text-center mt-1">
+                                        {% if application.decision != 'pending' %}Completed
+                                        {% elif application.status == 'reviewed' %}Awaiting decision
+                                        {% elif application.status == 'under_review' %}In progress
+                                        {% else %}Not started{% endif %}
+                                    </span>
                                 </div>
 
                                 <!-- Step 4: Decision -->
                                 <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full {% if application.is_reviewed %}bg-purple-500 shadow-xl{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 relative">
+                                    <div class="w-16 h-16 rounded-full 
+                                        {% if application.decision == 'accepted' %}bg-green-500 shadow-xl
+                                        {% elif application.decision == 'rejected' %}bg-red-500 shadow-xl
+                                        {% elif application.decision == 'waitlisted' %}bg-yellow-500 shadow-xl
+                                        {% else %}bg-gray-300{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 relative">
+                                        {% if application.decision == 'accepted' %}
+                                        <i data-lucide="check-circle" class="w-8 h-8"></i>
+                                        {% elif application.decision == 'rejected' %}
+                                        <i data-lucide="x-circle" class="w-8 h-8"></i>
+                                        {% elif application.decision == 'waitlisted' %}
+                                        <i data-lucide="clock" class="w-8 h-8"></i>
+                                        {% else %}
                                         <i data-lucide="award" class="w-8 h-8"></i>
+                                        {% endif %}
                                     </div>
-                                    <span class="text-sm font-semibold text-center {% if application.is_reviewed %}text-gray-900{% else %}text-gray-500{% endif %}">Decision</span>
-                                    <span class="text-xs text-gray-500 text-center mt-1">{% if application.is_reviewed %}Available{% else %}Pending{% endif %}</span>
+                                    <span class="text-sm font-semibold text-center {% if application.decision != 'pending' %}text-gray-900{% else %}text-gray-500{% endif %}">Decision</span>
+                                    <span class="text-xs text-gray-500 text-center mt-1">
+                                        {% if application.decision == 'accepted' %}Accepted
+                                        {% elif application.decision == 'rejected' %}Not Accepted
+                                        {% elif application.decision == 'waitlisted' %}Waitlisted
+                                        {% else %}Pending{% endif %}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -182,28 +224,49 @@
                             </div>
 
                             <!-- Step 3 -->
-                            <div class="flex items-center gap-4 p-4 rounded-lg {% if application.is_reviewed %}bg-green-50 border-2 border-green-500{% elif application.submitted %}bg-blue-50 border-2 border-blue-500{% else %}bg-gray-50 border-2 border-gray-300{% endif %}">
-                                <div class="w-12 h-12 rounded-full {% if application.is_reviewed %}bg-green-500{% elif application.submitted %}bg-blue-500 animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow-md flex-shrink-0">
-                                    {% if application.is_reviewed %}
+                            <div class="flex items-center gap-4 p-4 rounded-lg {% if application.decision != 'pending' or application.status in 'reviewed,decision_made' %}bg-green-50 border-2 border-green-500{% elif application.status == 'under_review' %}bg-blue-50 border-2 border-blue-500{% else %}bg-gray-50 border-2 border-gray-300{% endif %}">
+                                <div class="w-12 h-12 rounded-full {% if application.decision != 'pending' or application.status in 'reviewed,decision_made' %}bg-green-500{% elif application.status == 'under_review' %}bg-blue-500 animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow-md flex-shrink-0">
+                                    {% if application.decision != 'pending' or application.status in 'reviewed,decision_made' %}
                                     <i data-lucide="check" class="w-6 h-6"></i>
                                     {% else %}
                                     <i data-lucide="search" class="w-6 h-6"></i>
                                     {% endif %}
                                 </div>
                                 <div class="flex-1">
-                                    <h4 class="font-bold {% if application.submitted %}text-gray-900{% else %}text-gray-500{% endif %}">Under Review</h4>
-                                    <p class="text-sm text-gray-600">{% if application.is_reviewed %}Review completed{% elif application.submitted %}Currently reviewing{% else %}Not started{% endif %}</p>
+                                    <h4 class="font-bold {% if application.status in 'under_review,reviewed,decision_made' or application.decision != 'pending' %}text-gray-900{% else %}text-gray-500{% endif %}">Under Review</h4>
+                                    <p class="text-sm text-gray-600">{% if application.decision != 'pending' %}Review completed{% elif application.status == 'under_review' %}Currently reviewing{% else %}Not started{% endif %}</p>
                                 </div>
                             </div>
 
                             <!-- Step 4 -->
-                            <div class="flex items-center gap-4 p-4 rounded-lg {% if application.is_reviewed %}bg-purple-50 border-2 border-purple-500{% else %}bg-gray-50 border-2 border-gray-300{% endif %}">
-                                <div class="w-12 h-12 rounded-full {% if application.is_reviewed %}bg-purple-500{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow-md flex-shrink-0">
+                            <div class="flex items-center gap-4 p-4 rounded-lg 
+                                {% if application.decision == 'accepted' %}bg-green-50 border-2 border-green-500
+                                {% elif application.decision == 'rejected' %}bg-red-50 border-2 border-red-500
+                                {% elif application.decision == 'waitlisted' %}bg-yellow-50 border-2 border-yellow-500
+                                {% else %}bg-gray-50 border-2 border-gray-300{% endif %}">
+                                <div class="w-12 h-12 rounded-full 
+                                    {% if application.decision == 'accepted' %}bg-green-500
+                                    {% elif application.decision == 'rejected' %}bg-red-500
+                                    {% elif application.decision == 'waitlisted' %}bg-yellow-500
+                                    {% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow-md flex-shrink-0">
+                                    {% if application.decision == 'accepted' %}
+                                    <i data-lucide="check-circle" class="w-6 h-6"></i>
+                                    {% elif application.decision == 'rejected' %}
+                                    <i data-lucide="x-circle" class="w-6 h-6"></i>
+                                    {% elif application.decision == 'waitlisted' %}
+                                    <i data-lucide="clock" class="w-6 h-6"></i>
+                                    {% else %}
                                     <i data-lucide="award" class="w-6 h-6"></i>
+                                    {% endif %}
                                 </div>
                                 <div class="flex-1">
-                                    <h4 class="font-bold {% if application.is_reviewed %}text-gray-900{% else %}text-gray-500{% endif %}">Decision</h4>
-                                    <p class="text-sm text-gray-600">{% if application.is_reviewed %}Decision available{% else %}Decision pending{% endif %}</p>
+                                    <h4 class="font-bold {% if application.decision != 'pending' %}text-gray-900{% else %}text-gray-500{% endif %}">Decision</h4>
+                                    <p class="text-sm text-gray-600">
+                                        {% if application.decision == 'accepted' %}Application accepted
+                                        {% elif application.decision == 'rejected' %}Application not accepted
+                                        {% elif application.decision == 'waitlisted' %}Application waitlisted
+                                        {% else %}Decision pending{% endif %}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -215,12 +278,16 @@
                             <div class="flex justify-between text-xs mb-2">
                                 <span class="font-semibold text-gray-700">Progress</span>
                                 <span class="font-bold text-primary-950">
-                                    {% if application.is_reviewed %}100%{% elif application.submitted %}60%{% else %}25%{% endif %}
+                                    {% if application.decision != 'pending' %}100%
+                                    {% elif application.status == 'reviewed' %}75%
+                                    {% elif application.status == 'under_review' %}50%
+                                    {% elif application.submitted %}25%
+                                    {% else %}10%{% endif %}
                                 </span>
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-3 shadow-inner">
-                                <div class="h-3 rounded-full bg-gradient-to-r from-primary-950 to-purple-700 transition-all duration-500 shadow-sm" 
-                                    style="width: {% if application.is_reviewed %}100%{% elif application.submitted %}60%{% else %}25%{% endif %}"></div>
+                                <div class="h-3 rounded-full {% if application.decision == 'rejected' %}bg-gradient-to-r from-red-600 to-red-800{% else %}bg-gradient-to-r from-primary-950 to-purple-700{% endif %} transition-all duration-500 shadow-sm" 
+                                    style="width: {% if application.decision != 'pending' %}100%{% elif application.status == 'reviewed' %}75%{% elif application.status == 'under_review' %}50%{% elif application.submitted %}25%{% else %}10%{% endif %}"></div>
                             </div>
                         </div>
 
@@ -250,27 +317,48 @@
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-3 p-3 rounded-lg {% if application.is_reviewed %}bg-green-50 border border-green-500{% elif application.submitted %}bg-blue-50 border border-blue-500{% else %}bg-gray-50 border border-gray-300{% endif %}">
-                                <div class="w-10 h-10 rounded-full {% if application.is_reviewed %}bg-green-500{% elif application.submitted %}bg-blue-500 animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow flex-shrink-0">
-                                    {% if application.is_reviewed %}
+                            <div class="flex items-center gap-3 p-3 rounded-lg {% if application.decision != 'pending' or application.status in 'reviewed,decision_made' %}bg-green-50 border border-green-500{% elif application.status == 'under_review' %}bg-blue-50 border border-blue-500{% else %}bg-gray-50 border border-gray-300{% endif %}">
+                                <div class="w-10 h-10 rounded-full {% if application.decision != 'pending' or application.status in 'reviewed,decision_made' %}bg-green-500{% elif application.status == 'under_review' %}bg-blue-500 animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow flex-shrink-0">
+                                    {% if application.decision != 'pending' or application.status in 'reviewed,decision_made' %}
                                     <i data-lucide="check" class="w-5 h-5"></i>
                                     {% else %}
                                     <i data-lucide="search" class="w-5 h-5"></i>
                                     {% endif %}
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h4 class="font-bold text-sm {% if application.submitted %}text-gray-900{% else %}text-gray-500{% endif %}">Reviewing</h4>
-                                    <p class="text-xs text-gray-600 truncate">{% if application.is_reviewed %}Completed{% elif application.submitted %}In progress{% else %}Not started{% endif %}</p>
+                                    <h4 class="font-bold text-sm {% if application.status in 'under_review,reviewed,decision_made' or application.decision != 'pending' %}text-gray-900{% else %}text-gray-500{% endif %}">Reviewing</h4>
+                                    <p class="text-xs text-gray-600 truncate">{% if application.decision != 'pending' %}Completed{% elif application.status == 'under_review' %}In progress{% else %}Not started{% endif %}</p>
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-3 p-3 rounded-lg {% if application.is_reviewed %}bg-purple-50 border border-purple-500{% else %}bg-gray-50 border border-gray-300{% endif %}">
-                                <div class="w-10 h-10 rounded-full {% if application.is_reviewed %}bg-purple-500{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow flex-shrink-0">
+                            <div class="flex items-center gap-3 p-3 rounded-lg 
+                                {% if application.decision == 'accepted' %}bg-green-50 border border-green-500
+                                {% elif application.decision == 'rejected' %}bg-red-50 border border-red-500
+                                {% elif application.decision == 'waitlisted' %}bg-yellow-50 border border-yellow-500
+                                {% else %}bg-gray-50 border border-gray-300{% endif %}">
+                                <div class="w-10 h-10 rounded-full 
+                                    {% if application.decision == 'accepted' %}bg-green-500
+                                    {% elif application.decision == 'rejected' %}bg-red-500
+                                    {% elif application.decision == 'waitlisted' %}bg-yellow-500
+                                    {% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow flex-shrink-0">
+                                    {% if application.decision == 'accepted' %}
+                                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                                    {% elif application.decision == 'rejected' %}
+                                    <i data-lucide="x-circle" class="w-5 h-5"></i>
+                                    {% elif application.decision == 'waitlisted' %}
+                                    <i data-lucide="clock" class="w-5 h-5"></i>
+                                    {% else %}
                                     <i data-lucide="award" class="w-5 h-5"></i>
+                                    {% endif %}
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h4 class="font-bold text-sm {% if application.is_reviewed %}text-gray-900{% else %}text-gray-500{% endif %}">Decision</h4>
-                                    <p class="text-xs text-gray-600 truncate">{% if application.is_reviewed %}Available{% else %}Pending{% endif %}</p>
+                                    <h4 class="font-bold text-sm {% if application.decision != 'pending' %}text-gray-900{% else %}text-gray-500{% endif %}">Decision</h4>
+                                    <p class="text-xs text-gray-600 truncate">
+                                        {% if application.decision == 'accepted' %}Accepted
+                                        {% elif application.decision == 'rejected' %}Not Accepted
+                                        {% elif application.decision == 'waitlisted' %}Waitlisted
+                                        {% else %}Pending{% endif %}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -337,7 +425,7 @@
                     </div>
                 </section>
 
-                <!-- Activity Timeline -->
+                <!-- Activity Timeline - Updated -->
                 <section class="bg-white rounded-xl shadow-xl p-8 border border-gray-200 animate-slide-up">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                         <div class="w-10 h-10 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-3 shadow-md">
@@ -371,32 +459,74 @@
                                 <div class="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 shadow-md">
                                     <i data-lucide="check-circle-2" class="w-7 h-7 text-green-600"></i>
                                 </div>
-                                {% if application.is_reviewed %}<div class="h-full w-0.5 bg-blue-200 mt-4"></div>{% endif %}
+                                {% if application.status in 'under_review,reviewed,decision_made' or application.decision != 'pending' %}<div class="h-full w-0.5 bg-blue-200 mt-4"></div>{% endif %}
                             </div>
                             <div class="flex-1 pb-8">
                                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-2">
-                                    <h4 class="font-bold text-gray-900 text-lg">Documents Verified</h4>
+                                    <h4 class="font-bold text-gray-900 text-lg">Payment Verified</h4>
                                     <span class="text-sm text-gray-500 font-medium">{{ application.submission_date|date:"M d, Y" }}</span>
                                 </div>
-                                <p class="text-gray-600">All submitted documents have been verified by our team</p>
+                                <p class="text-gray-600">Payment confirmed and application processing started</p>
                             </div>
                         </div>
                         {% endif %}
 
-                        <!-- Timeline Item 3 -->
-                        {% if application.is_reviewed %}
+                        <!-- Timeline Item 3 - Under Review -->
+                        {% if application.status in 'under_review,reviewed,decision_made' or application.decision != 'pending' %}
+                        <div class="flex gap-6 relative">
+                            <div class="flex flex-col items-center">
+                                <div class="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 shadow-md">
+                                    <i data-lucide="search" class="w-7 h-7 text-indigo-600"></i>
+                                </div>
+                                {% if application.decision != 'pending' or application.status in 'reviewed,decision_made' %}<div class="h-full w-0.5 bg-blue-200 mt-4"></div>{% endif %}
+                            </div>
+                            <div class="flex-1 pb-8">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between mb-2">
+                                    <h4 class="font-bold text-gray-900 text-lg">Application Under Review</h4>
+                                    <span class="text-sm text-gray-500 font-medium">{% if application.reviewed_at %}{{ application.reviewed_at|date:"M d, Y" }}{% else %}In Progress{% endif %}</span>
+                                </div>
+                                <p class="text-gray-600">Your application is being reviewed by the admissions committee</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Timeline Item 4 - Decision Made -->
+                        {% if application.decision != 'pending' %}
                         <div class="flex gap-6">
                             <div class="flex flex-col items-center">
-                                <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 shadow-md">
-                                    <i data-lucide="star" class="w-7 h-7 text-purple-600"></i>
+                                <div class="w-14 h-14 rounded-full 
+                                    {% if application.decision == 'accepted' %}bg-green-100
+                                    {% elif application.decision == 'rejected' %}bg-red-100
+                                    {% elif application.decision == 'waitlisted' %}bg-yellow-100
+                                    {% endif %} flex items-center justify-center flex-shrink-0 shadow-md">
+                                    {% if application.decision == 'accepted' %}
+                                    <i data-lucide="check-circle" class="w-7 h-7 text-green-600"></i>
+                                    {% elif application.decision == 'rejected' %}
+                                    <i data-lucide="x-circle" class="w-7 h-7 text-red-600"></i>
+                                    {% elif application.decision == 'waitlisted' %}
+                                    <i data-lucide="clock" class="w-7 h-7 text-yellow-600"></i>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="flex-1">
                                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-2">
-                                    <h4 class="font-bold text-gray-900 text-lg">Application Reviewed</h4>
-                                    <span class="text-sm text-gray-500 font-medium">Recently</span>
+                                    <h4 class="font-bold text-gray-900 text-lg">
+                                        {% if application.decision == 'accepted' %}Application Accepted
+                                        {% elif application.decision == 'rejected' %}Application Decision
+                                        {% elif application.decision == 'waitlisted' %}Application Waitlisted
+                                        {% endif %}
+                                    </h4>
+                                    <span class="text-sm text-gray-500 font-medium">{% if application.decision_date %}{{ application.decision_date|date:"M d, Y" }}{% else %}Recently{% endif %}</span>
                                 </div>
-                                <p class="text-gray-600">Your application has been reviewed. Check your email for the decision.</p>
+                                <p class="text-gray-600">
+                                    {% if application.decision == 'accepted' %}
+                                        Congratulations! Your application has been accepted. Check your email for next steps.
+                                    {% elif application.decision == 'rejected' %}
+                                        Your application has been reviewed. Check your email for detailed feedback.
+                                    {% elif application.decision == 'waitlisted' %}
+                                        Your application is on the waitlist. We will notify you if a spot becomes available.
+                                    {% endif %}
+                                </p>
                             </div>
                         </div>
                         {% endif %}
@@ -407,7 +537,7 @@
             <!-- Right Column: Decision & Help -->
             <div class="space-y-8">
                 
-                <!-- Decision Panel -->
+                <!-- Decision Panel - Updated -->
                 <section class="bg-white rounded-xl shadow-xl p-8 border border-gray-200 animate-scale-in sticky top-28">
                     <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
                         <div class="w-9 h-9 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-3 shadow-md">
@@ -417,24 +547,67 @@
                     </h2>
 
                     <div class="text-center py-6">
-                        {% if application.is_reviewed %}
+                        {% if application.decision == 'accepted' %}
                         <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                             <i data-lucide="check-circle" class="w-14 h-14 text-green-600"></i>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-3">Decision Available</h3>
-                        <p class="text-gray-600 mb-4">Check your email for the admission decision</p>
+                        <h3 class="text-2xl font-bold text-green-700 mb-3">Accepted!</h3>
+                        <p class="text-gray-600 mb-4 leading-relaxed">Congratulations! You have been accepted to Modern International University.</p>
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-gray-700"><strong>Next Steps:</strong> Check your email for enrollment instructions and important dates.</p>
+                        </div>
+                        
+                        {% elif application.decision == 'rejected' %}
+                        <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                            <i data-lucide="x-circle" class="w-14 h-14 text-red-600"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-red-700 mb-3">Application Decision</h3>
+                        <p class="text-gray-600 mb-4 leading-relaxed">Thank you for your interest in MIU. After careful review, we are unable to offer admission at this time.</p>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-gray-700">Check your email for detailed feedback and information about reapplication.</p>
+                        </div>
+                        
+                        {% elif application.decision == 'waitlisted' %}
+                        <div class="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                            <i data-lucide="clock" class="w-14 h-14 text-yellow-600"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-yellow-700 mb-3">Waitlisted</h3>
+                        <p class="text-gray-600 mb-4 leading-relaxed">Your application has been placed on our waitlist. We will notify you if a position becomes available.</p>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-gray-700">Check your email for more information about the waitlist process.</p>
+                        </div>
+                        
                         {% else %}
                         <div class="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                             <i data-lucide="hourglass" class="w-14 h-14 text-blue-600"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-3">Under Review</h3>
-                        <p class="text-gray-600 mb-6 leading-relaxed">Your application is currently being reviewed by our admissions committee. Decision will be released within 4-6 weeks.</p>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">
+                            {% if application.status == 'under_review' %}Under Review
+                            {% elif application.status == 'reviewed' %}Review Complete
+                            {% else %}Processing{% endif %}
+                        </h3>
+                        <p class="text-gray-600 mb-6 leading-relaxed">
+                            {% if application.status == 'under_review' %}
+                                Your application is currently being reviewed by our admissions committee. Decision will be released within 4-6 weeks.
+                            {% elif application.status == 'reviewed' %}
+                                Your application has been reviewed. A final decision will be communicated shortly.
+                            {% else %}
+                                Your application is being processed. We will notify you once the review begins.
+                            {% endif %}
+                        </p>
                         <div class="flex justify-center mb-4">
                             <div class="h-2 bg-blue-200 rounded-full w-3/4 overflow-hidden shadow-inner">
-                                <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full animate-pulse" style="width: 60%"></div>
+                                <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full animate-pulse" 
+                                    style="width: {% if application.status == 'reviewed' %}90{% elif application.status == 'under_review' %}60{% else %}30{% endif %}%"></div>
                             </div>
                         </div>
-                        <p class="text-sm text-gray-500 font-medium">Estimated decision date: {{ application.submission_date|date:"F d, Y" }}</p>
+                        <p class="text-sm text-gray-500 font-medium">Estimated decision date: 
+                            {% if application.submission_date %}
+                                {{ application.submission_date|date:"F d, Y" }}
+                            {% else %}
+                                To be determined
+                            {% endif %}
+                        </p>
                         {% endif %}
                     </div>
                 </section>

@@ -164,6 +164,30 @@ class CourseApplication(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     submitted = models.BooleanField(default=False)
     submission_date = models.DateTimeField(null=True, blank=True)
+        
+    # Application Status Fields
+    STATUS_CHOICES = [
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('reviewed', 'Reviewed'),
+        ('decision_made', 'Decision Made'),
+    ]
+        
+    DECISION_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('waitlisted', 'Waitlisted'),
+    ]
+        
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+    decision = models.CharField(max_length=20, choices=DECISION_CHOICES, default='pending')
+    decision_date = models.DateTimeField(null=True, blank=True)
+    decision_notes = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_applications')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+        
+    # Keep for backwards compatibility
     is_reviewed = models.BooleanField(default=False)
     
     class Meta:

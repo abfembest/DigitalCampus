@@ -15,7 +15,7 @@ def is_admin(user):
     return user.is_staff or user.is_superuser
 
 
-@login_required
+@login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def dashboard(request):
     """Admin dashboard with statistics and recent applications"""
@@ -77,7 +77,7 @@ def dashboard(request):
     return render(request, 'admin/dashboard.html', context)
 
 
-@login_required
+@login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def applications_list(request):
     """List all applications with filtering and pagination"""
@@ -125,7 +125,7 @@ def applications_list(request):
     return render(request, 'admin/applications.html', context)
 
 
-@login_required
+@login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def application_detail(request, pk):
     """View detailed information about a specific application"""
@@ -146,7 +146,7 @@ def application_detail(request, pk):
     return render(request, 'admin/application_detail.html', context)
 
 
-@login_required
+@login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def mark_reviewed(request, pk):
     """Mark an application as reviewed"""

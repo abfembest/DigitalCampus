@@ -474,7 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const formData = new FormData(this);
-            const response = await fetch('{% url "auth_page" %}', {
+            const response = await fetch('{% url "eduweb:auth_page" %}', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -516,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const formData = new FormData(this);
-            const response = await fetch('{% url "auth_page" %}', {
+            const response = await fetch('{% url "eduweb:auth_page" %}', {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }

@@ -21,7 +21,7 @@
         <div class="max-w-4xl">
             <nav class="flex mb-8 text-sm" aria-label="Breadcrumb">
                 <ol class="inline-flex items-center space-x-2">
-                    <li><a href="{% url 'index' %}" class="text-purple-200 hover:text-white transition-colors">Home</a></li>
+                    <li><a href="{% url 'eduweb:index' %}" class="text-purple-200 hover:text-white transition-colors">Home</a></li>
                     <li><i data-lucide="chevron-right" class="w-4 h-4 text-purple-300"></i></li>
                     <li><span class="text-white font-medium">Campus Life</span></li>
                 </ol>
@@ -378,7 +378,7 @@
             Become part of a vibrant campus where friendships flourish and memories last a lifetime.
         </p>
         <div class="flex flex-wrap justify-center gap-6">
-            <a href="{% url 'apply' %}" class="px-8 py-4 bg-white text-primary-950 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
+            <a href="{% url 'eduweb:apply' %}" class="px-8 py-4 bg-white text-primary-950 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
                 Apply Now
                 <i data-lucide="arrow-right" class="w-5 h-5"></i>
             </a>

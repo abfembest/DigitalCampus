@@ -40,10 +40,13 @@ def auth_page(request):
     # Redirect if user is already logged in
     if request.user.is_authenticated:
         messages.info(request, 'You are already logged in.')
-        return redirect('apply')
+        # Redirect based on user type
+        if request.user.is_staff or request.user.is_superuser:
+            return redirect('administrator:dashboard')
+        else:
+            return redirect('eduweb:apply')
     
     # Generate captcha only on GET request (initial page load)
-    # This prevents the captcha from changing when the form is submitted
     if request.method == 'GET':
         captcha_question, captcha_answer = generate_captcha()
         request.session['captcha_answer'] = captcha_answer
@@ -60,8 +63,7 @@ def auth_page(request):
                 'captcha_question': captcha_question
             }, status=400)
         else:
-            # Reconstruct question for display (we'll generate a new one on error)
-            captcha_question = None  # Will be generated on error if needed
+            captcha_question = None
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -165,10 +167,17 @@ def auth_page(request):
                     del request.session['captcha_answer']
                     
                 login(request, user)
+                
+                # Check if user is admin/staff and redirect accordingly
+                if user.is_staff or user.is_superuser:
+                    redirect_url = reverse('administrator:dashboard')
+                else:
+                    redirect_url = reverse('eduweb:apply')
+                
                 return JsonResponse({
                     'success': True,
                     'message': 'Login successful! Redirecting...',
-                    'redirect_url': reverse('apply')
+                    'redirect_url': redirect_url
                 })
             else:
                 new_question, new_answer = generate_captcha()
@@ -331,7 +340,7 @@ def apply(request):
     
     if existing_application:
         messages.info(request, 'You already have an application in progress.')
-        return redirect('application_status')
+        return redirect('eduweb:application_status')
     
     if request.method == 'POST':
         form = CourseApplicationForm(request.POST, request.FILES)

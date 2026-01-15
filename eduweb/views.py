@@ -6,7 +6,7 @@ from .forms import ContactForm, CourseApplicationForm
 from .models import ContactMessage, CourseApplication, CourseApplicationFile,Application,Payment
 from django.http import JsonResponse
 from django.utils import timezone
-
+from .decorators import check_for_auth
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -326,11 +326,11 @@ def resend_verification(request):
             })
     return JsonResponse({'success': False, 'message': 'Invalid request.'}, status=400)
 
-
+@check_for_auth
 def index(request):
     return render(request, 'index.html')
 
-
+@check_for_auth
 def about(request):
     return render(request, 'about.html')
 
@@ -581,22 +581,23 @@ def send_application_admin_notification(application):
         return False
 
 
+@check_for_auth
 def detail(request):
     return render(request, 'detail.html')
 
-
+@check_for_auth
 def admission_course(request):
     return render(request, 'course.html')
 
-
+@check_for_auth
 def admission_requirement(request):
     return render(request, 'admission_requirement.html')
 
-
+@check_for_auth
 def blank_page(request):
     return render(request, 'blank_page.html')
 
-
+@check_for_auth
 def contact_submit(request):
     if request.method == 'POST':
         form = ContactForm(request.POST)
@@ -769,42 +770,44 @@ The MIU Admissions Team
 
 
 # Faculty Pages
+@check_for_auth
 def faculty_science(request):
     """Faculty of Science page"""
     return render(request, 'faculties/science.html')
 
-
+@check_for_auth
 def faculty_engineering(request):
     """Faculty of Engineering page"""
     return render(request, 'faculties/engineering.html')
 
-
+@check_for_auth
 def faculty_business(request):
     """Faculty of Business page"""
     return render(request, 'faculties/business.html')
 
-
+@check_for_auth
 def faculty_arts(request):
     """Faculty of Arts page"""
     return render(request, 'faculties/arts.html')
 
-
+@check_for_auth
 def faculty_health(request):
     """Faculty of Health Sciences page"""
     return render(request, 'faculties/health.html')
 
 
 # Program Pages
+@check_for_auth
 def program_business_admin(request):
     """Business Administration program page"""
     return render(request, 'programs/business_administration.html')
 
-
+@check_for_auth
 def program_computer_science(request):
     """Computer Science program page"""
     return render(request, 'programs/computer_science.html')
 
-
+@check_for_auth
 def program_data_science(request):
     """Data Science program page"""
     return render(request, 'programs/data_science.html')

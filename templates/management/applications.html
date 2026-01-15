@@ -1,0 +1,235 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Applications - MIU Admin Portal{% endblock %}
+
+{% block meta_description %}View and manage all course applications{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2 font-display">Course Applications</h1>
+    <p class="text-gray-600">Review and manage all submitted applications</p>
+</div>
+
+<!-- Filter and Search Section -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <input type="search" id="search" name="search" value="{{ request.GET.search }}" placeholder="Name, email, ID..." class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+        </div>
+        
+        <div>
+            <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select id="status" name="status" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <option value="">All Status</option>
+                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending Review</option>
+                <option value="reviewed" {% if request.GET.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="program" class="block text-sm font-medium text-gray-700 mb-2">Program</label>
+            <select id="program" name="program" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <option value="">All Programs</option>
+                {% for program_code, program_name in programs %}
+                <option value="{{ program_code }}" {% if request.GET.program == program_code %}selected{% endif %}>{{ program_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="flex items-end space-x-2">
+            <button type="submit" class="flex-1 px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                <i class="fas fa-search mr-2" aria-hidden="true"></i>Filter
+            </button>
+            <a href="{% url 'management:applications_list' %}" class="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fas fa-redo" aria-hidden="true"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Applications Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex flex-col md:flex-row md:items-center justify-between">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-0 font-display">
+                All Applications 
+                <span class="text-sm font-normal text-gray-500">({{ applications.paginator.count }} total)</span>
+            </h3>
+            <div id="datatableButtons" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table id="applicationsTable" class="w-full">
+            <thead class="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                    <th scope="col" class="py-4 px-6 text-left font-semibold text-gray-700">
+                        <input type="checkbox" id="selectAll" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" aria-label="Select all applications">
+                    </th>
+                    <th scope="col" class="py-4 px-6 text-left font-semibold text-gray-700">Application ID</th>
+                    <th scope="col" class="py-4 px-6 text-left font-semibold text-gray-700">Applicant</th>
+                    <th scope="col" class="py-4 px-6 text-left font-semibold text-gray-700">Program</th>
+                    <th scope="col" class="py-4 px-6 text-left font-semibold text-gray-700">Date Applied</th>
+                    <th scope="col" class="py-4 px-6 text-left font-semibold text-gray-700">Status</th>
+                    <th scope="col" class="py-4 px-6 text-left font-semibold text-gray-700">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for application in applications %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td class="py-4 px-6">
+                        <input type="checkbox" class="application-checkbox rounded border-gray-300 text-primary-600 focus:ring-primary-500" value="{{ application.id }}" aria-label="Select application {{ application.application_id }}">
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="font-mono text-sm font-medium text-primary-600">{{ application.application_id }}</span>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-semibold mr-3">
+                                {{ application.first_name|slice:":1" }}{{ application.last_name|slice:":1" }}
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-800">{{ application.get_full_name }}</div>
+                                <div class="text-sm text-gray-500">{{ application.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="font-medium text-gray-800">{{ application.get_program_display_name }}</div>
+                        <div class="text-sm text-gray-500">{{ application.get_degree_level_display_name }}</div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="font-medium text-gray-800">{{ application.created_at|date:"M d, Y" }}</div>
+                        <div class="text-sm text-gray-500">{{ application.created_at|date:"g:i A" }}</div>
+                    </td>
+                    <td class="py-4 px-6">
+                        {% if application.is_reviewed %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>Reviewed
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <i class="fas fa-clock mr-1" aria-hidden="true"></i>Pending
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="flex space-x-2">
+                            <a href="{% url 'management:application_detail' application.id %}" class="text-primary-600 hover:text-primary-800 p-2 rounded hover:bg-primary-50 transition-colors" title="View details" aria-label="View application {{ application.application_id }}">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr class="empty-row">
+                    <td colspan="7" class="py-12 px-6 text-center">
+                        <div class="text-gray-400">
+                            <i class="fas fa-inbox text-5xl mb-4" aria-hidden="true"></i>
+                            <p class="text-lg font-medium text-gray-600">No applications found</p>
+                            <p class="text-sm text-gray-500 mt-2">Try adjusting your filters or search criteria</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if applications.has_other_pages %}
+    <div class="p-6 border-t border-gray-200">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+            <p class="text-sm text-gray-600 mb-4 md:mb-0">
+                Showing {{ applications.start_index }} to {{ applications.end_index }} of {{ applications.paginator.count }} results
+            </p>
+            <nav class="flex space-x-2" aria-label="Pagination">
+                {% if applications.has_previous %}
+                <a href="?page={{ applications.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                </a>
+                {% endif %}
+                
+                {% for num in applications.paginator.page_range %}
+                    {% if applications.number == num %}
+                    <span class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium">{{ num }}</span>
+                    {% elif num > applications.number|add:'-3' and num < applications.number|add:'3' %}
+                    <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if applications.has_next %}
+                <a href="?page={{ applications.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if table has rows before initializing
+    const tableBody = document.querySelector('#applicationsTable tbody');
+    const hasRows = tableBody && tableBody.querySelectorAll('tr:not(.empty-row)').length > 0;
+    
+    if (hasRows) {
+        $('#applicationsTable').DataTable({
+            responsive: true,
+            pageLength: 15,
+            order: [[4, 'desc']], // Sort by date column
+            searching: false,  // Disable DataTables search (use Django filtering)
+            paging: false,     // Disable DataTables pagination (use Django pagination)
+            info: false,       // Disable DataTables info
+            columnDefs: [
+                { orderable: false, targets: [0, 6] } // Disable sorting on checkbox and actions
+            ],
+            dom: 'Bfrtip',
+            buttons: [
+                {
+                    extend: 'csv',
+                    text: '<i class="fas fa-file-csv mr-2"></i>CSV',
+                    className: 'px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm',
+                    exportOptions: {
+                        columns: [1, 2, 3, 4, 5]
+                    }
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fas fa-print mr-2"></i>Print',
+                    className: 'px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm',
+                    exportOptions: {
+                        columns: [1, 2, 3, 4, 5]
+                    }
+                }
+            ],
+            initComplete: function() {
+                this.api().buttons().container().appendTo('#datatableButtons');
+            }
+        });
+    } else {
+        // No data - hide export buttons
+        const exportButtons = document.getElementById('datatableButtons');
+        if (exportButtons) {
+            exportButtons.style.display = 'none';
+        }
+    }
+    
+    // Select all checkbox functionality
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.application-checkbox');
+    
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -16,6 +16,16 @@ from .forms import SignUpForm, LoginForm
 from .models import UserProfile
 import random
 
+def application_status_context(request):
+    """Add application status to all template contexts"""
+    has_pending_application = False
+    if request.user.is_authenticated:
+        has_pending_application = CourseApplication.objects.filter(
+            user=request.user,
+            submitted=True
+        ).exists()
+    return {'has_pending_application': has_pending_application}
+
 def generate_captcha():
     """Generate a simple math captcha"""
     num1 = random.randint(1, 10)

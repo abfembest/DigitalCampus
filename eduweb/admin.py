@@ -46,58 +46,205 @@ class ContactMessageAdmin(admin.ModelAdmin):
 class CourseApplicationFileInline(admin.TabularInline):
     model = CourseApplicationFile
     extra = 0
-    readonly_fields = ('file',)
+    readonly_fields = ('file', 'file_type', 'original_filename', 'file_size', 'uploaded_at')
+    can_delete = False
+    
+    def has_add_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(CourseApplication)
 class CourseApplicationAdmin(admin.ModelAdmin):
-    list_display = ('application_id', 'get_full_name', 'email', 'program', 'degree_level', 'submission_date', 'is_reviewed')
-    list_filter = ('program', 'degree_level', 'study_mode', 'intake', 'is_reviewed', 'submitted')
-    search_fields = ('application_id', 'first_name', 'last_name', 'email')
-    readonly_fields = ('application_id', 'created_at', 'submission_date', 'user')
+    list_display = (
+        'application_id', 
+        'get_full_name', 
+        'email', 
+        'program', 
+        'degree_level', 
+        'status',
+        'decision',
+        'submission_date', 
+        'is_reviewed'
+    )
+    list_filter = (
+        'status',
+        'decision',
+        'program', 
+        'degree_level', 
+        'study_mode', 
+        'intake', 
+        'is_reviewed', 
+        'submitted',
+        'scholarship',
+        'created_at',
+        'submission_date'
+    )
+    search_fields = ('application_id', 'first_name', 'last_name', 'email', 'phone')
+    readonly_fields = (
+        'application_id', 
+        'created_at', 
+        'submission_date', 
+        'user',
+        'reviewed_at',
+        'decision_date'
+    )
     date_hierarchy = 'submission_date'
     inlines = [CourseApplicationFileInline]
+    list_editable = ('status', 'decision', 'is_reviewed')
     
     fieldsets = (
         ('Application Info', {
-            'fields': ('application_id', 'user', 'submitted', 'is_reviewed', 'created_at', 'submission_date')
+            'fields': (
+                'application_id', 
+                'user', 
+                'submitted', 
+                'created_at', 
+                'submission_date'
+            )
+        }),
+        ('Application Status', {
+            'fields': (
+                'status',
+                'is_reviewed',
+                'reviewed_by',
+                'reviewed_at'
+            ),
+            'classes': ('collapse',),
+        }),
+        ('Decision', {
+            'fields': (
+                'decision',
+                'decision_date',
+                'decision_notes'
+            ),
+            'classes': ('collapse',),
         }),
         ('Personal Information', {
-            'fields': ('first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'country', 'gender', 'address')
+            'fields': (
+                'first_name', 
+                'last_name', 
+                'email', 
+                'phone', 
+                'date_of_birth', 
+                'country', 
+                'gender', 
+                'address'
+            )
         }),
         ('Academic Background', {
-            'fields': ('academic_history', 'english_proficiency', 'english_score', 'additional_qualifications')
+            'fields': (
+                'academic_history', 
+                'english_proficiency', 
+                'english_score', 
+                'additional_qualifications'
+            )
         }),
         ('Course Selection', {
-            'fields': ('program', 'degree_level', 'study_mode', 'intake', 'scholarship')
+            'fields': (
+                'program', 
+                'degree_level', 
+                'study_mode', 
+                'intake', 
+                'scholarship'
+            )
         }),
         ('Documents', {
             'fields': ('documents_uploaded',),
-            'description': 'Uploaded documents are shown below as inline files'
+            'description': 'Uploaded documents are shown below as inline files',
+            'classes': ('collapse',),
         }),
         ('Additional', {
-            'fields': ('referral_source',)
+            'fields': ('referral_source',),
+            'classes': ('collapse',),
         }),
     )
     
     def get_queryset(self, request):
         """Optimize queryset with select_related"""
-        return super().get_queryset(request).select_related('user')
+        return super().get_queryset(request).select_related('user', 'reviewed_by')
+    
+    actions = ['mark_as_under_review', 'mark_as_reviewed', 'mark_as_accepted', 'mark_as_rejected']
+    
+    def mark_as_under_review(self, request, queryset):
+        """Bulk action to mark applications as under review"""
+        updated = queryset.update(status='under_review')
+        self.message_user(request, f'{updated} application(s) marked as under review.')
+    mark_as_under_review.short_description = "Mark selected as Under Review"
+    
+    def mark_as_reviewed(self, request, queryset):
+        """Bulk action to mark applications as reviewed"""
+        from django.utils import timezone
+        updated = queryset.update(
+            status='reviewed',
+            is_reviewed=True,
+            reviewed_by=request.user,
+            reviewed_at=timezone.now()
+        )
+        self.message_user(request, f'{updated} application(s) marked as reviewed.')
+    mark_as_reviewed.short_description = "Mark selected as Reviewed"
+    
+    def mark_as_accepted(self, request, queryset):
+        """Bulk action to mark applications as accepted"""
+        from django.utils import timezone
+        updated = queryset.update(
+            status='decision_made',
+            decision='accepted',
+            decision_date=timezone.now()
+        )
+        self.message_user(request, f'{updated} application(s) marked as accepted.')
+    mark_as_accepted.short_description = "Mark selected as Accepted"
+    
+    def mark_as_rejected(self, request, queryset):
+        """Bulk action to mark applications as rejected"""
+        from django.utils import timezone
+        updated = queryset.update(
+            status='decision_made',
+            decision='rejected',
+            decision_date=timezone.now()
+        )
+        self.message_user(request, f'{updated} application(s) marked as rejected.')
+    mark_as_rejected.short_description = "Mark selected as Rejected"
 
 
 @admin.register(CourseApplicationFile)
 class CourseApplicationFileAdmin(admin.ModelAdmin):
-    list_display = ('application', 'file_type', 'original_filename', 'get_file_size', 'uploaded_at')
+    list_display = (
+        'application', 
+        'file_type', 
+        'original_filename', 
+        'get_file_size', 
+        'uploaded_at'
+    )
     list_filter = ('file_type', 'uploaded_at')
-    search_fields = ('application__application_id', 'application__first_name', 'application__last_name', 'original_filename')
-    readonly_fields = ('application', 'file', 'file_type', 'original_filename', 'file_size', 'uploaded_at', 'get_file_size')
+    search_fields = (
+        'application__application_id', 
+        'application__first_name', 
+        'application__last_name', 
+        'original_filename'
+    )
+    readonly_fields = (
+        'application', 
+        'file', 
+        'file_type', 
+        'original_filename', 
+        'file_size', 
+        'uploaded_at', 
+        'get_file_size'
+    )
     
     fieldsets = (
         ('Application Info', {
             'fields': ('application',)
         }),
         ('File Information', {
-            'fields': ('file', 'file_type', 'original_filename', 'file_size', 'get_file_size', 'uploaded_at')
+            'fields': (
+                'file', 
+                'file_type', 
+                'original_filename', 
+                'file_size', 
+                'get_file_size', 
+                'uploaded_at'
+            )
         }),
     )
     
@@ -105,3 +252,11 @@ class CourseApplicationFileAdmin(admin.ModelAdmin):
         """Display human-readable file size"""
         return obj.get_file_size_display()
     get_file_size.short_description = 'File Size'
+    
+    def has_add_permission(self, request):
+        """Disable adding files directly from admin"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Disable editing files from admin"""
+        return False

@@ -366,11 +366,19 @@
                     <!-- CTA Buttons -->
                     <div class="flex items-center gap-3 ml-4">
                         {% if user.is_authenticated %}
-                            <a href="{% url 'eduweb:apply' %}"
-                                class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
-                                Apply Now
-                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                            </a>
+                            {% if has_pending_application %}
+                                <a href="{% url 'eduweb:application_status' %}"
+                                    class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                                    View Application
+                                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                                </a>
+                            {% else %}
+                                <a href="{% url 'eduweb:apply' %}"
+                                    class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                                    Apply Now
+                                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                </a>
+                            {% endif %}
                             <a href="{% url 'eduweb:logout' %}"
                                 class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm hover:shadow-lg transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
                                 <i data-lucide="log-out" class="w-4 h-4"></i>
@@ -533,25 +541,33 @@
                         </div>
                     </div>
                     <div class="pt-4 space-y-3">
-                        {% if user.is_authenticated %}
+                    {% if user.is_authenticated %}
+                        {% if has_pending_application %}
+                            <a href="{% url 'eduweb:application_status' %}"
+                                class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                                View Application
+                                <i data-lucide="file-text" class="w-5 h-5"></i>
+                            </a>
+                        {% else %}
                             <a href="{% url 'eduweb:apply' %}"
                                 class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                                 Apply Now
                                 <i data-lucide="rocket" class="w-5 h-5"></i>
                             </a>
-                            <a href="{% url 'eduweb:logout' %}"
-                                class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
-                                <i data-lucide="log-out" class="w-5 h-5"></i>
-                                Logout
-                            </a>
-                        {% else %}
-                            <a href="{% url 'eduweb:auth_page' %}"
-                                class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
-                                Sign In / Apply
-                                <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                            </a>
                         {% endif %}
-                    </div>
+                        <a href="{% url 'eduweb:logout' %}"
+                            class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                            Logout
+                        </a>
+                    {% else %}
+                        <a href="{% url 'eduweb:auth_page' %}"
+                            class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            Sign In / Apply
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </a>
+                    {% endif %}
+                </div>
                 </div>
             </div>
         </nav>

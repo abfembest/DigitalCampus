@@ -69,6 +69,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'eduweb.views.application_status_context',
             ],
         },
     },
@@ -157,9 +158,9 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='MIU <noreply@miu.edu>
 CONTACT_EMAIL = config('CONTACT_EMAIL', default='admin@miu.edu')
 
 # Authentication settings
-LOGIN_URL = 'auth_page'
-LOGIN_REDIRECT_URL = 'apply'
-LOGOUT_REDIRECT_URL = 'index'
+LOGIN_URL = 'eduweb:auth_page'
+LOGIN_REDIRECT_URL = 'eduweb:apply'
+LOGOUT_REDIRECT_URL = 'eduweb:index'
 
 # Session settings
 SESSION_COOKIE_AGE = 1209600  # 2 weeks

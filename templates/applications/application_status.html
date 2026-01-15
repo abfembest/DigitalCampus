@@ -34,10 +34,18 @@
                     <p class="text-gray-600 mt-2 ml-15">Track your university application progress</p>
                 </div>
                 {% if application %}
-                <a href="{% url 'eduweb:index' %}" class="mt-4 md:mt-0 inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all duration-300 shadow-sm hover:shadow-md">
-                    <i data-lucide="home" class="w-5 h-5"></i>
-                    Back to Home
-                </a>
+                <div class="mt-4 md:mt-0 flex gap-3">
+                    {% if application.decision == 'accepted' %}
+                    <a href="{% url 'eduweb:admission_letter' application.id %}" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
+                        <i data-lucide="file-check" class="w-5 h-5"></i>
+                        View Admission Letter
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'eduweb:index' %}" class="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all duration-300 shadow-sm hover:shadow-md">
+                        <i data-lucide="home" class="w-5 h-5"></i>
+                        Back to Home
+                    </a>
+                </div>
                 {% endif %}
             </div>
 

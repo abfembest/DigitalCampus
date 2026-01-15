@@ -21,6 +21,8 @@ urlpatterns = [
     path('application_status/', views.application_status, name='application_status'),
     path('payments/', views.payments, name='payments'),
 
+    path('admission-letter/<int:application_id>/', views.admission_letter, name='admission_letter'),
+
     # Faculty Pages
     path('faculties/science/', views.faculty_science, name='faculty_science'),
     path('faculties/engineering/', views.faculty_engineering, name='faculty_engineering'),

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Admission Letter - {{ application.application_id }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #333;
+            line-height: 1.6;
+            position: relative;
+        }
+        
+        /* Watermark */
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.05;
+            width: 400px;
+            height: 400px;
+            z-index: -1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 4px solid #840384;
+        }
+        
+        .logo {
+            width: 120px;
+            height: auto;
+            margin: 0 auto 20px;
+            display: block;
+        }
+        
+        .university-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #840384;
+            margin-bottom: 10px;
+        }
+        
+        .contact-info {
+            font-size: 12px;
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        .letter-title {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .letter-title h1 {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .letter-title p {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .metadata {
+            margin-bottom: 30px;
+        }
+        
+        .metadata p {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        
+        .recipient {
+            margin-bottom: 30px;
+        }
+        
+        .recipient p {
+            margin: 3px 0;
+            font-size: 14px;
+        }
+        
+        .recipient .name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .content {
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+        
+        .content p {
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        
+        .content strong {
+            color: #840384;
+        }
+        
+        .content ul, .content ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        
+        .content li {
+            margin: 8px 0;
+            font-size: 13px;
+        }
+        
+        .signature {
+            margin-top: 50px;
+            margin-bottom: 30px;
+        }
+        
+        .signature-line {
+            border-top: 2px solid #333;
+            width: 250px;
+            margin-top: 60px;
+            padding-top: 10px;
+        }
+        
+        .signature p {
+            margin: 3px 0;
+            font-size: 13px;
+        }
+        
+        .signature .name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .footer p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Watermark -->
+    <div class="watermark">
+        <svg width="400" height="400" viewBox="0 0 100 100">
+            <text x="50" y="50" font-size="20" fill="#840384" text-anchor="middle" dominant-baseline="middle">MIU</text>
+        </svg>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="university-name">MODERN INTERNATIONAL UNIVERSITY</div>
+        <p class="contact-info">123 University Avenue, Knowledge City, KC 10101</p>
+        <p class="contact-info">Tel: +1 (555) 123-4567 | Email: admissions@miu.edu | Web: www.miu.edu</p>
+    </div>
+
+    <!-- Letter Title -->
+    <div class="letter-title">
+        <h1>LETTER OF ADMISSION</h1>
+        <p>Academic Year {{ application.get_intake_display }}</p>
+    </div>
+
+    <!-- Metadata -->
+    <div class="metadata">
+        <p><strong>Date:</strong> {{ application.decision_date|date:"F d, Y" }}</p>
+        <p><strong>Reference Number:</strong> {{ application.application_id }}</p>
+    </div>
+
+    <!-- Recipient -->
+    <div class="recipient">
+        <p class="name">{{ application.get_full_name }}</p>
+        <p>{{ application.address }}</p>
+        <p>{{ application.get_country_display }}</p>
+    </div>
+
+    <!-- Letter Content -->
+    <div class="content">
+        <p>Dear {{ application.first_name }},</p>
+        
+        <p><strong>Congratulations!</strong> On behalf of the Admissions Committee, I am delighted to inform you that you have been accepted to Modern International University for the <strong>{{ application.get_program_display_name }}</strong> program leading to a <strong>{{ application.get_degree_level_display_name }}</strong>.</p>
+        
+        <p>Your academic achievements and demonstrated potential have impressed our selection committee. We believe you will make significant contributions to our academic community and benefit greatly from the rigorous educational experience MIU offers.</p>
+        
+        <p><strong>Program Details:</strong></p>
+        <ul>
+            <li><strong>Program:</strong> {{ application.get_program_display_name }}</li>
+            <li><strong>Degree Level:</strong> {{ application.get_degree_level_display_name }}</li>
+            <li><strong>Study Mode:</strong> {{ application.get_study_mode_display }}</li>
+            <li><strong>Start Date:</strong> {{ application.get_intake_display }}</li>
+            {% if application.scholarship %}
+            <li><strong>Scholarship:</strong> Awarded - Details will be sent separately</li>
+            {% endif %}
+        </ul>
+        
+        <p><strong>Next Steps:</strong></p>
+        <ol>
+            <li>Accept your admission offer by <strong>{{ application.decision_date|date:"F d, Y" }}</strong></li>
+            <li>Complete enrollment registration through your student portal</li>
+            <li>Submit required enrollment documents</li>
+            <li>Pay the enrollment deposit of $500 (non-refundable)</li>
+            <li>Attend the mandatory orientation session</li>
+        </ol>
+        
+        <p>Detailed enrollment instructions and access to your student portal will be sent to your email address (<strong>{{ application.email }}</strong>) within 3 business days.</p>
+        
+        <p>Should you have any questions, please contact our Admissions Office at admissions@miu.edu or call +1 (555) 123-4567.</p>
+        
+        <p>Once again, congratulations on your acceptance. We look forward to welcoming you to the MIU community!</p>
+    </div>
+
+    <!-- Signature -->
+    <div class="signature">
+        <p>Sincerely,</p>
+        <div class="signature-line">
+            <p class="name">Dr. Sarah Johnson</p>
+            <p>Director of Admissions</p>
+            <p>Modern International University</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>This is an official letter of admission from Modern International University.</p>
+        <p>Document ID: {{ application.application_id }} | Generated on {{ application.decision_date|date:"F d, Y" }}</p>
+    </div>
+</body>
+</html>

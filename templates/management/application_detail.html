@@ -246,38 +246,37 @@
     </div>
 </div>
 
-<!-- Status and Actions -->
 <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6" aria-labelledby="status-heading">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <h2 id="status-heading" class="text-lg font-semibold text-gray-800 mb-3">Application Status</h2>
+            <h2 id="status-heading" class="text-lg font-semibold text-gray-800 mb-3">Current Application Status</h2>
             <div class="flex items-center gap-4 flex-wrap">
                 {% if application.status == 'submitted' %}
                 <span class="px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800" role="status">
                     <i class="fas fa-inbox mr-1" aria-hidden="true"></i>
-                    <span>Submitted</span>
+                    <span>Submitted - Awaiting Review</span>
                 </span>
                 {% elif application.status == 'under_review' %}
                 <span class="px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" role="status">
                     <i class="fas fa-clock mr-1" aria-hidden="true"></i>
-                    <span>Under Review</span>
+                    <span>Under Review by Committee</span>
                 </span>
                 {% elif application.status == 'reviewed' %}
                 <span class="px-4 py-2 rounded-full text-sm font-medium bg-purple-100 text-purple-800" role="status">
                     <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
-                    <span>Reviewed - Awaiting Decision</span>
+                    <span>Reviewed - Decision Pending</span>
                 </span>
                 {% elif application.status == 'decision_made' %}
                 <span class="px-4 py-2 rounded-full text-sm font-medium {% if application.decision == 'accepted' %}bg-green-100 text-green-800{% elif application.decision == 'rejected' %}bg-red-100 text-red-800{% else %}bg-orange-100 text-orange-800{% endif %}" role="status">
                     <i class="fas fa-{% if application.decision == 'accepted' %}check-circle{% elif application.decision == 'rejected' %}times-circle{% else %}hourglass-half{% endif %} mr-1" aria-hidden="true"></i>
-                    <span>Decision: {{ application.get_decision_display }}</span>
+                    <span>Decision Made: {{ application.get_decision_display }}</span>
                 </span>
                 {% endif %}
                 
                 {% if application.decision_date %}
                 <span class="text-sm text-gray-500">
                     <i class="fas fa-calendar mr-1" aria-hidden="true"></i>
-                    Decision made on {{ application.decision_date|date:"M d, Y" }}
+                    {{ application.decision_date|date:"M d, Y" }}
                 </span>
                 {% endif %}
             </div>
@@ -301,9 +300,16 @@
             </button>
             {% endif %}
             
+            {% if application.decision == 'accepted' %}
+            <a href="{% url 'eduweb:admission_letter' application.id %}" target="_blank" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center justify-center gap-2">
+                <i class="fas fa-file-contract" aria-hidden="true"></i>
+                <span>Generate Admission Letter</span>
+            </a>
+            {% endif %}
+
             <button class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center justify-center gap-2">
                 <i class="fas fa-envelope" aria-hidden="true"></i>
-                <span>Send Email</span>
+                <span>{{application.get_decision_display}}</span>
             </button>
         </div>
     </div>

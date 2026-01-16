@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admission Letter - {{ application.application_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Print Styles */
+    @media print {
+        /* Hide everything that shouldn't print */
+        header, footer, .no-print {
+            display: none !important;
+        }
+        
+        body {
+            background: white !important;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .print-container {
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+        }
+        
+        .letter-content {
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            page-break-inside: avoid;
+        }
+        
+        /* Preserve colors and backgrounds */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+        
+        /* Watermark for print */
+        .watermark-print {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.05;
+            width: 400px;
+            height: 400px;
+            z-index: 0;
+        }
+        
+        .letter-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Page setup */
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+    }
+    
+    /* Screen styles */
+    @media screen {
+        .watermark-print {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 py-12 print-container">
+    <div class="container mx-auto px-4 max-w-5xl">
+        
+        <!-- Header Actions - Hidden on Print -->
+        <div class="flex justify-between items-center mb-8 no-print">
+            <a href="{% if user.is_staff %}{% url 'management:application_detail' application.id %}{% else %}{% url 'eduweb:application_status' %}{% endif %}" class="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all duration-300">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                Back
+            </a>
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
+                <i data-lucide="printer" class="w-5 h-5"></i>
+                Print / Save as PDF
+            </button>
+        </div>
+
+        <!-- Watermark for Print Only -->
+        <div class="watermark-print">
+            <img src="{% static 'Miulogo.png' %}" alt="MIU Watermark">
+        </div>
+
+        <!-- Admission Letter -->
+        <div class="bg-white rounded-xl shadow-2xl overflow-hidden relative letter-content">
+            <!-- Watermark for Screen View -->
+            <div class="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none no-print">
+                <img src="{% static 'Miulogo.png' %}" alt="MIU Watermark" class="w-96 h-96 object-contain">
+            </div>
+
+            <!-- Letter Content -->
+            <div class="relative z-10 p-12 md:p-16">
+                <!-- Header with Logo -->
+                <div class="text-center mb-12 pb-8 border-b-4 border-primary-950">
+                    <img src="{% static 'Miulogo.png' %}" alt="MIU Logo" class="h-24 mx-auto mb-6">
+                    <h1 class="text-3xl font-bold text-primary-950 mb-2">MODERN INTERNATIONAL UNIVERSITY</h1>
+                    <p class="text-gray-600">123 University Avenue, Knowledge City, KC 10101</p>
+                    <p class="text-gray-600">Tel: +1 (555) 123-4567 | Email: admissions@miu.edu</p>
+                </div>
+
+                <!-- Letter Title -->
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">LETTER OF ADMISSION</h2>
+                    <p class="text-gray-600">Academic Year {{ application.get_intake_display }}</p>
+                </div>
+
+                <!-- Date and Reference -->
+                <div class="mb-8">
+                    <p class="text-gray-700 mb-2"><strong>Date:</strong> {{ application.decision_date|date:"F d, Y" }}</p>
+                    <p class="text-gray-700"><strong>Reference Number:</strong> {{ application.application_id }}</p>
+                </div>
+
+                <!-- Recipient -->
+                <div class="mb-8">
+                    <p class="text-gray-900 font-semibold text-lg">{{ application.get_full_name }}</p>
+                    <p class="text-gray-700">{{ application.address }}</p>
+                    <p class="text-gray-700">{{ application.get_country_display }}</p>
+                </div>
+
+                <!-- Letter Body -->
+                <div class="mb-8 space-y-4 text-gray-700 leading-relaxed">
+                    <p class="text-lg">Dear {{ application.first_name }},</p>
+                    
+                    <p><strong class="text-primary-950">Congratulations!</strong> On behalf of the Admissions Committee, I am delighted to inform you that you have been accepted to Modern International University for the <strong>{{ application.get_program_display_name }}</strong> program leading to a <strong>{{ application.get_degree_level_display_name }}</strong>.</p>
+                    
+                    <p>Your academic achievements and demonstrated potential have impressed our selection committee. We believe you will make significant contributions to our academic community and benefit greatly from the rigorous educational experience MIU offers.</p>
+                    
+                    <p><strong>Program Details:</strong></p>
+                    <ul class="list-disc list-inside ml-4 space-y-2">
+                        <li><strong>Program:</strong> {{ application.get_program_display_name }}</li>
+                        <li><strong>Degree Level:</strong> {{ application.get_degree_level_display_name }}</li>
+                        <li><strong>Study Mode:</strong> {{ application.get_study_mode_display }}</li>
+                        <li><strong>Start Date:</strong> {{ application.get_intake_display }}</li>
+                        {% if application.scholarship %}
+                        <li><strong>Scholarship:</strong> Awarded - Details will be sent separately</li>
+                        {% endif %}
+                    </ul>
+                    
+                    <p><strong>Next Steps:</strong></p>
+                    <ol class="list-decimal list-inside ml-4 space-y-2">
+                        <li>Accept your admission offer within 30 days of this letter</li>
+                        <li>Complete enrollment registration through your student portal</li>
+                        <li>Submit required enrollment documents</li>
+                        <li>Pay the enrollment deposit of $500 (non-refundable)</li>
+                        <li>Attend the mandatory orientation session</li>
+                    </ol>
+                    
+                    <p>Detailed enrollment instructions and access to your student portal will be sent to your email address (<strong>{{ application.email }}</strong>) within 3 business days.</p>
+                    
+                    <p>Should you have any questions, please contact our Admissions Office at admissions@miu.edu or call +1 (555) 123-4567.</p>
+                    
+                    <p>Once again, congratulations on your acceptance. We look forward to welcoming you to the MIU community!</p>
+                </div>
+
+                <!-- Signature -->
+                <div class="mt-12 mb-8">
+                    <p class="text-gray-700 mb-6">Sincerely,</p>
+                    <div class="border-t-2 border-gray-300 pt-2 inline-block">
+                        <p class="text-gray-900 font-bold text-lg">Dr. Sarah Johnson</p>
+                        <p class="text-gray-700">Director of Admissions</p>
+                        <p class="text-gray-700">Modern International University</p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="mt-12 pt-8 border-t-2 border-gray-200 text-center text-sm text-gray-600">
+                    <p class="mb-2">This is an official letter of admission from Modern International University.</p>
+                    <p>Document ID: {{ application.application_id }} | Generated on {% now "F d, Y" %}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Information - Hidden on Print -->
+        <div class="mt-8 bg-blue-50 border-2 border-blue-200 rounded-xl p-6 no-print">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="info" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">How to Save as PDF</h3>
+                    <ul class="text-gray-700 space-y-2">
+                        <li>• Click the "Print / Save as PDF" button above</li>
+                        <li>• In the print dialog, select "Save as PDF" or "Microsoft Print to PDF" as the destination</li>
+                        <li>• Choose your preferred location and click "Save"</li>
+                        <li>• Your colored admission letter will be saved as a PDF file</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

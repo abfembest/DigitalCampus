@@ -854,6 +854,29 @@ def application_status(request):
     return render(request, 'applications/application_status.html', context)
 
 
+login_required
+def admission_letter(request, application_id):
+    """Display admission letter for accepted application"""
+    # Allow both applicant and admin to view
+    application = get_object_or_404(CourseApplication, id=application_id)
+    
+    # Check permissions: either the application owner or staff
+    if not (request.user == application.user or request.user.is_staff):
+        messages.error(request, 'You do not have permission to view this admission letter.')
+        return redirect('eduweb:index')
+    
+    # Check if application is accepted
+    if application.decision != 'accepted':
+        messages.warning(request, 'Admission letter is only available for accepted applications.')
+        return redirect('eduweb:application_status')
+    
+    context = {
+        'application': application,
+    }
+    
+    return render(request, 'applications/admission_letter.html', context)
+
+
 def payments(request):
     """payments page"""
     return render(request, 'payments.html')

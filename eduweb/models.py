@@ -201,9 +201,14 @@ class CourseApplication(models.Model):
     def save(self, *args, **kwargs):
         # Generate application ID if not exists
         if not self.application_id:
-            import random
             year = timezone.now().year
-            self.application_id = f'MIU-{year}-{random.randint(10000, 99999)}'
+            # First save to get the auto-generated ID
+            super().save(*args, **kwargs)
+            # Format: MIU-YEAR-ID (e.g., MIU-2025-0001)
+            self.application_id = f'MIU-{year}-{str(self.id).zfill(4)}'
+            # Save again with the formatted ID
+            super().save(*args, **kwargs)
+            return
         super().save(*args, **kwargs)
     
     def get_full_name(self):

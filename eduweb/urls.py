@@ -46,10 +46,13 @@ urlpatterns = [
 
     ############### PAYMENT GATEWAY ################
 
-    path('api/payment/summary/<uuid:application_id>/', views.get_payment_summary, name='payment-summary'),
-    path('api/payment/create-intent/', views.create_payment_intent, name='create-payment-intent'),
-    path('api/payment/confirm/', views.confirm_payment, name='confirm-payment'),
-    path('api/webhooks/stripe/', views.stripe_webhook, name='stripe-webhook'),
+    path("pay/", views.payment_page),
+    path("create-intent/", views.create_payment_intent),
+    path("confirm/", views.confirm_payment),
+    path("success/<int:payment_id>/", views.payment_success),
+    path("stripe/webhook/", views.stripe_webhook),
+    path("refund/<int:payment_id>/", views.refund_payment),
+
 ]
 
 # Serve media files during development

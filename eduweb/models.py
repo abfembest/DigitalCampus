@@ -253,7 +253,7 @@ class CourseApplicationFile(models.Model):
     )
     file = models.FileField(upload_to=application_file_upload_path)
     file_type = models.CharField(max_length=50, choices=FILE_TYPE_CHOICES, default='other')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_at = models.DateTimeField(default=timezone.now())
     original_filename = models.CharField(max_length=255, blank=True)
     file_size = models.IntegerField(default=0)  # in bytes
     
@@ -312,3 +312,14 @@ class Payment(models.Model):
     card_brand = models.CharField(max_length=50, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
+
+
+class Vendor(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    stripe_account_id = models.CharField(
+        max_length=255, blank=True, null=True
+    )  # Stripe Connect (future)
+
+    def __str__(self):
+        return self.name

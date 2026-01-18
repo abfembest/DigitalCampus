@@ -1,10 +1,10 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
 from .forms import ContactForm, CourseApplicationForm
-from .models import ContactMessage, CourseApplication, CourseApplicationFile,Application,Payment
-from django.http import JsonResponse
+from .models import ContactMessage, CourseApplication, CourseApplicationFile,Application,Payment,Vendor
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from .decorators import check_for_auth
 from django.contrib.auth import login, authenticate, logout
@@ -15,6 +15,8 @@ from django.contrib.sites.shortcuts import get_current_site
 from .forms import SignUpForm, LoginForm
 from .models import UserProfile
 import random
+from django.db import transaction, IntegrityError
+
 
 def application_status_context(request):
     """Add application status to all template contexts"""
@@ -900,6 +902,199 @@ logger = logging.getLogger(__name__)
 # Initialize Stripe
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+def payment_page(request):
+    return render(request, "applications/pay.html", {
+        "stripe_key": settings.STRIPE_PUBLIC_KEY,
+        "amount": 25000  # £250.00
+    })
+
+
+
+@require_POST
+def create_payment_intent(request):
+    if not request.body:
+        return JsonResponse({"error": "Empty request body"}, status=400)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        print(data)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    amount = data.get("amount")
+    application_id = data.get("application_id")
+    vendor_id = data.get("vendor_id")  # pass vendor ID from frontend
+
+    vendor = get_object_or_404(Vendor, id=vendor_id)
+
+    if not amount or not application_id:
+        return JsonResponse({"error": "Missing fields"}, status=400)
+
+    intent = stripe.PaymentIntent.create(
+        amount=int(amount),
+        currency="gbp",
+        metadata={
+            "application_id": application_id,
+            "vendor_id": vendor.id,
+            "user_id": request.user.id if request.user.is_authenticated else "",
+        },
+        automatic_payment_methods={"enabled": True}
+    )
+
+    return JsonResponse({"clientSecret": intent.client_secret})
+
+
+
+
+
+#Stripe Webhook (Atomic, Idempotent, Safe)
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except Exception:
+        return HttpResponse(status=400)
+
+    if event["type"] == "payment_intent.succeeded":
+        intent = event["data"]["object"]
+
+        try:
+            with transaction.atomic():
+                payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
+                    stripe_payment_intent=intent.id,
+                    defaults={
+                        "application_id": intent.metadata.get("application_id"),
+                        "amount": intent.amount / 100,
+                        "currency": intent.currency.upper(),
+                        "status": "PAID",
+                        "vendor_id": intent.metadata.get("vendor_id"),
+                    },
+                )
+
+                if not created and payment.status == "PAID":
+                    return HttpResponse(status=200)
+
+                payment.status = "PAID"
+                payment.save()
+
+                # send emails after commit
+                transaction.on_commit(lambda: send_payment_emails(payment))
+
+        except IntegrityError:
+            return HttpResponse(status=200)
+
+    return HttpResponse(status=200)
+
+
+
+#Send Emails Helper
+
+
+def send_payment_emails(payment):
+    if payment.user and payment.user.email:
+        send_mail(
+            "Payment Receipt",
+            f"""
+    Payment Successful
+
+    Amount: £{payment.amount}
+    Application ID: {payment.application_id}
+    Transaction: {payment.stripe_payment_intent}
+    """,
+                settings.DEFAULT_FROM_EMAIL,
+                [payment.user.email],
+                fail_silently=True,
+            )
+
+        send_mail(
+            "New Payment Received",
+            f"""
+    Vendor Payment Alert
+
+    Application ID: {payment.application_id}
+    Amount: £{payment.amount}
+    """,
+            settings.DEFAULT_FROM_EMAIL,
+            [payment.vendor.email],
+            fail_silently=True,
+    )
+
+
+
+#Confirm Payment (Frontend POST fallback)
+
+@require_POST
+def confirm_payment(request):
+    if not request.body:
+        return JsonResponse({"error": "Empty body"}, status=400)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    payment_intent_id = data.get("payment_intent")
+    if not payment_intent_id:
+        return JsonResponse({"error": "Missing payment_intent"}, status=400)
+
+    intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+
+    if intent.status != "succeeded":
+        return JsonResponse({"status": "failed"}, status=400)
+
+    payment = ApplicationPayment.objects.filter(
+        stripe_payment_intent=intent.id
+    ).first()
+
+    if not payment:
+        return JsonResponse({"error": "Payment not recorded yet"}, status=400)
+
+    return JsonResponse({"status": "success", "payment_id": payment.id})
+
+
+#Payment Success Page (Receipt)
+
+def payment_success(request, payment_id):
+    payment = get_object_or_404(Application_pay, id=payment_id, status="PAID")
+
+    return render(request, "applications/payment_success.html", {
+        "payment": payment
+    })
+
+
+#Atomic Refunds
+
+@require_POST
+def refund_payment(request, payment_id):
+    payment = get_object_or_404(ApplicationPayment, id=payment_id)
+
+    if payment.status != "PAID":
+        return JsonResponse({"error": "Cannot refund non-paid payment"}, status=400)
+
+    try:
+        with transaction.atomic():
+            # Refund via Stripe
+            refund = stripe.Refund.create(
+                payment_intent=payment.stripe_payment_intent
+            )
+            # Update DB
+            payment.status = "REFUNDED"
+            payment.refunded_at = timezone.now()
+            payment.save()
+    except stripe.error.StripeError as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"status": "refunded"})
+
+
+
+
 @require_GET
 def get_payment_summary(request, application_id):
     """Get payment summary for an application"""
@@ -921,111 +1116,4 @@ def get_payment_summary(request, application_id):
     except Exception as e:
         logger.error(f"Error getting payment summary: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Unable to load payment details'}, status=500)
-
-@require_POST
-@csrf_exempt
-def create_payment_intent(request):
-    """Create Stripe Payment Intent"""
-    try:
-        data = json.loads(request.body)
-        application_id = data.get('application_id')
-        
-        application = get_object_or_404(Application, id=application_id)
-        amount = int(application.amount * 100)  # Convert to cents
-        
-        # Create Payment Intent
-        intent = stripe.PaymentIntent.create(
-            amount=amount,
-            currency='usd',
-            metadata={
-                'application_id': str(application.id),
-                'user_email': application.email,
-            },
-            description=f'Application fee for {application.full_name}',
-        )
-        
-        # Create payment record
-        payment = Payment.objects.create(
-            application=application,
-            amount=application.amount,
-            stripe_payment_intent_id=intent.id,
-            status='created'
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'clientSecret': intent.client_secret,
-            'payment_id': str(payment.id)
-        })
-    except Exception as e:
-        logger.error(f"Error creating payment intent: {str(e)}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-@require_POST
-@csrf_exempt
-def confirm_payment(request):
-    """Confirm payment and update application status"""
-    try:
-        data = json.loads(request.body)
-        payment_intent_id = data.get('payment_intent_id')
-        
-        # Retrieve payment intent from Stripe
-        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-        
-        if intent.status == 'succeeded':
-            # Update payment record
-            payment = Payment.objects.get(stripe_payment_intent_id=payment_intent_id)
-            payment.status = 'completed'
-            payment.card_last4 = intent.charges.data[0].payment_method_details.card.last4
-            payment.card_brand = intent.charges.data[0].payment_method_details.card.brand
-            payment.processed_at = timezone.now()
-            payment.save()
-            
-            # Update application status
-            application = payment.application
-            application.status = 'payment_completed'
-            application.save()
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Payment completed successfully',
-                'application_id': str(application.id)
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'error': f'Payment not successful. Status: {intent.status}'
-            }, status=400)
-            
-    except Exception as e:
-        logger.error(f"Error confirming payment: {str(e)}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-@require_POST
-@csrf_exempt
-def stripe_webhook(request):
-    """Handle Stripe webhooks for payment events"""
-    payload = request.body
-    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-        )
-    except ValueError as e:
-        return JsonResponse({'error': 'Invalid payload'}, status=400)
-    except stripe.error.SignatureVerificationError as e:
-        return JsonResponse({'error': 'Invalid signature'}, status=400)
-    
-    # Handle the event
-    if event['type'] == 'payment_intent.succeeded':
-        payment_intent = event['data']['object']
-        # Update your database here
-        logger.info(f"Payment succeeded for {payment_intent['id']}")
-    elif event['type'] == 'payment_intent.payment_failed':
-        payment_intent = event['data']['object']
-        logger.error(f"Payment failed for {payment_intent['id']}")
-    
-    return JsonResponse({'success': True})
-
 

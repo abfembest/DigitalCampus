@@ -321,5 +321,10 @@ class Vendor(models.Model):
         max_length=255, blank=True, null=True
     )  # Stripe Connect (future)
 
+<<<<<<< HEAD
     def __str__(self):
         return self.name
+=======
+    def _str_(self):
+        return self.name
+>>>>>>> 3f7806c9403befd488fff5c758601c5c41d39564

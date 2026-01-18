@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ContactMessage, CourseApplication, CourseApplicationFile, UserProfile
+from .models import ContactMessage, CourseApplication, CourseApplicationFile, UserProfile, Application, Payment, Vendor
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
@@ -260,3 +260,7 @@ class CourseApplicationFileAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         """Disable editing files from admin"""
         return False
+
+admin.site.register(Application)
+admin.site.register(Payment)
+admin.site.register(Vendor)

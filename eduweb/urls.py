@@ -24,18 +24,8 @@ urlpatterns = [
     path('admission-letter/<int:application_id>/', views.admission_letter, name='admission_letter'),
 
     # Faculty Pages
-    path('faculties/science/', views.faculty_science, name='faculty_science'),
-    path('faculties/engineering/', views.faculty_engineering, name='faculty_engineering'),
-    path('faculties/business/', views.faculty_business, name='faculty_business'),
-    path('faculties/arts/', views.faculty_arts, name='faculty_arts'),
-    path('faculties/health-sciences/', views.faculty_health, name='faculty_health'),
-
-    # Program Pages
-    path('programs/business-administration/', views.program_business_admin, name='program_business_admin'),
-    path('programs/computer-science/', views.program_computer_science, name='program_computer_science'),
-    path('programs/data-science/', views.program_data_science, name='program_data_science'),
-    path('programs/health-sciences/', views.program_health_sciences, name='program_health_sciences'),
-    path('programs/engineering/', views.program_engineering, name='program_engineering'),
+    path('faculty/<slug:slug>/', views.faculty_detail, name='faculty_detail'),
+    path('program/<slug:slug>/', views.course_detail, name='course_detail'),
 
     # Additional Pages
     path('research/', views.research, name='research'),

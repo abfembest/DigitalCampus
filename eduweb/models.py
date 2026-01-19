@@ -198,17 +198,33 @@ class CourseApplication(models.Model):
     def __str__(self):
         return f"{self.application_id} - {self.first_name} {self.last_name}"
     
+    # def save(self, *args, **kwargs):
+    #     # Generate application ID if not exists
+    #     if not self.application_id:
+    #         year = timezone.now().year
+    #         # First save to get the auto-generated ID
+    #         super().save(*args, **kwargs)
+    #         # Format: MIU-YEAR-ID (e.g., MIU-2025-0001)
+    #         self.application_id = f'MIU-{year}-{str(self.id).zfill(4)}'
+    #         # Save again with the formatted ID
+    #         super().save(*args, **kwargs)
+    #         return
+    #     super().save(*args, **kwargs)
+
     def save(self, *args, **kwargs):
-        # Generate application ID if not exists
         if not self.application_id:
+            # 1. Set a temporary unique ID to satisfy the database during the first save
+            self.application_id = f"TEMP-{uuid.uuid4().hex[:8]}"
+            super().save(*args, **kwargs)
+            
+            # 2. Generate the real formatted ID using the now-available self.id
             year = timezone.now().year
-            # First save to get the auto-generated ID
-            super().save(*args, **kwargs)
-            # Format: MIU-YEAR-ID (e.g., MIU-2025-0001)
             self.application_id = f'MIU-{year}-{str(self.id).zfill(4)}'
-            # Save again with the formatted ID
-            super().save(*args, **kwargs)
+            
+            # 3. Use .update() to save the final ID to the DB without triggering save() again
+            CourseApplication.objects.filter(id=self.id).update(application_id=self.application_id)
             return
+        
         super().save(*args, **kwargs)
     
     def get_full_name(self):
@@ -323,3 +339,151 @@ class Vendor(models.Model):
 
     def _str_(self):
         return self.name
+
+class Faculty(models.Model):
+    """Faculty/Department model"""
+    name = models.CharField(max_length=200, help_text="Faculty name (e.g., Faculty of Business)")
+    slug = models.SlugField(max_length=200, unique=True, help_text="URL-friendly name")
+    code = models.CharField(max_length=20, unique=True, help_text="Faculty code (e.g., BUS, ENG)")
+    
+    # Display Information
+    icon = models.CharField(max_length=50, default='graduation-cap', help_text="Lucide icon name")
+    color_primary = models.CharField(max_length=20, default='orange', help_text="Primary color (e.g., orange, blue)")
+    color_secondary = models.CharField(max_length=20, default='amber', help_text="Secondary color")
+    
+    # Content
+    tagline = models.CharField(max_length=200, help_text="Short tagline for hero section")
+    description = models.TextField(help_text="Main description of the faculty")
+    mission = models.TextField(blank=True, help_text="Faculty mission statement")
+    vision = models.TextField(blank=True, help_text="Faculty vision statement")
+    
+    # Media
+    hero_image = models.ImageField(upload_to='faculties/heroes/', blank=True, null=True)
+    about_image = models.ImageField(upload_to='faculties/about/', blank=True, null=True)
+    
+    # Statistics
+    student_count = models.IntegerField(default=0, help_text="Number of students")
+    placement_rate = models.IntegerField(default=0, help_text="Career placement rate (0-100)")
+    partner_count = models.IntegerField(default=0, help_text="Number of corporate partners")
+    international_faculty = models.IntegerField(default=0, help_text="International faculty percentage (0-100)")
+    
+    # Accreditation & Features
+    accreditation = models.TextField(blank=True, help_text="Accreditation details")
+    special_features = models.JSONField(default=list, blank=True, help_text="List of special features")
+    
+    # SEO
+    meta_description = models.CharField(max_length=160, blank=True)
+    meta_keywords = models.CharField(max_length=255, blank=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0, help_text="Order in navigation menu")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Faculty'
+        verbose_name_plural = 'Faculties'
+        ordering = ['display_order', 'name']
+    
+    def __str__(self):
+        return self.name
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('eduweb:faculty_detail', kwargs={'slug': self.slug})
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class Course(models.Model):
+    """Course/Program model"""
+    DEGREE_LEVEL_CHOICES = [
+        ('certificate', 'Certificate'),
+        ('diploma', 'Diploma'),
+        ('bachelor', "Bachelor's Degree"),
+        ('master', "Master's Degree"),
+        ('phd', 'PhD/Doctorate'),
+    ]
+    
+    STUDY_MODE_CHOICES = [
+        ('full-time', 'Full-time'),
+        ('part-time', 'Part-time'),
+        ('online', 'Online'),
+        ('hybrid', 'Hybrid'),
+    ]
+    
+    # Basic Information
+    name = models.CharField(max_length=200, help_text="Course name (e.g., Business Administration)")
+    slug = models.SlugField(max_length=200, unique=True)
+    code = models.CharField(max_length=20, unique=True, help_text="Course code (e.g., BUS101)")
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='courses')
+    
+    # Display
+    icon = models.CharField(max_length=50, default='book-open', help_text="Lucide icon name")
+    color_primary = models.CharField(max_length=20, default='blue', help_text="Primary color")
+    color_secondary = models.CharField(max_length=20, default='cyan', help_text="Secondary color")
+    
+    # Program Details
+    degree_levels = models.JSONField(default=list, help_text="Available degree levels (BSc, MSc, PhD)")
+    study_modes = models.JSONField(default=list, help_text="Available study modes")
+    duration_years = models.DecimalField(max_digits=3, decimal_places=1, default=4.0)
+    credits_required = models.IntegerField(default=120)
+    
+    # Content
+    tagline = models.CharField(max_length=200, help_text="Short tagline")
+    overview = models.TextField(help_text="Program overview")
+    description = models.TextField(help_text="Detailed description")
+    
+    # Learning Outcomes & Career Paths
+    learning_outcomes = models.JSONField(default=list, help_text="List of learning outcomes")
+    career_paths = models.JSONField(default=list, help_text="List of career paths")
+    
+    # Curriculum
+    core_courses = models.JSONField(default=list, help_text="Core courses with descriptions")
+    specialization_tracks = models.JSONField(default=list, help_text="Specialization options")
+    
+    # Requirements
+    undergraduate_requirements = models.JSONField(default=list, help_text="Undergrad admission requirements")
+    graduate_requirements = models.JSONField(default=list, help_text="Graduate admission requirements")
+    
+    # Statistics
+    avg_starting_salary = models.CharField(max_length=50, blank=True, help_text="e.g., $125k")
+    job_placement_rate = models.IntegerField(default=0, help_text="Placement rate (0-100)")
+    intake_periods = models.JSONField(default=list, help_text="Available intake periods")
+    
+    # Media
+    hero_image = models.ImageField(upload_to='courses/heroes/', blank=True, null=True)
+    
+    # SEO
+    meta_description = models.CharField(max_length=160, blank=True)
+    meta_keywords = models.CharField(max_length=255, blank=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False)
+    display_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Course'
+        verbose_name_plural = 'Courses'
+        ordering = ['faculty', 'display_order', 'name']
+    
+    def __str__(self):
+        return f"{self.name} - {self.faculty.name}"
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('eduweb:course_detail', kwargs={'slug': self.slug})
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)

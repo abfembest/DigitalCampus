@@ -769,60 +769,6 @@ The MIU Admissions Team
         return False
 
 
-# Faculty Pages
-@check_for_auth
-def faculty_science(request):
-    """Faculty of Science page"""
-    return render(request, 'faculties/science.html')
-
-@check_for_auth
-def faculty_engineering(request):
-    """Faculty of Engineering page"""
-    return render(request, 'faculties/engineering.html')
-
-@check_for_auth
-def faculty_business(request):
-    """Faculty of Business page"""
-    return render(request, 'faculties/business.html')
-
-@check_for_auth
-def faculty_arts(request):
-    """Faculty of Arts page"""
-    return render(request, 'faculties/arts.html')
-
-@check_for_auth
-def faculty_health(request):
-    """Faculty of Health Sciences page"""
-    return render(request, 'faculties/health.html')
-
-
-# Program Pages
-@check_for_auth
-def program_business_admin(request):
-    """Business Administration program page"""
-    return render(request, 'programs/business_administration.html')
-
-@check_for_auth
-def program_computer_science(request):
-    """Computer Science program page"""
-    return render(request, 'programs/computer_science.html')
-
-@check_for_auth
-def program_data_science(request):
-    """Data Science program page"""
-    return render(request, 'programs/data_science.html')
-
-
-def program_health_sciences(request):
-    """Health Sciences program page"""
-    return render(request, 'programs/health_sciences.html')
-
-
-def program_engineering(request):
-    """Engineering program page"""
-    return render(request, 'programs/engineering.html')
-
-
 # Additional Pages
 def research(request):
     """Research page view"""
@@ -1029,3 +975,31 @@ def stripe_webhook(request):
     return JsonResponse({'success': True})
 
 
+
+from django.shortcuts import get_object_or_404
+from .models import Faculty, Course
+
+@check_for_auth
+def faculty_detail(request, slug):
+    """Dynamic faculty detail page"""
+    faculty = get_object_or_404(Faculty, slug=slug, is_active=True)
+    courses = faculty.courses.filter(is_active=True)
+    
+    context = {
+        'faculty': faculty,
+        'courses': courses,
+    }
+    
+    return render(request, 'faculties/faculty_detail.html', context)
+
+
+@check_for_auth
+def course_detail(request, slug):
+    """Dynamic course detail page"""
+    course = get_object_or_404(Course, slug=slug, is_active=True)
+    
+    context = {
+        'course': course,
+    }
+    
+    return render(request, 'programs/course_detail.html', context)

@@ -300,3 +300,180 @@ def send_decision_email(application):
     except Exception as e:
         print(f"Error sending decision email: {str(e)}")
         return False
+    
+
+# Add these imports at the top
+from eduweb.models import Faculty, Course
+from management.forms import FacultyForm, CourseForm
+from django.urls import reverse
+
+# Add these new views AFTER your existing views
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def faculties_list(request):
+    """List all faculties"""
+    faculties = Faculty.objects.all().order_by('display_order', 'name')
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'faculties': faculties,
+        'pending_count': pending_count,
+    }
+    
+    return render(request, 'management/faculties_list.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def faculty_create(request):
+    """Create a new faculty"""
+    if request.method == 'POST':
+        form = FacultyForm(request.POST, request.FILES)
+        if form.is_valid():
+            faculty = form.save()
+            messages.success(request, f'Faculty "{faculty.name}" created successfully!')
+            return redirect('management:faculties_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = FacultyForm()
+    
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'form': form,
+        'pending_count': pending_count,
+        'action': 'Create',
+    }
+    
+    return render(request, 'management/faculty_form.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def faculty_edit(request, pk):
+    """Edit an existing faculty"""
+    faculty = get_object_or_404(Faculty, pk=pk)
+    
+    if request.method == 'POST':
+        form = FacultyForm(request.POST, request.FILES, instance=faculty)
+        if form.is_valid():
+            faculty = form.save()
+            messages.success(request, f'Faculty "{faculty.name}" updated successfully!')
+            return redirect('management:faculties_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = FacultyForm(instance=faculty)
+    
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'form': form,
+        'faculty': faculty,
+        'pending_count': pending_count,
+        'action': 'Edit',
+    }
+    
+    return render(request, 'management/faculty_form.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def faculty_delete(request, pk):
+    """Delete a faculty"""
+    faculty = get_object_or_404(Faculty, pk=pk)
+    
+    if request.method == 'POST':
+        faculty_name = faculty.name
+        faculty.delete()
+        messages.success(request, f'Faculty "{faculty_name}" deleted successfully!')
+        return redirect('management:faculties_list')
+    
+    return redirect('management:faculties_list')
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def courses_list(request):
+    """List all courses"""
+    courses = Course.objects.select_related('faculty').all().order_by('faculty', 'display_order', 'name')
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'courses': courses,
+        'pending_count': pending_count,
+    }
+    
+    return render(request, 'management/courses_list.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_create(request):
+    """Create a new course"""
+    if request.method == 'POST':
+        form = CourseForm(request.POST, request.FILES)
+        if form.is_valid():
+            course = form.save()
+            messages.success(request, f'Course "{course.name}" created successfully!')
+            return redirect('management:courses_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CourseForm()
+    
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'form': form,
+        'pending_count': pending_count,
+        'action': 'Create',
+    }
+    
+    return render(request, 'management/course_form.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_edit(request, pk):
+    """Edit an existing course"""
+    course = get_object_or_404(Course, pk=pk)
+    
+    if request.method == 'POST':
+        form = CourseForm(request.POST, request.FILES, instance=course)
+        if form.is_valid():
+            course = form.save()
+            messages.success(request, f'Course "{course.name}" updated successfully!')
+            return redirect('management:courses_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CourseForm(instance=course)
+    
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'form': form,
+        'course': course,
+        'pending_count': pending_count,
+        'action': 'Edit',
+    }
+    
+    return render(request, 'management/course_form.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_delete(request, pk):
+    """Delete a course"""
+    course = get_object_or_404(Course, pk=pk)
+    
+    if request.method == 'POST':
+        course_name = course.name
+        course.delete()
+        messages.success(request, f'Course "{course_name}" deleted successfully!')
+        return redirect('management:courses_list')
+    
+    return redirect('management:courses_list')

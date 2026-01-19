@@ -264,3 +264,97 @@ class CourseApplicationFileAdmin(admin.ModelAdmin):
 admin.site.register(Application)
 admin.site.register(Payment)
 admin.site.register(Vendor)
+
+from .models import Faculty, Course
+
+@admin.register(Faculty)
+class FacultyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'student_count', 'is_active', 'display_order', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('name', 'code', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('is_active', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'code', 'is_active', 'display_order')
+        }),
+        ('Display Settings', {
+            'fields': ('icon', 'color_primary', 'color_secondary', 'tagline')
+        }),
+        ('Content', {
+            'fields': ('description', 'mission', 'vision')
+        }),
+        ('Media', {
+            'fields': ('hero_image', 'about_image'),
+            'classes': ('collapse',)
+        }),
+        ('Statistics', {
+            'fields': ('student_count', 'placement_rate', 'partner_count', 'international_faculty')
+        }),
+        ('Additional Information', {
+            'fields': ('accreditation', 'special_features'),
+            'classes': ('collapse',)
+        }),
+        ('SEO', {
+            'fields': ('meta_description', 'meta_keywords'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'faculty', 'duration_years', 'is_active', 'is_featured', 'display_order')
+    list_filter = ('faculty', 'is_active', 'is_featured', 'created_at')
+    search_fields = ('name', 'code', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('is_active', 'is_featured', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'code', 'faculty', 'is_active', 'is_featured', 'display_order')
+        }),
+        ('Display Settings', {
+            'fields': ('icon', 'color_primary', 'color_secondary', 'tagline')
+        }),
+        ('Program Details', {
+            'fields': ('degree_levels', 'study_modes', 'duration_years', 'credits_required', 'intake_periods')
+        }),
+        ('Content', {
+            'fields': ('overview', 'description')
+        }),
+        ('Learning & Career', {
+            'fields': ('learning_outcomes', 'career_paths'),
+            'classes': ('collapse',)
+        }),
+        ('Curriculum', {
+            'fields': ('core_courses', 'specialization_tracks'),
+            'classes': ('collapse',)
+        }),
+        ('Admission Requirements', {
+            'fields': ('undergraduate_requirements', 'graduate_requirements'),
+            'classes': ('collapse',)
+        }),
+        ('Statistics', {
+            'fields': ('avg_starting_salary', 'job_placement_rate')
+        }),
+        ('Media', {
+            'fields': ('hero_image',),
+            'classes': ('collapse',)
+        }),
+        ('SEO', {
+            'fields': ('meta_description', 'meta_keywords'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )

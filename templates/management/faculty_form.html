@@ -1,0 +1,280 @@
+{% extends 'management/base.html' %}
+
+{% block title %}{{ action }} Faculty - MIU Admin{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center gap-3 text-sm text-gray-600 mb-4">
+        <a href="{% url 'management:dashboard' %}" class="hover:text-primary-600">Dashboard</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <a href="{% url 'management:faculties_list' %}" class="hover:text-primary-600">Faculties</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span class="text-gray-900 font-medium">{{ action }} Faculty</span>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-900 font-display">{{ action }} Faculty</h1>
+    <p class="text-gray-600 mt-2">{{ action }} faculty information and settings</p>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="space-y-6">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+    <div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    
+    <!-- Basic Information -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-info-circle text-primary-600"></i>
+            Basic Information
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Faculty Name *</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Faculty Code *</label>
+                {{ form.code }}
+                {% if form.code.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.code.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Icon (Lucide Icon Name) *</label>
+                {{ form.icon }}
+                <p class="text-xs text-gray-500 mt-1">Browse icons at: <a href="https://lucide.dev/icons" target="_blank" class="text-primary-600 hover:underline">lucide.dev/icons</a></p>
+                {% if form.icon.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.icon.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Tagline *</label>
+                {{ form.tagline }}
+                {% if form.tagline.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.tagline.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Colors -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-palette text-primary-600"></i>
+            Color Scheme
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Primary Color *</label>
+                {{ form.color_primary }}
+                {% if form.color_primary.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.color_primary.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Secondary Color *</label>
+                {{ form.color_secondary }}
+                {% if form.color_secondary.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.color_secondary.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Content -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-file-alt text-primary-600"></i>
+            Content
+        </h2>
+        
+        <div class="space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Description *</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Mission Statement</label>
+                {{ form.mission }}
+                {% if form.mission.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.mission.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Vision Statement</label>
+                {{ form.vision }}
+                {% if form.vision.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.vision.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Accreditation</label>
+                {{ form.accreditation }}
+                {% if form.accreditation.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.accreditation.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-chart-bar text-primary-600"></i>
+            Statistics
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Student Count</label>
+                {{ form.student_count }}
+                {% if form.student_count.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.student_count.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Placement Rate (%)</label>
+                {{ form.placement_rate }}
+                {% if form.placement_rate.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.placement_rate.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Corporate Partners</label>
+                {{ form.partner_count }}
+                {% if form.partner_count.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.partner_count.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">International Faculty (%)</label>
+                {{ form.international_faculty }}
+                {% if form.international_faculty.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.international_faculty.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Special Features -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-star text-primary-600"></i>
+            Special Features
+        </h2>
+        
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Special Features</label>
+            {{ form.special_features_text }}
+            {% if form.special_features_text.errors %}
+            <p class="text-red-600 text-sm mt-1">{{ form.special_features_text.errors.0 }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Images -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-images text-primary-600"></i>
+            Images
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Hero Image</label>
+                {{ form.hero_image }}
+                {% if faculty and faculty.hero_image %}
+                <img src="{{ faculty.hero_image.url }}" class="mt-3 max-w-xs rounded-lg shadow" alt="Current hero image">
+                {% endif %}
+                {% if form.hero_image.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.hero_image.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">About Image</label>
+                {{ form.about_image }}
+                {% if faculty and faculty.about_image %}
+                <img src="{{ faculty.about_image.url }}" class="mt-3 max-w-xs rounded-lg shadow" alt="Current about image">
+                {% endif %}
+                {% if form.about_image.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.about_image.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- SEO & Settings -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-cog text-primary-600"></i>
+            SEO & Settings
+        </h2>
+        
+        <div class="space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Meta Description</label>
+                {{ form.meta_description }}
+                {% if form.meta_description.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.meta_description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Meta Keywords</label>
+                {{ form.meta_keywords }}
+                {% if form.meta_keywords.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.meta_keywords.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="flex items-center gap-3">
+                    {{ form.is_active }}
+                    <label class="text-sm font-semibold text-gray-700">Active (visible on website)</label>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Display Order</label>
+                    {{ form.display_order }}
+                    {% if form.display_order.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.display_order.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Form Actions -->
+    <div class="flex items-center gap-4">
+        <button type="submit" class="px-8 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-all shadow-lg hover:shadow-xl">
+            <i class="fas fa-save mr-2"></i>
+            {{ action }} Faculty
+        </button>
+        <a href="{% url 'management:faculties_list' %}" class="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all">
+            Cancel
+        </a>
+    </div>
+</form>
+{% endblock %}

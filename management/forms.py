@@ -481,3 +481,169 @@ class CourseForm(forms.ModelForm):
             instance.save()
         
         return instance
+    
+from django import forms
+from eduweb.models import BlogPost, BlogCategory
+
+class BlogCategoryForm(forms.ModelForm):
+    """Form for creating/editing blog categories"""
+    
+    class Meta:
+        model = BlogCategory
+        fields = ['name', 'description', 'icon', 'color', 'display_order', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., Student Life'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'rows': 3,
+                'placeholder': 'Brief description of this category...'
+            }),
+            'icon': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., users (Lucide icon name)'
+            }),
+            'color': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            }, choices=[
+                ('blue', 'Blue'), ('green', 'Green'), ('purple', 'Purple'),
+                ('orange', 'Orange'), ('red', 'Red'), ('teal', 'Teal'),
+                ('pink', 'Pink'), ('indigo', 'Indigo'), ('rose', 'Rose')
+            ]),
+            'display_order': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., 1 (lower numbers appear first)'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+        }
+
+
+class BlogPostForm(forms.ModelForm):
+    """Form for creating/editing blog posts"""
+    
+    # Tags as textarea (convert to JSON list)
+    tags_text = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+            'placeholder': 'research, innovation, technology (comma-separated)'
+        }),
+        label='Tags',
+        help_text='Enter tags separated by commas'
+    )
+    
+    class Meta:
+        model = BlogPost
+        fields = [
+            'title', 'subtitle', 'excerpt', 'content', 'category',
+            'author_name', 'author_title', 'featured_image', 'featured_image_alt',
+            'read_time', 'status', 'is_featured', 'publish_date',
+            'meta_description', 'meta_keywords'
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., MIU Researchers Develop Breakthrough AI Technology'
+            }),
+            'subtitle': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'Optional subtitle for additional context'
+            }),
+            'excerpt': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'rows': 3,
+                'placeholder': 'Write a compelling summary (max 500 characters)...',
+                'maxlength': 500
+            }),
+            'content': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'rows': 15,
+                'placeholder': 'Write your full blog post content here. You can use HTML for formatting...'
+            }),
+            'category': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            }),
+            'author_name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., Dr. Sarah Johnson'
+            }),
+            'author_title': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., Communications Director'
+            }),
+            'featured_image': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'image/*'
+            }),
+            'featured_image_alt': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'Describe the image for accessibility'
+            }),
+            'read_time': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., 5 (minutes)',
+                'min': 1
+            }),
+            'status': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            }),
+            'is_featured': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'publish_date': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all'
+            }),
+            'meta_description': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'SEO meta description (max 160 characters)',
+                'maxlength': 160
+            }),
+            'meta_keywords': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'keyword1, keyword2, keyword3'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Pre-populate tags_text if editing
+        if self.instance.pk and self.instance.tags:
+            if isinstance(self.instance.tags, list):
+                self.fields['tags_text'].initial = ', '.join(self.instance.tags)
+        
+        # Set current user as default author if creating new post
+        if not self.instance.pk:
+            # This will be set in the view
+            pass
+    
+    def clean_tags_text(self):
+        """Convert comma-separated tags to list"""
+        text = self.cleaned_data.get('tags_text', '').strip()
+        if not text:
+            return []
+        
+        # Split by comma and clean each tag
+        tags = [tag.strip().lower() for tag in text.split(',') if tag.strip()]
+        return tags
+    
+    def clean_excerpt(self):
+        """Ensure excerpt is not too long"""
+        excerpt = self.cleaned_data.get('excerpt', '')
+        if len(excerpt) > 500:
+            raise forms.ValidationError('Excerpt must be 500 characters or less.')
+        return excerpt
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.tags = self.cleaned_data.get('tags_text', [])
+        
+        if commit:
+            instance.save()
+        
+        return instance

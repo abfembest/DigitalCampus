@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ContactMessage, CourseApplication, CourseApplicationFile, UserProfile, Application, Payment, Vendor
+from .models import ContactMessage, CourseApplication, CourseApplicationFile, UserProfile, Application, Payment, Vendor, BlogCategory, BlogPost
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
@@ -358,3 +358,6 @@ class CourseAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+admin.site.register(BlogCategory)
+admin.site.register(BlogPost)

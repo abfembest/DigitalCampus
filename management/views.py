@@ -477,3 +477,185 @@ def course_delete(request, pk):
         return redirect('management:courses_list')
     
     return redirect('management:courses_list')
+
+from eduweb.models import BlogPost, BlogCategory
+from management.forms import BlogPostForm, BlogCategoryForm
+
+# Add these views to management/views.py
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def blog_posts_list(request):
+    """List all blog posts"""
+    posts = BlogPost.objects.select_related('category', 'author').all().order_by('-publish_date')
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    # Filter by status if provided
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        posts = posts.filter(status=status_filter)
+    
+    context = {
+        'posts': posts,
+        'pending_count': pending_count,
+    }
+    
+    return render(request, 'management/blog_posts_list.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def blog_post_create(request):
+    """Create a new blog post"""
+    if request.method == 'POST':
+        form = BlogPostForm(request.POST, request.FILES)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+            messages.success(request, f'Blog post "{post.title}" created successfully!')
+            return redirect('management:blog_posts_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = BlogPostForm()
+    
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'form': form,
+        'pending_count': pending_count,
+        'action': 'Create',
+    }
+    
+    return render(request, 'management/blog_post_form.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def blog_post_edit(request, pk):
+    """Edit an existing blog post"""
+    post = get_object_or_404(BlogPost, pk=pk)
+    
+    if request.method == 'POST':
+        form = BlogPostForm(request.POST, request.FILES, instance=post)
+        if form.is_valid():
+            post = form.save()
+            messages.success(request, f'Blog post "{post.title}" updated successfully!')
+            return redirect('management:blog_posts_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = BlogPostForm(instance=post)
+    
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'form': form,
+        'post': post,
+        'pending_count': pending_count,
+        'action': 'Edit',
+    }
+    
+    return render(request, 'management/blog_post_form.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def blog_post_delete(request, pk):
+    """Delete a blog post"""
+    post = get_object_or_404(BlogPost, pk=pk)
+    
+    if request.method == 'POST':
+        post_title = post.title
+        post.delete()
+        messages.success(request, f'Blog post "{post_title}" deleted successfully!')
+        return redirect('management:blog_posts_list')
+    
+    return redirect('management:blog_posts_list')
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def blog_categories_list(request):
+    """List all blog categories"""
+    categories = BlogCategory.objects.all().order_by('display_order', 'name')
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'categories': categories,
+        'pending_count': pending_count,
+    }
+    
+    return render(request, 'management/blog_categories_list.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def blog_category_create(request):
+    """Create a new blog category"""
+    if request.method == 'POST':
+        form = BlogCategoryForm(request.POST)
+        if form.is_valid():
+            category = form.save()
+            messages.success(request, f'Category "{category.name}" created successfully!')
+            return redirect('management:blog_categories_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = BlogCategoryForm()
+    
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'form': form,
+        'pending_count': pending_count,
+        'action': 'Create',
+    }
+    
+    return render(request, 'management/blog_category_form.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def blog_category_edit(request, pk):
+    """Edit an existing blog category"""
+    category = get_object_or_404(BlogCategory, pk=pk)
+    
+    if request.method == 'POST':
+        form = BlogCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            category = form.save()
+            messages.success(request, f'Category "{category.name}" updated successfully!')
+            return redirect('management:blog_categories_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = BlogCategoryForm(instance=category)
+    
+    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    
+    context = {
+        'form': form,
+        'category': category,
+        'pending_count': pending_count,
+        'action': 'Edit',
+    }
+    
+    return render(request, 'management/blog_category_form.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def blog_category_delete(request, pk):
+    """Delete a blog category"""
+    category = get_object_or_404(BlogCategory, pk=pk)
+    
+    if request.method == 'POST':
+        category_name = category.name
+        category.delete()
+        messages.success(request, f'Category "{category_name}" deleted successfully!')
+        return redirect('management:blog_categories_list')
+    
+    return redirect('management:blog_categories_list')

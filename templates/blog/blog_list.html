@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}MIU Blog - News, Stories & Insights | Modern International University{% endblock %}
+
+{% block meta_tags %}
+<meta name="description" content="Read the latest news, student stories, research updates, and insights from Modern International University. Stay connected with the MIU community.">
+<meta name="keywords" content="MIU blog, university news, student stories, campus updates, research news, higher education blog">
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-primary-950 via-purple-900 to-indigo-900 text-white py-24 lg:py-32 overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-20 left-10 w-64 h-64 bg-purple-300 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-indigo-300 rounded-full blur-3xl"></div>
+    </div>
+    
+    <div class="container mx-auto relative z-10">
+        <div class="max-w-4xl">
+            <nav class="flex mb-8 text-sm" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-2">
+                    <li><a href="{% url 'eduweb:index' %}" class="text-purple-200 hover:text-white transition-colors">Home</a></li>
+                    <li><i data-lucide="chevron-right" class="w-4 h-4 text-purple-300"></i></li>
+                    <li><span class="text-white font-medium">Blog</span></li>
+                </ol>
+            </nav>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl">
+                    <i data-lucide="newspaper" class="w-8 h-8 text-white"></i>
+                </div>
+                <div>
+                    <p class="text-purple-200 text-sm font-medium mb-1">News & Stories</p>
+                    <h1 class="text-4xl lg:text-6xl font-bold font-display">MIU Blog</h1>
+                </div>
+            </div>
+            
+            <p class="text-xl text-purple-100 mb-8 leading-relaxed max-w-3xl">
+                Discover the latest news, student stories, research breakthroughs, and insights from the MIU community.
+            </p>
+
+            <!-- Search Bar -->
+            <form method="GET" action="{% url 'eduweb:blog' %}" class="max-w-2xl">
+                <div class="relative">
+                    <input type="search" 
+                           name="search" 
+                           value="{{ search_query }}"
+                           placeholder="Search articles..." 
+                           class="w-full px-6 py-4 pr-14 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-300 focus:outline-none">
+                    <button type="submit" 
+                            class="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-primary-950 text-white rounded-lg hover:bg-purple-800 transition-colors">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- Categories -->
+<section class="py-8 bg-white border-b border-gray-200 sticky top-20 lg:top-24 z-30">
+    <div class="container mx-auto">
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'eduweb:blog' %}" 
+               class="px-6 py-2 {% if not current_category %}bg-primary-950 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} rounded-full font-semibold transition-colors duration-200">
+                All Posts
+            </a>
+            {% for category in categories %}
+            <a href="{% url 'eduweb:blog' %}?category={{ category.slug }}" 
+               class="px-6 py-2 {% if current_category == category.slug %}bg-{{ category.color }}-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} rounded-full font-semibold transition-colors duration-200">
+                {{ category.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Featured Post -->
+{% if featured_post and not current_category and not search_query %}
+<section class="py-16 bg-gradient-to-br from-purple-50 to-pink-50">
+    <div class="container mx-auto">
+        <div class="max-w-6xl mx-auto bg-white rounded-2xl overflow-hidden shadow-2xl border border-purple-100">
+            <div class="grid md:grid-cols-2">
+                <div class="h-64 md:h-full bg-gradient-to-br from-purple-200 to-pink-200 flex items-center justify-center overflow-hidden">
+                    {% if featured_post.featured_image %}
+                    <img src="{{ featured_post.featured_image.url }}" 
+                         alt="{{ featured_post.featured_image_alt|default:featured_post.title }}" 
+                         class="w-full h-full object-cover">
+                    {% else %}
+                    <i data-lucide="image" class="w-24 h-24 text-purple-400"></i>
+                    {% endif %}
+                </div>
+                <div class="p-8 md:p-12">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">FEATURED</span>
+                        {% if featured_post.category %}
+                        <span class="px-3 py-1 bg-{{ featured_post.category.color }}-100 text-{{ featured_post.category.color }}-700 rounded-full text-xs font-semibold">
+                            {{ featured_post.category.name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4 font-display">{{ featured_post.title }}</h2>
+                    <p class="text-gray-600 mb-6 leading-relaxed">{{ featured_post.excerpt }}</p>
+                    <div class="flex items-center gap-4 text-sm text-gray-500 mb-6">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                            <span>{{ featured_post.author_name }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                            <span>{{ featured_post.publish_date|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                            <span>{{ featured_post.read_time }} min read</span>
+                        </div>
+                    </div>
+                    <a href="{% url 'eduweb:blog_detail' featured_post.slug %}" 
+                       class="inline-flex items-center gap-2 text-primary-950 font-semibold hover:gap-3 transition-all">
+                        Read Full Story
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Blog Posts Grid -->
+<section class="py-20 bg-white">
+    <div class="container mx-auto">
+        {% if search_query %}
+        <div class="mb-8">
+            <p class="text-gray-600">
+                Search results for: <strong class="text-gray-900">"{{ search_query }}"</strong>
+                <span class="text-sm ml-2">({{ posts.paginator.count }} posts found)</span>
+            </p>
+        </div>
+        {% endif %}
+
+        <div class="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for post in posts %}
+            <article class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300 flex flex-col">
+                <div class="h-48 bg-gradient-to-br from-{{ post.category.color|default:'blue' }}-200 to-{{ post.category.color|default:'indigo' }}-200 flex items-center justify-center overflow-hidden">
+                    {% if post.featured_image %}
+                    <img src="{{ post.featured_image.url }}" 
+                         alt="{{ post.featured_image_alt|default:post.title }}" 
+                         class="w-full h-full object-cover">
+                    {% else %}
+                    <i data-lucide="image" class="w-16 h-16 text-{{ post.category.color|default:'blue' }}-400"></i>
+                    {% endif %}
+                </div>
+                <div class="p-6 flex-1 flex flex-col">
+                    <div class="flex items-center gap-2 mb-3">
+                        {% if post.category %}
+                        <span class="px-3 py-1 bg-{{ post.category.color }}-100 text-{{ post.category.color }}-700 rounded-full text-xs font-semibold">
+                            {{ post.category.name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2">{{ post.title }}</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-3 flex-1">{{ post.excerpt }}</p>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                        <span>{{ post.author_name }}</span>
+                        <span>{{ post.publish_date|date:"M d, Y" }}</span>
+                    </div>
+                    <a href="{% url 'eduweb:blog_detail' post.slug %}" 
+                       class="inline-flex items-center gap-2 text-{{ post.category.color|default:'blue' }}-600 font-semibold text-sm hover:gap-3 transition-all">
+                        Read More
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </article>
+            {% empty %}
+            <div class="col-span-full text-center py-16">
+                <i data-lucide="search-x" class="w-20 h-20 text-gray-300 mx-auto mb-4"></i>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">No posts found</h3>
+                <p class="text-gray-600 mb-6">Try adjusting your search or filters</p>
+                <a href="{% url 'eduweb:blog' %}" 
+                   class="inline-flex items-center gap-2 px-6 py-3 bg-primary-950 text-white rounded-xl font-semibold hover:bg-purple-800 transition-colors">
+                    View All Posts
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if posts.paginator.num_pages > 1 %}
+        <div class="flex justify-center mt-12 gap-2">
+            {% if posts.has_previous %}
+            <a href="?page={{ posts.previous_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </a>
+            {% endif %}
+
+            {% for num in posts.paginator.page_range %}
+                {% if posts.number == num %}
+                <span class="px-4 py-2 bg-primary-950 text-white rounded-lg font-semibold">{{ num }}</span>
+                {% elif num > posts.number|add:'-3' and num < posts.number|add:'3' %}
+                <a href="?page={{ num }}{% if current_category %}&category={{ current_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                   class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+
+            {% if posts.has_next %}
+            <a href="?page={{ posts.next_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

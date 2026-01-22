@@ -782,60 +782,6 @@ The MIU Admissions Team
         return False
 
 
-# Faculty Pages
-@check_for_auth
-def faculty_science(request):
-    """Faculty of Science page"""
-    return render(request, 'faculties/science.html')
-
-@check_for_auth
-def faculty_engineering(request):
-    """Faculty of Engineering page"""
-    return render(request, 'faculties/engineering.html')
-
-@check_for_auth
-def faculty_business(request):
-    """Faculty of Business page"""
-    return render(request, 'faculties/business.html')
-
-@check_for_auth
-def faculty_arts(request):
-    """Faculty of Arts page"""
-    return render(request, 'faculties/arts.html')
-
-@check_for_auth
-def faculty_health(request):
-    """Faculty of Health Sciences page"""
-    return render(request, 'faculties/health.html')
-
-
-# Program Pages
-@check_for_auth
-def program_business_admin(request):
-    """Business Administration program page"""
-    return render(request, 'programs/business_administration.html')
-
-@check_for_auth
-def program_computer_science(request):
-    """Computer Science program page"""
-    return render(request, 'programs/computer_science.html')
-
-@check_for_auth
-def program_data_science(request):
-    """Data Science program page"""
-    return render(request, 'programs/data_science.html')
-
-
-def program_health_sciences(request):
-    """Health Sciences program page"""
-    return render(request, 'programs/health_sciences.html')
-
-
-def program_engineering(request):
-    """Engineering program page"""
-    return render(request, 'programs/engineering.html')
-
-
 # Additional Pages
 def research(request):
     """Research page view"""
@@ -847,9 +793,109 @@ def campus_life(request):
     return render(request, 'campus_life.html')
 
 
+from django.core.paginator import Paginator
+from eduweb.models import BlogPost, BlogCategory
+
+@check_for_auth
 def blog(request):
-    """Blog page view"""
-    return render(request, 'blog.html')
+    """Blog listing page with filtering and pagination"""
+    # Get all published posts
+    posts = BlogPost.objects.filter(status='published').select_related('category', 'author')
+    
+    # Get category filter
+    category_slug = request.GET.get('category', '')
+    if category_slug:
+        posts = posts.filter(category__slug=category_slug)
+    
+    # Get search query
+    search_query = request.GET.get('search', '')
+    if search_query:
+        posts = posts.filter(
+            Q(title__icontains=search_query) | 
+            Q(excerpt__icontains=search_query) |
+            Q(content__icontains=search_query)
+        )
+    
+    # Order by publish date
+    posts = posts.order_by('-publish_date')
+    
+    # Get featured post (most recent featured post)
+    featured_post = BlogPost.objects.filter(
+        status='published', 
+        is_featured=True
+    ).order_by('-publish_date').first()
+    
+    # Pagination (9 posts per page)
+    paginator = Paginator(posts, 9)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get all active categories for filter
+    categories = BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name')
+    
+    context = {
+        'posts': page_obj,
+        'featured_post': featured_post,
+        'categories': categories,
+        'current_category': category_slug,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'blog/blog_list.html', context)
+
+
+@check_for_auth
+def blog_detail(request, slug):
+    """Individual blog post detail page"""
+    post = get_object_or_404(
+        BlogPost.objects.select_related('category', 'author'),
+        slug=slug,
+        status='published'
+    )
+    
+    # Increment view count
+    post.increment_views()
+    
+    # Get related posts
+    related_posts = post.get_related_posts(limit=3)
+    
+    # Get all categories for sidebar
+    categories = BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name')
+    
+    context = {
+        'post': post,
+        'related_posts': related_posts,
+        'categories': categories,
+    }
+    
+    return render(request, 'blog/blog_detail.html', context)
+
+
+@check_for_auth
+def blog_category(request, slug):
+    """Blog posts filtered by category"""
+    category = get_object_or_404(BlogCategory, slug=slug, is_active=True)
+    
+    posts = BlogPost.objects.filter(
+        status='published',
+        category=category
+    ).select_related('author').order_by('-publish_date')
+    
+    # Pagination
+    paginator = Paginator(posts, 9)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get all categories for filter
+    categories = BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name')
+    
+    context = {
+        'posts': page_obj,
+        'categories': categories,
+        'current_category': category,
+    }
+    
+    return render(request, 'blog/blog_category.html', context)
 
 
 @login_required
@@ -1284,6 +1330,7 @@ def upload_application_file(request, application_id):
     file = request.FILES.get("file")
     file_type = request.POST.get("file_type")
 
+<<<<<<< HEAD
     CourseApplicationFile.objects.create(
         application=application,
         file=file,
@@ -1298,3 +1345,33 @@ def finalize_application(application):
     application.submission_date = timezone.now()
     application.status = "submitted"
     application.save()
+=======
+
+from django.shortcuts import get_object_or_404
+from .models import Faculty, Course
+
+@check_for_auth
+def faculty_detail(request, slug):
+    """Dynamic faculty detail page"""
+    faculty = get_object_or_404(Faculty, slug=slug, is_active=True)
+    courses = faculty.courses.filter(is_active=True)
+    
+    context = {
+        'faculty': faculty,
+        'courses': courses,
+    }
+    
+    return render(request, 'faculties/faculty_detail.html', context)
+
+
+@check_for_auth
+def course_detail(request, slug):
+    """Dynamic course detail page"""
+    course = get_object_or_404(Course, slug=slug, is_active=True)
+    
+    context = {
+        'course': course,
+    }
+    
+    return render(request, 'programs/course_detail.html', context)
+>>>>>>> ef6e711df83ba864c3342774272e1a30ecceb6b3

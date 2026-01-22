@@ -3,9 +3,11 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils.text import slugify
 import uuid
 import os
 
+# ==================== USER PROFILE ====================
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     email_verified = models.BooleanField(default=False)
@@ -21,7 +23,6 @@ class UserProfile(models.Model):
         return f"{self.user.username}'s Profile"
     
     def generate_verification_token(self):
-        """Generate a new verification token"""
         self.verification_token = uuid.uuid4()
         self.save()
         return self.verification_token
@@ -29,18 +30,17 @@ class UserProfile(models.Model):
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
-    """Create UserProfile when User is created"""
     if created:
         UserProfile.objects.create(user=instance)
 
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
-    """Save UserProfile when User is saved"""
     if hasattr(instance, 'profile'):
         instance.profile.save()
 
 
+# ==================== CONTACT ====================
 class ContactMessage(models.Model):
     SUBJECT_CHOICES = [
         ('admissions', 'Admissions Inquiry'),
@@ -67,6 +67,129 @@ class ContactMessage(models.Model):
         return f"{self.name} - {self.subject} ({self.created_at.strftime('%Y-%m-%d')})"
 
 
+# ==================== FACULTIES & COURSES ====================
+class Faculty(models.Model):
+    name = models.CharField(max_length=200, help_text="Faculty name (e.g., Faculty of Business)")
+    slug = models.SlugField(max_length=200, unique=True, help_text="URL-friendly name")
+    code = models.CharField(max_length=20, unique=True, help_text="Faculty code (e.g., BUS, ENG)")
+    
+    # Display Information
+    icon = models.CharField(max_length=50, default='graduation-cap', help_text="Lucide icon name")
+    color_primary = models.CharField(max_length=20, default='orange', help_text="Primary color")
+    color_secondary = models.CharField(max_length=20, default='amber', help_text="Secondary color")
+    
+    # Content
+    tagline = models.CharField(max_length=200, help_text="Short tagline for hero section")
+    description = models.TextField(help_text="Main description of the faculty")
+    mission = models.TextField(blank=True, help_text="Faculty mission statement")
+    vision = models.TextField(blank=True, help_text="Faculty vision statement")
+    
+    # Media
+    hero_image = models.ImageField(upload_to='faculties/heroes/', blank=True, null=True)
+    about_image = models.ImageField(upload_to='faculties/about/', blank=True, null=True)
+    
+    # Statistics
+    student_count = models.IntegerField(default=0, help_text="Number of students")
+    placement_rate = models.IntegerField(default=0, help_text="Career placement rate (0-100)")
+    partner_count = models.IntegerField(default=0, help_text="Number of corporate partners")
+    international_faculty = models.IntegerField(default=0, help_text="International faculty percentage")
+    
+    # Accreditation & Features
+    accreditation = models.TextField(blank=True, help_text="Accreditation details")
+    special_features = models.JSONField(default=list, blank=True, help_text="List of special features")
+    
+    # SEO
+    meta_description = models.CharField(max_length=160, blank=True)
+    meta_keywords = models.CharField(max_length=255, blank=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Faculty'
+        verbose_name_plural = 'Faculties'
+        ordering = ['display_order', 'name']
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class Course(models.Model):
+    name = models.CharField(max_length=200, help_text="Course name")
+    slug = models.SlugField(max_length=200, unique=True)
+    code = models.CharField(max_length=20, unique=True, help_text="Course code")
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='courses')
+    
+    # Display
+    icon = models.CharField(max_length=50, default='book-open', help_text="Lucide icon name")
+    color_primary = models.CharField(max_length=20, default='blue')
+    color_secondary = models.CharField(max_length=20, default='cyan')
+    
+    # Program Details
+    degree_levels = models.JSONField(default=list)
+    study_modes = models.JSONField(default=list)
+    duration_years = models.DecimalField(max_digits=3, decimal_places=1, default=4.0)
+    credits_required = models.IntegerField(default=120)
+    
+    # Content
+    tagline = models.CharField(max_length=200)
+    overview = models.TextField()
+    description = models.TextField()
+    
+    # Learning Outcomes & Career
+    learning_outcomes = models.JSONField(default=list)
+    career_paths = models.JSONField(default=list)
+    
+    # Curriculum
+    core_courses = models.JSONField(default=list)
+    specialization_tracks = models.JSONField(default=list)
+    
+    # Requirements
+    undergraduate_requirements = models.JSONField(default=list)
+    graduate_requirements = models.JSONField(default=list)
+    
+    # Statistics
+    avg_starting_salary = models.CharField(max_length=50, blank=True)
+    job_placement_rate = models.IntegerField(default=0)
+    intake_periods = models.JSONField(default=list)
+    
+    # Media
+    hero_image = models.ImageField(upload_to='courses/heroes/', blank=True, null=True)
+    
+    # SEO
+    meta_description = models.CharField(max_length=160, blank=True)
+    meta_keywords = models.CharField(max_length=255, blank=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    is_featured = models.BooleanField(default=False)
+    display_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Course'
+        verbose_name_plural = 'Courses'
+        ordering = ['faculty', 'display_order', 'name']
+    
+    def __str__(self):
+        return f"{self.name} - {self.faculty.name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+# ==================== APPLICATIONS ====================
 class CourseApplication(models.Model):
     DEGREE_LEVEL_CHOICES = [
         ('bachelor', "Bachelor's Degree"),
@@ -120,13 +243,27 @@ class CourseApplication(models.Model):
     
     REFERRAL_CHOICES = [
         ('website', 'University Website'),
-        ('search-engine', 'Search Engine (Google, etc.)'),
+        ('search-engine', 'Search Engine'),
         ('social-media', 'Social Media'),
         ('friend-family', 'Friend or Family'),
         ('education-fair', 'Education Fair'),
         ('school-counselor', 'School Counselor'),
         ('alumni', 'MIU Alumni'),
         ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('reviewed', 'Reviewed'),
+        ('decision_made', 'Decision Made'),
+    ]
+    
+    DECISION_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('waitlisted', 'Waitlisted'),
     ]
     
     # Personal Information
@@ -141,7 +278,7 @@ class CourseApplication(models.Model):
     gender = models.CharField(max_length=50, choices=GENDER_CHOICES)
     address = models.TextField()
     
-    # Academic History (stored as JSON)
+    # Academic History
     academic_history = models.JSONField(default=list)
     english_proficiency = models.CharField(max_length=50, blank=True)
     english_score = models.CharField(max_length=20, blank=True)
@@ -154,40 +291,22 @@ class CourseApplication(models.Model):
     intake = models.CharField(max_length=20, choices=INTAKE_CHOICES)
     scholarship = models.BooleanField(default=False)
     
-    # Additional Information
+    # Additional
     referral_source = models.CharField(max_length=100, blank=True, choices=REFERRAL_CHOICES)
-    
-    # Document Upload Status (stored as JSON)
     documents_uploaded = models.JSONField(default=dict)
     
     # Metadata
     created_at = models.DateTimeField(default=timezone.now)
     submitted = models.BooleanField(default=False)
     submission_date = models.DateTimeField(null=True, blank=True)
-        
-    # Application Status Fields
-    STATUS_CHOICES = [
-        ('submitted', 'Submitted'),
-        ('under_review', 'Under Review'),
-        ('reviewed', 'Reviewed'),
-        ('decision_made', 'Decision Made'),
-    ]
-        
-    DECISION_CHOICES = [
-        ('pending', 'Pending'),
-        ('accepted', 'Accepted'),
-        ('rejected', 'Rejected'),
-        ('waitlisted', 'Waitlisted'),
-    ]
-        
+    
+    # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
     decision = models.CharField(max_length=20, choices=DECISION_CHOICES, default='pending')
     decision_date = models.DateTimeField(null=True, blank=True)
     decision_notes = models.TextField(blank=True)
     reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_applications')
     reviewed_at = models.DateTimeField(null=True, blank=True)
-        
-    # Keep for backwards compatibility
     is_reviewed = models.BooleanField(default=False)
     
     class Meta:
@@ -199,15 +318,12 @@ class CourseApplication(models.Model):
         return f"{self.application_id} - {self.first_name} {self.last_name}"
     
     def save(self, *args, **kwargs):
-        # Generate application ID if not exists
         if not self.application_id:
+            self.application_id = f"TEMP-{uuid.uuid4().hex[:8]}"
+            super().save(*args, **kwargs)
             year = timezone.now().year
-            # First save to get the auto-generated ID
-            super().save(*args, **kwargs)
-            # Format: MIU-YEAR-ID (e.g., MIU-2025-0001)
             self.application_id = f'MIU-{year}-{str(self.id).zfill(4)}'
-            # Save again with the formatted ID
-            super().save(*args, **kwargs)
+            CourseApplication.objects.filter(id=self.id).update(application_id=self.application_id)
             return
         super().save(*args, **kwargs)
     
@@ -222,18 +338,9 @@ class CourseApplication(models.Model):
 
 
 def application_file_upload_path(instance, filename):
-    """
-    Generate upload path for application files
-    Format: applications/{application_id}/{file_type}/{filename}
-    """
-    # Clean the filename
     name, ext = os.path.splitext(filename)
-    # Create safe filename
     safe_filename = f"{name}{ext}"
-    
-    # Get file type from instance
     file_type = instance.file_type or 'other'
-    
     return f'applications/{instance.application.application_id}/{file_type}/{safe_filename}'
 
 
@@ -246,16 +353,12 @@ class CourseApplicationFile(models.Model):
         ('other', 'Other Document'),
     ]
     
-    application = models.ForeignKey(
-        CourseApplication, 
-        related_name='files', 
-        on_delete=models.CASCADE
-    )
+    application = models.ForeignKey(CourseApplication, related_name='files', on_delete=models.CASCADE)
     file = models.FileField(upload_to=application_file_upload_path)
     file_type = models.CharField(max_length=50, choices=FILE_TYPE_CHOICES, default='other')
     uploaded_at = models.DateTimeField(default=timezone.now())
     original_filename = models.CharField(max_length=255, blank=True)
-    file_size = models.IntegerField(default=0)  # in bytes
+    file_size = models.IntegerField(default=0)
     
     submitted = models.BooleanField(default=False)
     payment_status = models.CharField(
@@ -285,21 +388,16 @@ class CourseApplicationFile(models.Model):
         return f"{self.get_file_type_display()} - {self.application.application_id}"
     
     def save(self, *args, **kwargs):
-        # Store original filename if not set
         if not self.original_filename and self.file:
             self.original_filename = self.file.name
-        
-        # Store file size if not set
         if not self.file_size and self.file:
             try:
                 self.file_size = self.file.size
             except:
                 pass
-        
         super().save(*args, **kwargs)
     
     def get_file_size_display(self):
-        """Return human-readable file size"""
         size = self.file_size
         for unit in ['B', 'KB', 'MB', 'GB']:
             if size < 1024.0:
@@ -308,8 +406,7 @@ class CourseApplicationFile(models.Model):
         return f"{size:.1f} TB"
 
 
-   ########## PAYMENT GATEWAY #########
-
+# ==================== PAYMENT ====================
 from django.core.validators import MinValueValidator
 
 class Application(models.Model):
@@ -320,6 +417,7 @@ class Application(models.Model):
     status = models.CharField(max_length=50, default='pending_payment')
     created_at = models.DateTimeField(auto_now_add=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+
 
 class Payment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -336,12 +434,149 @@ class Payment(models.Model):
 class Vendor(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField()
-    stripe_account_id = models.CharField(
-        max_length=255, blank=True, null=True
-    )  # Stripe Connect (future)
+    stripe_account_id = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return self.name
+<<<<<<< HEAD
     def _str_(self):
         return self.name
 
+=======
+
+
+# ==================== BLOG SYSTEM ====================
+def blog_image_upload_path(instance, filename):
+    """Generate upload path for blog images"""
+    name, ext = os.path.splitext(filename)
+    safe_filename = f"{slugify(name)}{ext}"
+    return f'blog/{instance.slug}/{safe_filename}'
+
+
+class BlogCategory(models.Model):
+    """Blog category model for organizing posts"""
+    name = models.CharField(max_length=100, unique=True, help_text="Category name (e.g., Student Life)")
+    slug = models.SlugField(max_length=100, unique=True, help_text="URL-friendly name")
+    description = models.TextField(blank=True, help_text="Category description")
+    icon = models.CharField(max_length=50, default='folder', help_text="Lucide icon name")
+    color = models.CharField(max_length=20, default='blue', help_text="Color theme (e.g., blue, green)")
+    display_order = models.IntegerField(default=0, help_text="Order in category list")
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Blog Category'
+        verbose_name_plural = 'Blog Categories'
+        ordering = ['display_order', 'name']
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def get_post_count(self):
+        return self.blog_posts.filter(status='published').count()
+
+
+class BlogPost(models.Model):
+    """Main blog post model"""
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    ]
+    
+    # Basic Information
+    title = models.CharField(max_length=200, help_text="Post title")
+    slug = models.SlugField(max_length=200, unique=True, help_text="URL-friendly title")
+    subtitle = models.CharField(max_length=200, blank=True, help_text="Optional subtitle/excerpt")
+    
+    # Content
+    excerpt = models.TextField(max_length=500, help_text="Short summary (max 500 chars)")
+    content = models.TextField(help_text="Full blog post content (supports HTML)")
+    
+    # Categorization
+    category = models.ForeignKey(BlogCategory, on_delete=models.SET_NULL, null=True, related_name='blog_posts')
+    tags = models.JSONField(default=list, blank=True, help_text="List of tags (e.g., ['technology', 'innovation'])")
+    
+    # Author & Attribution
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='blog_posts')
+    author_name = models.CharField(max_length=100, help_text="Display name (overrides user)")
+    author_title = models.CharField(max_length=100, blank=True, help_text="e.g., 'Communications Director'")
+    
+    # Media
+    featured_image = models.ImageField(
+        upload_to=blog_image_upload_path, 
+        blank=True, 
+        null=True,
+        help_text="Main post image (recommended: 1200x630px)"
+    )
+    featured_image_alt = models.CharField(max_length=200, blank=True, help_text="Alt text for accessibility")
+    
+    # Metadata
+    read_time = models.IntegerField(default=5, help_text="Estimated reading time in minutes")
+    views_count = models.IntegerField(default=0, help_text="Number of views")
+    
+    # Publishing
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    is_featured = models.BooleanField(default=False, help_text="Show in featured section")
+    publish_date = models.DateTimeField(default=timezone.now, help_text="Publication date")
+    
+    # SEO
+    meta_description = models.CharField(max_length=160, blank=True, help_text="SEO meta description")
+    meta_keywords = models.CharField(max_length=255, blank=True, help_text="SEO keywords (comma-separated)")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Blog Post'
+        verbose_name_plural = 'Blog Posts'
+        ordering = ['-publish_date', '-created_at']
+        indexes = [
+            models.Index(fields=['-publish_date', 'status']),
+            models.Index(fields=['slug']),
+        ]
+    
+    def __str__(self):
+        return self.title
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+            # Ensure unique slug
+            original_slug = self.slug
+            counter = 1
+            while BlogPost.objects.filter(slug=self.slug).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
+        
+        # Auto-generate meta description from excerpt if not provided
+        if not self.meta_description and self.excerpt:
+            self.meta_description = self.excerpt[:160]
+        
+        # Set author_name from user if not provided
+        if not self.author_name and self.author:
+            self.author_name = self.author.get_full_name() or self.author.username
+        
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('eduweb:blog_detail', kwargs={'slug': self.slug})
+    
+    def increment_views(self):
+        """Increment view count"""
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+    
+    def get_related_posts(self, limit=3):
+        """Get related posts from same category"""
+        return BlogPost.objects.filter(
+            category=self.category,
+            status='published'
+        ).exclude(id=self.id)[:limit]
+>>>>>>> ef6e711df83ba864c3342774272e1a30ecceb6b3

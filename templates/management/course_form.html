@@ -1,0 +1,360 @@
+{% extends 'management/base.html' %}
+
+{% block title %}{{ action }} Program - MIU Admin{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center gap-3 text-sm text-gray-600 mb-4">
+        <a href="{% url 'management:dashboard' %}" class="hover:text-primary-600">Dashboard</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <a href="{% url 'management:courses_list' %}" class="hover:text-primary-600">Programs</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span class="text-gray-900 font-medium">{{ action }} Program</span>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-900 font-display">{{ action }} Program</h1>
+    <p class="text-gray-600 mt-2">{{ action }} program information and curriculum</p>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="space-y-6">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+    <div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+    
+    <!-- Basic Information -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-info-circle text-primary-600"></i>
+            Basic Information
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Program Name *</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Program Code *</label>
+                {{ form.code }}
+                {% if form.code.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.code.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Faculty *</label>
+                {{ form.faculty }}
+                {% if form.faculty.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.faculty.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Icon (Lucide Icon Name) *</label>
+                {{ form.icon }}
+                <p class="text-xs text-gray-500 mt-1">Browse icons at: <a href="https://lucide.dev/icons" target="_blank" class="text-primary-600 hover:underline">lucide.dev/icons</a></p>
+                {% if form.icon.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.icon.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Tagline *</label>
+                {{ form.tagline }}
+                {% if form.tagline.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.tagline.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Colors -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-palette text-primary-600"></i>
+            Color Scheme
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Primary Color *</label>
+                {{ form.color_primary }}
+                {% if form.color_primary.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.color_primary.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Secondary Color *</label>
+                {{ form.color_secondary }}
+                {% if form.color_secondary.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.color_secondary.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Program Details -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-graduation-cap text-primary-600"></i>
+            Program Details
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Duration (Years) *</label>
+                {{ form.duration_years }}
+                {% if form.duration_years.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.duration_years.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Credits Required</label>
+                {{ form.credits_required }}
+                {% if form.credits_required.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.credits_required.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Avg. Starting Salary</label>
+                {{ form.avg_starting_salary }}
+                {% if form.avg_starting_salary.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.avg_starting_salary.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Job Placement Rate (%)</label>
+                {{ form.job_placement_rate }}
+                {% if form.job_placement_rate.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.job_placement_rate.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Content -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-file-alt text-primary-600"></i>
+            Content
+        </h2>
+        
+        <div class="space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Overview *</label>
+                {{ form.overview }}
+                {% if form.overview.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.overview.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Detailed Description *</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Degree Options & Study Modes -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-certificate text-primary-600"></i>
+            Degree Options & Study Modes
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Degree Levels</label>
+                {{ form.degree_levels_text }}
+                {% if form.degree_levels_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.degree_levels_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Study Modes</label>
+                {{ form.study_modes_text }}
+                {% if form.study_modes_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.study_modes_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Intake Periods</label>
+                {{ form.intake_periods_text }}
+                {% if form.intake_periods_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.intake_periods_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Learning Outcomes & Career Paths -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-bullseye text-primary-600"></i>
+            Learning Outcomes & Career Paths
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Learning Outcomes</label>
+                {{ form.learning_outcomes_text }}
+                {% if form.learning_outcomes_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.learning_outcomes_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Career Paths</label>
+                {{ form.career_paths_text }}
+                {% if form.career_paths_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.career_paths_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Curriculum -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-book text-primary-600"></i>
+            Curriculum
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Core Courses</label>
+                {{ form.core_courses_text }}
+                {% if form.core_courses_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.core_courses_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Specialization Tracks</label>
+                {{ form.specialization_tracks_text }}
+                {% if form.specialization_tracks_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.specialization_tracks_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Admission Requirements -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-clipboard-check text-primary-600"></i>
+            Admission Requirements
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Undergraduate Requirements</label>
+                {{ form.undergraduate_requirements_text }}
+                {% if form.undergraduate_requirements_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.undergraduate_requirements_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Graduate Requirements</label>
+                {{ form.graduate_requirements_text }}
+                {% if form.graduate_requirements_text.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.graduate_requirements_text.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Images -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-image text-primary-600"></i>
+            Hero Image
+        </h2>
+        
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Hero Image</label>
+            {{ form.hero_image }}
+            {% if course and course.hero_image %}
+            <img src="{{ course.hero_image.url }}" class="mt-3 max-w-xs rounded-lg shadow" alt="Current hero image">
+            {% endif %}
+            {% if form.hero_image.errors %}
+            <p class="text-red-600 text-sm mt-1">{{ form.hero_image.errors.0 }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- SEO & Settings -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <i class="fas fa-cog text-primary-600"></i>
+            SEO & Settings
+        </h2>
+        
+        <div class="space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Meta Description</label>
+                {{ form.meta_description }}
+                {% if form.meta_description.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.meta_description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Meta Keywords</label>
+                {{ form.meta_keywords }}
+                {% if form.meta_keywords.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.meta_keywords.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="flex items-center gap-3">
+                    {{ form.is_active }}
+                    <label class="text-sm font-semibold text-gray-700">Active (visible on website)</label>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    {{ form.is_featured }}
+                    <label class="text-sm font-semibold text-gray-700">Featured Program</label>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Display Order</label>
+                    {{ form.display_order }}
+                    {% if form.display_order.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.display_order.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Form Actions -->
+    <div class="flex items-center gap-4">
+        <button type="submit" class="px-8 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-all shadow-lg hover:shadow-xl">
+            <i class="fas fa-save mr-2"></i>
+            {{ action }} Program
+        </button>
+        <a href="{% url 'management:courses_list' %}" class="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all">
+            Cancel
+        </a>
+    </div>
+</form>
+{% endblock %}

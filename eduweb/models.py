@@ -136,7 +136,7 @@ class CourseApplication(models.Model):
     last_name = models.CharField(max_length=100)
     email = models.EmailField()
     phone = models.CharField(max_length=20)
-    date_of_birth = models.DateField()
+    date_of_birth = models.DateField(null=True, blank=True)
     country = models.CharField(max_length=100, choices=COUNTRY_CHOICES)
     gender = models.CharField(max_length=50, choices=GENDER_CHOICES)
     address = models.TextField()
@@ -257,6 +257,25 @@ class CourseApplicationFile(models.Model):
     original_filename = models.CharField(max_length=255, blank=True)
     file_size = models.IntegerField(default=0)  # in bytes
     
+    submitted = models.BooleanField(default=False)
+    payment_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "Pending"),
+            ("success", "Success"),
+            ("cancelled", "Cancelled"),
+        ],
+        default="pending"
+    )
+
+    payment_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    paid_at = models.DateTimeField(blank=True, null=True)
+
     class Meta:
         ordering = ['-uploaded_at']
         verbose_name = 'Application File'
@@ -321,10 +340,8 @@ class Vendor(models.Model):
         max_length=255, blank=True, null=True
     )  # Stripe Connect (future)
 
-<<<<<<< HEAD
     def __str__(self):
         return self.name
-=======
     def _str_(self):
         return self.name
->>>>>>> 3f7806c9403befd488fff5c758601c5c41d39564
+

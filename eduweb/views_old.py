@@ -16,10 +16,6 @@ from .forms import SignUpForm, LoginForm
 from .models import UserProfile
 import random
 from django.db import transaction, IntegrityError
-import json
-from datetime import datetime
-from django.views.decorators.http import require_GET, require_POST
-from django.views.decorators.csrf import csrf_protect
 
 
 def application_status_context(request):
@@ -48,7 +44,6 @@ def generate_captcha():
     
     question = f"{num1} {operation} {num2}"
     return question, answer
-
 
 
 def auth_page(request):
@@ -342,180 +337,206 @@ def about(request):
     return render(request, 'about.html')
 
 
+
 @login_required
 def apply(request):
-    print(request.user)
-    # Check if email is verified
+    # Email verification
     if not request.user.profile.email_verified:
-        messages.warning(request, 'Please verify your email before applying.')
-        return redirect('auth_page')
-    
-    # Check if user already has a pending application
+        messages.warning(request, "Please verify your email before applying.")
+        return redirect("auth_page")
+
+    # Allow only ONE active (unsubmitted) application
     existing_application = CourseApplication.objects.filter(
         user=request.user,
-        decision='pending'
+        submitted=False
     ).first()
-    
-    if existing_application:
-        messages.info(request, 'You already have an application in progress.')
-        return redirect('eduweb:application_status')
-    
-    if request.method == 'POST':
+
+    if existing_application and request.method == "GET":
+        messages.info(request, "You have an application in progress.")
+        return redirect("eduweb:application_status")
+
+    if request.method == "POST":
         form = CourseApplicationForm(request.POST, request.FILES)
-        
-        if form.is_valid():
-            try:
-                print("=== APPLICATION SUBMISSION STARTED ===")
-                print(f"User: {request.user.username}")
-                print(f"Files received: {list(request.FILES.keys())}")
-                
-                # Collect academic history from all entries
-                academic_history = []
-                entry_count = 1
-                while True:
-                    education_level = request.POST.get(f'education_level_{entry_count}')
-                    if not education_level:
-                        break
-                    
-                    academic_history.append({
-                        'education_level': education_level,
-                        'institution': request.POST.get(f'institution_{entry_count}', ''),
-                        'field_of_study': request.POST.get(f'field_of_study_{entry_count}', ''),
-                        'graduation_year': request.POST.get(f'graduation_year_{entry_count}', ''),
-                        'gpa': request.POST.get(f'gpa_{entry_count}', ''),
-                    })
-                    entry_count += 1
-                
-                # Save application first (without files)
-                application = form.save(commit=False, user=request.user)
-                application.academic_history = academic_history
-                application.save()
-                
-                print(f"Application saved: {application.application_id}")
-                
-                # Handle file uploads with detailed tracking
-                documents = {}
-                file_field_mapping = {
-                    'transcripts_file': ('transcripts', 'Transcripts'),
-                    'english_proficiency_file': ('english_proficiency', 'English Proficiency Certificate'),
-                    'personal_statement_file': ('personal_statement', 'Personal Statement'),
-                    'cv_file': ('cv', 'CV/Resume')
-                }
-                
-                for form_field, (file_type, doc_name) in file_field_mapping.items():
-                    if form_field in request.FILES:
-                        try:
-                            file_obj = request.FILES[form_field]
-                            print(f"Processing {form_field}: {file_obj.name} ({file_obj.size} bytes)")
-                            
-                            # Create CourseApplicationFile entry with file type
-                            app_file = CourseApplicationFile.objects.create(
-                                application=application,
-                                file=file_obj,
-                                file_type=file_type,
-                                original_filename=file_obj.name,
-                                file_size=file_obj.size
-                            )
-                            
-                            # Store metadata in documents_uploaded JSON
-                            documents[doc_name] = {
-                                'file_id': app_file.id,
-                                'file_name': file_obj.name,
-                                'file_type': file_type,
-                                'file_size': app_file.get_file_size_display(),
-                                'file_path': app_file.file.name,
-                                'uploaded_at': timezone.now().isoformat()
-                            }
-                            
-                            print(f"✅ Successfully saved {doc_name}: ID {app_file.id}")
-                            
-                        except Exception as file_error:
-                            print(f"❌ Error uploading {form_field}: {str(file_error)}")
-                            import traceback
-                            traceback.print_exc()
-                            # Continue with other files even if one fails
-                            continue
-                    else:
-                        print(f"⚠️ No file uploaded for {form_field}")
-                
-                # Update documents_uploaded field if any documents were uploaded
-                if documents:
-                    application.documents_uploaded = documents
-                    application.save()
-                    print(f"Documents metadata saved: {list(documents.keys())}")
-                else:
-                    print("⚠️ No documents were uploaded")
-                
-                print("=== APPLICATION SUBMISSION COMPLETED ===")
 
-                # Send emails asynchronously (non-blocking)
-                from threading import Thread
-
-                def send_emails_async():
-                    try:
-                        send_application_confirmation_email(application)
-                        send_application_admin_notification(application)
-                    except Exception as email_error:
-                        print(f"Email error (non-critical): {str(email_error)}")
-
-                # Start email sending in background thread
-                email_thread = Thread(target=send_emails_async)
-                email_thread.daemon = True
-                email_thread.start()
-                
-                # Return JSON for AJAX
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'success': True,
-                        'application_id': application.application_id,
-                        'message': 'Application submitted successfully!',
-                        'files_uploaded': len(documents),
-                        'redirect_url': reverse('application_status')
-                    })
-                else:
-                    messages.success(request, f'Application submitted successfully! Your ID: {application.application_id}')
-                    return redirect('application_status')
-                    
-            except Exception as e:
-                print(f"=== ERROR IN APPLICATION SUBMISSION ===")
-                print(f"Error type: {type(e).__name__}")
-                print(f"Error message: {str(e)}")
-                import traceback
-                traceback.print_exc()
-                
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'{type(e).__name__}: {str(e)}'
-                    }, status=500)
-                else:
-                    messages.error(request, f'Error: {str(e)}')
-        else:
-            print("=== FORM VALIDATION ERRORS ===")
-            for field, errors in form.errors.items():
-                print(f"{field}: {errors}")
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                errors = {}
-                for field, error_list in form.errors.items():
-                    errors[field] = [str(e) for e in error_list]
-                
+        if not form.is_valid():
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse({
-                    'success': False,
-                    'errors': errors,
-                    'error': 'Please correct the errors in the form.'
+                    "success": False,
+                    "errors": form.errors,
                 }, status=400)
-            else:
-                messages.error(request, 'Please correct the errors in the form.')
-    if request.user.is_authenticated:
-        form = CourseApplicationForm(initial={
-            'email': request.user.email
-        })
+            messages.error(request, "Please correct the errors in the form.")
+            return redirect("eduweb:apply")
 
-    else:
-        form = CourseApplicationForm()
-    
-    return render(request, 'form.html', {'form': form})
+        try:
+            # ============================
+            # 1. COLLECT ACADEMIC HISTORY
+            # ============================
+            academic_history = []
+            entry_count = 1
+
+            while True:
+                level = request.POST.get(f"education_level_{entry_count}")
+                if not level:
+                    break
+
+                academic_history.append({
+                    "education_level": level,
+                    "institution": request.POST.get(f"institution_{entry_count}", ""),
+                    "field_of_study": request.POST.get(f"field_of_study_{entry_count}", ""),
+                    "graduation_year": request.POST.get(f"graduation_year_{entry_count}", ""),
+                    "gpa": request.POST.get(f"gpa_{entry_count}", ""),
+                })
+                entry_count += 1
+
+            # ============================
+            # 2. SAVE / UPDATE DRAFT
+            # ============================
+            application = existing_application or form.save(commit=False)
+            application.user = request.user
+            application.academic_history = academic_history
+            application.submitted = False
+            application.payment_status = application.payment_status or "pending"
+            application.save()
+
+            # ============================
+            # 3. BLOCK DOCUMENT UPLOAD BEFORE PAYMENT
+            # ============================
+            if request.FILES and application.payment_status != "success":
+                return JsonResponse({
+                    "success": False,
+                    "error": "Payment required before uploading documents."
+                }, status=403)
+
+            # ============================
+            # 4. HANDLE DOCUMENT UPLOADS
+            # ============================
+            documents = {}
+            file_map = {
+                "transcripts_file": ("transcripts", "Transcripts"),
+                "english_proficiency_file": ("english_proficiency", "English Proficiency"),
+                "personal_statement_file": ("personal_statement", "Personal Statement"),
+                "cv_file": ("cv", "CV"),
+            }
+
+            for field, (file_type, label) in file_map.items():
+                if field in request.FILES:
+                    file_obj = request.FILES[field]
+
+                    app_file = CourseApplicationFile.objects.create(
+                        application=application,
+                        file=file_obj,
+                        file_type=file_type,
+                        original_filename=file_obj.name,
+                        file_size=file_obj.size,
+                    )
+
+                    documents[label] = {
+                        "file_id": app_file.id,
+                        "name": file_obj.name,
+                        "type": file_type,
+                        "size": app_file.get_file_size_display(),
+                        "uploaded_at": timezone.now().isoformat(),
+                    }
+
+            if documents:
+                application.documents_uploaded = documents
+                application.save()
+
+            # ============================
+            # 5. FINALIZE APPLICATION
+            # ============================
+            if application.payment_status == "success" and application.documents_uploaded:
+                application.submitted = True
+                application.submitted_at = timezone.now()
+                application.save()
+
+                # async emails
+                from threading import Thread
+                Thread(
+                    target=lambda: (
+                        send_application_confirmation_email(application),
+                        send_application_admin_notification(application),
+                    ),
+                    daemon=True,
+                ).start()
+
+            # ============================
+            # 6. RESPONSE
+            # ============================
+            return JsonResponse({
+                "success": True,
+                "application_id": application.application_id,
+                "payment_status": application.payment_status,
+                "submitted": application.submitted,
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "error": str(e),
+            }, status=500)
+
+    # GET
+    form = CourseApplicationForm()
+    return render(request, "form.html", {"form": form})
+
+
+@login_required
+def initiate_payment(request):
+    application = get_object_or_404(
+        CourseApplication,
+        application_id=request.GET.get("application_id"),
+        user=request.user
+    )
+
+    return render(request, "payments/pay.html", {
+        "application": application,
+        "amount": application.program.application_fee,
+        "email": application.email,
+    })
+
+
+
+@csrf_exempt
+def payment_callback(request):
+    reference = request.GET.get("reference")
+
+    application = get_object_or_404(
+        CourseApplication,
+        payment_reference=reference
+    )
+
+    application.payment_status = "success"
+    application.paid_at = timezone.now()
+    application.save()
+
+    return redirect(
+        reverse("eduweb:application_continue", args=[application.application_id])
+    )
+
+
+
+@login_required
+def application_continue(request, application_id):
+    application = get_object_or_404(
+        CourseApplication,
+        application_id=application_id,
+        user=request.user
+    )
+
+    if application.payment_status != "success":
+        messages.error(request, "Payment required to continue.")
+        return redirect("eduweb:application_status")
+
+    form = CourseApplicationForm(instance=application)
+    return render(request, "form.html", {
+        "form": form,
+        "application": application,
+    })
+
+
+
+
 
 def send_application_confirmation_email(application):
     """Send confirmation email to applicant"""
@@ -901,6 +922,7 @@ def payments(request):
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth.decorators import login_required
 import json
 import stripe
@@ -1127,174 +1149,3 @@ def get_payment_summary(request, application_id):
         logger.error(f"Error getting payment summary: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Unable to load payment details'}, status=500)
 
-
-
-
-###################### APPLICATION SUBMISSION ##############################################
-
-@login_required
-@require_POST
-@csrf_protect
-def save_application_draft(request):
-    """
-    Safely save or update a CourseApplication as a draft.
-    Compatible with FormData submissions.
-    """
-
-    try:
-        data = request.POST
-
-        # -------------------------------------------------
-        # 1. GET OR CREATE APPLICATION (NO DUPLICATES)
-        # -------------------------------------------------
-        application_id = data.get("application_id")
-        application = None
-
-        if application_id:
-            application = CourseApplication.objects.filter(
-                application_id=application_id
-            ).first()
-
-        if not application:
-            application = CourseApplication(
-                user=request.user if request.user.is_authenticated else None
-            )
-
-        # -------------------------------------------------
-        # 2. PERSONAL INFORMATION
-        # -------------------------------------------------
-        application.first_name = data.get("first_name", "").strip()
-        application.last_name = data.get("last_name", "").strip()
-        application.email = data.get("email", "").strip()
-        application.phone = data.get("phone", "").strip()
-        application.gender = data.get("gender", "")
-        application.country = data.get("country", "")
-        application.address = data.get("address", "").strip()
-
-        # Date of birth (safe parsing, never overwrite with None)
-        dob = data.get("date_of_birth")
-        print(dob)
-        if dob:
-            try:
-                application.date_of_birth = datetime.strptime(
-                    dob, "%Y-%m-%d"
-                ).date()
-            except ValueError:
-                pass  # ignore invalid format during draft save
-       
-        # -------------------------------------------------
-        # 3. ACADEMIC / ENGLISH DETAILS
-        # -------------------------------------------------
-        # -------------------------------
-        # ENGLISH PROFICIENCY (FIXED)
-        # -------------------------------
-        proficiency_type = data.get("english_proficiency_type", "")
-
-        score = ""
-        if proficiency_type == "toefl":
-            score = data.get("toefl_score", "")
-        elif proficiency_type == "ielts":
-            score = data.get("ielts_score", "")
-        elif proficiency_type == "other":
-            score = data.get("other_test", "")
-        elif proficiency_type == "native":
-            score = "native"
-
-        application.english_proficiency = proficiency_type
-        application.english_score = score
-
-
-        # Academic history (JSON string expected)
-        academic_history = data.get("academic_history")
-        print(academic_history)
-        if academic_history:
-            try:
-                application.academic_history = json.loads(academic_history)
-            except json.JSONDecodeError:
-                pass
-
-        # -------------------------------------------------
-        # 4. COURSE SELECTION
-        # -------------------------------------------------
-        application.program = data.get("program", "")
-        application.degree_level = data.get("degree_level", "")
-        application.study_mode = data.get("study_mode", "")
-        application.intake = data.get("intake", "")
-        application.scholarship = data.get("scholarship") in ("true", "on", "1")
-
-        # -------------------------------------------------
-        # 5. META / DRAFT FLAGS
-        # -------------------------------------------------
-        application.submitted = False  # draft save only
-
-        # -------------------------------------------------
-        # 6. SAVE (MODEL HANDLES application_id GENERATION)
-        # -------------------------------------------------
-        application.save()
-
-        # -------------------------------------------------
-        # 7. RESPONSE
-        # -------------------------------------------------
-        return JsonResponse({
-            "success": True,
-            "application_id": application.application_id,
-            "payment_status": application.decision if application.decision else "pending",
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            "success": False,
-            "error": str(e)
-        }, status=400)
-
-
-
-@login_required
-def payment_details(request, application_id):
-    app = CourseApplication.objects.get(
-        application_id=application_id,
-        user=request.user
-    )
-
-    return JsonResponse({
-        "application_id": app.application_id,
-        "name": app.get_full_name(),
-        "program": app.get_program_display_name(),
-        "amount": 150.00,  # configurable later
-        "payment_status": app.files.filter(
-            payment_status="success"
-        ).exists() and "success" or "pending"
-    })
-
-@login_required
-@require_POST
-def upload_application_file(request, application_id):
-    application = CourseApplication.objects.get(
-        application_id=application_id,
-        user=request.user
-    )
-
-    # 🔒 HARD PAYMENT ENFORCEMENT
-    if not application.files.filter(payment_status="success").exists():
-        return JsonResponse({
-            "success": False,
-            "error": "Payment required before uploading documents"
-        }, status=403)
-
-    file = request.FILES.get("file")
-    file_type = request.POST.get("file_type")
-
-    CourseApplicationFile.objects.create(
-        application=application,
-        file=file,
-        file_type=file_type,
-        submitted=True
-    )
-
-    return JsonResponse({"success": True})
-
-def finalize_application(application):
-    application.submitted = True
-    application.submission_date = timezone.now()
-    application.status = "submitted"
-    application.save()

@@ -1,4 +1,4 @@
-from django import forms
+﻿from django import forms
 from .models import ContactMessage, CourseApplication
 from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -170,7 +170,7 @@ class CourseApplicationForm(forms.ModelForm):
     english_proficiency_type = forms.ChoiceField(
         required=True,
         choices=[
-            ('', '-- Select English Proficiency --'),  # Placeholder
+             # Placeholder
             ('toefl', 'TOEFL'),
             ('ielts', 'IELTS'),
             ('other', 'Other'),

@@ -44,7 +44,7 @@ urlpatterns = [
 
 
 
-    ############### PAYMENT GATEWAY ################
+    ############### PAYMENT GATEWAY URLS################
 
     path("pay/", views.payment_page),
     path("create-intent/", views.create_payment_intent),
@@ -52,6 +52,29 @@ urlpatterns = [
     path("success/<int:payment_id>/", views.payment_success),
     path("stripe/webhook/", views.stripe_webhook),
     path("refund/<int:payment_id>/", views.refund_payment),
+
+
+    ################## APPLICATION SUBMISSIONS #######
+
+    # ================= STAGE 4 =================
+    # Save application draft (Ajax)
+    path("applications/save-draft/", views.save_application_draft, name="save_application_draft"),
+
+    # ================= STAGE 5 =================
+    # Preload payment details (Ajax)
+    path("<str:application_id>/payment-details/",views.payment_details, name="payment_details"),
+
+    # Stripe payment handoff (to be implemented later)
+   # path("payments/stripe/start/", views.start_stripe_payment, name="start_stripe_payment"),
+
+    # Stripe webhook (future)
+  #  path("payments/stripe/webhook/",views.stripe_webhook,name="stripe_webhook"),
+
+    # ================= STAGE 6 =================
+    # Upload documents (Ajax)
+    path("<str:application_id>/upload-document/",views.upload_application_file,name="upload_application_file"),
+
+
 
 ]
 

@@ -511,17 +511,13 @@
                                 <select id="id_program" name="program" required
                                         class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-purple-500">
                                     <option value="">-- Select a Program --</option>
-                                    <option value="computer_science">Computer Science</option>
-                                    <option value="cybersecurity">Cybersecurity</option>
-                                    <option value="data_science">Data Science</option>
-                                    <option value="information_technology">Information Technology</option>
-                                    <option value="business_administration">Business Administration</option>
-                                    <option value="engineering">Engineering</option>
-                                    <option value="health_sciences">Health Sciences</option>
+                                    {% for course in courses %}
+                                    <option value="{{ course.program }}">{{ course.program }}</option>
+                                    {% endfor %}
                                 </select>
 
                             </div>
-
+                            <input type="number" id="application_cost" name="application_cost" value="">
 
 
                             <div class="mb-6">
@@ -814,11 +810,18 @@
 </section>
 
 <script>
-    // ================= FIXED APPLICATION FORM JAVASCRIPT =================
+
+
+
+
+    // ================= COMPLETE CORRECTED APPLICATION FORM JAVASCRIPT =================
     document.addEventListener('DOMContentLoaded', function () {
         // Global State
         let currentStep = 1;
         const totalSteps = 6;
+
+        // CSRF Token (Django specific)
+        const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
 
         // Step titles
         const stepTitles = {
@@ -958,11 +961,12 @@
             // Validate each academic entry
             let allEntriesValid = true;
             academicEntries.forEach(entry => {
+                const entryId = entry.getAttribute('data-entry');
                 const requiredFields = [
-                    'select[name^="education_level_"]',
-                    'input[name^="graduation_year_"]',
-                    'input[name^="institution_"]',
-                    'input[name^="field_of_study_"]'
+                    `select[name="education_level_${entryId}"]`,
+                    `input[name="graduation_year_${entryId}"]`,
+                    `input[name="institution_${entryId}"]`,
+                    `input[name="field_of_study_${entryId}"]`
                 ];
 
                 requiredFields.forEach(fieldPattern => {
@@ -977,8 +981,27 @@
 
             // Check English proficiency selection
             const englishProficiency = document.querySelector('input[name="english_proficiency_type"]:checked');
-            if (!englishProficiency || englishProficiency.value === '') {
+            if (!englishProficiency) {
                 allEntriesValid = false;
+            } else {
+                // For TOEFL, IELTS, and "Other", check if score/test name is provided
+                if (englishProficiency.value === 'toefl') {
+                    const toeflScore = document.querySelector('input[name="toefl_score"]');
+                    if (!toeflScore || !toeflScore.value.trim()) {
+                        allEntriesValid = false;
+                    }
+                } else if (englishProficiency.value === 'ielts') {
+                    const ieltsScore = document.querySelector('input[name="ielts_score"]');
+                    if (!ieltsScore || !ieltsScore.value.trim()) {
+                        allEntriesValid = false;
+                    }
+                } else if (englishProficiency.value === 'other') {
+                    const otherTest = document.querySelector('input[name="other_test"]');
+                    if (!otherTest || !otherTest.value.trim()) {
+                        allEntriesValid = false;
+                    }
+                }
+                // Native speaker doesn't require a score
             }
 
             gatingState.step2Completed = allEntriesValid;
@@ -1212,63 +1235,73 @@
             });
         }
 
-
-        //STEP 2 — SERIALIZE ACADEMIC HISTORY(SAFE)
-        // ==================== Academic History Serializer ====================
-        window.serializeAcademicHistory = function () {
-            const degrees = document.querySelectorAll('[name="degree_level[]"]');
-            const institutions = document.querySelectorAll('[name="institution[]"]');
-            const years = document.querySelectorAll('[name="graduation_year[]"]');
-            const fields = document.querySelectorAll('[name="field_of_study[]"]');
-            const gpas = document.querySelectorAll('[name="gpa[]"]');
-
+        // ================= ACADEMIC HISTORY & ENGLISH PROFICIENCY SERIALIZATION =================
+        function serializeAcademicHistory() {
             const entries = [];
-            const count = Math.max(
-                degrees.length,
-                institutions.length,
-                years.length,
-                fields.length,
-                gpas.length
-            );
+            const academicEntries = document.querySelectorAll('.academic-entry');
 
-            for (let i = 0; i < count; i++) {
-                const entry = {
-                    degree: degrees[i]?.value || "",
-                    institution: institutions[i]?.value || "",
-                    graduation_year: years[i]?.value || "",
-                    field_of_study: fields[i]?.value || "",
-                    gpa: gpas[i]?.value || ""
-                };
-                if (Object.values(entry).some(v => v)) {
-                    entries.push(entry);
+            academicEntries.forEach(entry => {
+                const entryId = entry.getAttribute('data-entry');
+                const degree = entry.querySelector(`select[name="education_level_${entryId}"]`)?.value || '';
+                const institution = entry.querySelector(`input[name="institution_${entryId}"]`)?.value || '';
+                const graduationYear = entry.querySelector(`input[name="graduation_year_${entryId}"]`)?.value || '';
+                const fieldOfStudy = entry.querySelector(`input[name="field_of_study_${entryId}"]`)?.value || '';
+                const gpa = entry.querySelector(`input[name="gpa_${entryId}"]`)?.value || '';
+
+                // Only add if at least one field has data
+                if (degree || institution || graduationYear || fieldOfStudy) {
+                    entries.push({
+                        degree: degree,
+                        institution: institution,
+                        graduation_year: graduationYear,
+                        field_of_study: fieldOfStudy,
+                        gpa: gpa
+                    });
                 }
+            });
+
+            // Set to hidden field
+            document.getElementById('academicHistoryPayload').value = JSON.stringify(entries);
+        }
+
+        function collectEnglishProficiencyData(formData) {
+            const englishType = document.querySelector('input[name="english_proficiency_type"]:checked');
+
+            if (!englishType) return;
+
+            const type = englishType.value;
+            let score = '';
+
+            // Based on type, get the appropriate score
+            if (type === 'toefl') {
+                score = document.querySelector('input[name="toefl_score"]')?.value || '';
+            } else if (type === 'ielts') {
+                score = document.querySelector('input[name="ielts_score"]')?.value || '';
+            } else if (type === 'other') {
+                score = document.querySelector('input[name="other_test"]')?.value || '';
+            } else if (type === 'native') {
+                score = 'Native Speaker';
             }
 
-            document.getElementById('academicHistoryPayload').value =
-                JSON.stringify(entries);
-        };
+            // Add to formData
+            formData.append('english_proficiency', type);
+            formData.append('english_score', score);
 
+            return { type, score };
+        }
 
-
-
-        // ================= STEP 4: SAVE APPLICATION (NON-DISRUPTIVE) =================
-        (function () {
+        // ================= STEP 4: SAVE APPLICATION =================
+        function setupSaveApplication() {
             const saveBtn = document.getElementById('saveApplicationBtn');
-            const form = document.querySelector('form');
-
-            if (!saveBtn || !form) return;
+            if (!saveBtn) return;
 
             saveBtn.addEventListener('click', function (e) {
                 e.preventDefault();
-                e.stopPropagation(); // ⛔ block other handlers (required)
-               
+                e.stopPropagation();
 
-                // Respect existing gating
-                if (typeof gatingState !== 'undefined' && !gatingState.step3Completed) {
-                    window.showToast?.(
-                        'error',
-                        'Please complete all required fields before saving.'
-                    );
+                // Validate all steps before saving
+                if (!validateStep1() || !validateStep2() || !validateStep3()) {
+                    showMessage('Please complete all required fields before saving.', 'error');
                     return false;
                 }
 
@@ -1276,72 +1309,108 @@
                 const originalHTML = saveBtn.innerHTML;
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = '⏳ Saving...';
-                serializeAcademicHistory(); // 🔑 REQUIRED
 
-                // ✅ SAFE: serialize existing form exactly as-is
-                const formData = new FormData(form);
-                if (window.APPLICATION_ID) {
-                    formData.append('application_id', window.APPLICATION_ID);
+                // Serialize academic history
+                serializeAcademicHistory();
+
+                // Prepare FormData
+                const formData = new FormData();
+
+                // Add CSRF token
+                if (CSRF_TOKEN) {
+                    formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
                 }
-                formData.append('save_only', 'true');
 
+                // Collect all form data
+                const form = document.getElementById('applicationForm');
+                const formElements = form.elements;
+
+                // Step 1: Personal Information
+                formData.append('first_name', formElements.first_name?.value || '');
+                formData.append('last_name', formElements.last_name?.value || '');
+                formData.append('email', formElements.email?.value || '');
+                formData.append('phone', formElements.phone?.value || '');
+                formData.append('date_of_birth', formElements.date_of_birth?.value || '');
+                formData.append('country', formElements.country?.value || '');
+                formData.append('gender', formElements.gender?.value || '');
+                formData.append('address', formElements.address?.value || '');
+
+                // Step 2: Academic History & English Proficiency
+                formData.append('academic_history', document.getElementById('academicHistoryPayload').value || '[]');
+                formData.append('additional_qualifications', formElements.additional_qualifications?.value || '');
+
+                // Collect English proficiency
+                collectEnglishProficiencyData(formData);
+
+                // Step 3: Course Selection
+                formData.append('program', formElements.program?.value || '');
+                formData.append('degree_level', document.querySelector('input[name="degree_level"]:checked')?.value || '');
+                formData.append('study_mode', document.querySelector('input[name="study_mode"]:checked')?.value || '');
+                formData.append('intake', document.querySelector('input[name="intake"]:checked')?.value || '');
+                formData.append('scholarship', document.querySelector('input[name="scholarship"]')?.checked ? 'true' : 'false');
+
+                // Add application ID if exists
+                const appId = document.getElementById('applicationId')?.value;
+                if (appId) {
+                    formData.append('application_id', appId);
+                }
+
+                // Save draft
                 fetch('/applications/save-draft/', {
                     method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': window.CSRF_TOKEN
                     },
-                    credentials: 'same-origin',
                     body: formData
                 })
-                    .then(res => res.json())
+                    .then(response => response.json())
                     .then(data => {
-                        if (!data.success) {
+                        if (data.success) {
+                            // Update application ID
+                            if (data.application_id) {
+                                const idField = document.getElementById('applicationId');
+                                if (idField) {
+                                    idField.value = data.application_id;
+                                }
+                            }
+
+                            // Update gating state
+                            gatingState.step4Saved = true;
+
+                            // Update UI
+                            updateNavigationGating();
+                            updateSidebarGating();
+
+                            // Show success message
+                            showMessage('Application saved successfully!', 'success');
+
+                            // Update save status display
+                            const saveStatus = document.getElementById('saveStatus');
+                            if (saveStatus) {
+                                saveStatus.innerHTML = `
+                                <div class="flex items-center gap-2 text-green-600 p-3 bg-green-50 rounded-lg mb-3">
+                                    <i data-lucide="check-circle" class="w-5 h-5"></i>
+                                    <span class="font-medium">Application saved! You can now proceed to payment.</span>
+                                </div>
+                            `;
+                                if (typeof lucide !== 'undefined') lucide.createIcons();
+                            }
+                        } else {
                             throw new Error(data.error || 'Save failed');
                         }
-
-                        // Persist returned ID
-                        if (data.application_id) {
-                            window.APPLICATION_ID = data.application_id;
-                            const idField = document.getElementById('applicationId');
-                            if (idField) idField.value = data.application_id;
-                        }
-
-                        // Update payment status
-                        const paymentStatus = document.getElementById('paymentStatus');
-                        if (paymentStatus && data.payment_status) {
-                            paymentStatus.innerText = data.payment_status.toUpperCase();
-                        }
-
-                        // Mark step saved without touching flow
-                        if (typeof gatingState !== 'undefined') {
-                            gatingState.step4Saved = true;
-                        }
-
-                        // Restore UI
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = originalHTML;
-
-                        // Unlock next step using existing logic
-                        updateNavigationGating?.();
-                        updateSidebarGating?.();
-
-                        window.showToast?.('success', 'Application saved successfully');
                     })
-                    .catch(err => {
-                        console.error('Save failed:', err);
+                    .catch(error => {
+                        console.error('Save error:', error);
+                        showMessage('Failed to save application: ' + error.message, 'error');
+                    })
+                    .finally(() => {
                         saveBtn.disabled = false;
                         saveBtn.innerHTML = originalHTML;
-                        window.showToast?.('error', err.message);
                     });
 
                 return false;
             });
-        })();
-
-
-
-
+        }
 
         // ================= STEP 5: PAYMENT ENFORCEMENT =================
         function setupPaymentEnforcement() {
@@ -1354,71 +1423,25 @@
 
                 // Check if step 4 was saved
                 if (!gatingState.step4Saved) {
-                    if (typeof window.showToast !== 'undefined') {
-                        window.showToast('warning', 'Please save your application before making payment.');
-                    } else {
-                        alert('Please save your application before making payment.');
-                    }
+                    showMessage('Please save your application before making payment.', 'warning');
                     return false;
                 }
 
-                // Show payment processing
-                paymentBtn.disabled = true;
-                const originalText = paymentBtn.innerHTML;
-                paymentBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processing Payment...';
+                // Get application ID
+                const applicationId = document.getElementById('applicationId')?.value;
+                if (!applicationId) {
+                    showMessage('Please save your application first.', 'warning');
+                    return false;
+                }
 
-                // Simulate payment processing (replace with actual payment gateway integration)
-                setTimeout(() => {
-                    // Simulate successful payment
-                    paymentConfirmed = true;
-                    gatingState.step5Paid = true;
-
-                    // Update payment button
-                    paymentBtn.innerHTML = '<span class="flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i> Payment Successful</span>';
-                    paymentBtn.classList.remove('payment-btn');
-                    paymentBtn.classList.add('payment-success');
-                    paymentBtn.disabled = true;
-
-                    // Show payment status
-                    const paymentStatus = document.getElementById('paymentStatusDisplay');
-                    if (paymentStatus) {
-                        paymentStatus.innerHTML = `
-                            <div class="flex items-center justify-center gap-2">
-                                <i data-lucide="check-circle" class="w-6 h-6"></i>
-                                <span class="font-medium">Payment confirmed! You can now proceed to upload documents.</span>
-                            </div>
-                        `;
-                        paymentStatus.classList.remove('hidden', 'payment-pending', 'payment-cancelled');
-                        paymentStatus.classList.add('payment-success', 'animate-scale-in');
-                        if (typeof lucide !== 'undefined') lucide.createIcons();
-                    }
-
-                    // Update database payment status (simulated)
-                    const paymentStatusInput = document.getElementById('paymentStatus');
-                    if (paymentStatusInput) {
-                        paymentStatusInput.value = 'paid';
-                    }
-
-                    // Enable step 6 in sidebar
-                    updateNavigationGating();
-
-                    // Show success toast
-                    if (typeof window.showToast !== 'undefined') {
-                        window.showToast('success', 'Payment successful! You can now upload your documents.');
-                    }
-
-                    // Auto-enable step 6 in sidebar
-                    setTimeout(() => {
-                        updateSidebarGating();
-                    }, 500);
-
-                }, 2000);
+                // Redirect to payment page (or integrate payment gateway)
+                window.location.href = `/payments/stripe/start/?application_id=${applicationId}`;
 
                 return false;
             });
         }
 
-        // ================= ACADEMIC ENTRIES =================
+        // ================= ACADEMIC ENTRIES MANAGEMENT =================
         let academicEntryCount = 0;
 
         function addAcademicEntry() {
@@ -1485,7 +1508,7 @@
                     </div>
                 </div>
             </div>
-        `;
+            `;
 
             container.insertAdjacentHTML('beforeend', entryHTML);
             if (typeof lucide !== 'undefined') {
@@ -1495,7 +1518,6 @@
             // Revalidate step 2 after adding entry
             validateStep2();
         }
-
 
         // Make removeAcademicEntry global
         window.removeAcademicEntry = function (entryId) {
@@ -1688,14 +1710,33 @@
 
             // Step-specific validation
             if (step === 2) {
+                // Validate English proficiency
                 const englishType = activeStep.querySelector('input[name="english_proficiency_type"]:checked');
-                if (!englishType || englishType.value === '') {
+                if (!englishType) {
                     errorMessages.push('Please select your English proficiency type');
                     isValid = false;
+                } else if (englishType.value === 'toefl') {
+                    const score = activeStep.querySelector('input[name="toefl_score"]');
+                    if (!score || !score.value.trim()) {
+                        errorMessages.push('Please enter your TOEFL score');
+                        isValid = false;
+                    }
+                } else if (englishType.value === 'ielts') {
+                    const score = activeStep.querySelector('input[name="ielts_score"]');
+                    if (!score || !score.value.trim()) {
+                        errorMessages.push('Please enter your IELTS score');
+                        isValid = false;
+                    }
+                } else if (englishType.value === 'other') {
+                    const testName = activeStep.querySelector('input[name="other_test"]');
+                    if (!testName || !testName.value.trim()) {
+                        errorMessages.push('Please enter the name of your English test');
+                        isValid = false;
+                    }
                 }
             }
 
-            // Declaration and privacy are in step 3 in this template
+            // Declaration and privacy are in step 3
             if (step === 3) {
                 const declaration = form.querySelector('input[name="declaration"]');
                 const privacy = form.querySelector('input[name="privacy"]');
@@ -1782,18 +1823,18 @@
             const academicEntries = document.querySelectorAll('.academic-entry');
 
             academicEntries.forEach((entry, index) => {
-                const entryNum = index + 1;
-                const levelSelect = entry.querySelector(`select[name="education_level_${entryNum}"]`);
+                const entryId = index + 1;
+                const levelSelect = entry.querySelector(`select[name="education_level_${entryId}"]`);
                 const level = levelSelect ? levelSelect.options[levelSelect.selectedIndex]?.text || '' : '';
-                const institution = entry.querySelector(`input[name="institution_${entryNum}"]`)?.value || '';
-                const graduationYear = entry.querySelector(`input[name="graduation_year_${entryNum}"]`)?.value || '';
-                const fieldOfStudy = entry.querySelector(`input[name="field_of_study_${entryNum}"]`)?.value || '';
-                const gpa = entry.querySelector(`input[name="gpa_${entryNum}"]`)?.value || '';
+                const institution = entry.querySelector(`input[name="institution_${entryId}"]`)?.value || '';
+                const graduationYear = entry.querySelector(`input[name="graduation_year_${entryId}"]`)?.value || '';
+                const fieldOfStudy = entry.querySelector(`input[name="field_of_study_${entryId}"]`)?.value || '';
+                const gpa = entry.querySelector(`input[name="gpa_${entryId}"]`)?.value || '';
 
                 if (institution) {
                     academicHTML += `
                     <div class="mb-3 p-3 bg-gray-50 rounded">
-                        <strong>Entry ${entryNum}:</strong> ${level} at ${institution}<br>
+                        <strong>Entry ${entryId}:</strong> ${level} at ${institution}<br>
                         ${graduationYear ? `<strong>Graduation Year:</strong> ${graduationYear}<br>` : ''}
                         ${fieldOfStudy ? `<strong>Field of Study:</strong> ${fieldOfStudy}<br>` : ''}
                         ${gpa ? `<strong>GPA:</strong> ${gpa}` : ''}
@@ -1805,9 +1846,20 @@
             // English Proficiency
             const englishProficiency = document.querySelector('input[name="english_proficiency_type"]:checked');
             let englishProficiencyText = 'Not selected';
+            let englishScoreText = '';
             if (englishProficiency) {
-                const label = englishProficiency.closest('.flex').querySelector('label');
-                englishProficiencyText = label ? label.textContent.trim() : englishProficiency.value;
+                const proficiencyValue = englishProficiency.value;
+                englishProficiencyText = proficiencyValue.toUpperCase();
+
+                if (proficiencyValue === 'toefl') {
+                    englishScoreText = document.querySelector('input[name="toefl_score"]')?.value || '';
+                } else if (proficiencyValue === 'ielts') {
+                    englishScoreText = document.querySelector('input[name="ielts_score"]')?.value || '';
+                } else if (proficiencyValue === 'other') {
+                    englishScoreText = document.querySelector('input[name="other_test"]')?.value || '';
+                } else if (proficiencyValue === 'native') {
+                    englishScoreText = 'Native Speaker';
+                }
             }
 
             // Course Selection (Step 3)
@@ -1837,9 +1889,6 @@
 
             const scholarship = document.querySelector('input[name="scholarship"]')?.checked ? 'Yes' : 'No';
 
-            const referralSourceSelect = document.querySelector('select[name="referral_source"]');
-            const referralSource = referralSourceSelect ? referralSourceSelect.options[referralSourceSelect.selectedIndex]?.text || 'Not specified' : 'Not specified';
-
             // Build the summary HTML
             let summaryHTML = `
             <div class="mb-6">
@@ -1859,7 +1908,7 @@
                 <h4 class="font-semibold mb-2 text-lg text-purple-900 border-b pb-2">Academic History</h4>
                 ${academicHTML || '<p class="text-gray-600 italic">No academic entries provided</p>'}
                 <div class="mt-3">
-                    <strong>English Proficiency:</strong> ${englishProficiencyText}
+                    <strong>English Proficiency:</strong> ${englishProficiencyText} ${englishScoreText ? `(${englishScoreText})` : ''}
                 </div>
             </div>
 
@@ -1871,7 +1920,6 @@
                     <div><strong>Study Mode:</strong> ${studyModeText}</div>
                     <div><strong>Intake Semester:</strong> ${intakeText}</div>
                     <div><strong>Scholarship Consideration:</strong> ${scholarship}</div>
-                    <div><strong>Referral Source:</strong> ${referralSource}</div>
                 </div>
             </div>
         `;
@@ -1888,6 +1936,7 @@
             const lastName = document.querySelector('input[name="last_name"]')?.value || '';
             const email = document.querySelector('input[name="email"]')?.value || '';
             const programSelect = document.querySelector('select[name="program"]');
+            const cost = document.querySelector('input[name="cost"]');
             const program = programSelect ? programSelect.options[programSelect.selectedIndex]?.text || 'Not selected' : 'Not selected';
 
             let paymentHTML = `
@@ -1916,24 +1965,25 @@
 
             // Check if payment was completed
             if (!gatingState.step5Paid) {
-                if (typeof window.showToast !== 'undefined') {
-                    window.showToast('error', 'Please complete the payment before submitting your application.');
-                } else {
-                    alert('Please complete the payment before submitting your application.');
-                }
+                showMessage('Please complete the payment before submitting your application.', 'error');
                 return false;
             }
 
+            // Serialize academic history
+            serializeAcademicHistory();
+
+            // Prepare FormData
             const formData = new FormData(form);
+
+            // Collect English proficiency data
+            collectEnglishProficiencyData(formData);
 
             // Disable submit button
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Submitting...';
 
-            // Show loading toast
-            if (typeof window.showToast !== 'undefined') {
-                window.showToast('info', 'Submitting your application...');
-            }
+            // Show loading message
+            showMessage('Submitting your application...', 'info');
 
             fetch(form.action, {
                 method: 'POST',
@@ -1951,33 +2001,68 @@
                 })
                 .then(data => {
                     if (data.success) {
-                        if (typeof window.showToast !== 'undefined') {
-                            window.showToast('success', 'Application submitted successfully!');
-                        }
+                        showMessage('Application submitted successfully!', 'success');
 
-                        // Redirect immediately
+                        // Redirect to status page
                         setTimeout(() => {
                             window.location.href = data.redirect_url || '/application_status/';
-                        }, 500);
+                        }, 1500);
 
                     } else {
-                        if (typeof window.showToast !== 'undefined') {
-                            window.showToast('error', data.error || 'An error occurred. Please try again.');
-                        }
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<span>Finalize Application</span>';
+                        throw new Error(data.error || 'An error occurred. Please try again.');
                     }
                 })
                 .catch(error => {
                     console.error('Submission Error:', error);
-                    if (typeof window.showToast !== 'undefined') {
-                        window.showToast('error', 'Network error. Please check your connection and try again.');
-                    }
+                    showMessage('Error: ' + error.message, 'error');
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<span>Finalize Application</span>';
                 });
 
             return false;
+        }
+
+        // ================= UTILITY FUNCTIONS =================
+        function showMessage(message, type = 'info') {
+            const messagesDiv = document.getElementById('formMessages');
+            if (!messagesDiv) return;
+
+            const colors = {
+                success: 'green',
+                error: 'red',
+                warning: 'yellow',
+                info: 'blue'
+            };
+
+            const icon = {
+                success: 'check-circle',
+                error: 'alert-circle',
+                warning: 'alert-triangle',
+                info: 'info'
+            };
+
+            const messageHTML = `
+                <div class="p-4 mb-4 rounded-lg border-2 animate-scale-in bg-${colors[type]}-50 border-${colors[type]}-200">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="${icon[type]}" class="w-5 h-5 text-${colors[type]}-600"></i>
+                        <span class="text-${colors[type]}-800 font-medium">${message}</span>
+                    </div>
+                </div>
+            `;
+
+            messagesDiv.innerHTML = messageHTML;
+
+            // Update icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+
+            // Auto-hide after 5 seconds for non-error messages
+            if (type !== 'error') {
+                setTimeout(() => {
+                    messagesDiv.innerHTML = '';
+                }, 5000);
+            }
         }
 
         // ================= EVENT LISTENERS =================
@@ -2023,7 +2108,7 @@
             setupValidationMonitors();
 
             // Setup save enforcement
-            setupSaveEnforcement();
+            setupSaveApplication();
 
             // Setup payment enforcement
             setupPaymentEnforcement();
@@ -2045,29 +2130,50 @@
 
         // Initialize form
         initForm();
+
+        // SELECT PROGRAMS AND THE PRICE COMES UP
+    document.addEventListener('DOMContentLoaded', function () {
+    const programSelect = document.getElementById('id_program');
+            const applicationCostInput = document.getElementById('application_cost');
+
+            if (!programSelect) return;
+
+            programSelect.addEventListener('change', function () {
+        const program = this.value;
+            if (!program) return;
+
+            fetch(`/applications/get-program-fee/?program=${encodeURIComponent(program)}`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.application_cost) return;
+
+            // Update hidden input (used by backend)
+            if (applicationCostInput) {
+                applicationCostInput.value = data.application_cost;
+            }
+
+            // Update payment summary display (Step 5)
+            const paymentDetails = document.getElementById('paymentDetails');
+            if (!paymentDetails) return;
+
+            const feeSpan = paymentDetails.querySelector('.font-bold.text-lg');
+            if (feeSpan) {
+                feeSpan.textContent = `$${data.application_cost}`;
+            }
+        })
+        .catch(err => {
+                console.error('Failed to load application fee:', err);
+        });
     });
+});
+
+
+    });
+
 </script>
 
-<script>
-
-    (function () {
-        if (!document.getElementById("stage5")) return;
-
-        fetch(`/applications/${APPLICATION_ID}/payment-details/`)
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById("payName").innerText = data.name;
-                document.getElementById("payAppId").innerText = data.application_id;
-                document.getElementById("payProgram").innerText = data.program;
-                document.getElementById("payAmount").innerText = `$${data.amount}`;
-            });
-    })();
-    // Sripe
-    document.getElementById("makePaymentBtn").addEventListener("click", function () {
-        window.location.href =`/payments/stripe/start/?application_id=${APPLICATION_ID}`;
-    });
-
-</script>
 
 
 {% endblock %}

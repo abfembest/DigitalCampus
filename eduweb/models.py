@@ -189,6 +189,36 @@ class Course(models.Model):
         super().save(*args, **kwargs)
 
 
+###  TO SELECT COURSE FOR APPLICATION #######
+class ProspectiveCourse(models.Model):
+    DEGREE_LEVEL_CHOICES = [('certificate', 'Certificate'), ('diploma', 'Diploma'), ('undergraduate', 'Undergraduate'), ('postgraduate', 'Postgraduate'), ('masters', 'Masters'), ('phd', 'PhD')]
+
+    STUDY_MODE_CHOICES = [('full_time', 'Full Time'), ('part_time', 'Part Time'), ('online', 'Online'), ('blended', 'Blended')]
+
+    INTAKE_CHOICES = [('january', 'January'), ('may', 'May'), ('september', 'September'), ('october', 'October')]
+
+    program = models.CharField(max_length=255)
+    degree_level = models.CharField(max_length=50, choices=DEGREE_LEVEL_CHOICES)
+    study_mode = models.CharField(max_length=50, choices=STUDY_MODE_CHOICES)
+    intake = models.CharField(max_length=50, choices=INTAKE_CHOICES)
+    application_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    duration = models.CharField(max_length=100)
+    tuition_fee = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    institution = models.CharField(max_length=255, blank=True, null=True)
+    country = models.CharField(max_length=100, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['program']
+        verbose_name = 'Prospective Course'
+        verbose_name_plural = 'Prospective Courses'
+
+    def __str__(self):
+        return f"{self.program} ({self.degree_level})"
+
 # ==================== APPLICATIONS ====================
 class CourseApplication(models.Model):
     DEGREE_LEVEL_CHOICES = [
@@ -308,6 +338,9 @@ class CourseApplication(models.Model):
     reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_applications')
     reviewed_at = models.DateTimeField(null=True, blank=True)
     is_reviewed = models.BooleanField(default=False)
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Amount the applicant has paid so far")
+    application_cost = models.ForeignKey('ProspectiveCourse', on_delete=models.PROTECT, related_name='applications', null=True)
+
     
     class Meta:
         ordering = ['-created_at']
@@ -438,11 +471,10 @@ class Vendor(models.Model):
 
     def __str__(self):
         return self.name
-<<<<<<< HEAD
+
     def _str_(self):
         return self.name
 
-=======
 
 
 # ==================== BLOG SYSTEM ====================
@@ -579,4 +611,7 @@ class BlogPost(models.Model):
             category=self.category,
             status='published'
         ).exclude(id=self.id)[:limit]
->>>>>>> ef6e711df83ba864c3342774272e1a30ecceb6b3
+
+    from django.db import models
+
+

@@ -5,7 +5,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.utils import timezone
-from eduweb.models import CourseApplication, CourseApplicationFile, User
+from eduweb.models import CourseApplication, User
 from datetime import timedelta
 import json
 from django.core.mail import EmailMultiAlternatives
@@ -23,8 +23,8 @@ def dashboard(request):
     
     # Get statistics
     total_applications = CourseApplication.objects.count()
-    pending_applications = CourseApplication.objects.filter(is_reviewed=False).count()
-    approved_applications = CourseApplication.objects.filter(is_reviewed=True).count()
+    pending_applications = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    approved_applications = CourseApplication.objects.filter(status__in=['accepted', 'reviewed']).count()
     total_students = User.objects.filter(is_staff=False, is_active=True).count()
     
     # Get recent applications (last 10)
@@ -50,13 +50,12 @@ def dashboard(request):
         'data': applications_by_day
     })
     
-    # Program distribution data
-    program_distribution = CourseApplication.objects.values('program').annotate(
+    program_distribution = CourseApplication.objects.values('course__name', 'course__faculty__name').annotate(
         count=Count('id')
-    ).order_by('-count')
-    
-    program_labels = [dict(CourseApplication.PROGRAM_CHOICES).get(item['program'], item['program']) 
-                     for item in program_distribution]
+    ).order_by('-count')[:10]  # Top 10 courses
+
+    program_labels = [f"{item['course__name']} ({item['course__faculty__name']})" 
+                    for item in program_distribution]
     program_data = [item['count'] for item in program_distribution]
     
     program_chart_data = json.dumps({
@@ -101,13 +100,17 @@ def applications_list(request):
     
     # Apply status filter
     if status_filter == 'pending':
-        applications = applications.filter(is_reviewed=False)
+        applications = applications.filter(status__in=['submitted', 'under_review'])
     elif status_filter == 'reviewed':
-        applications = applications.filter(is_reviewed=True)
+        applications = applications.filter(status='reviewed')
+    elif status_filter == 'accepted':
+        applications = applications.filter(status='accepted')
+    elif status_filter == 'rejected':
+        applications = applications.filter(status='rejected')
     
     # Apply program filter
     if program_filter:
-        applications = applications.filter(program=program_filter)
+        applications = applications.filter(course__id=program_filter)
     
     # Pagination
     paginator = Paginator(applications, 15)  # 15 applications per page
@@ -115,11 +118,13 @@ def applications_list(request):
     page_obj = paginator.get_page(page_number)
     
     # Get pending count for sidebar
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
+    from eduweb.models import Course
+
     context = {
         'applications': page_obj,
-        'programs': CourseApplication.PROGRAM_CHOICES,
+        'courses': Course.objects.filter(is_active=True).select_related('faculty'),
         'pending_count': pending_count,
     }
     
@@ -132,7 +137,7 @@ def application_detail(request, pk):
     """View detailed information about a specific application"""
     
     application = get_object_or_404(
-        CourseApplication.objects.prefetch_related('files'),
+        CourseApplication.objects.prefetch_related('documents'),  # ✅ Correct related name
         pk=pk
     )
     
@@ -160,9 +165,7 @@ def mark_reviewed(request, pk):
     if request.method == 'POST':
         application = get_object_or_404(CourseApplication, pk=pk)
         
-        # Update status to reviewed
         application.status = 'reviewed'
-        application.is_reviewed = True  # For backwards compatibility
         application.reviewed_by = request.user
         application.reviewed_at = timezone.now()
         application.save()
@@ -191,11 +194,17 @@ def make_decision(request, pk):
             messages.error(request, 'Invalid decision type.')
             return redirect('management:application_detail', pk=pk)
         
-        # Update application
-        application.decision = decision
-        application.decision_notes = decision_notes
-        application.status = 'decision_made'
-        application.decision_date = timezone.now()
+        # Update application status
+        if decision == 'accepted':
+            application.status = 'accepted'
+        elif decision == 'rejected':
+            application.status = 'rejected'
+        elif decision == 'waitlisted':
+            application.status = 'waitlisted'
+
+        application.review_notes = decision_notes  # ✅ Use review_notes instead
+        application.reviewed_by = request.user
+        application.reviewed_at = timezone.now()
         application.save()
         
         # Send decision email
@@ -214,7 +223,7 @@ def make_decision(request, pk):
 def send_decision_email(application):
     """Send admission decision email to applicant"""
     try:
-        decision = application.decision
+        decision = application.status
         
         if decision == 'accepted':
             subject = f'Congratulations! Admission Offer - {application.application_id}'
@@ -245,7 +254,7 @@ def send_decision_email(application):
                             <h3 style="color: {color}; margin-top: 0;">Admission Decision</h3>
                             <p style="font-size: 16px;"><strong>{decision_text} {application.get_program_display_name()}</strong></p>
                             <p><strong>Application ID:</strong> {application.application_id}</p>
-                            <p><strong>Decision Date:</strong> {application.decision_date.strftime('%B %d, %Y')}</p>
+                            <p><strong>Decision Date:</strong> {application.reviewed_at.strftime('%B %d, %Y') if application.reviewed_at else timezone.now().strftime('%B %d, %Y')}</p>
                         </div>
         """
         
@@ -272,11 +281,11 @@ def send_decision_email(application):
                         <p>We encourage you to apply again in the future. We wish you the best in your academic pursuits.</p>
             """
         
-        if application.decision_notes:
+        if application.review_notes:
             html_content += f"""
                         <div style="background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 5px;">
                             <p style="margin: 0;"><strong>Additional Notes:</strong></p>
-                            <p style="margin: 10px 0 0 0;">{application.decision_notes}</p>
+                            <p style="margin: 10px 0 0 0;">{application.review_notes}</p>
                         </div>
             """
         
@@ -314,7 +323,7 @@ from django.urls import reverse
 def faculties_list(request):
     """List all faculties"""
     faculties = Faculty.objects.all().order_by('display_order', 'name')
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'faculties': faculties,
@@ -339,7 +348,7 @@ def faculty_create(request):
     else:
         form = FacultyForm()
     
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'form': form,
@@ -367,7 +376,7 @@ def faculty_edit(request, pk):
     else:
         form = FacultyForm(instance=faculty)
     
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'form': form,
@@ -399,7 +408,7 @@ def faculty_delete(request, pk):
 def courses_list(request):
     """List all courses"""
     courses = Course.objects.select_related('faculty').all().order_by('faculty', 'display_order', 'name')
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'courses': courses,
@@ -424,7 +433,7 @@ def course_create(request):
     else:
         form = CourseForm()
     
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'form': form,
@@ -452,7 +461,7 @@ def course_edit(request, pk):
     else:
         form = CourseForm(instance=course)
     
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'form': form,
@@ -489,7 +498,7 @@ from management.forms import BlogPostForm, BlogCategoryForm
 def blog_posts_list(request):
     """List all blog posts"""
     posts = BlogPost.objects.select_related('category', 'author').all().order_by('-publish_date')
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     # Filter by status if provided
     status_filter = request.GET.get('status', '')
@@ -521,7 +530,7 @@ def blog_post_create(request):
     else:
         form = BlogPostForm()
     
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'form': form,
@@ -549,7 +558,7 @@ def blog_post_edit(request, pk):
     else:
         form = BlogPostForm(instance=post)
     
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'form': form,
@@ -581,7 +590,7 @@ def blog_post_delete(request, pk):
 def blog_categories_list(request):
     """List all blog categories"""
     categories = BlogCategory.objects.all().order_by('display_order', 'name')
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'categories': categories,
@@ -606,7 +615,7 @@ def blog_category_create(request):
     else:
         form = BlogCategoryForm()
     
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'form': form,
@@ -634,7 +643,7 @@ def blog_category_edit(request, pk):
     else:
         form = BlogCategoryForm(instance=category)
     
-    pending_count = CourseApplication.objects.filter(is_reviewed=False).count()
+    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
     
     context = {
         'form': form,

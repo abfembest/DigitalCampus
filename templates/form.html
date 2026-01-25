@@ -5,148 +5,50 @@
 
 {% block extra_css %}
 <style>
-    /* Minimal custom styles for animations only */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
     .form-step {
         display: none;
         animation: fadeIn 0.3s ease-out;
     }
-
-        .form-step.active {
-            display: block;
-        }
-
+    .form-step.active {
+        display: block;
+    }
+    
     .progress-step {
         transition: all 0.3s ease;
     }
-
-        .progress-step.active {
-            background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
-            color: white;
-            border-color: #840384;
-            box-shadow: 0 4px 15px rgba(132, 3, 132, 0.3);
-        }
-
-            .progress-step.active .step-number {
-                background-color: white;
-                color: #840384;
-                border-color: white;
-            }
-
-            .progress-step.active h3,
-            .progress-step.active p {
-                color: white;
-            }
-
-        .progress-step.completed {
-            background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
-            color: white;
-            border-color: #10B981;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-        }
-
-            .progress-step.completed .step-number {
-                background-color: white;
-                color: #10B981;
-                border-color: white;
-            }
-
-            .progress-step.completed h3,
-            .progress-step.completed p {
-                color: white;
-            }
-
-        /* Gating system styles */
-        .progress-step.disabled {
-            cursor: not-allowed !important;
-            opacity: 0.5 !important;
-            pointer-events: none;
-        }
-
-            .progress-step.disabled:hover {
-                transform: none !important;
-                box-shadow: none !important;
-            }
-
-        .progress-step.locked .step-number::after {
-            content: "🔒";
-            font-size: 0.8em;
-            margin-left: 2px;
-        }
-
-    @keyframes scale-in {
-        from {
-            opacity: 0;
-            transform: scale(0.9);
-        }
-
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
-
-    .animate-scale-in {
-        animation: scale-in 0.5s ease-out;
-    }
-
-    .payment-btn {
-        background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
-        padding: 1rem 2rem;
-        font-size: 1.25rem;
-        font-weight: bold;
+    .progress-step.active {
+        background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
         color: white;
-        border-radius: 0.75rem;
-        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-        transition: all 0.3s ease;
+        border-color: #840384;
+        box-shadow: 0 4px 15px rgba(132, 3, 132, 0.3);
     }
-
-        .payment-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4);
-        }
-
-    .payment-success {
+    .progress-step.active .step-number {
+        background-color: white;
+        color: #840384;
+    }
+    .progress-step.completed {
         background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+        color: white;
+        border-color: #10B981;
     }
-
-    .payment-pending {
-        background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+    .progress-step.completed .step-number {
+        background-color: white;
+        color: #10B981;
     }
-
-    .payment-cancelled {
-        background: linear-gradient(135deg, #EF4444 0%, #F87171 100%);
-    }
-
-    /* Next button disabled state */
-    #nextBtn:disabled {
+    .progress-step.disabled {
         opacity: 0.5;
         cursor: not-allowed;
-        transform: none !important;
+        pointer-events: none;
     }
-
-        #nextBtn:disabled:hover {
-            transform: none !important;
-            box-shadow: 0 10px 25px rgba(132, 3, 132, 0.3) !important;
-        }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-
-
-
 <section class="py-20 bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -156,19 +58,15 @@
                 Course Application Form
             </h1>
             <p class="text-gray-600 text-lg max-w-3xl mx-auto">
-                Complete your application to Modern International University in 6 simple steps.
-                Your progress will be saved automatically.
+                Complete your application in 4 simple steps. Your progress will be saved automatically.
             </p>
         </div>
-
-        <!-- Success/Error Messages -->
-        <div id="formMessages" class="max-w-4xl mx-auto mb-6"></div>
 
         <!-- Mobile Progress Indicator -->
         <div class="lg:hidden bg-white rounded-xl shadow-lg p-6 mb-6 max-w-4xl mx-auto">
             <div class="flex justify-between items-center mb-3">
                 <span class="font-semibold text-gray-800">
-                    Step <span id="mobileCurrentStep">1</span> of 6
+                    Step <span id="mobileCurrentStep">1</span> of 4
                 </span>
                 <span class="font-bold text-sm" style="color: #840384;">
                     <span id="mobileProgressPercentage">0</span>%
@@ -193,75 +91,53 @@
                     </h2>
 
                     <div class="space-y-3" id="progressSteps">
-                        <!-- Step 1 -->
-                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all"
-                             data-step="1">
-                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
-                                1
-                            </div>
+                        <!-- Steps 1-4: Interactive -->
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" data-step="1">
+                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">1</div>
                             <div class="flex-1">
                                 <h3 class="font-bold text-gray-900">Personal Information</h3>
                                 <p class="text-xs text-gray-600 mt-0.5">Basic details</p>
                             </div>
                         </div>
 
-                        <!-- Step 2 -->
-                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all"
-                             data-step="2">
-                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
-                                2
-                            </div>
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" data-step="2">
+                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">2</div>
                             <div class="flex-1">
                                 <h3 class="font-bold text-gray-900">Academic History</h3>
                                 <p class="text-xs text-gray-600 mt-0.5">Education background</p>
                             </div>
                         </div>
 
-                        <!-- Step 3 -->
-                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all"
-                             data-step="3">
-                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
-                                3
-                            </div>
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" data-step="3">
+                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">3</div>
                             <div class="flex-1">
                                 <h3 class="font-bold text-gray-900">Course Selection</h3>
                                 <p class="text-xs text-gray-600 mt-0.5">Program preferences</p>
                             </div>
                         </div>
 
-                        <!-- Step 4: Review & Save -->
-                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all"
-                             data-step="4">
-                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
-                                4
-                            </div>
+                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all" data-step="4">
+                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">4</div>
                             <div class="flex-1">
                                 <h3 class="font-bold text-gray-900">Review & Save</h3>
                                 <p class="text-xs text-gray-600 mt-0.5">Confirm details</p>
                             </div>
                         </div>
 
-                        <!-- Step 5: Make Payments -->
-                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all"
-                             data-step="5">
-                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
-                                5
-                            </div>
+                        <!-- Steps 5-6: Preview Only (Disabled) -->
+                        <div class="progress-step disabled flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300" data-step="5">
+                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-400 flex items-center justify-center flex-shrink-0 font-bold text-gray-400 bg-gray-100">5</div>
                             <div class="flex-1">
-                                <h3 class="font-bold text-gray-900">Make Payments</h3>
-                                <p class="text-xs text-gray-600 mt-0.5">Pay application fee</p>
+                                <h3 class="font-bold text-gray-500">Make Payment</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">Application fee</p>
                             </div>
                         </div>
 
-                        <!-- Step 6: Documents -->
-                        <div class="progress-step flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300 cursor-pointer hover:shadow-md transition-all"
-                             data-step="6">
-                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-800 flex items-center justify-center flex-shrink-0 font-bold text-gray-800 bg-white">
-                                6
-                            </div>
+                        <div class="progress-step disabled flex items-start gap-3 p-4 rounded-lg border-2 border-gray-300" data-step="6">
+                            <div class="step-number w-10 h-10 rounded-full border-2 border-gray-400 flex items-center justify-center flex-shrink-0 font-bold text-gray-400 bg-gray-100">6</div>
                             <div class="flex-1">
-                                <h3 class="font-bold text-gray-900">Documents</h3>
-                                <p class="text-xs text-gray-600 mt-0.5">Upload files</p>
+                                <h3 class="font-bold text-gray-500">Upload Documents</h3>
+                                <p class="text-xs text-gray-400 mt-0.5">Required files</p>
                             </div>
                         </div>
                     </div>
@@ -286,7 +162,6 @@
             <main class="flex-1">
                 <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
 
-                    <!-- Form Header -->
                     <div class="mb-8">
                         <h2 id="stepTitle" class="text-2xl font-bold mb-2" style="color: #840384;">
                             Personal Information
@@ -297,151 +172,106 @@
                         </div>
                     </div>
 
-
-
-                    <!-- Application Form -->
-                    <form id="applicationForm" method="POST" enctype="multipart/form-data">
+                    <form id="applicationForm" method="POST" action="{% url 'eduweb:apply' %}">
                         {% csrf_token %}
-
-
-
-                        <!-- Backend-populated hidden fields -->
+                        
                         <input type="hidden" id="applicationId" name="application_id">
-                        <input type="hidden" id="paymentStatus" name="payment_status" value="pending">
-                        <!--✅ STEP 2 — SERIALIZE ACADEMIC HISTORY (SAFE)-->
                         <input type="hidden" name="academic_history" id="academicHistoryPayload">
 
-
-                        <!-- ================= STEP 1 ================= -->
+                        <!-- STEP 1: Personal Information -->
                         <div class="form-step active" id="step1">
-                            <p class="text-gray-600 mb-6">
-                                Please provide your personal details and contact information.
-                            </p>
+                            <p class="text-gray-600 mb-6">Please provide your personal details and contact information.</p>
 
                             <div class="grid md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label for="id_first_name" class="block text-gray-700 font-medium mb-2">
-                                        First Name <span class="text-red-500">*</span>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.first_name.label }} <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="text"
-                                           id="id_first_name"
-                                           name="first_name"
-                                           required
-                                           placeholder="John"
-                                           class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                                    <div class="error-message text-red-500 text-sm mt-1"></div>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.first_name.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
 
                                 <div>
-                                    <label for="id_last_name" class="block text-gray-700 font-medium mb-2">
-                                        Last Name <span class="text-red-500">*</span>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.last_name.label }} <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="text"
-                                           id="id_last_name"
-                                           name="last_name"
-                                           required
-                                           placeholder="Smith"
-                                           class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                                    <div class="error-message text-red-500 text-sm mt-1"></div>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.last_name.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
 
                             <div class="mb-6">
-                                <label for="id_email" class="block text-gray-700 font-medium mb-2">
-                                    Email Address <span class="text-red-500">*</span>
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    {{ form.email.label }} <span class="text-red-500">*</span>
                                 </label>
-                                <input type="email"
-                                       id="id_email"
-                                       name="email"
-                                       value="{{ request.user.email|default:'' }}"
-                                       required
-                                       readonly
-                                       placeholder="john@example.com"
-                                       class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                                <div class="error-message text-red-500 text-sm mt-1"></div>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.email.errors.0 }}</div>
+                                {% endif %}
                             </div>
 
                             <div class="grid md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label for="id_phone" class="block text-gray-700 font-medium mb-2">
-                                        Phone Number <span class="text-red-500">*</span>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.phone.label }} <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="text"
-                                           id="id_phone"
-                                           name="phone"
-                                           required
-                                           placeholder="+1 (555) 123-4567"
-                                           class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.phone.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
 
                                 <div>
-                                    <label for="id_date_of_birth" class="block text-gray-700 font-medium mb-2">
-                                        Date of Birth <span class="text-red-500">*</span>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.date_of_birth.label }} <span class="text-red-500">*</span>
                                     </label>
-                                    <input type="date"
-                                           id="id_date_of_birth"
-                                           name="date_of_birth"
-                                           required
-                                           class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
+                                    {{ form.date_of_birth }}
+                                    {% if form.date_of_birth.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.date_of_birth.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
 
                             <div class="grid md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label for="id_country" class="block text-gray-700 font-medium mb-2">
-                                        Country <span class="text-red-500">*</span>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.country.label }} <span class="text-red-500">*</span>
                                     </label>
-                                    <select id="id_country" name="country" required
-                                            class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-purple-500">
-                                        <option value="">-- Select Your Country --</option>
-                                        <option value="NG">Nigeria</option>
-                                        <option value="GB">United Kingdom</option>
-                                        <option value="US">United States</option>
-                                        <option value="CA">Canada</option>
-                                        <option value="AU">Australia</option>
-                                        <option value="DE">Germany</option>
-                                        <option value="FR">France</option>
-                                        <option value="IN">India</option>
-                                        <option value="CN">China</option>
-                                        <option value="ZA">South Africa</option>
-                                    </select>
-
+                                    {{ form.country }}
+                                    {% if form.country.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.country.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
 
                                 <div>
-                                    <label for="id_gender" class="block text-gray-700 font-medium mb-2">
-                                        Gender <span class="text-red-500">*</span>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.gender.label }} <span class="text-red-500">*</span>
                                     </label>
-                                    <select id="id_gender" name="gender" required
-                                            class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-purple-500">
-                                        <option value="">-- Select Gender --</option>
-                                        <option value="male">Male</option>
-                                        <option value="female">Female</option>
-                                        <option value="non_binary">Non-binary</option>
-                                        <option value="prefer_not_to_say">Prefer not to say</option>
-                                    </select>
-
+                                    {{ form.gender }}
+                                    {% if form.gender.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.gender.errors.0 }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
 
                             <div class="mb-6">
-                                <label for="id_address" class="block text-gray-700 font-medium mb-2">
-                                    Current Address <span class="text-red-500">*</span>
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    {{ form.address.label }} <span class="text-red-500">*</span>
                                 </label>
-                                <textarea id="id_address"
-                                          name="address"
-                                          rows="3"
-                                          required
-                                          placeholder="Enter your full address"
-                                          class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500"></textarea>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.address.errors.0 }}</div>
+                                {% endif %}
                             </div>
                         </div>
 
-                        <!-- ================= STEP 2 ================= -->
+                        <!-- STEP 2: Academic History -->
                         <div class="form-step" id="step2">
-                            <p class="text-gray-600 mb-6">
-                                Please provide details of your previous education.
-                            </p>
+                            <p class="text-gray-600 mb-6">Please provide details of your previous education.</p>
 
                             <div id="academicEntriesContainer" class="space-y-6 mb-6"></div>
 
@@ -457,329 +287,112 @@
                                 <label class="block text-gray-700 font-medium mb-3">
                                     English Language Proficiency <span class="text-red-500">*</span>
                                 </label>
+                                {{ form.english_proficiency_test }}
+                                {% if form.english_proficiency_test.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.english_proficiency_test.errors.0 }}</div>
+                                {% endif %}
+                            </div>
 
-                                <div class="grid md:grid-cols-2 gap-4">
-
-                                    <label class="flex items-center gap-3 p-3 border rounded-lg">
-                                        <input type="radio" name="english_proficiency_type" value="toefl" required class="mr-2 h-5 w-5">
-                                        TOEFL
-                                        <input type="text" name="toefl_score" placeholder="Score"
-                                               class="w-20 px-2 py-1 border rounded">
-                                    </label>
-
-                                    <label class="flex items-center gap-3 p-3 border rounded-lg">
-                                        <input type="radio" name="english_proficiency_type" value="ielts" class="mr-2 h-5 w-5">
-                                        IELTS
-                                        <input type="text" name="ielts_score" placeholder="Score"
-                                               class="w-20 px-2 py-1 border rounded">
-                                    </label>
-
-                                    <label class="flex items-center gap-3 p-3 border rounded-lg">
-                                        <input type="radio" name="english_proficiency_type" value="other" class="mr-2 h-5 w-5">
-                                        Other
-                                        <input type="text" name="other_test" placeholder="Test name"
-                                               class="w-32 px-2 py-1 border rounded">
-                                    </label>
-
-                                    <label class="flex items-center gap-3 p-3 border rounded-lg">
-                                        <input type="radio" name="english_proficiency_type" value="native" class="mr-2 h-5 w-5">
-                                        Native Speaker
-                                    </label>
-
-                                </div>
+                            <div class="mb-6" id="scoreContainer" style="display:none;">
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    Test Score <span class="text-red-500">*</span>
+                                </label>
+                                {{ form.english_proficiency_score }}
+                                {% if form.english_proficiency_score.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.english_proficiency_score.errors.0 }}</div>
+                                {% endif %}
                             </div>
 
                             <div class="mb-6">
-                                <label for="id_additional_qualifications" class="block text-gray-700 font-medium mb-2">
-                                    Additional Qualifications or Certifications
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    {{ form.additional_qualifications.label }}
                                 </label>
-                                <textarea id="id_additional_qualifications"
-                                          name="additional_qualifications"
-                                          rows="3"
-                                          placeholder="List any certifications, awards, or relevant coursework"
-                                          class="w-full p-3 border-2 border-gray-300 rounded-lg"></textarea>
+                                {{ form.additional_qualifications }}
                             </div>
                         </div>
 
-                        <!-- ================= STEP 3 ================= -->
+                        <!-- STEP 3: Course Selection -->
                         <div class="form-step" id="step3">
+                            <p class="text-gray-600 mb-6">Select your desired program and preferences.</p>
 
                             <div class="mb-6">
-                                <label for="id_program" class="block text-gray-700 font-medium mb-2">
-                                    Program of Interest <span class="text-red-500">*</span>
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    {{ form.course.label }} <span class="text-red-500">*</span>
                                 </label>
-                                <select id="id_program" name="program" required
-                                        class="w-full p-3 border-2 border-gray-300 rounded-lg bg-white focus:border-purple-500">
-                                    <option value="">-- Select a Program --</option>
-                                    {% for course in courses %}
-                                    <option value="{{ course.program }}">{{ course.program }}</option>
-                                    {% endfor %}
-                                </select>
-
-                            </div>
-                            <input type="number" id="application_cost" name="application_cost" value="">
-
-
-                            <div class="mb-6">
-                                <label class="block text-gray-700 font-medium mb-3">
-                                    Degree Level <span class="text-red-500">*</span>
-                                </label>
-
-                                <div class="grid md:grid-cols-3 gap-4">
-                                    <label for="id_degree_level_0"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_degree_level_0" name="degree_level" value="bachelor" required class="mr-3 h-5 w-5">
-                                        <div>
-                                            <div class="font-medium">Bachelor</div>
-                                            <div class="text-sm text-gray-500">Undergraduate</div>
-                                        </div>
-                                    </label>
-
-                                    <label for="id_degree_level_1"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_degree_level_1" name="degree_level" value="master" required class="mr-3 h-5 w-5">
-                                        <div>
-                                            <div class="font-medium">Master</div>
-                                            <div class="text-sm text-gray-500">Graduate</div>
-                                        </div>
-                                    </label>
-
-                                    <label for="id_degree_level_2"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_degree_level_2" name="degree_level" value="phd" required class="mr-3 h-5 w-5">
-                                        <div>
-                                            <div class="font-medium">PhD</div>
-                                            <div class="text-sm text-gray-500">Research</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-
-
-
-                            <div class="mb-6">
-                                <label class="block text-gray-700 font-medium mb-3">
-                                    Study Mode <span class="text-red-500">*</span>
-                                </label>
-
-                                <div class="grid md:grid-cols-2 gap-4">
-                                    <label for="id_study_mode_0"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_study_mode_0" name="study_mode" value="full-time" required class="mr-3 h-5 w-5">
-                                        <div>
-                                            <div class="font-medium">Full Time</div>
-                                            <div class="text-sm text-gray-500">On campus</div>
-                                        </div>
-                                    </label>
-
-                                    <label for="id_study_mode_1"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_study_mode_1" name="study_mode" value="part-time" required class="mr-3 h-5 w-5">
-                                        <div>
-                                            <div class="font-medium">Part Time</div>
-                                            <div class="text-sm text-gray-500">Flexible</div>
-                                        </div>
-                                    </label>
-
-                                    <label for="id_study_mode_2"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_study_mode_2" name="study_mode" value="online" required class="mr-3 h-5 w-5">
-                                        <div>
-                                            <div class="font-medium">Online</div>
-                                            <div class="text-sm text-gray-500">Remote</div>
-                                        </div>
-                                    </label>
-
-                                    <label for="id_study_mode_3"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_study_mode_3" name="study_mode" value="hybrid" required class="mr-3 h-5 w-5">
-                                        <div>
-                                            <div class="font-medium">Hybrid</div>
-                                            <div class="text-sm text-gray-500">Hybrid</div>
-                                        </div>
-                                    </label>
-                                </div>
+                                {{ form.course }}
+                                {% if form.course.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.course.errors.0 }}</div>
+                                {% endif %}
                             </div>
 
                             <div class="mb-6">
-                                <label class="block text-gray-700 font-medium mb-3">
-                                    Intake Semester <span class="text-red-500">*</span>
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    {{ form.intake.label }} <span class="text-red-500">*</span>
                                 </label>
-
-                                <div class="grid md:grid-cols-3 gap-4">
-                                    <label for="id_intake_0"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_intake_0" name="intake" value="spring" required class="mr-3 h-5 w-5">
-                                        <span class="font-medium">Spring</span>
-                                    </label>
-
-                                    <label for="id_intake_1"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_intake_1" name="intake" value="summer" required class="mr-3 h-5 w-5">
-                                        <span class="font-medium">Summer</span>
-                                    </label>
-
-                                    <label for="id_intake_2"
-                                           class="flex items-center gap-3 p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 transition-all">
-                                        <input type="radio" id="id_intake_2" name="intake" value="fall" required class="mr-3 h-5 w-5">
-                                        <span class="font-medium">Fall</span>
-                                    </label>
-                                </div>
+                                {{ form.intake }}
+                                {% if form.intake.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.intake.errors.0 }}</div>
+                                {% endif %}
                             </div>
 
-
+                            <div class="mb-6">
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    {{ form.study_mode.label }} <span class="text-red-500">*</span>
+                                </label>
+                                {{ form.study_mode }}
+                                {% if form.study_mode.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.study_mode.errors.0 }}</div>
+                                {% endif %}
+                            </div>
 
                             <div class="mb-6 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-                                <label class="flex items-start gap-3 cursor-pointer">
-                                    <input type="checkbox" name="scholarship" class="mr-3 h-5 w-5">
+                                <label class="flex items-start gap-3">
+                                    {{ form.scholarship_requested }}
                                     <div>
-                                        <div class="font-medium" style="color:#840384;">
-                                            Apply for Scholarship Consideration
-                                        </div>
-                                        <p class="text-sm text-gray-600 mt-1">
-                                            Check this to be considered for merit-based scholarships
-                                        </p>
+                                        <div class="font-medium" style="color:#840384;">Apply for Scholarship Consideration</div>
+                                        <p class="text-sm text-gray-600 mt-1">Check this to be considered for merit-based scholarships</p>
                                     </div>
                                 </label>
                             </div>
 
                             <div class="space-y-4 mb-6">
-                                <label class="flex items-start gap-3 p-4 border rounded-lg cursor-pointer">
-                                    <input type="checkbox" name="declaration" required class="mr-3 h-5 w-5">
-                                    <div>
-                                        <div class="font-medium">Declaration <span class="text-red-500">*</span></div>
-                                        <p class="text-sm text-gray-600 mt-1">
-                                            I certify that all information provided is true and accurate
-                                        </p>
-                                    </div>
-                                </label>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.declaration.label }} <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.declaration }}
+                                    {% if form.declaration.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.declaration.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
 
-                                <label class="flex items-start gap-3 p-4 border rounded-lg cursor-pointer">
-                                    <input type="checkbox" name="privacy" required class="mr-3 h-5 w-5">
-                                    <div>
-                                        <div class="font-medium">Privacy Policy <span class="text-red-500">*</span></div>
-                                        <p class="text-sm text-gray-600 mt-1">
-                                            I have read and agree to the MIU Privacy Policy
-                                        </p>
-                                    </div>
-                                </label>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.privacy.label }} <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.privacy }}
+                                    {% if form.privacy.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.privacy.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
-
                         </div>
 
-
-                        <!-- Step 4: Review & Save -->
+                        <!-- STEP 4: Review & Save -->
                         <div class="form-step" id="step4">
-                            <p class="text-gray-600 mb-6">Please review your application details and save before proceeding to payment.</p>
+                            <p class="text-gray-600 mb-6">Please review your application details before saving.</p>
 
                             <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mb-6">
-                                <h3 class="text-lg font-bold mb-4" style="color: #840384;">
-                                    Application Summary
-                                </h3>
-                                <div id="reviewSummary" class="space-y-3 text-sm">
-                                    <!-- Will be populated by JavaScript -->
-                                </div>
+                                <h3 class="text-lg font-bold mb-4" style="color: #840384;">Application Summary</h3>
+                                <div id="reviewSummary" class="space-y-3 text-sm"></div>
                             </div>
 
-                            <!-- Save Application Button -->
-                            <div class="p-4 bg-purple-50 rounded-lg border-2 border-purple-200 mb-6">
-                                <div id="saveStatus" class="mb-3"></div>
-                                <button type="button" id="saveApplicationBtn"
-                                        class="px-8 py-3 text-white rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg"
-                                        style="background-color: #840384;">
-                                    Save Application
-                                </button>
-                                <p class="text-sm text-gray-600 mt-2">
-                                    Save your application details before proceeding to payment
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Step 5: Make Payments -->
-                        <div class="form-step" id="step5">
-                            <p class="text-gray-600 mb-6">Complete your application by paying the application fee.</p>
-
-                            <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mb-6">
-                                <h3 class="text-lg font-bold mb-4" style="color: #840384;">
-                                    Payment Details
-                                </h3>
-                                <div id="paymentDetails" class="space-y-3 text-sm">
-                                    <!-- Will be populated by JavaScript -->
-                                </div>
-                            </div>
-
-                            <div class="mb-6">
-                                <div id="paymentStatusDisplay" class="mb-4 p-4 rounded-lg text-white text-center font-semibold hidden">
-                                    <!-- Payment status will be shown here -->
-                                </div>
-
-                                <div class="text-center">
-                                    <button type="button" id="makePaymentBtn"
-                                            class="payment-btn px-8 py-4 text-white rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg">
-                                        Make Payment
-                                    </button>
-                                    <p class="text-sm text-gray-600 mt-3">
-                                        Application Fee: $100 (non-refundable)
+                            <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-6">
+                                <div class="flex items-start gap-3">
+                                    <i data-lucide="info" class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"></i>
+                                    <p class="text-sm text-gray-700">
+                                        Click "Save & Continue" below to save your application and proceed to payment.
                                     </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 6: Documents -->
-                        <div class="form-step" id="step6">
-                            <p class="text-gray-600 mb-6">
-                                Upload your supporting documents. Accepted formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB each)
-                            </p>
-
-                            <div class="space-y-6">
-                                <div>
-                                    <label class="block text-gray-700 font-medium mb-2">
-                                        Academic Transcripts <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="file" name="transcripts_file"
-                                           accept=".pdf,.doc,.docx,.jpg,.png"
-                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                                    <p class="text-sm text-gray-500 mt-1">Official transcripts from all institutions</p>
-                                </div>
-
-                                <div>
-                                    <label class="block text-gray-700 font-medium mb-2">
-                                        English Proficiency Certificate
-                                    </label>
-                                    <input type="file" name="english_proficiency_file"
-                                           accept=".pdf,.doc,.docx,.jpg,.png"
-                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                                    <p class="text-sm text-gray-500 mt-1">TOEFL, IELTS, or equivalent scores</p>
-                                </div>
-
-                                <div>
-                                    <label class="block text-gray-700 font-medium mb-2">
-                                        Personal Statement <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="file" name="personal_statement_file"
-                                           accept=".pdf,.doc,.docx"
-                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                                    <p class="text-sm text-gray-500 mt-1">500-1000 words</p>
-                                </div>
-
-                                <div>
-                                    <label class="block text-gray-700 font-medium mb-2">
-                                        Curriculum Vitae / Resume
-                                    </label>
-                                    <input type="file" name="cv_file"
-                                           accept=".pdf,.doc,.docx"
-                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                                    <p class="text-sm text-gray-500 mt-1">Detailed CV with experience</p>
-                                </div>
-
-                                <div>
-                                    <label class="block text-gray-700 font-medium mb-2">
-                                        Additional Documents (Optional)
-                                    </label>
-                                    <input type="file" name="additional_files"
-                                           accept=".pdf,.doc,.docx,.jpg,.png" multiple
-                                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                                    <p class="text-sm text-gray-500 mt-1">You can select multiple files</p>
                                 </div>
                             </div>
                         </div>
@@ -794,12 +407,7 @@
                             <button type="button" id="nextBtn"
                                     class="px-8 py-3 text-white rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg ml-auto"
                                     style="background-color: #840384;">
-                                Next Step →
-                            </button>
-
-                            <button type="submit" id="submitBtn"
-                                    class="px-8 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all shadow-lg hidden">
-                                Finalize Application
+                                <span id="nextBtnText">Next Step →</span>
                             </button>
                         </div>
                     </form>
@@ -809,1371 +417,5 @@
     </div>
 </section>
 
-<script>
-
-
-
-
-    // ================= COMPLETE CORRECTED APPLICATION FORM JAVASCRIPT =================
-    document.addEventListener('DOMContentLoaded', function () {
-        // Global State
-        let currentStep = 1;
-        const totalSteps = 6;
-
-        // CSRF Token (Django specific)
-        const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-
-        // Step titles
-        const stepTitles = {
-            1: "Personal Information",
-            2: "Academic History",
-            3: "Course Selection",
-            4: "Review & Save",
-            5: "Make Payments",
-            6: "Documents"
-        };
-
-        // DOM Elements
-        const form = document.getElementById('applicationForm');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const submitBtn = document.getElementById('submitBtn');
-        const progressSteps = document.querySelectorAll('.progress-step');
-        const formSteps = document.querySelectorAll('.form-step');
-
-        // Progress indicators
-        const progressBar = document.getElementById('progressBar');
-        const mobileProgressBar = document.getElementById('mobileProgressBar');
-        const stepProgressBar = document.getElementById('stepProgressBar');
-        const progressPercentage = document.getElementById('progressPercentage');
-        const mobileProgressPercentage = document.getElementById('mobileProgressPercentage');
-        const currentStepElement = document.getElementById('mobileCurrentStep');
-        const stepTitleElement = document.getElementById('stepTitle');
-        const mobileStepTitleElement = document.getElementById('mobileStepTitle');
-
-        // ================= ENHANCED GATING SYSTEM =================
-        let gatingState = {
-            step1Completed: false,
-            step2Completed: false,
-            step3Completed: false,
-            step4Saved: false,
-            step5Paid: false,
-            isStepValidating: false
-        };
-
-        // Payment simulation flag (would be replaced with real API call)
-        let paymentConfirmed = false;
-
-        // Initialize gating state from existing application
-        function initializeGatingState() {
-            const paymentStatusInput = document.getElementById('paymentStatus');
-            const applicationIdInput = document.getElementById('applicationId');
-
-            if (paymentStatusInput && paymentStatusInput.value === 'paid') {
-                gatingState.step5Paid = true;
-                paymentConfirmed = true;
-            }
-
-            if (applicationIdInput && applicationIdInput.value) {
-                gatingState.step4Saved = true;
-            }
-        }
-
-        // ================= VALIDATION MONITORS =================
-        function setupValidationMonitors() {
-            // Step 1 validation monitoring
-            const step1Inputs = document.querySelectorAll('#step1 input, #step1 select, #step1 textarea');
-            step1Inputs.forEach(input => {
-                input.addEventListener('input', validateStep1);
-                input.addEventListener('change', validateStep1);
-            });
-
-            // Step 2 validation monitoring
-            const step2Inputs = document.querySelectorAll('#step2 input, #step2 select');
-            step2Inputs.forEach(input => {
-                input.addEventListener('input', validateStep2);
-                input.addEventListener('change', validateStep2);
-            });
-
-            // Monitor academic entries
-            const academicContainer = document.getElementById('academicEntriesContainer');
-            if (academicContainer) {
-                const academicObserver = new MutationObserver(() => {
-                    validateStep2();
-                });
-                academicObserver.observe(academicContainer, { childList: true, subtree: true });
-            }
-
-            // Step 3 validation monitoring
-            const step3Inputs = document.querySelectorAll('#step3 input, #step3 select');
-            step3Inputs.forEach(input => {
-                input.addEventListener('change', validateStep3);
-            });
-
-            // Monitor checkboxes in Step 3
-            const declarationCheckbox = form.querySelector('input[name="declaration"]');
-            const privacyCheckbox = form.querySelector('input[name="privacy"]');
-            if (declarationCheckbox) declarationCheckbox.addEventListener('change', validateStep3);
-            if (privacyCheckbox) privacyCheckbox.addEventListener('change', validateStep3);
-        }
-
-        // ================= STEP VALIDATION FUNCTIONS =================
-        function validateStep1() {
-            const requiredFields = [
-                'input[name="first_name"]',
-                'input[name="last_name"]',
-                'input[name="email"]',
-                'input[name="phone"]',
-                'input[name="date_of_birth"]',
-                'select[name="country"]',
-                'select[name="gender"]',
-                'textarea[name="address"]'
-            ];
-
-            let allValid = true;
-            requiredFields.forEach(selector => {
-                const element = document.querySelector(selector);
-                if (element) {
-                    if (element.type === 'checkbox' || element.type === 'radio') {
-                        if (!element.checked) allValid = false;
-                    } else if (element.tagName === 'SELECT') {
-                        if (!element.value || element.value === '' || element.value === '--------') allValid = false;
-                    } else {
-                        if (!element.value || !element.value.trim()) allValid = false;
-                    }
-                }
-            });
-
-            gatingState.step1Completed = allValid;
-            updateNavigationGating();
-            return allValid;
-        }
-
-        function validateStep2() {
-            // Check for at least one academic entry
-            const academicEntries = document.querySelectorAll('.academic-entry');
-            if (academicEntries.length === 0) {
-                gatingState.step2Completed = false;
-                updateNavigationGating();
-                return false;
-            }
-
-            // Validate each academic entry
-            let allEntriesValid = true;
-            academicEntries.forEach(entry => {
-                const entryId = entry.getAttribute('data-entry');
-                const requiredFields = [
-                    `select[name="education_level_${entryId}"]`,
-                    `input[name="graduation_year_${entryId}"]`,
-                    `input[name="institution_${entryId}"]`,
-                    `input[name="field_of_study_${entryId}"]`
-                ];
-
-                requiredFields.forEach(fieldPattern => {
-                    const field = entry.querySelector(fieldPattern);
-                    if (field) {
-                        if (!field.value || !field.value.trim()) {
-                            allEntriesValid = false;
-                        }
-                    }
-                });
-            });
-
-            // Check English proficiency selection
-            const englishProficiency = document.querySelector('input[name="english_proficiency_type"]:checked');
-            if (!englishProficiency) {
-                allEntriesValid = false;
-            } else {
-                // For TOEFL, IELTS, and "Other", check if score/test name is provided
-                if (englishProficiency.value === 'toefl') {
-                    const toeflScore = document.querySelector('input[name="toefl_score"]');
-                    if (!toeflScore || !toeflScore.value.trim()) {
-                        allEntriesValid = false;
-                    }
-                } else if (englishProficiency.value === 'ielts') {
-                    const ieltsScore = document.querySelector('input[name="ielts_score"]');
-                    if (!ieltsScore || !ieltsScore.value.trim()) {
-                        allEntriesValid = false;
-                    }
-                } else if (englishProficiency.value === 'other') {
-                    const otherTest = document.querySelector('input[name="other_test"]');
-                    if (!otherTest || !otherTest.value.trim()) {
-                        allEntriesValid = false;
-                    }
-                }
-                // Native speaker doesn't require a score
-            }
-
-            gatingState.step2Completed = allEntriesValid;
-            updateNavigationGating();
-            return allEntriesValid;
-        }
-
-        function validateStep3() {
-            // Required program selection
-            const programSelect = document.querySelector('select[name="program"]');
-            const programValid = programSelect && programSelect.value && programSelect.value !== '' && programSelect.value !== '--------';
-
-            // Required degree level
-            const degreeLevel = document.querySelector('input[name="degree_level"]:checked');
-            const degreeValid = !!degreeLevel;
-
-            // Required study mode
-            const studyMode = document.querySelector('input[name="study_mode"]:checked');
-            const studyModeValid = !!studyMode;
-
-            // Required intake
-            const intake = document.querySelector('input[name="intake"]:checked');
-            const intakeValid = !!intake;
-
-            // Required declaration and privacy
-            const declaration = document.querySelector('input[name="declaration"]');
-            const privacy = document.querySelector('input[name="privacy"]');
-            const agreementsValid = declaration && declaration.checked && privacy && privacy.checked;
-
-            const allValid = programValid && degreeValid && studyModeValid && intakeValid && agreementsValid;
-
-            gatingState.step3Completed = allValid;
-            updateNavigationGating();
-            return allValid;
-        }
-
-        // ================= NAVIGATION GATING CONTROL =================
-        function updateNavigationGating() {
-            if (!nextBtn) return;
-
-            let nextEnabled = false;
-
-            switch (currentStep) {
-                case 1:
-                    nextEnabled = gatingState.step1Completed;
-                    break;
-                case 2:
-                    nextEnabled = gatingState.step2Completed;
-                    break;
-                case 3:
-                    nextEnabled = gatingState.step3Completed;
-                    break;
-                case 4:
-                    // Step 4: Next only enabled after explicit save
-                    nextEnabled = gatingState.step4Saved;
-                    break;
-                case 5:
-                    // Step 5: Next permanently disabled (payment handled separately)
-                    nextEnabled = false;
-                    break;
-                case 6:
-                    // Step 6: Next button hidden, submit button shown
-                    nextEnabled = true;
-                    break;
-            }
-
-            // Update next button state
-            nextBtn.disabled = !nextEnabled;
-
-            // Update sidebar step states
-            updateSidebarGating();
-        }
-
-        function updateSidebarGating() {
-            progressSteps.forEach(step => {
-                const stepNum = parseInt(step.getAttribute('data-step'));
-
-                if (stepNum <= currentStep) {
-                    // Steps up to current are either active or completed
-                    step.classList.remove('disabled');
-                    step.style.pointerEvents = 'auto';
-                    step.style.opacity = '1';
-                } else {
-                    // Future steps are disabled based on gating logic
-                    let isAccessible = false;
-
-                    switch (stepNum) {
-                        case 2:
-                            isAccessible = gatingState.step1Completed;
-                            break;
-                        case 3:
-                            isAccessible = gatingState.step1Completed && gatingState.step2Completed;
-                            break;
-                        case 4:
-                            isAccessible = gatingState.step1Completed && gatingState.step2Completed && gatingState.step3Completed;
-                            break;
-                        case 5:
-                            isAccessible = gatingState.step1Completed && gatingState.step2Completed && gatingState.step3Completed && gatingState.step4Saved;
-                            break;
-                        case 6:
-                            isAccessible = gatingState.step5Paid;
-                            break;
-                    }
-
-                    if (!isAccessible) {
-                        step.classList.add('disabled');
-                        step.style.pointerEvents = 'none';
-                        step.style.opacity = '0.5';
-                    } else {
-                        step.classList.remove('disabled');
-                        step.style.pointerEvents = 'auto';
-                        step.style.opacity = '1';
-                    }
-                }
-            });
-        }
-
-        // ================= OVERRIDE NAVIGATION BEHAVIOR =================
-        function overrideNavigationBehavior() {
-            // Store original next button handler
-            const originalNextHandler = nextBtn.onclick;
-
-            // Override next button click to enforce gating
-            nextBtn.onclick = function (e) {
-                // Prevent navigation if current step is not valid
-                if (currentStep === 4 && !gatingState.step4Saved) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    // Show save reminder
-                    const saveStatus = document.getElementById('saveStatus');
-                    if (saveStatus) {
-                        saveStatus.innerHTML = `
-                            <div class="flex items-center gap-2 text-red-600 p-3 bg-red-50 rounded-lg">
-                                <i data-lucide="alert-circle" class="w-5 h-5"></i>
-                                <span class="font-medium">Please save your application before proceeding to payment.</span>
-                            </div>
-                        `;
-                        if (typeof lucide !== 'undefined') lucide.createIcons();
-                    }
-
-                    return false;
-                }
-
-                if (currentStep === 5 && !gatingState.step5Paid) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    // Show payment reminder
-                    const paymentStatus = document.getElementById('paymentStatusDisplay');
-                    if (paymentStatus) {
-                        paymentStatus.innerHTML = `
-                            <div class="flex items-center justify-center gap-2 text-red-600">
-                                <i data-lucide="alert-circle" class="w-5 h-5"></i>
-                                <span>Please complete the payment before proceeding to document upload.</span>
-                            </div>
-                        `;
-                        paymentStatus.classList.remove('hidden', 'payment-success', 'payment-pending');
-                        paymentStatus.classList.add('payment-cancelled');
-                        if (typeof lucide !== 'undefined') lucide.createIcons();
-                    }
-
-                    return false;
-                }
-
-                // Call original handler if validation passes
-                if (originalNextHandler) {
-                    return originalNextHandler.call(this, e);
-                }
-            };
-
-            // Override progress step clicks in sidebar
-            progressSteps.forEach(step => {
-                const originalStepClick = step.onclick;
-
-                step.onclick = function (e) {
-                    const stepNum = parseInt(this.getAttribute('data-step'));
-
-                    // Prevent skipping ahead if gates are not satisfied
-                    if (stepNum > currentStep) {
-                        let canProceed = true;
-
-                        // Check all required gates for this step
-                        for (let i = currentStep + 1; i <= stepNum; i++) {
-                            switch (i) {
-                                case 2:
-                                    if (!gatingState.step1Completed) canProceed = false;
-                                    break;
-                                case 3:
-                                    if (!gatingState.step1Completed || !gatingState.step2Completed) canProceed = false;
-                                    break;
-                                case 4:
-                                    if (!gatingState.step1Completed || !gatingState.step2Completed || !gatingState.step3Completed) canProceed = false;
-                                    break;
-                                case 5:
-                                    if (!gatingState.step1Completed || !gatingState.step2Completed || !gatingState.step3Completed || !gatingState.step4Saved) canProceed = false;
-                                    break;
-                                case 6:
-                                    if (!gatingState.step5Paid) canProceed = false;
-                                    break;
-                            }
-                        }
-
-                        if (!canProceed) {
-                            e.preventDefault();
-                            e.stopPropagation();
-
-                            // Show appropriate message
-                            let message = 'Please complete the current step before proceeding.';
-                            if (stepNum === 5 && !gatingState.step4Saved) {
-                                message = 'Please save your application before accessing the payment section.';
-                            } else if (stepNum === 6 && !gatingState.step5Paid) {
-                                message = 'Please complete the payment before accessing the document upload section.';
-                            }
-
-                            if (typeof window.showToast !== 'undefined') {
-                                window.showToast('warning', message);
-                            } else {
-                                alert(message);
-                            }
-
-                            return false;
-                        }
-                    }
-
-                    // If moving backward or gates are satisfied, allow navigation
-                    if (originalStepClick) {
-                        return originalStepClick.call(this, e);
-                    }
-                };
-            });
-        }
-
-        // ================= ACADEMIC HISTORY & ENGLISH PROFICIENCY SERIALIZATION =================
-        function serializeAcademicHistory() {
-            const entries = [];
-            const academicEntries = document.querySelectorAll('.academic-entry');
-
-            academicEntries.forEach(entry => {
-                const entryId = entry.getAttribute('data-entry');
-                const degree = entry.querySelector(`select[name="education_level_${entryId}"]`)?.value || '';
-                const institution = entry.querySelector(`input[name="institution_${entryId}"]`)?.value || '';
-                const graduationYear = entry.querySelector(`input[name="graduation_year_${entryId}"]`)?.value || '';
-                const fieldOfStudy = entry.querySelector(`input[name="field_of_study_${entryId}"]`)?.value || '';
-                const gpa = entry.querySelector(`input[name="gpa_${entryId}"]`)?.value || '';
-
-                // Only add if at least one field has data
-                if (degree || institution || graduationYear || fieldOfStudy) {
-                    entries.push({
-                        degree: degree,
-                        institution: institution,
-                        graduation_year: graduationYear,
-                        field_of_study: fieldOfStudy,
-                        gpa: gpa
-                    });
-                }
-            });
-
-            // Set to hidden field
-            document.getElementById('academicHistoryPayload').value = JSON.stringify(entries);
-        }
-
-        function collectEnglishProficiencyData(formData) {
-            const englishType = document.querySelector('input[name="english_proficiency_type"]:checked');
-
-            if (!englishType) return;
-
-            const type = englishType.value;
-            let score = '';
-
-            // Based on type, get the appropriate score
-            if (type === 'toefl') {
-                score = document.querySelector('input[name="toefl_score"]')?.value || '';
-            } else if (type === 'ielts') {
-                score = document.querySelector('input[name="ielts_score"]')?.value || '';
-            } else if (type === 'other') {
-                score = document.querySelector('input[name="other_test"]')?.value || '';
-            } else if (type === 'native') {
-                score = 'Native Speaker';
-            }
-
-            // Add to formData
-            formData.append('english_proficiency', type);
-            formData.append('english_score', score);
-
-            return { type, score };
-        }
-
-        // ================= STEP 4: SAVE APPLICATION =================
-        function setupSaveApplication() {
-            const saveBtn = document.getElementById('saveApplicationBtn');
-            if (!saveBtn) return;
-
-            saveBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                // Validate all steps before saving
-                if (!validateStep1() || !validateStep2() || !validateStep3()) {
-                    showMessage('Please complete all required fields before saving.', 'error');
-                    return false;
-                }
-
-                // UI feedback
-                const originalHTML = saveBtn.innerHTML;
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '⏳ Saving...';
-
-                // Serialize academic history
-                serializeAcademicHistory();
-
-                // Prepare FormData
-                const formData = new FormData();
-
-                // Add CSRF token
-                if (CSRF_TOKEN) {
-                    formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
-                }
-
-                // Collect all form data
-                const form = document.getElementById('applicationForm');
-                const formElements = form.elements;
-
-                // Step 1: Personal Information
-                formData.append('first_name', formElements.first_name?.value || '');
-                formData.append('last_name', formElements.last_name?.value || '');
-                formData.append('email', formElements.email?.value || '');
-                formData.append('phone', formElements.phone?.value || '');
-                formData.append('date_of_birth', formElements.date_of_birth?.value || '');
-                formData.append('country', formElements.country?.value || '');
-                formData.append('gender', formElements.gender?.value || '');
-                formData.append('address', formElements.address?.value || '');
-
-                // Step 2: Academic History & English Proficiency
-                formData.append('academic_history', document.getElementById('academicHistoryPayload').value || '[]');
-                formData.append('additional_qualifications', formElements.additional_qualifications?.value || '');
-
-                // Collect English proficiency
-                collectEnglishProficiencyData(formData);
-
-                // Step 3: Course Selection
-                formData.append('program', formElements.program?.value || '');
-                formData.append('degree_level', document.querySelector('input[name="degree_level"]:checked')?.value || '');
-                formData.append('study_mode', document.querySelector('input[name="study_mode"]:checked')?.value || '');
-                formData.append('intake', document.querySelector('input[name="intake"]:checked')?.value || '');
-                formData.append('scholarship', document.querySelector('input[name="scholarship"]')?.checked ? 'true' : 'false');
-
-                // Add application ID if exists
-                const appId = document.getElementById('applicationId')?.value;
-                if (appId) {
-                    formData.append('application_id', appId);
-                }
-
-                // Save draft
-                fetch('/applications/save-draft/', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Update application ID
-                            if (data.application_id) {
-                                const idField = document.getElementById('applicationId');
-                                if (idField) {
-                                    idField.value = data.application_id;
-                                }
-                            }
-
-                            // Update gating state
-                            gatingState.step4Saved = true;
-
-                            // Update UI
-                            updateNavigationGating();
-                            updateSidebarGating();
-
-                            // Show success message
-                            showMessage('Application saved successfully!', 'success');
-
-                            // Update save status display
-                            const saveStatus = document.getElementById('saveStatus');
-                            if (saveStatus) {
-                                saveStatus.innerHTML = `
-                                <div class="flex items-center gap-2 text-green-600 p-3 bg-green-50 rounded-lg mb-3">
-                                    <i data-lucide="check-circle" class="w-5 h-5"></i>
-                                    <span class="font-medium">Application saved! You can now proceed to payment.</span>
-                                </div>
-                            `;
-                                if (typeof lucide !== 'undefined') lucide.createIcons();
-                            }
-                        } else {
-                            throw new Error(data.error || 'Save failed');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Save error:', error);
-                        showMessage('Failed to save application: ' + error.message, 'error');
-                    })
-                    .finally(() => {
-                        saveBtn.disabled = false;
-                        saveBtn.innerHTML = originalHTML;
-                    });
-
-                return false;
-            });
-        }
-
-        // ================= STEP 5: PAYMENT ENFORCEMENT =================
-        function setupPaymentEnforcement() {
-            const paymentBtn = document.getElementById('makePaymentBtn');
-            if (!paymentBtn) return;
-
-            paymentBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                // Check if step 4 was saved
-                if (!gatingState.step4Saved) {
-                    showMessage('Please save your application before making payment.', 'warning');
-                    return false;
-                }
-
-                // Get application ID
-                const applicationId = document.getElementById('applicationId')?.value;
-                if (!applicationId) {
-                    showMessage('Please save your application first.', 'warning');
-                    return false;
-                }
-
-                // Redirect to payment page (or integrate payment gateway)
-                window.location.href = `/payments/stripe/start/?application_id=${applicationId}`;
-
-                return false;
-            });
-        }
-
-        // ================= ACADEMIC ENTRIES MANAGEMENT =================
-        let academicEntryCount = 0;
-
-        function addAcademicEntry() {
-            academicEntryCount++;
-            const container = document.getElementById('academicEntriesContainer');
-            if (!container) return;
-
-            const entryHTML = `
-            <div class="academic-entry border-2 border-gray-300 rounded-lg p-6 relative" data-entry="${academicEntryCount}">
-                ${academicEntryCount > 1 ? `
-                <button type="button" class="remove-entry absolute top-4 right-4 text-red-600 hover:text-red-800" onclick="window.removeAcademicEntry(${academicEntryCount})">
-                    <i data-lucide="x-circle" class="w-6 h-6"></i>
-                </button>
-                ` : ''}
-
-                <h4 class="font-semibold mb-4 text-gray-800">Academic Entry ${academicEntryCount}</h4>
-
-                <div class="grid md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-gray-700 font-medium mb-2">
-                            Education Level <span class="text-red-500">*</span>
-                        </label>
-                        <select name="education_level_${academicEntryCount}" required class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white">
-                            <option value="">Select Level</option>
-                            <option value="high-school">High School</option>
-                            <option value="bachelor">Bachelor's Degree</option>
-                            <option value="master">Master's Degree</option>
-                            <option value="phd">PhD/Doctorate</option>
-                        </select>
-                        <div class="error-message text-red-500 text-sm mt-1"></div>
-                    </div>
-
-                    <div>
-                        <label class="block text-gray-700 font-medium mb-2">
-                            Graduation Year <span class="text-red-500">*</span>
-                        </label>
-                        <input type="number" name="graduation_year_${academicEntryCount}" required min="1950" max="2030" placeholder="2023" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                        <div class="error-message text-red-500 text-sm mt-1"></div>
-                    </div>
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2">
-                        Institution Name <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" name="institution_${academicEntryCount}" required placeholder="University/College Name" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                    <div class="error-message text-red-500 text-sm mt-1"></div>
-                </div>
-
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-gray-700 font-medium mb-2">
-                            Field of Study <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" name="field_of_study_${academicEntryCount}" required placeholder="Major/Field of Study" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                        <div class="error-message text-red-500 text-sm mt-1"></div>
-                    </div>
-
-                    <div>
-                        <label class="block text-gray-700 font-medium mb-2">
-                            GPA (Optional)
-                        </label>
-                        <input type="text" name="gpa_${academicEntryCount}" placeholder="3.5/4.0" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all">
-                    </div>
-                </div>
-            </div>
-            `;
-
-            container.insertAdjacentHTML('beforeend', entryHTML);
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-
-            // Revalidate step 2 after adding entry
-            validateStep2();
-        }
-
-        // Make removeAcademicEntry global
-        window.removeAcademicEntry = function (entryId) {
-            const entry = document.querySelector(`.academic-entry[data-entry="${entryId}"]`);
-            if (entry && academicEntryCount > 1) {
-                entry.remove();
-                // Update academic entry numbers
-                const entries = document.querySelectorAll('.academic-entry');
-                entries.forEach((entry, index) => {
-                    const entryNum = index + 1;
-                    entry.setAttribute('data-entry', entryNum);
-                    entry.querySelector('h4').textContent = `Academic Entry ${entryNum}`;
-                    // Update all inputs inside this entry
-                    const inputs = entry.querySelectorAll('[name]');
-                    inputs.forEach(input => {
-                        const name = input.getAttribute('name');
-                        if (name) {
-                            const newName = name.replace(/\d+$/, entryNum);
-                            input.setAttribute('name', newName);
-                        }
-                    });
-                });
-                academicEntryCount = entries.length;
-
-                // Revalidate step 2 after removing entry
-                validateStep2();
-            }
-        };
-
-        // ================= NAVIGATION =================
-        function goToNextStep() {
-            if (validateStep(currentStep)) {
-                if (currentStep < totalSteps) {
-                    currentStep++;
-                    updateStep();
-                }
-            }
-        }
-
-        function goToPrevStep() {
-            if (currentStep > 1) {
-                currentStep--;
-                updateStep();
-            }
-        }
-
-        // ================= STEP UPDATE =================
-        function updateStep() {
-            // Update step titles
-            const title = stepTitles[currentStep];
-            if (stepTitleElement) stepTitleElement.textContent = title;
-            if (mobileStepTitleElement) mobileStepTitleElement.textContent = title;
-
-            // Update current step number
-            if (currentStepElement) currentStepElement.textContent = currentStep;
-
-            // Update progress steps in sidebar
-            progressSteps.forEach(step => {
-                const stepNum = parseInt(step.getAttribute('data-step'));
-                step.classList.remove('active', 'completed');
-
-                if (stepNum < currentStep) {
-                    step.classList.add('completed');
-                } else if (stepNum === currentStep) {
-                    step.classList.add('active');
-                }
-            });
-
-            // Update form step visibility - SHOW ONLY CURRENT STEP
-            formSteps.forEach((step, index) => {
-                if (index + 1 === currentStep) {
-                    step.classList.add('active');
-                } else {
-                    step.classList.remove('active');
-                }
-            });
-
-            // Update navigation buttons
-            if (prevBtn) prevBtn.classList.toggle('hidden', currentStep === 1);
-
-            // Show next button for steps 1-4, hide for step 5, show submit for step 6
-            if (nextBtn) {
-                if (currentStep === 6) {
-                    nextBtn.classList.add('hidden');
-                } else {
-                    nextBtn.classList.remove('hidden');
-                }
-            }
-
-            if (submitBtn) submitBtn.classList.toggle('hidden', currentStep !== 6);
-
-            // Calculate progress percentage
-            const progressPercent = ((currentStep - 1) / (totalSteps - 1)) * 100;
-
-            // Update all progress bars
-            if (progressBar) progressBar.style.width = `${progressPercent}%`;
-            if (mobileProgressBar) mobileProgressBar.style.width = `${progressPercent}%`;
-            if (stepProgressBar) stepProgressBar.style.width = `${progressPercent}%`;
-
-            // Update percentage text
-            const percentText = Math.round(progressPercent);
-            if (progressPercentage) progressPercentage.textContent = percentText;
-            if (mobileProgressPercentage) mobileProgressPercentage.textContent = percentText;
-
-            // Update review section if on step 4 (preview step)
-            if (currentStep === 4) {
-                updateReviewSection();
-            }
-
-            // Update payment details if on step 5
-            if (currentStep === 5) {
-                updatePaymentDetails();
-            }
-
-            // Update navigation gating
-            updateNavigationGating();
-
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // ================= VALIDATION =================
-        function validateStep(step) {
-            const activeStep = document.getElementById(`step${step}`);
-            if (!activeStep) return false;
-
-            let isValid = true;
-            let errorMessages = [];
-
-            // Clear previous errors
-            activeStep.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-            activeStep.querySelectorAll('.border-red-500').forEach(el => {
-                el.classList.remove('border-red-500');
-            });
-
-            // Remove any existing validation error box
-            const existingError = activeStep.querySelector('.validation-errors');
-            if (existingError) {
-                existingError.remove();
-            }
-
-            // Get all required inputs in current step
-            const inputs = activeStep.querySelectorAll('input[required], select[required], textarea[required]');
-
-            inputs.forEach(input => {
-                // Skip inputs inside hidden academic entries
-                if (input.closest('.academic-entry') && !input.closest('.academic-entry').offsetParent) {
-                    return;
-                }
-
-                // Get field label
-                const labelElement = input.closest('div').querySelector('label');
-                const label = labelElement ? labelElement.textContent.replace('*', '').trim() : input.name;
-
-                // Check if field has value
-                if (input.type === 'checkbox' || input.type === 'radio') {
-                    const name = input.name;
-                    const checked = activeStep.querySelector(`input[name="${name}"]:checked`);
-                    if (!checked) {
-                        isValid = false;
-                        const firstInput = activeStep.querySelector(`input[name="${name}"]`);
-                        if (firstInput) {
-                            firstInput.classList.add('border-red-500');
-                            const errorDiv = firstInput.closest('.mb-6')?.querySelector('.error-message');
-                            const errorMsg = `Please select ${label}`;
-                            if (errorDiv) errorDiv.textContent = errorMsg;
-                            errorMessages.push(errorMsg);
-                        }
-                    }
-                } else if (input.tagName === 'SELECT') {
-                    // Check for empty or placeholder value in select fields
-                    if (!input.value || input.value === '' || input.value === '--------') {
-                        isValid = false;
-                        input.classList.add('border-red-500');
-                        const errorDiv = input.parentElement.querySelector('.error-message');
-                        const errorMsg = `Please select ${label}`;
-                        if (errorDiv) errorDiv.textContent = errorMsg;
-                        errorMessages.push(errorMsg);
-                    }
-                } else if (!input.value || !input.value.trim()) {
-                    isValid = false;
-                    input.classList.add('border-red-500');
-                    const errorDiv = input.parentElement.querySelector('.error-message') ||
-                        input.closest('div').querySelector('.error-message');
-                    const errorMsg = `${label} is required`;
-                    if (errorDiv) errorDiv.textContent = errorMsg;
-                    errorMessages.push(errorMsg);
-                }
-            });
-
-            // Step-specific validation
-            if (step === 2) {
-                // Validate English proficiency
-                const englishType = activeStep.querySelector('input[name="english_proficiency_type"]:checked');
-                if (!englishType) {
-                    errorMessages.push('Please select your English proficiency type');
-                    isValid = false;
-                } else if (englishType.value === 'toefl') {
-                    const score = activeStep.querySelector('input[name="toefl_score"]');
-                    if (!score || !score.value.trim()) {
-                        errorMessages.push('Please enter your TOEFL score');
-                        isValid = false;
-                    }
-                } else if (englishType.value === 'ielts') {
-                    const score = activeStep.querySelector('input[name="ielts_score"]');
-                    if (!score || !score.value.trim()) {
-                        errorMessages.push('Please enter your IELTS score');
-                        isValid = false;
-                    }
-                } else if (englishType.value === 'other') {
-                    const testName = activeStep.querySelector('input[name="other_test"]');
-                    if (!testName || !testName.value.trim()) {
-                        errorMessages.push('Please enter the name of your English test');
-                        isValid = false;
-                    }
-                }
-            }
-
-            // Declaration and privacy are in step 3
-            if (step === 3) {
-                const declaration = form.querySelector('input[name="declaration"]');
-                const privacy = form.querySelector('input[name="privacy"]');
-
-                if (declaration && !declaration.checked) {
-                    errorMessages.push('Please accept the declaration to continue');
-                    isValid = false;
-                }
-                if (privacy && !privacy.checked) {
-                    errorMessages.push('Please accept the privacy policy to continue');
-                    isValid = false;
-                }
-            }
-
-            // Step 6 (Documents) validation for required files
-            if (step === 6) {
-                const requiredFiles = activeStep.querySelectorAll('input[type="file"][required]');
-                requiredFiles.forEach(fileInput => {
-                    if (!fileInput.files || fileInput.files.length === 0) {
-                        isValid = false;
-                        fileInput.classList.add('border-red-500');
-                        const label = fileInput.previousElementSibling?.textContent || 'Required file';
-                        errorMessages.push(`${label} is required`);
-                    }
-                });
-            }
-
-            // Show consolidated error message
-            if (!isValid && errorMessages.length > 0) {
-                const uniqueErrors = [...new Set(errorMessages)];
-
-                // Create a detailed error message box
-                let errorHTML = '<div class="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6 animate-scale-in">';
-                errorHTML += '<div class="flex items-start gap-3">';
-                errorHTML += '<i data-lucide="alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"></i>';
-                errorHTML += '<div class="flex-1">';
-                errorHTML += '<h4 class="font-bold text-red-800 mb-2">Please fix the following errors:</h4>';
-                errorHTML += '<ul class="list-disc list-inside space-y-1 text-sm text-red-700">';
-
-                uniqueErrors.forEach(error => {
-                    errorHTML += `<li>${error}</li>`;
-                });
-
-                errorHTML += '</ul></div></div></div>';
-
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'validation-errors';
-                errorDiv.innerHTML = errorHTML;
-                activeStep.insertBefore(errorDiv, activeStep.firstChild);
-
-                // Re-initialize lucide icons
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-
-                // Scroll to error
-                setTimeout(() => {
-                    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-                }, 100);
-            }
-
-            return isValid;
-        }
-
-        // ================= REVIEW SECTION =================
-        function updateReviewSection() {
-            const reviewSummary = document.getElementById('reviewSummary');
-            if (!reviewSummary) return;
-
-            // Personal Information (Step 1)
-            const firstName = document.querySelector('input[name="first_name"]')?.value || '';
-            const lastName = document.querySelector('input[name="last_name"]')?.value || '';
-            const email = document.querySelector('input[name="email"]')?.value || '';
-            const phone = document.querySelector('input[name="phone"]')?.value || '';
-            const dateOfBirth = document.querySelector('input[name="date_of_birth"]')?.value || '';
-            const countrySelect = document.querySelector('select[name="country"]');
-            const country = countrySelect ? countrySelect.options[countrySelect.selectedIndex]?.text || 'Not selected' : 'Not selected';
-            const genderSelect = document.querySelector('select[name="gender"]');
-            const gender = genderSelect ? genderSelect.options[genderSelect.selectedIndex]?.text || 'Not selected' : 'Not selected';
-            const address = document.querySelector('textarea[name="address"]')?.value || '';
-
-            // Academic History (Step 2)
-            let academicHTML = '';
-            const academicEntries = document.querySelectorAll('.academic-entry');
-
-            academicEntries.forEach((entry, index) => {
-                const entryId = index + 1;
-                const levelSelect = entry.querySelector(`select[name="education_level_${entryId}"]`);
-                const level = levelSelect ? levelSelect.options[levelSelect.selectedIndex]?.text || '' : '';
-                const institution = entry.querySelector(`input[name="institution_${entryId}"]`)?.value || '';
-                const graduationYear = entry.querySelector(`input[name="graduation_year_${entryId}"]`)?.value || '';
-                const fieldOfStudy = entry.querySelector(`input[name="field_of_study_${entryId}"]`)?.value || '';
-                const gpa = entry.querySelector(`input[name="gpa_${entryId}"]`)?.value || '';
-
-                if (institution) {
-                    academicHTML += `
-                    <div class="mb-3 p-3 bg-gray-50 rounded">
-                        <strong>Entry ${entryId}:</strong> ${level} at ${institution}<br>
-                        ${graduationYear ? `<strong>Graduation Year:</strong> ${graduationYear}<br>` : ''}
-                        ${fieldOfStudy ? `<strong>Field of Study:</strong> ${fieldOfStudy}<br>` : ''}
-                        ${gpa ? `<strong>GPA:</strong> ${gpa}` : ''}
-                    </div>
-                `;
-                }
-            });
-
-            // English Proficiency
-            const englishProficiency = document.querySelector('input[name="english_proficiency_type"]:checked');
-            let englishProficiencyText = 'Not selected';
-            let englishScoreText = '';
-            if (englishProficiency) {
-                const proficiencyValue = englishProficiency.value;
-                englishProficiencyText = proficiencyValue.toUpperCase();
-
-                if (proficiencyValue === 'toefl') {
-                    englishScoreText = document.querySelector('input[name="toefl_score"]')?.value || '';
-                } else if (proficiencyValue === 'ielts') {
-                    englishScoreText = document.querySelector('input[name="ielts_score"]')?.value || '';
-                } else if (proficiencyValue === 'other') {
-                    englishScoreText = document.querySelector('input[name="other_test"]')?.value || '';
-                } else if (proficiencyValue === 'native') {
-                    englishScoreText = 'Native Speaker';
-                }
-            }
-
-            // Course Selection (Step 3)
-            const programSelect = document.querySelector('select[name="program"]');
-            const program = programSelect ? programSelect.options[programSelect.selectedIndex]?.text || 'Not selected' : 'Not selected';
-
-            const degreeLevel = document.querySelector('input[name="degree_level"]:checked');
-            let degreeLevelText = 'Not selected';
-            if (degreeLevel) {
-                const label = degreeLevel.closest('label').querySelector('.font-medium');
-                degreeLevelText = label ? label.textContent.trim() : degreeLevel.value;
-            }
-
-            const studyMode = document.querySelector('input[name="study_mode"]:checked');
-            let studyModeText = 'Not selected';
-            if (studyMode) {
-                const label = studyMode.closest('label').querySelector('.font-medium');
-                studyModeText = label ? label.textContent.trim() : studyMode.value;
-            }
-
-            const intake = document.querySelector('input[name="intake"]:checked');
-            let intakeText = 'Not selected';
-            if (intake) {
-                const label = intake.closest('label').querySelector('span.font-medium');
-                intakeText = label ? label.textContent.trim() : intake.value;
-            }
-
-            const scholarship = document.querySelector('input[name="scholarship"]')?.checked ? 'Yes' : 'No';
-
-            // Build the summary HTML
-            let summaryHTML = `
-            <div class="mb-6">
-                <h4 class="font-semibold mb-2 text-lg text-purple-900 border-b pb-2">Personal Information</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div><strong>Name:</strong> ${firstName} ${lastName}</div>
-                    <div><strong>Email:</strong> ${email}</div>
-                    <div><strong>Phone:</strong> ${phone}</div>
-                    <div><strong>Date of Birth:</strong> ${dateOfBirth || 'Not provided'}</div>
-                    <div><strong>Country:</strong> ${country}</div>
-                    <div><strong>Gender:</strong> ${gender}</div>
-                    <div class="md:col-span-2"><strong>Address:</strong> ${address}</div>
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <h4 class="font-semibold mb-2 text-lg text-purple-900 border-b pb-2">Academic History</h4>
-                ${academicHTML || '<p class="text-gray-600 italic">No academic entries provided</p>'}
-                <div class="mt-3">
-                    <strong>English Proficiency:</strong> ${englishProficiencyText} ${englishScoreText ? `(${englishScoreText})` : ''}
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <h4 class="font-semibold mb-2 text-lg text-purple-900 border-b pb-2">Course Selection</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div><strong>Program:</strong> ${program}</div>
-                    <div><strong>Degree Level:</strong> ${degreeLevelText}</div>
-                    <div><strong>Study Mode:</strong> ${studyModeText}</div>
-                    <div><strong>Intake Semester:</strong> ${intakeText}</div>
-                    <div><strong>Scholarship Consideration:</strong> ${scholarship}</div>
-                </div>
-            </div>
-        `;
-
-            reviewSummary.innerHTML = summaryHTML;
-        }
-
-        // ================= PAYMENT DETAILS =================
-        function updatePaymentDetails() {
-            const paymentDetails = document.getElementById('paymentDetails');
-            if (!paymentDetails) return;
-
-            const firstName = document.querySelector('input[name="first_name"]')?.value || '';
-            const lastName = document.querySelector('input[name="last_name"]')?.value || '';
-            const email = document.querySelector('input[name="email"]')?.value || '';
-            const programSelect = document.querySelector('select[name="program"]');
-            const cost = document.querySelector('input[name="cost"]');
-            const program = programSelect ? programSelect.options[programSelect.selectedIndex]?.text || 'Not selected' : 'Not selected';
-
-            let paymentHTML = `
-                <div><strong>Applicant:</strong> ${firstName} ${lastName}</div>
-                <div><strong>Email:</strong> ${email}</div>
-                <div><strong>Program:</strong> ${program}</div>
-                <div class="mt-4 pt-4 border-t border-blue-300">
-                    <div class="flex justify-between items-center">
-                        <span class="font-semibold">Application Fee:</span>
-                        <span class="font-bold text-lg">$100.00</span>
-                    </div>
-                    <p class="text-xs text-gray-600 mt-2">This fee is non-refundable and covers the cost of processing your application.</p>
-                </div>
-            `;
-
-            paymentDetails.innerHTML = paymentHTML;
-        }
-
-        // ================= FORM SUBMISSION =================
-        function submitApplication(e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Validate the final step (step 6 - Documents)
-            if (!validateStep(6)) return false;
-
-            // Check if payment was completed
-            if (!gatingState.step5Paid) {
-                showMessage('Please complete the payment before submitting your application.', 'error');
-                return false;
-            }
-
-            // Serialize academic history
-            serializeAcademicHistory();
-
-            // Prepare FormData
-            const formData = new FormData(form);
-
-            // Collect English proficiency data
-            collectEnglishProficiencyData(formData);
-
-            // Disable submit button
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Submitting...';
-
-            // Show loading message
-            showMessage('Submitting your application...', 'info');
-
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                credentials: 'same-origin'
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        showMessage('Application submitted successfully!', 'success');
-
-                        // Redirect to status page
-                        setTimeout(() => {
-                            window.location.href = data.redirect_url || '/application_status/';
-                        }, 1500);
-
-                    } else {
-                        throw new Error(data.error || 'An error occurred. Please try again.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Submission Error:', error);
-                    showMessage('Error: ' + error.message, 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<span>Finalize Application</span>';
-                });
-
-            return false;
-        }
-
-        // ================= UTILITY FUNCTIONS =================
-        function showMessage(message, type = 'info') {
-            const messagesDiv = document.getElementById('formMessages');
-            if (!messagesDiv) return;
-
-            const colors = {
-                success: 'green',
-                error: 'red',
-                warning: 'yellow',
-                info: 'blue'
-            };
-
-            const icon = {
-                success: 'check-circle',
-                error: 'alert-circle',
-                warning: 'alert-triangle',
-                info: 'info'
-            };
-
-            const messageHTML = `
-                <div class="p-4 mb-4 rounded-lg border-2 animate-scale-in bg-${colors[type]}-50 border-${colors[type]}-200">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="${icon[type]}" class="w-5 h-5 text-${colors[type]}-600"></i>
-                        <span class="text-${colors[type]}-800 font-medium">${message}</span>
-                    </div>
-                </div>
-            `;
-
-            messagesDiv.innerHTML = messageHTML;
-
-            // Update icons
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-
-            // Auto-hide after 5 seconds for non-error messages
-            if (type !== 'error') {
-                setTimeout(() => {
-                    messagesDiv.innerHTML = '';
-                }, 5000);
-            }
-        }
-
-        // ================= EVENT LISTENERS =================
-        if (prevBtn) prevBtn.addEventListener('click', goToPrevStep);
-        if (nextBtn) nextBtn.addEventListener('click', goToNextStep);
-        if (submitBtn) submitBtn.addEventListener('click', submitApplication);
-
-        // Add event listener for adding academic entries
-        const addAcademicBtn = document.getElementById('addAcademicEntryBtn');
-        if (addAcademicBtn) {
-            addAcademicBtn.addEventListener('click', addAcademicEntry);
-        }
-
-        // Progress step click handlers
-        progressSteps.forEach(step => {
-            step.addEventListener('click', function () {
-                const stepNum = parseInt(this.getAttribute('data-step'));
-                if (stepNum < currentStep || validateStep(currentStep)) {
-                    currentStep = stepNum;
-                    updateStep();
-                }
-            });
-        });
-
-        // ================= INITIALIZATION =================
-        function initForm() {
-            // Initialize gating state
-            initializeGatingState();
-
-            // Add initial academic entry
-            addAcademicEntry();
-
-            // Show only first step
-            formSteps.forEach((step, index) => {
-                if (index === 0) {
-                    step.classList.add('active');
-                } else {
-                    step.classList.remove('active');
-                }
-            });
-
-            // Setup validation monitors
-            setupValidationMonitors();
-
-            // Setup save enforcement
-            setupSaveApplication();
-
-            // Setup payment enforcement
-            setupPaymentEnforcement();
-
-            // Override navigation behavior
-            overrideNavigationBehavior();
-
-            // Initial validation
-            validateStep1();
-
-            // Update step
-            updateStep();
-
-            // Initialize lucide icons
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-
-        // Initialize form
-        initForm();
-
-        // SELECT PROGRAMS AND THE PRICE COMES UP
-    document.addEventListener('DOMContentLoaded', function () {
-    const programSelect = document.getElementById('id_program');
-            const applicationCostInput = document.getElementById('application_cost');
-
-            if (!programSelect) return;
-
-            programSelect.addEventListener('change', function () {
-        const program = this.value;
-            if (!program) return;
-
-            fetch(`/applications/get-program-fee/?program=${encodeURIComponent(program)}`, {
-                headers: {'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (!data.application_cost) return;
-
-            // Update hidden input (used by backend)
-            if (applicationCostInput) {
-                applicationCostInput.value = data.application_cost;
-            }
-
-            // Update payment summary display (Step 5)
-            const paymentDetails = document.getElementById('paymentDetails');
-            if (!paymentDetails) return;
-
-            const feeSpan = paymentDetails.querySelector('.font-bold.text-lg');
-            if (feeSpan) {
-                feeSpan.textContent = `$${data.application_cost}`;
-            }
-        })
-        .catch(err => {
-                console.error('Failed to load application fee:', err);
-        });
-    });
-});
-
-
-    });
-
-</script>
-
-
-
+<script src="{% static 'js/form.js' %}"></script>
 {% endblock %}

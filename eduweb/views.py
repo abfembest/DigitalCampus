@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
 from .forms import ContactForm, CourseApplicationForm
-from .models import ContactMessage, CourseApplication, CourseApplicationFile,Application,Payment,Vendor,ProspectiveCourse
+from .models import ContactMessage, CourseApplication, CourseIntake, Vendor
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from .decorators import check_for_auth
@@ -21,6 +21,13 @@ import json
 from datetime import datetime
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_protect
+from .models import (
+    ContactMessage, CourseApplication, Vendor, 
+    UserProfile, Course, CourseIntake, Faculty,
+    ApplicationDocument, ApplicationPayment
+)
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 
 def application_status_context(request):
@@ -29,7 +36,7 @@ def application_status_context(request):
     if request.user.is_authenticated:
         has_pending_application = CourseApplication.objects.filter(
             user=request.user,
-            submitted=True
+            status__in=['submitted', 'under_review', 'reviewed']
         ).exists()
     return {'has_pending_application': has_pending_application}
 
@@ -301,11 +308,11 @@ def verify_email(request, token):
         else:
             messages.info(request, 'Your email is already verified.')
         
-        return redirect('auth_page')
+        return redirect('eduweb:auth_page')
         
     except UserProfile.DoesNotExist:
         messages.error(request, 'Invalid verification link.')
-        return redirect('auth_page')
+        return redirect('eduweb:auth_page')
 
 
 def user_logout(request):
@@ -348,12 +355,12 @@ def apply(request):
     # Check if email is verified
     if request.user.profile.email_verified is False:
         messages.warning(request, 'Please verify your email before applying.')
-        return redirect('auth_page')
+        return redirect('eduweb:auth_page')
 
     # Check if user already has a pending application
     existing_application = CourseApplication.objects.filter(
         user=request.user,
-        decision='pending'
+        status__in=['draft', 'pending_payment', 'submitted', 'under_review']
     ).first()
 
     if existing_application:
@@ -361,20 +368,39 @@ def apply(request):
         return redirect('eduweb:application_status')
 
     # -------------------------------
-    # FETCH COURSES (NON-INTRUSIVE)
+    # FETCH COURSES (UPDATED)
     # -------------------------------
-    courses = ProspectiveCourse.objects.filter(is_active=True)
+    from .models import Course, Faculty, CourseIntake
 
-    courses_data = {}
+    courses = Course.objects.filter(is_active=True).select_related('faculty')
+    faculties = Faculty.objects.filter(is_active=True)
+
+    # Group courses by faculty
+    courses_by_faculty = {}
     for course in courses:
-        courses_data.setdefault(course.program, []).append({
+        faculty_name = course.faculty.name
+        if faculty_name not in courses_by_faculty:
+            courses_by_faculty[faculty_name] = []
+        
+        # Get active intakes for this course
+        intakes = CourseIntake.objects.filter(
+            course=course,
+            is_active=True,
+            application_deadline__gte=timezone.now().date()
+        ).values('id', 'intake_period', 'year', 'start_date')
+        
+        courses_by_faculty[faculty_name].append({
+            "id": course.id,
+            "name": course.name,
+            "code": course.code,
             "degree_level": course.degree_level,
-            "study_mode": course.study_mode,
-            "intake": course.intake,
-            "application_cost": str(course.application_cost),
+            "available_study_modes": course.available_study_modes,
+            "application_fee": str(course.application_fee),
+            "tuition_fee": str(course.tuition_fee),
+            "intakes": list(intakes)
         })
 
-    courses_json = json.dumps(courses_data, cls=DjangoJSONEncoder)
+    courses_json = json.dumps(courses_by_faculty, cls=DjangoJSONEncoder)
 
     # -------------------------------
     # POST LOGIC (UNCHANGED)
@@ -406,36 +432,27 @@ def apply(request):
                 application.save()
 
                 documents = {}
+                from .models import ApplicationDocument
+
                 file_field_mapping = {
-                    'transcripts_file': ('transcripts', 'Transcripts'),
-                    'english_proficiency_file': ('english_proficiency', 'English Proficiency Certificate'),
-                    'personal_statement_file': ('personal_statement', 'Personal Statement'),
-                    'cv_file': ('cv', 'CV/Resume')
+                    'transcript_file': 'transcript',
+                    'certificate_file': 'certificate',
+                    'english_test_file': 'english_test',
+                    'id_document_file': 'id_document',
+                    'cv_file': 'cv',
+                    'recommendation_file': 'recommendation'
                 }
 
-                for form_field, (file_type, doc_name) in file_field_mapping.items():
+                for form_field, file_type in file_field_mapping.items():
                     if form_field in request.FILES:
                         file_obj = request.FILES[form_field]
-                        app_file = CourseApplicationFile.objects.create(
+                        ApplicationDocument.objects.create(
                             application=application,
                             file=file_obj,
                             file_type=file_type,
                             original_filename=file_obj.name,
                             file_size=file_obj.size
                         )
-
-                        documents[doc_name] = {
-                            'file_id': app_file.id,
-                            'file_name': file_obj.name,
-                            'file_type': file_type,
-                            'file_size': app_file.get_file_size_display(),
-                            'file_path': app_file.file.name,
-                            'uploaded_at': timezone.now().isoformat()
-                        }
-
-                if documents:
-                    application.documents_uploaded = documents
-                    application.save()
 
                 from threading import Thread
 
@@ -509,9 +526,10 @@ def send_application_confirmation_email(application):
                         <div style="background-color: #E6F0FF; padding: 20px; border-radius: 8px; margin: 25px 0;">
                             <h3 style="color: #0F2A44; margin-top: 0;">Application Details</h3>
                             <p><strong>Application ID:</strong> {application.application_id}</p>
-                            <p><strong>Program:</strong> {application.get_program_display_name()}</p>
-                            <p><strong>Degree Level:</strong> {application.get_degree_level_display_name()}</p>
-                            <p><strong>Submission Date:</strong> {application.submission_date.strftime('%B %d, %Y')}</p>
+                            <p><strong>Program:</strong> {application.course.name}</p>
+                            <p><strong>Degree Level:</strong> {application.course.get_degree_level_display()}</p>
+                            <p><strong>Faculty:</strong> {application.course.faculty.name}</p>
+                            <p><strong>Submission Date:</strong> {application.submitted_at.strftime('%B %d, %Y') if application.submitted_at else 'Pending'}</p>
                         </div>
                         <p>Our admissions team will review your application and contact you within 5-7 business days.</p>
                         <p>Best regards,<br><strong style="color: #0F2A44;">The MIU Admissions Team</strong></p>
@@ -547,9 +565,12 @@ def send_application_admin_notification(application):
                 <p><strong>Application ID:</strong> {application.application_id}</p>
                 <p><strong>Name:</strong> {application.get_full_name()}</p>
                 <p><strong>Email:</strong> {application.email}</p>
-                <p><strong>Program:</strong> {application.get_program_display_name()}</p>
-                <p><strong>Degree Level:</strong> {application.get_degree_level_display_name()}</p>
-                <p><strong>Submitted:</strong> {application.submission_date.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><strong>Course:</strong> {application.course.name} ({application.course.code})</p>
+                <p><strong>Degree Level:</strong> {application.course.get_degree_level_display()}</p>
+                <p><strong>Faculty:</strong> {application.course.faculty.name}</p>
+                <p><strong>Intake:</strong> {application.intake.get_intake_period_display()} {application.intake.year}</p>
+                <p><strong>Study Mode:</strong> {application.get_study_mode_display()}</p>
+                <p><strong>Submitted:</strong> {application.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if application.submitted_at else 'Draft'}</p>
             </body>
         </html>
         """
@@ -757,11 +778,12 @@ The MIU Admissions Team
 
 
 # Additional Pages
+@check_for_auth
 def research(request):
     """Research page view"""
     return render(request, 'research.html')
 
-
+@check_for_auth
 def campus_life(request):
     """Campus Life page view"""
     return render(request, 'campus_life.html')
@@ -899,7 +921,7 @@ def admission_letter(request, application_id):
         return redirect('eduweb:index')
     
     # Check if application is accepted
-    if application.decision != 'accepted':
+    if application.status != 'accepted':
         messages.warning(request, 'Admission letter is only available for accepted applications.')
         return redirect('eduweb:application_status')
     
@@ -997,7 +1019,7 @@ def stripe_webhook(request):
         try:
             with transaction.atomic():
                 payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
-                    stripe_payment_intent=intent.id,
+                    gateway_payment_id=intent.id,  # ✅ Correct field name
                     defaults={
                         "application_id": intent.metadata.get("application_id"),
                         "amount": intent.amount / 100,
@@ -1079,7 +1101,7 @@ def confirm_payment(request):
         return JsonResponse({"status": "failed"}, status=400)
 
     payment = ApplicationPayment.objects.filter(
-        stripe_payment_intent=intent.id
+        gateway_payment_id=intent.id  # ✅ Correct
     ).first()
 
     if not payment:
@@ -1091,7 +1113,7 @@ def confirm_payment(request):
 #Payment Success Page (Receipt)
 
 def payment_success(request, payment_id):
-    payment = get_object_or_404(Application_pay, id=payment_id, status="PAID")
+    payment = get_object_or_404(ApplicationPayment, id=payment_id, status="success")
 
     return render(request, "applications/payment_success.html", {
         "payment": payment
@@ -1111,7 +1133,7 @@ def refund_payment(request, payment_id):
         with transaction.atomic():
             # Refund via Stripe
             refund = stripe.Refund.create(
-                payment_intent=payment.stripe_payment_intent
+                payment_intent=payment.gateway_payment_id  # ✅ Correct
             )
             # Update DB
             payment.status = "REFUNDED"
@@ -1129,23 +1151,46 @@ def refund_payment(request, payment_id):
 def get_payment_summary(request, application_id):
     """Get payment summary for an application"""
     try:
-        application = get_object_or_404(Application, id=application_id)
+        # Fix 1: Use correct model name 'CourseApplication'
+        # Fix 2: Use application_id field instead of id
+        application = get_object_or_404(
+            CourseApplication, 
+            application_id=application_id
+        )
         
-        # In production, verify user has permission to view this application
+        # Fix 3: Verify user has permission to view this application
+        if request.user.is_authenticated:
+            if not (request.user == application.user or request.user.is_staff):
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Permission denied'
+                }, status=403)
         
         summary = {
-            'application_id': str(application.id),
-            'full_name': application.full_name,
+            'application_id': application.application_id,  # ✅ Use the actual application_id field
+            'full_name': application.get_full_name(),  # ✅ Use the method (with parentheses)
             'email': application.email,
-            'amount': float(application.amount),
+            'course_name': application.course.name,  # ✅ Added course info
+            'faculty': application.course.faculty.name,  # ✅ Added faculty info
+            'amount': float(application.course.application_fee),  # ✅ Get fee from course
+            'currency': 'GBP',  # ✅ Added currency
             'description': 'Application Processing Fee',
-            'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
+            'stripe_public_key': settings.STRIPE_PUBLIC_KEY,  # ✅ Correct setting name
         }
         
         return JsonResponse({'success': True, 'data': summary})
+    except CourseApplication.DoesNotExist:
+        logger.error(f"Application not found: {application_id}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'Application not found'
+        }, status=404)
     except Exception as e:
         logger.error(f"Error getting payment summary: {str(e)}")
-        return JsonResponse({'success': False, 'error': 'Unable to load payment details'}, status=500)
+        return JsonResponse({
+            'success': False, 
+            'error': 'Unable to load payment details'
+        }, status=500)
 
 
 
@@ -1220,8 +1265,8 @@ def save_application_draft(request):
         elif proficiency_type == "native":
             score = "native"
 
-        application.english_proficiency = proficiency_type
-        application.english_score = score
+        application.english_proficiency_test = proficiency_type
+        application.english_proficiency_score = score
 
 
         # Academic history (JSON string expected)
@@ -1234,18 +1279,32 @@ def save_application_draft(request):
                 pass
 
         # -------------------------------------------------
-        # 4. COURSE SELECTION
+        # 4. COURSE SELECTION (UPDATED FOR FOREIGN KEYS)
         # -------------------------------------------------
-        application.program = data.get("program", "")
-        application.degree_level = data.get("degree_level", "")
+        course_id = data.get("course")
+        if course_id:
+            try:
+                application.course = Course.objects.get(id=course_id)
+            except Course.DoesNotExist:
+                pass
+
+        intake_id = data.get("intake")
+        if intake_id:
+            try:
+                application.intake = CourseIntake.objects.get(id=intake_id)
+            except CourseIntake.DoesNotExist:
+                pass
+
         application.study_mode = data.get("study_mode", "")
-        application.intake = data.get("intake", "")
-        application.scholarship = data.get("scholarship") in ("true", "on", "1")
+        application.scholarship_requested = data.get("scholarship_requested") in ("true", "on", "1")
+        application.financial_aid_requested = data.get("financial_aid_requested") in ("true", "on", "1")
+        application.referral_source = data.get("referral_source", "")
+        application.personal_statement = data.get("personal_statement", "")
 
         # -------------------------------------------------
         # 5. META / DRAFT FLAGS
         # -------------------------------------------------
-        application.submitted = False  # draft save only
+        application.status = 'draft'
 
         # -------------------------------------------------
         # 6. SAVE (MODEL HANDLES application_id GENERATION)
@@ -1258,7 +1317,7 @@ def save_application_draft(request):
         return JsonResponse({
             "success": True,
             "application_id": application.application_id,
-            "payment_status": application.decision if application.decision else "pending",
+            "payment_status": application.payment_status,
         })
 
     except Exception as e:
@@ -1279,11 +1338,10 @@ def payment_details(request, application_id):
     return JsonResponse({
         "application_id": app.application_id,
         "name": app.get_full_name(),
-        "program": app.get_program_display_name(),
-        "amount": 150.00,  # configurable later
-        "payment_status": app.files.filter(
-            payment_status="success"
-        ).exists() and "success" or "pending"
+        "course": app.course.name,
+        "faculty": app.course.faculty.name,
+        "amount": float(app.course.application_fee),
+        "payment_status": app.payment_status if hasattr(app, 'payment') else 'pending'
     })
 
 @login_required
@@ -1294,8 +1352,8 @@ def upload_application_file(request, application_id):
         user=request.user
     )
 
-    # 🔒 HARD PAYMENT ENFORCEMENT
-    if not application.files.filter(payment_status="success").exists():
+    # Check payment status using the new payment model
+    if not application.is_paid:
         return JsonResponse({
             "success": False,
             "error": "Payment required before uploading documents"
@@ -1303,19 +1361,19 @@ def upload_application_file(request, application_id):
 
     file = request.FILES.get("file")
     file_type = request.POST.get("file_type")
-    CourseApplicationFile.objects.create(
+    ApplicationDocument.objects.create(
         application=application,
         file=file,
         file_type=file_type,
-        submitted=True
+        original_filename=file.name,
+        file_size=file.size
     )
 
     return JsonResponse({"success": True})
 
 def finalize_application(application):
-    application.submitted = True
-    application.submission_date = timezone.now()
     application.status = "submitted"
+    application.submitted_at = timezone.now()
     application.save()
 
 
@@ -1346,4 +1404,3 @@ def course_detail(request, slug):
     }
     
     return render(request, 'programs/course_detail.html', context)
-

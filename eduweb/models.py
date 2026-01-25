@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.text import slugify
+from django.core.validators import MinValueValidator
 import uuid
 import os
 
@@ -123,6 +124,27 @@ class Faculty(models.Model):
 
 
 class Course(models.Model):
+    """
+    Unified course model - represents actual academic programs offered.
+    Removed ProspectiveCourse as it was redundant.
+    """
+    DEGREE_LEVEL_CHOICES = [
+        ('certificate', 'Certificate'),
+        ('diploma', 'Diploma'),
+        ('undergraduate', 'Undergraduate'),
+        ('postgraduate', 'Postgraduate'),
+        ('masters', 'Masters'),
+        ('phd', 'PhD')
+    ]
+
+    STUDY_MODE_CHOICES = [
+        ('full_time', 'Full Time'),
+        ('part_time', 'Part Time'),
+        ('online', 'Online'),
+        ('blended', 'Blended')
+    ]
+
+    # Basic Info
     name = models.CharField(max_length=200, help_text="Course name")
     slug = models.SlugField(max_length=200, unique=True)
     code = models.CharField(max_length=20, unique=True, help_text="Course code")
@@ -134,8 +156,11 @@ class Course(models.Model):
     color_secondary = models.CharField(max_length=20, default='cyan')
     
     # Program Details
-    degree_levels = models.JSONField(default=list)
-    study_modes = models.JSONField(default=list)
+    degree_level = models.CharField(max_length=50, choices=DEGREE_LEVEL_CHOICES)
+    available_study_modes = models.JSONField(
+        default=list, 
+        help_text="List of available study modes for this course"
+    )
     duration_years = models.DecimalField(max_digits=3, decimal_places=1, default=4.0)
     credits_required = models.IntegerField(default=120)
     
@@ -153,13 +178,26 @@ class Course(models.Model):
     specialization_tracks = models.JSONField(default=list)
     
     # Requirements
-    undergraduate_requirements = models.JSONField(default=list)
-    graduate_requirements = models.JSONField(default=list)
+    entry_requirements = models.JSONField(
+        default=list,
+        help_text="General entry requirements for this course"
+    )
+    
+    # Financial Information
+    application_fee = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        help_text="Application processing fee"
+    )
+    tuition_fee = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        help_text="Annual tuition fee"
+    )
     
     # Statistics
     avg_starting_salary = models.CharField(max_length=50, blank=True)
-    job_placement_rate = models.IntegerField(default=0)
-    intake_periods = models.JSONField(default=list)
+    job_placement_rate = models.IntegerField(default=0, help_text="Percentage (0-100)")
     
     # Media
     hero_image = models.ImageField(upload_to='courses/heroes/', blank=True, null=True)
@@ -181,77 +219,49 @@ class Course(models.Model):
         ordering = ['faculty', 'display_order', 'name']
     
     def __str__(self):
-        return f"{self.name} - {self.faculty.name}"
+        return f"{self.name} ({self.get_degree_level_display()})"
     
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = slugify(f"{self.name}-{self.degree_level}")
         super().save(*args, **kwargs)
 
 
-###  TO SELECT COURSE FOR APPLICATION #######
-class ProspectiveCourse(models.Model):
-    DEGREE_LEVEL_CHOICES = [('certificate', 'Certificate'), ('diploma', 'Diploma'), ('undergraduate', 'Undergraduate'), ('postgraduate', 'Postgraduate'), ('masters', 'Masters'), ('phd', 'PhD')]
-
-    STUDY_MODE_CHOICES = [('full_time', 'Full Time'), ('part_time', 'Part Time'), ('online', 'Online'), ('blended', 'Blended')]
-
-    INTAKE_CHOICES = [('january', 'January'), ('may', 'May'), ('september', 'September'), ('october', 'October')]
-
-    program = models.CharField(max_length=255)
-    degree_level = models.CharField(max_length=50, choices=DEGREE_LEVEL_CHOICES)
-    study_mode = models.CharField(max_length=50, choices=STUDY_MODE_CHOICES)
-    intake = models.CharField(max_length=50, choices=INTAKE_CHOICES)
-    application_cost = models.DecimalField(max_digits=10, decimal_places=2)
-    duration = models.CharField(max_length=100)
-    tuition_fee = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    institution = models.CharField(max_length=255, blank=True, null=True)
-    country = models.CharField(max_length=100, blank=True, null=True)
-    description = models.TextField(blank=True, null=True)
+class CourseIntake(models.Model):
+    """
+    Separate model for intake periods - allows multiple intakes per course
+    with different application deadlines and start dates
+    """
+    INTAKE_PERIOD_CHOICES = [
+        ('january', 'January'),
+        ('may', 'May'),
+        ('september', 'September'),
+        ('october', 'October')
+    ]
+    
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='intakes')
+    intake_period = models.CharField(max_length=50, choices=INTAKE_PERIOD_CHOICES)
+    year = models.IntegerField()
+    start_date = models.DateField()
+    application_deadline = models.DateField()
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
+    available_slots = models.IntegerField(default=0, help_text="Maximum number of students")
+    
     class Meta:
-        ordering = ['program']
-        verbose_name = 'Prospective Course'
-        verbose_name_plural = 'Prospective Courses'
-
+        unique_together = ['course', 'intake_period', 'year']
+        ordering = ['start_date']
+        verbose_name = 'Course Intake'
+        verbose_name_plural = 'Course Intakes'
+    
     def __str__(self):
-        return f"{self.program} ({self.degree_level})"
+        return f"{self.course.name} - {self.get_intake_period_display()} {self.year}"
+
 
 # ==================== APPLICATIONS ====================
 class CourseApplication(models.Model):
-    DEGREE_LEVEL_CHOICES = [
-        ('bachelor', "Bachelor's Degree"),
-        ('master', "Master's Degree"),
-        ('phd', 'PhD/Doctorate'),
-    ]
-    
-    STUDY_MODE_CHOICES = [
-        ('full-time', 'Full-time'),
-        ('part-time', 'Part-time'),
-        ('online', 'Online'),
-        ('hybrid', 'Hybrid'),
-    ]
-    
-    INTAKE_CHOICES = [
-        ('fall-2025', 'Fall 2025'),
-        ('spring-2026', 'Spring 2026'),
-        ('fall-2026', 'Fall 2026'),
-    ]
-    
-    PROGRAM_CHOICES = [
-        ('business', 'Business Administration (MBA)'),
-        ('computer-science', 'Computer Science'),
-        ('data-science', 'Data Science'),
-        ('engineering', 'Engineering'),
-        ('health-sciences', 'Health Sciences'),
-        ('psychology', 'Psychology'),
-        ('economics', 'Economics'),
-        ('law', 'Law'),
-        ('arts', 'Arts & Humanities'),
-    ]
-
+    """
+    Main application model - simplified and properly connected
+    """
     GENDER_CHOICES = [
         ('male', 'Male'),
         ('female', 'Female'),
@@ -283,22 +293,28 @@ class CourseApplication(models.Model):
     ]
     
     STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_payment', 'Pending Payment'),
         ('submitted', 'Submitted'),
         ('under_review', 'Under Review'),
         ('reviewed', 'Reviewed'),
-        ('decision_made', 'Decision Made'),
-    ]
-    
-    DECISION_CHOICES = [
-        ('pending', 'Pending'),
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
         ('waitlisted', 'Waitlisted'),
+        ('withdrawn', 'Withdrawn'),
     ]
     
-    # Personal Information
+    # Identification
     application_id = models.CharField(max_length=50, unique=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='applications', 
+        null=True, 
+        blank=True
+    )
+    
+    # Personal Information
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField()
@@ -309,121 +325,163 @@ class CourseApplication(models.Model):
     address = models.TextField()
     
     # Academic History
-    academic_history = models.JSONField(default=list)
-    english_proficiency = models.CharField(max_length=50, blank=True)
-    english_score = models.CharField(max_length=20, blank=True)
+    academic_history = models.JSONField(
+        default=list,
+        help_text="List of previous educational institutions and qualifications"
+    )
+    english_proficiency_test = models.CharField(max_length=50, blank=True)
+    english_proficiency_score = models.CharField(max_length=20, blank=True)
     additional_qualifications = models.TextField(blank=True)
     
-    # Course Selection
-    program = models.CharField(max_length=50, choices=PROGRAM_CHOICES)
-    degree_level = models.CharField(max_length=20, choices=DEGREE_LEVEL_CHOICES)
-    study_mode = models.CharField(max_length=20, choices=STUDY_MODE_CHOICES)
-    intake = models.CharField(max_length=20, choices=INTAKE_CHOICES)
-    scholarship = models.BooleanField(default=False)
+    # Course Selection - PROPER FOREIGN KEYS
+    course = models.ForeignKey(
+        Course, 
+        on_delete=models.PROTECT, 
+        related_name='applications',
+        help_text="The course being applied for"
+    )
+    intake = models.ForeignKey(
+        CourseIntake,
+        on_delete=models.PROTECT,
+        related_name='applications',
+        help_text="Specific intake period"
+    )
+    study_mode = models.CharField(
+        max_length=20, 
+        choices=Course.STUDY_MODE_CHOICES,
+        help_text="Preferred study mode"
+    )
     
-    # Additional
-    referral_source = models.CharField(max_length=100, blank=True, choices=REFERRAL_CHOICES)
-    documents_uploaded = models.JSONField(default=dict)
+    # Financial Aid
+    scholarship_requested = models.BooleanField(default=False)
+    financial_aid_requested = models.BooleanField(default=False)
     
-    # Metadata
-    created_at = models.DateTimeField(default=timezone.now)
-    submitted = models.BooleanField(default=False)
-    submission_date = models.DateTimeField(null=True, blank=True)
+    # Additional Information
+    referral_source = models.CharField(
+        max_length=100, 
+        blank=True, 
+        choices=REFERRAL_CHOICES
+    )
+    personal_statement = models.TextField(blank=True)
     
-    # Status
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
-    decision = models.CharField(max_length=20, choices=DECISION_CHOICES, default='pending')
-    decision_date = models.DateTimeField(null=True, blank=True)
-    decision_notes = models.TextField(blank=True)
-    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_applications')
+    # Application Status
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default='draft'
+    )
+    
+    # Review Information
+    reviewed_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='reviewed_applications'
+    )
     reviewed_at = models.DateTimeField(null=True, blank=True)
-    is_reviewed = models.BooleanField(default=False)
-    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Amount the applicant has paid so far")
-    application_cost = models.ForeignKey('ProspectiveCourse', on_delete=models.PROTECT, related_name='applications', null=True)
-
+    review_notes = models.TextField(blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(default=timezone.now)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Course Application'
         verbose_name_plural = 'Course Applications'
+        indexes = [
+            models.Index(fields=['application_id']),
+            models.Index(fields=['email']),
+            models.Index(fields=['status']),
+        ]
     
     def __str__(self):
-        return f"{self.application_id} - {self.first_name} {self.last_name}"
+        return f"{self.application_id} - {self.get_full_name()}"
     
     def save(self, *args, **kwargs):
         if not self.application_id:
+            # Create temporary ID first
             self.application_id = f"TEMP-{uuid.uuid4().hex[:8]}"
             super().save(*args, **kwargs)
+            # Generate proper ID after we have the primary key
             year = timezone.now().year
-            self.application_id = f'MIU-{year}-{str(self.id).zfill(4)}'
-            CourseApplication.objects.filter(id=self.id).update(application_id=self.application_id)
+            self.application_id = f'MIU-{year}-{str(self.id).zfill(6)}'
+            CourseApplication.objects.filter(id=self.id).update(
+                application_id=self.application_id
+            )
             return
         super().save(*args, **kwargs)
     
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
     
-    def get_program_display_name(self):
-        return dict(self.PROGRAM_CHOICES).get(self.program, self.program)
+    @property
+    def payment_status(self):
+        """Check if application fee has been paid"""
+        try:
+            payment = self.payment
+            return payment.status
+        except ApplicationPayment.DoesNotExist:
+            return 'pending'
     
-    def get_degree_level_display_name(self):
-        return dict(self.DEGREE_LEVEL_CHOICES).get(self.degree_level, self.degree_level)
+    @property
+    def is_paid(self):
+        """Quick check if application is paid"""
+        return self.payment_status == 'success'
+    
+    def can_submit(self):
+        """Check if application can be submitted"""
+        return self.is_paid and self.status == 'draft'
 
 
 def application_file_upload_path(instance, filename):
+    """Generate upload path for application files"""
     name, ext = os.path.splitext(filename)
-    safe_filename = f"{name}{ext}"
+    safe_filename = f"{slugify(name)}{ext}"
     file_type = instance.file_type or 'other'
     return f'applications/{instance.application.application_id}/{file_type}/{safe_filename}'
 
 
-class CourseApplicationFile(models.Model):
+class ApplicationDocument(models.Model):
+    """
+    Documents attached to applications
+    Removed payment fields - payment is handled separately
+    """
     FILE_TYPE_CHOICES = [
-        ('transcripts', 'Transcripts'),
-        ('english_proficiency', 'English Proficiency Certificate'),
-        ('personal_statement', 'Personal Statement'),
+        ('transcript', 'Academic Transcript'),
+        ('certificate', 'Certificate/Diploma'),
+        ('english_test', 'English Proficiency Test'),
+        ('id_document', 'ID Document'),
         ('cv', 'CV/Resume'),
+        ('recommendation', 'Letter of Recommendation'),
         ('other', 'Other Document'),
     ]
     
-    application = models.ForeignKey(CourseApplication, related_name='files', on_delete=models.CASCADE)
+    application = models.ForeignKey(
+        CourseApplication, 
+        related_name='documents', 
+        on_delete=models.CASCADE
+    )
     file = models.FileField(upload_to=application_file_upload_path)
-    file_type = models.CharField(max_length=50, choices=FILE_TYPE_CHOICES, default='other')
-    uploaded_at = models.DateTimeField(default=timezone.now())
-    original_filename = models.CharField(max_length=255, blank=True)
-    file_size = models.IntegerField(default=0)
+    file_type = models.CharField(max_length=50, choices=FILE_TYPE_CHOICES)
+    original_filename = models.CharField(max_length=255)
+    file_size = models.IntegerField(default=0, help_text="File size in bytes")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
     
-    submitted = models.BooleanField(default=False)
-    payment_status = models.CharField(
-        max_length=20,
-        choices=[
-            ("pending", "Pending"),
-            ("success", "Success"),
-            ("cancelled", "Cancelled"),
-        ],
-        default="pending"
-    )
-
-    payment_reference = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True
-    )
-
-    paid_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
         ordering = ['-uploaded_at']
-        verbose_name = 'Application File'
-        verbose_name_plural = 'Application Files'
+        verbose_name = 'Application Document'
+        verbose_name_plural = 'Application Documents'
     
     def __str__(self):
         return f"{self.get_file_type_display()} - {self.application.application_id}"
     
     def save(self, *args, **kwargs):
-        if not self.original_filename and self.file:
-            self.original_filename = self.file.name
-        if not self.file_size and self.file:
+        if self.file and not self.original_filename:
+            self.original_filename = os.path.basename(self.file.name)
+        if self.file and not self.file_size:
             try:
                 self.file_size = self.file.size
             except:
@@ -431,6 +489,7 @@ class CourseApplicationFile(models.Model):
         super().save(*args, **kwargs)
     
     def get_file_size_display(self):
+        """Human-readable file size"""
         size = self.file_size
         for unit in ['B', 'KB', 'MB', 'GB']:
             if size < 1024.0:
@@ -439,42 +498,134 @@ class CourseApplicationFile(models.Model):
         return f"{size:.1f} TB"
 
 
-# ==================== PAYMENT ====================
-from django.core.validators import MinValueValidator
-
-class Application(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
-    full_name = models.CharField(max_length=255)
-    email = models.EmailField()
-    status = models.CharField(max_length=50, default='pending_payment')
+# ==================== PAYMENT SYSTEM ====================
+class ApplicationPayment(models.Model):
+    """
+    Payment model for application fees
+    One-to-one relationship with CourseApplication
+    """
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    PAYMENT_METHOD_CHOICES = [
+        ('stripe', 'Stripe'),
+        ('paystack', 'Paystack'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('other', 'Other'),
+    ]
+    
+    # Link to application (one-to-one)
+    application = models.OneToOneField(
+        CourseApplication,
+        on_delete=models.CASCADE,
+        related_name='payment'
+    )
+    
+    # Payment Details
+    amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        validators=[MinValueValidator(0)]
+    )
+    currency = models.CharField(max_length=3, default='USD')
+    status = models.CharField(
+        max_length=20, 
+        choices=PAYMENT_STATUS_CHOICES, 
+        default='pending'
+    )
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        default='stripe'
+    )
+    
+    # Gateway Information
+    payment_reference = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Unique payment reference/transaction ID"
+    )
+    gateway_payment_id = models.CharField(
+        max_length=255, 
+        blank=True,
+        help_text="Payment gateway's transaction ID (e.g., Stripe payment intent)"
+    )
+    
+    # Card Information (if applicable)
+    card_last4 = models.CharField(max_length=4, blank=True)
+    card_brand = models.CharField(max_length=50, blank=True)
+    
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    paid_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Additional Info
+    payment_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional payment gateway metadata"
+    )
+    failure_reason = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = 'Application Payment'
+        verbose_name_plural = 'Application Payments'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['payment_reference']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"Payment for {self.application.application_id} - {self.status}"
+    
+    def save(self, *args, **kwargs):
+        # Generate reference if not exists
+        if not self.payment_reference:
+            self.payment_reference = f"PAY-{uuid.uuid4().hex[:12].upper()}"
+        
+        # Set amount from course if not set
+        if not self.amount:
+            self.amount = self.application.course.application_fee
+        
+        # Update paid_at when status changes to success
+        if self.status == 'success' and not self.paid_at:
+            self.paid_at = timezone.now()
+        
+        super().save(*args, **kwargs)
+        
+        # Update application status based on payment
+        if self.status == 'success':
+            if self.application.status == 'draft' or self.application.status == 'pending_payment':
+                self.application.status = 'pending_payment'  # Ready to submit
+                self.application.save(update_fields=['status'])
 
 
-class Payment(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    application = models.ForeignKey(Application, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=50, default='pending')
-    stripe_payment_intent_id = models.CharField(max_length=255, null=True, blank=True)
-    card_last4 = models.CharField(max_length=4, null=True, blank=True)
-    card_brand = models.CharField(max_length=50, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    processed_at = models.DateTimeField(null=True, blank=True)
-
-
+# ==================== VENDOR MANAGEMENT ====================
 class Vendor(models.Model):
+    """
+    Vendor/Partner institutions
+    """
     name = models.CharField(max_length=255)
     email = models.EmailField()
+    country = models.CharField(max_length=100, blank=True)
     stripe_account_id = models.CharField(max_length=255, blank=True, null=True)
-
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Vendor'
+        verbose_name_plural = 'Vendors'
+    
     def __str__(self):
         return self.name
-
-    def _str_(self):
-        return self.name
-
 
 
 # ==================== BLOG SYSTEM ====================
@@ -487,12 +638,12 @@ def blog_image_upload_path(instance, filename):
 
 class BlogCategory(models.Model):
     """Blog category model for organizing posts"""
-    name = models.CharField(max_length=100, unique=True, help_text="Category name (e.g., Student Life)")
-    slug = models.SlugField(max_length=100, unique=True, help_text="URL-friendly name")
-    description = models.TextField(blank=True, help_text="Category description")
-    icon = models.CharField(max_length=50, default='folder', help_text="Lucide icon name")
-    color = models.CharField(max_length=20, default='blue', help_text="Color theme (e.g., blue, green)")
-    display_order = models.IntegerField(default=0, help_text="Order in category list")
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, default='folder')
+    color = models.CharField(max_length=20, default='blue')
+    display_order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     
     class Meta:
@@ -521,44 +672,53 @@ class BlogPost(models.Model):
     ]
     
     # Basic Information
-    title = models.CharField(max_length=200, help_text="Post title")
-    slug = models.SlugField(max_length=200, unique=True, help_text="URL-friendly title")
-    subtitle = models.CharField(max_length=200, blank=True, help_text="Optional subtitle/excerpt")
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    subtitle = models.CharField(max_length=200, blank=True)
     
     # Content
-    excerpt = models.TextField(max_length=500, help_text="Short summary (max 500 chars)")
-    content = models.TextField(help_text="Full blog post content (supports HTML)")
+    excerpt = models.TextField(max_length=500)
+    content = models.TextField()
     
     # Categorization
-    category = models.ForeignKey(BlogCategory, on_delete=models.SET_NULL, null=True, related_name='blog_posts')
-    tags = models.JSONField(default=list, blank=True, help_text="List of tags (e.g., ['technology', 'innovation'])")
+    category = models.ForeignKey(
+        BlogCategory, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='blog_posts'
+    )
+    tags = models.JSONField(default=list, blank=True)
     
     # Author & Attribution
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='blog_posts')
-    author_name = models.CharField(max_length=100, help_text="Display name (overrides user)")
-    author_title = models.CharField(max_length=100, blank=True, help_text="e.g., 'Communications Director'")
+    author = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='blog_posts'
+    )
+    author_name = models.CharField(max_length=100)
+    author_title = models.CharField(max_length=100, blank=True)
     
     # Media
     featured_image = models.ImageField(
         upload_to=blog_image_upload_path, 
         blank=True, 
-        null=True,
-        help_text="Main post image (recommended: 1200x630px)"
+        null=True
     )
-    featured_image_alt = models.CharField(max_length=200, blank=True, help_text="Alt text for accessibility")
+    featured_image_alt = models.CharField(max_length=200, blank=True)
     
     # Metadata
-    read_time = models.IntegerField(default=5, help_text="Estimated reading time in minutes")
-    views_count = models.IntegerField(default=0, help_text="Number of views")
+    read_time = models.IntegerField(default=5)
+    views_count = models.IntegerField(default=0)
     
     # Publishing
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    is_featured = models.BooleanField(default=False, help_text="Show in featured section")
-    publish_date = models.DateTimeField(default=timezone.now, help_text="Publication date")
+    is_featured = models.BooleanField(default=False)
+    publish_date = models.DateTimeField(default=timezone.now)
     
     # SEO
-    meta_description = models.CharField(max_length=160, blank=True, help_text="SEO meta description")
-    meta_keywords = models.CharField(max_length=255, blank=True, help_text="SEO keywords (comma-separated)")
+    meta_description = models.CharField(max_length=160, blank=True)
+    meta_keywords = models.CharField(max_length=255, blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -579,18 +739,15 @@ class BlogPost(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title)
-            # Ensure unique slug
             original_slug = self.slug
             counter = 1
             while BlogPost.objects.filter(slug=self.slug).exists():
                 self.slug = f"{original_slug}-{counter}"
                 counter += 1
         
-        # Auto-generate meta description from excerpt if not provided
         if not self.meta_description and self.excerpt:
             self.meta_description = self.excerpt[:160]
         
-        # Set author_name from user if not provided
         if not self.author_name and self.author:
             self.author_name = self.author.get_full_name() or self.author.username
         
@@ -611,7 +768,3 @@ class BlogPost(models.Model):
             category=self.category,
             status='published'
         ).exclude(id=self.id)[:limit]
-
-    from django.db import models
-
-

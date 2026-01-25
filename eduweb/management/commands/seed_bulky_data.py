@@ -1,174 +1,213 @@
 import random
 import uuid
+import os
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils import timezone
 from faker import Faker
 from eduweb.models import (
-    UserProfile, ContactMessage, CourseApplication, CourseApplicationFile,
-    Application, Payment, Vendor, Faculty, Course, BlogCategory, BlogPost
+    UserProfile, ContactMessage, Faculty, Course, CourseIntake,
+    CourseApplication, ApplicationDocument, ApplicationPayment,
+    Vendor, BlogCategory, BlogPost
 )
 
 fake = Faker()
 
 class Command(BaseCommand):
-    help = 'Seeds the database with high-quality, unique, and bulky data'
+    help = 'Seeds all database tables with realistic, interconnected data and image paths'
 
     def handle(self, *args, **kwargs):
-        self.stdout.write(self.style.WARNING("Clearing existing data..."))
+        self.stdout.write(self.style.WARNING("Starting total database reset..."))
         
-        # Deletion Order to respect Foreign Keys
+        # 1. DELETE EXISTING DATA (Order handles ProtectedError)
+        ApplicationPayment.objects.all().delete()
+        ApplicationDocument.objects.all().delete()
+        CourseApplication.objects.all().delete()
+        CourseIntake.objects.all().delete()
         BlogPost.objects.all().delete()
         BlogCategory.objects.all().delete()
-        Payment.objects.all().delete()
-        Application.objects.all().delete()
-        CourseApplicationFile.objects.all().delete()
-        CourseApplication.objects.all().delete()
         Course.objects.all().delete()
         Faculty.objects.all().delete()
         ContactMessage.objects.all().delete()
         Vendor.objects.all().delete()
         User.objects.filter(is_superuser=False).delete()
 
-        self.stdout.write(self.style.SUCCESS("Database cleared. Generating bulky data..."))
+        self.stdout.write(self.style.SUCCESS("Database cleared. Generating comprehensive data..."))
 
-        # --- 1. USERS ---
+        # --- 2. USERS (Password: 12345) ---
+        # UserProfile is created automatically via signals in models.py
         users = []
-        for _ in range(12):
+        for _ in range(15):
             user = User.objects.create_user(
                 username=fake.unique.user_name(),
                 email=fake.unique.email(),
-                password='Password123!',
+                password='12345',
                 first_name=fake.first_name(),
                 last_name=fake.last_name()
             )
             users.append(user)
-        self.stdout.write("- Created 12 Users")
+        self.stdout.write("- Created 15 Users (Profile auto-generated via signals)")
 
-        # --- 2. FACULTIES ---
+        # --- 3. FACULTIES ---
         faculties = []
-        faculty_defs = [
-            ("Business & Management", "BUS", "briefcase"), ("Engineering & Tech", "ENG", "cpu"),
-            ("Health Sciences", "MED", "heart-pulse"), ("Arts & Humanities", "ART", "palette"),
-            ("Social Sciences", "SOC", "users"), ("Law & Governance", "LAW", "scale"),
-            ("Natural Sciences", "SCI", "beaker"), ("Environmental Studies", "ENV", "leaf"),
-            ("Architecture", "ARC", "layers"), ("Communication", "COM", "megaphone")
+        fac_configs = [
+            ("School of Business", "BUS", "briefcase", "orange", "amber"),
+            ("Engineering & Technology", "ENG", "cpu", "blue", "cyan"),
+            ("Medical Sciences", "MED", "heart-pulse", "red", "rose"),
+            ("Humanities & Arts", "ART", "palette", "purple", "violet"),
+            ("Faculty of Law", "LAW", "scale", "slate", "gray")
         ]
 
-        for name, code, icon in faculty_defs:
+        for name, code, icon, p_col, s_col in fac_configs:
             fac = Faculty.objects.create(
                 name=name,
                 code=code,
                 icon=icon,
+                color_primary=p_col,
+                color_secondary=s_col,
                 tagline=fake.catch_phrase(),
-                description="\n\n".join(fake.paragraphs(nb=10)),
-                mission=fake.paragraph(nb_sentences=5),
-                vision=fake.paragraph(nb_sentences=5),
-                student_count=random.randint(1000, 5000),
-                placement_rate=random.randint(80, 98),
-                partner_count=random.randint(20, 100),
-                international_faculty=random.randint(10, 40),
-                accreditation=f"Fully accredited by the {fake.company()} and the International Education Board.",
-                special_features=[fake.sentence() for _ in range(6)],
-                meta_description=fake.text(max_nb_chars=160)
+                description=fake.paragraph(nb_sentences=10),
+                mission=fake.paragraph(),
+                vision=fake.paragraph(),
+                hero_image=f"faculties/heroes/{code.lower()}.jpg",
+                about_image=f"faculties/about/{code.lower()}.jpg",
+                student_count=random.randint(1200, 4500),
+                placement_rate=random.randint(88, 99),
+                partner_count=random.randint(25, 60),
+                international_faculty=random.randint(15, 30),
+                special_features=[fake.bs().title() for _ in range(5)],
+                meta_description=fake.text(max_nb_chars=150)
             )
             faculties.append(fac)
-        self.stdout.write("- Created 10 Detailed Faculties")
 
-        # --- 3. COURSES (Fixed Unique Code Logic) ---
+        # --- 4. COURSES & INTAKES ---
+        all_courses = []
         for fac in faculties:
-            for i in range(2):
-                # Using a combination of faculty code, index, and hex to ensure uniqueness
-                unique_suffix = uuid.uuid4().hex[:4].upper()
-                course_code = f"{fac.code}-{i+100}-{unique_suffix}"
+            for i in range(3):
+                unique_hex = uuid.uuid4().hex[:4].upper()
+                c_name = f"{random.choice(['BSc', 'MSc', 'PhD'])} {fac.name.split(' ')[-1]} {fake.word().capitalize()}"
                 
-                Course.objects.create(
-                    name=f"{'Advanced' if i > 0 else 'Bachelor of'} {fac.name.split(' ')[0]} {fake.word().capitalize()}",
-                    code=course_code,
+                course = Course.objects.create(
+                    name=c_name,
+                    code=f"{fac.code}-{100+i}-{unique_hex}",
                     faculty=fac,
-                    degree_levels=["bachelor", "master"] if i == 0 else ["master", "phd"],
-                    study_modes=["full-time", "hybrid", "online"],
-                    duration_years=random.choice([2.0, 3.0, 4.0]),
+                    degree_level=random.choice(['undergraduate', 'masters', 'phd']),
+                    available_study_modes=["full_time", "online", "blended"],
+                    duration_years=random.choice([1.0, 3.0, 4.0]),
                     credits_required=random.choice([120, 180, 240]),
-                    tagline=fake.bs().capitalize(),
-                    overview=fake.text(max_nb_chars=1200),
-                    description="\n\n".join(fake.paragraphs(nb=15)),
-                    learning_outcomes=[fake.sentence() for _ in range(10)],
-                    career_paths=[fake.job() for _ in range(8)],
-                    core_courses=[
-                        {"code": f"MOD-{random.randint(10,99)}", "name": fake.catch_phrase(), "credits": 5} 
-                        for _ in range(12)
-                    ],
-                    specialization_tracks=[fake.catch_phrase() for _ in range(5)],
-                    undergraduate_requirements=[fake.sentence() for _ in range(5)],
-                    intake_periods=["Fall 2025", "Spring 2026", "Fall 2026"],
-                    avg_starting_salary=f"${random.randint(50, 120)}k",
-                    job_placement_rate=random.randint(85, 100)
+                    tagline=fake.sentence(),
+                    overview=fake.text(max_nb_chars=1000),
+                    description="\n\n".join(fake.paragraphs(nb=12)),
+                    learning_outcomes=[fake.sentence() for _ in range(6)],
+                    career_paths=[fake.job() for _ in range(5)],
+                    core_courses=[{"code": f"MOD{j}", "name": fake.catch_phrase(), "cr": 15} for j in range(6)],
+                    entry_requirements=[fake.sentence() for _ in range(4)],
+                    application_fee=75.00,
+                    tuition_fee=random.randint(8000, 25000),
+                    avg_starting_salary=f"${random.randint(45, 95)}k",
+                    job_placement_rate=random.randint(85, 100),
+                    hero_image=f"courses/heroes/c_{unique_hex.lower()}.jpg"
                 )
-        self.stdout.write("- Created 20 Massive Courses (Guaranteed Unique)")
+                all_courses.append(course)
 
-        # --- 4. BLOG SYSTEM ---
-        categories = []
-        for cat_name in ["Campus News", "Research", "Student Life", "Alumni", "Global"]:
-            cat = BlogCategory.objects.create(
-                name=cat_name,
-                description=fake.paragraph(),
-                icon=random.choice(['book', 'globe', 'users', 'award'])
-            )
-            categories.append(cat)
+                # Create Multiple Intakes
+                for p_code, p_name in [('january', 'Jan'), ('september', 'Sep')]:
+                    CourseIntake.objects.create(
+                        course=course,
+                        intake_period=p_code,
+                        year=2025,
+                        start_date=timezone.now().date() + timezone.timedelta(days=150),
+                        application_deadline=timezone.now().date() + timezone.timedelta(days=100),
+                        available_slots=60
+                    )
 
-        for _ in range(12):
-            post = BlogPost(
-                title=fake.sentence(nb_words=8),
-                excerpt=fake.text(max_nb_chars=400),
-                content="".join([f"<h3>{fake.sentence()}</h3><p>{p}</p>" for p in fake.paragraphs(nb=12)]),
-                category=random.choice(categories),
-                author=random.choice(users),
-                status='published',
-                is_featured=fake.boolean(chance_of_getting_true=25),
-                publish_date=timezone.now()
-            )
-            post.save() # Model save handles unique slugification
-        self.stdout.write("- Created 12 Rich-Text Blog Posts")
+        # --- 5. APPLICATIONS, DOCUMENTS & PAYMENTS ---
+        for user in users[:10]:
+            target_course = random.choice(all_courses)
+            target_intake = target_course.intakes.first()
 
-        # --- 5. APPLICATIONS & PAYMENTS ---
-        for user in users[:8]:
             app = CourseApplication.objects.create(
                 user=user,
                 first_name=user.first_name,
                 last_name=user.last_name,
                 email=user.email,
                 phone=fake.phone_number(),
-                date_of_birth=fake.date_of_birth(minimum_age=18, maximum_age=30),
-                country=random.choice(['US', 'UK', 'CA', 'AU', 'IN']),
-                gender='male',
+                country=random.choice(['US', 'UK', 'CA', 'NG', 'AU']),
+                gender=random.choice(['male', 'female']),
                 address=fake.address(),
-                academic_history=[{
-                    "school": fake.company(), 
-                    "gpa": "3.9", 
-                    "notes": fake.text(max_nb_chars=600)
-                }],
-                program='computer-science',
-                degree_level='bachelor',
-                study_mode='full-time',
-                intake='fall-2025'
-            )
-            
-            # Create corresponding Payment
-            pay_app = Application.objects.create(
-                user=user,
-                full_name=f"{user.first_name} {user.last_name}",
-                email=user.email,
-                amount=150.00,
-                status='paid'
-            )
-            Payment.objects.create(
-                application=pay_app,
-                amount=150.00,
-                status='succeeded',
-                stripe_payment_intent_id=f"pi_{uuid.uuid4().hex[:16]}",
-                card_last4="4242",
-                card_brand="Visa"
+                academic_history=[
+                    {"inst": fake.company(), "grade": "First Class", "year": "2023"}
+                ],
+                course=target_course,
+                intake=target_intake,
+                study_mode='full_time',
+                status='submitted',
+                referral_source='social-media',
+                personal_statement=fake.paragraph(nb_sentences=15)
             )
 
-        self.stdout.write(self.style.SUCCESS("Heavy data seeding successfully completed!"))
+            # Link Document
+            ApplicationDocument.objects.create(
+                application=app,
+                file_type='transcript',
+                file=f'applications/{app.application_id}/transcript/cert.pdf',
+                original_filename=f"{user.last_name}_transcript.pdf",
+                file_size=512000
+            )
+
+            # Link Payment
+            ApplicationPayment.objects.create(
+                application=app,
+                amount=target_course.application_fee,
+                status='success',
+                payment_method='stripe',
+                payment_reference=f"PAY-{uuid.uuid4().hex[:12].upper()}",
+                gateway_payment_id=f"pi_{uuid.uuid4().hex[:14]}",
+                card_last4="4242",
+                card_brand="MasterCard"
+            )
+
+        # --- 6. BLOG SYSTEM ---
+        categories = []
+        for cat_name in ["Research", "Campus Life", "Admissions", "Success Stories"]:
+            cat = BlogCategory.objects.create(
+                name=cat_name,
+                description=fake.sentence(),
+                icon=random.choice(['globe', 'users', 'award']),
+                color=random.choice(['blue', 'indigo', 'rose'])
+            )
+            categories.append(cat)
+
+        for _ in range(8):
+            BlogPost.objects.create(
+                title=fake.sentence(),
+                subtitle=fake.sentence(),
+                excerpt=fake.text(max_nb_chars=160),
+                content="".join([f"<p>{p}</p>" for p in fake.paragraphs(nb=10)]),
+                category=random.choice(categories),
+                author=random.choice(users),
+                status='published',
+                is_featured=random.choice([True, False]),
+                featured_image=f"blog/seed/post_{random.randint(1,10)}.jpg"
+            )
+
+        # --- 7. VENDORS & CONTACTS ---
+        for _ in range(4):
+            Vendor.objects.create(
+                name=fake.company(),
+                email=fake.company_email(),
+                country=fake.country()
+            )
+
+        for _ in range(10):
+            ContactMessage.objects.create(
+                name=fake.name(),
+                email=fake.email(),
+                subject=random.choice(['admissions', 'financial', 'programs']),
+                message=fake.text(max_nb_chars=800)
+            )
+
+        self.stdout.write(self.style.SUCCESS(f"TOTAL SEEDING COMPLETE!"))
+        self.stdout.write("- All 11 models populated with real relationships.")
+        self.stdout.write("- All image paths set for UI rendering.")
+        self.stdout.write("- Password for all generated users: 12345")

@@ -5,6 +5,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import re
+import os
 
 
 class SignUpForm(UserCreationForm):
@@ -425,3 +426,42 @@ class AcademicHistoryForm(forms.Form):
             'placeholder': 'e.g., 3.8 GPA or First Class'
         })
     )
+
+class ApplicationDocumentUploadForm(forms.ModelForm):
+    """Form for uploading application documents"""
+    
+    class Meta:
+        model = ApplicationDocument
+        fields = ['file', 'file_type']
+        widgets = {
+            'file_type': forms.Select(attrs={
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all bg-white',
+            }),
+            'file': forms.FileInput(attrs={
+                'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all',
+                'accept': '.pdf,.jpg,.jpeg,.png'
+            })
+        }
+    
+    auto_submit = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500'
+        }),
+        label='Submit application after upload'
+    )
+    
+    def clean_file(self):
+        file = self.cleaned_data.get('file')
+        if file:
+            # Validate file size (5MB max)
+            if file.size > 5 * 1024 * 1024:
+                raise forms.ValidationError('File size must be less than 5MB')
+            
+            # Validate file type
+            allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
+            file_ext = os.path.splitext(file.name)[1].lower()
+            if file_ext not in allowed_extensions:
+                raise forms.ValidationError('Only PDF, JPG, and PNG files are allowed')
+        
+        return file

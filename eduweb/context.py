@@ -9,3 +9,21 @@ def navigation_data(request):
         'all_faculties': faculties,
         'all_courses': courses,
     }
+
+from django import template
+
+register = template.Library()
+
+@register.filter
+def currency_symbol(currency_code):
+    """Return currency symbol for currency code"""
+    symbols = {
+        'USD': '$',
+        'GBP': '£',
+        'EUR': '€',
+        'JPY': '¥',
+        'CAD': 'C$',
+        'AUD': 'A$',
+        'NGN': '₦',
+    }
+    return symbols.get(currency_code.upper(), currency_code + ' ')

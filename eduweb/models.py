@@ -431,9 +431,26 @@ class CourseApplication(models.Model):
         """Quick check if application is paid"""
         return self.payment_status == 'success'
     
+    def can_upload_documents(self):
+        """Check if application can upload documents"""
+        return self.is_paid and self.status in ['payment_complete', 'documents_uploaded', 'pending_payment']
+    
     def can_submit(self):
-        """Check if application can be submitted"""
-        return self.is_paid and self.status == 'draft'
+        """Check if application can be submitted for review"""
+        return (
+            self.is_paid and 
+            self.documents.exists() and 
+            self.status in ['payment_complete', 'documents_uploaded']
+        )
+    
+    def mark_as_submitted(self):
+        """Mark application as submitted after all requirements met"""
+        if self.can_submit():
+            self.status = 'submitted'
+            self.submitted_at = timezone.now()
+            self.save(update_fields=['status', 'submitted_at'])
+            return True
+        return False
 
 
 def application_file_upload_path(instance, filename):
@@ -601,10 +618,10 @@ class ApplicationPayment(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Update application status based on payment
-        if self.status == 'success':
-            if self.application.status == 'draft' or self.application.status == 'pending_payment':
-                self.application.status = 'pending_payment'  # Ready to submit
+        # ✅ UPDATE: Change application status to 'payment_complete' after successful payment
+        if self.status == 'success' and self.paid_at:
+            if self.application.status in ['draft', 'pending_payment']:
+                self.application.status = 'payment_complete'  # Ready to upload documents
                 self.application.save(update_fields=['status'])
 
 

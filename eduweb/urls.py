@@ -64,7 +64,8 @@ urlpatterns = [
 
     # ================= STAGE 6 =================
     # Upload documents (Ajax)
-    path("<str:application_id>/upload-document/",views.upload_application_file,name="upload_application_file"),
+    path("<str:application_id>/upload-document/", views.upload_application_file, name="upload_application_file"),
+    path('test/mark-payment-success/<str:application_id>/', views.mark_payment_successful, name='mark_payment_successful'),
 
 
 

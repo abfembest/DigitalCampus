@@ -1,3 +1,4 @@
+from email.mime import application
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives, send_mail
@@ -36,7 +37,7 @@ def application_status_context(request):
     if request.user.is_authenticated:
         has_pending_application = CourseApplication.objects.filter(
             user=request.user,
-            status__in=['submitted', 'under_review', 'reviewed']
+            status__in=['draft', 'pending_payment', 'submitted', 'under_review', 'reviewed']
         ).exists()
     return {'has_pending_application': has_pending_application}
 
@@ -900,10 +901,22 @@ def application_status(request):
     # Get the most recent application for this user
     application = CourseApplication.objects.filter(
         user=request.user
-    ).order_by('-created_at').first()
+    ).select_related('course', 'intake', 'course__faculty').prefetch_related('documents').order_by('-created_at').first()
+    
+    # Check if payment exists
+    has_payment = False
+    payment = None
+    if application:
+        try:
+            payment = application.payment
+            has_payment = True
+        except ApplicationPayment.DoesNotExist:
+            has_payment = False
     
     context = {
-        'application': application
+        'application': application,
+        'has_payment': has_payment,
+        'payment': payment,
     }
     
     return render(request, 'applications/application_status.html', context)
@@ -1347,34 +1360,192 @@ def payment_details(request, application_id):
 @login_required
 @require_POST
 def upload_application_file(request, application_id):
-    application = CourseApplication.objects.get(
-        application_id=application_id,
-        user=request.user
-    )
+    from eduweb.forms import ApplicationDocumentUploadForm
+    """Handle document upload for an application using Django Form"""
+    try:
+        # Get the application
+        application = get_object_or_404(
+            CourseApplication, 
+            application_id=application_id,
+            user=request.user
+        )
+        
+        # Check if payment is completed
+        if not application.is_paid:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    "success": False,
+                    "error": "Payment must be completed before uploading documents"
+                }, status=403)
+            messages.error(request, "Payment must be completed before uploading documents")
+            return redirect('eduweb:application_status')
+        
+        # Check if application allows document uploads
+        if not application.can_upload_documents():
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    "success": False,
+                    "error": "Application is not in a state that allows document uploads"
+                }, status=403)
+            messages.error(request, "Application is not in a state that allows document uploads")
+            return redirect('eduweb:application_status')
+        
+        # Process the form
+        form = ApplicationDocumentUploadForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            # Create document
+            document = form.save(commit=False)
+            document.application = application
+            document.original_filename = request.FILES['file'].name
+            document.file_size = request.FILES['file'].size
+            document.save()
+            
+            # Update status to documents_uploaded after first document
+            if application.status in ['payment_complete', 'pending_payment']:
+                application.status = 'documents_uploaded'
+                application.save(update_fields=['status'])
+            
+            # Check if user wants to auto-submit
+            auto_submit = form.cleaned_data.get('auto_submit', False)
+            
+            response_data = {
+                "success": True,
+                "message": "Document uploaded successfully",
+                "documents_count": application.documents.count(),
+                "can_submit": application.can_submit(),
+                "document": {
+                    "id": document.id,
+                    "file_type": document.get_file_type_display(),
+                    "original_filename": document.original_filename,
+                    "file_size": document.get_file_size_display(),
+                }
+            }
+            
+            # If auto_submit is true and application can be submitted, submit it
+            if auto_submit and application.can_submit():
+                if application.mark_as_submitted():
+                    # Send submission confirmation emails
+                    from threading import Thread
+                    
+                    def send_emails_async():
+                        send_application_confirmation_email(application)
+                        send_application_admin_notification(application)
+                    
+                    Thread(target=send_emails_async, daemon=True).start()
+                    
+                    response_data.update({
+                        "submitted": True,
+                        "message": "Document uploaded and application submitted successfully!",
+                        "redirect_url": reverse('eduweb:application_status')
+                    })
+            
+            # AJAX response
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse(response_data)
+            
+            # Regular form response
+            messages.success(request, response_data['message'])
+            if response_data.get('submitted'):
+                return redirect('eduweb:application_status')
+            return redirect('eduweb:application_status')
+        
+        else:
+            # Form has errors
+            error_messages = []
+            for field, errors in form.errors.items():
+                for error in errors:
+                    error_messages.append(f"{field}: {error}")
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    "success": False,
+                    "error": "; ".join(error_messages),
+                    "errors": form.errors
+                }, status=400)
+            
+            for error in error_messages:
+                messages.error(request, error)
+            return redirect('eduweb:application_status')
+        
+    except Exception as e:
+        logger.error(f"Error uploading document: {str(e)}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+        messages.error(request, f"Error uploading document: {str(e)}")
+        return redirect('eduweb:application_status')
 
-    # Check payment status using the new payment model
-    if not application.is_paid:
-        return JsonResponse({
-            "success": False,
-            "error": "Payment required before uploading documents"
-        }, status=403)
+@login_required
+def mark_payment_successful(request, application_id):
+    """
+    TEST FUNCTION: Manually mark payment as successful
+    THIS SHOULD BE REMOVED IN PRODUCTION
+    """
+    import uuid
+    
+    try:
+        application = get_object_or_404(
+            CourseApplication,
+            application_id=application_id,
+            user=request.user
+        )
+        
+        # Generate unique payment reference
+        payment_ref = f"TEST-{uuid.uuid4().hex[:12].upper()}"
+        gateway_id = f"pi_test_{uuid.uuid4().hex[:24]}"
+        
+        # Create or update payment record
+        payment, created = ApplicationPayment.objects.get_or_create(
+            application=application,
+            defaults={
+                'amount': application.course.application_fee,
+                'currency': 'GBP',  # You can make this dynamic based on course
+                'status': 'success',
+                'payment_method': 'stripe',
+                'payment_reference': payment_ref,
+                'gateway_payment_id': gateway_id,
+                'paid_at': timezone.now(),
+                'card_last4': '4242',
+                'card_brand': 'visa',
+                'payment_metadata': {
+                    'test_payment': True,
+                    'created_via': 'manual_test_function',
+                    'timestamp': timezone.now().isoformat()
+                }
+            }
+        )
+        
+        if not created:
+            # Update existing payment to successful
+            payment.status = 'success'
+            payment.paid_at = timezone.now()
+            payment.payment_reference = payment_ref
+            payment.gateway_payment_id = gateway_id
+            payment.save()
+        
+        # Update application status AFTER payment success
+        if application.status in ['draft', 'pending_payment']:
+            application.status = 'payment_complete'  # Ready for document upload
+            application.save(update_fields=['status'])
+        
+        messages.success(
+            request, 
+            f'✅ TEST Payment Successful! Reference: {payment_ref} | Amount: £{payment.amount}'
+        )
+        return redirect('eduweb:application_status')
+        
+    except Exception as e:
+        logger.error(f"Error in mark_payment_successful: {str(e)}")
+        messages.error(request, f'❌ Error creating test payment: {str(e)}')
+        return redirect('eduweb:application_status')
 
-    file = request.FILES.get("file")
-    file_type = request.POST.get("file_type")
-    ApplicationDocument.objects.create(
-        application=application,
-        file=file,
-        file_type=file_type,
-        original_filename=file.name,
-        file_size=file.size
-    )
-
-    return JsonResponse({"success": True})
-
-def finalize_application(application):
-    application.status = "submitted"
-    application.submitted_at = timezone.now()
-    application.save()
+# def finalize_application(application):
+#     application.status = "submitted"
+#     application.submitted_at = timezone.now()
+#     application.save()
 
 
 from django.shortcuts import get_object_or_404

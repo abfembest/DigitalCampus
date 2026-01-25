@@ -110,6 +110,14 @@
         
         <div class="grid md:grid-cols-2 gap-6">
             <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Degree Level *</label>
+                {{ form.degree_level }}
+                {% if form.degree_level.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.degree_level.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Duration (Years) *</label>
                 {{ form.duration_years }}
                 {% if form.duration_years.errors %}
@@ -122,6 +130,22 @@
                 {{ form.credits_required }}
                 {% if form.credits_required.errors %}
                 <p class="text-red-600 text-sm mt-1">{{ form.credits_required.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Application Fee ($)</label>
+                {{ form.application_fee }}
+                {% if form.application_fee.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.application_fee.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Annual Tuition Fee ($)</label>
+                {{ form.tuition_fee }}
+                {% if form.tuition_fee.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.tuition_fee.errors.0 }}</p>
                 {% endif %}
             </div>
             
@@ -169,37 +193,19 @@
         </div>
     </div>
     
-    <!-- Degree Options & Study Modes -->
+    <!-- Study Modes -->
     <div class="bg-white rounded-xl shadow-lg p-6">
         <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-            <i class="fas fa-certificate text-primary-600"></i>
-            Degree Options & Study Modes
+            <i class="fas fa-clock text-primary-600"></i>
+            Available Study Modes
         </h2>
         
-        <div class="grid md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Degree Levels</label>
-                {{ form.degree_levels_text }}
-                {% if form.degree_levels_text.errors %}
-                <p class="text-red-600 text-sm mt-1">{{ form.degree_levels_text.errors.0 }}</p>
-                {% endif %}
-            </div>
-            
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Study Modes</label>
-                {{ form.study_modes_text }}
-                {% if form.study_modes_text.errors %}
-                <p class="text-red-600 text-sm mt-1">{{ form.study_modes_text.errors.0 }}</p>
-                {% endif %}
-            </div>
-            
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Intake Periods</label>
-                {{ form.intake_periods_text }}
-                {% if form.intake_periods_text.errors %}
-                <p class="text-red-600 text-sm mt-1">{{ form.intake_periods_text.errors.0 }}</p>
-                {% endif %}
-            </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Study Modes</label>
+            {{ form.available_study_modes_text }}
+            {% if form.available_study_modes_text.errors %}
+            <p class="text-red-600 text-sm mt-1">{{ form.available_study_modes_text.errors.0 }}</p>
+            {% endif %}
         </div>
     </div>
     
@@ -255,29 +261,20 @@
         </div>
     </div>
     
-    <!-- Admission Requirements -->
+    <!-- Entry Requirements -->
     <div class="bg-white rounded-xl shadow-lg p-6">
         <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
             <i class="fas fa-clipboard-check text-primary-600"></i>
-            Admission Requirements
+            Entry Requirements
         </h2>
         
-        <div class="grid md:grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Undergraduate Requirements</label>
-                {{ form.undergraduate_requirements_text }}
-                {% if form.undergraduate_requirements_text.errors %}
-                <p class="text-red-600 text-sm mt-1">{{ form.undergraduate_requirements_text.errors.0 }}</p>
-                {% endif %}
-            </div>
-            
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Graduate Requirements</label>
-                {{ form.graduate_requirements_text }}
-                {% if form.graduate_requirements_text.errors %}
-                <p class="text-red-600 text-sm mt-1">{{ form.graduate_requirements_text.errors.0 }}</p>
-                {% endif %}
-            </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Entry Requirements</label>
+            {{ form.entry_requirements_text }}
+            <p class="text-xs text-gray-500 mt-1">General requirements for admission to this program</p>
+            {% if form.entry_requirements_text.errors %}
+            <p class="text-red-600 text-sm mt-1">{{ form.entry_requirements_text.errors.0 }}</p>
+            {% endif %}
         </div>
     </div>
     

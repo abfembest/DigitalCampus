@@ -171,25 +171,14 @@ class FacultyForm(forms.ModelForm):
 
 class CourseForm(forms.ModelForm):
     # Text fields for JSON data
-    degree_levels_text = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={
-            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-            'rows': 3,
-            'placeholder': 'Enter one degree per line:\nBSc in Computer Science\nMSc in Computer Science\nPhD in Computer Science'
-        }),
-        label='Degree Levels',
-        help_text='One degree per line'
-    )
-    
-    study_modes_text = forms.CharField(
+    available_study_modes_text = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
             'rows': 2,
-            'placeholder': 'Enter one mode per line:\nFull-time\nPart-time\nOnline'
+            'placeholder': 'Enter one mode per line:\nFull Time\nPart Time\nOnline'
         }),
-        label='Study Modes',
+        label='Available Study Modes',
         help_text='One mode per line'
     )
     
@@ -237,37 +226,15 @@ class CourseForm(forms.ModelForm):
         help_text='Format: title|description (one per line)'
     )
     
-    undergraduate_requirements_text = forms.CharField(
+    entry_requirements_text = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
             'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
             'rows': 4,
-            'placeholder': 'Enter one requirement per line:\nHigh school diploma\nMinimum GPA of 3.0\nMath proficiency'
+            'placeholder': 'Enter one requirement per line:\nHigh school diploma or equivalent\nMinimum GPA of 3.0\nEnglish proficiency test scores'
         }),
-        label='Undergraduate Requirements',
+        label='Entry Requirements',
         help_text='One requirement per line'
-    )
-    
-    graduate_requirements_text = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={
-            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-            'rows': 4,
-            'placeholder': "Enter one requirement per line:\nBachelor's degree in related field\nMinimum GPA of 3.0\nGRE/GMAT scores"
-        }),
-        label='Graduate Requirements',
-        help_text='One requirement per line'
-    )
-    
-    intake_periods_text = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={
-            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-            'rows': 2,
-            'placeholder': 'Enter one intake per line:\nFall 2025\nSpring 2026\nSummer 2026'
-        }),
-        label='Intake Periods',
-        help_text='One intake per line'
     )
     
     class Meta:
@@ -275,7 +242,9 @@ class CourseForm(forms.ModelForm):
         fields = [
             'name', 'code', 'faculty', 'icon', 'color_primary', 'color_secondary',
             'tagline', 'overview', 'description',
+            'degree_level',  # Changed from degree_levels
             'duration_years', 'credits_required',
+            'application_fee', 'tuition_fee',  # Added fee fields
             'avg_starting_salary', 'job_placement_rate',
             'hero_image', 'meta_description', 'meta_keywords',
             'is_active', 'is_featured', 'display_order'
@@ -324,6 +293,9 @@ class CourseForm(forms.ModelForm):
                 'rows': 4,
                 'placeholder': 'Detailed program description...'
             }),
+            'degree_level': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            }),
             'duration_years': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'placeholder': 'e.g., 4',
@@ -332,6 +304,16 @@ class CourseForm(forms.ModelForm):
             'credits_required': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'placeholder': 'e.g., 120'
+            }),
+            'application_fee': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., 50.00',
+                'step': '0.01'
+            }),
+            'tuition_fee': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., 15000.00',
+                'step': '0.01'
             }),
             'avg_starting_salary': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
@@ -373,13 +355,9 @@ class CourseForm(forms.ModelForm):
         
         # Pre-populate text fields if editing
         if self.instance.pk:
-            # Safely handle degree_levels
-            if self.instance.degree_levels and isinstance(self.instance.degree_levels, list):
-                self.fields['degree_levels_text'].initial = '\n'.join(self.instance.degree_levels)
-            
-            # Safely handle study_modes
-            if self.instance.study_modes and isinstance(self.instance.study_modes, list):
-                self.fields['study_modes_text'].initial = '\n'.join(self.instance.study_modes)
+            # Safely handle available_study_modes
+            if self.instance.available_study_modes and isinstance(self.instance.available_study_modes, list):
+                self.fields['available_study_modes_text'].initial = '\n'.join(self.instance.available_study_modes)
             
             # Safely handle learning_outcomes
             if self.instance.learning_outcomes and isinstance(self.instance.learning_outcomes, list):
@@ -407,17 +385,9 @@ class CourseForm(forms.ModelForm):
                 if lines:
                     self.fields['specialization_tracks_text'].initial = '\n'.join(lines)
             
-            # Safely handle undergraduate_requirements
-            if self.instance.undergraduate_requirements and isinstance(self.instance.undergraduate_requirements, list):
-                self.fields['undergraduate_requirements_text'].initial = '\n'.join(self.instance.undergraduate_requirements)
-            
-            # Safely handle graduate_requirements
-            if self.instance.graduate_requirements and isinstance(self.instance.graduate_requirements, list):
-                self.fields['graduate_requirements_text'].initial = '\n'.join(self.instance.graduate_requirements)
-            
-            # Safely handle intake_periods
-            if self.instance.intake_periods and isinstance(self.instance.intake_periods, list):
-                self.fields['intake_periods_text'].initial = '\n'.join(self.instance.intake_periods)
+            # Safely handle entry_requirements
+            if self.instance.entry_requirements and isinstance(self.instance.entry_requirements, list):
+                self.fields['entry_requirements_text'].initial = '\n'.join(self.instance.entry_requirements)
     
     def _process_simple_list(self, text):
         """Convert textarea to simple list"""
@@ -449,11 +419,8 @@ class CourseForm(forms.ModelForm):
         instance = super().save(commit=False)
         
         # Convert text fields to JSON
-        instance.degree_levels = self._process_simple_list(
-            self.cleaned_data.get('degree_levels_text', '')
-        )
-        instance.study_modes = self._process_simple_list(
-            self.cleaned_data.get('study_modes_text', '')
+        instance.available_study_modes = self._process_simple_list(
+            self.cleaned_data.get('available_study_modes_text', '')
         )
         instance.learning_outcomes = self._process_simple_list(
             self.cleaned_data.get('learning_outcomes_text', '')
@@ -467,14 +434,8 @@ class CourseForm(forms.ModelForm):
         instance.specialization_tracks = self._process_title_description_list(
             self.cleaned_data.get('specialization_tracks_text', '')
         )
-        instance.undergraduate_requirements = self._process_simple_list(
-            self.cleaned_data.get('undergraduate_requirements_text', '')
-        )
-        instance.graduate_requirements = self._process_simple_list(
-            self.cleaned_data.get('graduate_requirements_text', '')
-        )
-        instance.intake_periods = self._process_simple_list(
-            self.cleaned_data.get('intake_periods_text', '')
+        instance.entry_requirements = self._process_simple_list(
+            self.cleaned_data.get('entry_requirements_text', '')
         )
         
         if commit:

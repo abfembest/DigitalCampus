@@ -241,6 +241,9 @@ def send_decision_email(application):
             color = '#ef4444'  # red
             icon = '📧'
         
+        # Get program name from the related Course model
+        program_name = f"{application.course.name} ({application.course.get_degree_level_display()})"
+        
         html_content = f"""
         <html>
             <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -252,7 +255,7 @@ def send_decision_email(application):
                         <p style="font-size: 16px;">Dear <strong>{application.first_name} {application.last_name}</strong>,</p>
                         <div style="background-color: {color}15; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid {color};">
                             <h3 style="color: {color}; margin-top: 0;">Admission Decision</h3>
-                            <p style="font-size: 16px;"><strong>{decision_text} {application.get_program_display_name()}</strong></p>
+                            <p style="font-size: 16px;"><strong>{decision_text} {program_name}</strong></p>
                             <p><strong>Application ID:</strong> {application.application_id}</p>
                             <p><strong>Decision Date:</strong> {application.reviewed_at.strftime('%B %d, %Y') if application.reviewed_at else timezone.now().strftime('%B %d, %Y')}</p>
                         </div>

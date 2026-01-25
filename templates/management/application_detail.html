@@ -7,7 +7,7 @@
 
 {% block extra_css %}
 <style>
-    /* PDF Modal Styles */
+    /* PDF Modal Styles - keeping existing styles */
     .pdf-modal {
         display: none;
         position: fixed;
@@ -246,6 +246,7 @@
     </div>
 </div>
 
+<!-- Current Application Status Section -->
 <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6" aria-labelledby="status-heading">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -266,23 +267,39 @@
                     <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
                     <span>Reviewed - Decision Pending</span>
                 </span>
-                {% elif application.status == 'decision_made' %}
-                <span class="px-4 py-2 rounded-full text-sm font-medium {% if application.decision == 'accepted' %}bg-green-100 text-green-800{% elif application.decision == 'rejected' %}bg-red-100 text-red-800{% else %}bg-orange-100 text-orange-800{% endif %}" role="status">
-                    <i class="fas fa-{% if application.decision == 'accepted' %}check-circle{% elif application.decision == 'rejected' %}times-circle{% else %}hourglass-half{% endif %} mr-1" aria-hidden="true"></i>
-                    <span>Decision Made: {{ application.get_decision_display }}</span>
+                {% elif application.status == 'accepted' %}
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800" role="status">
+                    <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
+                    <span>Accepted</span>
+                </span>
+                {% elif application.status == 'rejected' %}
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800" role="status">
+                    <i class="fas fa-times-circle mr-1" aria-hidden="true"></i>
+                    <span>Rejected</span>
+                </span>
+                {% elif application.status == 'waitlisted' %}
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-orange-100 text-orange-800" role="status">
+                    <i class="fas fa-hourglass-half mr-1" aria-hidden="true"></i>
+                    <span>Waitlisted</span>
+                </span>
+                {% else %}
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800" role="status">
+                    <i class="fas fa-info-circle mr-1" aria-hidden="true"></i>
+                    <span>{{ application.get_status_display }}</span>
                 </span>
                 {% endif %}
                 
-                {% if application.decision_date %}
+                {% if application.reviewed_at %}
                 <span class="text-sm text-gray-500">
                     <i class="fas fa-calendar mr-1" aria-hidden="true"></i>
-                    {{ application.decision_date|date:"M d, Y" }}
+                    {{ application.reviewed_at|date:"M d, Y" }}
                 </span>
                 {% endif %}
             </div>
         </div>
         
         <div class="flex flex-col sm:flex-row gap-3">
+            <!-- Mark as Reviewed button (only for under_review status) -->
             {% if application.status == 'under_review' %}
             <form method="post" action="{% url 'management:mark_reviewed' application.id %}" class="inline">
                 {% csrf_token %}
@@ -293,31 +310,36 @@
             </form>
             {% endif %}
             
-            {% if application.status == 'reviewed' and application.decision == 'pending' %}
+            <!-- Make Decision button (only for reviewed status) -->
+            {% if application.status == 'reviewed' %}
             <button onclick="openDecisionModal()" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2">
                 <i class="fas fa-gavel" aria-hidden="true"></i>
                 <span>Make Decision</span>
             </button>
             {% endif %}
             
-            {% if application.decision == 'accepted' %}
+            <!-- Generate Admission Letter (only for accepted status) -->
+            {% if application.status == 'accepted' %}
             <a href="{% url 'eduweb:admission_letter' application.id %}" target="_blank" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center justify-center gap-2">
                 <i class="fas fa-file-contract" aria-hidden="true"></i>
                 <span>Generate Admission Letter</span>
             </a>
             {% endif %}
 
-            <button class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center justify-center gap-2">
-                <i class="fas fa-envelope" aria-hidden="true"></i>
-                <span>{{application.get_decision_display}}</span>
-            </button>
+            <!-- Show current status for final decisions -->
+            {% if application.status in 'accepted,rejected,waitlisted' %}
+            <div class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium flex items-center justify-center gap-2">
+                <i class="fas fa-info-circle" aria-hidden="true"></i>
+                <span>Status: {{ application.get_status_display }}</span>
+            </div>
+            {% endif %}
         </div>
     </div>
     
-    {% if application.decision_notes %}
+    {% if application.review_notes %}
     <div class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <h4 class="font-semibold text-gray-800 mb-2">Decision Notes:</h4>
-        <p class="text-gray-700">{{ application.decision_notes }}</p>
+        <h4 class="font-semibold text-gray-800 mb-2">Review Notes:</h4>
+        <p class="text-gray-700">{{ application.review_notes }}</p>
     </div>
     {% endif %}
 </section>
@@ -499,10 +521,10 @@ document.addEventListener('keydown', function(e) {
                 <p class="text-gray-500 text-center py-4">No academic history provided</p>
                 {% endif %}
                 
-                {% if application.english_proficiency %}
+                {% if application.english_proficiency_test %}
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <h3 class="font-semibold text-gray-800 mb-2">English Proficiency</h3>
-                    <p class="text-gray-700">{{ application.english_proficiency }}{% if application.english_score %}: <span class="font-medium">{{ application.english_score }}</span>{% endif %}</p>
+                    <p class="text-gray-700">{{ application.english_proficiency_test }}{% if application.english_proficiency_score %}: <span class="font-medium">{{ application.english_proficiency_score }}</span>{% endif %}</p>
                 </div>
                 {% endif %}
                 
@@ -521,10 +543,10 @@ document.addEventListener('keydown', function(e) {
                 <h2 id="documents-heading" class="text-lg font-bold text-gray-800 font-display">Uploaded Documents</h2>
             </div>
             <div class="p-6">
-                {% if application.files.all %}
+                {% if application.documents.all %}
                 <ul class="space-y-3" role="list">
-                    {% for file in application.files.all %}
-                    {% if file.file %}  <!-- Add this check -->
+                    {% for file in application.documents.all %}
+                    {% if file.file %}
                     <li class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:shadow-md transition-all group">
                         <div class="flex items-center flex-1 min-w-0">
                             <div class="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0 mr-4">
@@ -553,137 +575,140 @@ document.addEventListener('keydown', function(e) {
                             {% if file.original_filename|slice:"-4:" == ".pdf" or file.file.name|slice:"-4:" == ".pdf" %}
                             <button onclick="openPDFModal('{{ file.file.url }}', '{{ file.get_file_type_display }}')" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm flex items-center gap-2 whitespace-nowrap" aria-label="View {{ file.get_file_type_display }}">
                                 <i class="fas fa-eye" aria-hidden="true"></i>
-                                <span>View</span>
-                            </button>
-                            {% endif %}
-                            <a href="{{ file.file.url }}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm flex items-center gap-2 whitespace-nowrap" download aria-label="Download {{ file.get_file_type_display }}">
-                                <i class="fas fa-download" aria-hidden="true"></i>
-                                <span>Download</span>
-                            </a>
-                        </div>
-                    </li>
-                    {% endif %}  <!-- End of check -->
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="text-center py-12">
-                    <i class="fas fa-folder-open text-gray-300 text-6xl mb-4" aria-hidden="true"></i>
-                    <p class="text-gray-500 text-lg">No documents uploaded</p>
-                </div>
-                {% endif %}
-            </div>
-        </section>
-    </div>
-
-    <!-- Sidebar -->
-    <aside class="xl:col-span-1 space-y-6">
-        <!-- Application Summary -->
-        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="summary-heading">
-            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
-                <h2 id="summary-heading" class="text-lg font-bold text-gray-800 font-display">Application Summary</h2>
-            </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <dt class="block text-sm font-medium text-gray-600 mb-1">Application ID</dt>
-                    <dd class="text-gray-800 font-mono font-medium text-sm bg-gray-50 px-3 py-2 rounded">{{ application.application_id }}</dd>
-                </div>
-                <div>
-                    <dt class="block text-sm font-medium text-gray-600 mb-1">Program</dt>
-                    <dd class="text-gray-800 font-medium">{{ application.get_program_display_name }}</dd>
-                </div>
-                <div>
-                    <dt class="block text-sm font-medium text-gray-600 mb-1">Degree Level</dt>
-                    <dd class="text-gray-800 font-medium">{{ application.get_degree_level_display_name }}</dd>
-                </div>
-                <div>
-                    <dt class="block text-sm font-medium text-gray-600 mb-1">Study Mode</dt>
-                    <dd class="text-gray-800 font-medium">{{ application.get_study_mode_display }}</dd>
-                </div>
-                <div>
-                    <dt class="block text-sm font-medium text-gray-600 mb-1">Intake</dt>
-                    <dd class="text-gray-800 font-medium">{{ application.get_intake_display }}</dd>
-                </div>
-                <div>
-                    <dt class="block text-sm font-medium text-gray-600 mb-1">Scholarship</dt>
-                    <dd class="text-gray-800 font-medium">
-                        {% if application.scholarship %}
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
-                            <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
-                            <span>Yes</span>
-                        </span>
-                        {% else %}
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600">
-                            <i class="fas fa-times-circle mr-1" aria-hidden="true"></i>
-                            <span>No</span>
-                        </span>
-                        {% endif %}
-                    </dd>
-                </div>
-            </div>
-        </section>
-
-        <!-- Timeline -->
-        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="timeline-heading">
-            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
-                <h2 id="timeline-heading" class="text-lg font-bold text-gray-800 font-display">Timeline</h2>
-            </div>
-            <div class="p-6">
-                <ol class="space-y-4" role="list">
-                    <li class="flex">
-                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mr-3">
-                            <i class="fas fa-file-alt" aria-hidden="true"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-800">Application Submitted</p>
-                            <p class="text-xs text-gray-500 mt-1">
-                                <time datetime="{{ application.created_at|date:'Y-m-d\TH:i' }}">{{ application.created_at|date:"M d, Y, g:i A" }}</time>
-                            </p>
-                        </div>
-                    </li>
-                    
-                    {% if application.submission_date %}
-                    <li class="flex">
-                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
-                            <i class="fas fa-check" aria-hidden="true"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-800">Documents Submitted</p>
-                            <p class="text-xs text-gray-500 mt-1">
-                                <time datetime="{{ application.submission_date|date:'Y-m-d\TH:i' }}">{{ application.submission_date|date:"M d, Y, g:i A" }}</time>
-                            </p>
-                        </div>
-                    </li>
-                    {% endif %}
-                    
-                    {% if application.is_reviewed %}
-                    <li class="flex">
-                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
-                            <i class="fas fa-eye" aria-hidden="true"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-800">Application Reviewed</p>
-                            <p class="text-xs text-gray-500 mt-1">By {{ request.user.get_full_name }}</p>
-                        </div>
-                    </li>
-                    {% endif %}
-                </ol>
-            </div>
-        </section>
-
-        <!-- Referral Source -->
-        {% if application.referral_source %}
-        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="referral-heading">
-            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
-                <h2 id="referral-heading" class="text-lg font-bold text-gray-800 font-display">Referral Information</h2>
-            </div>
-            <div class="p-6">
-                <p class="text-gray-700">{{ application.get_referral_source_display }}</p>
-            </div>
-        </section>
-        {% endif %}
-    </aside>
+<span>View</span>
+</button>
+{% endif %}
+<a href="{{ file.file.url }}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm flex items-center gap-2 whitespace-nowrap" download aria-label="Download {{ file.get_file_type_display }}">
+<i class="fas fa-download" aria-hidden="true"></i>
+<span>Download</span>
+</a>
 </div>
+</li>
+{% endif %}
+{% endfor %}
+</ul>
+{% else %}
+<div class="text-center py-12">
+<i class="fas fa-folder-open text-gray-300 text-6xl mb-4" aria-hidden="true"></i>
+<p class="text-gray-500 text-lg">No documents uploaded</p>
+</div>
+{% endif %}
+</div>
+</section>
+</div>
+<!-- Sidebar -->
+<aside class="xl:col-span-1 space-y-6">
+    <!-- Application Summary -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="summary-heading">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
+            <h2 id="summary-heading" class="text-lg font-bold text-gray-800 font-display">Application Summary</h2>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">Application ID</dt>
+                <dd class="text-gray-800 font-mono font-medium text-sm bg-gray-50 px-3 py-2 rounded">{{ application.application_id }}</dd>
+            </div>
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">Program</dt>
+                <dd class="text-gray-800 font-medium">{{ application.course.name }}</dd>
+            </div>
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">Degree Level</dt>
+                <dd class="text-gray-800 font-medium">{{ application.course.get_degree_level_display }}</dd>
+            </div>
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">Study Mode</dt>
+                <dd class="text-gray-800 font-medium">{{ application.get_study_mode_display }}</dd>
+            </div>
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">Intake</dt>
+                <dd class="text-gray-800 font-medium">{{ application.intake.get_intake_period_display }} {{ application.intake.year }}</dd>
+            </div>
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">Financial Aid</dt>
+                <dd class="text-gray-800 font-medium">
+                    {% if application.scholarship_requested or application.financial_aid_requested %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+                        <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
+                        <span>Requested</span>
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-600">
+                        <i class="fas fa-times-circle mr-1" aria-hidden="true"></i>
+                        <span>Not Requested</span>
+                    </span>
+                    {% endif %}
+                </dd>
+            </div>
+        </div>
+    </section>
 
+    <!-- Timeline -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="timeline-heading">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
+            <h2 id="timeline-heading" class="text-lg font-bold text-gray-800 font-display">Timeline</h2>
+        </div>
+        <div class="p-6">
+            <ol class="space-y-4" role="list">
+                <li class="flex">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mr-3">
+                        <i class="fas fa-file-alt" aria-hidden="true"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-800">Application Created</p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <time datetime="{{ application.created_at|date:'Y-m-d\TH:i' }}">{{ application.created_at|date:"M d, Y, g:i A" }}</time>
+                        </p>
+                    </div>
+                </li>
+                
+                {% if application.submitted_at %}
+                <li class="flex">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mr-3">
+                        <i class="fas fa-check" aria-hidden="true"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-800">Application Submitted</p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <time datetime="{{ application.submitted_at|date:'Y-m-d\TH:i' }}">{{ application.submitted_at|date:"M d, Y, g:i A" }}</time>
+                        </p>
+                    </div>
+                </li>
+                {% endif %}
+                
+                {% if application.reviewed_at %}
+                <li class="flex">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mr-3">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-800">Application Reviewed</p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            By {{ application.reviewed_by.get_full_name|default:application.reviewed_by.username }}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            <time datetime="{{ application.reviewed_at|date:'Y-m-d\TH:i' }}">{{ application.reviewed_at|date:"M d, Y, g:i A" }}</time>
+                        </p>
+                    </div>
+                </li>
+                {% endif %}
+            </ol>
+        </div>
+    </section>
+
+    <!-- Referral Source -->
+    {% if application.referral_source %}
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="referral-heading">
+        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
+            <h2 id="referral-heading" class="text-lg font-bold text-gray-800 font-display">Referral Information</h2>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-700">{{ application.get_referral_source_display }}</p>
+        </div>
+    </section>
+    {% endif %}
+</aside>
+</div>
 <!-- PDF Viewer Modal -->
 <div id="pdfModal" class="pdf-modal" role="dialog" aria-labelledby="pdfModalTitle" aria-modal="true">
     <div class="pdf-modal-content">
@@ -727,9 +752,7 @@ document.addEventListener('keydown', function(e) {
         </div>
     </div>
 </div>
-
 {% endblock %}
-
 {% block extra_js %}
 <!-- PDF.js Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -745,9 +768,6 @@ let scale = 1.5;
 const canvas = document.getElementById('pdfCanvas');
 const ctx = canvas.getContext('2d');
 
-/**
- * Render a specific page of the PDF
- */
 function renderPage(num) {
     pageRendering = true;
     
@@ -776,9 +796,6 @@ function renderPage(num) {
     updatePageButtons();
 }
 
-/**
- * Queue page rendering if another page is being rendered
- */
 function queueRenderPage(num) {
     if (pageRendering) {
         pageNumPending = num;
@@ -787,52 +804,34 @@ function queueRenderPage(num) {
     }
 }
 
-/**
- * Update navigation button states
- */
 function updatePageButtons() {
     document.getElementById('prevPage').disabled = pageNum <= 1;
     document.getElementById('nextPage').disabled = pageNum >= pdfDoc.numPages;
 }
 
-/**
- * Navigate to previous page
- */
 function onPrevPage() {
     if (pageNum <= 1) return;
     pageNum--;
     queueRenderPage(pageNum);
 }
 
-/**
- * Navigate to next page
- */
 function onNextPage() {
     if (pageNum >= pdfDoc.numPages) return;
     pageNum++;
     queueRenderPage(pageNum);
 }
 
-/**
- * Zoom in
- */
 function onZoomIn() {
     scale += 0.25;
     queueRenderPage(pageNum);
 }
 
-/**
- * Zoom out
- */
 function onZoomOut() {
     if (scale <= 0.5) return;
     scale -= 0.25;
     queueRenderPage(pageNum);
 }
 
-/**
- * Open PDF in modal
- */
 function openPDFModal(pdfUrl, title) {
     const modal = document.getElementById('pdfModal');
     const loading = document.getElementById('pdfLoading');
@@ -841,7 +840,6 @@ function openPDFModal(pdfUrl, title) {
     const controls = document.getElementById('pdfControls');
     const modalTitle = document.getElementById('pdfModalTitleText');
     
-    // Reset states
     loading.style.display = 'flex';
     error.style.display = 'none';
     container.classList.remove('active');
@@ -849,26 +847,21 @@ function openPDFModal(pdfUrl, title) {
     pageNum = 1;
     scale = 1.5;
     
-    // Set title
     modalTitle.textContent = title || 'Document Viewer';
     
-    // Show modal
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
     
-    // Load PDF
     const loadingTask = pdfjsLib.getDocument(pdfUrl);
     
     loadingTask.promise.then(function(pdf) {
         pdfDoc = pdf;
         document.getElementById('pageCount').textContent = pdf.numPages;
         
-        // Hide loading, show PDF
         loading.style.display = 'none';
         container.classList.add('active');
         controls.style.display = 'flex';
         
-        // Render first page
         renderPage(pageNum);
     }).catch(function(error) {
         console.error('Error loading PDF:', error);
@@ -877,9 +870,6 @@ function openPDFModal(pdfUrl, title) {
     });
 }
 
-/**
- * Close PDF modal
- */
 function closePDFModal() {
     const modal = document.getElementById('pdfModal');
     const container = document.getElementById('pdfContainer');
@@ -887,7 +877,6 @@ function closePDFModal() {
     modal.classList.remove('active');
     document.body.style.overflow = '';
     
-    // Clear PDF after animation
     setTimeout(function() {
         pdfDoc = null;
         container.classList.remove('active');
@@ -895,20 +884,17 @@ function closePDFModal() {
     }, 300);
 }
 
-// Event listeners for controls
 document.getElementById('prevPage').addEventListener('click', onPrevPage);
 document.getElementById('nextPage').addEventListener('click', onNextPage);
 document.getElementById('zoomIn').addEventListener('click', onZoomIn);
 document.getElementById('zoomOut').addEventListener('click', onZoomOut);
 
-// Close modal when clicking outside
 document.getElementById('pdfModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closePDFModal();
     }
 });
 
-// Close modal with Escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         const modal = document.getElementById('pdfModal');
@@ -918,7 +904,6 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Keyboard navigation for PDF
 document.addEventListener('keydown', function(e) {
     const modal = document.getElementById('pdfModal');
     if (modal.classList.contains('active') && pdfDoc) {

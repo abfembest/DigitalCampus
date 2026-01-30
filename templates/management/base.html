@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{% block meta_description %}MIU Admin Dashboard - Manage applications, students, and courses{% endblock %}">
-    <meta name="keywords" content="{% block meta_keywords %}admin, dashboard, university, management{% endblock %}">
+    <meta name="description" content="{% block meta_description %}MIU Portal - Manage your learning journey{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}portal, dashboard, university, management{% endblock %}">
     <meta name="author" content="MIU Administration">
     
-    <title>{% block title %}Admin Dashboard - MIU Portal{% endblock %}</title>
+    <title>{% block title %}Dashboard - MIU Portal{% endblock %}</title>
     
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -87,11 +87,9 @@
     .sidebar-collapsed + div {
         margin-left: 5rem !important;
     }
-    /* Hide all submenus when collapsed */
     .sidebar-collapsed [id$="Menu"] {
         display: none !important;
     }
-    /* Center align the header/logo when collapsed */
     .sidebar-collapsed > div:first-child {
         justify-content: center !important;
         padding-left: 0 !important;
@@ -103,12 +101,10 @@
     .sidebar-collapsed > div:first-child a i {
         margin-right: 0 !important;
     }
-    /* Style the menu toggle button to be relative for badge positioning */
     .sidebar-collapsed .menu-toggle {
         position: relative !important;
         justify-content: center !important;
     }
-    /* Position badges absolutely within their menu button */
     .sidebar-collapsed .menu-toggle .bg-accent-500 {
         position: absolute !important;
         top: 0.5rem !important;
@@ -121,7 +117,6 @@
         align-items: center !important;
         justify-content: center !important;
     }
-    /* Hide close button when collapsed */
     .sidebar-collapsed #closeSidebar {
         display: none !important;
     }
@@ -134,169 +129,234 @@
         <!-- Sidebar Navigation - Fixed positioning -->
         <aside id="sidebar" class="w-64 bg-gradient-to-b from-primary-500 to-secondary-500 text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
             <div class="flex flex-col h-full">
+                <!-- Header -->
                 <div class="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-                    <a href="{% url 'management:dashboard' %}" class="text-xl font-bold flex items-center font-display hover:opacity-80 transition-opacity">
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% else %}#{% endif %}" class="text-xl font-bold flex items-center font-display hover:opacity-80 transition-opacity">
                         <i class="fas fa-graduation-cap mr-3" aria-hidden="true"></i>
-                        <span class="whitespace-nowrap">MIU Admin</span>
+                        <span class="whitespace-nowrap">MIU Portal</span>
                     </a>
-                    <button id="closeSidebar" class="md:hidden text-white text-xl hover:bg-white/10 p-2 rounded transition-colors" aria-label="Close sidebar">
-                        <i class="fas fa-times" aria-hidden="true"></i>
+                    <button id="closeSidebar" class="text-white hover:text-gray-300 focus:outline-none md:hidden" aria-label="Close navigation">
+                        <i class="fas fa-times text-xl" aria-hidden="true"></i>
                     </button>
                 </div>
 
-                <!-- Sidebar Navigation - Scrollable -->
-                <nav class="flex-1 overflow-y-auto p-4" aria-label="Main navigation">
-                    <ul class="space-y-1">
-                        <li>
-                            <a href="{% url 'management:dashboard' %}" class="flex items-center p-3 text-white hover:bg-white/10 transition-all rounded {% if request.resolver_match.url_name == 'dashboard' %}bg-white/15 border-l-4 border-white{% endif %}" aria-current="{% if request.resolver_match.url_name == 'dashboard' %}page{% endif %}">
-                                <i class="fas fa-tachometer-alt w-6 mr-3" aria-hidden="true"></i>
-                                <span class="font-medium">Dashboard</span>
+                <!-- Navigation Menu - Scrollable -->
+                <nav class="flex-1 overflow-y-auto py-4 px-3" role="navigation" aria-label="Main navigation">
+                    
+                    {% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}
+                    <!-- ADMIN/MANAGEMENT MENU -->
+                    <!-- Dashboard -->
+                    <a href="{% url 'management:dashboard' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- Applications Management -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-file-alt w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Applications</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="applicationsMenu" class="ml-8 mt-2 space-y-1 hidden">
+                            <a href="{% url 'management:applications_list' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Applications
                             </a>
-                        </li>
+                        </div>
+                    </div>
 
-                        <li>
-                            <button class="flex items-center justify-between w-full p-3 text-white hover:bg-white/10 transition-all rounded menu-toggle" data-target="applicationsMenu" aria-expanded="false">
-                                <div class="flex items-center">
-                                    <i class="fas fa-file-alt w-6 mr-3" aria-hidden="true"></i>
-                                    <span class="font-medium">Applications</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <span class="bg-accent-500 text-white text-xs px-2 py-1 rounded-full mr-2">{{ pending_count|default:0 }}</span>
-                                    <i class="fas fa-chevron-right text-sm transition-transform duration-300 menu-arrow" aria-hidden="true"></i>
-                                </div>
-                            </button>
-                            <ul id="applicationsMenu" class="mt-1 space-y-1 max-h-0 overflow-hidden transition-all duration-400">
-                                <li>
-                                    <a href="{% url 'management:applications_list' %}" class="flex items-center justify-between p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all {% if request.resolver_match.url_name == 'applications_list' %}bg-white/10{% endif %}">
-                                        <div class="flex items-center">
-                                            <i class="fas fa-list w-5 mr-2" aria-hidden="true"></i>
-                                            <span>All Applications</span>
-                                        </div>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{% url 'management:applications_list' %}?status=pending" class="flex items-center justify-between p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all">
-                                        <div class="flex items-center">
-                                            <i class="fas fa-clock w-5 mr-2" aria-hidden="true"></i>
-                                            <span>Pending Review</span>
-                                        </div>
-                                        <span class="bg-accent-500 text-white text-xs px-2 py-1 rounded-full">{{ pending_count|default:0 }}</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            <a href="#" class="flex items-center p-3 text-white hover:bg-white/10 transition-all rounded">
-                                <i class="fas fa-users w-6 mr-3" aria-hidden="true"></i>
-                                <span class="font-medium">Students</span>
+                    <!-- Faculties Management -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-university w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Faculties</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="facultiesMenu" class="ml-8 mt-2 space-y-1 hidden">
+                            <a href="{% url 'management:faculties_list' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Faculties
                             </a>
-                        </li>
-
-                        <li>
-                            <a href="#" class="flex items-center p-3 text-white hover:bg-white/10 transition-all rounded">
-                                <i class="fas fa-book-open w-6 mr-3" aria-hidden="true"></i>
-                                <span class="font-medium">Courses</span>
+                            <a href="{% url 'management:faculty_create' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Faculty
                             </a>
-                        </li>
+                        </div>
+                    </div>
 
-                        <li>
-                            <button class="flex items-center justify-between w-full p-3 text-white hover:bg-white/10 transition-all rounded menu-toggle" data-target="facultiesMenu" aria-expanded="false">
-                                <div class="flex items-center">
-                                    <i class="fas fa-building w-6 mr-3" aria-hidden="true"></i>
-                                    <span class="font-medium">Faculties</span>
-                                </div>
-                                <i class="fas fa-chevron-right text-sm transition-transform duration-300 menu-arrow" aria-hidden="true"></i>
-                            </button>
-                            <ul id="facultiesMenu" class="mt-1 space-y-1 max-h-0 overflow-hidden transition-all duration-400">
-                                <li>
-                                    <a href="{% url 'management:faculties_list' %}" class="flex items-center p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all {% if request.resolver_match.url_name == 'faculties_list' %}bg-white/10{% endif %}">
-                                        <i class="fas fa-list w-5 mr-2" aria-hidden="true"></i>
-                                        <span>All Faculties</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{% url 'management:faculty_create' %}" class="flex items-center p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all {% if request.resolver_match.url_name == 'faculty_create' %}bg-white/10{% endif %}">
-                                        <i class="fas fa-plus w-5 mr-2" aria-hidden="true"></i>
-                                        <span>Add New Faculty</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            <button class="flex items-center justify-between w-full p-3 text-white hover:bg-white/10 transition-all rounded menu-toggle" data-target="coursesMenu" aria-expanded="false">
-                                <div class="flex items-center">
-                                    <i class="fas fa-book-open w-6 mr-3" aria-hidden="true"></i>
-                                    <span class="font-medium">Programs</span>
-                                </div>
-                                <i class="fas fa-chevron-right text-sm transition-transform duration-300 menu-arrow" aria-hidden="true"></i>
-                            </button>
-                            <ul id="coursesMenu" class="mt-1 space-y-1 max-h-0 overflow-hidden transition-all duration-400">
-                                <li>
-                                    <a href="{% url 'management:courses_list' %}" class="flex items-center p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all {% if request.resolver_match.url_name == 'courses_list' %}bg-white/10{% endif %}">
-                                        <i class="fas fa-list w-5 mr-2" aria-hidden="true"></i>
-                                        <span>All Programs</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{% url 'management:course_create' %}" class="flex items-center p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all {% if request.resolver_match.url_name == 'course_create' %}bg-white/10{% endif %}">
-                                        <i class="fas fa-plus w-5 mr-2" aria-hidden="true"></i>
-                                        <span>Add New Program</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            <button class="flex items-center justify-between w-full p-3 text-white hover:bg-white/10 transition-all rounded menu-toggle" data-target="blogMenu" aria-expanded="false">
-                                <div class="flex items-center">
-                                    <i class="fas fa-newspaper w-6 mr-3" aria-hidden="true"></i>
-                                    <span class="font-medium">Blog</span>
-                                </div>
-                                <i class="fas fa-chevron-right text-sm transition-transform duration-300 menu-arrow" aria-hidden="true"></i>
-                            </button>
-                            <ul id="blogMenu" class="mt-1 space-y-1 max-h-0 overflow-hidden transition-all duration-400">
-                                <li>
-                                    <a href="{% url 'management:blog_posts_list' %}" class="flex items-center p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all {% if request.resolver_match.url_name == 'blog_posts_list' %}bg-white/10{% endif %}">
-                                        <i class="fas fa-list w-5 mr-2" aria-hidden="true"></i>
-                                        <span>All Posts</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{% url 'management:blog_post_create' %}" class="flex items-center p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all {% if request.resolver_match.url_name == 'blog_post_create' %}bg-white/10{% endif %}">
-                                        <i class="fas fa-plus w-5 mr-2" aria-hidden="true"></i>
-                                        <span>Add New Post</span>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="{% url 'management:blog_categories_list' %}" class="flex items-center p-2 text-white/90 hover:bg-white/5 rounded text-sm transition-all {% if request.resolver_match.url_name == 'blog_categories_list' %}bg-white/10{% endif %}">
-                                        <i class="fas fa-folder w-5 mr-2" aria-hidden="true"></i>
-                                        <span>Categories</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            <a href="#" class="flex items-center p-3 text-white hover:bg-white/10 transition-all rounded">
-                                <i class="fas fa-cog w-6 mr-3" aria-hidden="true"></i>
-                                <span class="font-medium">Settings</span>
+                    <!-- Courses Management -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-book w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Courses</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="coursesMenu" class="ml-8 mt-2 space-y-1 hidden">
+                            <a href="{% url 'management:courses_list' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Courses
                             </a>
-                        </li>
-
-                        <li class="pt-4 mt-4 border-t border-white/20">
-                            <a href="{% url 'eduweb:logout' %}" class="flex items-center p-3 text-white hover:bg-red-600/30 transition-all rounded group">
-                                <i class="fas fa-sign-out-alt w-6 mr-3 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
-                                <span class="font-medium">Logout</span>
+                            <a href="{% url 'management:course_create' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Course
                             </a>
-                        </li>
-                    </ul>
+                        </div>
+                    </div>
+
+                    <!-- Blog Management -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-blog w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Blog</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="blogMenu" class="ml-8 mt-2 space-y-1 hidden">
+                            <a href="{% url 'management:blog_posts_list' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Posts
+                            </a>
+                            <a href="{% url 'management:blog_post_create' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Post
+                            </a>
+                            <a href="{% url 'management:blog_categories_list' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-tags mr-2" aria-hidden="true"></i> Categories
+                            </a>
+                        </div>
+                    </div>
+
+                    {% elif request.user.profile.role == 'student' %}
+                    <!-- STUDENT MENU -->
+                    <!-- Dashboard -->
+                    <a href="{% url 'students:dashboard' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- My Courses -->
+                    <a href="{% url 'students:my_courses' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-book-open w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">My Courses</span>
+                        </div>
+                    </a>
+
+                    <!-- Course Catalog -->
+                    <a href="{% url 'students:course_catalog' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-search w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Browse Courses</span>
+                        </div>
+                    </a>
+
+                    <!-- Assignments -->
+                    <a href="{% url 'students:assignments' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-tasks w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Assignments</span>
+                        </div>
+                        <span class="bg-accent-500 text-white text-xs px-2 py-1 rounded-full">3</span>
+                    </a>
+
+                    <!-- Grades -->
+                    <a href="{% url 'students:grades' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Grades & Progress</span>
+                        </div>
+                    </a>
+
+                    <!-- Certificates -->
+                    <a href="{% url 'students:certificates' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-certificate w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Certificates</span>
+                        </div>
+                    </a>
+
+                    <!-- Messages -->
+                    <a href="{% url 'students:messages' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-envelope w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Messages</span>
+                        </div>
+                        <span class="bg-accent-500 text-white text-xs px-2 py-1 rounded-full">2</span>
+                    </a>
+
+                    {% elif request.user.profile.role == 'instructor' %}
+                    <!-- INSTRUCTOR MENU (for future implementation) -->
+                    <a href="{% url 'instructors:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Dashboard</span>
+                    </a>
+
+                    {% elif request.user.profile.role == 'content_manager' %}
+                    <!-- CONTENT MANAGER MENU (for future implementation) -->
+                    <a href="{% url 'content:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Dashboard</span>
+                    </a>
+
+                    {% elif request.user.profile.role == 'support' %}
+                    <!-- SUPPORT STAFF MENU (for future implementation) -->
+                    <a href="{% url 'support:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Dashboard</span>
+                    </a>
+
+                    {% elif request.user.profile.role == 'finance' %}
+                    <!-- FINANCE MANAGER MENU (for future implementation) -->
+                    <a href="{% url 'finance:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Dashboard</span>
+                    </a>
+
+                    {% elif request.user.profile.role == 'qa' %}
+                    <!-- QA REVIEWER MENU (for future implementation) -->
+                    <a href="{% url 'qa:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Dashboard</span>
+                    </a>
+                    {% endif %}
+
+                    <!-- Common sections for all roles -->
+                    <div class="border-t border-white/10 my-4"></div>
+                    
+                    <!-- Settings (all users) -->
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}#{% else %}#{% endif %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <i class="fas fa-cog w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Settings</span>
+                    </a>
+
+                    <!-- Help & Support (all users) -->
+                    <a href="#" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Help & Support</span>
+                    </a>
                 </nav>
+
+                <!-- User Info at Bottom -->
+                <div class="p-4 border-t border-white/10 flex-shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30">
+                            <img src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=4a6bff&color=fff" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium text-sm truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
+                            <p class="text-xs text-white/70">{{ request.user.profile.get_role_display }}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </aside>
 
-        <!-- Main Content Area - Add left margin for fixed sidebar -->
+        <!-- Main Content Area -->
         <div class="flex-1 flex flex-col min-h-screen md:ml-64">
             <!-- Header -->
             <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
@@ -309,7 +369,7 @@
                         <div class="hidden md:block relative">
                             <label for="globalSearch" class="sr-only">Search</label>
                             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" aria-hidden="true"></i>
-                            <input type="search" id="globalSearch" placeholder="Search applications, students..." class="pl-12 pr-4 py-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64 lg:w-80 transition-all">
+                            <input type="search" id="globalSearch" placeholder="{% if request.user.profile.role == 'student' %}Search courses, assignments...{% else %}Search applications, students...{% endif %}" class="pl-12 pr-4 py-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64 lg:w-80 transition-all">
                         </div>
                     </div>
 
@@ -333,8 +393,20 @@
                                                 <i class="fas fa-file-alt" aria-hidden="true"></i>
                                             </div>
                                             <div class="ml-4">
-                                                <h5 class="font-medium text-gray-800">New Application Received</h5>
-                                                <p class="text-sm text-gray-600 mt-1">John Doe submitted an application for Computer Science</p>
+                                                <h5 class="font-medium text-gray-800">
+                                                    {% if request.user.profile.role == 'student' %}
+                                                    New Assignment Posted
+                                                    {% else %}
+                                                    New Application Received
+                                                    {% endif %}
+                                                </h5>
+                                                <p class="text-sm text-gray-600 mt-1">
+                                                    {% if request.user.profile.role == 'student' %}
+                                                    Introduction to Python - Due in 3 days
+                                                    {% else %}
+                                                    John Doe submitted an application for Computer Science
+                                                    {% endif %}
+                                                </p>
                                                 <p class="text-xs text-gray-500 mt-2">2 hours ago</p>
                                             </div>
                                         </div>
@@ -351,16 +423,16 @@
                                 </div>
                                 <div class="hidden md:block text-left">
                                     <p class="font-medium text-gray-800">{{ request.user.get_full_name|default:request.user.username }}</p>
-                                    <p class="text-sm text-gray-500">Administrator</p>
+                                    <p class="text-sm text-gray-500">{{ request.user.profile.get_role_display }}</p>
                                 </div>
                                 <i class="fas fa-chevron-down text-gray-500 hidden md:block" aria-hidden="true"></i>
                             </button>
 
                             <div class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 hidden group-hover:block">
-                                <a href="#" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
                                 </a>
-                                <a href="#" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
                                 </a>
                                 <a href="{% url 'eduweb:logout' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all">
@@ -381,42 +453,37 @@
             <footer class="bg-white border-t border-gray-200 py-4 px-6">
                 <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-600">
                     <p>&copy; {% now "Y" %} MIU. All rights reserved.</p>
-                    <p class="mt-2 md:mt-0">Admin Dashboard v1.0</p>
+                    <p class="mt-2 md:mt-0">Portal v1.0</p>
                 </div>
             </footer>
         </div>
     </div>
 
-    <!-- Chatbot (Add this before closing </body> tag) -->
+    <!-- Chatbot -->
     <div class="fixed bottom-6 right-6 z-50">
-        <!-- Chatbot Toggle Button -->
         <button id="chatbotToggle" class="w-14 h-14 rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 hover:shadow-xl transition-all flex items-center justify-center" aria-label="Open chat assistant">
             <i class="fas fa-robot text-2xl" aria-hidden="true"></i>
         </button>
 
-        <!-- Chatbot Window -->
         <div id="chatbotWindow" class="hidden absolute bottom-20 right-0 w-80 md:w-96 h-96 bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col">
-            <!-- Header -->
             <div class="bg-primary-600 text-white p-4 rounded-t-2xl flex justify-between items-center">
                 <h4 class="font-semibold flex items-center">
-                    <i class="fas fa-robot mr-3" aria-hidden="true"></i> Admin Assistant
+                    <i class="fas fa-robot mr-3" aria-hidden="true"></i> 
+                    {% if request.user.profile.role == 'student' %}Learning{% else %}Admin{% endif %} Assistant
                 </h4>
                 <button id="chatbotClose" class="text-white hover:text-gray-200" aria-label="Close chat">
                     <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
 
-            <!-- Messages -->
             <div id="chatbotMessages" class="flex-1 p-4 overflow-y-auto">
-                <!-- Initial message -->
                 <div class="mb-4">
                     <div class="inline-block max-w-[80%] bg-gray-100 rounded-2xl rounded-tl-none p-4">
-                        <p class="text-gray-800">Hello! I'm your Admin Assistant. How can I help you today?</p>
+                        <p class="text-gray-800">Hello! How can I help you today?</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Input Area -->
             <div class="p-4 border-t border-gray-200">
                 <div class="flex space-x-3">
                     <input type="text" id="chatbotInput" placeholder="Type your message here..." class="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" aria-label="Chat message">
@@ -424,9 +491,12 @@
                         <i class="fas fa-paper-plane" aria-hidden="true"></i>
                     </button>
                 </div>
-                <!-- Quick Replies -->
                 <div id="quickReplies" class="flex flex-wrap gap-2 mt-3">
+                    {% if request.user.profile.role == 'student' %}
+                    <button class="quick-reply-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm transition-all">My courses</button>
+                    {% else %}
                     <button class="quick-reply-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm transition-all">View pending applications</button>
+                    {% endif %}
                     <button class="quick-reply-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm transition-all">Help</button>
                 </div>
             </div>
@@ -434,7 +504,48 @@
     </div>
 
     <!-- Base JavaScript -->
-    <script src="{% static 'js/admin-base.js' %}"></script>
+    <script>
+        // Sidebar toggle
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('toggleSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
+
+        toggleBtn?.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('md:translate-x-0');
+        });
+
+        closeBtn?.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+        });
+
+        // Submenu toggles
+        document.querySelectorAll('.menu-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const arrow = this.querySelector('.menu-arrow');
+                const menuId = this.nextElementSibling?.id;
+                const menu = document.getElementById(menuId);
+                
+                if (menu) {
+                    menu.classList.toggle('hidden');
+                    arrow?.classList.toggle('rotate-180');
+                }
+            });
+        });
+
+        // Chatbot
+        const chatbotToggle = document.getElementById('chatbotToggle');
+        const chatbotWindow = document.getElementById('chatbotWindow');
+        const chatbotClose = document.getElementById('chatbotClose');
+
+        chatbotToggle?.addEventListener('click', () => {
+            chatbotWindow.classList.toggle('hidden');
+        });
+
+        chatbotClose?.addEventListener('click', () => {
+            chatbotWindow.classList.add('hidden');
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

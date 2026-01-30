@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('eduweb.urls')),
     path('management/', include('management.urls')),
+    path('student/', include('student.urls')),
 ]
 
 # Serve media files during development

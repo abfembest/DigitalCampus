@@ -1,0 +1,233 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Grades & Performance</h1>
+        <p class="text-gray-600 mt-2">Track your academic performance across all courses</p>
+    </div>
+
+    <!-- Overall Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Total Courses</p>
+                <i class="fas fa-book text-blue-600 text-xl"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ enrollments.count }}</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Completed</p>
+                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">
+                {{ enrollments|length|add:"-1" }}
+            </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Total Assignments</p>
+                <i class="fas fa-file-alt text-orange-600 text-xl"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ submissions.count }}</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-sm font-medium">Avg. Grade</p>
+                <i class="fas fa-star text-yellow-600 text-xl"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">
+                {% if submissions %}
+                    {% widthratio submissions|length 1 submissions.count %}%
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Course Grades -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">Course Grades</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Course
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Progress
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Current Grade
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for enrollment in enrollments %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div>
+                                    <p class="font-semibold text-gray-900">{{ enrollment.course.title }}</p>
+                                    <p class="text-sm text-gray-600">{{ enrollment.course.instructor_name }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="flex-1 mr-3">
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="{% if enrollment.progress_percentage == 100 %}bg-green-500{% else %}bg-primary-600{% endif %} h-2 rounded-full" 
+                                             style="width: {{ enrollment.progress_percentage }}%"></div>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-semibold text-gray-900">
+                                    {{ enrollment.progress_percentage|floatformat:0 }}%
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if enrollment.current_grade %}
+                            <span class="text-lg font-bold {% if enrollment.current_grade >= 90 %}text-green-600{% elif enrollment.current_grade >= 70 %}text-blue-600{% elif enrollment.current_grade >= 50 %}text-orange-600{% else %}text-red-600{% endif %}">
+                                {{ enrollment.current_grade|floatformat:1 }}%
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">Not graded yet</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if enrollment.status == 'completed' %}
+                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                Completed
+                            </span>
+                            {% elif enrollment.status == 'active' %}
+                            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                                In Progress
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                                {{ enrollment.get_status_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <a href="{% url 'students:course_detail' enrollment.course.id %}" 
+                               class="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                                View Details →
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center">
+                            <i class="fas fa-book-open text-5xl text-gray-300 mb-3"></i>
+                            <p class="text-gray-600">No courses enrolled yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Assignment Grades -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900">Assignment Grades</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Assignment
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Course
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Submitted
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Score
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for submission in submissions %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <p class="font-semibold text-gray-900">{{ submission.assignment.title }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-sm text-gray-900">{{ submission.assignment.lesson.course.title }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-sm text-gray-600">{{ submission.submitted_at|date:"M d, Y" }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <span class="text-lg font-bold {% if submission.score >= submission.assignment.passing_score %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ submission.score|floatformat:1 }}
+                                </span>
+                                <span class="text-sm text-gray-600 ml-1">
+                                    / {{ submission.assignment.max_score }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if submission.passed %}
+                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                <i class="fas fa-check-circle mr-1"></i>Passed
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                                <i class="fas fa-times-circle mr-1"></i>Failed
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <a href="{% url 'students:assignment_detail' submission.assignment.id %}" 
+                               class="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                                View Details →
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center">
+                            <i class="fas fa-clipboard-list text-5xl text-gray-300 mb-3"></i>
+                            <p class="text-gray-600">No graded assignments yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

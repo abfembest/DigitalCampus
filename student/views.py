@@ -624,7 +624,7 @@ def certificates(request):
     """List certificates"""
     certificates = Certificate.objects.filter(
         student=request.user
-    ).select_related('course').order_by('-issued_at')
+    ).select_related('course').order_by('-issued_date')
     
     context = {
         'page_title': 'My Certificates',

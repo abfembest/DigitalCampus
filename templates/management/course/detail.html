@@ -1,0 +1,476 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}{{ course.name }} - Course Details - MIU Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with Back Button -->
+    <div class="flex items-center gap-4">
+        <a href="{% url 'management:courses' %}" 
+           class="p-2 hover:bg-gray-100 rounded-lg transition-all"
+           aria-label="Back to courses">
+            <i class="fas fa-arrow-left text-gray-600"></i>
+        </a>
+        <div class="flex-1">
+            <h1 class="text-3xl font-bold text-gray-900 font-display">
+                {{ course.name }}
+            </h1>
+            <p class="text-gray-600 mt-1">
+                {{ course.code }} • {{ course.faculty.name }}
+            </p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'management:course_edit' course.pk %}" 
+               class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg inline-flex items-center">
+                <i class="fas fa-edit mr-2"></i>
+                Edit Program
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Total Applications</p>
+                    <p class="text-3xl font-bold text-gray-900">
+                        {{ application_count }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-file-alt text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Pending Review</p>
+                    <p class="text-3xl font-bold text-gray-900">
+                        {{ active_applications }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Accepted</p>
+                    <p class="text-3xl font-bold text-gray-900">
+                        {{ accepted_applications }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Information Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Basic Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-{{ course.color_primary }}-600 to-{{ course.color_secondary }}-500 px-6 py-4">
+                <h2 class="text-xl font-bold text-white flex items-center">
+                    <i class="fas fa-info-circle mr-3"></i>
+                    Basic Information
+                </h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between py-3 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Program Code:</span>
+                    <span class="text-gray-900 font-mono">{{ course.code }}</span>
+                </div>
+                
+                <div class="flex justify-between py-3 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Faculty:</span>
+                    <span class="inline-flex items-center gap-2 px-3 py-1 bg-{{ course.faculty.color_primary }}-50 text-{{ course.faculty.color_primary }}-700 rounded-full text-sm">
+                        <i class="fas fa-{{ course.faculty.icon }}"></i>
+                        {{ course.faculty.name }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between py-3 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Degree Level:</span>
+                    <span class="text-gray-900 capitalize">
+                        {{ course.get_degree_level_display }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between py-3 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Duration:</span>
+                    <span class="text-gray-900">
+                        {{ course.duration_years }} year{{ course.duration_years|floatformat:0|add:"0"|pluralize }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between py-3 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Credits Required:</span>
+                    <span class="text-gray-900">{{ course.credits_required }}</span>
+                </div>
+                
+                <div class="flex justify-between py-3">
+                    <span class="font-medium text-gray-700">Status:</span>
+                    <div class="flex flex-col gap-2">
+                        {% if course.is_active %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                            <i class="fas fa-check-circle"></i>
+                            Active
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+                            <i class="fas fa-times-circle"></i>
+                            Inactive
+                        </span>
+                        {% endif %}
+                        {% if course.is_featured %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                            <i class="fas fa-star"></i>
+                            Featured
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Information -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-green-600 to-emerald-500 px-6 py-4">
+                <h2 class="text-xl font-bold text-white flex items-center">
+                    <i class="fas fa-dollar-sign mr-3"></i>
+                    Financial Information
+                </h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between py-3 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Application Fee:</span>
+                    <span class="text-2xl font-bold text-gray-900">
+                        ${{ course.application_fee|floatformat:2 }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between py-3 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Tuition Fee:</span>
+                    <span class="text-2xl font-bold text-gray-900">
+                        ${{ course.tuition_fee|floatformat:2 }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between py-3 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Avg. Starting Salary:</span>
+                    <span class="text-xl font-bold text-green-600">
+                        {{ course.avg_starting_salary|default:"N/A" }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between py-3">
+                    <span class="font-medium text-gray-700">Job Placement Rate:</span>
+                    <span class="text-xl font-bold text-green-600">
+                        {{ course.job_placement_rate }}%
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Description & Overview -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-pink-500 px-6 py-4">
+            <h2 class="text-xl font-bold text-white flex items-center">
+                <i class="fas fa-align-left mr-3"></i>
+                Program Overview
+            </h2>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">Tagline:</h3>
+                <p class="text-gray-700 italic">"{{ course.tagline }}"</p>
+            </div>
+            
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">Overview:</h3>
+                <p class="text-gray-700">{{ course.overview }}</p>
+            </div>
+            
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">Description:</h3>
+                <p class="text-gray-700">{{ course.description }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Study Modes & Requirements -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Study Modes -->
+        {% if course.available_study_modes %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-calendar-alt mr-3 text-primary-600"></i>
+                    Available Study Modes
+                </h2>
+            </div>
+            <div class="p-6">
+                <ul class="space-y-2">
+                    {% for mode in course.available_study_modes %}
+                    <li class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                        <i class="fas fa-check text-blue-600"></i>
+                        <span class="text-gray-900">{{ mode }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Entry Requirements -->
+        {% if course.entry_requirements %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-clipboard-list mr-3 text-primary-600"></i>
+                    Entry Requirements
+                </h2>
+            </div>
+            <div class="p-6">
+                <ul class="space-y-2">
+                    {% for requirement in course.entry_requirements %}
+                    <li class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <i class="fas fa-check-circle text-green-600 mt-1"></i>
+                        <span class="text-gray-900">{{ requirement }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Learning Outcomes -->
+    {% if course.learning_outcomes %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-graduation-cap mr-3 text-primary-600"></i>
+                Learning Outcomes
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for outcome in course.learning_outcomes %}
+                <div class="flex items-start gap-3 p-4 bg-purple-50 rounded-lg">
+                    <i class="fas fa-lightbulb text-purple-600 mt-1"></i>
+                    <span class="text-gray-900">{{ outcome }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Career Paths -->
+    {% if course.career_paths %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-briefcase mr-3 text-primary-600"></i>
+                Career Paths
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for career in course.career_paths %}
+                <div class="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                    <i class="fas fa-arrow-right text-green-600"></i>
+                    <span class="text-gray-900 font-medium">{{ career }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Core Courses -->
+    {% if course.core_courses %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-book mr-3 text-primary-600"></i>
+                Core Courses
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                {% for course_item in course.core_courses %}
+                <div class="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-600">
+                    <h4 class="font-bold text-gray-900 mb-1">
+                        {{ course_item.title }}
+                    </h4>
+                    <p class="text-gray-700 text-sm">
+                        {{ course_item.description }}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Specialization Tracks -->
+    {% if course.specialization_tracks %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-route mr-3 text-primary-600"></i>
+                Specialization Tracks
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                {% for track in course.specialization_tracks %}
+                <div class="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-600">
+                    <h4 class="font-bold text-gray-900 mb-1">
+                        {{ track.title }}
+                    </h4>
+                    <p class="text-gray-700 text-sm">
+                        {{ track.description }}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Applications -->
+    {% if recent_applications %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-file-alt mr-3 text-primary-600"></i>
+                Recent Applications
+            </h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                            Application ID
+                        </th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                            Applicant
+                        </th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                            Date
+                        </th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for application in recent_applications %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 font-mono text-sm text-gray-900">
+                            {{ application.application_id }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div>
+                                <p class="font-medium text-gray-900">
+                                    {{ application.first_name }} {{ application.last_name }}
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    {{ application.email }}
+                                </p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">
+                            {{ application.created_at|date:"M d, Y" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if application.status == 'submitted' %}
+                            <span class="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                Submitted
+                            </span>
+                            {% elif application.status == 'under_review' %}
+                            <span class="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                                Under Review
+                            </span>
+                            {% elif application.status == 'reviewed' %}
+                            <span class="px-3 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                                Reviewed
+                            </span>
+                            {% elif application.status == 'accepted' %}
+                            <span class="px-3 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                Accepted
+                            </span>
+                            {% elif application.status == 'rejected' %}
+                            <span class="px-3 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                                Rejected
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <a href="{% url 'management:application_detail' application.pk %}" 
+                               class="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                                View Details →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <a href="{% url 'management:applications_list' %}?program={{ course.id }}" 
+               class="text-primary-600 hover:text-primary-700 font-medium">
+                View all applications for this program →
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- SEO Information -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                <i class="fas fa-search mr-3 text-primary-600"></i>
+                SEO Information
+            </h2>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <h3 class="font-semibold text-gray-700 mb-1">Meta Description:</h3>
+                <p class="text-gray-600">
+                    {{ course.meta_description|default:"Not set" }}
+                </p>
+            </div>
+            <div>
+                <h3 class="font-semibold text-gray-700 mb-1">Meta Keywords:</h3>
+                <p class="text-gray-600">
+                    {{ course.meta_keywords|default:"Not set" }}
+                </p>
+            </div>
+            <div>
+                <h3 class="font-semibold text-gray-700 mb-1">URL Slug:</h3>
+                <code class="px-3 py-1 bg-gray-100 rounded text-sm">
+                    {{ course.slug }}
+                </code>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

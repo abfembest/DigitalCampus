@@ -424,19 +424,26 @@ def faculty_delete(request, pk):
     return redirect('management:faculties_list')
 
 
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def courses_list(request):
-    """List all courses"""
-    courses = Course.objects.select_related('faculty').all().order_by('faculty', 'display_order', 'name')
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+def courses(request):
+    """
+    Unified courses management page with tabs for programs and categories
+    """
+    from django.db.models import Count
+    
+    # Get all courses with related data
+    courses = Course.objects.select_related('faculty').order_by('display_order', 'name')
+    
+    # Get all categories with course counts
+    categories = CourseCategory.objects.annotate(
+        course_count=Count('lms_courses')
+    ).order_by('display_order', 'name')
     
     context = {
         'courses': courses,
-        'pending_count': pending_count,
+        'categories': categories,
     }
     
-    return render(request, 'management/courses_list.html', context)
+    return render(request, 'management/course/courses.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -448,7 +455,7 @@ def course_create(request):
         if form.is_valid():
             course = form.save()
             messages.success(request, f'Course "{course.name}" created successfully!')
-            return redirect('management:courses_list')
+            return redirect('management:courses')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -462,8 +469,57 @@ def course_create(request):
         'action': 'Create',
     }
     
-    return render(request, 'management/course_form.html', context)
+    return render(request, 'management/course/course_form.html', context)
 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_detail(request, pk):
+    """
+    Display detailed information about a specific course/program
+    """
+    course = get_object_or_404(
+        Course.objects.select_related('faculty'),
+        pk=pk
+    )
+    
+    # Get statistics
+    application_count = CourseApplication.objects.filter(
+        course=course
+    ).count()
+    
+    active_applications = CourseApplication.objects.filter(
+        course=course,
+        status__in=['submitted', 'under_review', 'reviewed']
+    ).count()
+    
+    accepted_applications = CourseApplication.objects.filter(
+        course=course,
+        status='accepted'
+    ).count()
+    
+    # Get recent applications for this course
+    recent_applications = CourseApplication.objects.filter(
+        course=course
+    ).select_related('user').order_by('-created_at')[:10]
+    
+    pending_count = CourseApplication.objects.filter(
+        status__in=['submitted', 'under_review']
+    ).count()
+    
+    context = {
+        'course': course,
+        'application_count': application_count,
+        'active_applications': active_applications,
+        'accepted_applications': accepted_applications,
+        'recent_applications': recent_applications,
+        'pending_count': pending_count,
+    }
+    
+    return render(
+        request, 
+        'management/course/detail.html', 
+        context
+    )
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
@@ -476,7 +532,7 @@ def course_edit(request, pk):
         if form.is_valid():
             course = form.save()
             messages.success(request, f'Course "{course.name}" updated successfully!')
-            return redirect('management:courses_list')
+            return redirect('management:courses')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -491,7 +547,7 @@ def course_edit(request, pk):
         'action': 'Edit',
     }
     
-    return render(request, 'management/course_form.html', context)
+    return render(request, 'management/course/course_form.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -504,9 +560,9 @@ def course_delete(request, pk):
         course_name = course.name
         course.delete()
         messages.success(request, f'Course "{course_name}" deleted successfully!')
-        return redirect('management:courses_list')
+        return redirect('management:courses')
     
-    return redirect('management:courses_list')
+    return redirect('management:courses')
 
 from eduweb.models import BlogPost, BlogCategory
 from management.forms import BlogPostForm, BlogCategoryForm
@@ -1242,44 +1298,42 @@ def notification_config(request):
     return render(request, 'management/system_config/notifications.html', {'form': form})
 
 
-# ==================== COURSE CATEGORY VIEWS ====================
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def course_categories_list(request):
-    """List all course categories"""
-    categories = CourseCategory.objects.all().order_by('display_order', 'name')
+# @login_required(login_url='eduweb:auth_page')
+# @user_passes_test(is_admin)
+# def course_categories_list(request):
+#     """List all course categories"""
+#     # Add course counts to categories
+#     categories = CourseCategory.objects.annotate(
+#         course_count=Count('lms_courses')
+#     ).order_by('display_order', 'name')
     
-    # categories = CourseCategory.objects.annotate(
-    #     course_count=Count('lmscourse')
-    # ).order_by('display_order', 'name')
+#     # Search functionality
+#     search_query = request.GET.get('search', '')
+#     if search_query:
+#         categories = categories.filter(
+#             Q(name__icontains=search_query) | 
+#             Q(description__icontains=search_query)
+#         )
     
-    # Search functionality
-    search_query = request.GET.get('search', '')
-    if search_query:
-        categories = categories.filter(
-            Q(name__icontains=search_query) | 
-            Q(description__icontains=search_query)
-        )
+#     # Status filter
+#     status = request.GET.get('status', '')
+#     if status == 'active':
+#         categories = categories.filter(is_active=True)
+#     elif status == 'inactive':
+#         categories = categories.filter(is_active=False)
     
-    # Status filter
-    status = request.GET.get('status', '')
-    if status == 'active':
-        categories = categories.filter(is_active=True)
-    elif status == 'inactive':
-        categories = categories.filter(is_active=False)
+#     # Pagination
+#     paginator = Paginator(categories, 15)
+#     page = request.GET.get('page', 1)
+#     categories_page = paginator.get_page(page)
     
-    # Pagination
-    paginator = Paginator(categories, 15)
-    page = request.GET.get('page', 1)
-    categories_page = paginator.get_page(page)
-    
-    context = {
-        'categories': categories_page,
-        'search_query': search_query,
-        'status': status,
-        'total_categories': categories.count()
-    }
-    return render(request, 'management/course_categories/list.html', context)
+#     context = {
+#         'categories': categories_page,
+#         'search_query': search_query,
+#         'status': status,
+#         'total_categories': categories.count()
+#     }
+#     return render(request, 'management/course/list.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -1305,7 +1359,7 @@ def course_category_create(request):
     else:
         form = CourseCategoryForm()
     
-    return render(request, 'management/course_categories/create.html', {'form': form})
+    return render(request, 'management/course/create.html', {'form': form})
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -1333,7 +1387,7 @@ def course_category_edit(request, pk):
     else:
         form = CourseCategoryForm(instance=category)
     
-    return render(request, 'management/course_categories/edit.html', {
+    return render(request, 'management/course/edit.html', {
         'form': form,
         'category': category
     })
@@ -1372,7 +1426,7 @@ def course_category_delete(request, pk):
         messages.success(request, f'Category "{category_name}" deleted successfully.')
         return redirect('management:course_categories_list')
     
-    return render(request, 'management/course_categories/delete.html', {
+    return render(request, 'management/course/delete.html', {
         'category': category,
         'course_count': course_count
     })

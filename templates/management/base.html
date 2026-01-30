@@ -204,42 +204,25 @@
 
                     <!-- Courses Management -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path or 'course' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path or 'course' in request.path or 'categories' in request.path or 'category' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
-                                <i class="fas fa-book w-5 text-center" aria-hidden="true"></i>
+                                <i class="fas fa-graduation-cap w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Courses</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="coursesMenu" class="mt-2 space-y-1 hidden">
-                            <a href="{% url 'management:courses_list' %}" 
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Courses
+                            <a href="{% url 'management:courses' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses' or request.resolver_match.url_name == 'courses_list' or request.resolver_match.url_name == 'course_categories_list' %}bg-white/20{% endif %}">
+                                <i class="fas fa-th-list mr-2" aria-hidden="true"></i> Manage Courses
                             </a>
                             <a href="{% url 'management:course_create' %}" 
                             class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Course
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Course Categories (NEW) -->
-                    <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'categories' in request.path or 'category' in request.path %}bg-white/20{% endif %}">
-                            <div class="flex items-center">
-                                <i class="fas fa-th-large w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Course Categories</span>
-                            </div>
-                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
-                        </button>
-                        <div id="categoriesMenu" class="mt-2 space-y-1 hidden">
-                            <a href="{% url 'management:course_categories_list' %}" 
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_categories_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Categories
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Add Program
                             </a>
                             <a href="{% url 'management:course_category_create' %}" 
                             class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_category_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Category
+                                <i class="fas fa-plus-circle mr-2" aria-hidden="true"></i> Add Category
                             </a>
                         </div>
                     </div>

@@ -22,10 +22,16 @@ urlpatterns = [
     path('faculties/<int:pk>/delete/', views.faculty_delete, name='faculty_delete'),
     
     # Courses Management
-    path('courses/', views.courses_list, name='courses_list'),
+    path('courses/', views.courses, name='courses'),
     path('courses/create/', views.course_create, name='course_create'),
+    path('courses/<int:pk>/', views.course_detail, name='course_detail'),
     path('courses/<int:pk>/edit/', views.course_edit, name='course_edit'),
     path('courses/<int:pk>/delete/', views.course_delete, name='course_delete'),
+
+    # ==================== COURSE CATEGORIES ====================
+    path('categories/create/', views.course_category_create, name='course_category_create'),
+    path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
+    path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
 
     # Blog Management
     path('blog/posts/', views.blog_posts_list, name='blog_posts_list'),
@@ -66,12 +72,6 @@ urlpatterns = [
     path('config/branding/', views.branding_config, name='branding_config'),
     path('config/email/', views.email_config, name='email_config'),
     path('config/notifications/', views.notification_config, name='notification_config'),
-    
-    # ==================== COURSE CATEGORIES ====================
-    path('categories/', views.course_categories_list, name='course_categories_list'),
-    path('categories/create/', views.course_category_create, name='course_category_create'),
-    path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
-    path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
     
     # ==================== AUDIT LOGS & SECURITY ====================
     path('audit-logs/', views.audit_logs_list, name='audit_logs_list'),

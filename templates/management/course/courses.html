@@ -1,0 +1,410 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Courses Management - MIU Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 font-display">
+                <i class="fas fa-graduation-cap text-primary-600 mr-3"></i>
+                Courses Management
+            </h1>
+            <p class="text-gray-600 mt-1">Manage programs and course categories</p>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="border-b border-gray-200">
+            <nav class="flex -mb-px" role="tablist">
+                <button type="button" 
+                        class="tab-button flex-1 py-4 px-6 text-center font-medium border-b-2 transition-all"
+                        data-tab="programs"
+                        id="programs-tab"
+                        role="tab"
+                        aria-controls="programs-panel"
+                        aria-selected="true">
+                    <i class="fas fa-book mr-2"></i>
+                    Programs
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-primary-100 text-primary-800">{{ courses.count }}</span>
+                </button>
+                <button type="button"
+                        class="tab-button flex-1 py-4 px-6 text-center font-medium border-b-2 transition-all"
+                        data-tab="categories"
+                        id="categories-tab"
+                        role="tab"
+                        aria-controls="categories-panel"
+                        aria-selected="false">
+                    <i class="fas fa-th-large mr-2"></i>
+                    Categories
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-primary-100 text-primary-800">{{ categories.count }}</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Programs Panel -->
+            <div id="programs-panel" 
+                 class="tab-panel"
+                 role="tabpanel"
+                 aria-labelledby="programs-tab">
+                
+                <!-- Programs Header Actions -->
+                <div class="p-6 border-b border-gray-200 bg-gray-50">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex-1">
+                            <div class="relative">
+                                <input type="text" 
+                                       id="programSearch"
+                                       placeholder="Search programs by name, code, or faculty..." 
+                                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <select id="programStatusFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="featured">Featured</option>
+                            </select>
+                            <a href="{% url 'management:course_create' %}" 
+                               class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg inline-flex items-center whitespace-nowrap">
+                                <i class="fas fa-plus mr-2"></i>
+                                Add Program
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Programs List -->
+                <div class="overflow-x-auto">
+                    <table class="w-full" id="programsTable">
+                        <thead class="bg-gradient-to-r from-primary-600 to-secondary-500 text-white">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Order</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Program Name</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Faculty</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Code</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Duration</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Status</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200" id="programsTableBody">
+                            {% for course in courses %}
+                            <tr class="hover:bg-gray-50 transition-colors program-row" 
+                                data-status="{% if course.is_active %}active{% else %}inactive{% endif %}{% if course.is_featured %} featured{% endif %}"
+                                data-name="{{ course.name|lower }}"
+                                data-code="{{ course.code|lower }}"
+                                data-faculty="{{ course.faculty.name|lower }}">
+                                <td class="px-6 py-4">
+                                    <span class="font-mono text-gray-600">{{ course.display_order }}</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-{{ course.color_primary }}-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-{{ course.icon }} text-{{ course.color_primary }}-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-900">{{ course.name }}</p>
+                                            <p class="text-sm text-gray-500">{{ course.tagline|truncatewords:8 }}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center gap-2 px-3 py-1 bg-{{ course.faculty.color_primary }}-50 text-{{ course.faculty.color_primary }}-700 rounded-full text-sm">
+                                        <i class="fas fa-{{ course.faculty.icon }}"></i>
+                                        {{ course.faculty.name }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-mono">
+                                        {{ course.code }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-gray-700">{{ course.duration_years }} year{{ course.duration_years|floatformat:0|add:"0"|pluralize }}</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col gap-1">
+                                        {% if course.is_active %}
+                                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium w-fit">
+                                            <i class="fas fa-check-circle"></i>
+                                            Active
+                                        </span>
+                                        {% else %}
+                                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium w-fit">
+                                            <i class="fas fa-times-circle"></i>
+                                            Inactive
+                                        </span>
+                                        {% endif %}
+                                        {% if course.is_featured %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium w-fit">
+                                            <i class="fas fa-star"></i>
+                                            Featured
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <a href="{% url 'management:course_detail' course.pk %}" 
+                                           target="_blank" 
+                                           class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" 
+                                           title="View Page">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'management:course_edit' course.pk %}" 
+                                           class="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-all" 
+                                           title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form method="post" 
+                                              action="{% url 'management:course_delete' course.pk %}" 
+                                              class="inline" 
+                                              onsubmit="return confirm('Are you sure you want to delete {{ course.name }}?');">
+                                            {% csrf_token %}
+                                            <button type="submit" 
+                                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all" 
+                                                    title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="px-6 py-12 text-center">
+                                    <div class="flex flex-col items-center gap-3 text-gray-500">
+                                        <i class="fas fa-book-open text-5xl"></i>
+                                        <p class="text-lg">No programs found</p>
+                                        <a href="{% url 'management:course_create' %}" 
+                                           class="text-primary-600 hover:text-primary-700 font-semibold">
+                                            Create your first program
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Categories Panel -->
+            <div id="categories-panel" 
+                 class="tab-panel hidden"
+                 role="tabpanel"
+                 aria-labelledby="categories-tab">
+                
+                <!-- Categories Header Actions -->
+                <div class="p-6 border-b border-gray-200 bg-gray-50">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="flex-1">
+                            <div class="relative">
+                                <input type="text" 
+                                       id="categorySearch"
+                                       placeholder="Search categories..." 
+                                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <select id="categoryStatusFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                            <a href="{% url 'management:course_category_create' %}" 
+                               class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg inline-flex items-center whitespace-nowrap">
+                                <i class="fas fa-plus mr-2"></i>
+                                Add Category
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Categories Grid -->
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="categoriesGrid">
+                        {% for category in categories %}
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all category-card"
+                             data-status="{% if category.is_active %}active{% else %}inactive{% endif %}"
+                             data-name="{{ category.name|lower }}">
+                            <div class="p-6">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="w-12 h-12 rounded-lg flex items-center justify-center" 
+                                         style="background-color: {{ category.color }}20;">
+                                        <i class="fas fa-{{ category.icon }} text-2xl" 
+                                           style="color: {{ category.color }};"></i>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        {% if category.is_active %}
+                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                            Active
+                                        </span>
+                                        {% else %}
+                                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
+                                            Inactive
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <h3 class="text-lg font-bold text-gray-900 mb-2">{{ category.name }}</h3>
+                                <p class="text-sm text-gray-600 mb-4 line-clamp-2">{{ category.description }}</p>
+                                
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                                    <div class="text-sm text-gray-600">
+                                        <i class="fas fa-book mr-1"></i>
+                                        {{ category.course_count }} course{{ category.course_count|pluralize }}
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <a href="{% url 'management:course_category_edit' category.id %}" 
+                                           class="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-all" 
+                                           title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'management:course_category_delete' category.id %}" 
+                                           class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all" 
+                                           title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-span-full bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                            <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
+                            <p class="text-gray-500 text-lg mb-4">No categories found</p>
+                            <a href="{% url 'management:course_category_create' %}" 
+                               class="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all">
+                                <i class="fas fa-plus mr-2"></i>
+                                Create Your First Category
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tab-button {
+        color: #6b7280;
+        border-bottom-color: transparent;
+    }
+    
+    .tab-button:hover {
+        color: #374151;
+        border-bottom-color: #e5e7eb;
+    }
+    
+    .tab-button[aria-selected="true"] {
+        color: #3a56d4;
+        border-bottom-color: #3a56d4;
+    }
+    
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.dataset.tab;
+            
+            // Update buttons
+            tabButtons.forEach(btn => {
+                btn.setAttribute('aria-selected', 'false');
+            });
+            button.setAttribute('aria-selected', 'true');
+            
+            // Update panels
+            tabPanels.forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            document.getElementById(`${tabName}-panel`).classList.remove('hidden');
+        });
+    });
+    
+    // Programs search and filter
+    const programSearch = document.getElementById('programSearch');
+    const programStatusFilter = document.getElementById('programStatusFilter');
+    const programRows = document.querySelectorAll('.program-row');
+    
+    function filterPrograms() {
+        const searchTerm = programSearch.value.toLowerCase();
+        const statusFilter = programStatusFilter.value.toLowerCase();
+        
+        programRows.forEach(row => {
+            const name = row.dataset.name;
+            const code = row.dataset.code;
+            const faculty = row.dataset.faculty;
+            const status = row.dataset.status;
+            
+            const matchesSearch = searchTerm === '' || 
+                                name.includes(searchTerm) || 
+                                code.includes(searchTerm) || 
+                                faculty.includes(searchTerm);
+            
+            const matchesStatus = statusFilter === '' || status.includes(statusFilter);
+            
+            if (matchesSearch && matchesStatus) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    
+    programSearch?.addEventListener('input', filterPrograms);
+    programStatusFilter?.addEventListener('change', filterPrograms);
+    
+    // Categories search and filter
+    const categorySearch = document.getElementById('categorySearch');
+    const categoryStatusFilter = document.getElementById('categoryStatusFilter');
+    const categoryCards = document.querySelectorAll('.category-card');
+    
+    function filterCategories() {
+        const searchTerm = categorySearch.value.toLowerCase();
+        const statusFilter = categoryStatusFilter.value.toLowerCase();
+        
+        categoryCards.forEach(card => {
+            const name = card.dataset.name;
+            const status = card.dataset.status;
+            
+            const matchesSearch = searchTerm === '' || name.includes(searchTerm);
+            const matchesStatus = statusFilter === '' || status === statusFilter;
+            
+            if (matchesSearch && matchesStatus) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    categorySearch?.addEventListener('input', filterCategories);
+    categoryStatusFilter?.addEventListener('change', filterCategories);
+});
+</script>
+{% endblock %}

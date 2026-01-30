@@ -351,7 +351,7 @@ def faculties_list(request):
         'pending_count': pending_count,
     }
     
-    return render(request, 'management/faculties_list.html', context)
+    return render(request, 'management/faculty/faculties_list.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -377,7 +377,7 @@ def faculty_create(request):
         'action': 'Create',
     }
     
-    return render(request, 'management/faculty_form.html', context)
+    return render(request, 'management/faculty/faculty_form.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -406,7 +406,7 @@ def faculty_edit(request, pk):
         'action': 'Edit',
     }
     
-    return render(request, 'management/faculty_form.html', context)
+    return render(request, 'management/faculty/faculty_form.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -587,7 +587,7 @@ def blog_posts_list(request):
         'pending_count': pending_count,
     }
     
-    return render(request, 'management/blog_posts_list.html', context)
+    return render(request, 'management/blog/blog_posts_list.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -615,7 +615,7 @@ def blog_post_create(request):
         'action': 'Create',
     }
     
-    return render(request, 'management/blog_post_form.html', context)
+    return render(request, 'management/blog/blog_post_form.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -644,7 +644,7 @@ def blog_post_edit(request, pk):
         'action': 'Edit',
     }
     
-    return render(request, 'management/blog_post_form.html', context)
+    return render(request, 'management/blog/blog_post_form.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -674,7 +674,7 @@ def blog_categories_list(request):
         'pending_count': pending_count,
     }
     
-    return render(request, 'management/blog_categories_list.html', context)
+    return render(request, 'management/blog/blog_categories_list.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -700,7 +700,7 @@ def blog_category_create(request):
         'action': 'Create',
     }
     
-    return render(request, 'management/blog_category_form.html', context)
+    return render(request, 'management/blog/blog_category_form.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -729,7 +729,7 @@ def blog_category_edit(request, pk):
         'action': 'Edit',
     }
     
-    return render(request, 'management/blog_category_form.html', context)
+    return render(request, 'management/blog/blog_category_form.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')

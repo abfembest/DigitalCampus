@@ -1,0 +1,136 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Delete Course Category - MIU Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center gap-4">
+        <a href="{% url 'management:course_categories_list' %}" 
+           class="p-2 hover:bg-gray-100 rounded-lg transition-all">
+            <i class="fas fa-arrow-left text-gray-600"></i>
+        </a>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 font-display">
+                Delete Course Category
+            </h1>
+            <p class="text-gray-600 mt-1">Confirm deletion of course category</p>
+        </div>
+    </div>
+
+    <!-- Warning Card -->
+    <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg">
+        <div class="flex items-start">
+            <i class="fas fa-exclamation-triangle text-red-500 text-2xl mr-4 mt-1"></i>
+            <div>
+                <h3 class="text-lg font-bold text-red-900 mb-2">Warning: Permanent Deletion</h3>
+                <p class="text-red-800">
+                    You are about to permanently delete this category. This action cannot be undone.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category has courses warning -->
+    {% if course_count > 0 %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg">
+        <div class="flex items-start">
+            <i class="fas fa-info-circle text-yellow-500 text-2xl mr-4 mt-1"></i>
+            <div>
+                <h3 class="text-lg font-bold text-yellow-900 mb-2">Cannot Delete</h3>
+                <p class="text-yellow-800">
+                    This category has <strong>{{ course_count }} course{{ course_count|pluralize }}</strong> assigned to it. 
+                    Please reassign or delete those courses before deleting this category.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Category Details -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Category Details</h2>
+            
+            <!-- Preview Card -->
+            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-lg flex items-center justify-center" 
+                         style="background-color: {{ category.color }}20;">
+                        <i class="fas fa-{{ category.icon }} text-3xl" 
+                           style="color: {{ category.color }};"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold text-gray-900">{{ category.name }}</h3>
+                        <p class="text-gray-600 mt-1">{{ category.description }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Slug:</span>
+                    <span class="text-gray-900">{{ category.slug }}</span>
+                </div>
+                
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Icon:</span>
+                    <span class="text-gray-900">{{ category.icon }}</span>
+                </div>
+                
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Display Order:</span>
+                    <span class="text-gray-900">{{ category.display_order }}</span>
+                </div>
+                
+                <div class="flex justify-between py-2 border-b border-gray-200">
+                    <span class="font-medium text-gray-700">Number of Courses:</span>
+                    <span class="px-3 py-1 rounded-full {% if course_count > 0 %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                        {{ course_count }}
+                    </span>
+                </div>
+                
+                <div class="flex justify-between py-2">
+                    <span class="font-medium text-gray-700">Status:</span>
+                    {% if category.is_active %}
+                    <span class="px-3 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                        Active
+                    </span>
+                    {% else %}
+                    <span class="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
+                        Inactive
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Form -->
+        <form method="post" class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            {% csrf_token %}
+            <div class="flex justify-between items-center">
+                <a href="{% url 'management:course_categories_list' %}" 
+                   class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Cancel
+                </a>
+                {% if course_count == 0 %}
+                <button type="submit" 
+                        class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all shadow-md hover:shadow-lg">
+                    <i class="fas fa-trash mr-2"></i>
+                    Yes, Delete Category
+                </button>
+                {% else %}
+                <button type="button" 
+                        disabled
+                        class="px-6 py-3 bg-gray-400 text-white rounded-lg cursor-not-allowed">
+                    <i class="fas fa-ban mr-2"></i>
+                    Cannot Delete
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -55,6 +55,29 @@ urlpatterns = [
     
     # AJAX endpoints
     path('users/<int:pk>/quick-info/', views.user_quick_info, name='user_quick_info'),
+
+    # ==================== SYSTEM CONFIGURATION ====================
+    path('config/', views.system_config_list, name='system_config_list'),
+    path('config/create/', views.system_config_create, name='system_config_create'),
+    path('config/<int:pk>/edit/', views.system_config_edit, name='system_config_edit'),
+    path('config/<int:pk>/delete/', views.system_config_delete, name='system_config_delete'),
+    
+    # Specific configuration pages
+    path('config/branding/', views.branding_config, name='branding_config'),
+    path('config/email/', views.email_config, name='email_config'),
+    path('config/notifications/', views.notification_config, name='notification_config'),
+    
+    # ==================== COURSE CATEGORIES ====================
+    path('categories/', views.course_categories_list, name='course_categories_list'),
+    path('categories/create/', views.course_category_create, name='course_category_create'),
+    path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
+    path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
+    
+    # ==================== AUDIT LOGS & SECURITY ====================
+    path('audit-logs/', views.audit_logs_list, name='audit_logs_list'),
+    path('audit-logs/<int:pk>/', views.audit_log_detail, name='audit_log_detail'),
+    path('audit-logs/export/', views.audit_logs_export, name='audit_logs_export'),
+    path('security/', views.security_dashboard, name='security_dashboard'),
 ]
 
 # Serve media files during development

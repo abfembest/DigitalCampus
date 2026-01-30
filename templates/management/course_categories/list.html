@@ -1,0 +1,163 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Course Categories - MIU Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 font-display">
+                <i class="fas fa-th-large text-primary-600 mr-3"></i>
+                Course Categories
+            </h1>
+            <p class="text-gray-600 mt-1">Organize courses into categories for better navigation</p>
+        </div>
+        <a href="{% url 'management:course_category_create' %}" 
+           class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg inline-flex items-center">
+            <i class="fas fa-plus mr-2"></i>
+            Create Category
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Total Categories</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ total_categories }}</p>
+                </div>
+                <i class="fas fa-th-large text-blue-500 text-3xl"></i>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Active</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ categories|length }}</p>
+                </div>
+                <i class="fas fa-check-circle text-green-500 text-3xl"></i>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">With Courses</p>
+                    <p class="text-3xl font-bold text-gray-900">
+                        {{ categories|length }}
+                    </p>
+                </div>
+                <i class="fas fa-book text-purple-500 text-3xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="bg-white p-4 rounded-lg shadow-sm">
+        <form method="get" class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <input type="text" 
+                       name="search" 
+                       value="{{ search_query }}" 
+                       placeholder="Search categories..."
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+            </div>
+            <select name="status" 
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white">
+                <option value="">All Status</option>
+                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+            <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all">
+                <i class="fas fa-filter mr-2"></i>Filter
+            </button>
+        </form>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for category in categories %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all">
+            <div class="p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center" 
+                         style="background-color: {{ category.color }}20;">
+                        <i class="fas fa-{{ category.icon }} text-2xl" 
+                           style="color: {{ category.color }};"></i>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if category.is_active %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                            Active
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
+                            Inactive
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <h3 class="text-lg font-bold text-gray-900 mb-2">{{ category.name }}</h3>
+                <p class="text-sm text-gray-600 mb-4 line-clamp-2">{{ category.description }}</p>
+                
+                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <div class="text-sm text-gray-600">
+                        <i class="fas fa-book mr-1"></i>
+                        {{ category.course_count }} course{{ category.course_count|pluralize }}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{% url 'management:course_category_edit' category.id %}" 
+                           class="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-all" 
+                           title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{% url 'management:course_category_delete' category.id %}" 
+                           class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all" 
+                           title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
+            <p class="text-gray-500 text-lg mb-4">No categories found</p>
+            <a href="{% url 'management:course_category_create' %}" 
+               class="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all">
+                <i class="fas fa-plus mr-2"></i>
+                Create Your First Category
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if categories.has_other_pages %}
+    <div class="bg-white p-4 rounded-lg shadow-sm">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                Showing {{ categories.start_index }} to {{ categories.end_index }} of {{ total_categories }} categories
+            </div>
+            <div class="flex gap-2">
+                {% if categories.has_previous %}
+                <a href="?page={{ categories.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Previous</a>
+                {% endif %}
+                
+                <span class="px-4 py-2 bg-primary-600 text-white rounded-lg">{{ categories.number }}</span>
+                
+                {% if categories.has_next %}
+                <a href="?page={{ categories.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Next</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

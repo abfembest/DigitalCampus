@@ -1,0 +1,189 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Edit Course Category - MIU Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex items-center gap-4">
+        <a href="{% url 'management:course_categories_list' %}" 
+           class="p-2 hover:bg-gray-100 rounded-lg transition-all">
+            <i class="fas fa-arrow-left text-gray-600"></i>
+        </a>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 font-display">
+                Edit Course Category
+            </h1>
+            <p class="text-gray-600 mt-1">Update category information</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {% csrf_token %}
+        
+        <div class="p-6 space-y-6">
+            <!-- Basic Information -->
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-info-circle mr-3 text-primary-600"></i>
+                    Basic Information
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Category Name <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Slug <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.slug }}
+                        {% if form.slug.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.slug.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Description
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Customization -->
+            <div class="pt-6 border-t border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-palette mr-3 text-primary-600"></i>
+                    Visual Customization
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Icon
+                        </label>
+                        {{ form.icon }}
+                        {% if form.icon.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.icon.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Color
+                        </label>
+                        <div class="flex items-center gap-4">
+                            {{ form.color }}
+                            <span class="text-sm text-gray-600">Badge color</span>
+                        </div>
+                        {% if form.color.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.color.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm font-medium text-gray-700 mb-3">Preview:</p>
+                    <div class="inline-flex items-center gap-3 bg-white px-4 py-3 rounded-lg shadow-sm">
+                        <div class="w-10 h-10 rounded-lg flex items-center justify-center" 
+                             id="preview-icon-bg" 
+                             style="background-color: {{ category.color }}20;">
+                            <i class="fas fa-{{ category.icon }} text-2xl" 
+                               id="preview-icon"
+                               style="color: {{ category.color }};"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-gray-900" id="preview-name">{{ category.name }}</div>
+                            <div class="text-sm text-gray-600" id="preview-desc">{{ category.description }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="pt-6 border-t border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-cog mr-3 text-primary-600"></i>
+                    Settings
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Display Order
+                        </label>
+                        {{ form.display_order }}
+                        {% if form.display_order.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.display_order.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex items-start pt-8">
+                        <div class="flex items-center h-5 mt-1">
+                            {{ form.is_active }}
+                        </div>
+                        <div class="ml-3">
+                            <label class="text-sm font-medium text-gray-700">Active Status</label>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Inactive categories are hidden from students
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+            <a href="{% url 'management:course_categories_list' %}" 
+               class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-all">
+                Cancel
+            </a>
+            <button type="submit" 
+                    class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg">
+                <i class="fas fa-save mr-2"></i>
+                Update Category
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Live preview with existing values
+const nameInput = document.querySelector('input[name="name"]');
+const descInput = document.querySelector('textarea[name="description"]');
+const iconInput = document.querySelector('input[name="icon"]');
+const colorInput = document.querySelector('input[name="color"]');
+
+nameInput?.addEventListener('input', (e) => {
+    document.getElementById('preview-name').textContent = e.target.value || 'Category Name';
+});
+
+descInput?.addEventListener('input', (e) => {
+    document.getElementById('preview-desc').textContent = e.target.value || 'Category description';
+});
+
+iconInput?.addEventListener('input', (e) => {
+    const icon = e.target.value || 'code';
+    document.getElementById('preview-icon').className = `fas fa-${icon} text-2xl`;
+});
+
+colorInput?.addEventListener('input', (e) => {
+    const color = e.target.value;
+    document.getElementById('preview-icon-bg').style.backgroundColor = color + '20';
+    document.getElementById('preview-icon').style.color = color;
+});
+</script>
+{% endblock %}

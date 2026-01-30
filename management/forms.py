@@ -837,3 +837,240 @@ class QuickRoleChangeForm(forms.Form):
             'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white'
         })
     )
+
+from django import forms
+from eduweb.models import SystemConfiguration, CourseCategory
+from django.contrib.auth.models import User
+import json
+
+
+# ==================== SYSTEM CONFIGURATION FORMS ====================
+class SystemConfigurationForm(forms.ModelForm):
+    """Form for system configuration settings"""
+    class Meta:
+        model = SystemConfiguration
+        fields = ('key', 'value', 'setting_type', 'description', 'is_public')
+        widgets = {
+            'key': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'e.g., site_name'
+            }),
+            'value': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'rows': 4,
+                'placeholder': 'Configuration value'
+            }),
+            'setting_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'rows': 2,
+                'placeholder': 'Describe what this setting controls'
+            }),
+            'is_public': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+            })
+        }
+
+
+class BrandingConfigForm(forms.Form):
+    """Form for branding configuration"""
+    site_name = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'Your University Name'
+        })
+    )
+    site_tagline = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'Your inspiring tagline'
+        })
+    )
+    logo = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'accept': 'image/*'
+        })
+    )
+    favicon = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'accept': 'image/*'
+        })
+    )
+    primary_color = forms.CharField(
+        max_length=7,
+        widget=forms.TextInput(attrs={
+            'type': 'color',
+            'class': 'h-12 w-24 rounded-lg border border-gray-300'
+        })
+    )
+
+
+class EmailConfigForm(forms.Form):
+    """Form for email configuration"""
+    smtp_host = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'smtp.example.com'
+        })
+    )
+    smtp_port = forms.IntegerField(
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': '587'
+        })
+    )
+    smtp_username = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'your-email@example.com'
+        })
+    )
+    smtp_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': '••••••••'
+        })
+    )
+    from_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'noreply@example.com'
+        })
+    )
+    from_name = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'University Name'
+        })
+    )
+
+
+class NotificationConfigForm(forms.Form):
+    """Form for notification settings"""
+    enable_email_notifications = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+        })
+    )
+    enable_sms_notifications = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+        })
+    )
+    enable_push_notifications = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+        })
+    )
+    notification_from_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'notifications@example.com'
+        })
+    )
+
+
+# ==================== COURSE CATEGORY FORMS ====================
+class CourseCategoryForm(forms.ModelForm):
+    """Form for course categories"""
+    class Meta:
+        model = CourseCategory
+        fields = ('name', 'slug', 'description', 'icon', 'color', 
+                  'is_active', 'display_order')
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'e.g., Programming'
+            }),
+            'slug': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'programming (auto-generated)'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'rows': 3,
+                'placeholder': 'Brief description of this category'
+            }),
+            'icon': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'code (Font Awesome icon name without fa-)'
+            }),
+            'color': forms.TextInput(attrs={
+                'type': 'color',
+                'class': 'h-12 w-24 rounded-lg border border-gray-300'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+            }),
+            'display_order': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': '0'
+            })
+        }
+
+
+# ==================== AUDIT LOG FILTERS ====================
+class AuditLogFilterForm(forms.Form):
+    """Form for filtering audit logs"""
+    ACTION_CHOICES = [
+        ('', 'All Actions'),
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+        ('password_reset', 'Password Reset'),
+        ('permission_change', 'Permission Change'),
+    ]
+    
+    user = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_active=True),
+        required=False,
+        empty_label='All Users',
+        widget=forms.Select(attrs={
+            'class': 'px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white'
+        })
+    )
+    action = forms.ChoiceField(
+        choices=ACTION_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white'
+        })
+    )
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+        })
+    )
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+        })
+    )
+    search = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'Search description...'
+        })
+    )

@@ -960,3 +960,562 @@ def user_quick_info(request, pk):
     }
     
     return JsonResponse(data)
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
+from django.contrib.auth.models import User
+from datetime import timedelta
+import json
+import csv
+
+# Import models
+from eduweb.models import (
+    SystemConfiguration, 
+    CourseCategory, 
+    AuditLog
+)
+
+# Import forms
+from management.forms import (
+    SystemConfigurationForm,
+    BrandingConfigForm,
+    EmailConfigForm,
+    NotificationConfigForm,
+    CourseCategoryForm,
+    AuditLogFilterForm
+)
+
+
+def is_admin(user):
+    """Check if user is staff/admin"""
+    return user.is_staff or user.is_superuser
+
+
+# ==================== SYSTEM CONFIGURATION VIEWS ====================
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def system_config_list(request):
+    """List all system configurations"""
+    configs = SystemConfiguration.objects.all().order_by('key')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        configs = configs.filter(
+            Q(key__icontains=search_query) | 
+            Q(description__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(configs, 20)
+    page = request.GET.get('page', 1)
+    configs_page = paginator.get_page(page)
+    
+    context = {
+        'configs': configs_page,
+        'search_query': search_query,
+        'total_configs': configs.count()
+    }
+    return render(request, 'management/system_config/list.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def system_config_create(request):
+    """Create new system configuration"""
+    if request.method == 'POST':
+        form = SystemConfigurationForm(request.POST)
+        if form.is_valid():
+            config = form.save(commit=False)
+            config.updated_by = request.user
+            config.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='SystemConfiguration',
+                object_id=config.id,
+                description=f'Created configuration: {config.key}'
+            )
+            
+            messages.success(request, f'Configuration "{config.key}" created successfully.')
+            return redirect('management:system_config_list')
+    else:
+        form = SystemConfigurationForm()
+    
+    return render(request, 'management/system_config/create.html', {'form': form})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def system_config_edit(request, pk):
+    """Edit system configuration"""
+    config = get_object_or_404(SystemConfiguration, pk=pk)
+    
+    if request.method == 'POST':
+        form = SystemConfigurationForm(request.POST, instance=config)
+        if form.is_valid():
+            config = form.save(commit=False)
+            config.updated_by = request.user
+            config.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='SystemConfiguration',
+                object_id=config.id,
+                description=f'Updated configuration: {config.key}'
+            )
+            
+            messages.success(request, f'Configuration "{config.key}" updated successfully.')
+            return redirect('management:system_config_list')
+    else:
+        form = SystemConfigurationForm(instance=config)
+    
+    return render(request, 'management/system_config/edit.html', {
+        'form': form,
+        'config': config
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def system_config_delete(request, pk):
+    """Delete system configuration"""
+    config = get_object_or_404(SystemConfiguration, pk=pk)
+    
+    if request.method == 'POST':
+        config_key = config.key
+        
+        # Create audit log before deletion
+        AuditLog.objects.create(
+            user=request.user,
+            action='delete',
+            model_name='SystemConfiguration',
+            object_id=config.id,
+            description=f'Deleted configuration: {config_key}'
+        )
+        
+        config.delete()
+        messages.success(request, f'Configuration "{config_key}" deleted successfully.')
+        return redirect('management:system_config_list')
+    
+    return render(request, 'management/system_config/delete.html', {'config': config})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def branding_config(request):
+    """Manage branding configuration"""
+    if request.method == 'POST':
+        form = BrandingConfigForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Save each configuration
+            for key, value in form.cleaned_data.items():
+                if value:
+                    config, created = SystemConfiguration.objects.get_or_create(
+                        key=f'branding_{key}',
+                        defaults={
+                            'setting_type': 'text',
+                            'is_public': True,
+                            'updated_by': request.user
+                        }
+                    )
+                    config.value = str(value)
+                    config.updated_by = request.user
+                    config.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='SystemConfiguration',
+                description='Updated branding configuration'
+            )
+            
+            messages.success(request, 'Branding settings updated successfully.')
+            return redirect('management:branding_config')
+    else:
+        # Load existing values
+        initial_data = {}
+        for key in ['site_name', 'site_tagline', 'primary_color']:
+            try:
+                config = SystemConfiguration.objects.get(key=f'branding_{key}')
+                initial_data[key] = config.value
+            except SystemConfiguration.DoesNotExist:
+                pass
+        
+        form = BrandingConfigForm(initial=initial_data)
+    
+    return render(request, 'management/system_config/branding.html', {'form': form})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def email_config(request):
+    """Manage email configuration"""
+    if request.method == 'POST':
+        form = EmailConfigForm(request.POST)
+        if form.is_valid():
+            # Save email configuration
+            for key, value in form.cleaned_data.items():
+                config, created = SystemConfiguration.objects.get_or_create(
+                    key=f'email_{key}',
+                    defaults={
+                        'setting_type': 'text',
+                        'is_public': False,
+                        'updated_by': request.user
+                    }
+                )
+                config.value = str(value)
+                config.updated_by = request.user
+                config.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='SystemConfiguration',
+                description='Updated email configuration'
+            )
+            
+            messages.success(request, 'Email settings updated successfully.')
+            return redirect('management:email_config')
+    else:
+        # Load existing values
+        initial_data = {}
+        for key in ['smtp_host', 'smtp_port', 'smtp_username', 'from_email', 'from_name']:
+            try:
+                config = SystemConfiguration.objects.get(key=f'email_{key}')
+                initial_data[key] = config.value
+            except SystemConfiguration.DoesNotExist:
+                pass
+        
+        form = EmailConfigForm(initial=initial_data)
+    
+    return render(request, 'management/system_config/email.html', {'form': form})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def notification_config(request):
+    """Manage notification settings"""
+    if request.method == 'POST':
+        form = NotificationConfigForm(request.POST)
+        if form.is_valid():
+            # Save notification configuration
+            for key, value in form.cleaned_data.items():
+                config, created = SystemConfiguration.objects.get_or_create(
+                    key=f'notification_{key}',
+                    defaults={
+                        'setting_type': 'boolean' if isinstance(value, bool) else 'text',
+                        'is_public': False,
+                        'updated_by': request.user
+                    }
+                )
+                config.value = str(value)
+                config.updated_by = request.user
+                config.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='SystemConfiguration',
+                description='Updated notification configuration'
+            )
+            
+            messages.success(request, 'Notification settings updated successfully.')
+            return redirect('management:notification_config')
+    else:
+        # Load existing values
+        initial_data = {}
+        form = NotificationConfigForm(initial=initial_data)
+    
+    return render(request, 'management/system_config/notifications.html', {'form': form})
+
+
+# ==================== COURSE CATEGORY VIEWS ====================
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_categories_list(request):
+    """List all course categories"""
+    categories = CourseCategory.objects.all().order_by('display_order', 'name')
+    
+    # categories = CourseCategory.objects.annotate(
+    #     course_count=Count('lmscourse')
+    # ).order_by('display_order', 'name')
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        categories = categories.filter(
+            Q(name__icontains=search_query) | 
+            Q(description__icontains=search_query)
+        )
+    
+    # Status filter
+    status = request.GET.get('status', '')
+    if status == 'active':
+        categories = categories.filter(is_active=True)
+    elif status == 'inactive':
+        categories = categories.filter(is_active=False)
+    
+    # Pagination
+    paginator = Paginator(categories, 15)
+    page = request.GET.get('page', 1)
+    categories_page = paginator.get_page(page)
+    
+    context = {
+        'categories': categories_page,
+        'search_query': search_query,
+        'status': status,
+        'total_categories': categories.count()
+    }
+    return render(request, 'management/course_categories/list.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_category_create(request):
+    """Create new course category"""
+    if request.method == 'POST':
+        form = CourseCategoryForm(request.POST)
+        if form.is_valid():
+            category = form.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='CourseCategory',
+                object_id=category.id,
+                description=f'Created course category: {category.name}'
+            )
+            
+            messages.success(request, f'Category "{category.name}" created successfully.')
+            return redirect('management:course_categories_list')
+    else:
+        form = CourseCategoryForm()
+    
+    return render(request, 'management/course_categories/create.html', {'form': form})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_category_edit(request, pk):
+    """Edit course category"""
+    category = get_object_or_404(CourseCategory, pk=pk)
+    
+    if request.method == 'POST':
+        form = CourseCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            category = form.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='CourseCategory',
+                object_id=category.id,
+                description=f'Updated course category: {category.name}'
+            )
+            
+            messages.success(request, f'Category "{category.name}" updated successfully.')
+            return redirect('management:course_categories_list')
+    else:
+        form = CourseCategoryForm(instance=category)
+    
+    return render(request, 'management/course_categories/edit.html', {
+        'form': form,
+        'category': category
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_category_delete(request, pk):
+    """Delete course category"""
+    category = get_object_or_404(CourseCategory, pk=pk)
+    
+    # Check if category has courses
+    course_count = category.lmscourse_set.count()
+    
+    if request.method == 'POST':
+        if course_count > 0:
+            messages.error(
+                request, 
+                f'Cannot delete category "{category.name}" because it has {course_count} course(s). '
+                'Please reassign or delete those courses first.'
+            )
+            return redirect('management:course_categories_list')
+        
+        category_name = category.name
+        
+        # Create audit log before deletion
+        AuditLog.objects.create(
+            user=request.user,
+            action='delete',
+            model_name='CourseCategory',
+            object_id=category.id,
+            description=f'Deleted course category: {category_name}'
+        )
+        
+        category.delete()
+        messages.success(request, f'Category "{category_name}" deleted successfully.')
+        return redirect('management:course_categories_list')
+    
+    return render(request, 'management/course_categories/delete.html', {
+        'category': category,
+        'course_count': course_count
+    })
+
+
+# ==================== AUDIT LOG VIEWS ====================
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def audit_logs_list(request):
+    """List all audit logs with filtering"""
+    logs = AuditLog.objects.select_related('user').order_by('-timestamp')
+    
+    # Apply filters
+    form = AuditLogFilterForm(request.GET)
+    if form.is_valid():
+        if form.cleaned_data.get('user'):
+            logs = logs.filter(user=form.cleaned_data['user'])
+        if form.cleaned_data.get('action'):
+            logs = logs.filter(action=form.cleaned_data['action'])
+        if form.cleaned_data.get('date_from'):
+            logs = logs.filter(timestamp__date__gte=form.cleaned_data['date_from'])
+        if form.cleaned_data.get('date_to'):
+            logs = logs.filter(timestamp__date__lte=form.cleaned_data['date_to'])
+        if form.cleaned_data.get('search'):
+            logs = logs.filter(
+                Q(description__icontains=form.cleaned_data['search']) |
+                Q(model_name__icontains=form.cleaned_data['search'])
+            )
+    
+    # Pagination
+    paginator = Paginator(logs, 50)
+    page = request.GET.get('page', 1)
+    logs_page = paginator.get_page(page)
+    
+    # Statistics
+    stats = {
+        'total_logs': logs.count(),
+        'today_logs': AuditLog.objects.filter(timestamp__date=timezone.now().date()).count(),
+        'week_logs': AuditLog.objects.filter(
+            timestamp__gte=timezone.now() - timedelta(days=7)
+        ).count(),
+        'action_breakdown': AuditLog.objects.values('action').annotate(
+            count=Count('id')
+        ).order_by('-count')[:5]
+    }
+    
+    context = {
+        'logs': logs_page,
+        'form': form,
+        'stats': stats,
+        'total_logs': logs.count()
+    }
+    return render(request, 'management/audit_logs/list.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def audit_log_detail(request, pk):
+    """View detailed audit log entry"""
+    log = get_object_or_404(AuditLog, pk=pk)
+    
+    # Get related logs (same object)
+    related_logs = []
+    if log.model_name and log.object_id:
+        related_logs = AuditLog.objects.filter(
+            model_name=log.model_name,
+            object_id=log.object_id
+        ).exclude(pk=log.pk).order_by('-timestamp')[:10]
+    
+    context = {
+        'log': log,
+        'related_logs': related_logs
+    }
+    return render(request, 'management/audit_logs/detail.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def audit_logs_export(request):
+    """Export audit logs to CSV"""
+    logs = AuditLog.objects.select_related('user').order_by('-timestamp')
+    
+    # Apply same filters as list view
+    form = AuditLogFilterForm(request.GET)
+    if form.is_valid():
+        if form.cleaned_data.get('user'):
+            logs = logs.filter(user=form.cleaned_data['user'])
+        if form.cleaned_data.get('action'):
+            logs = logs.filter(action=form.cleaned_data['action'])
+        if form.cleaned_data.get('date_from'):
+            logs = logs.filter(timestamp__date__gte=form.cleaned_data['date_from'])
+        if form.cleaned_data.get('date_to'):
+            logs = logs.filter(timestamp__date__lte=form.cleaned_data['date_to'])
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="audit_logs.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Timestamp', 'User', 'Action', 'Model', 'Object ID', 'Description', 'IP Address'])
+    
+    for log in logs:
+        writer.writerow([
+            log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            log.user.username if log.user else 'System',
+            log.action,
+            log.model_name or '',
+            log.object_id or '',
+            log.description,
+            log.ip_address or ''
+        ])
+    
+    return response
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def security_dashboard(request):
+    """Security overview dashboard"""
+    # Recent security events
+    security_logs = AuditLog.objects.filter(
+        action__in=['login', 'logout', 'password_reset', 'permission_change']
+    ).select_related('user').order_by('-timestamp')[:20]
+    
+    # Failed login attempts (would need additional tracking)
+    failed_logins = []
+    
+    # Active sessions count
+    active_users = User.objects.filter(
+        is_active=True,
+        last_login__gte=timezone.now() - timedelta(hours=24)
+    ).count()
+    
+    # Permission changes in last 30 days
+    recent_permission_changes = AuditLog.objects.filter(
+        action='permission_change',
+        timestamp__gte=timezone.now() - timedelta(days=30)
+    ).count()
+    
+    context = {
+        'security_logs': security_logs,
+        'failed_logins': failed_logins,
+        'active_users': active_users,
+        'recent_permission_changes': recent_permission_changes
+    }
+    return render(request, 'management/security/dashboard.html', context)

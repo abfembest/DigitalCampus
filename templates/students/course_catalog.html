@@ -1,0 +1,235 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Course Catalog</h1>
+        <p class="text-gray-600 mt-2">Browse and enroll in available courses</p>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <form method="get" action="{% url 'students:course_catalog' %}">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Search -->
+                <div class="md:col-span-2">
+                    <input type="text" 
+                           name="q" 
+                           value="{{ search_query|default:'' }}"
+                           placeholder="Search courses..." 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+                </div>
+
+                <!-- Category Filter -->
+                <div>
+                    <select name="category" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.slug }}" 
+                                {% if request.GET.category == category.slug %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Difficulty Filter -->
+                <div>
+                    <select name="difficulty" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+                        <option value="">All Levels</option>
+                        <option value="beginner" 
+                                {% if request.GET.difficulty == 'beginner' %}selected{% endif %}>
+                            Beginner
+                        </option>
+                        <option value="intermediate" 
+                                {% if request.GET.difficulty == 'intermediate' %}selected{% endif %}>
+                            Intermediate
+                        </option>
+                        <option value="advanced" 
+                                {% if request.GET.difficulty == 'advanced' %}selected{% endif %}>
+                            Advanced
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 flex gap-3">
+                <button type="submit" 
+                        class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    <i class="fas fa-search mr-2"></i>Apply Filters
+                </button>
+                <a href="{% url 'students:course_catalog' %}" 
+                   class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                    Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Courses Grid -->
+    {% if courses %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for course in courses %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
+            <!-- Course Thumbnail -->
+            <div class="h-48 bg-gradient-to-br from-primary-500 to-secondary-500 relative">
+                {% if course.thumbnail %}
+                <img src="{{ course.thumbnail.url }}" 
+                     alt="{{ course.title }}" 
+                     class="w-full h-full object-cover">
+                {% else %}
+                <div class="w-full h-full flex items-center justify-center">
+                    <i class="fas fa-book text-white text-6xl opacity-50"></i>
+                </div>
+                {% endif %}
+
+                <!-- Enrollment Badge -->
+                {% if course.id in enrolled_ids %}
+                <div class="absolute top-3 right-3">
+                    <span class="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold">
+                        <i class="fas fa-check mr-1"></i>Enrolled
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="p-6">
+                <!-- Category & Difficulty -->
+                <div class="flex items-center gap-2 mb-3">
+                    {% if course.category %}
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                        {{ course.category.name }}
+                    </span>
+                    {% endif %}
+                    <span class="px-3 py-1 {% if course.difficulty_level == 'beginner' %}bg-green-100 text-green-700{% elif course.difficulty_level == 'intermediate' %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %} rounded-full text-xs font-medium">
+                        {{ course.get_difficulty_level_display }}
+                    </span>
+                </div>
+
+                <!-- Course Title -->
+                <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                    <a href="{% url 'students:course_detail' course.id %}" 
+                       class="hover:text-primary-600">
+                        {{ course.title }}
+                    </a>
+                </h3>
+
+                <!-- Short Description -->
+                <p class="text-sm text-gray-600 mb-4 line-clamp-2">
+                    {{ course.short_description }}
+                </p>
+
+                <!-- Instructor -->
+                <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+                    <i class="fas fa-user-tie text-gray-400 mr-2"></i>
+                    <span class="text-sm text-gray-700">{{ course.instructor_name }}</span>
+                </div>
+
+                <!-- Course Stats -->
+                <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+                    <div>
+                        <p class="text-xs text-gray-500">Duration</p>
+                        <p class="text-sm font-semibold text-gray-900">
+                            {{ course.duration_hours }}h
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Students</p>
+                        <p class="text-sm font-semibold text-gray-900">
+                            {{ course.total_enrollments }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Rating</p>
+                        <p class="text-sm font-semibold text-gray-900">
+                            <i class="fas fa-star text-yellow-500"></i>
+                            {{ course.average_rating|floatformat:1 }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Price & Action -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        {% if course.is_free %}
+                        <span class="text-2xl font-bold text-green-600">Free</span>
+                        {% else %}
+                        <span class="text-2xl font-bold text-gray-900">
+                            ${{ course.price }}
+                        </span>
+                        {% if course.discount_price %}
+                        <span class="text-sm text-gray-500 line-through ml-2">
+                            ${{ course.discount_price }}
+                        </span>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <a href="{% url 'students:course_detail' course.id %}" 
+                       class="px-4 py-2 {% if course.id in enrolled_ids %}bg-primary-600{% else %}bg-primary-600{% endif %} text-white rounded-lg hover:bg-primary-700 text-sm font-medium">
+                        {% if course.id in enrolled_ids %}
+                            Continue
+                        {% else %}
+                            View Course
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination (if needed) -->
+    {% if courses.has_other_pages %}
+    <div class="mt-8 flex justify-center">
+        <nav class="flex gap-2">
+            {% if courses.has_previous %}
+            <a href="?page={{ courses.previous_page_number }}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                Previous
+            </a>
+            {% endif %}
+
+            {% for num in courses.paginator.page_range %}
+            <a href="?page={{ num }}" 
+               class="px-4 py-2 {% if courses.number == num %}bg-primary-600 text-white{% else %}bg-white border border-gray-300 hover:bg-gray-50{% endif %} rounded-lg">
+                {{ num }}
+            </a>
+            {% endfor %}
+
+            {% if courses.has_next %}
+            <a href="?page={{ courses.next_page_number }}" 
+               class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                Next
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- No Courses Found -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class="text-center">
+            <i class="fas fa-search text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                No courses found
+            </h3>
+            <p class="text-gray-600 mb-6">
+                Try adjusting your search or filter criteria
+            </p>
+            <a href="{% url 'students:course_catalog' %}" 
+               class="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                View All Courses
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

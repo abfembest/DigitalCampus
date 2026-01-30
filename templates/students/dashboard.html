@@ -1,0 +1,242 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">
+            Welcome back, {{ request.user.first_name|default:request.user.username }}!
+        </h1>
+        <p class="text-gray-600 mt-2">Here's what's happening with your learning journey</p>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Courses -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Enrolled Courses</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ total_enrolled }}</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-book text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Courses -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Completed</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ completed_courses }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Certificates -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Certificates</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ certificates_earned }}</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-certificate text-yellow-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Tasks -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">Pending Tasks</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ pending_assignments.count }}</p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-tasks text-red-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Active Courses -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-900">Active Courses</h2>
+                    <a href="{% url 'students:my_courses' %}" 
+                       class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                        View All →
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% if enrollments %}
+                        <div class="space-y-4">
+                            {% for enrollment in enrollments %}
+                            <div class="border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-all">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-gray-900">
+                                            <a href="{% url 'students:course_detail' enrollment.course.id %}" 
+                                               class="hover:text-primary-600">
+                                                {{ enrollment.course.title }}
+                                            </a>
+                                        </h3>
+                                        <p class="text-sm text-gray-600 mt-1">
+                                            {{ enrollment.course.instructor_name }}
+                                        </p>
+                                        <div class="mt-3">
+                                            <div class="flex items-center justify-between text-sm mb-1">
+                                                <span class="text-gray-600">Progress</span>
+                                                <span class="font-medium text-gray-900">
+                                                    {{ enrollment.progress_percentage|floatformat:0 }}%
+                                                </span>
+                                            </div>
+                                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                                <div class="bg-primary-600 h-2 rounded-full" 
+                                                     style="width: {{ enrollment.progress_percentage }}%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <a href="{% url 'students:course_detail' enrollment.course.id %}" 
+                                       class="ml-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm">
+                                        Continue
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-12">
+                            <i class="fas fa-book text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-600">You haven't enrolled in any courses yet</p>
+                            <a href="{% url 'students:course_catalog' %}" 
+                               class="mt-4 inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                                Browse Course Catalog
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Upcoming Assignments -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-900">Upcoming Assignments</h2>
+                    <a href="{% url 'students:assignments' %}" 
+                       class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                        View All →
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% if pending_assignments %}
+                        <div class="space-y-3">
+                            {% for assignment in pending_assignments %}
+                            <a href="{% url 'students:assignment_detail' assignment.id %}" 
+                               class="block border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-all">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-gray-900">
+                                            {{ assignment.title }}
+                                        </h3>
+                                        <p class="text-sm text-gray-600 mt-1">
+                                            {{ assignment.lesson.course.title }}
+                                        </p>
+                                        <div class="flex items-center mt-2 text-sm">
+                                            <i class="fas fa-clock text-orange-500 mr-2"></i>
+                                            <span class="text-gray-600">
+                                                Due: {{ assignment.due_date|date:"M d, Y g:i A" }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span class="ml-4 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                        Pending
+                                    </span>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <i class="fas fa-check-circle text-5xl text-green-300 mb-3"></i>
+                            <p class="text-gray-600">No pending assignments</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Announcements -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-900">Announcements</h2>
+                </div>
+                <div class="p-6">
+                    {% if announcements %}
+                        <div class="space-y-4">
+                            {% for announcement in announcements %}
+                            <div class="border-l-4 {% if announcement.priority == 'urgent' %}border-red-500{% elif announcement.priority == 'high' %}border-orange-500{% else %}border-blue-500{% endif %} pl-4">
+                                <h3 class="font-semibold text-gray-900 text-sm">
+                                    {{ announcement.title }}
+                                </h3>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    {{ announcement.content|truncatewords:20 }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    {{ announcement.publish_date|date:"M d, Y" }}
+                                </p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-gray-600 text-sm">No announcements</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-900">Quick Actions</h2>
+                </div>
+                <div class="p-6 space-y-3">
+                    <a href="{% url 'students:course_catalog' %}" 
+                       class="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all border border-gray-200">
+                        <i class="fas fa-search text-primary-600 text-xl w-8"></i>
+                        <span class="ml-3 text-gray-900 font-medium">Browse Courses</span>
+                    </a>
+                    <a href="{% url 'students:assignments' %}" 
+                       class="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all border border-gray-200">
+                        <i class="fas fa-file-alt text-orange-600 text-xl w-8"></i>
+                        <span class="ml-3 text-gray-900 font-medium">View Assignments</span>
+                    </a>
+                    <a href="{% url 'students:progress' %}" 
+                       class="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all border border-gray-200">
+                        <i class="fas fa-chart-line text-green-600 text-xl w-8"></i>
+                        <span class="ml-3 text-gray-900 font-medium">Track Progress</span>
+                    </a>
+                    <a href="{% url 'students:certificates' %}" 
+                       class="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all border border-gray-200">
+                        <i class="fas fa-certificate text-yellow-600 text-xl w-8"></i>
+                        <span class="ml-3 text-gray-900 font-medium">My Certificates</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

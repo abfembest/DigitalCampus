@@ -306,63 +306,100 @@
                     </div>
 
                     {% elif request.user.profile.role == 'student' %}
-                    <!-- STUDENT MENU -->
+                    <!-- STUDENT/LEARNER MENU -->
+
                     <!-- Dashboard -->
-                    <a href="{% url 'students:dashboard' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
-                        <div class="flex items-center">
-                            <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Dashboard</span>
-                        </div>
+                    <a href="{% url 'students:dashboard' %}" 
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
+                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Dashboard</span>
                     </a>
 
                     <!-- My Courses -->
-                    <a href="{% url 'students:my_courses' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <div class="flex items-center">
-                            <i class="fas fa-book-open w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">My Courses</span>
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path or 'course' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-book w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">My Courses</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="coursesMenu" class="mt-2 space-y-1 hidden">
+                            <a href="{% url 'students:my_courses' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i> Enrolled Courses
+                            </a>
+                            <a href="{% url 'students:course_catalog' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
+                                <i class="fas fa-search mr-2" aria-hidden="true"></i> Browse Catalog
+                            </a>
                         </div>
-                    </a>
+                    </div>
 
-                    <!-- Course Catalog -->
-                    <a href="{% url 'students:course_catalog' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <div class="flex items-center">
-                            <i class="fas fa-search w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Browse Courses</span>
+                    <!-- Assignments & Quizzes -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'assignment' in request.path or 'quiz' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-tasks w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Tasks</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="tasksMenu" class="mt-2 space-y-1 hidden">
+                            <a href="{% url 'students:assignments' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'assignment' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Assignments
+                            </a>
+                            <a href="#" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-question-circle mr-2" aria-hidden="true"></i> Quizzes
+                            </a>
                         </div>
-                    </a>
+                    </div>
 
-                    <!-- Assignments -->
-                    <a href="{% url 'students:assignments' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <div class="flex items-center">
-                            <i class="fas fa-tasks w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Assignments</span>
+                    <!-- Progress & Grades -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'grades' in request.path or 'progress' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Performance</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="performanceMenu" class="mt-2 space-y-1 hidden">
+                            <a href="{% url 'students:grades' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'grades' %}bg-white/20{% endif %}">
+                                <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i> Grades
+                            </a>
+                            <a href="{% url 'students:progress' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
+                                <i class="fas fa-tasks mr-2" aria-hidden="true"></i> Progress
+                            </a>
                         </div>
-                        <span class="bg-accent-500 text-white text-xs px-2 py-1 rounded-full">3</span>
-                    </a>
-
-                    <!-- Grades -->
-                    <a href="{% url 'students:grades' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <div class="flex items-center">
-                            <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Grades & Progress</span>
-                        </div>
-                    </a>
+                    </div>
 
                     <!-- Certificates -->
-                    <a href="{% url 'students:certificates' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <div class="flex items-center">
-                            <i class="fas fa-certificate w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Certificates</span>
-                        </div>
+                    <a href="{% url 'students:certificates' %}" 
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
+                        <i class="fas fa-certificate w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Certificates</span>
                     </a>
 
                     <!-- Messages -->
-                    <a href="{% url 'students:messages' %}" class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                    <a href="#" 
+                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'messages' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-envelope w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3">Messages</span>
                         </div>
-                        <span class="bg-accent-500 text-white text-xs px-2 py-1 rounded-full">2</span>
+                        <span class="bg-accent-500 text-white text-xs rounded-full px-2 py-1">2</span>
+                    </a>
+
+                    <!-- Profile -->
+                    <a href="{% url 'students:profile' %}" 
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
+                        <i class="fas fa-user w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">My Profile</span>
                     </a>
 
                     {% elif request.user.profile.role == 'instructor' %}

@@ -23,9 +23,9 @@ urlpatterns = [
     path('assignments/<int:assignment_id>/submit/', views.submit_assignment, name='submit_assignment'),
     
     # Quizzes
-    path('quizzes/<int:quiz_id>/', views.quiz_detail, name='quiz_detail'),
-    path('quizzes/<int:quiz_id>/attempt/', views.quiz_attempt, name='quiz_attempt'),
-    path('quizzes/<int:quiz_id>/submit/', views.submit_quiz, name='submit_quiz'),
+    # path('quizzes/<int:quiz_id>/', views.quiz_detail, name='quiz_detail'),
+    # path('quizzes/<int:quiz_id>/attempt/', views.quiz_attempt, name='quiz_attempt'),
+    # path('quizzes/<int:quiz_id>/submit/', views.submit_quiz, name='submit_quiz'),
     
     # Grades & Progress
     path('grades/', views.grades, name='grades'),
@@ -33,12 +33,12 @@ urlpatterns = [
     
     # Certificates
     path('certificates/', views.certificates, name='certificates'),
-    path('certificates/<int:certificate_id>/download/', views.download_certificate, name='download_certificate'),
+    # path('certificates/<int:certificate_id>/download/', views.download_certificate, name='download_certificate'),
     
     # Messages
-    path('messages/', views.messages, name='messages'),
-    path('messages/<int:message_id>/', views.message_detail, name='message_detail'),
-    path('messages/compose/', views.compose_message, name='compose_message'),
+    # path('messages/', views.message, name='messages'),
+    # path('messages/<int:message_id>/', views.message_detail, name='message_detail'),
+    # path('messages/compose/', views.compose_message, name='compose_message'),
     
     # Profile & Settings
     path('profile/', views.profile, name='profile'),

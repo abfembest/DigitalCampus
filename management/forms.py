@@ -1,5 +1,5 @@
 from django import forms
-from eduweb.models import Faculty, Course
+from eduweb.models import Faculty, Course, BlogPost, BlogCategory
 import json
 
 class FacultyForm(forms.ModelForm):
@@ -442,9 +442,6 @@ class CourseForm(forms.ModelForm):
             instance.save()
         
         return instance
-    
-from django import forms
-from eduweb.models import BlogPost, BlogCategory
 
 class BlogCategoryForm(forms.ModelForm):
     """Form for creating/editing blog categories"""

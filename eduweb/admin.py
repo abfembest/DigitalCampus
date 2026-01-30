@@ -1,38 +1,280 @@
 from django.contrib import admin
 from django.utils import timezone
 from .models import (
-    ContactMessage, CourseApplication, ApplicationDocument,
-    UserProfile, ApplicationPayment, Vendor, BlogCategory, 
-    BlogPost, Faculty, Course, CourseIntake
+    Announcement, Assignment, AssignmentSubmission, AuditLog,
+    Badge, StudentBadge, BlogCategory, BlogPost,
+    Certificate, ContactMessage,
+    Course, CourseIntake, CourseApplication, ApplicationDocument, ApplicationPayment,
+    CourseCategory, Discussion, DiscussionReply,
+    Enrollment, Faculty, Invoice, Lesson, LessonSection, LessonProgress,
+    LMSCourse, Message, Notification,
+    PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
+    Review, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
+    SystemConfiguration, UserProfile, Vendor
 )
 
 
-@admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email_verified', 'created_at')
-    list_filter = ('email_verified', 'created_at')
-    search_fields = ('user__username', 'user__email')
-    readonly_fields = ('verification_token', 'created_at', 'updated_at')
+# ==================== ANNOUNCEMENTS ====================
+@admin.register(Announcement)
+class AnnouncementAdmin(admin.ModelAdmin):
+    list_display = ('title', 'announcement_type', 'priority', 'is_active', 'publish_date', 'created_by')
+    list_filter = ('announcement_type', 'priority', 'is_active', 'publish_date')
+    search_fields = ('title', 'content')
+    prepopulated_fields = {'slug': ('title',)}
+    readonly_fields = ('created_at', 'updated_at')
+    date_hierarchy = 'publish_date'
     
     fieldsets = (
-        ('User', {
-            'fields': ('user',)
+        ('Basic Information', {
+            'fields': ('title', 'slug', 'content', 'announcement_type', 'priority')
         }),
-        ('Verification', {
-            'fields': ('email_verified', 'verification_token')
+        ('Targeting', {
+            'fields': ('course', 'category')
+        }),
+        ('Publishing', {
+            'fields': ('is_active', 'publish_date', 'expiry_date', 'created_by')
         }),
         ('Timestamps', {
-            'fields': ('created_at', 'updated_at')
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
         }),
     )
 
 
+# ==================== ASSIGNMENTS ====================
+@admin.register(Assignment)
+class AssignmentAdmin(admin.ModelAdmin):
+    list_display = ('title', 'lesson', 'due_date', 'max_score', 'passing_score', 'is_active', 'display_order')
+    list_filter = ('lesson__course', 'is_active', 'due_date')
+    search_fields = ('title', 'description', 'lesson__title')
+    readonly_fields = ('created_at', 'updated_at')
+    list_editable = ('is_active', 'display_order')
+    date_hierarchy = 'due_date'
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('lesson', 'title', 'slug', 'description', 'instructions')
+        }),
+        ('Grading', {
+            'fields': ('max_score', 'passing_score')
+        }),
+        ('Deadlines', {
+            'fields': ('due_date', 'allow_late_submission', 'late_penalty_percent')
+        }),
+        ('Attachment', {
+            'fields': ('attachment',)
+        }),
+        ('Settings', {
+            'fields': ('is_active', 'display_order')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(AssignmentSubmission)
+class AssignmentSubmissionAdmin(admin.ModelAdmin):
+    list_display = ('student', 'assignment', 'status', 'score', 'is_late', 'submitted_at', 'graded_by')
+    list_filter = ('status', 'is_late', 'submitted_at')
+    search_fields = ('student__username', 'assignment__title')
+    readonly_fields = ('submitted_at', 'graded_at', 'created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Submission', {
+            'fields': ('assignment', 'student', 'submission_text', 'attachment')
+        }),
+        ('Grading', {
+            'fields': ('score', 'feedback', 'graded_by', 'graded_at')
+        }),
+        ('Status', {
+            'fields': ('status', 'is_late')
+        }),
+        ('Timestamps', {
+            'fields': ('submitted_at', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== AUDIT LOGS ====================
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    list_display = ('user', 'action', 'model_name', 'object_id', 'ip_address', 'timestamp')
+    list_filter = ('action', 'model_name', 'timestamp')
+    search_fields = ('user__username', 'model_name', 'description')
+    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'description', 'ip_address', 'user_agent', 'extra_data', 'timestamp')
+    date_hierarchy = 'timestamp'
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+# ==================== BADGES ====================
+@admin.register(Badge)
+class BadgeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'icon', 'color', 'points', 'is_active', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('name', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'description', 'icon', 'color')
+        }),
+        ('Criteria', {
+            'fields': ('criteria', 'points')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'created_at')
+        }),
+    )
+
+
+@admin.register(StudentBadge)
+class StudentBadgeAdmin(admin.ModelAdmin):
+    list_display = ('student', 'badge', 'awarded_by', 'awarded_at')
+    list_filter = ('badge', 'awarded_at')
+    search_fields = ('student__username', 'badge__name')
+    readonly_fields = ('awarded_at',)
+    
+    fieldsets = (
+        ('Badge Award', {
+            'fields': ('student', 'badge', 'awarded_by', 'reason')
+        }),
+        ('Timestamp', {
+            'fields': ('awarded_at',)
+        }),
+    )
+
+
+# ==================== BLOG ====================
+@admin.register(BlogCategory)
+class BlogCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'get_post_count', 'icon', 'color', 'display_order', 'is_active')
+    list_filter = ('is_active', 'color')
+    search_fields = ('name', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('display_order', 'is_active')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'description')
+        }),
+        ('Display Settings', {
+            'fields': ('icon', 'color', 'display_order', 'is_active')
+        }),
+    )
+    
+    def get_post_count(self, obj):
+        return obj.get_post_count()
+    get_post_count.short_description = 'Published Posts'
+
+
+@admin.register(BlogPost)
+class BlogPostAdmin(admin.ModelAdmin):
+    list_display = (
+        'title', 'author_name', 'category', 'status', 
+        'is_featured', 'views_count', 'publish_date', 'created_at'
+    )
+    list_filter = (
+        'status', 'is_featured', 'category', 
+        'publish_date', 'created_at'
+    )
+    search_fields = ('title', 'subtitle', 'content', 'author_name')
+    prepopulated_fields = {'slug': ('title',)}
+    list_editable = ('status', 'is_featured')
+    readonly_fields = ('created_at', 'updated_at', 'views_count')
+    date_hierarchy = 'publish_date'
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'slug', 'subtitle', 'category')
+        }),
+        ('Content', {
+            'fields': ('excerpt', 'content')
+        }),
+        ('Author Information', {
+            'fields': ('author', 'author_name', 'author_title')
+        }),
+        ('Media', {
+            'fields': ('featured_image', 'featured_image_alt'),
+            'classes': ('collapse',)
+        }),
+        ('Categorization', {
+            'fields': ('tags',),
+            'classes': ('collapse',)
+        }),
+        ('Publishing', {
+            'fields': ('status', 'is_featured', 'publish_date')
+        }),
+        ('Metadata', {
+            'fields': ('read_time', 'views_count'),
+            'classes': ('collapse',)
+        }),
+        ('SEO', {
+            'fields': ('meta_description', 'meta_keywords'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['publish_posts', 'unpublish_posts', 'feature_posts']
+    
+    def publish_posts(self, request, queryset):
+        updated = queryset.update(status='published', publish_date=timezone.now())
+        self.message_user(request, f'{updated} post(s) published.')
+    publish_posts.short_description = "Publish selected posts"
+    
+    def unpublish_posts(self, request, queryset):
+        updated = queryset.update(status='draft')
+        self.message_user(request, f'{updated} post(s) unpublished.')
+    unpublish_posts.short_description = "Unpublish selected posts"
+    
+    def feature_posts(self, request, queryset):
+        updated = queryset.update(is_featured=True)
+        self.message_user(request, f'{updated} post(s) featured.')
+    feature_posts.short_description = "Feature selected posts"
+
+
+# ==================== CERTIFICATES ====================
+@admin.register(Certificate)
+class CertificateAdmin(admin.ModelAdmin):
+    list_display = ('certificate_id', 'student', 'course', 'issued_date', 'completion_date', 'is_verified')
+    list_filter = ('is_verified', 'issued_date')
+    search_fields = ('certificate_id', 'student__username', 'course__title')
+    readonly_fields = ('certificate_id', 'verification_code', 'created_at')
+    
+    fieldsets = (
+        ('Certificate Information', {
+            'fields': ('student', 'course', 'certificate_id', 'verification_code')
+        }),
+        ('Details', {
+            'fields': ('issued_date', 'completion_date', 'grade', 'is_verified')
+        }),
+        ('File', {
+            'fields': ('certificate_file',)
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',)
+        }),
+    )
+
+
+# ==================== CONTACT ====================
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'subject', 'created_at', 'is_read', 'responded')
+    list_display = ('name', 'email', 'subject', 'created_at', 'is_read', 'responded', 'responded_by')
     list_filter = ('subject', 'is_read', 'responded', 'created_at')
     search_fields = ('name', 'email', 'message')
-    readonly_fields = ('created_at',)
+    readonly_fields = ('created_at', 'responded_at')
     list_editable = ('is_read', 'responded')
     date_hierarchy = 'created_at'
     
@@ -44,12 +286,12 @@ class ContactMessageAdmin(admin.ModelAdmin):
             'fields': ('message',)
         }),
         ('Status', {
-            'fields': ('is_read', 'responded', 'created_at')
+            'fields': ('is_read', 'responded', 'responded_by', 'responded_at', 'created_at')
         }),
     )
 
 
-# ==================== FACULTY & COURSES ====================
+# ==================== COURSE APPLICATION SYSTEM ====================
 @admin.register(Faculty)
 class FacultyAdmin(admin.ModelAdmin):
     list_display = ('name', 'code', 'student_count', 'is_active', 'display_order', 'created_at')
@@ -176,7 +418,6 @@ class CourseIntakeAdmin(admin.ModelAdmin):
     )
 
 
-# ==================== APPLICATIONS ====================
 class ApplicationDocumentInline(admin.TabularInline):
     model = ApplicationDocument
     extra = 0
@@ -228,7 +469,6 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'course',
         'intake',
         'status',
-        'get_payment_status',
         'submitted_at', 
         'created_at'
     )
@@ -236,196 +476,110 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'status',
         'course__faculty',
         'course',
-        'intake__intake_period',
-        'study_mode',
-        'scholarship_requested',
-        'financial_aid_requested',
-        'created_at',
-        'submitted_at'
+        'intake__year',
+        'created_at'
     )
     search_fields = (
-        'application_id', 'first_name', 'last_name', 
-        'email', 'phone', 'course__name'
+        'application_id',
+        'first_name',
+        'last_name',
+        'email',
+        'phone'
     )
     readonly_fields = (
-        'application_id', 
-        'created_at', 
+        'application_id',
         'submitted_at',
-        'updated_at',
-        'user',
         'reviewed_at',
-        'get_payment_status'
+        'created_at',
+        'updated_at'
     )
     date_hierarchy = 'created_at'
     inlines = [ApplicationDocumentInline, ApplicationPaymentInline]
-    list_editable = ('status',)
     
     fieldsets = (
         ('Application Info', {
-            'fields': (
-                'application_id', 
-                'user', 
-                'created_at', 
-                'submitted_at',
-                'updated_at'
-            )
+            'fields': ('application_id', 'status', 'reviewer', 'review_notes')
         }),
-        ('Application Status', {
-            'fields': (
-                'status',
-                'get_payment_status'
-            )
-        }),
-        ('Review Information', {
-            'fields': (
-                'reviewed_by',
-                'reviewed_at',
-                'review_notes'
-            ),
-            'classes': ('collapse',),
+        ('Course Selection', {
+            'fields': ('course', 'intake', 'study_mode')
         }),
         ('Personal Information', {
             'fields': (
-                'first_name', 
-                'last_name', 
-                'email', 
-                'phone', 
-                'date_of_birth', 
-                'country', 
-                'gender', 
-                'address'
+                'first_name', 'last_name', 'email', 'phone',
+                'date_of_birth', 'gender', 'nationality'
             )
+        }),
+        ('Address', {
+            'fields': (
+                'address_line1', 'address_line2', 'city',
+                'state', 'postal_code', 'country'
+            ),
+            'classes': ('collapse',)
         }),
         ('Academic Background', {
             'fields': (
-                'academic_history', 
-                'english_proficiency_test', 
-                'english_proficiency_score', 
-                'additional_qualifications'
+                'highest_qualification', 'institution_name',
+                'graduation_year', 'gpa_or_grade'
             )
-        }),
-        ('Course Selection', {
-            'fields': (
-                'course',
-                'intake',
-                'study_mode'
-            )
-        }),
-        ('Financial Aid', {
-            'fields': ('scholarship_requested', 'financial_aid_requested'),
-            'classes': ('collapse',)
         }),
         ('Additional Information', {
-            'fields': ('referral_source', 'personal_statement'),
+            'fields': (
+                'work_experience_years', 'personal_statement',
+                'how_did_you_hear'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Emergency Contact', {
+            'fields': (
+                'emergency_contact_name', 'emergency_contact_phone',
+                'emergency_contact_relationship'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('submitted_at', 'reviewed_at', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
     
-    def get_queryset(self, request):
-        """Optimize queryset with select_related"""
-        return super().get_queryset(request).select_related(
-            'user', 'reviewed_by', 'course', 'course__faculty', 'intake'
-        )
-    
-    def get_payment_status(self, obj):
-        """Display payment status"""
-        return obj.payment_status
-    get_payment_status.short_description = 'Payment Status'
-    
-    actions = [
-        'mark_as_under_review', 'mark_as_reviewed', 
-        'mark_as_submitted', 'mark_as_withdrawn'
-    ]
-    
-    def mark_as_under_review(self, request, queryset):
-        """Bulk action to mark applications as under review"""
-        updated = queryset.update(status='under_review')
-        self.message_user(request, f'{updated} application(s) marked as under review.')
-    mark_as_under_review.short_description = "Mark selected as Under Review"
-    
-    def mark_as_reviewed(self, request, queryset):
-        """Bulk action to mark applications as reviewed"""
-        updated = queryset.update(
-            status='reviewed',
-            reviewed_by=request.user,
-            reviewed_at=timezone.now()
-        )
-        self.message_user(request, f'{updated} application(s) marked as reviewed.')
-    mark_as_reviewed.short_description = "Mark selected as Reviewed"
-    
-    def mark_as_submitted(self, request, queryset):
-        """Bulk action to mark applications as submitted"""
-        updated = queryset.filter(status='draft').update(
-            status='submitted',
-            submitted_at=timezone.now()
-        )
-        self.message_user(request, f'{updated} application(s) marked as submitted.')
-    mark_as_submitted.short_description = "Mark selected as Submitted"
-    
-    def mark_as_withdrawn(self, request, queryset):
-        """Bulk action to mark applications as withdrawn"""
-        updated = queryset.update(status='withdrawn')
-        self.message_user(request, f'{updated} application(s) marked as withdrawn.')
-    mark_as_withdrawn.short_description = "Mark selected as Withdrawn"
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
+    get_full_name.short_description = 'Full Name'
+    get_full_name.admin_order_field = 'first_name'
 
 
 @admin.register(ApplicationDocument)
 class ApplicationDocumentAdmin(admin.ModelAdmin):
     list_display = (
-        'application', 
-        'file_type', 
-        'original_filename', 
-        'get_file_size', 
+        'application',
+        'file_type',
+        'original_filename',
+        'file_size',
         'uploaded_at'
     )
     list_filter = ('file_type', 'uploaded_at')
     search_fields = (
-        'application__application_id', 
-        'application__first_name', 
-        'application__last_name', 
+        'application__application_id',
+        'application__first_name',
+        'application__last_name',
         'original_filename'
     )
     readonly_fields = (
-        'application', 
-        'file', 
-        'file_type', 
-        'original_filename', 
-        'file_size', 
-        'uploaded_at', 
-        'get_file_size'
+        'application',
+        'file',
+        'file_type',
+        'original_filename',
+        'file_size',
+        'uploaded_at'
     )
-    
-    fieldsets = (
-        ('Application Info', {
-            'fields': ('application',)
-        }),
-        ('File Information', {
-            'fields': (
-                'file', 
-                'file_type', 
-                'original_filename', 
-                'file_size', 
-                'get_file_size', 
-                'uploaded_at'
-            )
-        }),
-    )
-    
-    def get_file_size(self, obj):
-        """Display human-readable file size"""
-        return obj.get_file_size_display()
-    get_file_size.short_description = 'File Size'
     
     def has_add_permission(self, request):
-        """Disable adding files directly from admin"""
         return False
     
     def has_change_permission(self, request, obj=None):
-        """Disable editing files from admin"""
         return False
 
 
-# ==================== PAYMENT ====================
 @admin.register(ApplicationPayment)
 class ApplicationPaymentAdmin(admin.ModelAdmin):
     list_display = (
@@ -444,38 +598,12 @@ class ApplicationPaymentAdmin(admin.ModelAdmin):
     )
     date_hierarchy = 'created_at'
     
-    fieldsets = (
-        ('Application', {
-            'fields': ('application',)
-        }),
-        ('Payment Details', {
-            'fields': (
-                'payment_reference', 'amount', 'currency', 
-                'status', 'payment_method'
-            )
-        }),
-        ('Gateway Information', {
-            'fields': ('gateway_payment_id', 'card_last4', 'card_brand'),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'paid_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-        ('Additional Information', {
-            'fields': ('payment_metadata', 'failure_reason'),
-            'classes': ('collapse',)
-        }),
-    )
-    
     def has_add_permission(self, request):
-        """Payments should be created programmatically"""
         return False
     
     actions = ['mark_as_success', 'mark_as_failed']
     
     def mark_as_success(self, request, queryset):
-        """Mark payments as successful"""
         updated = queryset.filter(status='processing').update(
             status='success',
             paid_at=timezone.now()
@@ -484,10 +612,643 @@ class ApplicationPaymentAdmin(admin.ModelAdmin):
     mark_as_success.short_description = "Mark selected as Successful"
     
     def mark_as_failed(self, request, queryset):
-        """Mark payments as failed"""
         updated = queryset.filter(status='processing').update(status='failed')
         self.message_user(request, f'{updated} payment(s) marked as failed.')
     mark_as_failed.short_description = "Mark selected as Failed"
+
+
+# ==================== COURSE CATEGORIES ====================
+@admin.register(CourseCategory)
+class CourseCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'parent', 'icon', 'color', 'display_order', 'is_active')
+    list_filter = ('is_active', 'parent')
+    search_fields = ('name', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('display_order', 'is_active')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'description', 'parent')
+        }),
+        ('Display Settings', {
+            'fields': ('icon', 'color', 'display_order', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== DISCUSSIONS ====================
+@admin.register(Discussion)
+class DiscussionAdmin(admin.ModelAdmin):
+    list_display = ('title', 'course', 'author', 'is_pinned', 'is_locked', 'views_count', 'created_at')
+    list_filter = ('is_pinned', 'is_locked', 'course', 'created_at')
+    search_fields = ('title', 'content', 'author__username')
+    readonly_fields = ('views_count', 'created_at', 'updated_at')
+    list_editable = ('is_pinned', 'is_locked')
+    
+    fieldsets = (
+        ('Discussion Information', {
+            'fields': ('course', 'title', 'slug', 'content', 'author')
+        }),
+        ('Settings', {
+            'fields': ('is_pinned', 'is_locked', 'views_count')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(DiscussionReply)
+class DiscussionReplyAdmin(admin.ModelAdmin):
+    list_display = ('discussion', 'author', 'is_solution', 'created_at')
+    list_filter = ('is_solution', 'created_at')
+    search_fields = ('discussion__title', 'author__username', 'content')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Reply Information', {
+            'fields': ('discussion', 'author', 'content', 'parent', 'is_solution')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== ENROLLMENTS ====================
+@admin.register(Enrollment)
+class EnrollmentAdmin(admin.ModelAdmin):
+    list_display = ('student', 'course', 'status', 'progress_percentage', 'enrolled_at', 'completed_at')
+    list_filter = ('status', 'course', 'enrolled_at', 'completed_at')
+    search_fields = ('student__username', 'course__title')
+    readonly_fields = ('enrolled_at', 'completed_at', 'last_accessed')
+    
+    fieldsets = (
+        ('Enrollment Information', {
+            'fields': ('student', 'course', 'enrolled_by', 'status')
+        }),
+        ('Progress', {
+            'fields': ('progress_percentage', 'completed_lessons', 'current_grade')
+        }),
+        ('Timestamps', {
+            'fields': ('enrolled_at', 'completed_at', 'last_accessed'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== HELPDESK / SUPPORT ====================
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+    list_display = ('ticket_id', 'user', 'category', 'subject', 'priority', 'status', 'assigned_to', 'created_at')
+    list_filter = ('status', 'priority', 'category', 'created_at')
+    search_fields = ('ticket_id', 'user__username', 'subject', 'description')
+    readonly_fields = ('ticket_id', 'created_at', 'updated_at', 'resolved_at')
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Ticket Information', {
+            'fields': ('ticket_id', 'user', 'category', 'subject', 'description')
+        }),
+        ('Status & Priority', {
+            'fields': ('status', 'priority', 'assigned_to')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'resolved_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(TicketReply)
+class TicketReplyAdmin(admin.ModelAdmin):
+    list_display = ('ticket', 'author', 'is_internal_note', 'created_at')
+    list_filter = ('is_internal_note', 'created_at')
+    search_fields = ('ticket__ticket_id', 'author__username', 'message')
+    readonly_fields = ('created_at',)
+    
+    fieldsets = (
+        ('Reply Information', {
+            'fields': ('ticket', 'author', 'message', 'is_internal_note')
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',)
+        }),
+    )
+
+
+# ==================== INVOICES ====================
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ('invoice_number', 'student', 'course', 'total_amount', 'status', 'issue_date', 'due_date')
+    list_filter = ('status', 'issue_date', 'due_date')
+    search_fields = ('invoice_number', 'student__username', 'course__title')
+    readonly_fields = ('invoice_number', 'issue_date', 'created_at', 'updated_at', 'tax_amount', 'total_amount')
+    
+    fieldsets = (
+        ('Invoice Information', {
+            'fields': ('invoice_number', 'student', 'course', 'status')
+        }),
+        ('Financial Details', {
+            'fields': ('subtotal', 'tax_rate', 'tax_amount', 'discount_amount', 'total_amount', 'currency')
+        }),
+        ('Dates', {
+            'fields': ('issue_date', 'due_date', 'paid_date')
+        }),
+        ('Notes', {
+            'fields': ('notes',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== LESSON PROGRESS ====================
+@admin.register(LessonProgress)
+class LessonProgressAdmin(admin.ModelAdmin):
+    list_display = ('enrollment', 'lesson', 'is_completed', 'completion_percentage', 'time_spent_minutes', 'last_accessed')
+    list_filter = ('is_completed', 'lesson__course', 'last_accessed')
+    search_fields = ('enrollment__student__username', 'lesson__title')
+    readonly_fields = ('started_at', 'completed_at', 'last_accessed')
+    
+    fieldsets = (
+        ('Progress Information', {
+            'fields': ('enrollment', 'lesson', 'is_completed', 'completion_percentage', 'time_spent_minutes')
+        }),
+        ('Video Progress', {
+            'fields': ('video_progress_seconds',)
+        }),
+        ('Timestamps', {
+            'fields': ('started_at', 'completed_at', 'last_accessed'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== LMS COURSES ====================
+@admin.register(LMSCourse)
+class LMSCourseAdmin(admin.ModelAdmin):
+    list_display = (
+        'title', 'code', 'category', 'instructor_name', 'difficulty_level',
+        'price', 'is_free', 'is_published', 'is_featured', 'total_enrollments'
+    )
+    list_filter = (
+        'category', 'difficulty_level', 'is_free', 'is_published',
+        'is_featured', 'created_at'
+    )
+    search_fields = ('title', 'code', 'description', 'instructor_name')
+    prepopulated_fields = {'slug': ('title',)}
+    list_editable = ('is_published', 'is_featured')
+    readonly_fields = (
+        'total_enrollments', 'average_rating', 'total_reviews',
+        'created_at', 'updated_at', 'published_at'
+    )
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('title', 'slug', 'code', 'category')
+        }),
+        ('Content', {
+            'fields': ('short_description', 'description', 'learning_objectives', 'prerequisites')
+        }),
+        ('Course Details', {
+            'fields': ('difficulty_level', 'duration_hours', 'language')
+        }),
+        ('Instructor', {
+            'fields': ('instructor', 'instructor_name', 'instructor_bio')
+        }),
+        ('Media', {
+            'fields': ('thumbnail', 'promo_video_url'),
+            'classes': ('collapse',)
+        }),
+        ('Pricing', {
+            'fields': ('is_free', 'price', 'discount_price')
+        }),
+        ('Enrollment', {
+            'fields': ('max_students', 'enrollment_start_date', 'enrollment_end_date')
+        }),
+        ('Status', {
+            'fields': ('is_published', 'is_featured')
+        }),
+        ('Certificate', {
+            'fields': ('has_certificate', 'certificate_template')
+        }),
+        ('SEO', {
+            'fields': ('meta_description', 'meta_keywords'),
+            'classes': ('collapse',)
+        }),
+        ('Statistics', {
+            'fields': ('total_enrollments', 'average_rating', 'total_reviews'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'published_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Lesson)
+class LessonAdmin(admin.ModelAdmin):
+    list_display = ('title', 'course', 'section', 'lesson_type', 'is_preview', 'is_active', 'display_order')
+    list_filter = ('lesson_type', 'is_preview', 'is_active', 'course')
+    search_fields = ('title', 'description', 'course__title')
+    list_editable = ('is_active', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('course', 'section', 'title', 'slug', 'lesson_type')
+        }),
+        ('Content', {
+            'fields': ('description', 'content')
+        }),
+        ('Video Content', {
+            'fields': ('video_url', 'video_duration_minutes')
+        }),
+        ('File Content', {
+            'fields': ('file',)
+        }),
+        ('Settings', {
+            'fields': ('is_preview', 'is_active', 'display_order')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(LessonSection)
+class LessonSectionAdmin(admin.ModelAdmin):
+    list_display = ('title', 'course', 'display_order', 'is_active')
+    list_filter = ('is_active', 'course')
+    search_fields = ('title', 'description', 'course__title')
+    list_editable = ('display_order', 'is_active')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Section Information', {
+            'fields': ('course', 'title', 'slug', 'description')
+        }),
+        ('Settings', {
+            'fields': ('display_order', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== MESSAGES ====================
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ('sender', 'recipient', 'subject', 'is_read', 'created_at')
+    list_filter = ('is_read', 'created_at')
+    search_fields = ('sender__username', 'recipient__username', 'subject', 'body')
+    readonly_fields = ('created_at', 'read_at')
+    
+    fieldsets = (
+        ('Message Information', {
+            'fields': ('sender', 'recipient', 'subject', 'body', 'parent')
+        }),
+        ('Status', {
+            'fields': ('is_read', 'read_at')
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',)
+        }),
+    )
+
+
+# ==================== NOTIFICATIONS ====================
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('user', 'notification_type', 'title', 'is_read', 'created_at')
+    list_filter = ('notification_type', 'is_read', 'created_at')
+    search_fields = ('user__username', 'title', 'message')
+    readonly_fields = ('created_at', 'read_at')
+    
+    fieldsets = (
+        ('Notification Information', {
+            'fields': ('user', 'notification_type', 'title', 'message', 'link')
+        }),
+        ('Status', {
+            'fields': ('is_read', 'read_at')
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',)
+        }),
+    )
+
+
+# ==================== PAYMENT GATEWAY ====================
+@admin.register(PaymentGateway)
+class PaymentGatewayAdmin(admin.ModelAdmin):
+    list_display = ('name', 'gateway_type', 'is_active', 'is_test_mode', 'created_at')
+    list_filter = ('gateway_type', 'is_active', 'is_test_mode')
+    search_fields = ('name', 'gateway_type')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'gateway_type')
+        }),
+        ('Credentials', {
+            'fields': ('api_key', 'api_secret', 'webhook_secret')
+        }),
+        ('Settings', {
+            'fields': ('is_active', 'is_test_mode')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ('transaction_id', 'user', 'transaction_type', 'amount', 'status', 'created_at')
+    list_filter = ('transaction_type', 'status', 'created_at')
+    search_fields = ('transaction_id', 'user__username', 'gateway_transaction_id')
+    readonly_fields = ('transaction_id', 'created_at', 'completed_at')
+    
+    fieldsets = (
+        ('Transaction Information', {
+            'fields': ('transaction_id', 'user', 'transaction_type', 'status')
+        }),
+        ('Financial Details', {
+            'fields': ('amount', 'currency')
+        }),
+        ('Gateway Details', {
+            'fields': ('gateway', 'gateway_transaction_id')
+        }),
+        ('Related Objects', {
+            'fields': ('course',)
+        }),
+        ('Metadata', {
+            'fields': ('metadata',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== QUIZZES ====================
+@admin.register(Quiz)
+class QuizAdmin(admin.ModelAdmin):
+    list_display = ('title', 'lesson', 'passing_score', 'max_attempts', 'is_active', 'display_order')
+    list_filter = ('lesson__course', 'is_active')
+    search_fields = ('title', 'description', 'lesson__title')
+    list_editable = ('is_active', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('lesson', 'title', 'slug', 'description', 'instructions')
+        }),
+        ('Settings', {
+            'fields': (
+                'time_limit_minutes', 'passing_score', 'max_attempts',
+                'shuffle_questions', 'show_correct_answers'
+            )
+        }),
+        ('Status', {
+            'fields': ('is_active', 'display_order')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(QuizQuestion)
+class QuizQuestionAdmin(admin.ModelAdmin):
+    list_display = ('quiz', 'question_type', 'get_question_preview', 'points', 'display_order', 'is_active')
+    list_filter = ('question_type', 'is_active', 'quiz__lesson__course')
+    search_fields = ('question_text', 'quiz__title')
+    list_editable = ('display_order', 'is_active')
+    
+    fieldsets = (
+        ('Question Information', {
+            'fields': ('quiz', 'question_type', 'question_text', 'explanation', 'points')
+        }),
+        ('Settings', {
+            'fields': ('display_order', 'is_active')
+        }),
+    )
+    
+    def get_question_preview(self, obj):
+        return obj.question_text[:50] + "..." if len(obj.question_text) > 50 else obj.question_text
+    get_question_preview.short_description = 'Question'
+
+
+@admin.register(QuizAnswer)
+class QuizAnswerAdmin(admin.ModelAdmin):
+    list_display = ('question', 'get_answer_preview', 'is_correct', 'display_order')
+    list_filter = ('is_correct', 'question__quiz__lesson__course')
+    search_fields = ('answer_text', 'question__question_text')
+    
+    fieldsets = (
+        ('Answer Information', {
+            'fields': ('question', 'answer_text', 'is_correct', 'display_order')
+        }),
+    )
+    
+    def get_answer_preview(self, obj):
+        return obj.answer_text[:50] + "..." if len(obj.answer_text) > 50 else obj.answer_text
+    get_answer_preview.short_description = 'Answer'
+
+
+@admin.register(QuizAttempt)
+class QuizAttemptAdmin(admin.ModelAdmin):
+    list_display = ('student', 'quiz', 'score', 'percentage', 'passed', 'is_completed', 'started_at')
+    list_filter = ('is_completed', 'passed', 'quiz__lesson__course')
+    search_fields = ('student__username', 'quiz__title')
+    readonly_fields = ('started_at', 'completed_at')
+    
+    fieldsets = (
+        ('Attempt Information', {
+            'fields': ('quiz', 'student')
+        }),
+        ('Scoring', {
+            'fields': ('score', 'max_score', 'percentage', 'passed')
+        }),
+        ('Status', {
+            'fields': ('is_completed', 'time_taken_minutes')
+        }),
+        ('Timestamps', {
+            'fields': ('started_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(QuizResponse)
+class QuizResponseAdmin(admin.ModelAdmin):
+    list_display = ('attempt', 'question', 'is_correct', 'points_earned')
+    list_filter = ('is_correct', 'attempt__quiz__lesson__course')
+    search_fields = ('attempt__student__username', 'question__question_text')
+    
+    fieldsets = (
+        ('Response Information', {
+            'fields': ('attempt', 'question', 'selected_answer', 'text_response')
+        }),
+        ('Grading', {
+            'fields': ('is_correct', 'points_earned')
+        }),
+    )
+
+
+# ==================== REVIEWS ====================
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('course', 'student', 'rating', 'is_approved', 'created_at')
+    list_filter = ('rating', 'is_approved', 'course', 'created_at')
+    search_fields = ('course__title', 'student__username', 'review_text')
+    readonly_fields = ('created_at', 'updated_at')
+    list_editable = ('is_approved',)
+    
+    fieldsets = (
+        ('Review Information', {
+            'fields': ('course', 'student', 'rating', 'review_text')
+        }),
+        ('Status', {
+            'fields': ('is_approved',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== SUBSCRIPTION PLANS ====================
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'billing_cycle', 'is_active', 'is_popular', 'display_order')
+    list_filter = ('billing_cycle', 'is_active', 'is_popular')
+    search_fields = ('name', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('is_active', 'is_popular', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'description', 'features')
+        }),
+        ('Pricing', {
+            'fields': ('price', 'currency', 'billing_cycle')
+        }),
+        ('Access', {
+            'fields': ('max_courses',)
+        }),
+        ('Status', {
+            'fields': ('is_active', 'is_popular', 'display_order')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'plan', 'status', 'start_date', 'end_date', 'auto_renew')
+    list_filter = ('status', 'auto_renew', 'plan')
+    search_fields = ('user__username', 'plan__name', 'gateway_subscription_id')
+    readonly_fields = ('created_at', 'updated_at', 'cancelled_at')
+    
+    fieldsets = (
+        ('Subscription Information', {
+            'fields': ('user', 'plan', 'status')
+        }),
+        ('Billing', {
+            'fields': ('start_date', 'end_date', 'auto_renew')
+        }),
+        ('Payment', {
+            'fields': ('gateway_subscription_id',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at', 'cancelled_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== SYSTEM CONFIGURATION ====================
+@admin.register(SystemConfiguration)
+class SystemConfigurationAdmin(admin.ModelAdmin):
+    list_display = ('key', 'setting_type', 'is_public', 'updated_by', 'updated_at')
+    list_filter = ('setting_type', 'is_public')
+    search_fields = ('key', 'value', 'description')
+    readonly_fields = ('updated_at',)
+    
+    fieldsets = (
+        ('Configuration', {
+            'fields': ('key', 'value', 'setting_type', 'description')
+        }),
+        ('Permissions', {
+            'fields': ('is_public', 'updated_by')
+        }),
+        ('Timestamp', {
+            'fields': ('updated_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== USER PROFILE ====================
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'email_verified', 'phone', 'country', 'created_at')
+    list_filter = ('role', 'email_verified', 'created_at')
+    search_fields = ('user__username', 'user__email', 'phone', 'country')
+    readonly_fields = ('verification_token', 'created_at', 'updated_at')
+    
+    fieldsets = (
+        ('User', {
+            'fields': ('user', 'role')
+        }),
+        ('Personal Information', {
+            'fields': ('bio', 'avatar', 'phone', 'date_of_birth')
+        }),
+        ('Address', {
+            'fields': ('address', 'city', 'country'),
+            'classes': ('collapse',)
+        }),
+        ('Social', {
+            'fields': ('website', 'linkedin', 'twitter'),
+            'classes': ('collapse',)
+        }),
+        ('Preferences', {
+            'fields': ('email_notifications', 'marketing_emails')
+        }),
+        ('Verification', {
+            'fields': ('email_verified', 'verification_token')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 # ==================== VENDOR ====================
@@ -496,12 +1257,13 @@ class VendorAdmin(admin.ModelAdmin):
     list_display = ('name', 'email', 'country', 'is_active', 'created_at')
     list_filter = ('is_active', 'country', 'created_at')
     search_fields = ('name', 'email', 'stripe_account_id')
+    prepopulated_fields = {'slug': ('name',)}
     list_editable = ('is_active',)
     readonly_fields = ('created_at',)
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'email', 'country')
+            'fields': ('name', 'slug', 'email', 'country')
         }),
         ('Integration', {
             'fields': ('stripe_account_id',),
@@ -513,107 +1275,7 @@ class VendorAdmin(admin.ModelAdmin):
     )
 
 
-# ==================== BLOG ====================
-@admin.register(BlogCategory)
-class BlogCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'get_post_count', 'icon', 'color', 'display_order', 'is_active')
-    list_filter = ('is_active', 'color')
-    search_fields = ('name', 'description')
-    prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('display_order', 'is_active')
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'slug', 'description')
-        }),
-        ('Display Settings', {
-            'fields': ('icon', 'color', 'display_order', 'is_active')
-        }),
-    )
-    
-    def get_post_count(self, obj):
-        """Display number of published posts"""
-        return obj.get_post_count()
-    get_post_count.short_description = 'Published Posts'
-
-
-@admin.register(BlogPost)
-class BlogPostAdmin(admin.ModelAdmin):
-    list_display = (
-        'title', 'author_name', 'category', 'status', 
-        'is_featured', 'views_count', 'publish_date', 'created_at'
-    )
-    list_filter = (
-        'status', 'is_featured', 'category', 
-        'publish_date', 'created_at'
-    )
-    search_fields = ('title', 'subtitle', 'content', 'author_name')
-    prepopulated_fields = {'slug': ('title',)}
-    list_editable = ('status', 'is_featured')
-    readonly_fields = ('created_at', 'updated_at', 'views_count')
-    date_hierarchy = 'publish_date'
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('title', 'slug', 'subtitle', 'category')
-        }),
-        ('Content', {
-            'fields': ('excerpt', 'content')
-        }),
-        ('Author Information', {
-            'fields': ('author', 'author_name', 'author_title')
-        }),
-        ('Media', {
-            'fields': ('featured_image', 'featured_image_alt'),
-            'classes': ('collapse',)
-        }),
-        ('Categorization', {
-            'fields': ('tags',),
-            'classes': ('collapse',)
-        }),
-        ('Publishing', {
-            'fields': ('status', 'is_featured', 'publish_date')
-        }),
-        ('Metadata', {
-            'fields': ('read_time', 'views_count'),
-            'classes': ('collapse',)
-        }),
-        ('SEO', {
-            'fields': ('meta_description', 'meta_keywords'),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    def get_queryset(self, request):
-        """Optimize queryset"""
-        return super().get_queryset(request).select_related('author', 'category')
-    
-    actions = ['publish_posts', 'unpublish_posts', 'feature_posts']
-    
-    def publish_posts(self, request, queryset):
-        """Publish selected posts"""
-        updated = queryset.update(status='published', publish_date=timezone.now())
-        self.message_user(request, f'{updated} post(s) published.')
-    publish_posts.short_description = "Publish selected posts"
-    
-    def unpublish_posts(self, request, queryset):
-        """Unpublish selected posts"""
-        updated = queryset.update(status='draft')
-        self.message_user(request, f'{updated} post(s) unpublished.')
-    unpublish_posts.short_description = "Unpublish selected posts"
-    
-    def feature_posts(self, request, queryset):
-        """Feature selected posts"""
-        updated = queryset.update(is_featured=True)
-        self.message_user(request, f'{updated} post(s) featured.')
-    feature_posts.short_description = "Feature selected posts"
-
-
 # Site customization
-admin.site.site_header = "MIU Administration"
-admin.site.site_title = "MIU Admin Portal"
-admin.site.index_title = "Welcome to MIU Administration"
+admin.site.site_header = "LMS Administration"
+admin.site.site_title = "LMS Admin Portal"
+admin.site.index_title = "Welcome to LMS Administration"

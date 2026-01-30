@@ -4,7 +4,8 @@ from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
 from .forms import ContactForm, CourseApplicationForm
-from .models import ContactMessage, CourseApplication, CourseIntake, Vendor
+from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor
+from eduweb.models import Faculty, Course, BlogPost, BlogCategory
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from .decorators import check_for_auth

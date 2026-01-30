@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'eduweb',
     'management',
+    'student',
+    'parent'
 ]
 
 MIDDLEWARE = [

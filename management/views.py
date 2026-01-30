@@ -5,11 +5,29 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.utils import timezone
-from eduweb.models import CourseApplication, User
-from datetime import timedelta
-import json
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
+from django.urls import reverse
+from datetime import timedelta
+import json
+
+# Model imports
+from eduweb.models import (
+    CourseApplication, 
+    User, 
+    Faculty, 
+    Course, 
+    BlogPost, 
+    BlogCategory
+)
+
+# Form imports
+from management.forms import (
+    FacultyForm, 
+    CourseForm, 
+    BlogPostForm, 
+    BlogCategoryForm
+)
 
 
 def is_admin(user):

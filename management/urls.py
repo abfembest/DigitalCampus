@@ -38,6 +38,23 @@ urlpatterns = [
     path('blog/categories/create/', views.blog_category_create, name='blog_category_create'),
     path('blog/categories/<int:pk>/edit/', views.blog_category_edit, name='blog_category_edit'),
     path('blog/categories/<int:pk>/delete/', views.blog_category_delete, name='blog_category_delete'),
+
+    path('users/', views.users_list, name='users_list'),
+    
+    # User CRUD operations
+    path('users/create/', views.user_create, name='user_create'),
+    path('users/<int:pk>/', views.user_detail, name='user_detail'),
+    path('users/<int:pk>/edit/', views.user_edit, name='user_edit'),
+    
+    # User actions
+    path('users/<int:pk>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
+    path('users/<int:pk>/change-role/', views.user_change_role, name='user_change_role'),
+    
+    # Bulk actions
+    path('users/bulk-action/', views.bulk_user_action, name='bulk_user_action'),
+    
+    # AJAX endpoints
+    path('users/<int:pk>/quick-info/', views.user_quick_info, name='user_quick_info'),
 ]
 
 # Serve media files during development

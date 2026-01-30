@@ -689,3 +689,274 @@ def blog_category_delete(request, pk):
         return redirect('management:blog_categories_list')
     
     return redirect('management:blog_categories_list')
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.db import transaction
+from .forms import (
+    UserSearchForm, UserCreateForm, UserEditForm, 
+    UserProfileForm, QuickRoleChangeForm
+)
+from eduweb.models import UserProfile
+
+
+def is_admin(user):
+    """Check if user is admin or staff"""
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+
+
+@login_required
+@user_passes_test(is_admin)
+def users_list(request):
+    """List all users with search and filter functionality"""
+    # Get search and filter parameters
+    search_form = UserSearchForm(request.GET or None)
+    users = User.objects.select_related('profile').all()
+    
+    # Apply filters
+    if search_form.is_valid():
+        search = search_form.cleaned_data.get('search')
+        role = search_form.cleaned_data.get('role')
+        is_active = search_form.cleaned_data.get('is_active')
+        
+        if search:
+            users = users.filter(
+                Q(username__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(email__icontains=search)
+            )
+        
+        if role:
+            users = users.filter(profile__role=role)
+        
+        if is_active:
+            users = users.filter(is_active=(is_active == 'true'))
+    
+    # Calculate statistics
+    stats = {
+        'total_users': User.objects.count(),
+        'active_users': User.objects.filter(is_active=True).count(),
+        'staff_users': User.objects.filter(is_staff=True).count(),
+        'students': UserProfile.objects.filter(role='student').count(),
+        'instructors': UserProfile.objects.filter(role='instructor').count(),
+    }
+    
+    # Pagination
+    paginator = Paginator(users, 20)
+    page_number = request.GET.get('page')
+    users_page = paginator.get_page(page_number)
+    
+    return render(request, 'management/users/list.html', {
+        'users': users_page,
+        'search_form': search_form,
+        'stats': stats
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def user_detail(request, pk):
+    """View user details"""
+    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
+    
+    # Calculate user statistics based on role
+    stats = {}
+    if user.profile.role == 'student':
+        stats = {
+            'enrollments': 0,  # Add actual enrollment count
+            'completed_courses': 0,  # Add actual completed courses count
+        }
+    elif user.profile.role == 'instructor':
+        stats = {
+            'courses_taught': 0,  # Add actual courses count
+            'total_students': 0,  # Add actual students count
+        }
+    
+    return render(request, 'management/users/detail.html', {
+        'user': user,
+        'stats': stats
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def user_create(request):
+    """Create a new user"""
+    if request.method == 'POST':
+        form = UserCreateForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                # Create user
+                user = form.save()
+                
+                # Update profile with role
+                user.profile.role = form.cleaned_data['role']
+                user.profile.save()
+                
+                messages.success(
+                    request, 
+                    f'User {user.username} created successfully!'
+                )
+                return redirect('management:user_detail', pk=user.pk)
+    else:
+        form = UserCreateForm()
+    
+    return render(request, 'management/users/create.html', {
+        'form': form
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def user_edit(request, pk):
+    """Edit user information"""
+    user = get_object_or_404(User, pk=pk)
+    
+    if request.method == 'POST':
+        user_form = UserEditForm(request.POST, instance=user)
+        profile_form = UserProfileForm(
+            request.POST, 
+            request.FILES, 
+            instance=user.profile
+        )
+        
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, f'User {user.username} updated successfully!')
+            return redirect('management:user_detail', pk=user.pk)
+    else:
+        user_form = UserEditForm(instance=user)
+        profile_form = UserProfileForm(instance=user.profile)
+    
+    return render(request, 'management/users/edit.html', {
+        'user': user,
+        'user_form': user_form,
+        'profile_form': profile_form
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def user_toggle_active(request, pk):
+    """Toggle user active status"""
+    user = get_object_or_404(User, pk=pk)
+    
+    # Prevent self-deactivation
+    if user.id == request.user.id:
+        messages.error(request, 'You cannot deactivate your own account!')
+        return redirect('management:user_detail', pk=pk)
+    
+    user.is_active = not user.is_active
+    user.save()
+    
+    status = 'activated' if user.is_active else 'deactivated'
+    messages.success(request, f'User {user.username} has been {status}.')
+    
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'is_active': user.is_active
+        })
+    
+    return redirect('management:user_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def user_change_role(request, pk):
+    """Change user role (AJAX endpoint)"""
+    user = get_object_or_404(User, pk=pk)
+    form = QuickRoleChangeForm(request.POST)
+    
+    if form.is_valid():
+        user.profile.role = form.cleaned_data['role']
+        user.profile.save()
+        
+        messages.success(
+            request, 
+            f"Role changed to {user.profile.get_role_display()}"
+        )
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'role': user.profile.role,
+                'role_display': user.profile.get_role_display()
+            })
+    else:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
+    
+    return redirect('management:user_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def bulk_user_action(request):
+    """Handle bulk actions on users"""
+    action = request.POST.get('action')
+    user_ids = request.POST.get('user_ids', '').split(',')
+    
+    if not action or not user_ids:
+        messages.error(request, 'Invalid bulk action request.')
+        return redirect('management:users_list')
+    
+    # Filter out current user to prevent self-modification
+    user_ids = [int(uid) for uid in user_ids if uid and int(uid) != request.user.id]
+    
+    if not user_ids:
+        messages.warning(request, 'No valid users selected.')
+        return redirect('management:users_list')
+    
+    users = User.objects.filter(id__in=user_ids)
+    count = users.count()
+    
+    if action == 'activate':
+        users.update(is_active=True)
+        messages.success(request, f'{count} user(s) activated successfully.')
+    
+    elif action == 'deactivate':
+        users.update(is_active=False)
+        messages.success(request, f'{count} user(s) deactivated successfully.')
+    
+    else:
+        messages.error(request, 'Invalid action specified.')
+    
+    return redirect('management:users_list')
+
+
+@login_required
+@user_passes_test(is_admin)
+def user_quick_info(request, pk):
+    """Get quick user info for preview (AJAX endpoint)"""
+    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
+    
+    data = {
+        'id': user.id,
+        'username': user.username,
+        'full_name': user.get_full_name() or user.username,
+        'email': user.email,
+        'role': user.profile.get_role_display(),
+        'is_active': user.is_active,
+        'is_staff': user.is_staff,
+        'date_joined': user.date_joined.strftime('%B %d, %Y'),
+        'last_login': user.last_login.strftime('%B %d, %Y') if user.last_login else 'Never',
+        'avatar_url': user.profile.avatar.url if user.profile.avatar else None,
+    }
+    
+    return JsonResponse(data)

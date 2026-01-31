@@ -1224,7 +1224,7 @@ def save_application_draft(request):
         data = request.POST
 
         # -------------------------------------------------
-        # 1. GET OR CREATE APPLICATION (NO DUPLICATES)
+        # 1. GET OR CREATE APPLICATION
         # -------------------------------------------------
         application_id = data.get("application_id")
         application = None
@@ -1240,60 +1240,7 @@ def save_application_draft(request):
             )
 
         # -------------------------------------------------
-        # 2. PERSONAL INFORMATION
-        # -------------------------------------------------
-        application.first_name = data.get("first_name", "").strip()
-        application.last_name = data.get("last_name", "").strip()
-        application.email = data.get("email", "").strip()
-        application.phone = data.get("phone", "").strip()
-        application.gender = data.get("gender", "")
-        application.country = data.get("country", "")
-        application.address = data.get("address", "").strip()
-
-        # Date of birth (safe parsing, never overwrite with None)
-        dob = data.get("date_of_birth")
-        print(dob)
-        if dob:
-            try:
-                application.date_of_birth = datetime.strptime(
-                    dob, "%Y-%m-%d"
-                ).date()
-            except ValueError:
-                pass  # ignore invalid format during draft save
-       
-        # -------------------------------------------------
-        # 3. ACADEMIC / ENGLISH DETAILS
-        # -------------------------------------------------
-        # -------------------------------
-        # ENGLISH PROFICIENCY (FIXED)
-        # -------------------------------
-        proficiency_type = data.get("english_proficiency_type", "")
-
-        score = ""
-        if proficiency_type == "toefl":
-            score = data.get("toefl_score", "")
-        elif proficiency_type == "ielts":
-            score = data.get("ielts_score", "")
-        elif proficiency_type == "other":
-            score = data.get("other_test", "")
-        elif proficiency_type == "native":
-            score = "native"
-
-        application.english_proficiency_test = proficiency_type
-        application.english_proficiency_score = score
-
-
-        # Academic history (JSON string expected)
-        academic_history = data.get("academic_history")
-        print(academic_history)
-        if academic_history:
-            try:
-                application.academic_history = json.loads(academic_history)
-            except json.JSONDecodeError:
-                pass
-
-        # -------------------------------------------------
-        # 4. COURSE SELECTION (UPDATED FOR FOREIGN KEYS)
+        # 2. COURSE & INTAKE
         # -------------------------------------------------
         course_id = data.get("course")
         if course_id:
@@ -1310,28 +1257,95 @@ def save_application_draft(request):
                 pass
 
         application.study_mode = data.get("study_mode", "")
-        application.scholarship_requested = data.get("scholarship_requested") in ("true", "on", "1")
-        application.financial_aid_requested = data.get("financial_aid_requested") in ("true", "on", "1")
-        application.referral_source = data.get("referral_source", "")
+
+        # -------------------------------------------------
+        # 3. PERSONAL INFORMATION
+        # -------------------------------------------------
+        application.first_name = data.get("first_name", "").strip()
+        application.last_name = data.get("last_name", "").strip()
+        application.email = data.get("email", "").strip()
+        application.phone = data.get("phone", "").strip()
+        application.gender = data.get("gender", "")
+        application.nationality = data.get("nationality", "")
+        application.country = data.get("country", "")
+
+        dob = data.get("date_of_birth")
+        if dob:
+            try:
+                application.date_of_birth = datetime.strptime(dob, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
+        # -------------------------------------------------
+        # 4. ADDRESS (CORRECTED)
+        # -------------------------------------------------
+        application.address_line1 = data.get("address_line1", "").strip()
+        application.address_line2 = data.get("address_line2", "").strip()
+        application.city = data.get("city", "").strip()
+        application.state = data.get("state", "").strip()
+        application.postal_code = data.get("postal_code", "").strip()
+        application.country = data.get("country", "")
+
+        # -------------------------------------------------
+        # 5. ACADEMIC BACKGROUND (SINGLE HIGHEST QUALIFICATION)
+        # -------------------------------------------------
+        application.highest_qualification = data.get("highest_qualification", "")
+        application.institution_name = data.get("institution_name", "")
+        application.graduation_year = data.get("graduation_year", "")
+        application.gpa_or_grade = data.get("gpa_or_grade", "")
+
+        # -------------------------------------------------
+        # 6. LANGUAGE PROFICIENCY (MATCHES META)
+        # -------------------------------------------------
+        application.language_skill = data.get("language_skill", "")
+        application.language_score = data.get("language_score", "")
+
+        # -------------------------------------------------
+        # 7. FULL ACADEMIC HISTORY (JSON)
+        # -------------------------------------------------
+        academic_history = data.get("academic_history")
+        if academic_history:
+            try:
+                application.academic_history = json.loads(academic_history)
+            except json.JSONDecodeError:
+                pass
+
+        # -------------------------------------------------
+        # 8. ADDITIONAL INFORMATION
+        # -------------------------------------------------
+        application.work_experience_years = data.get("work_experience_years") or 0
         application.personal_statement = data.get("personal_statement", "")
+        application.how_did_you_hear = data.get("how_did_you_hear", "")
 
         # -------------------------------------------------
-        # 5. META / DRAFT FLAGS
+        # 9. PRIVACY & CONSENT
         # -------------------------------------------------
-        application.status = 'draft'
+        application.accept_privacy_policy = data.get("accept_privacy_policy") in ("true", "on", "1")
+        application.accept_terms_conditions = data.get("accept_terms_conditions") in ("true", "on", "1")
+        application.marketing_consent = data.get("marketing_consent") in ("true", "on", "1")
+        application.scholarship = data.get("scholarship") in ("true", "on", "1")
 
         # -------------------------------------------------
-        # 6. SAVE (MODEL HANDLES application_id GENERATION)
+        # 10. EMERGENCY CONTACT
+        # -------------------------------------------------
+        application.emergency_contact_name = data.get("emergency_contact_name", "")
+        application.emergency_contact_phone = data.get("emergency_contact_phone", "")
+        application.emergency_contact_relationship = data.get("emergency_contact_relationship", "")
+
+        # -------------------------------------------------
+        # 11. DRAFT STATUS
+        # -------------------------------------------------
+        application.status = "draft"
+
+        # -------------------------------------------------
+        # 12. SAVE
         # -------------------------------------------------
         application.save()
 
-        # -------------------------------------------------
-        # 7. RESPONSE
-        # -------------------------------------------------
         return JsonResponse({
             "success": True,
             "application_id": application.application_id,
-            "payment_status": application.payment_status,
+            "payment_status": application.payment_status
         })
 
     except Exception as e:
@@ -1339,6 +1353,7 @@ def save_application_draft(request):
             "success": False,
             "error": str(e)
         }, status=400)
+
 
 
 

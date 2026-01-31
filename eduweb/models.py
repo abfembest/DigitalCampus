@@ -12,6 +12,7 @@ import os
 from decimal import Decimal
 
 
+
 # ==================== HELPER FUNCTIONS ====================
 def validate_file_size(file, max_size_mb=10):
     """Validate file size"""
@@ -719,6 +720,14 @@ class CourseApplication(models.Model):
         ('rejected', 'Rejected'),
         ('withdrawn', 'Withdrawn'),
     ]
+    LANGUAGE_CHOICES = [
+        ('toefl', 'TOEFL'),
+        ('ielts', 'IELTS'),
+        ('pte', 'PTE Academic'),
+        ('duolingo', 'Duolingo English Test'),
+        ('cambridge', 'Cambridge English'),
+        ('none', 'None'),
+    ]
     
     # Application ID
     application_id = models.CharField(max_length=20, unique=True, editable=False)
@@ -738,6 +747,8 @@ class CourseApplication(models.Model):
     date_of_birth = models.DateField()
     gender = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')])
     nationality = models.CharField(max_length=100)
+
+    payment_status = models.TextField(default="pending")
     
     # Address
     address_line1 = models.CharField(max_length=200)
@@ -750,13 +761,21 @@ class CourseApplication(models.Model):
     # Academic Background
     highest_qualification = models.CharField(max_length=100)
     institution_name = models.CharField(max_length=200)
-    graduation_year = models.IntegerField()
+    graduation_year = models.TextField()
     gpa_or_grade = models.CharField(max_length=20)
+    language_skill = models.CharField(max_length=20, choices=LANGUAGE_CHOICES,blank=True, null=True)
+    language_score = models.DecimalField(max_digits=5,decimal_places=2,blank=True,null=True,help_text="Enter test score (e.g. 7.5 for IELTS, 95 for TOEFL)")
     
     # Additional Information
     work_experience_years = models.IntegerField(default=0)
     personal_statement = models.TextField()
     how_did_you_hear = models.CharField(max_length=100, blank=True)
+    scholarship = models.BooleanField(default=False)
+    # Privacy & Consent
+    accept_privacy_policy = models.BooleanField(default=False)
+    accept_terms_conditions = models.BooleanField(default=False)
+    marketing_consent = models.BooleanField(default=False)
+
     
     # Emergency Contact
     emergency_contact_name = models.CharField(max_length=100)

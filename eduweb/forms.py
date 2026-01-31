@@ -184,13 +184,18 @@ class CourseApplicationForm(forms.ModelForm):
             'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
             
             # Academic Background
-            'highest_qualification', 'institution_name', 'graduation_year', 'gpa_or_grade',
-            
+            'highest_qualification', 'institution_name', 'graduation_year', 'gpa_or_grade',          
+            'language_skill','language_score',
             # Additional Information
             'work_experience_years', 'personal_statement', 'how_did_you_hear',
+
+             # Privacy & Consent
+             'accept_privacy_policy','accept_terms_conditions','marketing_consent','scholarship',
+
             
             # Emergency Contact
             'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
+
         ]
         
         widgets = {
@@ -235,10 +240,11 @@ class CourseApplicationForm(forms.ModelForm):
             }),
             
             # Address
-            'address_line1': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+            'address_line1': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-1.5 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'placeholder': 'Street address'
             }),
+
             'address_line2': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'placeholder': 'Apartment, suite, etc. (optional)'
@@ -279,7 +285,15 @@ class CourseApplicationForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'placeholder': 'e.g., 3.5/4.0 or First Class'
             }),
-            
+               'language_skill': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            }),
+             'language_score': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'placeholder': 'e.g., 6.5 or 80',
+                'min':0
+            }),
+
             # Additional Information
             'work_experience_years': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
@@ -309,6 +323,22 @@ class CourseApplicationForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'placeholder': 'e.g., Parent, Spouse, Sibling'
             }),
+
+                        #privacy and terms
+            'accept_terms_conditions': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-primary-600 rounded focus:ring-primary-400 cursor-pointer',
+                'required': True,
+            }),
+
+            'accept_privacy_policy': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-primary-600 rounded focus:ring-primary-400 cursor-pointer',
+                'required': True,
+            }),
+
+            'scholarship': forms.CheckboxInput(attrs={
+                'class': 'h-5 w-5 text-purple-600 rounded focus:ring-purple-400 cursor-pointer',
+            }),
+
         }
     
     def clean_phone(self):

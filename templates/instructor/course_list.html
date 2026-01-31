@@ -1,0 +1,111 @@
+{% extends 'management/base.html' %}
+
+{% load static %}
+
+{% block title %}My Courses - Instructor{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 font-display">My Courses</h1>
+            <p class="text-gray-600 mt-2">Manage all your courses</p>
+        </div>
+        <a href="{% url 'instructor:course_create' %}" 
+           class="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
+            <i class="fas fa-plus-circle mr-2"></i> Create New Course
+        </a>
+    </div>
+</div>
+
+{% if courses %}
+<!-- Courses Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for course in courses %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group">
+        <!-- Course Thumbnail -->
+        <div class="relative h-48 bg-gradient-to-br from-primary-400 to-secondary-500 overflow-hidden">
+            {% if course.thumbnail %}
+            <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            {% else %}
+            <div class="w-full h-full flex items-center justify-center">
+                <i class="fas fa-book text-6xl text-white opacity-50"></i>
+            </div>
+            {% endif %}
+            
+            <!-- Status Badge -->
+            <div class="absolute top-4 right-4">
+                {% if course.is_published %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500 text-white shadow-lg">
+                    <i class="fas fa-check-circle mr-1"></i> Published
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-500 text-white shadow-lg">
+                    <i class="fas fa-edit mr-1"></i> Draft
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Course Content -->
+        <div class="p-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-bold text-gray-900 mb-1 line-clamp-2">{{ course.title }}</h3>
+                <p class="text-sm text-gray-500 font-medium">{{ course.code }}</p>
+            </div>
+
+            <p class="text-gray-600 text-sm mb-4 line-clamp-2">{{ course.short_description }}</p>
+
+            <!-- Course Stats -->
+            <div class="flex items-center justify-between text-sm text-gray-600 mb-4 pb-4 border-b border-gray-200">
+                <div class="flex items-center">
+                    <i class="fas fa-user-graduate mr-2 text-primary-600"></i>
+                    <span class="font-medium">{{ course.enrollment_count }} students</span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-star text-yellow-400 mr-1"></i>
+                    <span class="font-medium">{{ course.average_rating|floatformat:1 }}</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-3 gap-2">
+                <a href="{% url 'instructor:course_edit' course.slug %}" 
+                   class="flex items-center justify-center px-3 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
+                   title="Edit Course">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'instructor:lesson_list' course.slug %}" 
+                   class="flex items-center justify-center px-3 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                   title="Manage Content">
+                    <i class="fas fa-play-circle"></i>
+                </a>
+                <a href="{% url 'instructor:students_list' course.slug %}" 
+                   class="flex items-center justify-center px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                   title="View Students">
+                    <i class="fas fa-users"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+    <div class="max-w-md mx-auto">
+        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-book text-5xl text-gray-400"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">No Courses Yet</h3>
+        <p class="text-gray-600 mb-6">Create your first course to start teaching and sharing knowledge with students.</p>
+        <a href="{% url 'instructor:course_create' %}" 
+           class="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
+            <i class="fas fa-plus-circle mr-2"></i> Create Your First Course
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

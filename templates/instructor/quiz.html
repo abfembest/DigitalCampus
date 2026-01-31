@@ -1,0 +1,142 @@
+{% extends 'management/base.html' %}
+
+{% block title %}Quiz Questions - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'instructor:course_list' %}">Courses</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'instructor:lesson_list' course.slug %}">{{ course.title }}</a></li>
+            <li class="breadcrumb-item active">{{ quiz.title }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1>{{ quiz.title }}</h1>
+            <p class="text-muted">Manage quiz questions</p>
+        </div>
+        <a href="{% url 'instructor:question_create' course.slug lesson.id quiz.id %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add Question
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-9">
+        {% if questions %}
+        {% for question in questions %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">Question {{ forloop.counter }}</h6>
+                        <span class="badge bg-secondary">{{ question.get_question_type_display }}</span>
+                        <span class="badge bg-info">{{ question.points }} points</span>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        {% if question.question_type == 'multiple_choice' %}
+                        <a href="{% url 'instructor:question_answers' course.slug lesson.id quiz.id question.id %}" class="btn btn-outline-primary">
+                            <i class="bi bi-list"></i> Answers
+                        </a>
+                        {% endif %}
+                        <button class="btn btn-outline-danger">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">{{ question.question_text }}</p>
+                
+                {% if question.question_type == 'multiple_choice' %}
+                <div class="mt-3">
+                    <small class="text-muted d-block mb-2">Answer Choices:</small>
+                    {% if question.answers.all %}
+                    <div class="list-group list-group-flush">
+                        {% for answer in question.answers.all %}
+                        <div class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                {% if answer.is_correct %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                {% else %}
+                                <i class="bi bi-circle me-2 text-muted"></i>
+                                {% endif %}
+                                <span {% if answer.is_correct %}class="fw-bold"{% endif %}>
+                                    {{ answer.answer_text }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> No answer choices added yet.
+                        <a href="{% url 'instructor:question_answers' course.slug lesson.id quiz.id question.id %}">Add answers</a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if question.explanation %}
+                <div class="mt-3">
+                    <small class="text-muted d-block">Explanation:</small>
+                    <p class="mb-0 small">{{ question.explanation }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-question-circle display-1 text-muted"></i>
+                <h3 class="mt-4">No Questions Yet</h3>
+                <p class="text-muted">Add questions to your quiz</p>
+                <a href="{% url 'instructor:question_create' course.slug lesson.id quiz.id %}" class="btn btn-primary mt-3">
+                    <i class="bi bi-plus-circle"></i> Add First Question
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0">Quiz Settings</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Passing Score</small>
+                    <h5 class="mb-0">{{ quiz.passing_score }}%</h5>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">Max Attempts</small>
+                    <h5 class="mb-0">{{ quiz.max_attempts }}</h5>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">Time Limit</small>
+                    <h5 class="mb-0">
+                        {% if quiz.time_limit_minutes %}
+                        {{ quiz.time_limit_minutes }} min
+                        {% else %}
+                        No limit
+                        {% endif %}
+                    </h5>
+                </div>
+                <div>
+                    <small class="text-muted">Questions</small>
+                    <h5 class="mb-0">{{ questions|length }}</h5>
+                </div>
+                <hr>
+                <div class="d-grid">
+                    <a href="{% url 'instructor:quiz_edit' course.slug lesson.id quiz.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-gear"></i> Edit Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

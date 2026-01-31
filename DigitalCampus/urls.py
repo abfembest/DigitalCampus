@@ -24,6 +24,8 @@ urlpatterns = [
     path('', include('eduweb.urls')),
     path('management/', include('management.urls')),
     path('student/', include('student.urls')),
+    # path('parent/', include('parent.urls')),
+    path('instructor/', include('instructor.urls')),
 ]
 
 # Serve media files during development

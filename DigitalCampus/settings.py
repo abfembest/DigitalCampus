@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'eduweb',
     'management',
     'student',
-    'parent'
+    'parent',
+    'instructor',
 ]
 
 MIDDLEWARE = [

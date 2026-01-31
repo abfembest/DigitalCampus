@@ -403,10 +403,183 @@
                     </a>
 
                     {% elif request.user.profile.role == 'instructor' %}
-                    <!-- INSTRUCTOR MENU (for future implementation) -->
-                    <a href="{% url 'instructors:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Dashboard</span>
+                    <!-- INSTRUCTOR MENU -->
+
+                    <!-- Dashboard -->
+                    <a href="{% url 'instructor:dashboard' %}" 
+                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-tachometer-alt w-5 mr-3" aria-hidden="true"></i>
+                            <span>Dashboard</span>
+                        </div>
+                    </a>
+
+                    <!-- My Courses -->
+                    <div class="mb-1">
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-book w-5 mr-3" aria-hidden="true"></i>
+                                <span>My Courses</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
+                        </button>
+                        <div id="coursesMenu" class="ml-8 mt-1 space-y-1 hidden">
+                            <a href="{% url 'instructor:course_list' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-list mr-2 w-4" aria-hidden="true"></i> All Courses
+                            </a>
+                            <a href="{% url 'instructor:course_create' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-plus-circle mr-2 w-4" aria-hidden="true"></i> Create New
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Current Course Context (Only show if viewing a specific course) -->
+                    {% if course %}
+                    <div class="mb-1">
+                        <div class="py-2 px-4 text-xs uppercase tracking-wider text-white/60 font-semibold">
+                            Current Course
+                        </div>
+                        <div class="mb-1 bg-white/5 rounded-lg p-3">
+                            <p class="text-sm font-semibold truncate">{{ course.title }}</p>
+                            <p class="text-xs text-white/70 truncate">{{ course.code }}</p>
+                        </div>
+                        
+                        <a href="{% url 'instructor:course_edit' course.slug %}" 
+                        class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm mb-1">
+                            <i class="fas fa-edit w-5 mr-3" aria-hidden="true"></i>
+                            <span>Edit Course</span>
+                        </a>
+                        
+                        <a href="{% url 'instructor:lesson_list' course.slug %}" 
+                        class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm mb-1">
+                            <i class="fas fa-film w-5 mr-3" aria-hidden="true"></i>
+                            <span>Lessons & Content</span>
+                        </a>
+                        
+                        <a href="{% url 'instructor:students_list' course.slug %}" 
+                        class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm mb-1">
+                            <i class="fas fa-user-graduate w-5 mr-3" aria-hidden="true"></i>
+                            <span>Students</span>
+                        </a>
+                        
+                        <a href="{% url 'instructor:announcement_create' course.slug %}" 
+                        class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm mb-1">
+                            <i class="fas fa-bullhorn w-5 mr-3" aria-hidden="true"></i>
+                            <span>Announcements</span>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Content Management -->
+                    <div class="mb-1">
+                        <div class="py-2 px-4 text-xs uppercase tracking-wider text-white/60 font-semibold mt-4">
+                            Content
+                        </div>
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-play-circle w-5 mr-3" aria-hidden="true"></i>
+                                <span>Lessons</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
+                        </button>
+                        <div id="lessonsMenu" class="ml-8 mt-1 space-y-1 hidden">
+                            {% if course %}
+                            <a href="{% url 'instructor:lesson_create' course.slug %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-plus mr-2 w-4" aria-hidden="true"></i> Add Lesson
+                            </a>
+                            <a href="{% url 'instructor:section_create' course.slug %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-folder-plus mr-2 w-4" aria-hidden="true"></i> Add Section
+                            </a>
+                            {% else %}
+                            <span class="block py-2 px-4 text-sm text-white/50">Select a course first</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Assessments -->
+                    <div class="mb-1">
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-clipboard-check w-5 mr-3" aria-hidden="true"></i>
+                                <span>Assessments</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
+                        </button>
+                        <div id="assessmentsMenu" class="ml-8 mt-1 space-y-1 hidden">
+                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-question-circle mr-2 w-4" aria-hidden="true"></i> Quizzes
+                            </a>
+                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-tasks mr-2 w-4" aria-hidden="true"></i> Assignments
+                            </a>
+                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-file-alt mr-2 w-4" aria-hidden="true"></i> Submissions
+                                <span class="ml-2 px-2 py-0.5 bg-accent-500 text-white text-xs rounded-full">3</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Students -->
+                    <a href="#" 
+                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-users w-5 mr-3" aria-hidden="true"></i>
+                            <span>Students</span>
+                        </div>
+                    </a>
+
+                    <!-- Analytics -->
+                    <div class="mb-1">
+                        <div class="py-2 px-4 text-xs uppercase tracking-wider text-white/60 font-semibold mt-4">
+                            Reports
+                        </div>
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-line w-5 mr-3" aria-hidden="true"></i>
+                                <span>Analytics</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
+                        </button>
+                        <div id="analyticsMenu" class="ml-8 mt-1 space-y-1 hidden">
+                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-chart-bar mr-2 w-4" aria-hidden="true"></i> Course Stats
+                            </a>
+                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-graduation-cap mr-2 w-4" aria-hidden="true"></i> Student Progress
+                            </a>
+                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-star mr-2 w-4" aria-hidden="true"></i> Reviews & Ratings
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Resources -->
+                    <a href="#" 
+                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-folder w-5 mr-3" aria-hidden="true"></i>
+                            <span>Resources</span>
+                        </div>
+                    </a>
+
+                    <!-- Settings -->
+                    <div class="mb-1 mt-4">
+                        <div class="py-2 px-4 text-xs uppercase tracking-wider text-white/60 font-semibold">
+                            Settings
+                        </div>
+                        <a href="#" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <i class="fas fa-cog w-5 mr-3" aria-hidden="true"></i>
+                            <span>Preferences</span>
+                        </a>
+                    </div>
+
+                    <!-- Help & Support -->
+                    <a href="#" 
+                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-question-circle w-5 mr-3" aria-hidden="true"></i>
+                            <span>Help & Support</span>
+                        </div>
                     </a>
 
                     {% elif request.user.profile.role == 'content_manager' %}

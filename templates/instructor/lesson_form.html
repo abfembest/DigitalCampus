@@ -1,0 +1,133 @@
+{% extends 'management/base.html' %}
+
+{% block title %}{% if lesson %}Edit Lesson{% else %}Create Lesson{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'instructor:course_list' %}">Courses</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'instructor:course_edit' course.slug %}">{{ course.title }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'instructor:lesson_list' course.slug %}">Lessons</a></li>
+            <li class="breadcrumb-item active">{% if lesson %}Edit{% else %}Create{% endif %}</li>
+        </ol>
+    </nav>
+    <h1>{% if lesson %}Edit Lesson{% else %}Create New Lesson{% endif %}</h1>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Lesson Title *</label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <div class="text-danger small">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">Lesson Type *</label>
+                    {{ form.lesson_type }}
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">Section (Optional)</label>
+                    {{ form.section }}
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Display Order</label>
+                    {{ form.display_order }}
+                </div>
+                
+                <div class="col-md-3">
+                    <div class="form-check mt-4">
+                        {{ form.is_preview }}
+                        <label class="form-check-label">Free Preview</label>
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    {{ form.description }}
+                </div>
+                
+                <!-- Video Fields -->
+                <div class="col-12" id="video-fields">
+                    <hr>
+                    <h6>Video Content</h6>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Video URL</label>
+                            {{ form.video_url }}
+                            <small class="text-muted">YouTube, Vimeo, or storage URL</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Duration (minutes)</label>
+                            {{ form.video_duration_minutes }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Text Fields -->
+                <div class="col-12" id="text-fields">
+                    <hr>
+                    <h6>Text Content</h6>
+                    <label class="form-label">Content</label>
+                    {{ form.content }}
+                </div>
+                
+                <!-- File Fields -->
+                <div class="col-12" id="file-fields">
+                    <hr>
+                    <h6>File Content</h6>
+                    <label class="form-label">Attachment</label>
+                    {{ form.file }}
+                    {% if lesson.file %}
+                    <div class="mt-2">
+                        <small>Current: <a href="{{ lesson.file.url }}" target="_blank">{{ lesson.file.name }}</a></small>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-12">
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save Lesson
+                        </button>
+                        <a href="{% url 'instructor:lesson_list' course.slug %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Show/hide fields based on lesson type
+document.addEventListener('DOMContentLoaded', function() {
+    const lessonType = document.querySelector('[name="lesson_type"]');
+    const videoFields = document.getElementById('video-fields');
+    const textFields = document.getElementById('text-fields');
+    const fileFields = document.getElementById('file-fields');
+    
+    function updateFields() {
+        const type = lessonType.value;
+        videoFields.style.display = type === 'video' ? 'block' : 'none';
+        textFields.style.display = type === 'text' ? 'block' : 'none';
+        fileFields.style.display = type === 'file' ? 'block' : 'none';
+    }
+    
+    lessonType.addEventListener('change', updateFields);
+    updateFields();
+});
+</script>
+{% endblock %}

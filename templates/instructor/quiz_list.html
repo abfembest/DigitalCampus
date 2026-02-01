@@ -1,0 +1,120 @@
+{% extends 'management/base.html' %}
+
+{% load static %}
+
+{% block title %}Quizzes - {{ lesson.title }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'instructor:course_list' %}" class="text-gray-600 hover:text-primary-600">Courses</a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <a href="{% url 'instructor:lesson_list' course.slug %}" class="text-gray-600 hover:text-primary-600">{{ course.title }}</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <span class="text-gray-500">{{ lesson.title }} - Quizzes</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 font-display">Quizzes</h1>
+            <p class="text-gray-600 mt-2">Manage quizzes for {{ lesson.title }}</p>
+        </div>
+        <a href="{% url 'instructor:quiz_create' course.slug lesson.id %}" 
+           class="px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
+            <i class="fas fa-plus-circle mr-2"></i> Create Quiz
+        </a>
+    </div>
+</div>
+
+{% if quizzes %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for quiz in quizzes %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+        <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 p-6 border-b border-yellow-200">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h3 class="font-bold text-gray-900 text-lg mb-2">{{ quiz.title }}</h3>
+                    {% if quiz.description %}
+                    <p class="text-gray-600 text-sm">{{ quiz.description|truncatewords:15 }}</p>
+                    {% endif %}
+                </div>
+                <div class="flex-shrink-0">
+                    {% if quiz.is_active %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Active
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        Inactive
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <p class="text-xs text-gray-600">Questions</p>
+                    <p class="text-lg font-bold text-gray-900">{{ quiz.questions.count }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-600">Passing Score</p>
+                    <p class="text-lg font-bold text-gray-900">{{ quiz.passing_score }}%</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-600">Time Limit</p>
+                    <p class="text-lg font-bold text-gray-900">
+                        {% if quiz.time_limit_minutes %}{{ quiz.time_limit_minutes }} min{% else %}No limit{% endif %}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-600">Max Attempts</p>
+                    <p class="text-lg font-bold text-gray-900">{{ quiz.max_attempts }}</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'instructor:quiz_questions' course.slug lesson.id quiz.id %}" 
+                   class="flex-1 px-4 py-2 bg-primary-50 text-primary-700 text-center rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium">
+                    <i class="fas fa-list mr-1"></i> Questions
+                </a>
+                <a href="{% url 'instructor:quiz_edit' course.slug lesson.id quiz.id %}" 
+                   class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 text-center rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                    <i class="fas fa-edit mr-1"></i> Edit
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+    <div class="max-w-md mx-auto">
+        <div class="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-question-circle text-5xl text-yellow-500"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">No Quizzes Yet</h3>
+        <p class="text-gray-600 mb-6">Create quizzes to test student understanding</p>
+        <a href="{% url 'instructor:quiz_create' course.slug lesson.id %}" 
+           class="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
+            <i class="fas fa-plus-circle mr-2"></i> Create First Quiz
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

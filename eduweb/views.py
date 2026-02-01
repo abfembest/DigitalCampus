@@ -8,7 +8,7 @@ from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendo
 from eduweb.models import Faculty, Course, BlogPost, BlogCategory
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from .decorators import check_for_auth
+from .decorators import check_for_auth, smart_redirect_applicant
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -353,6 +353,7 @@ def about(request):
 
 
 @login_required
+@smart_redirect_applicant
 def apply(request):
     # Check if email is verified
     if request.user.profile.email_verified is False:
@@ -897,6 +898,7 @@ def blog_category(request, slug):
 
 
 @login_required
+@smart_redirect_applicant
 def application_status(request):
     """Display user's application status"""
     # Get the most recent application for this user

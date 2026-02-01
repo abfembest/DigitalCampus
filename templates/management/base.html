@@ -403,7 +403,6 @@
                     </a>
 
                     {% elif request.user.profile.role == 'instructor' %}
-                    <!-- INSTRUCTOR MENU -->
 
                     <!-- Dashboard -->
                     <a href="{% url 'instructor:dashboard' %}" 
@@ -423,7 +422,7 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
-                        <div id="coursesMenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <div id="coursesMenu" class="mt-1 space-y-1 hidden">
                             <a href="{% url 'instructor:course_list' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
                                 <i class="fas fa-list mr-2 w-4" aria-hidden="true"></i> All Courses
                             </a>
@@ -482,7 +481,7 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
-                        <div id="lessonsMenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <div id="lessonsMenu" class="mt-1 space-y-1 hidden">
                             {% if course %}
                             <a href="{% url 'instructor:lesson_create' course.slug %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
                                 <i class="fas fa-plus mr-2 w-4" aria-hidden="true"></i> Add Lesson
@@ -505,7 +504,7 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
-                        <div id="assessmentsMenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <div id="assessmentsMenu" class="mt-1 space-y-1 hidden">
                             <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
                                 <i class="fas fa-question-circle mr-2 w-4" aria-hidden="true"></i> Quizzes
                             </a>
@@ -540,7 +539,7 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
-                        <div id="analyticsMenu" class="ml-8 mt-1 space-y-1 hidden">
+                        <div id="analyticsMenu" class="mt-1 space-y-1 hidden">
                             <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
                                 <i class="fas fa-chart-bar mr-2 w-4" aria-hidden="true"></i> Course Stats
                             </a>

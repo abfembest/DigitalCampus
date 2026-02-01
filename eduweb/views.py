@@ -1342,11 +1342,17 @@ def save_application_draft(request):
         # -------------------------------------------------
         application.save()
 
-        return JsonResponse({
+        return redirect(
+            "application_status",
+            application_id=application.application_id,
+            payment_status=application.payment_status
+        )
+        
+        '''return JsonResponse({
             "success": True,
             "application_id": application.application_id,
             "payment_status": application.payment_status
-        })
+        })'''
 
     except Exception as e:
         return JsonResponse({

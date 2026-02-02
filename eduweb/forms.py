@@ -221,7 +221,7 @@ class CourseApplicationForm(forms.ModelForm):
             }),
             'email': forms.EmailInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'your.email@example.com'
+                'placeholder': 'your.email@example.com', 'readonly':'readonly'
             }),
             'phone': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',

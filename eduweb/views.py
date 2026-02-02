@@ -904,7 +904,7 @@ def application_status(request):
     # Get the most recent application for this user
     application = CourseApplication.objects.filter(
         user=request.user
-    ).select_related('course', 'intake', 'course__faculty').prefetch_related('documents').order_by('-created_at').first()
+    ).select_related('course', 'intake','course__faculty').prefetch_related('documents').order_by('-created_at').first()
     
     # Check if payment exists
     has_payment = False
@@ -1223,6 +1223,20 @@ def save_application_draft(request):
     """
 
     try:
+        # -------------------------------------------------
+        # 0. CHECK FOR OPEN APPLICATION
+        # -------------------------------------------------
+        if request.user.is_authenticated:
+            open_application = CourseApplication.objects.filter(
+                user=request.user,
+                in_processing=True
+            ).exists()
+
+            if open_application:
+                # Redirect to status page with message
+                messages.info(request, "You have an open application")
+                return redirect("eduweb:application_status")
+
         data = request.POST
 
         # -------------------------------------------------
@@ -1279,7 +1293,7 @@ def save_application_draft(request):
                 pass
 
         # -------------------------------------------------
-        # 4. ADDRESS (CORRECTED)
+        # 4. ADDRESS
         # -------------------------------------------------
         application.address_line1 = data.get("address_line1", "").strip()
         application.address_line2 = data.get("address_line2", "").strip()
@@ -1289,7 +1303,7 @@ def save_application_draft(request):
         application.country = data.get("country", "")
 
         # -------------------------------------------------
-        # 5. ACADEMIC BACKGROUND (SINGLE HIGHEST QUALIFICATION)
+        # 5. ACADEMIC BACKGROUND
         # -------------------------------------------------
         application.highest_qualification = data.get("highest_qualification", "")
         application.institution_name = data.get("institution_name", "")
@@ -1297,13 +1311,13 @@ def save_application_draft(request):
         application.gpa_or_grade = data.get("gpa_or_grade", "")
 
         # -------------------------------------------------
-        # 6. LANGUAGE PROFICIENCY (MATCHES META)
+        # 6. LANGUAGE PROFICIENCY
         # -------------------------------------------------
         application.language_skill = data.get("language_skill", "")
         application.language_score = data.get("language_score", "")
 
         # -------------------------------------------------
-        # 7. FULL ACADEMIC HISTORY (JSON)
+        # 7. FULL ACADEMIC HISTORY
         # -------------------------------------------------
         academic_history = data.get("academic_history")
         if academic_history:
@@ -1344,23 +1358,14 @@ def save_application_draft(request):
         # -------------------------------------------------
         application.save()
 
-        return redirect(
-            "application_status",
-            application_id=application.application_id,
-            payment_status=application.payment_status
-        )
-        
-        '''return JsonResponse({
-            "success": True,
-            "application_id": application.application_id,
-            "payment_status": application.payment_status
-        })'''
+        return redirect("eduweb:application_status")
 
     except Exception as e:
         return JsonResponse({
             "success": False,
             "error": str(e)
         }, status=400)
+
 
 
 
@@ -1552,8 +1557,8 @@ def mark_payment_successful(request, application_id):
         
         # Update application status AFTER payment success
         if application.status in ['draft', 'pending_payment']:
-            application.status = 'payment_complete'  # Ready for document upload
-            application.save(update_fields=['status'])
+            application.payment_status = 'success'  # Ready for document upload
+            application.save(update_fields=['payment_status'])
         
         messages.success(
             request, 

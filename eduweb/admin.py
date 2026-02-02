@@ -470,14 +470,17 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'intake',
         'status',
         'submitted_at', 
-        'created_at'
+        'created_at',
+        'payment_status',
+        'in_processing'
     )
     list_filter = (
         'status',
         'course__faculty',
         'course',
         'intake__year',
-        'created_at'
+        'created_at',
+        'payment_status'
     )
     search_fields = (
         'application_id',

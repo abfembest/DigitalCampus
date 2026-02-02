@@ -1997,3 +1997,107 @@ def update_course_enrollment_count(sender, instance, created, **kwargs):
 def update_course_rating(sender, instance, created, **kwargs):
     """Update course rating when review is added/modified"""
     instance.course.update_statistics()
+
+# ==================== STUDY GROUPS ====================
+class StudyGroup(models.Model):
+    """Study groups for collaborative learning"""
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    description = models.TextField(blank=True)
+    course = models.ForeignKey(
+        'LMSCourse', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        related_name='study_groups'
+    )
+    
+    # Settings
+    max_members = models.IntegerField(default=10)
+    is_active = models.BooleanField(default=True)
+    is_public = models.BooleanField(default=True)
+    
+    # Creator
+    created_by = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='study_groups_created'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Study Group'
+        verbose_name_plural = 'Study Groups'
+        indexes = [
+            models.Index(fields=['course', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+            original_slug = self.slug
+            counter = 1
+            while StudyGroup.objects.filter(slug=self.slug).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
+    
+    def member_count(self):
+        """Get current member count"""
+        return self.members.filter(is_active=True).count()
+    
+    def is_full(self):
+        """Check if group is at max capacity"""
+        return self.member_count() >= self.max_members
+
+
+class StudyGroupMember(models.Model):
+    """Members of study groups"""
+    ROLE_CHOICES = [
+        ('member', 'Member'),
+        ('moderator', 'Moderator'),
+        ('admin', 'Admin'),
+    ]
+    
+    study_group = models.ForeignKey(
+        StudyGroup, 
+        on_delete=models.CASCADE, 
+        related_name='members'
+    )
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='study_group_memberships'
+    )
+    role = models.CharField(
+        max_length=20, 
+        choices=ROLE_CHOICES, 
+        default='member'
+    )
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    
+    # Timestamps
+    joined_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-joined_at']
+        verbose_name = 'Study Group Member'
+        verbose_name_plural = 'Study Group Members'
+        unique_together = [['study_group', 'user']]
+        indexes = [
+            models.Index(fields=['study_group', 'is_active']),
+            models.Index(fields=['user', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} in {self.study_group.name}"

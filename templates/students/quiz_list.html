@@ -1,0 +1,94 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            Quizzes
+        </h1>
+        <p class="text-gray-600 mt-2">
+            Test your knowledge and track your progress
+        </p>
+    </div>
+
+    <!-- Quizzes List -->
+    {% if quizzes %}
+    <div class="space-y-4">
+        {% for quiz in quizzes %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">
+                        <a href="{% url 'students:quiz_detail' quiz.id %}" 
+                           class="hover:text-primary-600">
+                            {{ quiz.title }}
+                        </a>
+                    </h3>
+                    
+                    <div class="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                        <span>
+                            <i class="fas fa-book mr-2"></i>
+                            {{ quiz.lesson.course.title }}
+                        </span>
+                        <span>
+                            <i class="fas fa-layer-group mr-2"></i>
+                            {{ quiz.lesson.title }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-question-circle mr-2"></i>
+                            {{ quiz.questions.count }} questions
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-clock mr-2"></i>
+                            {{ quiz.time_limit_minutes }} minutes
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Passing: {{ quiz.passing_score }}%
+                        </div>
+                        <div class="flex items-center text-green-600 font-semibold">
+                            <i class="fas fa-trophy mr-2"></i>
+                            Best: {{ quiz.best_score|floatformat:1 }}%
+                        </div>
+                    </div>
+
+                    {% if quiz.user_attempts > 0 %}
+                    <p class="text-sm text-gray-600 mt-3">
+                        Attempts: {{ quiz.user_attempts }}
+                        {% if quiz.max_attempts > 0 %}
+                        / {{ quiz.max_attempts }}
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <a href="{% url 'students:quiz_detail' quiz.id %}" 
+                   class="ml-6 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium">
+                    View Quiz
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class="text-center">
+            <i class="fas fa-question-circle text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                No quizzes available
+            </h3>
+            <p class="text-gray-600">
+                Quizzes will appear here as you progress through your courses
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

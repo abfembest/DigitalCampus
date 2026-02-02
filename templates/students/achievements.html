@@ -1,0 +1,210 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            Achievements & Badges
+        </h1>
+        <p class="text-gray-600 mt-2">
+            Track your learning milestones and earn badges
+        </p>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl shadow-sm p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-yellow-100 text-sm mb-1">
+                        Badges Earned
+                    </p>
+                    <p class="text-4xl font-bold">
+                        {{ user_badges.count }}
+                    </p>
+                </div>
+                <i class="fas fa-award text-6xl opacity-50"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl shadow-sm p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm mb-1">
+                        Courses Completed
+                    </p>
+                    <p class="text-4xl font-bold">
+                        {{ completed_courses }}
+                    </p>
+                </div>
+                <i class="fas fa-graduation-cap text-6xl opacity-50"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-500 to-teal-500 rounded-xl shadow-sm p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm mb-1">
+                        Total Points
+                    </p>
+                    <p class="text-4xl font-bold">
+                        {{ total_points }}
+                    </p>
+                </div>
+                <i class="fas fa-star text-6xl opacity-50"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Earned Badges -->
+    {% if user_badges %}
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+            My Badges
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {% for user_badge in user_badges %}
+            <div class="bg-white rounded-xl shadow-sm border-2 border-yellow-200 p-6 text-center hover:shadow-lg transition-all">
+                <div class="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                    <i class="fas fa-award text-white text-5xl"></i>
+                </div>
+                
+                <h3 class="font-bold text-gray-900 mb-2">
+                    {{ user_badge.badge.name }}
+                </h3>
+                
+                <p class="text-sm text-gray-600 mb-3 line-clamp-2">
+                    {{ user_badge.badge.description }}
+                </p>
+                
+                <p class="text-xs text-gray-500">
+                    <i class="fas fa-calendar mr-1"></i>
+                    Earned {{ user_badge.awarded_at|date:"M d, Y" }}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Unearned Badges -->
+    {% if unearned_badges %}
+    <div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+            Available Badges
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {% for badge in unearned_badges %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center opacity-75 hover:opacity-100 transition-all">
+                <div class="w-24 h-24 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                    <i class="fas fa-lock text-gray-400 text-5xl"></i>
+                </div>
+                
+                <h3 class="font-bold text-gray-900 mb-2">
+                    {{ badge.name }}
+                </h3>
+                
+                <p class="text-sm text-gray-600 mb-3 line-clamp-2">
+                    {{ badge.description }}
+                </p>
+                
+                {% if badge.criteria %}
+                <p class="text-xs text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    {{ badge.criteria }}
+                </p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- No Badges -->
+    {% if not user_badges and not unearned_badges %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div class="text-center">
+            <i class="fas fa-award text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                No badges yet
+            </h3>
+            <p class="text-gray-600 mb-6">
+                Complete courses and assignments to earn your first badge!
+            </p>
+            <a href="{% url 'students:my_courses' %}" 
+               class="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                Continue Learning
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Badge Categories -->
+    <div class="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Badge Categories
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="flex items-start">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-4">
+                    <i class="fas fa-graduation-cap text-white"></i>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-1">
+                        Course Completion
+                    </h4>
+                    <p class="text-sm text-gray-600">
+                        Earned by completing courses
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-4">
+                    <i class="fas fa-star text-white"></i>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-1">
+                        High Achievement
+                    </h4>
+                    <p class="text-sm text-gray-600">
+                        Earned by achieving high scores
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-4">
+                    <i class="fas fa-fire text-white"></i>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-1">
+                        Streak Rewards
+                    </h4>
+                    <p class="text-sm text-gray-600">
+                        Earned by maintaining learning streaks
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-start">
+                <div class="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-4">
+                    <i class="fas fa-users text-white"></i>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-1">
+                        Community
+                    </h4>
+                    <p class="text-sm text-gray-600">
+                        Earned through community participation
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

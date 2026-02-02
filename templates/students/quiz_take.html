@@ -1,0 +1,160 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Quiz Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                    {{ quiz.title }}
+                </h1>
+                <p class="text-gray-600">
+                    {{ quiz.questions.count }} questions • 
+                    {{ quiz.time_limit_minutes }} minutes
+                </p>
+            </div>
+            
+            <!-- Timer -->
+            <div id="timer" class="text-center">
+                <p class="text-sm text-gray-600 mb-1">Time Remaining</p>
+                <p class="text-3xl font-bold text-primary-600" id="time-display">
+                    {{ quiz.time_limit_minutes }}:00
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Form -->
+    <form method="post" 
+          action="{% url 'students:quiz_submit' attempt.id %}" 
+          id="quiz-form">
+        {% csrf_token %}
+        
+        <div class="space-y-6">
+            {% for question in questions %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-start gap-3 mb-4">
+                    <span class="flex-shrink-0 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold">
+                        {{ forloop.counter }}
+                    </span>
+                    <div class="flex-1">
+                        <p class="text-lg font-semibold text-gray-900 mb-2">
+                            {{ question.question_text }}
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            {{ question.points }} point{{ question.points|pluralize }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="ml-11 space-y-3">
+                    {% if question.question_type == 'multiple_choice' %}
+                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                            <input type="radio" 
+                                   name="question_{{ question.id }}" 
+                                   value="option_a" 
+                                   class="mt-1 mr-3"
+                                   required>
+                            <span class="text-gray-700">
+                                {{ question.option_a }}
+                            </span>
+                        </label>
+                        
+                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                            <input type="radio" 
+                                   name="question_{{ question.id }}" 
+                                   value="option_b" 
+                                   class="mt-1 mr-3"
+                                   required>
+                            <span class="text-gray-700">
+                                {{ question.option_b }}
+                            </span>
+                        </label>
+                        
+                        {% if question.option_c %}
+                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                            <input type="radio" 
+                                   name="question_{{ question.id }}" 
+                                   value="option_c" 
+                                   class="mt-1 mr-3"
+                                   required>
+                            <span class="text-gray-700">
+                                {{ question.option_c }}
+                            </span>
+                        </label>
+                        {% endif %}
+                        
+                        {% if question.option_d %}
+                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
+                            <input type="radio" 
+                                   name="question_{{ question.id }}" 
+                                   value="option_d" 
+                                   class="mt-1 mr-3"
+                                   required>
+                            <span class="text-gray-700">
+                                {{ question.option_d }}
+                            </span>
+                        </label>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Submit Button -->
+        <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <p class="text-gray-600">
+                    Make sure you've answered all questions before submitting.
+                </p>
+                <button type="submit" 
+                        class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-semibold">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Submit Quiz
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Timer functionality
+let timeLimit = {{ quiz.time_limit_minutes }} * 60; // Convert to seconds
+let timeRemaining = timeLimit;
+
+function updateTimer() {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    
+    document.getElementById('time-display').textContent = 
+        `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (timeRemaining <= 0) {
+        // Auto-submit form
+        document.getElementById('quiz-form').submit();
+    } else if (timeRemaining <= 60) {
+        // Warning when 1 minute left
+        document.getElementById('time-display').classList.add('text-red-600');
+    }
+    
+    timeRemaining--;
+}
+
+// Update every second
+setInterval(updateTimer, 1000);
+
+// Confirm before leaving
+window.addEventListener('beforeunload', function (e) {
+    e.preventDefault();
+    e.returnValue = '';
+});
+</script>
+{% endblock %}

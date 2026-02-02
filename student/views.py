@@ -2,14 +2,19 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Count, Avg
 from django.utils import timezone
+from django.core.paginator import Paginator
 from functools import wraps
+from datetime import timedelta
 
 from eduweb.models import (
     LMSCourse, Enrollment, Lesson, LessonProgress, 
     CourseCategory, Assignment, AssignmentSubmission,
-    Certificate, Announcement
+    Certificate, Announcement, Quiz, QuizAttempt, 
+    QuizAnswer, QuizQuestion, QuizResponse, StudyGroup, StudyGroupMember, 
+    Discussion, DiscussionReply, Badge, 
+    StudentBadge
 )
 
 
@@ -45,7 +50,7 @@ def dashboard(request):
     """Student dashboard with overview"""
     user = request.user
     
-    # Active enrollments (limit to 5)
+    # Active enrollments
     enrollments = Enrollment.objects.filter(
         student=user,
         status='active'
@@ -105,21 +110,28 @@ def dashboard(request):
 @login_required
 @student_required
 def my_courses(request):
-    """List student's enrolled courses - Active and Completed only"""
+    """List student's enrolled courses"""
     status_filter = request.GET.get('status', 'active')
     
-    # Only allow 'active' or 'completed' filters
     if status_filter not in ['active', 'completed']:
         status_filter = 'active'
     
-    # Filter enrollments by status
     enrollments = Enrollment.objects.filter(
         student=request.user,
         status=status_filter
     ).select_related(
         'course', 
         'course__category'
+    ).prefetch_related(
+        'course__lessons'
     ).order_by('-enrolled_at')
+    
+    # Add completed lesson count
+    for enrollment in enrollments:
+        enrollment.completed_lessons = LessonProgress.objects.filter(
+            enrollment=enrollment,
+            is_completed=True
+        ).count()
     
     context = {
         'page_title': 'My Courses',
@@ -133,7 +145,7 @@ def my_courses(request):
 @login_required
 @student_required
 def course_catalog(request):
-    """Browse available courses (NOT enrolled)"""
+    """Browse available courses"""
     category_slug = request.GET.get('category')
     search_query = request.GET.get('q')
     difficulty = request.GET.get('difficulty')
@@ -145,9 +157,7 @@ def course_catalog(request):
     
     # Apply filters
     if category_slug:
-        courses = courses.filter(
-            category__slug=category_slug
-        )
+        courses = courses.filter(category__slug=category_slug)
     
     if search_query:
         courses = courses.filter(
@@ -157,14 +167,14 @@ def course_catalog(request):
         )
     
     if difficulty:
-        courses = courses.filter(
-            difficulty_level=difficulty
-        )
+        courses = courses.filter(difficulty_level=difficulty)
     
     # Optimize queries
     courses = courses.select_related(
         'category', 
         'instructor'
+    ).annotate(
+        total_enrollments=Count('enrollments')
     ).order_by('-created_at')
     
     # Get enrolled course IDs
@@ -179,19 +189,20 @@ def course_catalog(request):
         is_active=True
     ).order_by('name')
     
+    # Pagination
+    paginator = Paginator(courses, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     context = {
         'page_title': 'Course Catalog',
-        'courses': courses,
+        'courses': page_obj,
         'categories': categories,
         'enrolled_ids': enrolled_ids,
         'search_query': search_query,
     }
     
-    return render(
-        request, 
-        'students/course_catalog.html', 
-        context
-    )
+    return render(request, 'students/course_catalog.html', context)
 
 
 @login_required
@@ -216,31 +227,20 @@ def course_detail(request, course_id):
     # Get course sections
     sections = course.sections.filter(
         is_active=True
-    ).order_by('display_order')
+    ).prefetch_related('lessons').order_by('display_order')
     
-    # For non-enrolled users, filter lessons to show only previews
+    # Filter lessons based on enrollment
     if not enrollment:
-        # Create a list to store sections with filtered lessons
-        filtered_sections = []
-        
         for section in sections:
-            # Get only preview lessons for this section
-            preview_lessons = section.lessons.filter(
+            section.filtered_lessons = section.lessons.filter(
                 is_preview=True,
                 is_active=True
-            )
-            
-            if preview_lessons.exists():
-                section.filtered_lessons = preview_lessons
-                filtered_sections.append(section)
-        
-        sections = filtered_sections
+            ).order_by('display_order')
     else:
-        # For enrolled users, get all active lessons
         for section in sections:
             section.filtered_lessons = section.lessons.filter(
                 is_active=True
-            )
+            ).order_by('display_order')
     
     context = {
         'page_title': course.title,
@@ -249,20 +249,13 @@ def course_detail(request, course_id):
         'sections': sections,
     }
     
-    return render(
-        request, 
-        'students/course_detail.html', 
-        context
-    )
+    return render(request, 'students/course_detail.html', context)
 
 
 @login_required
 @student_required
 def enroll_course(request, course_id):
-    """
-    Enroll in a course
-    NOTE: Payment logic should be added here
-    """
+    """Enroll in a course"""
     if request.method != 'POST':
         return redirect('students:course_catalog')
     
@@ -283,41 +276,29 @@ def enroll_course(request, course_id):
             request, 
             'You are already enrolled in this course.'
         )
-        return redirect(
-            'students:course_detail', 
-            course_id=course_id
-        )
+        return redirect('students:course_detail', course_id=course_id)
     
-    # TODO: Add payment verification here
-    # For now, only allow free courses
-    if not course.is_free:
+    # Create enrollment (for free courses)
+    if course.is_free:
+        Enrollment.objects.create(
+            student=request.user,
+            course=course,
+            status='active',
+            enrolled_at=timezone.now()
+        )
+        
+        messages.success(
+            request,
+            f'Successfully enrolled in {course.title}!'
+        )
+        return redirect('students:course_detail', course_id=course_id)
+    else:
+        # TODO: Handle paid course enrollment
         messages.error(
             request,
-            'Payment required. Please complete payment first.'
+            'Payment required. This feature is coming soon.'
         )
-        # Redirect to payment page (to be implemented)
-        return redirect(
-            'students:course_detail', 
-            course_id=course_id
-        )
-    
-    # Create enrollment for free courses
-    Enrollment.objects.create(
-        student=request.user,
-        course=course,
-        enrolled_by=request.user,
-        status='active'
-    )
-    
-    messages.success(
-        request, 
-        f'Successfully enrolled in {course.title}!'
-    )
-    
-    return redirect(
-        'students:course_detail', 
-        course_id=course_id
-    )
+        return redirect('students:course_detail', course_id=course_id)
 
 
 @login_required
@@ -329,83 +310,58 @@ def lesson_view(request, lesson_id):
             'course', 
             'section'
         ),
-        id=lesson_id,
-        is_active=True
+        id=lesson_id
     )
     
-    # Verify enrollment or preview access
-    enrollment = Enrollment.objects.filter(
+    # Verify enrollment
+    enrollment = get_object_or_404(
+        Enrollment,
         student=request.user,
-        course=lesson.course
-    ).first()
-    
-    # Check access
-    if not enrollment and not lesson.is_preview:
-        messages.error(
-            request,
-            'Please enroll to access this lesson.'
-        )
-        return redirect(
-            'students:course_detail', 
-            course_id=lesson.course.id
-        )
-    
-    # Track progress for enrolled students
-    progress = None
-    if enrollment:
-        progress, _ = LessonProgress.objects.get_or_create(
-            enrollment=enrollment,
-            lesson=lesson
-        )
-        progress.last_accessed = timezone.now()
-        progress.save(update_fields=['last_accessed'])
-    
-    # Get navigation lessons
-    all_lessons = list(
-        lesson.course.lessons.filter(
-            is_active=True
-        ).order_by(
-            'section__display_order', 
-            'display_order'
-        )
+        course=lesson.course,
+        status='active'
     )
     
-    try:
-        current_idx = all_lessons.index(lesson)
-        next_lesson = (
-            all_lessons[current_idx + 1] 
-            if current_idx < len(all_lessons) - 1 
-            else None
-        )
-        prev_lesson = (
-            all_lessons[current_idx - 1] 
-            if current_idx > 0 
-            else None
-        )
-    except ValueError:
-        next_lesson = None
-        prev_lesson = None
+    # Get or create progress
+    progress, created = LessonProgress.objects.get_or_create(
+        enrollment=enrollment,
+        lesson=lesson
+    )
+    
+    # Update last accessed
+    progress.last_accessed = timezone.now()
+    progress.save()
+    
+    # Get previous and next lessons
+    all_lessons = Lesson.objects.filter(
+        course=lesson.course,
+        is_active=True
+    ).order_by('section__display_order', 'display_order')
+    
+    lesson_list = list(all_lessons)
+    current_index = next(
+        (i for i, l in enumerate(lesson_list) if l.id == lesson.id), 
+        None
+    )
+    
+    prev_lesson = lesson_list[current_index - 1] if current_index and current_index > 0 else None
+    next_lesson = lesson_list[current_index + 1] if current_index is not None and current_index < len(lesson_list) - 1 else None
     
     context = {
         'page_title': lesson.title,
         'lesson': lesson,
         'enrollment': enrollment,
         'progress': progress,
-        'next_lesson': next_lesson,
         'prev_lesson': prev_lesson,
+        'next_lesson': next_lesson,
     }
     
-    return render(
-        request, 
-        'students/lesson.html', 
-        context
-    )
+    return render(request, 'students/lesson.html', context)
 
 
 @login_required
 @student_required
 def mark_lesson_complete(request, lesson_id):
-    """Mark lesson as completed"""
+    """Mark lesson as complete"""
     if request.method != 'POST':
         return JsonResponse({
             'success': False,
@@ -428,7 +384,11 @@ def mark_lesson_complete(request, lesson_id):
     
     progress.is_completed = True
     progress.completion_percentage = 100
+    progress.completed_at = timezone.now()
     progress.save()
+    
+    # Update enrollment progress
+    enrollment.update_progress()
     
     return JsonResponse({
         'success': True,
@@ -443,17 +403,19 @@ def assignments(request):
     """List all assignments"""
     status_filter = request.GET.get('status', 'pending')
     
-    # Base query
+    # Get assignments for enrolled courses
+    enrolled_courses = Enrollment.objects.filter(
+        student=request.user
+    ).values_list('course_id', flat=True)
+    
     base_query = Assignment.objects.filter(
-        lesson__course__enrollments__student=request.user
+        lesson__course_id__in=enrolled_courses,
+        is_active=True
     )
     
     # Filter by status
     if status_filter == 'pending':
-        assignments = base_query.filter(
-            lesson__course__enrollments__status='active',
-            is_active=True
-        ).exclude(
+        assignments = base_query.exclude(
             submissions__student=request.user,
             submissions__status__in=['submitted', 'graded']
         )
@@ -472,6 +434,8 @@ def assignments(request):
     
     assignments = assignments.select_related(
         'lesson__course'
+    ).prefetch_related(
+        'submissions'
     ).distinct().order_by('due_date')
     
     context = {
@@ -480,11 +444,7 @@ def assignments(request):
         'status_filter': status_filter,
     }
     
-    return render(
-        request, 
-        'students/assignments.html', 
-        context
-    )
+    return render(request, 'students/assignments.html', context)
 
 
 @login_required
@@ -492,9 +452,7 @@ def assignments(request):
 def assignment_detail(request, assignment_id):
     """View assignment details"""
     assignment = get_object_or_404(
-        Assignment.objects.select_related(
-            'lesson__course'
-        ),
+        Assignment.objects.select_related('lesson__course'),
         id=assignment_id
     )
     
@@ -518,11 +476,7 @@ def assignment_detail(request, assignment_id):
         'submission': submission,
     }
     
-    return render(
-        request, 
-        'students/assignment_detail.html', 
-        context
-    )
+    return render(request, 'students/assignment_detail.html', context)
 
 
 @login_required
@@ -532,10 +486,7 @@ def submit_assignment(request, assignment_id):
     if request.method != 'POST':
         return redirect('students:assignments')
     
-    assignment = get_object_or_404(
-        Assignment, 
-        id=assignment_id
-    )
+    assignment = get_object_or_404(Assignment, id=assignment_id)
     
     # Verify enrollment
     get_object_or_404(
@@ -552,10 +503,7 @@ def submit_assignment(request, assignment_id):
     )
     
     # Update submission
-    submission.submission_text = request.POST.get(
-        'submission_text', 
-        ''
-    )
+    submission.submission_text = request.POST.get('submission_text', '')
     
     if request.FILES.get('attachment'):
         submission.attachment = request.FILES['attachment']
@@ -569,15 +517,459 @@ def submit_assignment(request, assignment_id):
     
     submission.save()
     
-    messages.success(
-        request, 
-        'Assignment submitted successfully!'
+    messages.success(request, 'Assignment submitted successfully!')
+    return redirect('students:assignment_detail', assignment_id=assignment_id)
+
+
+# ==================== QUIZZES ====================
+@login_required
+@student_required
+def quiz_list(request):
+    """List all quizzes"""
+    enrolled_courses = Enrollment.objects.filter(
+        student=request.user
+    ).values_list('course_id', flat=True)
+    
+    quizzes = Quiz.objects.filter(
+        lesson__course_id__in=enrolled_courses,
+        is_active=True
+    ).select_related(
+        'lesson__course'
+    ).order_by('-created_at')
+    
+    # Add attempt info
+    for quiz in quizzes:
+        quiz.user_attempts = QuizAttempt.objects.filter(
+            quiz=quiz,
+            student=request.user
+        ).count()
+        quiz.best_score = QuizAttempt.objects.filter(
+            quiz=quiz,
+            student=request.user
+        ).aggregate(Avg('score'))['score__avg'] or 0
+    
+    context = {
+        'page_title': 'Quizzes',
+        'quizzes': quizzes,
+    }
+    
+    return render(request, 'students/quiz_list.html', context)
+
+
+@login_required
+@student_required
+def quiz_detail(request, quiz_id):
+    """View quiz details"""
+    quiz = get_object_or_404(
+        Quiz.objects.select_related('lesson__course'),
+        id=quiz_id
     )
     
-    return redirect(
-        'students:assignment_detail', 
-        assignment_id=assignment_id
+    # Verify enrollment
+    get_object_or_404(
+        Enrollment,
+        student=request.user,
+        course=quiz.lesson.course
     )
+    
+    # Get previous attempts
+    attempts = QuizAttempt.objects.filter(
+        quiz=quiz,
+        student=request.user
+    ).order_by('-started_at')
+    
+    # Check attempt limits
+    can_attempt = True
+    if quiz.max_attempts > 0:
+        if attempts.count() >= quiz.max_attempts:
+            can_attempt = False
+    
+    context = {
+        'page_title': quiz.title,
+        'quiz': quiz,
+        'attempts': attempts,
+        'can_attempt': can_attempt,
+    }
+    
+    return render(request, 'students/quiz_detail.html', context)
+
+
+@login_required
+@student_required
+def quiz_take(request, quiz_id):
+    """Take quiz"""
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    
+    # Verify enrollment
+    enrollment = get_object_or_404(
+        Enrollment,
+        student=request.user,
+        course=quiz.lesson.course,
+        status='active'
+    )
+    
+    # Check attempt limits
+    attempts_count = QuizAttempt.objects.filter(
+        quiz=quiz,
+        student=request.user
+    ).count()
+    
+    if quiz.max_attempts > 0 and attempts_count >= quiz.max_attempts:
+        messages.error(request, 'Maximum attempts reached.')
+        return redirect('students:quiz_detail', quiz_id=quiz_id)
+    
+    # Create new attempt
+    attempt = QuizAttempt.objects.create(
+        quiz=quiz,
+        student=request.user,
+        started_at=timezone.now()
+    )
+    
+    # Get questions
+    questions = quiz.questions.filter(
+        is_active=True
+    ).prefetch_related('answers').order_by('display_order')
+    
+    context = {
+        'page_title': f'Taking: {quiz.title}',
+        'quiz': quiz,
+        'attempt': attempt,
+        'questions': questions,
+    }
+    
+    return render(request, 'students/quiz_take.html', context)
+
+
+@login_required
+@student_required
+def quiz_submit(request, attempt_id):
+    """Submit quiz answers"""
+    if request.method != 'POST':
+        return redirect('students:quiz_list')
+    
+    attempt = get_object_or_404(
+        QuizAttempt,
+        id=attempt_id,
+        student=request.user
+    )
+    
+    if attempt.completed_at:
+        messages.warning(request, 'Quiz already submitted.')
+        return redirect('students:quiz_result', attempt_id=attempt_id)
+    
+    # Process answers
+    total_score = 0
+    max_score = 0
+    
+    for key, value in request.POST.items():
+        if key.startswith('question_'):
+            question_id = int(key.split('_')[1])
+            question = attempt.quiz.questions.get(id=question_id)
+            max_score += float(question.points)
+            
+            # Get selected answer
+            try:
+                selected_answer = QuizAnswer.objects.get(id=int(value))
+                
+                # Create response record
+                response = QuizResponse.objects.create(
+                    attempt=attempt,
+                    question=question,
+                    selected_answer=selected_answer,
+                    is_correct=selected_answer.is_correct,
+                    points_earned=question.points if selected_answer.is_correct else 0
+                )
+                
+                # Add to score if correct
+                if selected_answer.is_correct:
+                    total_score += float(question.points)
+            except (QuizAnswer.DoesNotExist, ValueError):
+                pass
+    
+    # Calculate percentage
+    percentage = (total_score / max_score * 100) if max_score > 0 else 0
+    
+    # Update attempt
+    attempt.score = percentage
+    attempt.passed = percentage >= attempt.quiz.passing_score
+    attempt.completed_at = timezone.now()
+    attempt.save()
+    
+    messages.success(request, 'Quiz submitted successfully!')
+    return redirect('students:quiz_result', attempt_id=attempt_id)
+
+
+@login_required
+@student_required
+def quiz_result(request, attempt_id):
+    """View quiz results"""
+    attempt = get_object_or_404(
+        QuizAttempt.objects.select_related('quiz'),
+        id=attempt_id,
+        student=request.user
+    )
+    
+    # Get answers with questions
+    answers = attempt.responses.select_related(
+        'question', 'selected_answer'
+    ).all()
+    
+    context = {
+        'page_title': 'Quiz Results',
+        'attempt': attempt,
+        'answers': answers,
+    }
+    
+    return render(request, 'students/quiz_result.html', context)
+
+
+# ==================== COMMUNITY ====================
+@login_required
+@student_required
+def community(request):
+    """Community discussion board"""
+    filter_type = request.GET.get('filter', 'all')
+    search_query = request.GET.get('q', '')
+    
+    threads = Discussion.objects.select_related(
+        'author', 
+        'course'
+    ).annotate(
+        reply_count=Count('replies')
+    )
+    
+    # Apply filters
+    if filter_type == 'my_courses':
+        enrolled_courses = Enrollment.objects.filter(
+            student=request.user
+        ).values_list('course_id', flat=True)
+        threads = threads.filter(course_id__in=enrolled_courses)
+    elif filter_type == 'my_posts':
+        threads = threads.filter(author=request.user)
+    
+    if search_query:
+        threads = threads.filter(
+            Q(title__icontains=search_query) |
+            Q(content__icontains=search_query)
+        )
+    
+    threads = threads.order_by('-is_pinned', '-created_at')
+    
+    # Pagination
+    paginator = Paginator(threads, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    context = {
+        'page_title': 'Community',
+        'threads': page_obj,
+        'filter_type': filter_type,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'students/community.html', context)
+
+
+@login_required
+@student_required
+def thread_detail(request, thread_id):
+    """View discussion thread"""
+    thread = get_object_or_404(
+        Discussion.objects.select_related('author', 'course'),
+        id=thread_id
+    )
+    
+    # Increment views
+    thread.views_count += 1
+    thread.save()
+    
+    # Get replies
+    replies = thread.replies.select_related(
+        'author'
+    ).order_by('created_at')
+    
+    # Handle reply submission
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        if content:
+            DiscussionReply.objects.create(
+                thread=thread,
+                author=request.user,
+                content=content
+            )
+            messages.success(request, 'Reply posted successfully!')
+            return redirect('students:thread_detail', thread_id=thread_id)
+    
+    context = {
+        'page_title': thread.title,
+        'thread': thread,
+        'replies': replies,
+    }
+    
+    return render(request, 'students/thread_detail.html', context)
+
+
+@login_required
+@student_required
+def create_thread(request):
+    """Create new discussion thread"""
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        content = request.POST.get('content', '').strip()
+        course_id = request.POST.get('course_id')
+        
+        if title and content:
+            thread = Discussion.objects.create(
+                title=title,
+                content=content,
+                author=request.user,
+                course_id=course_id if course_id else None
+            )
+            messages.success(request, 'Thread created successfully!')
+            return redirect('students:thread_detail', thread_id=thread.id)
+        else:
+            messages.error(request, 'Please fill in all fields.')
+    
+    # Get user's enrolled courses
+    enrolled_courses = LMSCourse.objects.filter(
+        enrollments__student=request.user
+    )
+    
+    context = {
+        'page_title': 'New Discussion',
+        'enrolled_courses': enrolled_courses,
+    }
+    
+    return render(request, 'students/create_thread.html', context)
+
+
+# ==================== STUDY GROUPS ====================
+@login_required
+@student_required
+def study_groups(request):
+    """List study groups"""
+    # Groups user is member of
+    my_groups = StudyGroup.objects.filter(
+        members__user=request.user,
+        members__is_active=True,
+        is_active=True
+    ).distinct()
+    
+    # Available groups to join
+    available_groups = StudyGroup.objects.filter(
+        is_active=True
+    ).exclude(
+        members__user=request.user
+    ).annotate(
+        member_count=Count('members')
+    )
+    
+    context = {
+        'page_title': 'Study Groups',
+        'my_groups': my_groups,
+        'available_groups': available_groups,
+    }
+    
+    return render(request, 'students/study_groups.html', context)
+
+
+@login_required
+@student_required
+def study_group_detail(request, group_id):
+    """View study group details"""
+    group = get_object_or_404(
+        StudyGroup.objects.select_related('course'),
+        id=group_id
+    )
+    
+    # Check membership
+    is_member = StudyGroupMember.objects.filter(
+        study_group=group,
+        user=request.user
+    ).exists()
+    
+    members = group.members.select_related('user').all()
+    
+    context = {
+        'page_title': group.name,
+        'group': group,
+        'is_member': is_member,
+        'members': members,
+    }
+    
+    return render(request, 'students/study_group_detail.html', context)
+
+
+@login_required
+@student_required
+def join_study_group(request, group_id):
+    """Join a study group"""
+    if request.method != 'POST':
+        return redirect('students:study_groups')
+    
+    group = get_object_or_404(StudyGroup, id=group_id)
+    
+    # Check if already member
+    if StudyGroupMember.objects.filter(
+        study_group=group,
+        user=request.user
+    ).exists():
+        messages.info(request, 'You are already a member.')
+        return redirect('students:study_group_detail', group_id=group_id)
+    
+    # Check capacity
+    current_members = group.members.count()
+    if current_members >= group.max_members:
+        messages.error(request, 'Group is full.')
+        return redirect('students:study_groups')
+    
+    # Add member
+    StudyGroupMember.objects.create(
+        study_group=group,
+        user=request.user,
+        role='member'
+    )
+    
+    messages.success(request, f'Joined {group.name} successfully!')
+    return redirect('students:study_group_detail', group_id=group_id)
+
+
+# ==================== ACHIEVEMENTS ====================
+@login_required
+@student_required
+def achievements(request):
+    """View achievements and badges"""
+    # User's badges
+    user_badges = StudentBadge.objects.filter(
+        student=request.user
+    ).select_related('badge').order_by('-awarded_at')
+    
+    # All available badges
+    all_badges = Badge.objects.filter(is_active=True)
+    
+    # Separate earned and unearned
+    earned_badge_ids = user_badges.values_list('badge_id', flat=True)
+    unearned_badges = all_badges.exclude(id__in=earned_badge_ids)
+    
+    # Calculate statistics
+    completed_courses = Enrollment.objects.filter(
+        student=request.user,
+        status='completed'
+    ).count()
+    
+    # Calculate total points from badges
+    total_points = sum(
+        badge.badge.points for badge in user_badges
+    ) if user_badges else 0
+    
+    context = {
+        'page_title': 'Achievements',
+        'user_badges': user_badges,
+        'unearned_badges': unearned_badges,
+        'completed_courses': completed_courses,
+        'total_points': total_points,
+    }
+    
+    return render(request, 'students/achievements.html', context)
 
 
 @login_required
@@ -608,7 +1000,15 @@ def progress(request):
     """View learning progress"""
     enrollments = Enrollment.objects.filter(
         student=request.user
-    ).select_related('course').order_by('-enrolled_at')
+    ).select_related('course').prefetch_related(
+        'course__sections__lessons'
+    ).order_by('-enrolled_at')
+    
+    for enrollment in enrollments:
+        enrollment.completed_lessons = LessonProgress.objects.filter(
+            enrollment=enrollment,
+            is_completed=True
+        ).count()
     
     context = {
         'page_title': 'My Progress',
@@ -631,11 +1031,7 @@ def certificates(request):
         'certificates': certificates,
     }
     
-    return render(
-        request, 
-        'students/certificates.html', 
-        context
-    )
+    return render(request, 'students/certificates.html', context)
 
 
 @login_required
@@ -657,16 +1053,16 @@ def profile(request):
         profile.phone = request.POST.get('phone', '')
         profile.city = request.POST.get('city', '')
         profile.country = request.POST.get('country', '')
+        profile.website = request.POST.get('website', '')
+        profile.linkedin = request.POST.get('linkedin', '')
+        profile.twitter = request.POST.get('twitter', '')
         
         if request.FILES.get('avatar'):
             profile.avatar = request.FILES['avatar']
         
         profile.save()
         
-        messages.success(
-            request, 
-            'Profile updated successfully!'
-        )
+        messages.success(request, 'Profile updated successfully!')
         return redirect('students:profile')
     
     context = {
@@ -692,10 +1088,32 @@ def settings(request):
         )
         profile.save()
         
-        messages.success(
-            request, 
-            'Settings updated successfully!'
-        )
+        # Handle password change if provided
+        current_password = request.POST.get('current_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if current_password and new_password:
+            if request.user.check_password(current_password):
+                if new_password == confirm_password:
+                    request.user.set_password(new_password)
+                    request.user.save()
+                    messages.success(
+                        request, 
+                        'Password updated successfully!'
+                    )
+                else:
+                    messages.error(
+                        request, 
+                        'New passwords do not match.'
+                    )
+            else:
+                messages.error(
+                    request, 
+                    'Current password is incorrect.'
+                )
+        
+        messages.success(request, 'Settings updated successfully!')
         return redirect('students:settings')
     
     context = {

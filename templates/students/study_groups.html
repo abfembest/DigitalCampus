@@ -1,0 +1,147 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            Study Groups
+        </h1>
+        <p class="text-gray-600 mt-2">
+            Collaborate with peers in structured study groups
+        </p>
+    </div>
+
+    <!-- My Groups -->
+    {% if my_groups %}
+    <div class="mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            My Study Groups
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for group in my_groups %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
+                <div class="h-32 bg-gradient-to-br from-primary-500 to-secondary-500 p-6 flex items-center justify-center">
+                    <i class="fas fa-users text-white text-5xl opacity-75"></i>
+                </div>
+                
+                <div class="p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">
+                        <a href="{% url 'students:study_group_detail' group.id %}" 
+                           class="hover:text-primary-600">
+                            {{ group.name }}
+                        </a>
+                    </h3>
+                    
+                    {% if group.course %}
+                    <p class="text-sm text-gray-600 mb-4">
+                        <i class="fas fa-book mr-2"></i>
+                        {{ group.course.title }}
+                    </p>
+                    {% endif %}
+
+                    <div class="flex items-center justify-between text-sm mb-4">
+                        <span class="text-gray-600">
+                            <i class="fas fa-users mr-1"></i>
+                            {{ group.members.count }} / {{ group.max_members }} members
+                        </span>
+                    </div>
+
+                    <a href="{% url 'students:study_group_detail' group.id %}" 
+                       class="block w-full text-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium">
+                        View Group
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Available Groups -->
+    <div>
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            Available Study Groups
+        </h2>
+        
+        {% if available_groups %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for group in available_groups %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
+                <div class="h-32 bg-gradient-to-br from-blue-500 to-purple-500 p-6 flex items-center justify-center">
+                    <i class="fas fa-user-plus text-white text-5xl opacity-75"></i>
+                </div>
+                
+                <div class="p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">
+                        {{ group.name }}
+                    </h3>
+                    
+                    {% if group.course %}
+                    <p class="text-sm text-gray-600 mb-2">
+                        <i class="fas fa-book mr-2"></i>
+                        {{ group.course.title }}
+                    </p>
+                    {% endif %}
+
+                    {% if group.description %}
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">
+                        {{ group.description }}
+                    </p>
+                    {% endif %}
+
+                    <div class="flex items-center justify-between text-sm mb-4">
+                        <span class="text-gray-600">
+                            <i class="fas fa-users mr-1"></i>
+                            {{ group.member_count }} / {{ group.max_members }}
+                        </span>
+                        {% if group.member_count >= group.max_members %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">
+                            Full
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                            Open
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if group.member_count < group.max_members %}
+                    <form method="post" 
+                          action="{% url 'students:join_study_group' group.id %}">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium">
+                            <i class="fas fa-user-plus mr-2"></i>
+                            Join Group
+                        </button>
+                    </form>
+                    {% else %}
+                    <button disabled
+                            class="w-full px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium">
+                        Group Full
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+            <div class="text-center">
+                <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                    No study groups available
+                </h3>
+                <p class="text-gray-600">
+                    Check back later or create your own study group
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

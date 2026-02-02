@@ -75,25 +75,26 @@
     </script>
 
     <style>
+    /* Sidebar Collapsed Styles */
     .sidebar-collapsed {
         width: 5rem !important;
     }
-    .sidebar-collapsed span:not(.bg-accent-500) {
-        display: none !important;
+    .sidebar-collapsed span:not(.bg-accent-500):not(.badge-count) {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
+        display: inline-block;
     }
     .sidebar-collapsed .menu-arrow {
         display: none !important;
-    }
-    .sidebar-collapsed + div {
-        margin-left: 5rem !important;
     }
     .sidebar-collapsed [id$="Menu"] {
         display: none !important;
     }
     .sidebar-collapsed > div:first-child {
         justify-content: center !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
     }
     .sidebar-collapsed > div:first-child a {
         margin-right: 0 !important;
@@ -102,10 +103,10 @@
         margin-right: 0 !important;
     }
     .sidebar-collapsed .menu-toggle {
-        position: relative !important;
         justify-content: center !important;
+        position: relative;
     }
-    .sidebar-collapsed .menu-toggle .bg-accent-500 {
+    .sidebar-collapsed .badge-count {
         position: absolute !important;
         top: 0.5rem !important;
         right: 0.5rem !important;
@@ -113,24 +114,74 @@
         height: 1rem !important;
         font-size: 0.5rem !important;
         padding: 0.125rem !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
     }
     .sidebar-collapsed #closeSidebar {
         display: none !important;
     }
-</style>
+    .sidebar-collapsed .user-info-bottom {
+        padding: 0.75rem !important;
+    }
+    .sidebar-collapsed .user-info-bottom > div {
+        justify-content: center !important;
+    }
+    .sidebar-collapsed .user-info-bottom .flex-1 {
+        display: none !important;
+    }
+    
+    /* Smooth transitions */
+    #sidebar {
+        transition: width 0.3s ease, transform 0.3s ease;
+    }
+    
+    #mainContent {
+        transition: margin-left 0.3s ease;
+    }
+    
+    /* Dropdown styles - FIXED */
+    .dropdown-menu {
+        display: none;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
+    }
+    
+    .dropdown-menu.show {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+    
+    /* Mobile overlay */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 30;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .sidebar-overlay.show {
+        display: block;
+        opacity: 1;
+    }
+    </style>
     
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay md:hidden"></div>
+    
     <div class="flex min-h-screen">
         <!-- Sidebar Navigation - Fixed positioning -->
         <aside id="sidebar" class="w-64 bg-gradient-to-b from-primary-500 to-secondary-500 text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
             <div class="flex flex-col h-full">
                 <!-- Header -->
-                <div class="p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+                <div class="sidebar-header p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
                     <a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% else %}#{% endif %}" class="text-xl font-bold flex items-center font-display hover:opacity-80 transition-opacity">
                         <i class="fas fa-graduation-cap mr-3" aria-hidden="true"></i>
                         <span class="whitespace-nowrap">MIU Portal</span>
@@ -350,8 +401,8 @@
                             class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'assignment' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Assignments
                             </a>
-                            <a href="#" 
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                            <a href="{% url 'students:quiz_list' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'quiz' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2" aria-hidden="true"></i> Quizzes
                             </a>
                         </div>
@@ -372,57 +423,68 @@
                                 <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i> Grades
                             </a>
                             <a href="{% url 'students:progress' %}" 
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
-                                <i class="fas fa-tasks mr-2" aria-hidden="true"></i> Progress
+                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
+                                    <i class="fas fa-chart-bar mr-2" aria-hidden="true"></i> Progress
+                            </a>
+                            <a href="{% url 'students:achievements' %}" 
+                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'achievements' %}bg-white/20{% endif %}">
+                                    <i class="fas fa-trophy mr-2" aria-hidden="true"></i> Achievements
+                            </a>
+                            <a href="{% url 'students:certificates' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
+                                <i class="fas fa-certificate mr-2" aria-hidden="true"></i> Certificates
                             </a>
                         </div>
                     </div>
 
-                    <!-- Certificates -->
-                    <a href="{% url 'students:certificates' %}" 
-                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
-                        <i class="fas fa-certificate w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Certificates</span>
-                    </a>
-
-                    <!-- Messages -->
-                    <a href="#" 
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'messages' in request.path %}bg-white/20{% endif %}">
-                        <div class="flex items-center">
-                            <i class="fas fa-envelope w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Messages</span>
+                    <!-- Community -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                            <div class="flex items-center">
+                                <i class="fas fa-comments w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Community</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="communityMenu" class="mt-2 space-y-1 hidden">
+                            <a href="{% url 'students:community' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'community' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-comment-dots mr-2" aria-hidden="true"></i> Discussions
+                            </a>
+                            <a href="{% url 'students:study_groups' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'study-groups' in request.path or 'study_groups' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-users mr-2" aria-hidden="true"></i> Study Groups
+                            </a>
                         </div>
-                        <span class="bg-accent-500 text-white text-xs rounded-full px-2 py-1">2</span>
-                    </a>
+                    </div>
 
                     <!-- Profile -->
                     <a href="{% url 'students:profile' %}" 
-                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'profile' in request.path %}bg-white/20{% endif %}">
                         <i class="fas fa-user w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">My Profile</span>
+                        <span class="ml-3">Profile</span>
                     </a>
 
                     {% elif request.user.profile.role == 'instructor' %}
+                    <!-- INSTRUCTOR MENU -->
 
                     <!-- Dashboard -->
                     <a href="{% url 'instructor:dashboard' %}" 
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
-                        <div class="flex items-center">
-                            <i class="fas fa-tachometer-alt w-5 mr-3" aria-hidden="true"></i>
-                            <span>Dashboard</span>
-                        </div>
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
+                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Dashboard</span>
                     </a>
 
                     <!-- My Courses -->
                     <div class="mb-1">
                         <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
                             <div class="flex items-center">
-                                <i class="fas fa-book w-5 mr-3" aria-hidden="true"></i>
+                                <i class="fas fa-book-open w-5 mr-3" aria-hidden="true"></i>
                                 <span>My Courses</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
-                        <div id="coursesMenu" class="mt-1 space-y-1 hidden">
+                        <div id="myCoursesMenu" class="mt-1 space-y-1 hidden">
                             <a href="{% url 'instructor:course_list' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
                                 <i class="fas fa-list mr-2 w-4" aria-hidden="true"></i> All Courses
                             </a>
@@ -513,7 +575,7 @@
                             </a>
                             <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
                                 <i class="fas fa-file-alt mr-2 w-4" aria-hidden="true"></i> Submissions
-                                <span class="ml-2 px-2 py-0.5 bg-accent-500 text-white text-xs rounded-full">3</span>
+                                <span class="ml-2 px-2 py-0.5 bg-accent-500 text-white text-xs rounded-full badge-count">3</span>
                             </a>
                         </div>
                     </div>
@@ -624,10 +686,15 @@
                         <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
                         <span class="ml-3">Help & Support</span>
                     </a>
+
+                    <a href="{% url 'eduweb:logout' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <i class="fas fa-sign-out-alt w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Logout</span>
+                    </a>
                 </nav>
 
                 <!-- User Info at Bottom -->
-                <div class="p-4 border-t border-white/10 flex-shrink-0">
+                <div class="user-info-bottom p-4 border-t border-white/10 flex-shrink-0">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30">
                             <img src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=4a6bff&color=fff" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
@@ -642,45 +709,56 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-h-screen md:ml-64">
-            <!-- Header -->
-            <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
-                <div class="flex items-center justify-between px-4 md:px-6 py-3">
+        <div id="mainContent" class="flex-1 flex flex-col min-h-screen md:ml-64">
+            <!-- Top Header Bar -->
+            <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+                <div class="flex items-center justify-between p-4">
+                    <!-- Left: Mobile Menu + Desktop Collapse + Breadcrumbs -->
                     <div class="flex items-center space-x-4">
-                        <button id="toggleSidebar" class="text-gray-700 hover:bg-gray-100 p-2 rounded-lg transition-all" aria-label="Toggle navigation" aria-expanded="false">
+                        <!-- Mobile Hamburger Menu -->
+                        <button id="toggleSidebar" class="md:hidden text-gray-600 hover:text-gray-900 focus:outline-none" aria-label="Toggle navigation">
                             <i class="fas fa-bars text-xl" aria-hidden="true"></i>
                         </button>
-
-                        <div class="hidden md:block relative">
-                            <label for="globalSearch" class="sr-only">Search</label>
-                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" aria-hidden="true"></i>
-                            <input type="search" id="globalSearch" placeholder="{% if request.user.profile.role == 'student' %}Search courses, assignments...{% else %}Search applications, students...{% endif %}" class="pl-12 pr-4 py-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64 lg:w-80 transition-all">
-                        </div>
+                        
+                        <!-- Desktop Sidebar Collapse Toggle -->
+                        <button id="collapseSidebar" class="hidden md:block text-gray-600 hover:text-gray-900 focus:outline-none" aria-label="Collapse sidebar">
+                            <i class="fas fa-bars text-xl" aria-hidden="true"></i>
+                        </button>
+                        
+                        <!-- Breadcrumbs -->
+                        <nav aria-label="Breadcrumb" class="hidden sm:block">
+                            <ol class="flex items-center space-x-2 text-sm text-gray-600">
+                                <li><a href="#" class="hover:text-primary-600">Home</a></li>
+                                <li><i class="fas fa-chevron-right text-xs" aria-hidden="true"></i></li>
+                                <li class="text-gray-900 font-medium">{% block breadcrumb %}Dashboard{% endblock %}</li>
+                            </ol>
+                        </nav>
                     </div>
 
+                    <!-- Right: Notifications + Profile -->
                     <div class="flex items-center space-x-4">
-                        <!-- Notifications -->
-                        <div class="relative group">
-                            <button class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all" aria-label="Notifications" aria-haspopup="true">
+                        <!-- Notifications Dropdown -->
+                        <div class="relative">
+                            <button id="notificationDropdown" class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all" aria-label="Notifications">
                                 <i class="fas fa-bell text-xl" aria-hidden="true"></i>
-                                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">3</span>
+                                <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
                             </button>
 
-                            <div class="absolute right-0 top-full mt-2 w-80 md:w-96 bg-white rounded-xl shadow-xl border border-gray-200 hidden group-hover:block">
+                            <div id="notificationMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 max-h-96 overflow-y-auto">
                                 <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                                    <h4 class="font-semibold text-gray-800">Notifications</h4>
-                                    <button class="text-sm text-primary-600 hover:text-primary-800">Mark all as read</button>
+                                    <h4 class="font-semibold text-gray-900">Notifications</h4>
+                                    <span class="text-xs text-gray-500">3 new</span>
                                 </div>
-                                <div class="max-h-96 overflow-y-auto">
-                                    <div class="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer bg-blue-50">
-                                        <div class="flex">
-                                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
-                                                <i class="fas fa-file-alt" aria-hidden="true"></i>
+                                <div class="divide-y divide-gray-100">
+                                    <div class="p-4 hover:bg-gray-50 cursor-pointer transition-all">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="flex-shrink-0 w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-bell text-primary-600" aria-hidden="true"></i>
                                             </div>
-                                            <div class="ml-4">
-                                                <h5 class="font-medium text-gray-800">
+                                            <div class="flex-1">
+                                                <h5 class="font-medium text-gray-900">
                                                     {% if request.user.profile.role == 'student' %}
-                                                    New Assignment Posted
+                                                    New Assignment Available
                                                     {% else %}
                                                     New Application Received
                                                     {% endif %}
@@ -700,9 +778,9 @@
                             </div>
                         </div>
 
-                        <!-- User Profile -->
-                        <div class="relative group">
-                            <button class="flex items-center space-x-3 p-1 rounded-full hover:bg-gray-100 transition-all" aria-haspopup="true">
+                        <!-- User Profile Dropdown -->
+                        <div class="relative">
+                            <button id="profileDropdown" class="flex items-center space-x-3 p-1 rounded-full hover:bg-gray-100 transition-all" aria-haspopup="true">
                                 <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-500">
                                     <img src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=4a6bff&color=fff" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
                                 </div>
@@ -713,7 +791,7 @@
                                 <i class="fas fa-chevron-down text-gray-500 hidden md:block" aria-hidden="true"></i>
                             </button>
 
-                            <div class="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 hidden group-hover:block">
+                            <div id="profileMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200">
                                 <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
                                 </a>
@@ -788,25 +866,52 @@
         </div>
     </div>
 
-    <!-- Base JavaScript -->
+    <!-- Base JavaScript - FIXED VERSION -->
     <script>
-        // Sidebar toggle
+        // Get all elements
         const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
         const toggleBtn = document.getElementById('toggleSidebar');
         const closeBtn = document.getElementById('closeSidebar');
+        const collapseBtn = document.getElementById('collapseSidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
 
+        // Mobile sidebar toggle
         toggleBtn?.addEventListener('click', () => {
             sidebar.classList.toggle('-translate-x-full');
-            sidebar.classList.toggle('md:translate-x-0');
+            sidebarOverlay.classList.toggle('show');
         });
 
+        // Mobile sidebar close button
         closeBtn?.addEventListener('click', () => {
             sidebar.classList.add('-translate-x-full');
+            sidebarOverlay.classList.remove('show');
+        });
+
+        // Close sidebar when clicking overlay
+        sidebarOverlay?.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+            sidebarOverlay.classList.remove('show');
+        });
+
+        // Desktop sidebar collapse/expand
+        collapseBtn?.addEventListener('click', () => {
+            sidebar.classList.toggle('sidebar-collapsed');
+            
+            // Adjust main content margin
+            if (sidebar.classList.contains('sidebar-collapsed')) {
+                mainContent.classList.remove('md:ml-64');
+                mainContent.classList.add('md:ml-20');
+            } else {
+                mainContent.classList.remove('md:ml-20');
+                mainContent.classList.add('md:ml-64');
+            }
         });
 
         // Submenu toggles
         document.querySelectorAll('.menu-toggle').forEach(toggle => {
-            toggle.addEventListener('click', function() {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
                 const arrow = this.querySelector('.menu-arrow');
                 const menuId = this.nextElementSibling?.id;
                 const menu = document.getElementById(menuId);
@@ -818,17 +923,75 @@
             });
         });
 
-        // Chatbot
+        // Dropdown functionality - FIXED to prevent glitching
+        function setupDropdown(buttonId, menuId) {
+            const button = document.getElementById(buttonId);
+            const menu = document.getElementById(menuId);
+            
+            if (!button || !menu) return;
+            
+            // Toggle dropdown on button click
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // Close all other dropdowns
+                document.querySelectorAll('.dropdown-menu').forEach(dropdown => {
+                    if (dropdown !== menu && dropdown.classList.contains('show')) {
+                        dropdown.classList.remove('show');
+                    }
+                });
+                
+                // Toggle current dropdown
+                menu.classList.toggle('show');
+            });
+            
+            // Prevent dropdown from closing when clicking inside it
+            menu.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // Setup all dropdowns
+        setupDropdown('profileDropdown', 'profileMenu');
+        setupDropdown('notificationDropdown', 'notificationMenu');
+
+        // Close all dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdowns = document.querySelectorAll('.dropdown-menu');
+            dropdowns.forEach(dropdown => {
+                if (dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            });
+        });
+
+        // Chatbot functionality
         const chatbotToggle = document.getElementById('chatbotToggle');
         const chatbotWindow = document.getElementById('chatbotWindow');
         const chatbotClose = document.getElementById('chatbotClose');
 
-        chatbotToggle?.addEventListener('click', () => {
+        chatbotToggle?.addEventListener('click', (e) => {
+            e.stopPropagation();
             chatbotWindow.classList.toggle('hidden');
         });
 
         chatbotClose?.addEventListener('click', () => {
             chatbotWindow.classList.add('hidden');
+        });
+
+        // Close chatbot when clicking outside
+        document.addEventListener('click', (e) => {
+            if (chatbotWindow && 
+                !chatbotWindow.contains(e.target) && 
+                !chatbotToggle.contains(e.target) &&
+                !chatbotWindow.classList.contains('hidden')) {
+                chatbotWindow.classList.add('hidden');
+            }
+        });
+
+        // Prevent chatbot from closing when clicking inside
+        chatbotWindow?.addEventListener('click', (e) => {
+            e.stopPropagation();
         });
     </script>
     {% block extra_js %}{% endblock %}

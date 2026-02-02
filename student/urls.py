@@ -8,39 +8,152 @@ urlpatterns = [
     path('', views.dashboard, name='dashboard'),
     
     # Courses
-    path('courses/', views.my_courses, name='my_courses'),
-    path('courses/catalog/', views.course_catalog, name='course_catalog'),
-    path('courses/<int:course_id>/', views.course_detail, name='course_detail'),
-    path('courses/<int:course_id>/enroll/', views.enroll_course, name='enroll_course'),
+    path(
+        'courses/', 
+        views.my_courses, 
+        name='my_courses'
+    ),
+    path(
+        'courses/catalog/', 
+        views.course_catalog, 
+        name='course_catalog'
+    ),
+    path(
+        'courses/<int:course_id>/', 
+        views.course_detail, 
+        name='course_detail'
+    ),
+    path(
+        'courses/<int:course_id>/enroll/', 
+        views.enroll_course, 
+        name='enroll_course'
+    ),
     
     # Lessons
-    path('lessons/<int:lesson_id>/', views.lesson_view, name='lesson_view'),
-    path('lessons/<int:lesson_id>/complete/', views.mark_lesson_complete, name='mark_lesson_complete'),
+    path(
+        'lessons/<int:lesson_id>/', 
+        views.lesson_view, 
+        name='lesson_view'
+    ),
+    path(
+        'lessons/<int:lesson_id>/complete/', 
+        views.mark_lesson_complete, 
+        name='mark_lesson_complete'
+    ),
     
     # Assignments
-    path('assignments/', views.assignments, name='assignments'),
-    path('assignments/<int:assignment_id>/', views.assignment_detail, name='assignment_detail'),
-    path('assignments/<int:assignment_id>/submit/', views.submit_assignment, name='submit_assignment'),
+    path(
+        'assignments/', 
+        views.assignments, 
+        name='assignments'
+    ),
+    path(
+        'assignments/<int:assignment_id>/', 
+        views.assignment_detail, 
+        name='assignment_detail'
+    ),
+    path(
+        'assignments/<int:assignment_id>/submit/', 
+        views.submit_assignment, 
+        name='submit_assignment'
+    ),
     
     # Quizzes
-    # path('quizzes/<int:quiz_id>/', views.quiz_detail, name='quiz_detail'),
-    # path('quizzes/<int:quiz_id>/attempt/', views.quiz_attempt, name='quiz_attempt'),
-    # path('quizzes/<int:quiz_id>/submit/', views.submit_quiz, name='submit_quiz'),
+    path(
+        'quizzes/', 
+        views.quiz_list, 
+        name='quiz_list'
+    ),
+    path(
+        'quizzes/<int:quiz_id>/', 
+        views.quiz_detail, 
+        name='quiz_detail'
+    ),
+    path(
+        'quizzes/<int:quiz_id>/take/', 
+        views.quiz_take, 
+        name='quiz_take'
+    ),
+    path(
+        'quizzes/attempt/<int:attempt_id>/submit/', 
+        views.quiz_submit, 
+        name='quiz_submit'
+    ),
+    path(
+        'quizzes/attempt/<int:attempt_id>/result/', 
+        views.quiz_result, 
+        name='quiz_result'
+    ),
+    
+    # Community
+    path(
+        'community/', 
+        views.community, 
+        name='community'
+    ),
+    path(
+        'community/thread/<int:thread_id>/', 
+        views.thread_detail, 
+        name='thread_detail'
+    ),
+    path(
+        'community/create/', 
+        views.create_thread, 
+        name='create_thread'
+    ),
+    
+    # Study Groups
+    path(
+        'study-groups/', 
+        views.study_groups, 
+        name='study_groups'
+    ),
+    path(
+        'study-groups/<int:group_id>/', 
+        views.study_group_detail, 
+        name='study_group_detail'
+    ),
+    path(
+        'study-groups/<int:group_id>/join/', 
+        views.join_study_group, 
+        name='join_study_group'
+    ),
+    
+    # Achievements
+    path(
+        'achievements/', 
+        views.achievements, 
+        name='achievements'
+    ),
     
     # Grades & Progress
-    path('grades/', views.grades, name='grades'),
-    path('progress/', views.progress, name='progress'),
+    path(
+        'grades/', 
+        views.grades, 
+        name='grades'
+    ),
+    path(
+        'progress/', 
+        views.progress, 
+        name='progress'
+    ),
     
     # Certificates
-    path('certificates/', views.certificates, name='certificates'),
-    # path('certificates/<int:certificate_id>/download/', views.download_certificate, name='download_certificate'),
-    
-    # Messages
-    # path('messages/', views.message, name='messages'),
-    # path('messages/<int:message_id>/', views.message_detail, name='message_detail'),
-    # path('messages/compose/', views.compose_message, name='compose_message'),
+    path(
+        'certificates/', 
+        views.certificates, 
+        name='certificates'
+    ),
     
     # Profile & Settings
-    path('profile/', views.profile, name='profile'),
-    path('settings/', views.settings, name='settings'),
+    path(
+        'profile/', 
+        views.profile, 
+        name='profile'
+    ),
+    path(
+        'settings/', 
+        views.settings, 
+        name='settings'
+    ),
 ]

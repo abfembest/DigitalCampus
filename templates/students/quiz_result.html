@@ -1,0 +1,137 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Results Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-6 text-center">
+        <div class="mb-6">
+            {% if attempt.passed %}
+            <div class="w-24 h-24 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-check-circle text-green-600 text-5xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-green-600 mb-2">
+                Congratulations!
+            </h1>
+            <p class="text-gray-600">You passed the quiz</p>
+            {% else %}
+            <div class="w-24 h-24 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-times-circle text-red-600 text-5xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-red-600 mb-2">
+                Keep Trying!
+            </h1>
+            <p class="text-gray-600">You didn't pass this time</p>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Your Score</p>
+                <p class="text-3xl font-bold {% if attempt.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ attempt.score|floatformat:1 }}%
+                </p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Passing Score</p>
+                <p class="text-3xl font-bold text-gray-900">
+                    {{ attempt.quiz.passing_score }}%
+                </p>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-600 mb-1">Time Taken</p>
+                <p class="text-3xl font-bold text-gray-900">
+                    {% widthratio attempt.completed_at|timesince:attempt.started_at 1 60 %} min
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Answer Review -->
+    {% if attempt.quiz.show_correct_answers %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            Answer Review
+        </h2>
+        
+        <div class="space-y-6">
+            {% for answer in answers %}
+            <div class="border-l-4 {% if answer.selected_answer == answer.question.correct_answer %}border-green-500{% else %}border-red-500{% endif %} pl-4">
+                <div class="flex items-start justify-between mb-2">
+                    <p class="font-semibold text-gray-900">
+                        {{ forloop.counter }}. {{ answer.question.question_text }}
+                    </p>
+                    {% if answer.selected_answer == answer.question.correct_answer %}
+                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                        Correct
+                    </span>
+                    {% else %}
+                    <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                        Incorrect
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="text-sm text-gray-600 mt-2">
+                    <p class="mb-1">
+                        <strong>Your answer:</strong> 
+                        {% if answer.selected_answer == 'option_a' %}
+                            {{ answer.question.option_a }}
+                        {% elif answer.selected_answer == 'option_b' %}
+                            {{ answer.question.option_b }}
+                        {% elif answer.selected_answer == 'option_c' %}
+                            {{ answer.question.option_c }}
+                        {% elif answer.selected_answer == 'option_d' %}
+                            {{ answer.question.option_d }}
+                        {% endif %}
+                    </p>
+                    {% if answer.selected_answer != answer.question.correct_answer %}
+                    <p class="text-green-600">
+                        <strong>Correct answer:</strong> 
+                        {% if answer.question.correct_answer == 'option_a' %}
+                            {{ answer.question.option_a }}
+                        {% elif answer.question.correct_answer == 'option_b' %}
+                            {{ answer.question.option_b }}
+                        {% elif answer.question.correct_answer == 'option_c' %}
+                            {{ answer.question.option_c }}
+                        {% elif answer.question.correct_answer == 'option_d' %}
+                            {{ answer.question.option_d }}
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                {% if answer.question.explanation %}
+                <div class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-sm text-blue-900">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        {{ answer.question.explanation }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="flex items-center justify-between gap-4">
+        <a href="{% url 'students:quiz_detail' attempt.quiz.id %}" 
+           class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Back to Quiz
+        </a>
+        
+        {% if not attempt.passed and attempt.quiz.max_attempts > 0 and attempt.quiz.attempts.count < attempt.quiz.max_attempts %}
+        <a href="{% url 'students:quiz_take' attempt.quiz.id %}" 
+           class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium">
+            <i class="fas fa-redo mr-2"></i>
+            Try Again
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

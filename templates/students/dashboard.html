@@ -295,7 +295,7 @@ check assignments, and stay updated with announcements.
                     {% if pending_assignments %}
                         <div class="space-y-3">
                             {% for assignment in pending_assignments %}
-                            <a href="{% url 'students:assignment_detail' assignment.id %}" 
+                            <a href="{% url 'students:assignment_detail' assignment.lesson.course.slug assignment.slug %}"
                                class="block border border-gray-200 
                                       rounded-lg p-4 
                                       hover:border-primary-300 

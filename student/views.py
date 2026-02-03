@@ -330,68 +330,100 @@ def course_catalog(request):
 @student_required
 def course_detail(request, course_slug):
     """
-    View course details using slug
-    Shows different content for enrolled vs non-enrolled students
+    Display comprehensive course details
+    - Uses slug for SEO-friendly URLs
+    - Efficient queries with select_related/prefetch_related
+    - Different views for enrolled vs non-enrolled students
+    - Security: Validates enrollment status
     """
-    # Get course by slug
-    course = get_object_or_404(
-        LMSCourse.objects.select_related(
-            'instructor', 
-            'category'
-        ).prefetch_related(
-            Prefetch(
-                'sections',
-                queryset=LessonSection.objects.filter(
-                    is_active=True
-                ).order_by('display_order'),
-                to_attr='active_sections'
-            )
-        ),
-        slug=course_slug,
-        is_published=True
-    )
-    
-    # Check enrollment
-    enrollment = Enrollment.objects.filter(
-        student=request.user,
-        course=course
-    ).first()
-    
-    # Prepare sections with lessons
-    sections = course.active_sections
-    
-    for section in sections:
+    try:
+        # Fetch course with related data in single query
+        course = get_object_or_404(
+            LMSCourse.objects
+            .select_related('instructor', 'category')
+            .prefetch_related(
+                Prefetch(
+                    'sections',
+                    queryset=LessonSection.objects
+                    .filter(is_active=True)
+                    .prefetch_related(
+                        Prefetch(
+                            'lessons',
+                            queryset=Lesson.objects.filter(is_active=True).order_by('display_order'),
+                            to_attr='active_lessons'
+                        )
+                    )
+                    .order_by('display_order'),
+                    to_attr='active_sections'
+                )
+            ),
+            slug=course_slug,
+            is_published=True
+        )
+        
+        # Check if student is enrolled
+        enrollment = Enrollment.objects.filter(
+            student=request.user,
+            course=course
+        ).select_related('course').first()
+        
+        # Prepare sections with filtered lessons
+        sections = course.active_sections
+        
+        for section in sections:
+            if enrollment:
+                # Enrolled: show all lessons
+                section.filtered_lessons = section.active_lessons
+            else:
+                # Not enrolled: show only preview lessons
+                section.filtered_lessons = [
+                    lesson for lesson in section.active_lessons 
+                    if lesson.is_preview
+                ]
+        
+        # Calculate progress for enrolled students
         if enrollment:
-            # Show all lessons for enrolled students
-            section.filtered_lessons = (
-                section.lessons
-                .filter(is_active=True)
-                .order_by('display_order')
-            )
-        else:
-            # Show only preview lessons for non-enrolled
-            section.filtered_lessons = (
-                section.lessons
-                .filter(is_active=True, is_preview=True)
-                .order_by('display_order')
-            )
-    
-    # Calculate completed lessons if enrolled
-    if enrollment:
-        completed_count = LessonProgress.objects.filter(
-            enrollment=enrollment,
-            is_completed=True
-        ).count()
-        enrollment.completed_lessons_count = completed_count
-    
-    context = {
-        'page_title': course.title,
-        'course': course,
-        'enrollment': enrollment,
-        'sections': sections,
-    }
-    
-    return render(request, 'students/course_detail.html', context)
+            completed_count = LessonProgress.objects.filter(
+                enrollment=enrollment,
+                is_completed=True
+            ).count()
+            enrollment.completed_lessons_count = completed_count
+            
+            # Get the first incomplete lesson for "Continue Learning" button
+            first_incomplete_lesson = None
+            for section in sections:
+                for lesson in section.filtered_lessons:
+                    # Check if lesson is not completed
+                    is_completed = LessonProgress.objects.filter(
+                        enrollment=enrollment,
+                        lesson=lesson,
+                        is_completed=True
+                    ).exists()
+                    
+                    if not is_completed:
+                        first_incomplete_lesson = lesson
+                        break
+                if first_incomplete_lesson:
+                    break
+            
+            enrollment.next_lesson = first_incomplete_lesson
+        
+        context = {
+            'page_title': course.title,
+            'course': course,
+            'enrollment': enrollment,
+            'sections': sections,
+        }
+        
+        return render(request, 'students/course_detail.html', context)
+        
+    except Exception as e:
+        # Log error in production
+        messages.error(
+            request,
+            'An error occurred loading the course. Please try again.'
+        )
+        return redirect('students:course_catalog')
 
 
 @login_required

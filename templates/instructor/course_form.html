@@ -1,296 +1,424 @@
 {% extends 'management/base.html' %}
-
 {% load static %}
 
-{% block title %}{% if course %}Edit Course{% else %}Create Course{% endif %} - Instructor{% endblock %}
+{% block title %}
+{% if course %}Edit Course{% else %}Create Course{% endif %} - Instructor
+{% endblock %}
 
 {% block content %}
-<!-- Breadcrumb -->
-<nav class="flex mb-6" aria-label="Breadcrumb">
-    <ol class="inline-flex items-center space-x-1 md:space-x-3">
-        <li class="inline-flex items-center">
-            <a href="{% url 'instructor:course_list' %}" class="text-gray-600 hover:text-primary-600 inline-flex items-center">
-                <i class="fas fa-book mr-2"></i> Courses
-            </a>
-        </li>
-        <li>
-            <div class="flex items-center">
-                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
-                <span class="text-gray-500">{% if course %}Edit{% else %}Create{% endif %}</span>
-            </div>
-        </li>
-    </ol>
-</nav>
-
-<!-- Page Header -->
-<div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900 font-display">
-        {% if course %}Edit Course{% else %}Create New Course{% endif %}
-    </h1>
-    <p class="text-gray-600 mt-2">
-        {% if course %}Update your course information{% else %}Fill in the details to create your course{% endif %}
-    </p>
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Main Form -->
-    <div class="lg:col-span-2">
-        <form method="post" enctype="multipart/form-data" class="bg-white rounded-xl shadow-sm border border-gray-200">
-            {% csrf_token %}
-            
-            <div class="p-6 space-y-6">
-                <!-- Basic Information -->
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Basic Information</h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Course Title *</label>
-                            {{ form.title }}
-                            {% if form.title.errors %}
-                            <p class="mt-1 text-sm text-red-600">{{ form.title.errors }}</p>
-                            {% endif %}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Course Code *</label>
-                            {{ form.code }}
-                            {% if form.code.errors %}
-                            <p class="mt-1 text-sm text-red-600">{{ form.code.errors }}</p>
-                            {% endif %}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                            {{ form.category }}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
-                            {{ form.difficulty_level }}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Duration (Hours)</label>
-                            {{ form.duration_hours }}
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Short Description *</label>
-                            {{ form.short_description }}
-                            <p class="mt-1 text-sm text-gray-500">Max 500 characters - This appears in course listings</p>
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Description *</label>
-                            {{ form.description }}
-                        </div>
-                    </div>
+<div class="max-w-12xl mx-auto">
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'instructor:course_list' %}" 
+                   class="text-gray-600 hover:text-primary-600 inline-flex items-center">
+                    <i class="fas fa-book mr-2"></i> Courses
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                    <span class="text-gray-500">
+                        {% if course %}Edit{% else %}Create{% endif %}
+                    </span>
                 </div>
+            </li>
+        </ol>
+    </nav>
 
-                <!-- Media -->
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Media</h2>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Course Thumbnail</label>
-                            {{ form.thumbnail }}
-                            {% if course.thumbnail %}
-                            <div class="mt-3">
-                                <img src="{{ course.thumbnail.url }}" alt="Current thumbnail" class="w-48 h-32 object-cover rounded-lg border border-gray-200">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 font-display">
+            {% if course %}Edit Course{% else %}Create New Course{% endif %}
+        </h1>
+        <p class="text-gray-600 mt-2">
+            {% if course %}
+            Update your course information
+            {% else %}
+            Fill in the details to create your course
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Form -->
+        <div class="lg:col-span-2">
+            <form method="post" 
+                  enctype="multipart/form-data" 
+                  class="bg-white rounded-xl shadow-sm border border-gray-200">
+                {% csrf_token %}
+                
+                <div class="p-6 space-y-6">
+                    <!-- Basic Information -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                            Basic Information
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Course Title *
+                                </label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                <p class="mt-1 text-sm text-red-600">
+                                    {{ form.title.errors }}
+                                </p>
+                                {% endif %}
                             </div>
-                            {% endif %}
-                            <p class="mt-1 text-sm text-gray-500">Recommended: 1280x720px (16:9 ratio)</p>
-                        </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Promo Video URL</label>
-                            {{ form.promo_video_url }}
-                            <p class="mt-1 text-sm text-gray-500">YouTube or Vimeo URL</p>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Course Code *
+                                </label>
+                                {{ form.code }}
+                                {% if form.code.errors %}
+                                <p class="mt-1 text-sm text-red-600">
+                                    {{ form.code.errors }}
+                                </p>
+                                {% endif %}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Category *
+                                </label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                <p class="mt-1 text-sm text-red-600">
+                                    {{ form.category.errors }}
+                                </p>
+                                {% endif %}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Difficulty Level
+                                </label>
+                                {{ form.difficulty_level }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Duration (Hours)
+                                </label>
+                                {{ form.duration_hours }}
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Language
+                                </label>
+                                {{ form.language }}
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Short Description *
+                                </label>
+                                {{ form.short_description }}
+                                <p class="mt-1 text-sm text-gray-500">
+                                    Max 500 characters - This appears in course listings
+                                </p>
+                                {% if form.short_description.errors %}
+                                <p class="mt-1 text-sm text-red-600">
+                                    {{ form.short_description.errors }}
+                                </p>
+                                {% endif %}
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Full Description *
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                <p class="mt-1 text-sm text-red-600">
+                                    {{ form.description.errors }}
+                                </p>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Pricing -->
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Pricing</h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="flex items-center">
+                    <!-- Media -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                            Media
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Course Thumbnail
+                                </label>
+                                {{ form.thumbnail }}
+                                {% if course.thumbnail %}
+                                <div class="mt-3">
+                                    <img src="{{ course.thumbnail.url }}" 
+                                         alt="Current thumbnail" 
+                                         class="w-48 h-32 object-cover rounded-lg border border-gray-200">
+                                </div>
+                                {% endif %}
+                                <p class="mt-1 text-sm text-gray-500">
+                                    Recommended: 1280x720px (16:9 ratio)
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Promo Video URL
+                                </label>
+                                {{ form.promo_video_url }}
+                                <p class="mt-1 text-sm text-gray-500">
+                                    YouTube or Vimeo URL
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pricing -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                            Pricing
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="flex items-center">
+                                <label class="flex items-center cursor-pointer">
+                                    {{ form.is_free }}
+                                    <span class="ml-2 text-sm font-medium text-gray-700">
+                                        Free Course
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Price ($)
+                                </label>
+                                {{ form.price }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Discount Price ($)
+                                </label>
+                                {{ form.discount_price }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Enrollment Settings -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                            Enrollment Settings
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Max Students
+                                </label>
+                                {{ form.max_students }}
+                                <p class="mt-1 text-sm text-gray-500">
+                                    Leave blank for unlimited
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Enrollment Start
+                                </label>
+                                {{ form.enrollment_start_date }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Enrollment End
+                                </label>
+                                {{ form.enrollment_end_date }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings -->
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                            Settings
+                        </h2>
+                        
+                        <div class="space-y-3">
                             <label class="flex items-center cursor-pointer">
-                                {{ form.is_free }}
-                                <span class="ml-2 text-sm font-medium text-gray-700">Free Course</span>
+                                {{ form.has_certificate }}
+                                <span class="ml-2 text-sm font-medium text-gray-700">
+                                    Offer Certificate upon completion
+                                </span>
+                            </label>
+
+                            <label class="flex items-center cursor-pointer">
+                                {{ form.is_published }}
+                                <span class="ml-2 text-sm font-medium text-gray-700">
+                                    Publish Course (make visible to students)
+                                </span>
+                            </label>
+
+                            <label class="flex items-center cursor-pointer">
+                                {{ form.is_featured }}
+                                <span class="ml-2 text-sm font-medium text-gray-700">
+                                    Feature this course
+                                </span>
                             </label>
                         </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
-                            {{ form.price }}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Discount Price ($)</label>
-                            {{ form.discount_price }}
-                        </div>
                     </div>
                 </div>
 
-                <!-- Enrollment Settings -->
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Enrollment Settings</h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Max Students</label>
-                            {{ form.max_students }}
-                            <p class="mt-1 text-sm text-gray-500">Leave blank for unlimited</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Enrollment Start</label>
-                            {{ form.enrollment_start_date }}
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Enrollment End</label>
-                            {{ form.enrollment_end_date }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Settings -->
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Settings</h2>
-                    
-                    <div class="space-y-3">
-                        <label class="flex items-center cursor-pointer">
-                            {{ form.has_certificate }}
-                            <span class="ml-2 text-sm font-medium text-gray-700">Offer Certificate upon completion</span>
-                        </label>
-
-                        <label class="flex items-center cursor-pointer">
-                            {{ form.is_published }}
-                            <span class="ml-2 text-sm font-medium text-gray-700">Publish Course (make visible to students)</span>
-                        </label>
-
-                        <label class="flex items-center cursor-pointer">
-                            {{ form.is_featured }}
-                            <span class="ml-2 text-sm font-medium text-gray-700">Feature this course</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
-                <div class="flex items-center justify-between">
-                    <a href="{% url 'instructor:course_list' %}" 
-                       class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </a>
-                    <div class="flex items-center space-x-3">
-                        {% if course %}
-                        <a href="{% url 'instructor:course_objectives' course.slug %}" 
-                           class="px-4 py-2 text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors">
-                            <i class="fas fa-list-check mr-2"></i> Edit Objectives
+                <!-- Form Actions -->
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <a href="{% url 'instructor:course_list' %}" 
+                           class="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center">
+                            Cancel
                         </a>
-                        {% endif %}
-                        <button type="submit" 
-                                class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all font-medium">
-                            <i class="fas fa-save mr-2"></i> Save Course
-                        </button>
+                        <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                            {% if course %}
+                            <a href="{% url 'instructor:course_objectives' course.slug %}" 
+                               class="w-full sm:w-auto px-4 py-2 text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors text-center">
+                                <i class="fas fa-list-check mr-2"></i> 
+                                Edit Objectives
+                            </a>
+                            {% endif %}
+                            <button type="submit" 
+                                    class="w-full sm:w-auto px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all font-medium">
+                                <i class="fas fa-save mr-2"></i> 
+                                Save Course
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            {% if course %}
+            <!-- Course Stats -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <h3 class="font-semibold text-gray-900 mb-4">
+                    Course Statistics
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Students Enrolled</span>
+                        <span class="font-bold text-gray-900">
+                            {{ stats.total_students }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Total Lessons</span>
+                        <span class="font-bold text-gray-900">
+                            {{ stats.total_lessons }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Sections</span>
+                        <span class="font-bold text-gray-900">
+                            {{ stats.total_sections }}
+                        </span>
                     </div>
                 </div>
             </div>
-        </form>
-    </div>
 
-    <!-- Sidebar -->
-    <div class="lg:col-span-1">
-        {% if course %}
-        <!-- Course Stats -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h3 class="font-semibold text-gray-900 mb-4">Course Statistics</h3>
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-600">Students Enrolled</span>
-                    <span class="font-bold text-gray-900">{{ stats.total_students }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-600">Total Lessons</span>
-                    <span class="font-bold text-gray-900">{{ stats.total_lessons }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-gray-600">Sections</span>
-                    <span class="font-bold text-gray-900">{{ stats.total_sections }}</span>
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">
+                    Quick Actions
+                </h3>
+                <div class="space-y-2">
+                    <a href="{% url 'instructor:lesson_list' course.slug %}" 
+                       class="flex items-center px-4 py-2 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-play-circle w-5 mr-3"></i> 
+                        Manage Lessons
+                    </a>
+                    <a href="{% url 'instructor:students_list' course.slug %}" 
+                       class="flex items-center px-4 py-2 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-users w-5 mr-3"></i> 
+                        View Students
+                    </a>
+                    <a href="{% url 'instructor:announcement_create' course.slug %}" 
+                       class="flex items-center px-4 py-2 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-bullhorn w-5 mr-3"></i> 
+                        New Announcement
+                    </a>
+                    <hr class="my-2">
+                    <a href="{% url 'instructor:course_delete' course.slug %}" 
+                       class="flex items-center px-4 py-2 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                        <i class="fas fa-trash w-5 mr-3"></i> 
+                        Delete Course
+                    </a>
                 </div>
             </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div class="space-y-2">
-                <a href="{% url 'instructor:lesson_list' course.slug %}" 
-                   class="flex items-center px-4 py-2 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <i class="fas fa-play-circle w-5 mr-3"></i> Manage Lessons
-                </a>
-                <a href="{% url 'instructor:students_list' course.slug %}" 
-                   class="flex items-center px-4 py-2 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <i class="fas fa-users w-5 mr-3"></i> View Students
-                </a>
-                <a href="{% url 'instructor:announcement_create' course.slug %}" 
-                   class="flex items-center px-4 py-2 text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <i class="fas fa-bullhorn w-5 mr-3"></i> New Announcement
-                </a>
-                <hr class="my-2">
-                <a href="{% url 'instructor:course_delete' course.slug %}" 
-                   class="flex items-center px-4 py-2 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
-                    <i class="fas fa-trash w-5 mr-3"></i> Delete Course
-                </a>
+            {% else %}
+            <!-- Tips for New Course -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-2"></i> 
+                    Tips
+                </h3>
+                <ul class="space-y-2 text-sm text-gray-600">
+                    <li class="flex items-start">
+                        <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                        <span>Use a clear, descriptive title</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                        <span>Write detailed learning objectives</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                        <span>Add a professional thumbnail</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                        <span>Set appropriate pricing</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                        <span>Structure content logically</span>
+                    </li>
+                </ul>
             </div>
+            {% endif %}
         </div>
-        {% else %}
-        <!-- Tips for New Course -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="font-semibold text-gray-900 mb-4">
-                <i class="fas fa-lightbulb text-yellow-500 mr-2"></i> Tips
-            </h3>
-            <ul class="space-y-2 text-sm text-gray-600">
-                <li class="flex items-start">
-                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
-                    <span>Use a clear, descriptive title</span>
-                </li>
-                <li class="flex items-start">
-                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
-                    <span>Write detailed learning objectives</span>
-                </li>
-                <li class="flex items-start">
-                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
-                    <span>Add a professional thumbnail</span>
-                </li>
-                <li class="flex items-start">
-                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
-                    <span>Set appropriate pricing</span>
-                </li>
-                <li class="flex items-start">
-                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
-                    <span>Structure content logically</span>
-                </li>
-            </ul>
-        </div>
-        {% endif %}
     </div>
 </div>
 
-<!-- Add custom styles for form elements -->
+<!-- Custom styles for form elements -->
 <style>
-    input[type="text"], input[type="number"], input[type="email"], input[type="url"], input[type="date"], textarea, select {
-        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors;
+    input[type="text"], 
+    input[type="number"], 
+    input[type="email"], 
+    input[type="url"], 
+    input[type="date"], 
+    textarea, 
+    select {
+        @apply w-full px-4 py-2 border border-gray-300 rounded-lg 
+               focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
+               transition-colors;
     }
     input[type="checkbox"] {
-        @apply w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500;
+        @apply w-4 h-4 text-primary-600 border-gray-300 rounded 
+               focus:ring-primary-500;
+    }
+    input[type="file"] {
+        @apply w-full px-4 py-2 border border-gray-300 rounded-lg 
+               focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
+               file:mr-4 file:py-2 file:px-4 
+               file:rounded-lg file:border-0 
+               file:bg-primary-50 file:text-primary-700 
+               hover:file:bg-primary-100;
     }
 </style>
 {% endblock %}

@@ -4,49 +4,65 @@
 {% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Page Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Grades & Performance</h1>
-        <p class="text-gray-600 mt-2">Track your academic performance across all courses</p>
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+            Grades & Performance
+        </h1>
+        <p class="text-gray-600 mt-2 text-sm md:text-base">
+            Track your academic performance across all courses
+        </p>
     </div>
 
     <!-- Overall Statistics -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-200">
             <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-500 text-sm font-medium">Total Courses</p>
-                <i class="fas fa-book text-blue-600 text-xl"></i>
+                <p class="text-gray-500 text-xs md:text-sm font-medium">
+                    Total Courses
+                </p>
+                <i class="fas fa-book text-blue-600 text-lg md:text-xl"></i>
             </div>
-            <p class="text-3xl font-bold text-gray-900">{{ enrollments.count }}</p>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-500 text-sm font-medium">Completed</p>
-                <i class="fas fa-check-circle text-green-600 text-xl"></i>
-            </div>
-            <p class="text-3xl font-bold text-gray-900">
-                {{ enrollments|length|add:"-1" }}
+            <p class="text-2xl md:text-3xl font-bold text-gray-900">
+                {{ enrollments.count }}
             </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-200">
             <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-500 text-sm font-medium">Total Assignments</p>
-                <i class="fas fa-file-alt text-orange-600 text-xl"></i>
+                <p class="text-gray-500 text-xs md:text-sm font-medium">
+                    Completed
+                </p>
+                <i class="fas fa-check-circle text-green-600 text-lg md:text-xl"></i>
             </div>
-            <p class="text-3xl font-bold text-gray-900">{{ submissions.count }}</p>
+            <p class="text-2xl md:text-3xl font-bold text-gray-900">
+                {% for enrollment in enrollments %}{% if enrollment.status == 'completed' %}1{% endif %}{% endfor %}
+            </p>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-200">
             <div class="flex items-center justify-between mb-2">
-                <p class="text-gray-500 text-sm font-medium">Avg. Grade</p>
-                <i class="fas fa-star text-yellow-600 text-xl"></i>
+                <p class="text-gray-500 text-xs md:text-sm font-medium">
+                    Assignments
+                </p>
+                <i class="fas fa-file-alt text-orange-600 text-lg md:text-xl"></i>
             </div>
-            <p class="text-3xl font-bold text-gray-900">
+            <p class="text-2xl md:text-3xl font-bold text-gray-900">
+                {{ submissions.count }}
+            </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-gray-500 text-xs md:text-sm font-medium">
+                    Avg. Grade
+                </p>
+                <i class="fas fa-star text-yellow-600 text-lg md:text-xl"></i>
+            </div>
+            <p class="text-2xl md:text-3xl font-bold text-gray-900">
                 {% if submissions %}
-                    {% widthratio submissions|length 1 submissions.count %}%
+                    {% widthratio submissions.count 1 submissions.count %}%
                 {% else %}
                     N/A
                 {% endif %}
@@ -55,11 +71,85 @@
     </div>
 
     <!-- Course Grades -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
-        <div class="p-6 border-b border-gray-200">
-            <h2 class="text-xl font-bold text-gray-900">Course Grades</h2>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden">
+        <div class="p-4 md:p-6 border-b border-gray-200">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900">
+                Course Grades
+            </h2>
         </div>
-        <div class="overflow-x-auto">
+        
+        <!-- Mobile View -->
+        <div class="md:hidden divide-y divide-gray-200">
+            {% for enrollment in enrollments %}
+            <div class="p-4">
+                <div class="mb-3">
+                    <p class="font-semibold text-gray-900 mb-1">
+                        {{ enrollment.course.title }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        {{ enrollment.course.instructor_name|default:"MIU Staff" }}
+                    </p>
+                </div>
+                
+                <div class="mb-3">
+                    <p class="text-xs text-gray-600 mb-1">Progress</p>
+                    <div class="flex items-center">
+                        <div class="flex-1 mr-2">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="{% if enrollment.progress_percentage == 100 %}bg-green-500{% else %}bg-primary-600{% endif %} h-2 rounded-full" 
+                                     style="width: {{ enrollment.progress_percentage }}%"></div>
+                            </div>
+                        </div>
+                        <span class="text-sm font-semibold text-gray-900">
+                            {{ enrollment.progress_percentage|floatformat:0 }}%
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Current Grade</p>
+                        {% if enrollment.current_grade %}
+                        <span class="text-lg font-bold {% if enrollment.current_grade >= 90 %}text-green-600{% elif enrollment.current_grade >= 70 %}text-blue-600{% elif enrollment.current_grade >= 50 %}text-orange-600{% else %}text-red-600{% endif %}">
+                            {{ enrollment.current_grade|floatformat:1 }}%
+                        </span>
+                        {% else %}
+                        <span class="text-sm text-gray-400">Not graded</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        {% if enrollment.status == 'completed' %}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                            Completed
+                        </span>
+                        {% elif enrollment.status == 'active' %}
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                            In Progress
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                            {{ enrollment.get_status_display }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <a href="{% url 'students:course_detail' enrollment.course.slug %}" 
+                   class="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                    View Details →
+                </a>
+            </div>
+            {% empty %}
+            <div class="p-8 text-center">
+                <i class="fas fa-book-open text-4xl text-gray-300 mb-3"></i>
+                <p class="text-gray-600 text-sm">No courses enrolled yet</p>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Desktop View -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
@@ -82,12 +172,16 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for enrollment in enrollments %}
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4">
                             <div class="flex items-center">
                                 <div>
-                                    <p class="font-semibold text-gray-900">{{ enrollment.course.title }}</p>
-                                    <p class="text-sm text-gray-600">{{ enrollment.course.instructor_name }}</p>
+                                    <p class="font-semibold text-gray-900">
+                                        {{ enrollment.course.title }}
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        {{ enrollment.course.instructor_name|default:"MIU Staff" }}
+                                    </p>
                                 </div>
                             </div>
                         </td>
@@ -129,7 +223,7 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4">
-                            <a href="{% url 'students:course_detail' enrollment.course.id %}" 
+                            <a href="{% url 'students:course_detail' enrollment.course.slug %}" 
                                class="text-primary-600 hover:text-primary-700 font-medium text-sm">
                                 View Details →
                             </a>
@@ -149,11 +243,68 @@
     </div>
 
     <!-- Assignment Grades -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="p-6 border-b border-gray-200">
-            <h2 class="text-xl font-bold text-gray-900">Assignment Grades</h2>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-4 md:p-6 border-b border-gray-200">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900">
+                Assignment Grades
+            </h2>
         </div>
-        <div class="overflow-x-auto">
+        
+        <!-- Mobile View -->
+        <div class="md:hidden divide-y divide-gray-200">
+            {% for submission in submissions %}
+            <div class="p-4">
+                <p class="font-semibold text-gray-900 mb-1">
+                    {{ submission.assignment.title }}
+                </p>
+                <p class="text-sm text-gray-900 mb-2">
+                    {{ submission.assignment.lesson.course.title }}
+                </p>
+                <p class="text-xs text-gray-600 mb-3">
+                    Submitted: {{ submission.submitted_at|date:"M d, Y" }}
+                </p>
+                
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <p class="text-xs text-gray-600 mb-1">Score</p>
+                        <div class="flex items-center">
+                            <span class="text-lg font-bold {% if submission.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ submission.score|floatformat:1 }}
+                            </span>
+                            <span class="text-sm text-gray-600 ml-1">
+                                / {{ submission.assignment.max_score }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        {% if submission.passed %}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                            <i class="fas fa-check-circle mr-1"></i>Passed
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                            <i class="fas fa-times-circle mr-1"></i>Failed
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <a href="{% url 'students:assignment_detail' submission.assignment.lesson.course.slug submission.assignment.slug %}" 
+                   class="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                    View Details →
+                </a>
+            </div>
+            {% empty %}
+            <div class="p-8 text-center">
+                <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-3"></i>
+                <p class="text-gray-600 text-sm">No graded assignments yet</p>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Desktop View -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
@@ -179,19 +330,25 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     {% for submission in submissions %}
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4">
-                            <p class="font-semibold text-gray-900">{{ submission.assignment.title }}</p>
+                            <p class="font-semibold text-gray-900">
+                                {{ submission.assignment.title }}
+                            </p>
                         </td>
                         <td class="px-6 py-4">
-                            <p class="text-sm text-gray-900">{{ submission.assignment.lesson.course.title }}</p>
+                            <p class="text-sm text-gray-900">
+                                {{ submission.assignment.lesson.course.title }}
+                            </p>
                         </td>
                         <td class="px-6 py-4">
-                            <p class="text-sm text-gray-600">{{ submission.submitted_at|date:"M d, Y" }}</p>
+                            <p class="text-sm text-gray-600">
+                                {{ submission.submitted_at|date:"M d, Y" }}
+                            </p>
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
-                                <span class="text-lg font-bold {% if submission.score >= submission.assignment.passing_score %}text-green-600{% else %}text-red-600{% endif %}">
+                                <span class="text-lg font-bold {% if submission.passed %}text-green-600{% else %}text-red-600{% endif %}">
                                     {{ submission.score|floatformat:1 }}
                                 </span>
                                 <span class="text-sm text-gray-600 ml-1">
@@ -211,7 +368,7 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4">
-                            <a href="{% url 'students:assignment_detail' submission.assignment.id %}" 
+                            <a href="{% url 'students:assignment_detail' submission.assignment.lesson.course.slug submission.assignment.slug %}" 
                                class="text-primary-600 hover:text-primary-700 font-medium text-sm">
                                 View Details →
                             </a>

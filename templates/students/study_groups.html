@@ -3,11 +3,16 @@
 
 {% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
 
+{% block extra_meta %}
+<meta name="description" content="Join study groups to collaborate with peers, share knowledge, and enhance your learning experience.">
+<meta name="keywords" content="study groups, peer learning, collaboration, student community">
+{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Page Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
             Study Groups
         </h1>
         <p class="text-gray-600 mt-2">
@@ -15,54 +20,65 @@
         </p>
     </div>
 
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+        {% for message in messages %}
+        <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- My Groups -->
     {% if my_groups %}
-    <div class="mb-8">
+    <section class="mb-8">
         <h2 class="text-xl font-bold text-gray-900 mb-4">
             My Study Groups
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for group in my_groups %}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
+            <article class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
                 <div class="h-32 bg-gradient-to-br from-primary-500 to-secondary-500 p-6 flex items-center justify-center">
-                    <i class="fas fa-users text-white text-5xl opacity-75"></i>
+                    <i class="fas fa-users text-white text-5xl opacity-75" aria-hidden="true"></i>
                 </div>
                 
                 <div class="p-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-2">
                         <a href="{% url 'students:study_group_detail' group.id %}" 
-                           class="hover:text-primary-600">
+                           class="hover:text-primary-600 focus:outline-none focus:underline">
                             {{ group.name }}
                         </a>
                     </h3>
                     
                     {% if group.course %}
-                    <p class="text-sm text-gray-600 mb-4">
-                        <i class="fas fa-book mr-2"></i>
-                        {{ group.course.title }}
+                    <p class="text-sm text-gray-600 mb-4 flex items-center gap-2">
+                        <i class="fas fa-book" aria-hidden="true"></i>
+                        <span>{{ group.course.title }}</span>
                     </p>
                     {% endif %}
 
                     <div class="flex items-center justify-between text-sm mb-4">
-                        <span class="text-gray-600">
-                            <i class="fas fa-users mr-1"></i>
-                            {{ group.members.count }} / {{ group.max_members }} members
+                        <span class="text-gray-600 flex items-center gap-1">
+                            <i class="fas fa-users" aria-hidden="true"></i>
+                            <span class="sr-only">Members:</span>
+                            {{ group.member_count|default:0 }} / {{ group.max_members }}
                         </span>
                     </div>
 
                     <a href="{% url 'students:study_group_detail' group.id %}" 
-                       class="block w-full text-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium">
+                       class="block w-full text-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                         View Group
                     </a>
                 </div>
-            </div>
+            </article>
             {% endfor %}
         </div>
-    </div>
+    </section>
     {% endif %}
 
     <!-- Available Groups -->
-    <div>
+    <section>
         <h2 class="text-xl font-bold text-gray-900 mb-4">
             Available Study Groups
         </h2>
@@ -70,9 +86,9 @@
         {% if available_groups %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for group in available_groups %}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
+            <article class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
                 <div class="h-32 bg-gradient-to-br from-blue-500 to-purple-500 p-6 flex items-center justify-center">
-                    <i class="fas fa-user-plus text-white text-5xl opacity-75"></i>
+                    <i class="fas fa-user-plus text-white text-5xl opacity-75" aria-hidden="true"></i>
                 </div>
                 
                 <div class="p-6">
@@ -81,9 +97,9 @@
                     </h3>
                     
                     {% if group.course %}
-                    <p class="text-sm text-gray-600 mb-2">
-                        <i class="fas fa-book mr-2"></i>
-                        {{ group.course.title }}
+                    <p class="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                        <i class="fas fa-book" aria-hidden="true"></i>
+                        <span>{{ group.course.title }}</span>
                     </p>
                     {% endif %}
 
@@ -94,45 +110,47 @@
                     {% endif %}
 
                     <div class="flex items-center justify-between text-sm mb-4">
-                        <span class="text-gray-600">
-                            <i class="fas fa-users mr-1"></i>
-                            {{ group.member_count }} / {{ group.max_members }}
+                        <span class="text-gray-600 flex items-center gap-1">
+                            <i class="fas fa-users" aria-hidden="true"></i>
+                            <span class="sr-only">Members:</span>
+                            {{ group.member_count|default:0 }} / {{ group.max_members }}
                         </span>
-                        {% if group.member_count >= group.max_members %}
-                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">
+                        {% if group.is_full %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
                             Full
                         </span>
                         {% else %}
-                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
                             Open
                         </span>
                         {% endif %}
                     </div>
 
-                    {% if group.member_count < group.max_members %}
+                    {% if not group.is_full %}
                     <form method="post" 
                           action="{% url 'students:join_study_group' group.id %}">
                         {% csrf_token %}
                         <button type="submit" 
-                                class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium">
+                                class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                             <i class="fas fa-user-plus mr-2"></i>
                             Join Group
                         </button>
                     </form>
                     {% else %}
                     <button disabled
-                            class="w-full px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium">
+                            class="w-full px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium"
+                            aria-label="Group is full">
                         Group Full
                     </button>
                     {% endif %}
                 </div>
-            </div>
+            </article>
             {% endfor %}
         </div>
         {% else %}
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
             <div class="text-center">
-                <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+                <i class="fas fa-users text-6xl text-gray-300 mb-4" aria-hidden="true"></i>
                 <h3 class="text-xl font-semibold text-gray-900 mb-2">
                     No study groups available
                 </h3>
@@ -142,6 +160,6 @@
             </div>
         </div>
         {% endif %}
-    </div>
+    </section>
 </div>
 {% endblock %}

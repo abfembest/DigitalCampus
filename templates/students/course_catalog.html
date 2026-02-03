@@ -203,7 +203,7 @@ that match your learning goals.
                 <!-- Course Title -->
                 <h2 class="text-base sm:text-lg font-bold 
                            text-gray-900 mb-2 line-clamp-2">
-                    <a href="{% url 'students:course_detail' course.id %}" 
+                    <a href="{% url 'students:course_detail' course.slug %}" 
                        class="hover:text-primary-600 
                               focus:text-primary-600 
                               focus:outline-none focus:ring-2 
@@ -282,7 +282,7 @@ that match your learning goals.
                         {% endif %}
                     </div>
 
-                    <a href="{% url 'students:course_detail' course.id %}" 
+                    <a href="{% url 'students:course_detail' course.slug %}" 
                        class="px-3 sm:px-4 py-2 text-white 
                               rounded-lg transition-colors 
                               text-xs sm:text-sm font-medium 

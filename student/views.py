@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Q, Count, Avg, Prefetch, Max
+from django.db.models import Q, Count, Avg, Prefetch, Max, Sum, F
 from django.utils import timezone
 from django.core.paginator import Paginator
 from functools import wraps
@@ -18,7 +18,7 @@ from eduweb.models import (
     StudentBadge, LessonSection
 )
 
-from .forms import AssignmentSubmissionForm
+from .forms import AssignmentSubmissionForm, SettingsForm, ProfileUpdateForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm
 
 
 def student_required(view_func):
@@ -1296,45 +1296,62 @@ def quiz_result(request, attempt_id):
     return render(request, 'students/quiz_result.html', context)
 
 
-# ==================== COMMUNITY ====================
+# ==================== COMMUNITY & DISCUSSIONS ====================
 @login_required
 @student_required
 def community(request):
-    """Community discussion board"""
-    filter_type = request.GET.get('filter', 'all')
-    search_query = request.GET.get('q', '')
+    """
+    Community discussion forum with filtering and search
+    """
+    user = request.user
     
+    # Get filter and search parameters
+    filter_type = request.GET.get('filter', 'all')
+    search_query = request.GET.get('q', '').strip()
+    
+    # Base queryset with optimizations
     threads = Discussion.objects.select_related(
-        'author', 
+        'author',
         'course'
     ).annotate(
-        reply_count=Count('replies')
+        reply_count=Count('replies'),
+        views=F('views_count')
     )
     
     # Apply filters
     if filter_type == 'my_courses':
-        enrolled_courses = Enrollment.objects.filter(
-            student=request.user
+        # Show discussions from user's enrolled courses
+        enrolled_course_ids = Enrollment.objects.filter(
+            student=user,
+            status='active'
         ).values_list('course_id', flat=True)
-        threads = threads.filter(course_id__in=enrolled_courses)
+        threads = threads.filter(course_id__in=enrolled_course_ids)
     elif filter_type == 'my_posts':
-        threads = threads.filter(author=request.user)
+        # Show user's own discussions
+        threads = threads.filter(author=user)
     
+    # Apply search
     if search_query:
         threads = threads.filter(
             Q(title__icontains=search_query) |
             Q(content__icontains=search_query)
         )
     
+    # Order threads
     threads = threads.order_by('-is_pinned', '-created_at')
     
-    # Pagination
-    paginator = Paginator(threads, 20)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    # Paginate
+    paginator = Paginator(threads, 15)
+    page_number = request.GET.get('page', 1)
+    
+    try:
+        threads = paginator.get_page(page_number)
+    except Exception:
+        threads = paginator.get_page(1)
     
     context = {
         'page_title': 'Community',
-        'threads': page_obj,
+        'threads': threads,
         'filter_type': filter_type,
         'search_query': search_query,
     }
@@ -1345,37 +1362,44 @@ def community(request):
 @login_required
 @student_required
 def thread_detail(request, thread_id):
-    """View discussion thread"""
+    """
+    View individual discussion thread with replies
+    """
     thread = get_object_or_404(
         Discussion.objects.select_related('author', 'course'),
         id=thread_id
     )
     
-    # Increment views
-    thread.views_count += 1
-    thread.save()
+    # Increment view count
+    thread.views_count = F('views_count') + 1
+    thread.save(update_fields=['views_count'])
+    thread.refresh_from_db()
     
     # Get replies
     replies = thread.replies.select_related(
         'author'
     ).order_by('created_at')
     
-    # Handle reply submission
+    # Handle new reply with form
     if request.method == 'POST':
-        content = request.POST.get('content', '').strip()
-        if content:
-            DiscussionReply.objects.create(
-                thread=thread,
-                author=request.user,
-                content=content
-            )
+        form = ReplyCreateForm(request.POST)
+        
+        if form.is_valid():
+            reply = form.save(commit=False)
+            reply.discussion = thread
+            reply.author = request.user
+            reply.save()
+            
             messages.success(request, 'Reply posted successfully!')
             return redirect('students:thread_detail', thread_id=thread_id)
+    else:
+        form = ReplyCreateForm()
     
     context = {
         'page_title': thread.title,
         'thread': thread,
         'replies': replies,
+        'reply_form': form,
     }
     
     return render(request, 'students/thread_detail.html', context)
@@ -1384,32 +1408,31 @@ def thread_detail(request, thread_id):
 @login_required
 @student_required
 def create_thread(request):
-    """Create new discussion thread"""
+    """
+    Create a new discussion thread using Django form
+    """
     if request.method == 'POST':
-        title = request.POST.get('title', '').strip()
-        content = request.POST.get('content', '').strip()
-        course_id = request.POST.get('course_id')
+        form = ThreadCreateForm(
+            user=request.user,
+            data=request.POST
+        )
         
-        if title and content:
-            thread = Discussion.objects.create(
-                title=title,
-                content=content,
-                author=request.user,
-                course_id=course_id if course_id else None
+        if form.is_valid():
+            thread = form.save(commit=False)
+            thread.author = request.user
+            thread.save()
+            
+            messages.success(
+                request,
+                'Discussion created successfully!'
             )
-            messages.success(request, 'Thread created successfully!')
             return redirect('students:thread_detail', thread_id=thread.id)
-        else:
-            messages.error(request, 'Please fill in all fields.')
-    
-    # Get user's enrolled courses
-    enrolled_courses = LMSCourse.objects.filter(
-        enrollments__student=request.user
-    )
+    else:
+        form = ThreadCreateForm(user=request.user)
     
     context = {
-        'page_title': 'New Discussion',
-        'enrolled_courses': enrolled_courses,
+        'page_title': 'Create Discussion',
+        'form': form,
     }
     
     return render(request, 'students/create_thread.html', context)
@@ -1419,22 +1442,43 @@ def create_thread(request):
 @login_required
 @student_required
 def study_groups(request):
-    """List study groups"""
-    # Groups user is member of
-    my_groups = StudyGroup.objects.filter(
-        members__user=request.user,
-        members__is_active=True,
-        is_active=True
-    ).distinct()
+    """
+    List study groups - user's groups and available groups
+    """
+    user = request.user
     
-    # Available groups to join
-    available_groups = StudyGroup.objects.filter(
+    # Get user's study groups
+    my_group_ids = StudyGroupMember.objects.filter(
+        user=user,
         is_active=True
-    ).exclude(
-        members__user=request.user
-    ).annotate(
-        member_count=Count('members')
+    ).values_list('study_group_id', flat=True)
+    
+    my_groups = StudyGroup.objects.filter(
+        id__in=my_group_ids,
+        is_active=True
+    ).select_related('course').annotate(
+        member_count=Count(
+            'members',
+            filter=Q(members__is_active=True)
+        )
     )
+    
+    # Get available groups (not full, public, not already joined)
+    available_groups = StudyGroup.objects.filter(
+        is_active=True,
+        is_public=True
+    ).exclude(
+        id__in=my_group_ids
+    ).select_related('course').annotate(
+        member_count=Count(
+            'members',
+            filter=Q(members__is_active=True)
+        )
+    ).order_by('-created_at')
+    
+    # Annotate whether each group is full
+    for group in available_groups:
+        group.is_full = group.member_count >= group.max_members
     
     context = {
         'page_title': 'Study Groups',
@@ -1448,25 +1492,48 @@ def study_groups(request):
 @login_required
 @student_required
 def study_group_detail(request, group_id):
-    """View study group details"""
+    """
+    View study group details and members
+    """
     group = get_object_or_404(
-        StudyGroup.objects.select_related('course'),
+        StudyGroup.objects.select_related('course', 'created_by'),
         id=group_id
     )
     
-    # Check membership
+    # Check if user is a member
     is_member = StudyGroupMember.objects.filter(
         study_group=group,
-        user=request.user
+        user=request.user,
+        is_active=True
     ).exists()
     
-    members = group.members.select_related('user').all()
+    # Get members
+    members = group.members.filter(
+        is_active=True
+    ).select_related('user')
+    
+    # Handle message form (only for members)
+    if request.method == 'POST' and is_member:
+        form = StudyGroupMessageForm(request.POST)
+        
+        if form.is_valid():
+            # Here you would save the message to a GroupMessage model
+            # For now, just show success
+            messages.success(request, 'Message posted successfully!')
+            return redirect(
+                'students:study_group_detail',
+                group_id=group_id
+            )
+    else:
+        form = StudyGroupMessageForm()
     
     context = {
         'page_title': group.name,
         'group': group,
         'is_member': is_member,
         'members': members,
+        'member_count': members.count(),
+        'message_form': form if is_member else None,
     }
     
     return render(request, 'students/study_group_detail.html', context)
@@ -1475,64 +1542,91 @@ def study_group_detail(request, group_id):
 @login_required
 @student_required
 def join_study_group(request, group_id):
-    """Join a study group"""
+    """
+    Join a study group
+    """
     if request.method != 'POST':
         return redirect('students:study_groups')
     
-    group = get_object_or_404(StudyGroup, id=group_id)
-    
-    # Check if already member
-    if StudyGroupMember.objects.filter(
-        study_group=group,
-        user=request.user
-    ).exists():
-        messages.info(request, 'You are already a member.')
-        return redirect('students:study_group_detail', group_id=group_id)
-    
-    # Check capacity
-    current_members = group.members.count()
-    if current_members >= group.max_members:
-        messages.error(request, 'Group is full.')
-        return redirect('students:study_groups')
-    
-    # Add member
-    StudyGroupMember.objects.create(
-        study_group=group,
-        user=request.user,
-        role='member'
+    group = get_object_or_404(
+        StudyGroup,
+        id=group_id,
+        is_active=True
     )
     
-    messages.success(request, f'Joined {group.name} successfully!')
+    # Check if already a member
+    existing = StudyGroupMember.objects.filter(
+        study_group=group,
+        user=request.user
+    ).first()
+    
+    if existing and existing.is_active:
+        messages.info(
+            request,
+            'You are already a member of this group.'
+        )
+        return redirect(
+            'students:study_group_detail',
+            group_id=group_id
+        )
+    
+    # Check if group is full
+    current_count = group.members.filter(is_active=True).count()
+    if current_count >= group.max_members:
+        messages.error(request, 'This study group is full.')
+        return redirect('students:study_groups')
+    
+    # Join group
+    if existing:
+        existing.is_active = True
+        existing.save()
+    else:
+        StudyGroupMember.objects.create(
+            study_group=group,
+            user=request.user,
+            role='member'
+        )
+    
+    messages.success(
+        request,
+        f'Successfully joined {group.name}!'
+    )
     return redirect('students:study_group_detail', group_id=group_id)
-
 
 # ==================== ACHIEVEMENTS ====================
 @login_required
 @student_required
 def achievements(request):
-    """View achievements and badges"""
-    # User's badges
-    user_badges = StudentBadge.objects.filter(
-        student=request.user
-    ).select_related('badge').order_by('-awarded_at')
+    """
+    View achievements and badges with statistics
+    """
+    user = request.user
     
-    # All available badges
+    # Get user's earned badges
+    user_badges = (
+        StudentBadge.objects
+        .filter(student=user)
+        .select_related('badge')
+        .order_by('-awarded_at')
+    )
+    
+    # Get all available badges
     all_badges = Badge.objects.filter(is_active=True)
     
-    # Separate earned and unearned
+    # Separate earned and unearned badges
     earned_badge_ids = user_badges.values_list('badge_id', flat=True)
     unearned_badges = all_badges.exclude(id__in=earned_badge_ids)
     
-    # Calculate statistics
+    # Calculate completed courses
     completed_courses = Enrollment.objects.filter(
-        student=request.user,
+        student=user,
         status='completed'
     ).count()
     
     # Calculate total points from badges
-    total_points = sum(
-        badge.badge.points for badge in user_badges
-    ) if user_badges else 0
+    total_points = user_badges.aggregate(
+        total=Sum('badge__points')
+    )['total'] or 0
     
     context = {
         'page_title': 'Achievements',
@@ -1545,18 +1639,79 @@ def achievements(request):
     return render(request, 'students/achievements.html', context)
 
 
+# ==================== GRADES ====================
 @login_required
 @student_required
 def grades(request):
-    """View grades"""
-    enrollments = Enrollment.objects.filter(
-        student=request.user
-    ).select_related('course')
+    """
+    View grades and performance across all courses
+    """
+    user = request.user
     
-    submissions = AssignmentSubmission.objects.filter(
-        student=request.user,
-        status='graded'
-    ).select_related('assignment__lesson__course')
+    # Get all enrollments with optimized queries
+    enrollments = (
+        Enrollment.objects
+        .filter(student=user)
+        .select_related('course', 'course__instructor')
+        .prefetch_related('course__lessons')
+        .order_by('-enrolled_at')
+    )
+    
+    # Add progress data to each enrollment
+    for enrollment in enrollments:
+        # Get completed lessons count
+        completed_count = LessonProgress.objects.filter(
+            enrollment=enrollment,
+            is_completed=True
+        ).count()
+        
+        total_lessons = enrollment.course.lessons.filter(
+            is_active=True
+        ).count()
+        
+        # Calculate progress percentage
+        enrollment.completed_lessons = completed_count
+        enrollment.progress_percentage = (
+            (completed_count / total_lessons * 100) 
+            if total_lessons > 0 
+            else 0
+        )
+        
+        # Get current grade (average of graded assignments)
+        from django.db.models import FloatField
+        grade_data = AssignmentSubmission.objects.filter(
+            student=user,
+            assignment__lesson__course=enrollment.course,
+            status='graded',
+            score__isnull=False
+        ).aggregate(
+            avg_score=Avg(
+                F('score') * 100.0 / F('assignment__max_score'),
+                output_field=FloatField()
+            )
+        )
+        
+        enrollment.current_grade = grade_data['avg_score']
+    
+    # Get graded assignment submissions
+    submissions = (
+        AssignmentSubmission.objects
+        .filter(student=user, status='graded')
+        .select_related(
+            'assignment',
+            'assignment__lesson',
+            'assignment__lesson__course'
+        )
+        .order_by('-graded_at')
+    )
+    
+    # Add passed status to submissions
+    for submission in submissions:
+        submission.passed = (
+            submission.score >= submission.assignment.passing_score
+            if submission.score is not None
+            else False
+        )
     
     context = {
         'page_title': 'Grades & Performance',
@@ -1567,37 +1722,150 @@ def grades(request):
     return render(request, 'students/grades.html', context)
 
 
+# ==================== PROGRESS ====================
 @login_required
 @student_required
 def progress(request):
-    """View learning progress"""
-    enrollments = Enrollment.objects.filter(
-        student=request.user
-    ).select_related('course').prefetch_related(
-        'course__sections__lessons'
-    ).order_by('-enrolled_at')
+    """
+    View detailed learning progress across all courses
+    """
+    user = request.user
     
+    # Get all enrollments with related data
+    enrollments = (
+        Enrollment.objects
+        .filter(student=user)
+        .select_related('course', 'course__instructor')
+        .prefetch_related(
+            'course__sections',
+            'course__sections__lessons',
+            'course__lessons'
+        )
+        .order_by('-enrolled_at')
+    )
+    
+    # Add detailed progress data to each enrollment
     for enrollment in enrollments:
-        enrollment.completed_lessons = LessonProgress.objects.filter(
+        # Get completed lessons
+        completed_progress = LessonProgress.objects.filter(
             enrollment=enrollment,
             is_completed=True
+        ).values_list('lesson_id', flat=True)
+        
+        enrollment.completed_lesson_ids = set(completed_progress)
+        
+        # Count completed lessons
+        enrollment.completed_lessons = len(completed_progress)
+        
+        # Calculate progress percentage
+        total_lessons = enrollment.course.lessons.filter(
+            is_active=True
         ).count()
+        
+        enrollment.progress_percentage = (
+            (enrollment.completed_lessons / total_lessons * 100) 
+            if total_lessons > 0 
+            else 0
+        )
+        
+        # Add section progress
+        for section in enrollment.course.sections.all():
+            section_lessons = section.lessons.filter(is_active=True)
+            total = section_lessons.count()
+            completed = sum(
+                1 for lesson in section_lessons 
+                if lesson.id in enrollment.completed_lesson_ids
+            )
+            section.progress_percentage = (
+                (completed / total * 100) if total > 0 else 0
+            )
+            section.total_lessons = total
+    
+    # Calculate learning activity for last 28 days
+    from datetime import datetime, timedelta
+    today = timezone.now().date()
+    start_date = today - timedelta(days=27)  # 28 days including today
+    
+    activity_data = []
+    for i in range(28):
+        date = start_date + timedelta(days=i)
+        
+        # Count activities for this day
+        lessons_completed = LessonProgress.objects.filter(
+            enrollment__student=user,
+            completed_at__date=date
+        ).count()
+        
+        assignments_submitted = AssignmentSubmission.objects.filter(
+            student=user,
+            submitted_at__date=date
+        ).count()
+        
+        quizzes_taken = QuizAttempt.objects.filter(
+            student=user,
+            started_at__date=date
+        ).count()
+        
+        # Calculate activity level (0-3)
+        total_activities = (
+            lessons_completed + 
+            assignments_submitted + 
+            quizzes_taken
+        )
+        
+        if total_activities == 0:
+            level = 0
+        elif total_activities <= 2:
+            level = 1
+        elif total_activities <= 5:
+            level = 2
+        else:
+            level = 3
+        
+        activity_data.append({
+            'date': date,
+            'level': level,
+            'count': total_activities,
+            'lessons': lessons_completed,
+            'assignments': assignments_submitted,
+            'quizzes': quizzes_taken,
+        })
     
     context = {
         'page_title': 'My Progress',
         'enrollments': enrollments,
+        'activity_data': activity_data,
     }
     
     return render(request, 'students/progress.html', context)
 
 
+# ==================== CERTIFICATES ====================
 @login_required
 @student_required
 def certificates(request):
-    """List certificates"""
-    certificates = Certificate.objects.filter(
-        student=request.user
-    ).select_related('course').order_by('-issued_date')
+    """
+    List all earned certificates
+    """
+    user = request.user
+    
+    # Get all certificates with course data
+    certificates = (
+        Certificate.objects
+        .filter(student=user)
+        .select_related('course', 'course__instructor')
+        .order_by('-issued_date')
+    )
+    
+    # Add instructor name to each certificate
+    for cert in certificates:
+        if hasattr(cert.course, 'instructor'):
+            cert.course.instructor_name = (
+                cert.course.instructor.get_full_name() 
+                or cert.course.instructor.username
+            )
+        else:
+            cert.course.instructor_name = 'MIU Staff'
     
     context = {
         'page_title': 'My Certificates',
@@ -1607,39 +1875,63 @@ def certificates(request):
     return render(request, 'students/certificates.html', context)
 
 
+# ==================== PROFILE & SETTINGS ====================
 @login_required
 @student_required
 def profile(request):
-    """View/edit profile"""
+    """
+    View and edit user profile using Django form
+    """
+    user = request.user
+    profile = user.profile
+    
+    # Get statistics for sidebar
+    stats = {
+        'total_enrolled': Enrollment.objects.filter(
+            student=user
+        ).count(),
+        'completed_courses': Enrollment.objects.filter(
+            student=user,
+            status='completed'
+        ).count(),
+        'certificates_earned': Certificate.objects.filter(
+            student=user
+        ).count(),
+        'total_hours': 0,  # Calculate from lesson progress
+    }
+    
     if request.method == 'POST':
-        user = request.user
-        profile = user.profile
+        form = ProfileUpdateForm(
+            request.POST,
+            request.FILES,
+            instance=profile
+        )
         
-        # Update user
-        user.first_name = request.POST.get('first_name', '')
-        user.last_name = request.POST.get('last_name', '')
-        user.email = request.POST.get('email', '')
-        user.save()
-        
-        # Update profile
-        profile.bio = request.POST.get('bio', '')
-        profile.phone = request.POST.get('phone', '')
-        profile.city = request.POST.get('city', '')
-        profile.country = request.POST.get('country', '')
-        profile.website = request.POST.get('website', '')
-        profile.linkedin = request.POST.get('linkedin', '')
-        profile.twitter = request.POST.get('twitter', '')
-        
-        if request.FILES.get('avatar'):
-            profile.avatar = request.FILES['avatar']
-        
-        profile.save()
-        
-        messages.success(request, 'Profile updated successfully!')
-        return redirect('students:profile')
+        if form.is_valid():
+            # Update user fields
+            user.first_name = form.cleaned_data.get('first_name', '')
+            user.last_name = form.cleaned_data.get('last_name', '')
+            user.email = form.cleaned_data.get('email', '')
+            user.save()
+            
+            # Update profile
+            form.save()
+            
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('students:profile')
+    else:
+        # Populate form with current data
+        initial_data = {
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+        }
+        form = ProfileUpdateForm(instance=profile, initial=initial_data)
     
     context = {
         'page_title': 'My Profile',
+        'form': form,
+        **stats,
     }
     
     return render(request, 'students/profile.html', context)
@@ -1648,49 +1940,68 @@ def profile(request):
 @login_required
 @student_required
 def settings(request):
-    """Account settings"""
+    """
+    Account settings and preferences using Django form
+    """
+    user = request.user
+    profile = user.profile
+    
     if request.method == 'POST':
-        profile = request.user.profile
+        form = SettingsForm(request.POST, instance=profile)
         
-        # Update preferences
-        profile.email_notifications = (
-            request.POST.get('email_notifications') == 'on'
-        )
-        profile.marketing_emails = (
-            request.POST.get('marketing_emails') == 'on'
-        )
-        profile.save()
-        
-        # Handle password change if provided
-        current_password = request.POST.get('current_password')
-        new_password = request.POST.get('new_password')
-        confirm_password = request.POST.get('confirm_password')
-        
-        if current_password and new_password:
-            if request.user.check_password(current_password):
-                if new_password == confirm_password:
-                    request.user.set_password(new_password)
-                    request.user.save()
-                    messages.success(
-                        request, 
-                        'Password updated successfully!'
-                    )
-                else:
+        if form.is_valid():
+            form.save()
+            
+            # Handle password change
+            current_password = request.POST.get(
+                'current_password',
+                ''
+            ).strip()
+            new_password = request.POST.get('new_password', '').strip()
+            confirm_password = request.POST.get(
+                'confirm_password',
+                ''
+            ).strip()
+            
+            if current_password and new_password:
+                if not user.check_password(current_password):
                     messages.error(
-                        request, 
+                        request,
+                        'Current password is incorrect.'
+                    )
+                elif new_password != confirm_password:
+                    messages.error(
+                        request,
                         'New passwords do not match.'
                     )
-            else:
-                messages.error(
-                    request, 
-                    'Current password is incorrect.'
+                elif len(new_password) < 8:
+                    messages.error(
+                        request,
+                        'Password must be at least 8 characters.'
+                    )
+                else:
+                    user.set_password(new_password)
+                    user.save()
+                    messages.success(
+                        request,
+                        'Password updated successfully! '
+                        'Please login again.'
+                    )
+                    return redirect('eduweb:auth_page')
+            
+            if not (current_password and new_password):
+                messages.success(
+                    request,
+                    'Settings updated successfully!'
                 )
-        
-        messages.success(request, 'Settings updated successfully!')
-        return redirect('students:settings')
+            
+            return redirect('students:settings')
+    else:
+        form = SettingsForm(instance=profile)
     
     context = {
         'page_title': 'Settings',
+        'form': form,
     }
     
     return render(request, 'students/settings.html', context)

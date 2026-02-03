@@ -4,76 +4,93 @@
 {% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Page Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">My Certificates</h1>
-        <p class="text-gray-600 mt-2">View and download your earned certificates</p>
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+            My Certificates
+        </h1>
+        <p class="text-gray-600 mt-2 text-sm md:text-base">
+            View and download your earned certificates
+        </p>
     </div>
 
     <!-- Certificates Grid -->
     {% if certificates %}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {% for certificate in certificates %}
-        <div class="bg-white rounded-xl shadow-sm border-2 border-yellow-200 overflow-hidden hover:shadow-lg transition-all">
+        <div class="bg-white rounded-xl shadow-sm border-2 border-yellow-200 overflow-hidden hover:shadow-lg transition-all duration-200">
             <!-- Certificate Visual -->
-            <div class="h-48 bg-gradient-to-br from-yellow-50 to-yellow-100 relative p-6 flex items-center justify-center">
+            <div class="h-40 md:h-48 bg-gradient-to-br from-yellow-50 to-yellow-100 relative p-4 md:p-6 flex items-center justify-center">
                 <div class="text-center">
-                    <i class="fas fa-certificate text-yellow-600 text-6xl mb-3"></i>
-                    <p class="text-yellow-800 font-semibold">Certificate of Completion</p>
+                    <i class="fas fa-certificate text-yellow-600 text-5xl md:text-6xl mb-2 md:mb-3"></i>
+                    <p class="text-yellow-800 font-semibold text-xs md:text-sm">
+                        Certificate of Completion
+                    </p>
                 </div>
                 
                 <!-- Seal -->
-                <div class="absolute top-4 right-4 w-16 h-16 bg-yellow-600 rounded-full flex items-center justify-center">
-                    <i class="fas fa-award text-white text-2xl"></i>
+                <div class="absolute top-3 right-3 md:top-4 md:right-4 w-12 h-12 md:w-16 md:h-16 bg-yellow-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-award text-white text-lg md:text-2xl"></i>
                 </div>
             </div>
 
-            <div class="p-6">
+            <div class="p-4 md:p-6">
                 <!-- Course Title -->
-                <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                <h3 class="text-base md:text-lg font-bold text-gray-900 mb-2 line-clamp-2">
                     {{ certificate.course.title }}
                 </h3>
 
                 <!-- Certificate Details -->
                 <div class="space-y-2 mb-4">
-                    <div class="flex items-center text-sm text-gray-600">
+                    <div class="flex items-center text-xs md:text-sm text-gray-600">
                         <i class="fas fa-hashtag w-5 text-gray-400"></i>
-                        <span class="ml-2">{{ certificate.certificate_id }}</span>
+                        <span class="ml-2 truncate">{{ certificate.certificate_id }}</span>
                     </div>
-                    <div class="flex items-center text-sm text-gray-600">
+                    <div class="flex items-center text-xs md:text-sm text-gray-600">
                         <i class="fas fa-calendar w-5 text-gray-400"></i>
-                        <span class="ml-2">Issued: {{ certificate.issued_at|date:"M d, Y" }}</span>
+                        <span class="ml-2">Issued: {{ certificate.issued_date|date:"M d, Y" }}</span>
                     </div>
-                    <div class="flex items-center text-sm text-gray-600">
+                    <div class="flex items-center text-xs md:text-sm text-gray-600">
                         <i class="fas fa-user-tie w-5 text-gray-400"></i>
-                        <span class="ml-2">{{ certificate.course.instructor_name }}</span>
+                        <span class="ml-2 truncate">{{ certificate.course.instructor_name }}</span>
                     </div>
                 </div>
 
                 <!-- Actions -->
                 <div class="flex gap-2">
-                    <button onclick="viewCertificate('{{ certificate.id }}')" 
-                            class="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium text-sm">
-                        <i class="fas fa-eye mr-2"></i>View
+                    <button onclick="viewCertificate('{{ certificate.id }}', '{{ certificate.course.title|escapejs }}', '{{ certificate.issued_date|date:"M d, Y" }}', '{{ certificate.certificate_id }}')" 
+                            class="flex-1 px-3 md:px-4 py-2 md:py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-xs md:text-sm">
+                        <i class="fas fa-eye mr-1 md:mr-2"></i>View
                     </button>
-                    <a href="#" 
-                       class="flex-1 px-4 py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all font-medium text-sm text-center">
-                        <i class="fas fa-download mr-2"></i>Download
+                    {% if certificate.file %}
+                    <a href="{{ certificate.file.url }}" 
+                       download
+                       class="flex-1 px-3 md:px-4 py-2 md:py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium text-xs md:text-sm text-center">
+                        <i class="fas fa-download mr-1 md:mr-2"></i>Download
                     </a>
+                    {% else %}
+                    <button onclick="alert('Download functionality coming soon!')"
+                            class="flex-1 px-3 md:px-4 py-2 md:py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium text-xs md:text-sm">
+                        <i class="fas fa-download mr-1 md:mr-2"></i>Download
+                    </button>
+                    {% endif %}
                 </div>
 
                 <!-- Share -->
                 <div class="mt-3 pt-3 border-t border-gray-200">
                     <p class="text-xs text-gray-600 mb-2">Share:</p>
                     <div class="flex gap-2">
-                        <button class="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-all text-xs">
+                        <button onclick="shareToLinkedIn('{{ certificate.course.title|escapejs }}', '{{ certificate.certificate_id }}')"
+                                class="flex-1 px-2 md:px-3 py-1.5 md:py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors text-xs">
                             <i class="fab fa-linkedin mr-1"></i>LinkedIn
                         </button>
-                        <button class="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-all text-xs">
+                        <button onclick="shareToTwitter('{{ certificate.course.title|escapejs }}')"
+                                class="flex-1 px-2 md:px-3 py-1.5 md:py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors text-xs">
                             <i class="fab fa-twitter mr-1"></i>Twitter
                         </button>
-                        <button class="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-all text-xs">
+                        <button onclick="copyLink('{{ certificate.certificate_id }}')"
+                                class="flex-1 px-2 md:px-3 py-1.5 md:py-2 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors text-xs">
                             <i class="fas fa-link mr-1"></i>Link
                         </button>
                     </div>
@@ -83,18 +100,22 @@
         {% endfor %}
     </div>
     {% else %}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 md:p-12">
         <div class="text-center">
-            <div class="w-24 h-24 mx-auto mb-6 bg-yellow-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-certificate text-yellow-600 text-5xl"></i>
+            <div class="w-20 h-20 md:w-24 md:h-24 mx-auto mb-6 bg-yellow-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-certificate text-yellow-600 text-4xl md:text-5xl"></i>
             </div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">No certificates yet</h3>
-            <p class="text-gray-600 mb-6">Complete courses to earn certificates</p>
+            <h3 class="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+                No certificates yet
+            </h3>
+            <p class="text-sm md:text-base text-gray-600 mb-6">
+                Complete courses to earn certificates
+            </p>
             
             <!-- Progress Encouragement -->
             <div class="max-w-md mx-auto mb-6">
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p class="text-sm text-blue-800">
+                    <p class="text-xs md:text-sm text-blue-800">
                         <i class="fas fa-lightbulb mr-2"></i>
                         Keep learning! Complete your enrolled courses to earn your first certificate.
                     </p>
@@ -102,7 +123,7 @@
             </div>
 
             <a href="{% url 'students:my_courses' %}" 
-               class="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-semibold">
+               class="inline-block px-6 py-3 bg-primary-600 text-white text-sm md:text-base rounded-lg hover:bg-primary-700 transition-colors font-semibold">
                 View My Courses
             </a>
         </div>
@@ -110,43 +131,64 @@
     {% endif %}
 
     <!-- Certificate Info -->
-    <div class="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">About Certificates</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4 md:p-6">
+        <h3 class="text-lg md:text-xl font-semibold text-gray-900 mb-4">
+            About Certificates
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <div class="flex items-start">
-                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-4">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-3 md:mr-4">
                     <i class="fas fa-check text-white"></i>
                 </div>
                 <div>
-                    <h4 class="font-semibold text-gray-900 mb-1">Verified Certificates</h4>
-                    <p class="text-sm text-gray-600">All certificates are digitally verified and can be shared with employers</p>
+                    <h4 class="font-semibold text-gray-900 mb-1 text-sm md:text-base">
+                        Verified Certificates
+                    </h4>
+                    <p class="text-xs md:text-sm text-gray-600">
+                        All certificates are digitally verified and can be shared with employers
+                    </p>
                 </div>
             </div>
+            
             <div class="flex items-start">
-                <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-4">
+                <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-3 md:mr-4">
                     <i class="fas fa-share-alt text-white"></i>
                 </div>
                 <div>
-                    <h4 class="font-semibold text-gray-900 mb-1">Easy Sharing</h4>
-                    <p class="text-sm text-gray-600">Share on LinkedIn, add to your resume, or download as PDF</p>
+                    <h4 class="font-semibold text-gray-900 mb-1 text-sm md:text-base">
+                        Easy Sharing
+                    </h4>
+                    <p class="text-xs md:text-sm text-gray-600">
+                        Share on LinkedIn, add to your resume, or download as PDF
+                    </p>
                 </div>
             </div>
+            
             <div class="flex items-start">
-                <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-4">
+                <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-3 md:mr-4">
                     <i class="fas fa-infinity text-white"></i>
                 </div>
                 <div>
-                    <h4 class="font-semibold text-gray-900 mb-1">Lifetime Access</h4>
-                    <p class="text-sm text-gray-600">Your certificates never expire and are always accessible</p>
+                    <h4 class="font-semibold text-gray-900 mb-1 text-sm md:text-base">
+                        Lifetime Access
+                    </h4>
+                    <p class="text-xs md:text-sm text-gray-600">
+                        Your certificates never expire and are always accessible
+                    </p>
                 </div>
             </div>
+            
             <div class="flex items-start">
-                <div class="w-10 h-10 bg-yellow-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-4">
+                <div class="w-10 h-10 bg-yellow-600 rounded-lg flex items-center justify-center flex-shrink-0 mr-3 md:mr-4">
                     <i class="fas fa-award text-white"></i>
                 </div>
                 <div>
-                    <h4 class="font-semibold text-gray-900 mb-1">Industry Recognition</h4>
-                    <p class="text-sm text-gray-600">Recognized by top companies and educational institutions</p>
+                    <h4 class="font-semibold text-gray-900 mb-1 text-sm md:text-base">
+                        Industry Recognition
+                    </h4>
+                    <p class="text-xs md:text-sm text-gray-600">
+                        Recognized by top companies and educational institutions
+                    </p>
                 </div>
             </div>
         </div>
@@ -154,31 +196,52 @@
 </div>
 
 <!-- Certificate Modal -->
-<div id="certificateModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-xl font-bold text-gray-900">Certificate Preview</h3>
-            <button onclick="closeCertificateModal()" class="text-gray-400 hover:text-gray-600">
+<div id="certificateModal" 
+     class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+     onclick="closeCertificateModal(event)">
+    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" 
+         onclick="event.stopPropagation()">
+        <div class="p-4 md:p-6 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg md:text-xl font-bold text-gray-900">
+                Certificate Preview
+            </h3>
+            <button onclick="closeCertificateModal()" 
+                    class="text-gray-400 hover:text-gray-600 transition-colors">
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
-        <div class="p-6">
-            <div class="aspect-[1.414/1] bg-gradient-to-br from-yellow-50 to-yellow-100 border-8 border-yellow-600 rounded-lg p-12 text-center">
-                <div class="border-4 border-yellow-400 h-full flex flex-col items-center justify-center p-8">
-                    <i class="fas fa-certificate text-yellow-600 text-6xl mb-6"></i>
-                    <h1 class="text-4xl font-bold text-gray-900 mb-4">Certificate of Completion</h1>
-                    <p class="text-xl text-gray-700 mb-6">This certifies that</p>
-                    <h2 class="text-3xl font-bold text-gray-900 mb-6">{{ request.user.get_full_name }}</h2>
-                    <p class="text-xl text-gray-700 mb-4">has successfully completed</p>
-                    <h3 id="modalCourseName" class="text-2xl font-bold text-gray-900 mb-8">Course Name</h3>
-                    <div class="flex items-center justify-between w-full mt-8">
+        <div class="p-4 md:p-6">
+            <div class="aspect-[1.414/1] bg-gradient-to-br from-yellow-50 to-yellow-100 border-4 md:border-8 border-yellow-600 rounded-lg p-6 md:p-12 text-center">
+                <div class="border-2 md:border-4 border-yellow-400 h-full flex flex-col items-center justify-center p-4 md:p-8">
+                    <i class="fas fa-certificate text-yellow-600 text-4xl md:text-6xl mb-4 md:mb-6"></i>
+                    <h1 class="text-2xl md:text-4xl font-bold text-gray-900 mb-3 md:mb-4">
+                        Certificate of Completion
+                    </h1>
+                    <p class="text-base md:text-xl text-gray-700 mb-4 md:mb-6">
+                        This certifies that
+                    </p>
+                    <h2 class="text-xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">
+                        {{ request.user.get_full_name|default:request.user.username }}
+                    </h2>
+                    <p class="text-base md:text-xl text-gray-700 mb-3 md:mb-4">
+                        has successfully completed
+                    </p>
+                    <h3 id="modalCourseName" 
+                        class="text-lg md:text-2xl font-bold text-gray-900 mb-6 md:mb-8 px-4">
+                        Course Name
+                    </h3>
+                    <div class="flex items-center justify-between w-full mt-4 md:mt-8 text-sm md:text-base">
                         <div class="text-left">
-                            <p class="text-sm text-gray-600">Issue Date</p>
-                            <p id="modalIssueDate" class="font-semibold text-gray-900">Date</p>
+                            <p class="text-xs md:text-sm text-gray-600">Issue Date</p>
+                            <p id="modalIssueDate" class="font-semibold text-gray-900">
+                                Date
+                            </p>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm text-gray-600">Certificate ID</p>
-                            <p id="modalCertId" class="font-semibold text-gray-900">ID</p>
+                            <p class="text-xs md:text-sm text-gray-600">Certificate ID</p>
+                            <p id="modalCertId" class="font-semibold text-gray-900 text-xs md:text-sm">
+                                ID
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -190,13 +253,52 @@
 
 {% block extra_js %}
 <script>
-function viewCertificate(certId) {
-    // In a real implementation, fetch certificate data
+function viewCertificate(certId, courseName, issueDate, certNumber) {
+    document.getElementById('modalCourseName').textContent = courseName;
+    document.getElementById('modalIssueDate').textContent = issueDate;
+    document.getElementById('modalCertId').textContent = certNumber;
     document.getElementById('certificateModal').classList.remove('hidden');
 }
 
-function closeCertificateModal() {
-    document.getElementById('certificateModal').classList.add('hidden');
+function closeCertificateModal(event) {
+    if (!event || event.target.id === 'certificateModal') {
+        document.getElementById('certificateModal').classList.add('hidden');
+    }
 }
+
+function shareToLinkedIn(courseName, certId) {
+    const url = encodeURIComponent(window.location.origin + '/verify/certificate/' + certId);
+    const text = encodeURIComponent('I just earned a certificate in ' + courseName + '!');
+    window.open(
+        'https://www.linkedin.com/sharing/share-offsite/?url=' + url,
+        '_blank',
+        'width=600,height=600'
+    );
+}
+
+function shareToTwitter(courseName) {
+    const text = encodeURIComponent('I just earned a certificate in ' + courseName + ' from MIU! 🎓');
+    window.open(
+        'https://twitter.com/intent/tweet?text=' + text,
+        '_blank',
+        'width=600,height=600'
+    );
+}
+
+function copyLink(certId) {
+    const url = window.location.origin + '/verify/certificate/' + certId;
+    navigator.clipboard.writeText(url).then(() => {
+        alert('Certificate link copied to clipboard!');
+    }).catch(() => {
+        alert('Failed to copy link. Please try again.');
+    });
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeCertificateModal();
+    }
+});
 </script>
 {% endblock %}

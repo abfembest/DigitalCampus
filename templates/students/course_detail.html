@@ -4,142 +4,205 @@
 {% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Back Button -->
     <div class="mb-4">
         <a href="{% url 'students:course_catalog' %}" 
-           class="text-primary-600 hover:text-primary-700 flex items-center">
+           class="text-primary-600 hover:text-primary-700 flex items-center text-sm sm:text-base">
             <i class="fas fa-arrow-left mr-2"></i> Back to Catalog
         </a>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <!-- Main Content -->
-        <div class="lg:col-span-2 space-y-6">
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
             <!-- Course Header -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="h-64 bg-gradient-to-br from-primary-500 to-secondary-500 relative">
+            <article class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <!-- Thumbnail -->
+                <div class="h-48 sm:h-64 bg-gradient-to-br from-primary-500 to-secondary-500 relative">
                     {% if course.thumbnail %}
                     <img src="{{ course.thumbnail.url }}" 
                          alt="{{ course.title }}" 
                          class="w-full h-full object-cover">
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center">
-                        <i class="fas fa-book text-white text-8xl opacity-50"></i>
+                        <i class="fas fa-book text-white text-6xl sm:text-8xl opacity-50"></i>
                     </div>
                     {% endif %}
                 </div>
 
-                <div class="p-6">
-                    <div class="flex items-center gap-3 mb-4">
+                <div class="p-4 sm:p-6">
+                    <!-- Category and Difficulty Badges -->
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
                         {% if course.category %}
-                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        <span class="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium">
                             {{ course.category.name }}
                         </span>
                         {% endif %}
-                        <span class="px-3 py-1 {% if course.difficulty_level == 'beginner' %}bg-green-100 text-green-700{% elif course.difficulty_level == 'intermediate' %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %} rounded-full text-sm font-medium">
+                        <span class="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium
+                        {% if course.difficulty_level == 'beginner' %}
+                            bg-green-100 text-green-700
+                        {% elif course.difficulty_level == 'intermediate' %}
+                            bg-yellow-100 text-yellow-700
+                        {% else %}
+                            bg-red-100 text-red-700
+                        {% endif %}">
                             {{ course.get_difficulty_level_display }}
                         </span>
                     </div>
 
-                    <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ course.title }}</h1>
+                    <!-- Course Title -->
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 break-words">
+                        {{ course.title }}
+                    </h1>
                     
-                    <p class="text-gray-700 mb-6">{{ course.short_description }}</p>
+                    <!-- Short Description -->
+                    <p class="text-sm sm:text-base text-gray-700 mb-6">
+                        {{ course.short_description }}
+                    </p>
 
                     <!-- Instructor -->
                     <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
-                        <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                            <i class="fas fa-user-tie text-gray-600 text-xl"></i>
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 flex items-center justify-center mr-3 flex-shrink-0">
+                            {% if course.instructor.profile.avatar %}
+                            <img src="{{ course.instructor.profile.avatar.url }}" 
+                                 alt="{{ course.instructor_name }}"
+                                 class="w-full h-full rounded-full object-cover">
+                            {% else %}
+                            <i class="fas fa-user-tie text-gray-600 text-lg sm:text-xl"></i>
+                            {% endif %}
                         </div>
-                        <div>
-                            <p class="text-sm text-gray-600">Instructor</p>
-                            <p class="font-semibold text-gray-900">{{ course.instructor_name }}</p>
+                        <div class="min-w-0">
+                            <p class="text-xs sm:text-sm text-gray-600">Instructor</p>
+                            <p class="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                                {{ course.instructor_name }}
+                            </p>
                         </div>
                     </div>
 
                     <!-- Course Stats -->
-                    <div class="grid grid-cols-3 gap-4">
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <i class="fas fa-clock text-primary-600 text-xl mb-2"></i>
-                            <p class="text-sm text-gray-600">Duration</p>
-                            <p class="font-semibold text-gray-900">{{ course.duration_hours }} hrs</p>
+                    <div class="grid grid-cols-3 gap-2 sm:gap-4">
+                        <div class="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                            <i class="fas fa-clock text-primary-600 text-lg sm:text-xl mb-1 sm:mb-2"></i>
+                            <p class="text-xs text-gray-600">Duration</p>
+                            <p class="text-sm sm:text-base font-semibold text-gray-900">
+                                {{ course.duration_hours }} hrs
+                            </p>
                         </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <i class="fas fa-users text-primary-600 text-xl mb-2"></i>
-                            <p class="text-sm text-gray-600">Students</p>
-                            <p class="font-semibold text-gray-900">{{ course.total_enrollments }}</p>
+                        <div class="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                            <i class="fas fa-users text-primary-600 text-lg sm:text-xl mb-1 sm:mb-2"></i>
+                            <p class="text-xs text-gray-600">Students</p>
+                            <p class="text-sm sm:text-base font-semibold text-gray-900">
+                                {{ course.total_enrollments }}
+                            </p>
                         </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-lg">
-                            <i class="fas fa-star text-yellow-500 text-xl mb-2"></i>
-                            <p class="text-sm text-gray-600">Rating</p>
-                            <p class="font-semibold text-gray-900">{{ course.average_rating|floatformat:1 }}</p>
+                        <div class="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                            <i class="fas fa-star text-yellow-500 text-lg sm:text-xl mb-1 sm:mb-2"></i>
+                            <p class="text-xs text-gray-600">Rating</p>
+                            <p class="text-sm sm:text-base font-semibold text-gray-900">
+                                {{ course.average_rating|floatformat:1 }}
+                            </p>
                         </div>
                     </div>
                 </div>
-            </div>
+            </article>
 
             <!-- Course Description -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">About This Course</h2>
-                <div class="prose max-w-none text-gray-700">
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+                    About This Course
+                </h2>
+                <div class="prose max-w-none text-sm sm:text-base text-gray-700">
                     {{ course.description|linebreaks }}
                 </div>
-            </div>
+            </section>
 
             <!-- Learning Objectives -->
             {% if course.learning_objectives %}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">What You'll Learn</h2>
-                <ul class="space-y-3">
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+                    What You'll Learn
+                </h2>
+                <ul class="space-y-2 sm:space-y-3">
                     {% for objective in course.learning_objectives %}
                     <li class="flex items-start">
-                        <i class="fas fa-check-circle text-green-500 mr-3 mt-1"></i>
-                        <span class="text-gray-700">{{ objective }}</span>
+                        <i class="fas fa-check-circle text-green-500 mr-2 sm:mr-3 mt-1 flex-shrink-0"></i>
+                        <span class="text-sm sm:text-base text-gray-700">
+                            {{ objective }}
+                        </span>
                     </li>
                     {% endfor %}
                 </ul>
-            </div>
+            </section>
             {% endif %}
 
             <!-- Course Content -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">Course Content</h2>
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+                    Course Content
+                </h2>
                 
                 {% if sections %}
-                <div class="space-y-4">
+                <div class="space-y-3 sm:space-y-4">
                     {% for section in sections %}
                     <div class="border border-gray-200 rounded-lg overflow-hidden">
-                        <div class="bg-gray-50 px-4 py-3 flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-900">{{ section.title }}</h3>
-                            <span class="text-sm text-gray-600">
-                                {{ section.filtered_lessons.count }} lesson{{ section.filtered_lessons.count|pluralize }}
+                        <!-- Section Header -->
+                        <div class="bg-gray-50 px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
+                            <h3 class="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                                {{ section.title }}
+                            </h3>
+                            <span class="text-xs sm:text-sm text-gray-600 ml-2 whitespace-nowrap">
+                                {{ section.filtered_lessons.count }} 
+                                lesson{{ section.filtered_lessons.count|pluralize }}
                             </span>
                         </div>
                         
+                        <!-- Lessons -->
                         {% if section.filtered_lessons %}
                         <div class="divide-y divide-gray-200">
                             {% for lesson in section.filtered_lessons %}
-                            <div class="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
-                                <div class="flex items-center flex-1">
-                                    <i class="fas {% if lesson.lesson_type == 'video' %}fa-play-circle{% elif lesson.lesson_type == 'text' %}fa-file-alt{% elif lesson.lesson_type == 'quiz' %}fa-question-circle{% else %}fa-file{% endif %} text-gray-400 mr-3"></i>
-                                    <div class="flex-1">
-                                        <p class="font-medium text-gray-900">{{ lesson.title }}</p>
+                            <div class="px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center flex-1 min-w-0 mr-2">
+                                    <!-- Lesson Icon -->
+                                    <i class="fas 
+                                    {% if lesson.lesson_type == 'video' %}
+                                        fa-play-circle
+                                    {% elif lesson.lesson_type == 'text' %}
+                                        fa-file-alt
+                                    {% elif lesson.lesson_type == 'quiz' %}
+                                        fa-question-circle
+                                    {% else %}
+                                        fa-file
+                                    {% endif %} 
+                                    text-gray-400 mr-2 sm:mr-3 flex-shrink-0 text-sm sm:text-base"></i>
+                                    
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-medium text-xs sm:text-sm text-gray-900 truncate">
+                                            {{ lesson.title }}
+                                        </p>
                                         {% if lesson.video_duration_minutes %}
-                                        <p class="text-sm text-gray-600">{{ lesson.video_duration_minutes }} min</p>
+                                        <p class="text-xs text-gray-600">
+                                            {{ lesson.video_duration_minutes }} min
+                                        </p>
                                         {% endif %}
                                     </div>
                                 </div>
                                 
-                                {% if enrollment %}
-                                <a href="{% url 'students:lesson_view' lesson.id %}" 
-                                class="text-primary-600 hover:text-primary-700 font-medium text-sm">
-                                    View →
-                                </a>
-                                {% elif lesson.is_preview %}
-                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Preview</span>
-                                {% else %}
-                                <i class="fas fa-lock text-gray-400"></i>
-                                {% endif %}
+                                <!-- Action Button/Badge -->
+                                <div class="flex-shrink-0">
+                                    {% if enrollment %}
+                                    <a href="{% url 'students:lesson_view' course.slug lesson.slug %}" 
+                                       class="text-primary-600 hover:text-primary-700 font-medium text-xs sm:text-sm whitespace-nowrap">
+                                        View →
+                                    </a>
+                                    {% elif lesson.is_preview %}
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs whitespace-nowrap">
+                                        Preview
+                                    </span>
+                                    {% else %}
+                                    <i class="fas fa-lock text-gray-400"></i>
+                                    {% endif %}
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
@@ -148,82 +211,93 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-gray-600">Course content will be available soon.</p>
+                <p class="text-sm sm:text-base text-gray-600">
+                    Course content will be available soon.
+                </p>
                 {% endif %}
-            </div>
+            </section>
         </div>
 
         <!-- Sidebar -->
-        <div class="space-y-6">
+        <aside class="space-y-4 sm:space-y-6">
             <!-- Enrollment Card -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:sticky lg:top-24">
                 {% if enrollment %}
+                <!-- Enrolled Student View -->
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm text-gray-600">Your Progress</span>
-                        <span class="font-semibold text-gray-900">{{ enrollment.progress_percentage|floatformat:0 }}%</span>
+                        <span class="text-xs sm:text-sm text-gray-600">Your Progress</span>
+                        <span class="font-semibold text-sm sm:text-base text-gray-900">
+                            {{ enrollment.progress_percentage|floatformat:0 }}%
+                        </span>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-3">
-                        <div class="bg-primary-600 h-3 rounded-full" 
+                    <div class="w-full bg-gray-200 rounded-full h-2 sm:h-3">
+                        <div class="bg-primary-600 h-2 sm:h-3 rounded-full transition-all" 
                              style="width: {{ enrollment.progress_percentage }}%"></div>
                     </div>
                 </div>
                 
-                <a href="{% url 'students:course_detail' course.id %}" 
-                   class="block w-full text-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-semibold mb-3">
+                <a href="{% url 'students:course_detail' course.slug %}" 
+                   class="block w-full text-center px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-semibold text-sm sm:text-base mb-3">
                     Continue Learning
                 </a>
                 
-                <div class="text-center text-sm text-gray-600">
+                <div class="text-center text-xs sm:text-sm text-gray-600">
                     <i class="fas fa-check-circle text-green-500 mr-1"></i>
-                    Enrolled on {{ enrollment.enrolled_at|date:"M d, Y" }}
+                    Enrolled {{ enrollment.enrolled_at|date:"M d, Y" }}
                 </div>
                 {% else %}
+                <!-- Non-enrolled View -->
                 <!-- Pricing -->
                 <div class="text-center mb-6">
                     {% if course.is_free %}
-                    <p class="text-3xl font-bold text-gray-900">Free</p>
+                    <p class="text-2xl sm:text-3xl font-bold text-gray-900">Free</p>
                     {% else %}
-                    <p class="text-3xl font-bold text-gray-900">${{ course.price }}</p>
+                    <p class="text-2xl sm:text-3xl font-bold text-gray-900">
+                        ${{ course.price }}
+                    </p>
                     {% if course.discount_price %}
-                    <p class="text-sm text-gray-500 line-through">${{ course.discount_price }}</p>
+                    <p class="text-sm text-gray-500 line-through">
+                        ${{ course.discount_price }}
+                    </p>
                     {% endif %}
                     {% endif %}
                 </div>
 
                 <!-- Enroll Button -->
-                <form method="post" action="{% url 'students:enroll_course' course.id %}">
+                <form method="post" 
+                      action="{% url 'students:enroll_course' course.slug %}">
                     {% csrf_token %}
                     <button type="submit" 
-                            class="w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-semibold">
+                            class="w-full px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-semibold text-sm sm:text-base">
                         Enroll Now
                     </button>
                 </form>
                 {% endif %}
 
                 <!-- Course Features -->
-                <div class="mt-6 pt-6 border-t border-gray-200 space-y-3">
-                    <div class="flex items-center text-sm text-gray-700">
-                        <i class="fas fa-language w-5 text-gray-400"></i>
-                        <span class="ml-3">{{ course.language }}</span>
+                <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 space-y-2 sm:space-y-3">
+                    <div class="flex items-center text-xs sm:text-sm text-gray-700">
+                        <i class="fas fa-language w-4 sm:w-5 text-gray-400 flex-shrink-0"></i>
+                        <span class="ml-2 sm:ml-3">{{ course.language }}</span>
                     </div>
                     {% if course.has_certificate %}
-                    <div class="flex items-center text-sm text-gray-700">
-                        <i class="fas fa-certificate w-5 text-gray-400"></i>
-                        <span class="ml-3">Certificate included</span>
+                    <div class="flex items-center text-xs sm:text-sm text-gray-700">
+                        <i class="fas fa-certificate w-4 sm:w-5 text-gray-400 flex-shrink-0"></i>
+                        <span class="ml-2 sm:ml-3">Certificate included</span>
                     </div>
                     {% endif %}
-                    <div class="flex items-center text-sm text-gray-700">
-                        <i class="fas fa-mobile-alt w-5 text-gray-400"></i>
-                        <span class="ml-3">Mobile friendly</span>
+                    <div class="flex items-center text-xs sm:text-sm text-gray-700">
+                        <i class="fas fa-mobile-alt w-4 sm:w-5 text-gray-400 flex-shrink-0"></i>
+                        <span class="ml-2 sm:ml-3">Mobile friendly</span>
                     </div>
-                    <div class="flex items-center text-sm text-gray-700">
-                        <i class="fas fa-infinity w-5 text-gray-400"></i>
-                        <span class="ml-3">Lifetime access</span>
+                    <div class="flex items-center text-xs sm:text-sm text-gray-700">
+                        <i class="fas fa-infinity w-4 sm:w-5 text-gray-400 flex-shrink-0"></i>
+                        <span class="ml-2 sm:ml-3">Lifetime access</span>
                     </div>
                 </div>
             </div>
-        </div>
+        </aside>
     </div>
 </div>
 {% endblock %}

@@ -3,158 +3,195 @@
 
 {% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
 
+{% block meta_tags %}
+<meta name="description" content="Take quiz: {{ quiz.title }}">
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-7xl mx-auto">
     <!-- Quiz Header -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900 mb-2">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 sticky top-4 z-10">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex-1">
+                <h1 class="text-xl md:text-2xl font-bold text-gray-900 mb-2">
                     {{ quiz.title }}
                 </h1>
-                <p class="text-gray-600">
-                    {{ quiz.questions.count }} questions • 
-                    {{ quiz.time_limit_minutes }} minutes
+                <p class="text-gray-600 text-sm">
+                    <i class="fas fa-question-circle mr-1"></i>
+                    {{ quiz.questions.count }} question{{ quiz.questions.count|pluralize }}
+                    {% if quiz.time_limit_minutes %}
+                    • <i class="fas fa-clock mr-1"></i>{{ quiz.time_limit_minutes }} minutes
+                    {% endif %}
                 </p>
             </div>
             
             <!-- Timer -->
-            <div id="timer" class="text-center">
-                <p class="text-sm text-gray-600 mb-1">Time Remaining</p>
+            {% if quiz.time_limit_minutes %}
+            <div id="timer" class="text-center bg-gray-50 rounded-lg p-4 min-w-[150px]">
+                <p class="text-sm text-gray-600 mb-1">
+                    <i class="fas fa-hourglass-half mr-1"></i>
+                    Time Remaining
+                </p>
                 <p class="text-3xl font-bold text-primary-600" id="time-display">
                     {{ quiz.time_limit_minutes }}:00
                 </p>
             </div>
+            {% endif %}
         </div>
     </div>
 
     <!-- Quiz Form -->
     <form method="post" 
           action="{% url 'students:quiz_submit' attempt.id %}" 
-          id="quiz-form">
+          id="quiz-form"
+          class="space-y-6">
         {% csrf_token %}
         
-        <div class="space-y-6">
-            {% for question in questions %}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div class="flex items-start gap-3 mb-4">
-                    <span class="flex-shrink-0 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold">
-                        {{ forloop.counter }}
-                    </span>
-                    <div class="flex-1">
-                        <p class="text-lg font-semibold text-gray-900 mb-2">
-                            {{ question.question_text }}
-                        </p>
-                        <p class="text-sm text-gray-600">
-                            {{ question.points }} point{{ question.points|pluralize }}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="ml-11 space-y-3">
-                    {% if question.question_type == 'multiple_choice' %}
-                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                            <input type="radio" 
-                                   name="question_{{ question.id }}" 
-                                   value="option_a" 
-                                   class="mt-1 mr-3"
-                                   required>
-                            <span class="text-gray-700">
-                                {{ question.option_a }}
-                            </span>
-                        </label>
-                        
-                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                            <input type="radio" 
-                                   name="question_{{ question.id }}" 
-                                   value="option_b" 
-                                   class="mt-1 mr-3"
-                                   required>
-                            <span class="text-gray-700">
-                                {{ question.option_b }}
-                            </span>
-                        </label>
-                        
-                        {% if question.option_c %}
-                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                            <input type="radio" 
-                                   name="question_{{ question.id }}" 
-                                   value="option_c" 
-                                   class="mt-1 mr-3"
-                                   required>
-                            <span class="text-gray-700">
-                                {{ question.option_c }}
-                            </span>
-                        </label>
-                        {% endif %}
-                        
-                        {% if question.option_d %}
-                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all">
-                            <input type="radio" 
-                                   name="question_{{ question.id }}" 
-                                   value="option_d" 
-                                   class="mt-1 mr-3"
-                                   required>
-                            <span class="text-gray-700">
-                                {{ question.option_d }}
-                            </span>
-                        </label>
-                        {% endif %}
-                    {% endif %}
+        {% for question in questions %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div class="flex items-start gap-3 mb-4">
+                <span class="flex-shrink-0 w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center font-semibold text-lg">
+                    {{ forloop.counter }}
+                </span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-lg font-semibold text-gray-900 mb-2">
+                        {{ question.question_text }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-star mr-1 text-gold-500"></i>
+                        {{ question.points }} point{{ question.points|pluralize }}
+                    </p>
                 </div>
             </div>
-            {% endfor %}
-        </div>
 
-        <!-- Submit Button -->
-        <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between">
-                <p class="text-gray-600">
+            <div class="ml-0 md:ml-13 space-y-3">
+                {% if question.question_type == 'multiple_choice' %}
+                    {% for answer in question.answers.all %}
+                    <label class="flex items-start p-4 border-2 border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-all hover:border-primary-300 group">
+                        <input type="radio" 
+                               name="question_{{ question.id }}" 
+                               value="{{ answer.id }}" 
+                               class="mt-1 mr-3 w-5 h-5 text-primary-600 focus:ring-primary-500"
+                               required>
+                        <span class="text-gray-700 group-hover:text-gray-900 flex-1">
+                            {{ answer.answer_text }}
+                        </span>
+                    </label>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Submit Section -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky bottom-4">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-gray-600 text-sm md:text-base">
+                    <i class="fas fa-info-circle mr-2"></i>
                     Make sure you've answered all questions before submitting.
                 </p>
                 <button type="submit" 
-                        class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-semibold">
+                        class="w-full md:w-auto px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-semibold shadow-md hover:shadow-lg">
                     <i class="fas fa-check-circle mr-2"></i>
                     Submit Quiz
                 </button>
             </div>
         </div>
     </form>
+
+    <!-- Warning Modal (Hidden by default) -->
+    <div id="time-warning" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle text-orange-500 text-5xl mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Time Running Out!</h3>
+                <p class="text-gray-600 mb-4">You have less than 1 minute remaining.</p>
+                <button onclick="closeWarning()" 
+                        class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all">
+                    Continue
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
+{% if quiz.time_limit_minutes %}
 // Timer functionality
 let timeLimit = {{ quiz.time_limit_minutes }} * 60; // Convert to seconds
 let timeRemaining = timeLimit;
+let warningShown = false;
 
 function updateTimer() {
     const minutes = Math.floor(timeRemaining / 60);
     const seconds = timeRemaining % 60;
     
-    document.getElementById('time-display').textContent = 
-        `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const display = document.getElementById('time-display');
+    display.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
     if (timeRemaining <= 0) {
         // Auto-submit form
         document.getElementById('quiz-form').submit();
     } else if (timeRemaining <= 60) {
         // Warning when 1 minute left
-        document.getElementById('time-display').classList.add('text-red-600');
+        display.classList.remove('text-primary-600');
+        display.classList.add('text-red-600');
+        
+        // Show warning once
+        if (!warningShown) {
+            showWarning();
+            warningShown = true;
+        }
+    } else if (timeRemaining <= 300) {
+        // Change to orange when 5 minutes left
+        display.classList.remove('text-primary-600');
+        display.classList.add('text-orange-600');
     }
     
     timeRemaining--;
 }
 
+function showWarning() {
+    document.getElementById('time-warning').classList.remove('hidden');
+    setTimeout(() => {
+        closeWarning();
+    }, 5000);
+}
+
+function closeWarning() {
+    document.getElementById('time-warning').classList.add('hidden');
+}
+
 // Update every second
 setInterval(updateTimer, 1000);
+{% endif %}
 
 // Confirm before leaving
 window.addEventListener('beforeunload', function (e) {
     e.preventDefault();
     e.returnValue = '';
 });
+
+// Remove warning on form submit
+document.getElementById('quiz-form').addEventListener('submit', function() {
+    window.removeEventListener('beforeunload', arguments.callee);
+});
+
+// Scroll to first unanswered question
+function scrollToUnanswered() {
+    const questions = document.querySelectorAll('[name^="question_"]');
+    for (let i = 0; i < questions.length; i++) {
+        const questionName = questions[i].name;
+        const answered = document.querySelector(`[name="${questionName}"]:checked`);
+        if (!answered) {
+            questions[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            break;
+        }
+    }
+}
 </script>
 {% endblock %}

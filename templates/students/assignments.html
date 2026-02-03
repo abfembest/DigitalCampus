@@ -4,111 +4,168 @@
 {% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Page Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">My Assignments</h1>
-        <p class="text-gray-600 mt-2">Track and submit your assignments</p>
+    <div class="mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+            My Assignments
+        </h1>
+        <p class="text-gray-600 mt-2">
+            Track and submit your assignments
+        </p>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div class="flex items-center space-x-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-6">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-4">
             <a href="?status=pending" 
-               class="px-4 py-2 rounded-lg {% if status_filter == 'pending' %}bg-orange-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-all">
-                <i class="fas fa-clock mr-2"></i>Pending
+               class="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base transition-all text-center
+               {% if status_filter == 'pending' %}
+                   bg-orange-600 text-white
+               {% else %}
+                   bg-gray-100 text-gray-700 hover:bg-gray-200
+               {% endif %}">
+                <i class="fas fa-clock mr-1 sm:mr-2"></i>
+                <span class="hidden sm:inline">Pending</span>
+                <span class="sm:hidden">Pending</span>
             </a>
+            
             <a href="?status=submitted" 
-               class="px-4 py-2 rounded-lg {% if status_filter == 'submitted' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-all">
-                <i class="fas fa-paper-plane mr-2"></i>Submitted
+               class="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base transition-all text-center
+               {% if status_filter == 'submitted' %}
+                   bg-blue-600 text-white
+               {% else %}
+                   bg-gray-100 text-gray-700 hover:bg-gray-200
+               {% endif %}">
+                <i class="fas fa-paper-plane mr-1 sm:mr-2"></i>
+                <span class="hidden sm:inline">Submitted</span>
+                <span class="sm:hidden">Submitted</span>
             </a>
+            
             <a href="?status=graded" 
-               class="px-4 py-2 rounded-lg {% if status_filter == 'graded' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-all">
-                <i class="fas fa-check-circle mr-2"></i>Graded
+               class="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base transition-all text-center
+               {% if status_filter == 'graded' %}
+                   bg-green-600 text-white
+               {% else %}
+                   bg-gray-100 text-gray-700 hover:bg-gray-200
+               {% endif %}">
+                <i class="fas fa-check-circle mr-1 sm:mr-2"></i>
+                <span class="hidden sm:inline">Graded</span>
+                <span class="sm:hidden">Graded</span>
             </a>
+            
             <a href="?status=all" 
-               class="px-4 py-2 rounded-lg {% if status_filter == 'all' %}bg-primary-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-all">
-                <i class="fas fa-list mr-2"></i>All
+               class="flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base transition-all text-center
+               {% if status_filter == 'all' %}
+                   bg-primary-600 text-white
+               {% else %}
+                   bg-gray-100 text-gray-700 hover:bg-gray-200
+               {% endif %}">
+                <i class="fas fa-list mr-1 sm:mr-2"></i>
+                <span class="hidden sm:inline">All</span>
+                <span class="sm:hidden">All</span>
             </a>
         </div>
     </div>
 
     <!-- Assignments List -->
     {% if assignments %}
-    <div class="space-y-4">
+    <div class="space-y-3 sm:space-y-4">
         {% for assignment in assignments %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all">
-            <div class="flex items-start justify-between">
-                <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-3">
-                        <h3 class="text-xl font-bold text-gray-900">
-                            <a href="{% url 'students:assignment_detail' assignment.id %}" 
-                               class="hover:text-primary-600">
+        <article class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-all">
+            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <!-- Main Content -->
+                <div class="flex-1 min-w-0">
+                    <!-- Title and Status -->
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                        <h2 class="text-lg sm:text-xl font-bold text-gray-900 break-words">
+                            <a href="{% url 'students:assignment_detail' assignment.lesson.course.slug assignment.slug %}" 
+                               class="hover:text-primary-600 transition-colors">
                                 {{ assignment.title }}
                             </a>
-                        </h3>
-                        {% if assignment.submissions.first %}
-                            {% if assignment.submissions.first.status == 'graded' %}
-                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                        </h2>
+                        
+                        {% if assignment.submission %}
+                            {% if assignment.submission.status == 'graded' %}
+                            <span class="px-2 sm:px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
                                 <i class="fas fa-check-circle mr-1"></i>Graded
                             </span>
-                            {% elif assignment.submissions.first.status == 'submitted' %}
-                            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                            {% elif assignment.submission.status == 'submitted' %}
+                            <span class="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
                                 <i class="fas fa-paper-plane mr-1"></i>Submitted
                             </span>
                             {% endif %}
                         {% else %}
                             {% if assignment.is_overdue %}
-                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                            <span class="px-2 sm:px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
                                 <i class="fas fa-exclamation-circle mr-1"></i>Overdue
                             </span>
                             {% else %}
-                            <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                            <span class="px-2 sm:px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
                                 <i class="fas fa-clock mr-1"></i>Pending
                             </span>
                             {% endif %}
                         {% endif %}
                     </div>
 
-                    <p class="text-gray-600 mb-4">{{ assignment.description|truncatewords:30 }}</p>
+                    <!-- Description -->
+                    <p class="text-sm sm:text-base text-gray-600 mb-4 line-clamp-2">
+                        {{ assignment.description|truncatewords:30 }}
+                    </p>
 
                     <!-- Course Info -->
-                    <div class="flex items-center gap-6 text-sm text-gray-600 mb-4">
+                    <div class="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-600 mb-4">
                         <div class="flex items-center">
                             <i class="fas fa-book mr-2 text-primary-600"></i>
-                            {{ assignment.lesson.course.title }}
+                            <span class="truncate max-w-[150px] sm:max-w-none">
+                                {{ assignment.lesson.course.title }}
+                            </span>
                         </div>
                         <div class="flex items-center">
                             <i class="fas fa-layer-group mr-2 text-primary-600"></i>
-                            {{ assignment.lesson.title }}
+                            <span class="truncate max-w-[150px] sm:max-w-none">
+                                {{ assignment.lesson.title }}
+                            </span>
                         </div>
                     </div>
 
                     <!-- Assignment Details -->
-                    <div class="flex items-center gap-6 text-sm">
+                    <div class="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-sm">
                         <div class="flex items-center {% if assignment.is_overdue %}text-red-600{% else %}text-gray-600{% endif %}">
                             <i class="fas fa-calendar-alt mr-2"></i>
-                            Due: {{ assignment.due_date|date:"M d, Y g:i A" }}
+                            <span>
+                                Due: 
+                                <span class="font-medium">
+                                    {{ assignment.due_date|date:"M d, Y" }}
+                                </span>
+                            </span>
                         </div>
+                        
                         <div class="flex items-center text-gray-600">
                             <i class="fas fa-star mr-2"></i>
-                            Max Score: {{ assignment.max_score }}
+                            <span>Max: {{ assignment.max_score }}</span>
                         </div>
-                        {% if assignment.submissions.first.score %}
+                        
+                        {% if assignment.submission.score %}
                         <div class="flex items-center text-green-600 font-semibold">
                             <i class="fas fa-trophy mr-2"></i>
-                            Your Score: {{ assignment.submissions.first.score }}
+                            <span>Score: {{ assignment.submission.score }}</span>
                         </div>
                         {% endif %}
                     </div>
                 </div>
 
                 <!-- Action Button -->
-                <div class="ml-6">
-                    <a href="{% url 'students:assignment_detail' assignment.id %}" 
-                       class="px-6 py-3 {% if assignment.submissions.first.status == 'graded' %}bg-gray-100 text-gray-700 hover:bg-gray-200{% else %}bg-primary-600 text-white hover:bg-primary-700{% endif %} rounded-lg transition-all font-medium whitespace-nowrap">
-                        {% if assignment.submissions.first %}
-                            {% if assignment.submissions.first.status == 'graded' %}
+                <div class="lg:ml-6 mt-4 lg:mt-0">
+                    <a href="{% url 'students:assignment_detail' assignment.lesson.course.slug assignment.slug %}" 
+                       class="block w-full lg:w-auto px-4 sm:px-6 py-2.5 sm:py-3 text-center rounded-lg transition-all font-medium text-sm sm:text-base whitespace-nowrap
+                       {% if assignment.submission.status == 'graded' %}
+                           bg-gray-100 text-gray-700 hover:bg-gray-200
+                       {% else %}
+                           bg-primary-600 text-white hover:bg-primary-700
+                       {% endif %}">
+                        {% if assignment.submission %}
+                            {% if assignment.submission.status == 'graded' %}
                                 View Results
                             {% else %}
                                 View Submission
@@ -119,15 +176,18 @@
                     </a>
                 </div>
             </div>
-        </div>
+        </article>
         {% endfor %}
     </div>
     {% else %}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+    <!-- Empty State -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12">
         <div class="text-center">
-            <i class="fas fa-clipboard-list text-6xl text-gray-300 mb-4"></i>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">No assignments found</h3>
-            <p class="text-gray-600">
+            <i class="fas fa-clipboard-list text-5xl sm:text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+                No assignments found
+            </h3>
+            <p class="text-sm sm:text-base text-gray-600 mb-6">
                 {% if status_filter == 'pending' %}
                 You have no pending assignments
                 {% elif status_filter == 'submitted' %}
@@ -138,6 +198,10 @@
                 You don't have any assignments
                 {% endif %}
             </p>
+            <a href="{% url 'students:my_courses' %}" 
+               class="inline-block px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all text-sm sm:text-base">
+                View My Courses
+            </a>
         </div>
     </div>
     {% endif %}

@@ -2,11 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Q, Count, Avg
+from django.db.models import Q, Count, Avg, Prefetch, Max
 from django.utils import timezone
 from django.core.paginator import Paginator
 from functools import wraps
 from datetime import timedelta
+from decimal import Decimal
 
 from eduweb.models import (
     LMSCourse, Enrollment, Lesson, LessonProgress, 
@@ -14,8 +15,10 @@ from eduweb.models import (
     Certificate, Announcement, Quiz, QuizAttempt, 
     QuizAnswer, QuizQuestion, QuizResponse, StudyGroup, StudyGroupMember, 
     Discussion, DiscussionReply, Badge, 
-    StudentBadge
+    StudentBadge, LessonSection
 )
+
+from .forms import AssignmentSubmissionForm
 
 
 def student_required(view_func):
@@ -28,6 +31,14 @@ def student_required(view_func):
                 'Please login to access this page.'
             )
             return redirect('eduweb:auth_page')
+        
+        # Check if user has profile
+        if not hasattr(request.user, 'profile'):
+            messages.error(
+                request, 
+                'Profile not found. Please contact support.'
+            )
+            return redirect('eduweb:index')
         
         if request.user.profile.role != 'student':
             messages.error(
@@ -47,91 +58,183 @@ def student_required(view_func):
 @login_required
 @student_required
 def dashboard(request):
-    """Student dashboard with overview"""
+    """
+    Student dashboard with overview of courses, 
+    assignments, and announcements
+    """
     user = request.user
     
-    # Active enrollments
-    enrollments = Enrollment.objects.filter(
-        student=user,
-        status='active'
-    ).select_related('course')[:5]
-    
-    # Pending assignments
-    pending_assignments = Assignment.objects.filter(
-        lesson__course__enrollments__student=user,
-        lesson__course__enrollments__status='active',
-        due_date__gte=timezone.now(),
-        is_active=True
-    ).exclude(
-        submissions__student=user,
-        submissions__status__in=['submitted', 'graded']
-    ).select_related(
-        'lesson__course'
-    ).order_by('due_date')[:5]
-    
-    # Recent announcements
-    announcements = Announcement.objects.filter(
-        Q(announcement_type='system') |
-        Q(
-            course__enrollments__student=user, 
-            announcement_type='course'
-        ),
-        is_active=True,
-        publish_date__lte=timezone.now()
-    ).distinct().order_by('-publish_date')[:5]
-    
-    # Statistics
-    total_enrolled = Enrollment.objects.filter(
-        student=user
-    ).count()
-    
-    completed_courses = Enrollment.objects.filter(
-        student=user,
-        status='completed'
-    ).count()
-    
-    certificates_earned = Certificate.objects.filter(
-        student=user
-    ).count()
+    try:
+        # Get active enrollments with optimized query
+        enrollments = (
+            Enrollment.objects
+            .filter(student=user, status='active')
+            .select_related('course', 'course__category')
+            .prefetch_related(
+                Prefetch(
+                    'course__lessons',
+                    to_attr='all_lessons'
+                )
+            )
+            .order_by('-last_accessed')[:5]
+        )
+        
+        # Add progress data to each enrollment
+        for enrollment in enrollments:
+            completed_count = (
+                LessonProgress.objects
+                .filter(
+                    enrollment=enrollment,
+                    is_completed=True
+                )
+                .count()
+            )
+            enrollment.completed_lessons_count = completed_count
+        
+        # Get pending assignments - only those not submitted or graded
+        pending_assignments = (
+            Assignment.objects
+            .filter(
+                lesson__course__enrollments__student=user,
+                lesson__course__enrollments__status='active',
+                due_date__gte=timezone.now(),
+                is_active=True
+            )
+            .exclude(
+                Q(submissions__student=user) & 
+                Q(submissions__status__in=['submitted', 'graded'])
+            )
+            .select_related('lesson__course')
+            .distinct()
+            .order_by('due_date')[:5]
+        )
+        
+        # Get recent announcements
+        announcements = (
+            Announcement.objects
+            .filter(
+                Q(announcement_type='system') |
+                Q(
+                    course__enrollments__student=user,
+                    announcement_type='course'
+                ),
+                is_active=True,
+                publish_date__lte=timezone.now()
+            )
+            .filter(
+                Q(expiry_date__isnull=True) |
+                Q(expiry_date__gte=timezone.now())
+            )
+            .distinct()
+            .order_by('-priority', '-publish_date')[:5]
+        )
+        
+        # Calculate statistics
+        stats = {
+            'total_enrolled': (
+                Enrollment.objects
+                .filter(student=user)
+                .count()
+            ),
+            'completed_courses': (
+                Enrollment.objects
+                .filter(student=user, status='completed')
+                .count()
+            ),
+            'certificates_earned': (
+                Certificate.objects
+                .filter(student=user)
+                .count()
+            ),
+        }
+        
+    except Exception as e:
+        # Log error in production
+        messages.error(
+            request,
+            'An error occurred loading the dashboard. '
+            'Please try again.'
+        )
+        # Return minimal context
+        enrollments = []
+        pending_assignments = []
+        announcements = []
+        stats = {
+            'total_enrolled': 0,
+            'completed_courses': 0,
+            'certificates_earned': 0,
+        }
     
     context = {
         'page_title': 'My Dashboard',
         'enrollments': enrollments,
         'pending_assignments': pending_assignments,
         'announcements': announcements,
-        'total_enrolled': total_enrolled,
-        'completed_courses': completed_courses,
-        'certificates_earned': certificates_earned,
+        'total_enrolled': stats['total_enrolled'],
+        'completed_courses': stats['completed_courses'],
+        'certificates_earned': stats['certificates_earned'],
     }
     
     return render(request, 'students/dashboard.html', context)
 
 
+
 @login_required
 @student_required
 def my_courses(request):
-    """List student's enrolled courses"""
+    """
+    Display student's enrolled courses
+    Filter by active or completed status
+    """
+    # Get status filter from request
     status_filter = request.GET.get('status', 'active')
     
-    if status_filter not in ['active', 'completed']:
+    # Validate status filter
+    valid_statuses = ['active', 'completed']
+    if status_filter not in valid_statuses:
         status_filter = 'active'
     
-    enrollments = Enrollment.objects.filter(
-        student=request.user,
-        status=status_filter
-    ).select_related(
-        'course', 
-        'course__category'
-    ).prefetch_related(
-        'course__lessons'
-    ).order_by('-enrolled_at')
-    
-    # Add completed lesson count
-    for enrollment in enrollments:
-        enrollment.completed_lessons = LessonProgress.objects.filter(
-            enrollment=enrollment,
-            is_completed=True
-        ).count()
+    try:
+        # Optimized query with select/prefetch related
+        enrollments = (
+            Enrollment.objects
+            .filter(
+                student=request.user,
+                status=status_filter
+            )
+            .select_related(
+                'course',
+                'course__category',
+                'course__instructor'
+            )
+            .prefetch_related(
+                Prefetch(
+                    'course__lessons',
+                    queryset=Lesson.objects.filter(is_active=True),
+                    to_attr='active_lessons'
+                )
+            )
+            .order_by('-enrolled_at')
+        )
+        
+        # Add completed lesson count to each enrollment
+        for enrollment in enrollments:
+            completed_count = (
+                LessonProgress.objects
+                .filter(
+                    enrollment=enrollment,
+                    is_completed=True
+                )
+                .count()
+            )
+            enrollment.completed_lessons_count = completed_count
+            
+    except Exception as e:
+        messages.error(
+            request,
+            'Error loading courses. Please try again.'
+        )
+        enrollments = []
     
     context = {
         'page_title': 'My Courses',
@@ -145,61 +248,79 @@ def my_courses(request):
 @login_required
 @student_required
 def course_catalog(request):
-    """Browse available courses"""
-    category_slug = request.GET.get('category')
-    search_query = request.GET.get('q')
-    difficulty = request.GET.get('difficulty')
+    """
+    Browse available courses with filters and search
+    Optimized queries and pagination
+    """
+    # Get filter parameters
+    category_slug = request.GET.get('category', '').strip()
+    search_query = request.GET.get('q', '').strip()
+    difficulty = request.GET.get('difficulty', '').strip()
     
-    # Get published courses
-    courses = LMSCourse.objects.filter(
-        is_published=True,
-    )
-    
-    # Apply filters
-    if category_slug:
-        courses = courses.filter(category__slug=category_slug)
-    
-    if search_query:
-        courses = courses.filter(
-            Q(title__icontains=search_query) |
-            Q(description__icontains=search_query) |
-            Q(short_description__icontains=search_query)
+    try:
+        # Start with published courses only
+        courses = LMSCourse.objects.filter(is_published=True)
+        
+        # Apply category filter
+        if category_slug:
+            courses = courses.filter(category__slug=category_slug)
+        
+        # Apply search filter
+        if search_query:
+            courses = courses.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(short_description__icontains=search_query) |
+                Q(code__icontains=search_query)
+            )
+        
+        # Apply difficulty filter
+        if difficulty and difficulty in dict(LMSCourse.DIFFICULTY_CHOICES):
+            courses = courses.filter(difficulty_level=difficulty)
+        
+        # Optimize query with select_related
+        courses = (
+            courses
+            .select_related('category', 'instructor')
+            .order_by('-is_featured', '-created_at')
         )
-    
-    if difficulty:
-        courses = courses.filter(difficulty_level=difficulty)
-    
-    # Optimize queries
-    courses = courses.select_related(
-        'category', 
-        'instructor'
-    ).annotate(
-        total_enrollments=Count('enrollments')
-    ).order_by('-created_at')
-    
-    # Get enrolled course IDs
-    enrolled_ids = list(
-        Enrollment.objects.filter(
-            student=request.user
-        ).values_list('course_id', flat=True)
-    )
-    
-    # Get active categories
-    categories = CourseCategory.objects.filter(
-        is_active=True
-    ).order_by('name')
-    
-    # Pagination
-    paginator = Paginator(courses, 12)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+        
+        # Get enrolled course IDs
+        enrolled_course_ids = set(
+            Enrollment.objects
+            .filter(student=request.user)
+            .values_list('course_id', flat=True)
+        )
+        
+        # Get active categories
+        categories = (
+            CourseCategory.objects
+            .filter(is_active=True)
+            .order_by('name')
+        )
+        
+        # Pagination
+        paginator = Paginator(courses, 12)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+        
+    except Exception as e:
+        messages.error(
+            request,
+            'Error loading course catalog. Please try again.'
+        )
+        page_obj = None
+        categories = []
+        enrolled_course_ids = set()
     
     context = {
         'page_title': 'Course Catalog',
         'courses': page_obj,
         'categories': categories,
-        'enrolled_ids': enrolled_ids,
+        'enrolled_ids': enrolled_course_ids,
         'search_query': search_query,
+        'category_slug': category_slug,
+        'difficulty': difficulty,
     }
     
     return render(request, 'students/course_catalog.html', context)
@@ -207,14 +328,26 @@ def course_catalog(request):
 
 @login_required
 @student_required
-def course_detail(request, course_id):
-    """View course details"""
+def course_detail(request, course_slug):
+    """
+    View course details using slug
+    Shows different content for enrolled vs non-enrolled students
+    """
+    # Get course by slug
     course = get_object_or_404(
         LMSCourse.objects.select_related(
             'instructor', 
             'category'
+        ).prefetch_related(
+            Prefetch(
+                'sections',
+                queryset=LessonSection.objects.filter(
+                    is_active=True
+                ).order_by('display_order'),
+                to_attr='active_sections'
+            )
         ),
-        id=course_id,
+        slug=course_slug,
         is_published=True
     )
     
@@ -224,23 +357,32 @@ def course_detail(request, course_id):
         course=course
     ).first()
     
-    # Get course sections
-    sections = course.sections.filter(
-        is_active=True
-    ).prefetch_related('lessons').order_by('display_order')
+    # Prepare sections with lessons
+    sections = course.active_sections
     
-    # Filter lessons based on enrollment
-    if not enrollment:
-        for section in sections:
-            section.filtered_lessons = section.lessons.filter(
-                is_preview=True,
-                is_active=True
-            ).order_by('display_order')
-    else:
-        for section in sections:
-            section.filtered_lessons = section.lessons.filter(
-                is_active=True
-            ).order_by('display_order')
+    for section in sections:
+        if enrollment:
+            # Show all lessons for enrolled students
+            section.filtered_lessons = (
+                section.lessons
+                .filter(is_active=True)
+                .order_by('display_order')
+            )
+        else:
+            # Show only preview lessons for non-enrolled
+            section.filtered_lessons = (
+                section.lessons
+                .filter(is_active=True, is_preview=True)
+                .order_by('display_order')
+            )
+    
+    # Calculate completed lessons if enrolled
+    if enrollment:
+        completed_count = LessonProgress.objects.filter(
+            enrollment=enrollment,
+            is_completed=True
+        ).count()
+        enrollment.completed_lessons_count = completed_count
     
     context = {
         'page_title': course.title,
@@ -254,14 +396,18 @@ def course_detail(request, course_id):
 
 @login_required
 @student_required
-def enroll_course(request, course_id):
-    """Enroll in a course"""
+def enroll_course(request, course_slug):
+    """
+    Enroll in a course
+    Handles free courses immediately, redirects paid courses to payment
+    """
     if request.method != 'POST':
         return redirect('students:course_catalog')
     
+    # Get course by slug
     course = get_object_or_404(
         LMSCourse, 
-        id=course_id, 
+        slug=course_slug, 
         is_published=True
     )
     
@@ -276,41 +422,55 @@ def enroll_course(request, course_id):
             request, 
             'You are already enrolled in this course.'
         )
-        return redirect('students:course_detail', course_id=course_id)
+        return redirect('students:course_detail', course_slug=course_slug)
     
-    # Create enrollment (for free courses)
+    # Create enrollment for free courses
     if course.is_free:
-        Enrollment.objects.create(
-            student=request.user,
-            course=course,
-            status='active',
-            enrolled_at=timezone.now()
-        )
-        
-        messages.success(
-            request,
-            f'Successfully enrolled in {course.title}!'
-        )
-        return redirect('students:course_detail', course_id=course_id)
+        try:
+            enrollment = Enrollment.objects.create(
+                student=request.user,
+                course=course,
+                status='active',
+                enrolled_at=timezone.now()
+            )
+            
+            messages.success(
+                request,
+                f'Successfully enrolled in {course.title}!'
+            )
+            return redirect('students:course_detail', course_slug=course_slug)
+            
+        except Exception as e:
+            messages.error(
+                request,
+                'An error occurred during enrollment. Please try again.'
+            )
+            return redirect('students:course_detail', course_slug=course_slug)
     else:
         # TODO: Handle paid course enrollment
-        messages.error(
+        messages.info(
             request,
-            'Payment required. This feature is coming soon.'
+            'This is a paid course. Payment processing will be implemented.'
         )
-        return redirect('students:course_detail', course_id=course_id)
+        return redirect('students:course_detail', course_slug=course_slug)
 
 
 @login_required
 @student_required
-def lesson_view(request, lesson_id):
-    """View lesson content"""
+def lesson_view(request, course_slug, lesson_slug):
+    """
+    View lesson content using slug
+    Tracks progress and provides navigation
+    """
+    # Get lesson by slug
     lesson = get_object_or_404(
         Lesson.objects.select_related(
             'course', 
             'section'
         ),
-        id=lesson_id
+        course__slug=course_slug,
+        slug=lesson_slug,
+        is_active=True
     )
     
     # Verify enrollment
@@ -318,33 +478,66 @@ def lesson_view(request, lesson_id):
         Enrollment,
         student=request.user,
         course=lesson.course,
-        status='active'
+        status__in=['active', 'completed']
     )
     
     # Get or create progress
     progress, created = LessonProgress.objects.get_or_create(
         enrollment=enrollment,
-        lesson=lesson
+        lesson=lesson,
+        defaults={
+            'last_accessed': timezone.now()
+        }
     )
     
-    # Update last accessed
-    progress.last_accessed = timezone.now()
-    progress.save()
+    # Update last accessed if not just created
+    if not created:
+        progress.last_accessed = timezone.now()
+        progress.save(update_fields=['last_accessed'])
+    
+    # Get all lessons in course for navigation
+    all_lessons = list(
+        Lesson.objects.filter(
+            course=lesson.course,
+            is_active=True
+        ).select_related('section')
+        .order_by('section__display_order', 'display_order')
+    )
+    
+    # Get completed lesson IDs for this enrollment
+    completed_lesson_ids = set(
+        LessonProgress.objects.filter(
+            enrollment=enrollment,
+            is_completed=True
+        ).values_list('lesson_id', flat=True)
+    )
+    
+    # Add completion status to all lessons
+    for l in all_lessons:
+        l.is_completed = l.id in completed_lesson_ids
+    
+    # Find current lesson index
+    try:
+        current_index = next(
+            i for i, l in enumerate(all_lessons) 
+            if l.id == lesson.id
+        )
+    except StopIteration:
+        current_index = None
     
     # Get previous and next lessons
-    all_lessons = Lesson.objects.filter(
-        course=lesson.course,
-        is_active=True
-    ).order_by('section__display_order', 'display_order')
+    prev_lesson = None
+    next_lesson = None
     
-    lesson_list = list(all_lessons)
-    current_index = next(
-        (i for i, l in enumerate(lesson_list) if l.id == lesson.id), 
-        None
-    )
+    if current_index is not None:
+        if current_index > 0:
+            prev_lesson = all_lessons[current_index - 1]
+        if current_index < len(all_lessons) - 1:
+            next_lesson = all_lessons[current_index + 1]
     
-    prev_lesson = lesson_list[current_index - 1] if current_index and current_index > 0 else None
-    next_lesson = lesson_list[current_index + 1] if current_index is not None and current_index < len(lesson_list) - 1 else None
+    # Calculate completed lessons count
+    completed_lessons_count = len(completed_lesson_ids)
+    enrollment.completed_lessons = completed_lessons_count
     
     context = {
         'page_title': lesson.title,
@@ -357,90 +550,169 @@ def lesson_view(request, lesson_id):
     
     return render(request, 'students/lesson.html', context)
 
-
 @login_required
 @student_required
-def mark_lesson_complete(request, lesson_id):
-    """Mark lesson as complete"""
+def mark_lesson_complete(request, course_slug, lesson_slug):
+    """
+    Mark lesson as complete via AJAX
+    Updates enrollment progress
+    """
+    from django.http import JsonResponse
+    
     if request.method != 'POST':
         return JsonResponse({
             'success': False,
             'message': 'Invalid request method'
         }, status=400)
     
-    lesson = get_object_or_404(Lesson, id=lesson_id)
+    # Get lesson
+    lesson = get_object_or_404(
+        Lesson,
+        course__slug=course_slug,
+        slug=lesson_slug,
+        is_active=True
+    )
     
+    # Verify enrollment
     enrollment = get_object_or_404(
         Enrollment,
         student=request.user,
         course=lesson.course,
-        status='active'
+        status__in=['active', 'completed']
     )
     
-    progress, _ = LessonProgress.objects.get_or_create(
-        enrollment=enrollment,
-        lesson=lesson
-    )
-    
-    progress.is_completed = True
-    progress.completion_percentage = 100
-    progress.completed_at = timezone.now()
-    progress.save()
-    
-    # Update enrollment progress
-    enrollment.update_progress()
-    
-    return JsonResponse({
-        'success': True,
-        'message': 'Lesson marked as complete',
-        'progress': enrollment.progress_percentage
-    })
+    try:
+        # Get or create progress
+        progress, created = LessonProgress.objects.get_or_create(
+            enrollment=enrollment,
+            lesson=lesson
+        )
+        
+        # Mark as complete
+        if not progress.is_completed:
+            progress.is_completed = True
+            progress.completion_percentage = 100
+            progress.completed_at = timezone.now()
+            progress.save()
+            
+            # Update enrollment progress
+            if hasattr(enrollment, 'update_progress'):
+                enrollment.update_progress()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Lesson marked as complete',
+            'progress': enrollment.progress_percentage
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': 'An error occurred. Please try again.'
+        }, status=500)
 
 
 @login_required
 @student_required
 def assignments(request):
-    """List all assignments"""
-    status_filter = request.GET.get('status', 'pending')
+    """
+    Display student's assignments with filtering
+    Supports: pending, submitted, graded, all
+    """
+    # Get and validate status filter
+    status_filter = request.GET.get('status', 'pending').lower()
+    valid_statuses = ['pending', 'submitted', 'graded', 'all']
     
-    # Get assignments for enrolled courses
-    enrolled_courses = Enrollment.objects.filter(
-        student=request.user
-    ).values_list('course_id', flat=True)
+    if status_filter not in valid_statuses:
+        status_filter = 'pending'
     
-    base_query = Assignment.objects.filter(
-        lesson__course_id__in=enrolled_courses,
-        is_active=True
-    )
-    
-    # Filter by status
-    if status_filter == 'pending':
-        assignments = base_query.exclude(
-            submissions__student=request.user,
-            submissions__status__in=['submitted', 'graded']
+    try:
+        # Get user's enrolled course IDs
+        enrolled_course_ids = (
+            Enrollment.objects
+            .filter(
+                student=request.user,
+                status__in=['active', 'completed']
+            )
+            .values_list('course_id', flat=True)
         )
-    elif status_filter == 'submitted':
-        assignments = base_query.filter(
-            submissions__student=request.user,
-            submissions__status='submitted'
+        
+        # Base query: assignments from enrolled courses
+        assignments_query = (
+            Assignment.objects
+            .filter(
+                lesson__course_id__in=enrolled_course_ids,
+                is_active=True
+            )
+            .select_related(
+                'lesson__course',
+                'lesson__course__category',
+                'lesson__section'
+            )
+            .prefetch_related(
+                Prefetch(
+                    'submissions',
+                    queryset=AssignmentSubmission.objects.filter(
+                        student=request.user
+                    ).select_related('graded_by'),
+                    to_attr='user_submissions'
+                )
+            )
+            .order_by('due_date')
         )
-    elif status_filter == 'graded':
-        assignments = base_query.filter(
-            submissions__student=request.user,
-            submissions__status='graded'
+        
+        # Apply status filtering
+        if status_filter == 'pending':
+            # Not submitted OR draft status
+            assignments_query = assignments_query.exclude(
+                submissions__student=request.user,
+                submissions__status__in=['submitted', 'graded']
+            ).distinct()
+            
+        elif status_filter == 'submitted':
+            # Submitted but not graded
+            assignments_query = assignments_query.filter(
+                submissions__student=request.user,
+                submissions__status='submitted'
+            ).distinct()
+            
+        elif status_filter == 'graded':
+            # Graded assignments
+            assignments_query = assignments_query.filter(
+                submissions__student=request.user,
+                submissions__status='graded'
+            ).distinct()
+        
+        # For 'all', no additional filtering needed
+        
+        # Execute query
+        assignments_list = list(assignments_query)
+        
+        # Add submission info and overdue status
+        for assignment in assignments_list:
+            # Get user's submission if exists
+            assignment.submission = (
+                assignment.user_submissions[0] 
+                if assignment.user_submissions 
+                else None
+            )
+            
+            # Check if overdue (only for non-submitted)
+            if not assignment.submission or assignment.submission.status == 'draft':
+                assignment.is_overdue = timezone.now() > assignment.due_date
+            else:
+                assignment.is_overdue = False
+                
+    except Exception as e:
+        messages.error(
+            request,
+            'Error loading assignments. Please try again.'
         )
-    else:
-        assignments = base_query
-    
-    assignments = assignments.select_related(
-        'lesson__course'
-    ).prefetch_related(
-        'submissions'
-    ).distinct().order_by('due_date')
+        assignments_list = []
     
     context = {
         'page_title': 'My Assignments',
-        'assignments': assignments,
+        'assignments': assignments_list,
         'status_filter': status_filter,
     }
     
@@ -449,31 +721,53 @@ def assignments(request):
 
 @login_required
 @student_required
-def assignment_detail(request, assignment_id):
-    """View assignment details"""
+def assignment_detail(request, course_slug, assignment_slug):
+    """
+    View assignment details
+    Uses course slug and assignment slug for SEO-friendly URLs
+    """
+    # Get assignment with related data
     assignment = get_object_or_404(
-        Assignment.objects.select_related('lesson__course'),
-        id=assignment_id
+        Assignment.objects.select_related(
+            'lesson__course',
+            'lesson__section'
+        ),
+        lesson__course__slug=course_slug,
+        slug=assignment_slug,
+        is_active=True
     )
     
-    # Verify enrollment
+    # Verify student is enrolled in the course
     enrollment = get_object_or_404(
         Enrollment,
         student=request.user,
-        course=assignment.lesson.course
+        course=assignment.lesson.course,
+        status__in=['active', 'completed']
     )
     
-    # Get submission
-    submission = AssignmentSubmission.objects.filter(
-        assignment=assignment,
-        student=request.user
-    ).first()
+    # Get student's submission if exists
+    try:
+        submission = AssignmentSubmission.objects.select_related(
+            'graded_by'
+        ).get(
+            assignment=assignment,
+            student=request.user
+        )
+    except AssignmentSubmission.DoesNotExist:
+        submission = None
+    
+    # Check if overdue
+    is_overdue = (
+        timezone.now() > assignment.due_date 
+        and not submission
+    )
     
     context = {
         'page_title': assignment.title,
         'assignment': assignment,
-        'enrollment': enrollment,
         'submission': submission,
+        'enrollment': enrollment,
+        'is_overdue': is_overdue,
     }
     
     return render(request, 'students/assignment_detail.html', context)
@@ -481,125 +775,300 @@ def assignment_detail(request, assignment_id):
 
 @login_required
 @student_required
-def submit_assignment(request, assignment_id):
-    """Submit assignment"""
-    if request.method != 'POST':
-        return redirect('students:assignments')
-    
-    assignment = get_object_or_404(Assignment, id=assignment_id)
+def submit_assignment(request, course_slug, assignment_slug):
+    """
+    Handle assignment submission
+    Uses Django forms for validation
+    """
+    # Get assignment
+    assignment = get_object_or_404(
+        Assignment.objects.select_related('lesson__course'),
+        lesson__course__slug=course_slug,
+        slug=assignment_slug,
+        is_active=True
+    )
     
     # Verify enrollment
-    get_object_or_404(
+    enrollment = get_object_or_404(
         Enrollment,
         student=request.user,
         course=assignment.lesson.course,
-        status='active'
+        status__in=['active', 'completed']
     )
     
-    # Get or create submission
-    submission, _ = AssignmentSubmission.objects.get_or_create(
+    # Check if already submitted
+    existing_submission = AssignmentSubmission.objects.filter(
         assignment=assignment,
-        student=request.user
+        student=request.user,
+        status__in=['submitted', 'graded']
+    ).first()
+    
+    if existing_submission:
+        messages.info(
+            request,
+            'You have already submitted this assignment.'
+        )
+        return redirect(
+            'students:assignment_detail',
+            course_slug=course_slug,
+            assignment_slug=assignment_slug
+        )
+    
+    # Check if overdue and late submissions not allowed
+    is_overdue = timezone.now() > assignment.due_date
+    
+    if is_overdue and not assignment.allow_late_submission:
+        messages.error(
+            request,
+            'This assignment is past due and no longer accepts submissions.'
+        )
+        return redirect(
+            'students:assignment_detail',
+            course_slug=course_slug,
+            assignment_slug=assignment_slug
+        )
+    
+    if request.method == 'POST':
+        form = AssignmentSubmissionForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            try:
+                # Create or update submission
+                submission, created = AssignmentSubmission.objects.get_or_create(
+                    assignment=assignment,
+                    student=request.user,
+                    defaults={
+                        'submission_text': form.cleaned_data['submission_text'],
+                        'status': 'submitted',
+                        'submitted_at': timezone.now(),
+                        'is_late': is_overdue,
+                    }
+                )
+                
+                # If not created, update existing draft
+                if not created:
+                    submission.submission_text = (
+                        form.cleaned_data['submission_text']
+                    )
+                    submission.status = 'submitted'
+                    submission.submitted_at = timezone.now()
+                    submission.is_late = is_overdue
+                
+                # Handle file upload
+                if 'attachment' in request.FILES:
+                    submission.attachment = request.FILES['attachment']
+                
+                submission.save()
+                
+                # Success message
+                if is_overdue:
+                    messages.warning(
+                        request,
+                        f'Assignment submitted successfully! '
+                        f'Note: This is a late submission and may '
+                        f'incur a {assignment.late_penalty_percent}% penalty.'
+                    )
+                else:
+                    messages.success(
+                        request,
+                        'Assignment submitted successfully!'
+                    )
+                
+                return redirect(
+                    'students:assignment_detail',
+                    course_slug=course_slug,
+                    assignment_slug=assignment_slug
+                )
+                
+            except Exception as e:
+                messages.error(
+                    request,
+                    'Error submitting assignment. Please try again.'
+                )
+        else:
+            messages.error(
+                request,
+                'Please correct the errors in the form.'
+            )
+    else:
+        # GET request - redirect to detail page
+        return redirect(
+            'students:assignment_detail',
+            course_slug=course_slug,
+            assignment_slug=assignment_slug
+        )
+    
+    # If form errors, redirect back with messages
+    return redirect(
+        'students:assignment_detail',
+        course_slug=course_slug,
+        assignment_slug=assignment_slug
     )
-    
-    # Update submission
-    submission.submission_text = request.POST.get('submission_text', '')
-    
-    if request.FILES.get('attachment'):
-        submission.attachment = request.FILES['attachment']
-    
-    submission.status = 'submitted'
-    submission.submitted_at = timezone.now()
-    
-    # Check if late
-    if timezone.now() > assignment.due_date:
-        submission.is_late = True
-    
-    submission.save()
-    
-    messages.success(request, 'Assignment submitted successfully!')
-    return redirect('students:assignment_detail', assignment_id=assignment_id)
 
 
 # ==================== QUIZZES ====================
 @login_required
 @student_required
 def quiz_list(request):
-    """List all quizzes"""
+    """
+    List all quizzes with filtering and status
+    """
+    # Get filter parameter
+    status_filter = request.GET.get('status', 'all')
+
+    # Get enrolled course IDs
     enrolled_courses = Enrollment.objects.filter(
-        student=request.user
+        student=request.user,
+        status='active'
     ).values_list('course_id', flat=True)
-    
+
+    # Base queryset with optimization
     quizzes = Quiz.objects.filter(
         lesson__course_id__in=enrolled_courses,
         is_active=True
     ).select_related(
-        'lesson__course'
+        'lesson',
+        'lesson__course',
+        'lesson__course__category'
+    ).prefetch_related(
+        'questions'
     ).order_by('-created_at')
-    
-    # Add attempt info
+
+    # Annotate with attempt information
+    quiz_list = []
     for quiz in quizzes:
-        quiz.user_attempts = QuizAttempt.objects.filter(
+        # Get all attempts for this quiz
+        attempts = QuizAttempt.objects.filter(
             quiz=quiz,
-            student=request.user
-        ).count()
-        quiz.best_score = QuizAttempt.objects.filter(
-            quiz=quiz,
-            student=request.user
-        ).aggregate(Avg('score'))['score__avg'] or 0
-    
+            student=request.user,
+            is_completed=True
+        )
+
+        # Calculate statistics
+        attempt_count = attempts.count()
+        best_score = (
+            attempts.aggregate(Max('percentage'))
+            ['percentage__max'] or 0
+        )
+        latest_attempt = attempts.order_by(
+            '-completed_at'
+        ).first()
+
+        # Determine status
+        has_passed = attempts.filter(passed=True).exists()
+        can_attempt = (
+            quiz.max_attempts == 0 or
+            attempt_count < quiz.max_attempts
+        )
+
+        # Determine quiz status
+        if has_passed:
+            quiz_status = 'passed'
+        elif attempt_count > 0 and not can_attempt:
+            quiz_status = 'failed'
+        elif attempt_count > 0:
+            quiz_status = 'pending'
+        else:
+            quiz_status = 'not_started'
+
+        # Apply status filter
+        if status_filter != 'all':
+            if status_filter != quiz_status:
+                continue
+
+        # Add computed fields
+        quiz.attempt_count = attempt_count
+        quiz.best_score = best_score
+        quiz.latest_attempt = latest_attempt
+        quiz.has_passed = has_passed
+        quiz.can_attempt = can_attempt
+        quiz.quiz_status = quiz_status
+
+        quiz_list.append(quiz)
+
     context = {
         'page_title': 'Quizzes',
-        'quizzes': quizzes,
+        'quizzes': quiz_list,
+        'status_filter': status_filter,
     }
-    
+
     return render(request, 'students/quiz_list.html', context)
 
 
 @login_required
 @student_required
-def quiz_detail(request, quiz_id):
-    """View quiz details"""
+def quiz_detail(request, course_slug, lesson_slug, quiz_slug):
+    """
+    View quiz details using slug-based URL
+    """
+    # Get quiz with related data
     quiz = get_object_or_404(
-        Quiz.objects.select_related('lesson__course'),
-        id=quiz_id
+        Quiz.objects.select_related(
+            'lesson',
+            'lesson__course',
+            'lesson__course__category'
+        ).prefetch_related('questions'),
+        slug=quiz_slug,
+        lesson__slug=lesson_slug,
+        lesson__course__slug=course_slug
     )
-    
+
     # Verify enrollment
-    get_object_or_404(
+    enrollment = get_object_or_404(
         Enrollment,
         student=request.user,
         course=quiz.lesson.course
     )
-    
+
     # Get previous attempts
     attempts = QuizAttempt.objects.filter(
         quiz=quiz,
-        student=request.user
-    ).order_by('-started_at')
-    
-    # Check attempt limits
-    can_attempt = True
-    if quiz.max_attempts > 0:
-        if attempts.count() >= quiz.max_attempts:
-            can_attempt = False
-    
+        student=request.user,
+        is_completed=True
+    ).select_related('quiz').order_by('-completed_at')
+
+    # Check if can attempt
+    attempt_count = attempts.count()
+    can_attempt = (
+        quiz.max_attempts == 0 or
+        attempt_count < quiz.max_attempts
+    )
+
+    # Get best score
+    best_score = (
+        attempts.aggregate(Max('percentage'))
+        ['percentage__max'] or 0
+    )
+
     context = {
         'page_title': quiz.title,
         'quiz': quiz,
         'attempts': attempts,
+        'attempt_count': attempt_count,
         'can_attempt': can_attempt,
+        'best_score': best_score,
+        'enrollment': enrollment,
     }
-    
+
     return render(request, 'students/quiz_detail.html', context)
 
 
 @login_required
 @student_required
-def quiz_take(request, quiz_id):
-    """Take quiz"""
-    quiz = get_object_or_404(Quiz, id=quiz_id)
-    
+def quiz_take(request, course_slug, lesson_slug, quiz_slug):
+    """
+    Take quiz using slug-based URL
+    """
+    # Get quiz
+    quiz = get_object_or_404(
+        Quiz.objects.select_related(
+            'lesson__course'
+        ).prefetch_related('questions__answers'),
+        slug=quiz_slug,
+        lesson__slug=lesson_slug,
+        lesson__course__slug=course_slug
+    )
+
     # Verify enrollment
     enrollment = get_object_or_404(
         Enrollment,
@@ -607,94 +1076,147 @@ def quiz_take(request, quiz_id):
         course=quiz.lesson.course,
         status='active'
     )
-    
+
     # Check attempt limits
     attempts_count = QuizAttempt.objects.filter(
         quiz=quiz,
-        student=request.user
+        student=request.user,
+        is_completed=True
     ).count()
-    
-    if quiz.max_attempts > 0 and attempts_count >= quiz.max_attempts:
+
+    if (
+        quiz.max_attempts > 0 and
+        attempts_count >= quiz.max_attempts
+    ):
         messages.error(request, 'Maximum attempts reached.')
-        return redirect('students:quiz_detail', quiz_id=quiz_id)
-    
+        return redirect(
+            'students:quiz_detail',
+            course_slug=course_slug,
+            lesson_slug=lesson_slug,
+            quiz_slug=quiz_slug
+        )
+
     # Create new attempt
     attempt = QuizAttempt.objects.create(
         quiz=quiz,
         student=request.user,
         started_at=timezone.now()
     )
-    
+
     # Get questions
     questions = quiz.questions.filter(
         is_active=True
     ).prefetch_related('answers').order_by('display_order')
-    
+
+    # Shuffle if enabled
+    if quiz.shuffle_questions:
+        questions = questions.order_by('?')
+
     context = {
         'page_title': f'Taking: {quiz.title}',
         'quiz': quiz,
         'attempt': attempt,
         'questions': questions,
+        'course_slug': course_slug,
+        'lesson_slug': lesson_slug,
+        'quiz_slug': quiz_slug,
     }
-    
+
     return render(request, 'students/quiz_take.html', context)
 
 
 @login_required
 @student_required
 def quiz_submit(request, attempt_id):
-    """Submit quiz answers"""
+    """
+    Submit quiz answers
+    """
     if request.method != 'POST':
         return redirect('students:quiz_list')
-    
+
+    # Get attempt
     attempt = get_object_or_404(
-        QuizAttempt,
+        QuizAttempt.objects.select_related(
+            'quiz__lesson__course'
+        ),
         id=attempt_id,
         student=request.user
     )
-    
-    if attempt.completed_at:
+
+    # Check if already completed
+    if attempt.is_completed:
         messages.warning(request, 'Quiz already submitted.')
-        return redirect('students:quiz_result', attempt_id=attempt_id)
-    
+        return redirect(
+            'students:quiz_result',
+            attempt_id=attempt_id
+        )
+
     # Process answers
-    total_score = 0
-    max_score = 0
-    
+    total_score = Decimal('0.00')
+    max_score = Decimal('0.00')
+
     for key, value in request.POST.items():
         if key.startswith('question_'):
-            question_id = int(key.split('_')[1])
-            question = attempt.quiz.questions.get(id=question_id)
-            max_score += float(question.points)
-            
-            # Get selected answer
             try:
-                selected_answer = QuizAnswer.objects.get(id=int(value))
-                
+                question_id = int(key.split('_')[1])
+                question = attempt.quiz.questions.get(
+                    id=question_id
+                )
+                max_score += question.points
+
+                # Get selected answer
+                selected_answer = QuizAnswer.objects.get(
+                    id=int(value)
+                )
+
+                # Calculate points
+                points_earned = (
+                    question.points
+                    if selected_answer.is_correct
+                    else Decimal('0.00')
+                )
+
                 # Create response record
-                response = QuizResponse.objects.create(
+                QuizResponse.objects.create(
                     attempt=attempt,
                     question=question,
                     selected_answer=selected_answer,
                     is_correct=selected_answer.is_correct,
-                    points_earned=question.points if selected_answer.is_correct else 0
+                    points_earned=points_earned
                 )
-                
-                # Add to score if correct
+
+                # Add to total score
                 if selected_answer.is_correct:
-                    total_score += float(question.points)
-            except (QuizAnswer.DoesNotExist, ValueError):
-                pass
-    
+                    total_score += question.points
+
+            except (
+                QuizAnswer.DoesNotExist,
+                QuizQuestion.DoesNotExist,
+                ValueError
+            ):
+                continue
+
     # Calculate percentage
-    percentage = (total_score / max_score * 100) if max_score > 0 else 0
-    
+    percentage = (
+        (total_score / max_score * 100)
+        if max_score > 0
+        else Decimal('0.00')
+    )
+
+    # Calculate time taken
+    time_delta = timezone.now() - attempt.started_at
+    time_taken = int(time_delta.total_seconds() / 60)
+
     # Update attempt
-    attempt.score = percentage
+    attempt.score = total_score
+    attempt.max_score = max_score
+    attempt.percentage = percentage
     attempt.passed = percentage >= attempt.quiz.passing_score
+    attempt.is_completed = True
     attempt.completed_at = timezone.now()
+    attempt.time_taken_minutes = time_taken
     attempt.save()
-    
+
     messages.success(request, 'Quiz submitted successfully!')
     return redirect('students:quiz_result', attempt_id=attempt_id)
 
@@ -702,24 +1224,43 @@ def quiz_submit(request, attempt_id):
 @login_required
 @student_required
 def quiz_result(request, attempt_id):
-    """View quiz results"""
+    """
+    View quiz results
+    """
+    # Get attempt with related data
     attempt = get_object_or_404(
-        QuizAttempt.objects.select_related('quiz'),
+        QuizAttempt.objects.select_related(
+            'quiz',
+            'quiz__lesson',
+            'quiz__lesson__course'
+        ),
         id=attempt_id,
         student=request.user
     )
-    
-    # Get answers with questions
+
+    # Get all responses with related data
     answers = attempt.responses.select_related(
-        'question', 'selected_answer'
-    ).all()
-    
+        'question',
+        'selected_answer'
+    ).order_by('question__display_order')
+
+    # Calculate statistics
+    total_questions = answers.count()
+    correct_answers = answers.filter(is_correct=True).count()
+    incorrect_answers = total_questions - correct_answers
+
     context = {
         'page_title': 'Quiz Results',
         'attempt': attempt,
         'answers': answers,
+        'total_questions': total_questions,
+        'correct_answers': correct_answers,
+        'incorrect_answers': incorrect_answers,
+        'course_slug': attempt.quiz.lesson.course.slug,
+        'lesson_slug': attempt.quiz.lesson.slug,
+        'quiz_slug': attempt.quiz.slug,
     }
-    
+
     return render(request, 'students/quiz_result.html', context)
 
 

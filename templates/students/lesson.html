@@ -3,18 +3,28 @@
 
 {% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
 
+{% block meta_tags %}
+<meta name="description" content="{{ lesson.title }} - {{ lesson.description|truncatewords:20 }}">
+<meta name="keywords" content="lesson, {{ lesson.course.title }}, MIU, online learning">
+{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-12xl mx-auto">
     <!-- Breadcrumb -->
-    <div class="mb-4 flex items-center text-sm text-gray-600">
-        <a href="{% url 'students:my_courses' %}" class="hover:text-primary-600">My Courses</a>
-        <i class="fas fa-chevron-right mx-2 text-xs"></i>
-        <a href="{% url 'students:course_detail' lesson.course.id %}" class="hover:text-primary-600">
-            {{ lesson.course.title }}
+    <nav class="mb-4 flex items-center text-sm text-gray-600" aria-label="Breadcrumb">
+        <a href="{% url 'students:my_courses' %}" 
+           class="hover:text-primary-600 transition-colors">
+            <i class="fas fa-book mr-1"></i>
+            My Courses
         </a>
         <i class="fas fa-chevron-right mx-2 text-xs"></i>
-        <span class="text-gray-900">{{ lesson.title }}</span>
-    </div>
+        <a href="{% url 'students:course_detail' lesson.course.slug %}" 
+           class="hover:text-primary-600 transition-colors">
+            {{ lesson.course.title|truncatewords:5 }}
+        </a>
+        <i class="fas fa-chevron-right mx-2 text-xs"></i>
+        <span class="text-gray-900 font-medium">{{ lesson.title|truncatewords:5 }}</span>
+    </nav>
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Main Content -->
@@ -56,18 +66,24 @@
 
                 <!-- Lesson Header -->
                 <div class="p-6 border-b border-gray-200">
-                    <div class="flex items-start justify-between">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div class="flex-1">
-                            <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ lesson.title }}</h1>
+                            <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                                {{ lesson.title }}
+                            </h1>
                             {% if lesson.section %}
-                            <p class="text-gray-600">{{ lesson.section.title }}</p>
+                            <p class="text-gray-600 flex items-center">
+                                <i class="fas fa-folder mr-2"></i>
+                                {{ lesson.section.title }}
+                            </p>
                             {% endif %}
                         </div>
                         
                         <!-- Mark Complete Button -->
                         <button id="markCompleteBtn" 
-                                data-lesson-id="{{ lesson.id }}"
-                                class="px-6 py-3 {% if progress.is_completed %}bg-green-500 hover:bg-green-600{% else %}bg-primary-600 hover:bg-primary-700{% endif %} text-white rounded-lg transition-all font-medium">
+                                data-course-slug="{{ lesson.course.slug }}"
+                                data-lesson-slug="{{ lesson.slug }}"
+                                class="w-full md:w-auto px-6 py-3 {% if progress.is_completed %}bg-green-500 hover:bg-green-600{% else %}bg-primary-600 hover:bg-primary-700{% endif %} text-white rounded-lg transition-all font-medium shadow-md hover:shadow-lg">
                             <i class="fas {% if progress.is_completed %}fa-check-circle{% else %}fa-circle{% endif %} mr-2"></i>
                             <span>{% if progress.is_completed %}Completed{% else %}Mark as Complete{% endif %}</span>
                         </button>
@@ -77,7 +93,10 @@
                 <!-- Lesson Description -->
                 {% if lesson.description %}
                 <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-3">Description</h2>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Description
+                    </h2>
                     <div class="prose max-w-none text-gray-700">
                         {{ lesson.description|linebreaks }}
                     </div>
@@ -108,26 +127,26 @@
 
             <!-- Navigation -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                     {% if prev_lesson %}
-                    <a href="{% url 'students:lesson_view' prev_lesson.id %}" 
-                       class="flex items-center px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all">
+                    <a href="{% url 'students:lesson_view' lesson.course.slug prev_lesson.slug %}" 
+                       class="w-full sm:w-auto flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium">
                         <i class="fas fa-chevron-left mr-2"></i>
                         Previous Lesson
                     </a>
                     {% else %}
-                    <div></div>
+                    <div class="hidden sm:block"></div>
                     {% endif %}
 
                     {% if next_lesson %}
-                    <a href="{% url 'students:lesson_view' next_lesson.id %}" 
-                       class="flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all">
+                    <a href="{% url 'students:lesson_view' lesson.course.slug next_lesson.slug %}" 
+                       class="w-full sm:w-auto flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-medium">
                         Next Lesson
                         <i class="fas fa-chevron-right ml-2"></i>
                     </a>
                     {% else %}
-                    <a href="{% url 'students:course_detail' lesson.course.id %}" 
-                       class="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+                    <a href="{% url 'students:course_detail' lesson.course.slug %}" 
+                       class="w-full sm:w-auto flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium">
                         <i class="fas fa-check-circle mr-2"></i>
                         Course Complete
                     </a>
@@ -140,18 +159,22 @@
         <div class="space-y-6">
             <!-- Course Progress -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="font-semibold text-gray-900 mb-4">Course Progress</h3>
+                <h3 class="font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-chart-line mr-2"></i>
+                    Course Progress
+                </h3>
                 <div class="mb-4">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-sm text-gray-600">Overall</span>
                         <span class="font-semibold text-gray-900">{{ enrollment.progress_percentage|floatformat:0 }}%</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-3">
-                        <div class="bg-primary-600 h-3 rounded-full" 
+                        <div class="bg-primary-600 h-3 rounded-full transition-all" 
                              style="width: {{ enrollment.progress_percentage }}%"></div>
                     </div>
                 </div>
                 <p class="text-sm text-gray-600">
+                    <i class="fas fa-check-circle text-green-500 mr-1"></i>
                     {{ enrollment.completed_lessons }} of {{ lesson.course.lessons.count }} lessons completed
                 </p>
             </div>
@@ -159,23 +182,31 @@
             <!-- Course Navigation -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="p-4 bg-gray-50 border-b border-gray-200">
-                    <h3 class="font-semibold text-gray-900">Course Content</h3>
+                    <h3 class="font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-list mr-2"></i>
+                        Course Content
+                    </h3>
                 </div>
                 <div class="max-h-96 overflow-y-auto">
                     {% for section in lesson.course.sections.all %}
                     <div class="border-b border-gray-200">
                         <div class="p-3 bg-gray-50">
-                            <p class="font-medium text-gray-900 text-sm">{{ section.title }}</p>
+                            <p class="font-medium text-gray-900 text-sm flex items-center">
+                                <i class="fas fa-folder mr-2 text-gray-500"></i>
+                                {{ section.title }}
+                            </p>
                         </div>
                         {% for course_lesson in section.lessons.all %}
-                        <a href="{% url 'students:lesson_view' course_lesson.id %}" 
-                           class="block p-3 hover:bg-gray-50 transition-all {% if course_lesson.id == lesson.id %}bg-blue-50 border-l-4 border-primary-600{% endif %}">
+                        <a href="{% url 'students:lesson_view' lesson.course.slug course_lesson.slug %}" 
+                           class="block p-3 hover:bg-gray-50 transition-all {% if course_lesson.slug == lesson.slug %}bg-blue-50 border-l-4 border-primary-600{% endif %}">
                             <div class="flex items-center justify-between">
-                                <div class="flex items-center flex-1">
-                                    <i class="fas {% if course_lesson.lesson_type == 'video' %}fa-play-circle{% elif course_lesson.lesson_type == 'text' %}fa-file-alt{% else %}fa-file{% endif %} text-gray-400 mr-2 text-sm"></i>
-                                    <span class="text-sm text-gray-700">{{ course_lesson.title }}</span>
+                                <div class="flex items-center flex-1 min-w-0">
+                                    <i class="fas {% if course_lesson.lesson_type == 'video' %}fa-play-circle text-blue-500{% elif course_lesson.lesson_type == 'text' %}fa-file-alt text-gray-500{% else %}fa-file text-gray-500{% endif %} mr-2 text-sm flex-shrink-0"></i>
+                                    <span class="text-sm text-gray-700 truncate">{{ course_lesson.title }}</span>
                                 </div>
-                                <i class="fas fa-check-circle text-green-500 text-sm"></i>
+                                {% if course_lesson.is_completed %}
+                                <i class="fas fa-check-circle text-green-500 text-sm flex-shrink-0 ml-2"></i>
+                                {% endif %}
                             </div>
                         </a>
                         {% endfor %}
@@ -186,19 +217,25 @@
 
             <!-- Quick Actions -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <h3 class="font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-bolt mr-2"></i>
+                    Quick Actions
+                </h3>
                 <div class="space-y-2">
-                    <a href="{% url 'students:course_detail' lesson.course.id %}" 
-                       class="block text-sm text-primary-600 hover:text-primary-700">
-                        <i class="fas fa-book mr-2"></i> Course Overview
+                    <a href="{% url 'students:course_detail' lesson.course.slug %}" 
+                       class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
+                        <i class="fas fa-book mr-2"></i>
+                        Course Overview
                     </a>
-                    <a href="#" 
-                       class="block text-sm text-primary-600 hover:text-primary-700">
-                        <i class="fas fa-comment mr-2"></i> Ask a Question
+                    <a href="{% url 'students:assignments' %}" 
+                       class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
+                        <i class="fas fa-tasks mr-2"></i>
+                        View Assignments
                     </a>
-                    <a href="#" 
-                       class="block text-sm text-primary-600 hover:text-primary-700">
-                        <i class="fas fa-bookmark mr-2"></i> Take Notes
+                    <a href="{% url 'students:quiz_list' %}" 
+                       class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
+                        <i class="fas fa-clipboard-list mr-2"></i>
+                        Take Quizzes
                     </a>
                 </div>
             </div>
@@ -211,10 +248,11 @@
 <script>
 document.getElementById('markCompleteBtn')?.addEventListener('click', async function() {
     const btn = this;
-    const lessonId = btn.dataset.lessonId;
+    const courseSlug = btn.dataset.courseSlug;
+    const lessonSlug = btn.dataset.lessonSlug;
     
     try {
-        const response = await fetch(`/students/lessons/${lessonId}/complete/`, {
+        const response = await fetch(`/student/courses/${courseSlug}/lessons/${lessonSlug}/complete/`, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': '{{ csrf_token }}',
@@ -225,6 +263,7 @@ document.getElementById('markCompleteBtn')?.addEventListener('click', async func
         const data = await response.json();
         
         if (data.success) {
+            // Update button state
             btn.classList.remove('bg-primary-600', 'hover:bg-primary-700');
             btn.classList.add('bg-green-500', 'hover:bg-green-600');
             btn.querySelector('i').classList.remove('fa-circle');
@@ -233,14 +272,26 @@ document.getElementById('markCompleteBtn')?.addEventListener('click', async func
             
             // Show success message
             const message = document.createElement('div');
-            message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-            message.textContent = 'Lesson marked as complete!';
+            message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-down';
+            message.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Lesson marked as complete!';
             document.body.appendChild(message);
             
-            setTimeout(() => message.remove(), 3000);
+            setTimeout(() => {
+                message.style.opacity = '0';
+                message.style.transition = 'opacity 0.3s';
+                setTimeout(() => message.remove(), 300);
+            }, 3000);
         }
     } catch (error) {
         console.error('Error:', error);
+        
+        // Show error message
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        errorMsg.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>Failed to mark as complete. Please try again.';
+        document.body.appendChild(errorMsg);
+        
+        setTimeout(() => errorMsg.remove(), 3000);
     }
 });
 </script>

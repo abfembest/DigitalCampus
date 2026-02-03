@@ -19,69 +19,61 @@ urlpatterns = [
         name='course_catalog'
     ),
     path(
-        'courses/<int:course_id>/', 
-        views.course_detail, 
+        'courses/<slug:course_slug>/',
+        views.course_detail,
         name='course_detail'
     ),
     path(
-        'courses/<int:course_id>/enroll/', 
-        views.enroll_course, 
+        'courses/<slug:course_slug>/enroll/',
+        views.enroll_course,
         name='enroll_course'
     ),
     
-    # Lessons
+    # Lessons - Slug-based
     path(
-        'lessons/<int:lesson_id>/', 
-        views.lesson_view, 
+        'courses/<slug:course_slug>/lessons/<slug:lesson_slug>/',
+        views.lesson_view,
         name='lesson_view'
     ),
     path(
-        'lessons/<int:lesson_id>/complete/', 
-        views.mark_lesson_complete, 
+        'courses/<slug:course_slug>/lessons/<slug:lesson_slug>/complete/',
+        views.mark_lesson_complete,
         name='mark_lesson_complete'
     ),
     
     # Assignments
+    path('assignments/', views.assignments, name='assignments'),
     path(
-        'assignments/', 
-        views.assignments, 
-        name='assignments'
-    ),
-    path(
-        'assignments/<int:assignment_id>/', 
-        views.assignment_detail, 
+        'courses/<slug:course_slug>/assignments/<slug:assignment_slug>/',
+        views.assignment_detail,
         name='assignment_detail'
     ),
     path(
-        'assignments/<int:assignment_id>/submit/', 
-        views.submit_assignment, 
+        'courses/<slug:course_slug>/assignments/<slug:assignment_slug>/submit/',
+        views.submit_assignment,
         name='submit_assignment'
     ),
     
     # Quizzes
+    path('quizzes/', views.quiz_list, name='quiz_list'),
     path(
-        'quizzes/', 
-        views.quiz_list, 
-        name='quiz_list'
-    ),
-    path(
-        'quizzes/<int:quiz_id>/', 
-        views.quiz_detail, 
+        'courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/<slug:quiz_slug>/',
+        views.quiz_detail,
         name='quiz_detail'
     ),
     path(
-        'quizzes/<int:quiz_id>/take/', 
-        views.quiz_take, 
+        'courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/<slug:quiz_slug>/take/',
+        views.quiz_take,
         name='quiz_take'
     ),
     path(
-        'quizzes/attempt/<int:attempt_id>/submit/', 
-        views.quiz_submit, 
+        'quizzes/attempt/<int:attempt_id>/submit/',
+        views.quiz_submit,
         name='quiz_submit'
     ),
     path(
-        'quizzes/attempt/<int:attempt_id>/result/', 
-        views.quiz_result, 
+        'quizzes/attempt/<int:attempt_id>/result/',
+        views.quiz_result,
         name='quiz_result'
     ),
     

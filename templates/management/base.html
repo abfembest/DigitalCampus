@@ -37,6 +37,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
     
     <!-- Tailwind Config -->
     <script>
@@ -238,7 +242,7 @@
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div class="sidebar-header p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% else %}#{% endif %}" class="text-xl font-bold flex items-center font-display hover:opacity-80 transition-opacity">
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% else %}#{% endif %}" class="text-xl font-bold flex items-center font-display hover:opacity-80 transition-opacity">
                         <i class="fas fa-graduation-cap mr-3" aria-hidden="true"></i>
                         <span class="whitespace-nowrap">MIU Portal</span>
                     </a>
@@ -708,7 +712,7 @@
                     </a>
 
                     <!-- Help & Support (all users) -->
-                    <a href="{% if request.user.profile.role == 'instructor' %}{% url 'instructor:help_support' %}{% else %}#{% endif %}" 
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:help_support' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:help_support' %}{% else %}#{% endif %}" 
                     class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
                         <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
                         <span class="ml-3">Help & Support</span>
@@ -755,7 +759,7 @@
                         <!-- Breadcrumbs -->
                         <nav aria-label="Breadcrumb" class="hidden sm:block">
                             <ol class="flex items-center space-x-2 text-sm text-gray-600">
-                                <li><a href="#" class="hover:text-primary-600">Home</a></li>
+                                <li><a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser %}{% url 'management:dashboard' %}{% else %}#{% endif %}" class="hover:text-primary-600">Home</a></li>
                                 <li><i class="fas fa-chevron-right text-xs" aria-hidden="true"></i></li>
                                 <li class="text-gray-900 font-medium">{% block breadcrumb %}Dashboard{% endblock %}</li>
                             </ol>
@@ -1021,6 +1025,64 @@
             e.stopPropagation();
         });
     </script>
+
+    <!-- Django Messages with SweetAlert2 -->
+    {% if messages %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% for message in messages %}
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: '{% if message.tags == "error" %}error{% elif message.tags == "warning" %}warning{% elif message.tags == "success" %}success{% elif message.tags == "info" %}info{% else %}info{% endif %}',
+                title: '{{ message|escapejs }}',
+                showConfirmButton: false,
+                timer: 5000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                },
+                customClass: {
+                    popup: 'colored-toast'
+                }
+            });
+        {% endfor %}
+    });
+    </script>
+
+    <style>
+    .colored-toast.swal2-icon-success {
+        background-color: #d4edda !important;
+        border-left: 4px solid #28a745 !important;
+    }
+
+    .colored-toast.swal2-icon-error {
+        background-color: #f8d7da !important;
+        border-left: 4px solid #dc3545 !important;
+    }
+
+    .colored-toast.swal2-icon-warning {
+        background-color: #fff3cd !important;
+        border-left: 4px solid #ffc107 !important;
+    }
+
+    .colored-toast.swal2-icon-info {
+        background-color: #d1ecf1 !important;
+        border-left: 4px solid #17a2b8 !important;
+    }
+
+    .colored-toast .swal2-title {
+        font-size: 14px !important;
+        font-weight: 500 !important;
+    }
+
+    .colored-toast .swal2-timer-progress-bar {
+        background: rgba(0, 0, 0, 0.2) !important;
+    }
+    </style>
+    {% endif %}
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

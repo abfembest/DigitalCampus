@@ -148,4 +148,9 @@ urlpatterns = [
         views.settings, 
         name='settings'
     ),
+    path(
+        'help-support/', 
+        views.help_support, 
+        name='help_support'
+    ),
 ]

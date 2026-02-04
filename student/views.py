@@ -18,7 +18,10 @@ from eduweb.models import (
     StudentBadge, LessonSection
 )
 
-from .forms import AssignmentSubmissionForm, SettingsForm, ProfileUpdateForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm
+from .forms import AssignmentSubmissionForm, SettingsForm, ProfileUpdateForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm, StudentSupportTicketForm
+
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 def student_required(view_func):
@@ -2005,3 +2008,175 @@ def settings(request):
     }
     
     return render(request, 'students/settings.html', context)
+
+@login_required
+@student_required
+def help_support(request):
+    """Help and support page with FAQs and ticket submission"""
+    
+    if request.method == 'POST':
+        form = StudentSupportTicketForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            # Get current course if student is enrolled
+            current_course = None
+            enrollments = Enrollment.objects.filter(
+                student=request.user,
+                status='active'
+            ).first()
+            
+            if enrollments:
+                current_course = enrollments.course.title
+            
+            # Send email to support team
+            subject = (
+                f"[STUDENT-{form.cleaned_data['priority'].upper()}] "
+                f"{form.cleaned_data['subject']}"
+            )
+            
+            message = f"""
+New Support Ticket from Student
+
+From: {request.user.get_full_name()} ({request.user.email})
+Student ID: {request.user.id}
+Current Course: {current_course or 'None'}
+Category: {form.cleaned_data['category']}
+Priority: {form.cleaned_data['priority']}
+
+Message:
+{form.cleaned_data['message']}
+
+---
+User Role: Student
+Submission Time: {timezone.now()}
+            """
+            
+            try:
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [settings.SUPPORT_EMAIL],
+                    fail_silently=False,
+                )
+                
+                messages.success(
+                    request,
+                    'Your support ticket has been submitted! '
+                    'Our team will get back to you within 24-48 hours.'
+                )
+                return redirect('students:help_support')
+            
+            except Exception as e:
+                messages.error(
+                    request,
+                    'An error occurred while submitting your ticket. '
+                    'Please try again later.'
+                )
+    else:
+        form = StudentSupportTicketForm()
+    
+    # Student-specific FAQs
+    faqs = [
+        {
+            'question': 'How do I enroll in a course?',
+            'answer': (
+                'Go to Browse Catalog, find the course you want, '
+                'and click the Enroll button. Some courses may '
+                'require payment before enrollment.'
+            )
+        },
+        {
+            'question': 'How do I submit an assignment?',
+            'answer': (
+                'Navigate to the Assignments page, select the '
+                'assignment, and use the submission form to upload '
+                'your work. Make sure to submit before the deadline!'
+            )
+        },
+        {
+            'question': 'Can I retake a quiz?',
+            'answer': (
+                'This depends on the course settings. Some quizzes '
+                'allow multiple attempts while others are one-time. '
+                'Check the quiz instructions for details.'
+            )
+        },
+        {
+            'question': 'How do I track my progress?',
+            'answer': (
+                'Visit your Dashboard or the Progress page to see '
+                'completion rates, grades, and overall performance '
+                'across all your enrolled courses.'
+            )
+        },
+        {
+            'question': 'When will I receive my certificate?',
+            'answer': (
+                'Certificates are issued automatically when you '
+                'complete all course requirements and achieve the '
+                'passing grade. Check the Certificates page.'
+            )
+        },
+        {
+            'question': 'How do I contact my instructor?',
+            'answer': (
+                'You can post questions in the course discussion '
+                'forum, or use the messaging feature to contact '
+                'your instructor directly.'
+            )
+        },
+        {
+            'question': 'What if I miss a deadline?',
+            'answer': (
+                'Contact your instructor immediately. Some '
+                'assignments allow late submissions with a penalty. '
+                'Extensions are at the instructor\'s discretion.'
+            )
+        },
+        {
+            'question': 'How do I join a study group?',
+            'answer': (
+                'Go to Study Groups, browse available groups, and '
+                'click Join. You can also create your own study '
+                'group for others to join.'
+            )
+        },
+    ]
+    
+    # Quick links for students
+    quick_links = [
+        {
+            'title': 'Getting Started Guide',
+            'icon': 'fa-rocket',
+            'url': '#',
+            'description': 'New to the platform? Start here'
+        },
+        {
+            'title': 'Video Tutorials',
+            'icon': 'fa-video',
+            'url': '#',
+            'description': 'Watch step-by-step guides'
+        },
+        {
+            'title': 'Study Tips',
+            'icon': 'fa-lightbulb',
+            'url': '#',
+            'description': 'Learn effective study strategies'
+        },
+        {
+            'title': 'Community Forum',
+            'icon': 'fa-users',
+            'url': '#',
+            'description': 'Connect with fellow students'
+        },
+    ]
+    
+    context = {
+        'form': form,
+        'faqs': faqs,
+        'quick_links': quick_links,
+        'page_title': 'Help & Support',
+    }
+    
+    return render(request, 'students/help_support.html', context)

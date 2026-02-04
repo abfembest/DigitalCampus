@@ -11,6 +11,8 @@ from eduweb.models import (
     LMSCourse,
     Enrollment
 )
+from django.core.validators import FileExtensionValidator
+
 
 
 # ==================== ASSIGNMENT FORMS ====================
@@ -602,3 +604,96 @@ class StudyGroupCreateForm(forms.ModelForm):
             )
         
         return max_members
+    
+class StudentSupportTicketForm(forms.Form):
+    """Form for students to submit support tickets"""
+    
+    CATEGORY_CHOICES = [
+        ('technical', 'Technical Issue'),
+        ('course', 'Course Content'),
+        ('enrollment', 'Enrollment Issue'),
+        ('payment', 'Payment & Billing'),
+        ('account', 'Account Settings'),
+        ('assignment', 'Assignment Help'),
+        ('quiz', 'Quiz/Assessment'),
+        ('certificate', 'Certificate Issue'),
+        ('other', 'Other'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', 'Low - General Question'),
+        ('medium', 'Medium - Need Help'),
+        ('high', 'High - Urgent Issue'),
+    ]
+    
+    category = forms.ChoiceField(
+        choices=CATEGORY_CHOICES,
+        widget=forms.Select(attrs={
+            'class': (
+                'w-full px-4 py-2 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500'
+            )
+        }),
+        label='Issue Category'
+    )
+    
+    priority = forms.ChoiceField(
+        choices=PRIORITY_CHOICES,
+        widget=forms.Select(attrs={
+            'class': (
+                'w-full px-4 py-2 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500'
+            )
+        }),
+        label='Priority Level'
+    )
+    
+    subject = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': (
+                'w-full px-4 py-2 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500'
+            ),
+            'placeholder': 'Brief description of your issue'
+        }),
+        label='Subject'
+    )
+    
+    message = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': (
+                'w-full px-4 py-2 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500'
+            ),
+            'rows': 6,
+            'placeholder': 'Please provide detailed information...'
+        }),
+        label='Message'
+    )
+    
+    attachment = forms.FileField(
+        required=False,
+        validators=[
+            FileExtensionValidator(
+                ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx']
+            )
+        ],
+        widget=forms.FileInput(attrs={
+            'class': (
+                'w-full px-4 py-2 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 file:mr-4 file:py-2 '
+                'file:px-4 file:rounded-lg file:border-0 '
+                'file:text-sm file:font-semibold '
+                'file:bg-primary-50 file:text-primary-700 '
+                'hover:file:bg-primary-100'
+            ),
+        }),
+        label='Attachment (Optional)',
+        help_text='Upload screenshot or document (Max 5MB)'
+    )

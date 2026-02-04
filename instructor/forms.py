@@ -4,6 +4,8 @@ from eduweb.models import (
     LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
     QuizAnswer, Assignment, Announcement
 )
+from django.contrib.auth.models import User
+from eduweb.models import UserProfile
 
 
 # ==================== COURSE FORMS ====================
@@ -406,3 +408,233 @@ class AnnouncementForm(forms.ModelForm):
                 'type': 'datetime-local'
             }),
         }
+
+
+# ==================== PROFILE FORM ====================
+class InstructorProfileForm(forms.ModelForm):
+    """Form for instructor profile management"""
+    
+    # User fields
+    first_name = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'First Name'
+        })
+    )
+    
+    last_name = forms.CharField(
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'Last Name'
+        })
+    )
+    
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'email@example.com'
+        })
+    )
+    
+    class Meta:
+        model = UserProfile
+        fields = [
+            'bio', 'avatar', 'phone', 'city', 'country',
+            'website', 'linkedin', 'twitter'
+        ]
+        widgets = {
+            'bio': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'rows': 4,
+                'placeholder': 'Tell us about yourself, your teaching experience, and expertise...'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': '+234 XXX XXX XXXX'
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'Lagos'
+            }),
+            'country': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'Nigeria'
+            }),
+            'website': forms.URLInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'https://yourwebsite.com'
+            }),
+            'linkedin': forms.URLInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'https://linkedin.com/in/yourprofile'
+            }),
+            'twitter': forms.URLInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'placeholder': 'https://twitter.com/yourusername'
+            }),
+            'avatar': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100',
+                'accept': 'image/*'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        if user:
+            self.fields['first_name'].initial = user.first_name
+            self.fields['last_name'].initial = user.last_name
+            self.fields['email'].initial = user.email
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        user = self.instance.user
+        
+        if User.objects.exclude(pk=user.pk).filter(email=email).exists():
+            raise forms.ValidationError('Email already in use.')
+        return email
+
+
+# ==================== SETTINGS FORM ====================
+class InstructorSettingsForm(forms.ModelForm):
+    """Form for instructor account settings"""
+    
+    class Meta:
+        model = UserProfile
+        fields = [
+            'email_notifications',
+            'marketing_emails',
+        ]
+        widgets = {
+            'email_notifications': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'marketing_emails': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+        }
+
+
+class PasswordChangeForm(forms.Form):
+    """Form for changing password"""
+    
+    current_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': '••••••••'
+        }),
+        label='Current Password'
+    )
+    
+    new_password = forms.CharField(
+        min_length=8,
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': '••••••••'
+        }),
+        label='New Password',
+        help_text='Must be at least 8 characters long'
+    )
+    
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': '••••••••'
+        }),
+        label='Confirm New Password'
+    )
+    
+    def __init__(self, user=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+    
+    def clean_current_password(self):
+        password = self.cleaned_data.get('current_password')
+        if not self.user.check_password(password):
+            raise forms.ValidationError('Current password is incorrect.')
+        return password
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password = cleaned_data.get('new_password')
+        confirm_password = cleaned_data.get('confirm_password')
+        
+        if new_password and confirm_password:
+            if new_password != confirm_password:
+                raise forms.ValidationError({
+                    'confirm_password': 'Passwords do not match.'
+                })
+        return cleaned_data
+
+
+# ==================== HELP & SUPPORT FORM ====================
+class SupportTicketForm(forms.Form):
+    """Form for submitting support tickets"""
+    
+    CATEGORY_CHOICES = [
+        ('technical', 'Technical Issue'),
+        ('course', 'Course Management'),
+        ('billing', 'Billing & Payments'),
+        ('account', 'Account Settings'),
+        ('student', 'Student Management'),
+        ('content', 'Content Upload'),
+        ('other', 'Other'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', 'Low - General Question'),
+        ('medium', 'Medium - Need Help'),
+        ('high', 'High - Urgent Issue'),
+    ]
+    
+    category = forms.ChoiceField(
+        choices=CATEGORY_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+        }),
+        label='Issue Category'
+    )
+    
+    priority = forms.ChoiceField(
+        choices=PRIORITY_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
+        }),
+        label='Priority Level'
+    )
+    
+    subject = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'placeholder': 'Brief description of your issue'
+        }),
+        label='Subject'
+    )
+    
+    message = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+            'rows': 6,
+            'placeholder': 'Please provide detailed information about your issue...'
+        }),
+        label='Message'
+    )
+    
+    attachment = forms.FileField(
+        required=False,
+        validators=[
+            FileExtensionValidator(['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'])
+        ],
+        widget=forms.FileInput(attrs={
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100',
+        }),
+        label='Attachment (Optional)',
+        help_text='Upload screenshot or document (Max 5MB)'
+    )

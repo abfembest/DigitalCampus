@@ -69,4 +69,9 @@ urlpatterns = [
 
     path('resources/', views.resources, name='resources'),
 
+    # ==================== PROFILE & SETTINGS ====================
+    path('profile/', views.instructor_profile, name='profile'),
+    path('settings/', views.instructor_settings, name='settings'),
+    path('help-support/', views.help_support, name='help_support'),
+
 ]

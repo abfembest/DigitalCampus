@@ -6,6 +6,9 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models.functions import TruncDate, TruncMonth
+from django.contrib.auth import update_session_auth_hash
+from django.core.mail import send_mail
+from django.conf import settings
 
 from eduweb.models import (
     LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
@@ -15,7 +18,7 @@ from eduweb.models import (
 from .forms import (
     CourseForm, CourseObjectivesForm, LessonForm, SectionForm,
     QuizForm, QuizQuestionForm, QuizAnswerForm, AssignmentForm,
-    AnnouncementForm
+    AnnouncementForm, InstructorProfileForm, InstructorSettingsForm, PasswordChangeForm, SupportTicketForm
 )
 
 
@@ -1302,3 +1305,261 @@ def resources(request):
     }
     
     return render(request, 'instructor/resources.html', context)
+
+# ==================== PROFILE VIEW ====================
+@login_required
+def instructor_profile(request):
+    """View and edit instructor profile"""
+    
+    # Get instructor statistics
+    total_courses = LMSCourse.objects.filter(
+        instructor=request.user
+    ).count()
+    
+    total_students = Enrollment.objects.filter(
+        course__instructor=request.user
+    ).values('student').distinct().count()
+    
+    avg_rating = LMSCourse.objects.filter(
+        instructor=request.user
+    ).aggregate(avg_rating=Avg('average_rating'))['avg_rating'] or 0
+    
+    total_reviews = LMSCourse.objects.filter(
+        instructor=request.user
+    ).aggregate(
+        total=Count('reviews')
+    )['total']
+    
+    if request.method == 'POST':
+        form = InstructorProfileForm(
+            request.POST,
+            request.FILES,
+            instance=request.user.profile,
+            user=request.user
+        )
+        
+        if form.is_valid():
+            # Update User model fields
+            user = request.user
+            user.first_name = form.cleaned_data['first_name']
+            user.last_name = form.cleaned_data['last_name']
+            user.email = form.cleaned_data['email']
+            user.save()
+            
+            # Update Profile model fields
+            form.save()
+            
+            messages.success(
+                request,
+                'Your profile has been updated successfully!'
+            )
+            return redirect('instructor:profile')
+    else:
+        form = InstructorProfileForm(
+            instance=request.user.profile,
+            user=request.user
+        )
+    
+    context = {
+        'form': form,
+        'page_title': 'My Profile',
+        'total_courses': total_courses,
+        'total_students': total_students,
+        'avg_rating': round(avg_rating, 1),
+        'total_reviews': total_reviews,
+    }
+    return render(request, 'instructor/profile.html', context)
+
+
+# ==================== SETTINGS VIEW ====================
+@login_required
+def instructor_settings(request):
+    """Manage instructor account settings"""
+    
+    settings_form = InstructorSettingsForm(
+        instance=request.user.profile
+    )
+    password_form = PasswordChangeForm(user=request.user)
+    
+    if request.method == 'POST':
+        if 'update_settings' in request.POST:
+            settings_form = InstructorSettingsForm(
+                request.POST,
+                instance=request.user.profile
+            )
+            
+            if settings_form.is_valid():
+                settings_form.save()
+                messages.success(
+                    request,
+                    'Settings updated successfully!'
+                )
+                return redirect('instructor:settings')
+        
+        elif 'change_password' in request.POST:
+            password_form = PasswordChangeForm(
+                user=request.user,
+                data=request.POST
+            )
+            
+            if password_form.is_valid():
+                # Change password
+                new_password = password_form.cleaned_data['new_password']
+                request.user.set_password(new_password)
+                request.user.save()
+                
+                # Keep user logged in
+                update_session_auth_hash(request, request.user)
+                
+                messages.success(
+                    request,
+                    'Your password has been changed successfully!'
+                )
+                return redirect('instructor:settings')
+    
+    context = {
+        'settings_form': settings_form,
+        'password_form': password_form,
+        'page_title': 'Settings',
+    }
+    return render(request, 'instructor/settings.html', context)
+
+
+# ==================== HELP & SUPPORT VIEW ====================
+@login_required
+def help_support(request):
+    """Help and support page with FAQs and ticket submission"""
+    
+    if request.method == 'POST':
+        form = SupportTicketForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            # Send email to support team
+            subject = f"[{form.cleaned_data['priority'].upper()}] {form.cleaned_data['subject']}"
+            message = f"""
+New Support Ticket from Instructor
+
+From: {request.user.get_full_name()} ({request.user.email})
+Category: {form.cleaned_data['category']}
+Priority: {form.cleaned_data['priority']}
+
+Message:
+{form.cleaned_data['message']}
+
+---
+User ID: {request.user.id}
+Role: Instructor
+            """
+            
+            try:
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [settings.SUPPORT_EMAIL],
+                    fail_silently=False,
+                )
+                
+                messages.success(
+                    request,
+                    'Your support ticket has been submitted successfully! '
+                    'Our team will get back to you within 24-48 hours.'
+                )
+                return redirect('instructor:help_support')
+            
+            except Exception as e:
+                messages.error(
+                    request,
+                    'An error occurred while submitting your ticket. '
+                    'Please try again later.'
+                )
+    else:
+        form = SupportTicketForm()
+    
+    # FAQs data
+    faqs = [
+        {
+            'question': 'How do I create a new course?',
+            'answer': 'Navigate to Courses > Create Course from the sidebar menu. '
+                     'Fill in the course details, upload a thumbnail, and click Save. '
+                     'You can then add sections, lessons, and assessments.'
+        },
+        {
+            'question': 'How do I upload course materials?',
+            'answer': 'When creating or editing a lesson, you can upload videos, '
+                     'documents, and other materials. Supported formats include '
+                     'PDF, DOCX, MP4, and more.'
+        },
+        {
+            'question': 'How do I grade student assignments?',
+            'answer': 'Go to Assessments > All Assignments and click on any assignment. '
+                     'You\'ll see all submissions. Click on a submission to view, '
+                     'provide feedback, and assign a grade.'
+        },
+        {
+            'question': 'Can I track student progress?',
+            'answer': 'Yes! Go to Analytics > Student Progress to view detailed '
+                     'reports on each student\'s performance, completion rates, '
+                     'and engagement metrics.'
+        },
+        {
+            'question': 'How do I communicate with students?',
+            'answer': 'You can create announcements for your courses, respond to '
+                     'discussion forum posts, and provide feedback on assignments. '
+                     'Students can also message you directly.'
+        },
+        {
+            'question': 'What payment methods are supported?',
+            'answer': 'We support credit/debit cards, bank transfers, and various '
+                     'mobile payment options. Payments are processed securely and '
+                     'you receive monthly payouts.'
+        },
+        {
+            'question': 'How do I issue certificates?',
+            'answer': 'Certificates are automatically generated when students complete '
+                     'all course requirements. You can customize certificate templates '
+                     'in your course settings.'
+        },
+        {
+            'question': 'What are the video upload limits?',
+            'answer': 'Video files should not exceed 2GB per file. We recommend '
+                     'using MP4 format at 1080p resolution for best quality and '
+                     'compatibility.'
+        },
+    ]
+    
+    # Quick links
+    quick_links = [
+        {
+            'title': 'Getting Started Guide',
+            'icon': 'fa-book-open',
+            'url': '#',
+            'description': 'Learn the basics of creating and managing courses'
+        },
+        {
+            'title': 'Video Tutorials',
+            'icon': 'fa-video',
+            'url': '#',
+            'description': 'Watch step-by-step video guides'
+        },
+        {
+            'title': 'Best Practices',
+            'icon': 'fa-lightbulb',
+            'url': '#',
+            'description': 'Tips for creating engaging course content'
+        },
+        {
+            'title': 'Community Forum',
+            'icon': 'fa-users',
+            'url': '#',
+            'description': 'Connect with other instructors'
+        },
+    ]
+    
+    context = {
+        'form': form,
+        'faqs': faqs,
+        'quick_links': quick_links,
+        'page_title': 'Help & Support',
+    }
+    return render(request, 'instructor/help_support.html', context)

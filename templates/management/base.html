@@ -701,13 +701,15 @@
                     <div class="border-t border-white/10 my-4"></div>
                     
                     <!-- Settings (all users) -->
-                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}#{% else %}#{% endif %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}#{% else %}#{% endif %}" 
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
                         <i class="fas fa-cog w-5 text-center" aria-hidden="true"></i>
                         <span class="ml-3">Settings</span>
                     </a>
 
                     <!-- Help & Support (all users) -->
-                    <a href="#" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                    <a href="{% if request.user.profile.role == 'instructor' %}{% url 'instructor:help_support' %}{% else %}#{% endif %}" 
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
                         <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
                         <span class="ml-3">Help & Support</span>
                     </a>
@@ -817,10 +819,10 @@
                             </button>
 
                             <div id="profileMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200">
-                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:profile' %}{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
                                 </a>
-                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}#{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
                                 </a>
                                 <a href="{% url 'eduweb:logout' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all">

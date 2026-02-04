@@ -1,0 +1,440 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Manage Lessons - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-12xl mx-auto">
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'instructor:course_list' %}" 
+                   class="text-gray-600 hover:text-primary-600 inline-flex items-center">
+                    <i class="fas fa-book mr-2"></i> Courses
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                    <a href="{% url 'instructor:course_edit' course.slug %}" 
+                       class="text-gray-600 hover:text-primary-600">
+                        {{ course.title|truncatewords:5 }}
+                    </a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                    <span class="text-gray-500">Lessons</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 font-display">
+                    Course Content
+                </h1>
+                <p class="text-gray-600 mt-2">
+                    Organize your course into sections and lessons
+                </p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a href="{% url 'instructor:section_create' course.slug %}" 
+                   class="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-primary-600 text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-all">
+                    <i class="fas fa-folder-plus mr-2"></i> 
+                    Add Section
+                </a>
+                <a href="{% url 'instructor:lesson_create' course.slug %}" 
+                   class="inline-flex items-center justify-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
+                    <i class="fas fa-plus-circle mr-2"></i> 
+                    Add Lesson
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Stats Overview -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm font-medium">Total Sections</p>
+                    <h3 class="text-3xl font-bold text-gray-900 mt-2">
+                        {{ sections.count }}
+                    </h3>
+                </div>
+                <div class="bg-blue-50 text-blue-600 p-3 rounded-lg">
+                    <i class="fas fa-folder text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm font-medium">Total Lessons</p>
+                    <h3 class="text-3xl font-bold text-gray-900 mt-2">
+                        {{ course.lessons.count }}
+                    </h3>
+                </div>
+                <div class="bg-green-50 text-green-600 p-3 rounded-lg">
+                    <i class="fas fa-play-circle text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm font-medium">Video Lessons</p>
+                    <h3 class="text-3xl font-bold text-gray-900 mt-2">
+                        {{ video_count }}
+                    </h3>
+                </div>
+                <div class="bg-purple-50 text-purple-600 p-3 rounded-lg">
+                    <i class="fas fa-video text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-gray-600 text-sm font-medium">Quizzes</p>
+                    <h3 class="text-3xl font-bold text-gray-900 mt-2">
+                        {{ quiz_count }}
+                    </h3>
+                </div>
+                <div class="bg-orange-50 text-orange-600 p-3 rounded-lg">
+                    <i class="fas fa-question-circle text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if sections %}
+    <!-- Sections with Lessons -->
+    <div class="space-y-6">
+        {% for section in sections %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Section Header -->
+            <div class="bg-gradient-to-r from-primary-50 to-blue-50 border-b border-gray-200 p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-start gap-4">
+                        <div class="bg-primary-600 text-white p-3 rounded-lg">
+                            <i class="fas fa-folder text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">
+                                {{ section.title }}
+                            </h2>
+                            {% if section.description %}
+                            <p class="text-gray-600 mt-1">
+                                {{ section.description }}
+                            </p>
+                            {% endif %}
+                            <p class="text-sm text-gray-500 mt-2">
+                                <i class="fas fa-list-ul mr-1"></i>
+                                {{ section.lessons.count }} lesson{{ section.lessons.count|pluralize }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{% url 'instructor:section_edit' course.slug section.id %}" 
+                           class="inline-flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                           title="Edit Section">
+                            <i class="fas fa-edit mr-2"></i> Edit
+                        </a>
+                        <a href="{% url 'instructor:section_delete' course.slug section.id %}" 
+                           class="inline-flex items-center px-4 py-2 bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                           title="Delete Section">
+                            <i class="fas fa-trash mr-2"></i> Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lessons in Section -->
+            {% if section.lessons.all %}
+            <div class="divide-y divide-gray-200">
+                {% for lesson in section.lessons.all %}
+                <div class="p-6 hover:bg-gray-50 transition-colors">
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div class="flex items-start gap-4 flex-1">
+                            <!-- Lesson Type Icon -->
+                            <div class="flex-shrink-0">
+                                {% if lesson.lesson_type == 'video' %}
+                                <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-video text-xl"></i>
+                                </div>
+                                {% elif lesson.lesson_type == 'text' %}
+                                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-file-alt text-xl"></i>
+                                </div>
+                                {% elif lesson.lesson_type == 'quiz' %}
+                                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-question-circle text-xl"></i>
+                                </div>
+                                {% elif lesson.lesson_type == 'assignment' %}
+                                <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-tasks text-xl"></i>
+                                </div>
+                                {% else %}
+                                <div class="w-12 h-12 bg-gray-100 text-gray-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-file text-xl"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Lesson Info -->
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                                    {{ lesson.title }}
+                                </h3>
+                                {% if lesson.description %}
+                                <p class="text-gray-600 text-sm mb-2 line-clamp-2">
+                                    {{ lesson.description }}
+                                </p>
+                                {% endif %}
+                                <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                                    <span class="inline-flex items-center">
+                                        <i class="fas fa-tag mr-1"></i>
+                                        {{ lesson.get_lesson_type_display }}
+                                    </span>
+                                    {% if lesson.video_duration_minutes %}
+                                    <span class="inline-flex items-center">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ lesson.video_duration_minutes }} min
+                                    </span>
+                                    {% endif %}
+                                    {% if lesson.is_preview %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                        <i class="fas fa-eye mr-1"></i> Preview
+                                    </span>
+                                    {% endif %}
+                                    {% if not lesson.is_active %}
+                                    <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                                        <i class="fas fa-pause-circle mr-1"></i> Inactive
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{% url 'instructor:lesson_edit' course.slug lesson.id %}" 
+                               class="inline-flex items-center px-3 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
+                               title="Edit Lesson">
+                                <i class="fas fa-edit mr-2"></i> Edit
+                            </a>
+                            
+                            {% if lesson.lesson_type == 'quiz' %}
+                            <a href="{% url 'instructor:quiz_list' course.slug lesson.id %}" 
+                               class="inline-flex items-center px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
+                               title="Manage Quizzes">
+                                <i class="fas fa-question-circle mr-2"></i> Quizzes
+                            </a>
+                            {% endif %}
+                            
+                            {% if lesson.lesson_type == 'assignment' %}
+                            <a href="{% url 'instructor:assignment_list' course.slug lesson.id %}" 
+                               class="inline-flex items-center px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
+                               title="Manage Assignments">
+                                <i class="fas fa-tasks mr-2"></i> Assignments
+                            </a>
+                            {% endif %}
+                            
+                            <a href="{% url 'instructor:lesson_delete' course.slug lesson.id %}" 
+                               class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+                               title="Delete Lesson">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Empty Section State -->
+            <div class="p-12 text-center">
+                <i class="fas fa-inbox text-5xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                    No lessons in this section yet
+                </h3>
+                <p class="text-gray-600 mb-4">
+                    Add your first lesson to this section
+                </p>
+                <a href="{% url 'instructor:lesson_create' course.slug %}" 
+                   class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    <i class="fas fa-plus-circle mr-2"></i> 
+                    Add Lesson
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- Lessons without Section -->
+        {% if course.lessons.all %}
+        {% for lesson in course.lessons.all %}
+        {% if not lesson.section %}
+        {% if forloop.first %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gray-50 border-b border-gray-200 p-6">
+                <div class="flex items-start gap-4">
+                    <div class="bg-gray-400 text-white p-3 rounded-lg">
+                        <i class="fas fa-stream text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">
+                            Unsectioned Lessons
+                        </h2>
+                        <p class="text-gray-600 mt-1">
+                            Lessons not assigned to any section
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divide-y divide-gray-200">
+        {% endif %}
+                <div class="p-6 hover:bg-gray-50 transition-colors">
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div class="flex items-start gap-4 flex-1">
+                            <div class="flex-shrink-0">
+                                {% if lesson.lesson_type == 'video' %}
+                                <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-video text-xl"></i>
+                                </div>
+                                {% elif lesson.lesson_type == 'text' %}
+                                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-file-alt text-xl"></i>
+                                </div>
+                                {% elif lesson.lesson_type == 'quiz' %}
+                                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-question-circle text-xl"></i>
+                                </div>
+                                {% elif lesson.lesson_type == 'assignment' %}
+                                <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-tasks text-xl"></i>
+                                </div>
+                                {% else %}
+                                <div class="w-12 h-12 bg-gray-100 text-gray-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-file text-xl"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                                    {{ lesson.title }}
+                                </h3>
+                                {% if lesson.description %}
+                                <p class="text-gray-600 text-sm mb-2 line-clamp-2">
+                                    {{ lesson.description }}
+                                </p>
+                                {% endif %}
+                                <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                                    <span class="inline-flex items-center">
+                                        <i class="fas fa-tag mr-1"></i>
+                                        {{ lesson.get_lesson_type_display }}
+                                    </span>
+                                    {% if lesson.video_duration_minutes %}
+                                    <span class="inline-flex items-center">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ lesson.video_duration_minutes }} min
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{% url 'instructor:lesson_edit' course.slug lesson.id %}" 
+                               class="inline-flex items-center px-3 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium">
+                                <i class="fas fa-edit mr-2"></i> Edit
+                            </a>
+                            <a href="{% url 'instructor:lesson_delete' course.slug lesson.id %}" 
+                               class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% if forloop.last %}
+            </div>
+        </div>
+                {% endif %}
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- Empty State - No Sections -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div class="max-w-md mx-auto">
+            <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-folder-open text-5xl text-gray-400"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">
+                No Course Content Yet
+            </h3>
+            <p class="text-gray-600 mb-6">
+                Start building your course by creating sections to organize your lessons, or add lessons directly.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <a href="{% url 'instructor:section_create' course.slug %}" 
+                   class="inline-flex items-center px-6 py-3 bg-white border-2 border-primary-600 text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-all">
+                    <i class="fas fa-folder-plus mr-2"></i> 
+                    Create First Section
+                </a>
+                <a href="{% url 'instructor:lesson_create' course.slug %}" 
+                   class="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
+                    <i class="fas fa-plus-circle mr-2"></i> 
+                    Add First Lesson
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Tips -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <div class="flex items-start gap-4">
+            <div class="flex-shrink-0">
+                <i class="fas fa-lightbulb text-3xl text-blue-600"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-blue-900 mb-2">
+                    Tips for Organizing Course Content
+                </h3>
+                <ul class="space-y-2 text-blue-800">
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
+                        <span>Use sections to group related lessons together (e.g., "Week 1", "Introduction", "Advanced Topics")</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
+                        <span>Mix different lesson types (videos, text, quizzes) to keep learners engaged</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
+                        <span>Enable preview on introductory lessons to attract potential students</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
+                        <span>Use display order to control the sequence of lessons within sections</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

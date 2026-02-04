@@ -1,110 +1,316 @@
 {% extends 'management/base.html' %}
+{% load static %}
 
-{% block title %}{% if lesson %}Edit Lesson{% else %}Create Lesson{% endif %}{% endblock %}
+{% block title %}
+{% if lesson %}Edit Lesson{% else %}Create Lesson{% endif %} - Instructor
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'instructor:course_list' %}">Courses</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'instructor:course_edit' course.slug %}">{{ course.title }}</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'instructor:lesson_list' course.slug %}">Lessons</a></li>
-            <li class="breadcrumb-item active">{% if lesson %}Edit{% else %}Create{% endif %}</li>
+<div class="max-w-12xl mx-auto">
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'instructor:course_list' %}" 
+                   class="text-gray-600 hover:text-primary-600 inline-flex items-center">
+                    <i class="fas fa-book mr-2"></i> Courses
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                    <a href="{% url 'instructor:course_edit' course.slug %}" 
+                       class="text-gray-600 hover:text-primary-600">
+                        {{ course.title|truncatewords:5 }}
+                    </a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                    <a href="{% url 'instructor:lesson_list' course.slug %}" 
+                       class="text-gray-600 hover:text-primary-600">
+                        Lessons
+                    </a>
+                </div>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                    <span class="text-gray-500">
+                        {% if lesson %}Edit{% else %}Create{% endif %}
+                    </span>
+                </div>
+            </li>
         </ol>
     </nav>
-    <h1>{% if lesson %}Edit Lesson{% else %}Create New Lesson{% endif %}</h1>
-</div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 font-display">
+            {% if lesson %}Edit Lesson{% else %}Create New Lesson{% endif %}
+        </h1>
+        <p class="text-gray-600 mt-2">
+            {% if lesson %}
+            Update lesson information and content
+            {% else %}
+            Add a new lesson to your course
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Main Form -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <label class="form-label">Lesson Title *</label>
-                    {{ form.title }}
-                    {% if form.title.errors %}
-                    <div class="text-danger small">{{ form.title.errors }}</div>
-                    {% endif %}
-                </div>
-                
-                <div class="col-md-4">
-                    <label class="form-label">Lesson Type *</label>
-                    {{ form.lesson_type }}
-                </div>
-                
-                <div class="col-md-6">
-                    <label class="form-label">Section (Optional)</label>
-                    {{ form.section }}
-                </div>
-                
-                <div class="col-md-3">
-                    <label class="form-label">Display Order</label>
-                    {{ form.display_order }}
-                </div>
-                
-                <div class="col-md-3">
-                    <div class="form-check mt-4">
-                        {{ form.is_preview }}
-                        <label class="form-check-label">Free Preview</label>
+            <div class="p-6 space-y-6">
+                <!-- Basic Information -->
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                        Basic Information
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Lesson Title *
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                            <p class="mt-1 text-sm text-red-600">
+                                {{ form.title.errors }}
+                            </p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Lesson Type *
+                            </label>
+                            {{ form.lesson_type }}
+                            {% if form.lesson_type.errors %}
+                            <p class="mt-1 text-sm text-red-600">
+                                {{ form.lesson_type.errors }}
+                            </p>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Section (Optional)
+                            </label>
+                            {{ form.section }}
+                            <p class="mt-1 text-sm text-gray-500">
+                                Organize lessons into sections
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Display Order
+                            </label>
+                            {{ form.display_order }}
+                            <p class="mt-1 text-sm text-gray-500">
+                                Order of appearance (0 = first)
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center cursor-pointer mt-6">
+                                {{ form.is_preview }}
+                                <span class="ml-2 text-sm font-medium text-gray-700">
+                                    Free Preview (allow non-enrolled students to view)
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Description
+                            </label>
+                            {{ form.description }}
+                            <p class="mt-1 text-sm text-gray-500">
+                                Brief overview of what students will learn
+                            </p>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="col-12">
-                    <label class="form-label">Description</label>
-                    {{ form.description }}
-                </div>
-                
-                <!-- Video Fields -->
-                <div class="col-12" id="video-fields">
-                    <hr>
-                    <h6>Video Content</h6>
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="form-label">Video URL</label>
+
+                <!-- Video Content -->
+                <div id="video-fields" class="hidden">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                        <i class="fas fa-video text-purple-600 mr-2"></i>
+                        Video Content
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Video URL
+                            </label>
                             {{ form.video_url }}
-                            <small class="text-muted">YouTube, Vimeo, or storage URL</small>
+                            <p class="mt-1 text-sm text-gray-500">
+                                YouTube, Vimeo, or direct video URL
+                            </p>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Duration (minutes)</label>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Duration (minutes)
+                            </label>
                             {{ form.video_duration_minutes }}
                         </div>
                     </div>
                 </div>
-                
-                <!-- Text Fields -->
-                <div class="col-12" id="text-fields">
-                    <hr>
-                    <h6>Text Content</h6>
-                    <label class="form-label">Content</label>
-                    {{ form.content }}
-                </div>
-                
-                <!-- File Fields -->
-                <div class="col-12" id="file-fields">
-                    <hr>
-                    <h6>File Content</h6>
-                    <label class="form-label">Attachment</label>
-                    {{ form.file }}
-                    {% if lesson.file %}
-                    <div class="mt-2">
-                        <small>Current: <a href="{{ lesson.file.url }}" target="_blank">{{ lesson.file.name }}</a></small>
+
+                <!-- Text Content -->
+                <div id="text-fields" class="hidden">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                        <i class="fas fa-file-alt text-blue-600 mr-2"></i>
+                        Text Content
+                    </h2>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Content
+                        </label>
+                        {{ form.content }}
+                        <p class="mt-1 text-sm text-gray-500">
+                            Rich text content for text-based lessons
+                        </p>
                     </div>
-                    {% endif %}
                 </div>
-                
-                <div class="col-12">
-                    <hr>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save"></i> Save Lesson
-                        </button>
-                        <a href="{% url 'instructor:lesson_list' course.slug %}" class="btn btn-secondary">Cancel</a>
+
+                <!-- File Content -->
+                <div id="file-fields" class="hidden">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                        <i class="fas fa-file text-gray-600 mr-2"></i>
+                        File Attachment
+                    </h2>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Upload File
+                        </label>
+                        {{ form.file }}
+                        {% if lesson and lesson.file %}
+                        <div class="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p class="text-sm text-gray-600">
+                                Current file: 
+                                <a href="{{ lesson.file.url }}" 
+                                   target="_blank" 
+                                   class="text-primary-600 hover:text-primary-700 font-medium">
+                                    {{ lesson.file.name|slice:"7:" }}
+                                </a>
+                            </p>
+                        </div>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">
+                            PDF, Word, PowerPoint, or other downloadable materials
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Quiz/Assignment Info -->
+                <div id="quiz-fields" class="hidden">
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-6">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-question-circle text-3xl text-green-600"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-green-900 mb-2">
+                                    Quiz Lesson
+                                </h3>
+                                <p class="text-green-800 mb-3">
+                                    After creating this lesson, you'll be able to add quiz questions and configure settings.
+                                </p>
+                                {% if lesson %}
+                                <a href="{% url 'instructor:quiz_list' course.slug lesson.id %}" 
+                                   class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                                    <i class="fas fa-question-circle mr-2"></i> 
+                                    Manage Quizzes
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="assignment-fields" class="hidden">
+                    <div class="bg-orange-50 border border-orange-200 rounded-xl p-6">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-tasks text-3xl text-orange-600"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-orange-900 mb-2">
+                                    Assignment Lesson
+                                </h3>
+                                <p class="text-orange-800 mb-3">
+                                    After creating this lesson, you'll be able to add assignment details and configure submission settings.
+                                </p>
+                                {% if lesson %}
+                                <a href="{% url 'instructor:assignment_list' course.slug lesson.id %}" 
+                                   class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium">
+                                    <i class="fas fa-tasks mr-2"></i> 
+                                    Manage Assignments
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Form Actions -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <a href="{% url 'instructor:lesson_list' course.slug %}" 
+                       class="w-full sm:w-auto px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            class="w-full sm:w-auto px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all font-medium">
+                        <i class="fas fa-save mr-2"></i> 
+                        Save Lesson
+                    </button>
+                </div>
+            </div>
         </form>
+    </div>
+
+    <!-- Tips Sidebar (Optional) -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <div class="flex items-start gap-4">
+            <div class="flex-shrink-0">
+                <i class="fas fa-lightbulb text-3xl text-blue-600"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-blue-900 mb-2">
+                    Tips for Creating Lessons
+                </h3>
+                <ul class="space-y-2 text-blue-800">
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
+                        <span><strong>Video lessons:</strong> Keep videos under 15 minutes for better engagement</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
+                        <span><strong>Text lessons:</strong> Use clear headings and break content into digestible sections</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
+                        <span><strong>Preview:</strong> Enable preview on introductory lessons to attract students</span>
+                    </li>
+                    <li class="flex items-start">
+                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
+                        <span><strong>Mix formats:</strong> Combine videos, text, and quizzes for varied learning</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -112,22 +318,50 @@
 
 {% block extra_js %}
 <script>
-// Show/hide fields based on lesson type
+// Show/hide content fields based on lesson type
 document.addEventListener('DOMContentLoaded', function() {
-    const lessonType = document.querySelector('[name="lesson_type"]');
+    const lessonTypeField = document.querySelector('[name="lesson_type"]');
     const videoFields = document.getElementById('video-fields');
     const textFields = document.getElementById('text-fields');
     const fileFields = document.getElementById('file-fields');
+    const quizFields = document.getElementById('quiz-fields');
+    const assignmentFields = document.getElementById('assignment-fields');
     
-    function updateFields() {
-        const type = lessonType.value;
-        videoFields.style.display = type === 'video' ? 'block' : 'none';
-        textFields.style.display = type === 'text' ? 'block' : 'none';
-        fileFields.style.display = type === 'file' ? 'block' : 'none';
+    function updateFieldsVisibility() {
+        const selectedType = lessonTypeField.value;
+        
+        // Hide all content sections first
+        videoFields.classList.add('hidden');
+        textFields.classList.add('hidden');
+        fileFields.classList.add('hidden');
+        quizFields.classList.add('hidden');
+        assignmentFields.classList.add('hidden');
+        
+        // Show relevant section based on lesson type
+        switch(selectedType) {
+            case 'video':
+                videoFields.classList.remove('hidden');
+                break;
+            case 'text':
+                textFields.classList.remove('hidden');
+                break;
+            case 'file':
+                fileFields.classList.remove('hidden');
+                break;
+            case 'quiz':
+                quizFields.classList.remove('hidden');
+                break;
+            case 'assignment':
+                assignmentFields.classList.remove('hidden');
+                break;
+        }
     }
     
-    lessonType.addEventListener('change', updateFields);
-    updateFields();
+    // Initial load
+    updateFieldsVisibility();
+    
+    // Update on change
+    lessonTypeField.addEventListener('change', updateFieldsVisibility);
 });
 </script>
 {% endblock %}

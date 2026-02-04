@@ -75,28 +75,26 @@
     </script>
 
     <style>
-        /* Sidebar Collapsed Styles - SIMPLIFIED */
+        /* ==================== SIDEBAR COLLAPSED STYLES ==================== */
         .sidebar-collapsed {
             width: 5rem !important;
         }
 
-        /* Hide text when collapsed */
+        /* HIDE ALL TEXT CONTENT WHEN COLLAPSED */
         .sidebar-collapsed .sidebar-header span,
-        .sidebar-collapsed nav span:not(.badge-count) {
-            display: none !important;
-        }
-
-        /* Hide arrows when collapsed */
+        .sidebar-collapsed nav span:not(.badge-count),
+        .sidebar-collapsed .py-2.px-4.text-xs.uppercase,
+        .sidebar-collapsed .bg-white\/5,
         .sidebar-collapsed .menu-arrow {
             display: none !important;
         }
 
-        /* Hide submenus when collapsed */
+        /* HIDE SUBMENUS WHEN COLLAPSED */
         .sidebar-collapsed [id$="Menu"] {
             display: none !important;
         }
 
-        /* Center header content when collapsed */
+        /* CENTER HEADER WHEN COLLAPSED */
         .sidebar-collapsed .sidebar-header {
             justify-content: center !important;
             padding-left: 0.5rem !important;
@@ -111,20 +109,22 @@
             margin-right: 0 !important;
         }
 
-        /* Center all nav items when collapsed */
+        /* CENTER ALL NAV ITEMS WHEN COLLAPSED */
         .sidebar-collapsed nav a,
-        .sidebar-collapsed nav button {
+        .sidebar-collapsed nav button,
+        .sidebar-collapsed .menu-toggle {
             justify-content: center !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
         }
 
         .sidebar-collapsed nav a > div,
-        .sidebar-collapsed nav button > div {
+        .sidebar-collapsed nav button > div,
+        .sidebar-collapsed .menu-toggle > div {
             justify-content: center !important;
         }
 
-        /* Center icons and remove margin */
+        /* CENTER ICONS AND REMOVE MARGINS */
         .sidebar-collapsed nav i {
             margin: 0 !important;
             width: 1.5rem;
@@ -134,7 +134,7 @@
             justify-content: center;
         }
 
-        /* Badge positioning when collapsed */
+        /* BADGE COUNT POSITIONING */
         .sidebar-collapsed .badge-count {
             position: absolute !important;
             top: 0.25rem !important;
@@ -148,12 +148,12 @@
             justify-content: center !important;
         }
 
-        /* Hide close button on mobile when collapsed */
+        /* HIDE MOBILE CLOSE BUTTON WHEN COLLAPSED */
         .sidebar-collapsed #closeSidebar {
             display: none !important;
         }
 
-        /* User info at bottom when collapsed */
+        /* USER INFO AT BOTTOM WHEN COLLAPSED */
         .sidebar-collapsed .user-info-bottom {
             padding: 0.75rem 0.5rem !important;
         }
@@ -170,22 +170,23 @@
             margin: 0 auto;
         }
 
-        /* Smooth transitions */
+        /* SMOOTH TRANSITIONS */
         #sidebar {
             transition: width 0.3s ease, transform 0.3s ease;
             overflow-x: hidden;
+            overflow-y: auto;
         }
 
         #mainContent {
             transition: margin-left 0.3s ease;
         }
 
-        /* Ensure nav items have proper structure */
+        /* ENSURE PROPER STRUCTURE */
         nav a, nav button {
             position: relative;
         }
 
-        /* Dropdown styles */
+        /* ==================== DROPDOWN STYLES ==================== */
         .dropdown-menu {
             display: none;
             opacity: 0;
@@ -201,20 +202,27 @@
             pointer-events: auto;
         }
 
-        /* Mobile overlay */
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 30;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+        /* ==================== ACTIVE STATES ==================== */
+        .sidebar-item-active {
+            background-color: rgba(255, 255, 255, 0.2);
         }
 
-        .sidebar-overlay.show {
-            display: block;
-            opacity: 1;
+        /* ==================== SCROLLBAR STYLING ==================== */
+        #sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
         }
     </style>
     
@@ -615,34 +623,21 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
                         <div id="assessmentsMenu" class="mt-1 space-y-1 hidden">
-                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-question-circle mr-2 w-4" aria-hidden="true"></i> Quizzes
+                            <a href="{% url 'instructor:all_quizzes' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-question-circle mr-2 w-4" aria-hidden="true"></i> All Quizzes
                             </a>
-                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-tasks mr-2 w-4" aria-hidden="true"></i> Assignments
-                            </a>
-                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-file-alt mr-2 w-4" aria-hidden="true"></i> Submissions
-                                <span class="ml-2 px-2 py-0.5 bg-accent-500 text-white text-xs rounded-full badge-count">3</span>
+                            <a href="{% url 'instructor:all_assignments' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                                <i class="fas fa-tasks mr-2 w-4" aria-hidden="true"></i> All Assignments
                             </a>
                         </div>
                     </div>
-
-                    <!-- Students -->
-                    <a href="#" 
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <div class="flex items-center">
-                            <i class="fas fa-users w-5 mr-3" aria-hidden="true"></i>
-                            <span>Students</span>
-                        </div>
-                    </a>
 
                     <!-- Analytics -->
                     <div class="mb-1">
                         <div class="py-2 px-4 text-xs uppercase tracking-wider text-white/60 font-semibold mt-4">
                             Reports
                         </div>
-                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'analytics' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-chart-line w-5 mr-3" aria-hidden="true"></i>
                                 <span>Analytics</span>
@@ -650,13 +645,16 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
                         <div id="analyticsMenu" class="mt-1 space-y-1 hidden">
-                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-chart-bar mr-2 w-4" aria-hidden="true"></i> Course Stats
+                            <a href="{% url 'instructor:analytics_course_stats' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'analytics_course_stats' %}bg-white/20{% endif %}">
+                                <i class="fas fa-chart-bar mr-2 w-4" aria-hidden="true"></i> Course Statistics
                             </a>
-                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                            <a href="{% url 'instructor:analytics_student_progress' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'analytics_student_progress' %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2 w-4" aria-hidden="true"></i> Student Progress
                             </a>
-                            <a href="#" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
+                            <a href="{% url 'instructor:analytics_reviews' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'analytics_reviews' %}bg-white/20{% endif %}">
                                 <i class="fas fa-star mr-2 w-4" aria-hidden="true"></i> Reviews & Ratings
                             </a>
                         </div>
@@ -668,26 +666,6 @@
                         <div class="flex items-center">
                             <i class="fas fa-folder w-5 mr-3" aria-hidden="true"></i>
                             <span>Resources</span>
-                        </div>
-                    </a>
-
-                    <!-- Settings -->
-                    <div class="mb-1 mt-4">
-                        <div class="py-2 px-4 text-xs uppercase tracking-wider text-white/60 font-semibold">
-                            Settings
-                        </div>
-                        <a href="#" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
-                            <i class="fas fa-cog w-5 mr-3" aria-hidden="true"></i>
-                            <span>Preferences</span>
-                        </a>
-                    </div>
-
-                    <!-- Help & Support -->
-                    <a href="#" 
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <div class="flex items-center">
-                            <i class="fas fa-question-circle w-5 mr-3" aria-hidden="true"></i>
-                            <span>Help & Support</span>
                         </div>
                     </a>
 

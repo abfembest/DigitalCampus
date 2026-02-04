@@ -8,7 +8,7 @@ from eduweb.models import (
 
 # ==================== COURSE FORMS ====================
 class CourseForm(forms.ModelForm):
-    """Form for creating and editing courses"""
+    """Form for creating and editing courses with Tailwind styling"""
     
     class Meta:
         model = LMSCourse
@@ -22,60 +22,79 @@ class CourseForm(forms.ModelForm):
         ]
         widgets = {
             'title': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Course Title'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'placeholder': 'Enter course title'
             }),
             'code': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'e.g., CS101'
             }),
-            'category': forms.Select(attrs={'class': 'form-control'}),
+            'category': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            }),
             'short_description': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 3,
                 'placeholder': 'Brief description (max 500 characters)'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 6,
                 'placeholder': 'Detailed course description'
             }),
-            'difficulty_level': forms.Select(attrs={'class': 'form-control'}),
+            'difficulty_level': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            }),
             'duration_hours': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.5'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'step': '0.5',
+                'placeholder': 'e.g., 10'
             }),
             'language': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 'English'
             }),
             'promo_video_url': forms.URLInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'YouTube or Vimeo URL'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'placeholder': 'https://youtube.com/watch?v=...'
             }),
             'price': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'step': '0.01',
+                'placeholder': '0.00'
             }),
             'discount_price': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'step': '0.01',
+                'placeholder': '0.00'
             }),
             'max_students': forms.NumberInput(attrs={
-                'class': 'form-control'
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'placeholder': 'Leave blank for unlimited'
             }),
             'enrollment_start_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'type': 'date'
             }),
             'enrollment_end_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'type': 'date'
             }),
-            'is_free': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'has_certificate': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_published': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_featured': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'thumbnail': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100'
+            }),
+            'is_free': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'has_certificate': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'is_published': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'is_featured': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
         }
 
 
@@ -83,7 +102,7 @@ class CourseObjectivesForm(forms.ModelForm):
     """Form for managing course learning objectives"""
     objectives = forms.CharField(
         widget=forms.Textarea(attrs={
-            'class': 'form-control',
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
             'rows': 6,
             'placeholder': 'Enter one objective per line'
         }),
@@ -92,7 +111,7 @@ class CourseObjectivesForm(forms.ModelForm):
     prerequisites = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
-            'class': 'form-control',
+            'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
             'rows': 4,
             'placeholder': 'Enter one prerequisite per line'
         }),
@@ -113,16 +132,16 @@ class SectionForm(forms.ModelForm):
         fields = ['title', 'description', 'display_order']
         widgets = {
             'title': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'Section Title'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 3,
                 'placeholder': 'Section description (optional)'
             }),
             'display_order': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 0
             }),
         }
@@ -140,35 +159,44 @@ class LessonForm(forms.ModelForm):
             'file', 'is_preview', 'display_order'
         ]
         widgets = {
-            'section': forms.Select(attrs={'class': 'form-control'}),
+            'section': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            }),
             'title': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'Lesson Title'
             }),
-            'lesson_type': forms.Select(attrs={'class': 'form-control'}),
+            'lesson_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            }),
             'description': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 3,
                 'placeholder': 'Lesson description'
             }),
             'content': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 8,
                 'placeholder': 'Lesson content (for text lessons)'
             }),
             'video_url': forms.URLInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'YouTube, Vimeo, or storage URL'
             }),
             'video_duration_minutes': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 0
             }),
             'display_order': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 0
             }),
-            'is_preview': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'file': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100'
+            }),
+            'is_preview': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
         }
     
     def __init__(self, *args, **kwargs):
@@ -193,41 +221,41 @@ class QuizForm(forms.ModelForm):
         ]
         widgets = {
             'title': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'Quiz Title'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 3,
                 'placeholder': 'Quiz description'
             }),
             'instructions': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 4,
                 'placeholder': 'Instructions for students'
             }),
             'time_limit_minutes': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'Leave blank for no limit'
             }),
             'passing_score': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 70,
                 'step': '0.01'
             }),
             'max_attempts': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 3
             }),
             'display_order': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 0
             }),
             'shuffle_questions': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
             'show_correct_answers': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
         }
 
@@ -242,24 +270,26 @@ class QuizQuestionForm(forms.ModelForm):
             'points', 'display_order'
         ]
         widgets = {
-            'question_type': forms.Select(attrs={'class': 'form-control'}),
+            'question_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            }),
             'question_text': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 3,
                 'placeholder': 'Enter your question'
             }),
             'explanation': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 2,
                 'placeholder': 'Explanation (shown after answer)'
             }),
             'points': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 1,
                 'step': '0.01'
             }),
             'display_order': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 0
             }),
         }
@@ -273,14 +303,14 @@ class QuizAnswerForm(forms.ModelForm):
         fields = ['answer_text', 'is_correct', 'display_order']
         widgets = {
             'answer_text': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'Answer choice'
             }),
             'is_correct': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
             'display_order': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 0
             }),
         }
@@ -300,43 +330,46 @@ class AssignmentForm(forms.ModelForm):
         ]
         widgets = {
             'title': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'Assignment Title'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 4,
                 'placeholder': 'Assignment description'
             }),
             'instructions': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 6,
                 'placeholder': 'Detailed instructions for students'
             }),
             'max_score': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 100,
                 'step': '0.01'
             }),
             'passing_score': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 50,
                 'step': '0.01'
             }),
             'due_date': forms.DateTimeInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'type': 'datetime-local'
             }),
             'late_penalty_percent': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 0
             }),
             'display_order': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'value': 0
             }),
+            'attachment': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100'
+            }),
             'allow_late_submission': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
         }
 
@@ -353,21 +386,23 @@ class AnnouncementForm(forms.ModelForm):
         ]
         widgets = {
             'title': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'Announcement Title'
             }),
             'content': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 6,
                 'placeholder': 'Announcement content'
             }),
-            'priority': forms.Select(attrs={'class': 'form-control'}),
+            'priority': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            }),
             'publish_date': forms.DateTimeInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'type': 'datetime-local'
             }),
             'expiry_date': forms.DateTimeInput(attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'type': 'datetime-local'
             }),
         }

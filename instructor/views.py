@@ -1228,3 +1228,77 @@ def reviews_ratings(request):
         'instructor/analytics/reviews_ratings.html', 
         context
     )
+
+@login_required
+def resources(request):
+    """
+    Pool and display all resources from courses
+    """
+    # Get all courses for this instructor
+    instructor_courses = LMSCourse.objects.filter(
+        instructor=request.user
+    ).prefetch_related(
+        'lessons',
+        'lessons__assignments'
+    )
+    
+    # Pool resources from lessons
+    lesson_videos = []
+    lesson_docs = []
+    
+    for course in instructor_courses:
+        for lesson in course.lessons.all():
+            # Videos
+            if lesson.video_url:
+                lesson_videos.append({
+                    'course': course,
+                    'lesson': lesson,
+                    'url': lesson.video_url,
+                    'type': 'video',
+                    'uploaded': lesson.created_at
+                })
+            
+            # Documents
+            if lesson.document:
+                lesson_docs.append({
+                    'course': course,
+                    'lesson': lesson,
+                    'file': lesson.document,
+                    'name': lesson.document.name.split('/')[-1],
+                    'type': 'document',
+                    'uploaded': lesson.created_at
+                })
+    
+    # Pool assignment files
+    assignment_files = []
+    for course in instructor_courses:
+        for lesson in course.lessons.all():
+            for assignment in lesson.assignments.all():
+                if assignment.attachment:
+                    assignment_files.append({
+                        'course': course,
+                        'lesson': lesson,
+                        'assignment': assignment,
+                        'file': assignment.attachment,
+                        'name': assignment.attachment.name.split('/')[-1],
+                        'type': 'assignment',
+                        'uploaded': assignment.created_at
+                    })
+    
+    # Statistics
+    stats = {
+        'total_videos': len(lesson_videos),
+        'total_docs': len(lesson_docs),
+        'total_assignments': len(assignment_files),
+        'total_courses': instructor_courses.count(),
+    }
+    
+    context = {
+        'lesson_videos': lesson_videos,
+        'lesson_docs': lesson_docs,
+        'assignment_files': assignment_files,
+        'stats': stats,
+        'courses': instructor_courses,
+    }
+    
+    return render(request, 'instructor/resources.html', context)

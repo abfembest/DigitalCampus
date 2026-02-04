@@ -1,0 +1,267 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Resources - Instructor{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Resources</h1>
+        <p class="text-gray-600 mt-2">
+            All your course materials in one place
+        </p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-video text-3xl text-blue-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600">Videos</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        {{ stats.total_videos }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-file-alt text-3xl text-green-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600">Documents</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        {{ stats.total_docs }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-tasks text-3xl text-purple-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600">Assignments</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        {{ stats.total_assignments }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-book text-3xl text-orange-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm text-gray-600">Courses</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        {{ stats.total_courses }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="border-b border-gray-200">
+            <nav class="flex -mb-px">
+                <button class="tab-btn active py-4 px-6 text-sm font-medium" 
+                        data-tab="videos">
+                    <i class="fas fa-video mr-2"></i>Videos
+                </button>
+                <button class="tab-btn py-4 px-6 text-sm font-medium" 
+                        data-tab="documents">
+                    <i class="fas fa-file-alt mr-2"></i>Documents
+                </button>
+                <button class="tab-btn py-4 px-6 text-sm font-medium" 
+                        data-tab="assignments">
+                    <i class="fas fa-tasks mr-2"></i>Assignment Files
+                </button>
+            </nav>
+        </div>
+
+        <!-- Videos Tab -->
+        <div id="videos-tab" class="tab-content p-6">
+            {% if lesson_videos %}
+            <div class="space-y-4">
+                {% for item in lesson_videos %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start space-x-4 flex-1">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-play-circle text-3xl text-blue-600"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-semibold text-gray-900">
+                                    {{ item.lesson.title }}
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    <i class="fas fa-book mr-1"></i>
+                                    {{ item.course.title }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Uploaded: {{ item.uploaded|date:"M d, Y" }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 ml-4">
+                            <a href="{{ item.url }}" 
+                               target="_blank"
+                               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <i class="fas fa-external-link-alt mr-2"></i>
+                                View
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-video text-gray-300 text-5xl mb-4"></i>
+                <p class="text-gray-500">No videos uploaded yet</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Documents Tab -->
+        <div id="documents-tab" class="tab-content hidden p-6">
+            {% if lesson_docs %}
+            <div class="space-y-4">
+                {% for item in lesson_docs %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start space-x-4 flex-1">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-file-pdf text-3xl text-red-600"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-semibold text-gray-900">
+                                    {{ item.name }}
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    <i class="fas fa-book mr-1"></i>
+                                    {{ item.course.title }} - {{ item.lesson.title }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Uploaded: {{ item.uploaded|date:"M d, Y" }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 ml-4">
+                            <a href="{{ item.file.url }}" 
+                               download
+                               class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                <i class="fas fa-download mr-2"></i>
+                                Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-file-alt text-gray-300 text-5xl mb-4"></i>
+                <p class="text-gray-500">No documents uploaded yet</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Assignment Files Tab -->
+        <div id="assignments-tab" class="tab-content hidden p-6">
+            {% if assignment_files %}
+            <div class="space-y-4">
+                {% for item in assignment_files %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start space-x-4 flex-1">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-paperclip text-3xl text-purple-600"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-semibold text-gray-900">
+                                    {{ item.name }}
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    <i class="fas fa-tasks mr-1"></i>
+                                    {{ item.assignment.title }}
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    <i class="fas fa-book mr-1"></i>
+                                    {{ item.course.title }} - {{ item.lesson.title }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Uploaded: {{ item.uploaded|date:"M d, Y" }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 ml-4">
+                            <a href="{{ item.file.url }}" 
+                               download
+                               class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                                <i class="fas fa-download mr-2"></i>
+                                Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-tasks text-gray-300 text-5xl mb-4"></i>
+                <p class="text-gray-500">No assignment files uploaded yet</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+
+            // Remove active class from all buttons
+            tabBtns.forEach(b => {
+                b.classList.remove('active', 'text-blue-600', 'border-b-2', 'border-blue-600');
+                b.classList.add('text-gray-600');
+            });
+
+            // Add active class to clicked button
+            this.classList.add('active', 'text-blue-600', 'border-b-2', 'border-blue-600');
+            this.classList.remove('text-gray-600');
+
+            // Hide all tab contents
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Show target tab content
+            document.getElementById(targetTab + '-tab').classList.remove('hidden');
+        });
+    });
+
+    // Initialize first tab as active
+    tabBtns[0].classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+});
+</script>
+{% endblock %}

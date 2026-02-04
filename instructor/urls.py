@@ -67,6 +67,6 @@ urlpatterns = [
         views.reviews_ratings, 
         name='analytics_reviews'),
 
-
+    path('resources/', views.resources, name='resources'),
 
 ]

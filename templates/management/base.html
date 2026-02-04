@@ -660,14 +660,13 @@
                         </div>
                     </div>
 
-                    <!-- Resources -->
-                    <a href="#" 
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <div class="flex items-center">
-                            <i class="fas fa-folder w-5 mr-3" aria-hidden="true"></i>
-                            <span>Resources</span>
-                        </div>
-                    </a>
+                    <a href="{% url 'instructor:resources' %}" 
+                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'resources' %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-folder w-5 mr-3" aria-hidden="true"></i>
+                                <span>Resources</span>
+                            </div>
+                        </a>
 
                     {% elif request.user.profile.role == 'content_manager' %}
                     <!-- CONTENT MANAGER MENU (for future implementation) -->

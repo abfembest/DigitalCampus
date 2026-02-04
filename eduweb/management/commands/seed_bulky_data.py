@@ -343,7 +343,7 @@ class Command(BaseCommand):
                 'name': 'Free',
                 'description': 'Access to free courses only',
                 'price': Decimal('0.00'),
-                'duration_days': 365,
+                'billing_cycle': 'yearly',
                 'features': ['Access to free courses', 'Community forums', 'Basic support'],
                 'max_courses': 5,
                 'is_popular': False
@@ -352,7 +352,7 @@ class Command(BaseCommand):
                 'name': 'Basic',
                 'description': 'Perfect for individual learners',
                 'price': Decimal('29.99'),
-                'duration_days': 30,
+                'billing_cycle': 'monthly',
                 'features': ['All free features', 'Access to premium courses', 'Email support', 'Downloadable resources'],
                 'max_courses': 20,
                 'is_popular': False
@@ -361,7 +361,7 @@ class Command(BaseCommand):
                 'name': 'Pro',
                 'description': 'Best value for serious learners',
                 'price': Decimal('79.99'),
-                'duration_days': 30,
+                'billing_cycle': 'monthly',
                 'features': ['All Basic features', 'Unlimited courses', 'Priority support', 'Certificates', 'Live Q&A sessions'],
                 'max_courses': None,
                 'is_popular': True
@@ -370,7 +370,7 @@ class Command(BaseCommand):
                 'name': 'Enterprise',
                 'description': 'For teams and organizations',
                 'price': Decimal('299.99'),
-                'duration_days': 30,
+                'billing_cycle': 'monthly',
                 'features': ['All Pro features', 'Team management', 'Custom branding', 'Dedicated support', 'Analytics dashboard', 'API access'],
                 'max_courses': None,
                 'is_popular': False
@@ -381,7 +381,8 @@ class Command(BaseCommand):
                 name=pd['name'],
                 description=pd['description'],
                 price=pd['price'],
-                duration_days=pd['duration_days'],
+                currency='USD',
+                billing_cycle=pd['billing_cycle'],
                 features=pd['features'],
                 max_courses=pd['max_courses'],
                 is_active=True,
@@ -394,15 +395,22 @@ class Command(BaseCommand):
         self.stdout.write("🎫 Creating user subscriptions...")
         for student in random.sample(users['students'], k=25):
             plan = random.choice(plans)
-            start_date = timezone.now() - timedelta(days=random.randint(0, 60))
+            start_date = timezone.now().date() - timedelta(days=random.randint(0, 60))
+            # Calculate end date based on billing cycle
+            if plan.billing_cycle == 'monthly':
+                end_date = start_date + timedelta(days=30)
+            elif plan.billing_cycle == 'quarterly':
+                end_date = start_date + timedelta(days=90)
+            else:  # yearly
+                end_date = start_date + timedelta(days=365)
+            
             Subscription.objects.create(
                 user=student,
                 plan=plan,
-                start_date=start_date,
-                end_date=start_date + timedelta(days=plan.duration_days),
-                is_active=random.random() > 0.2,
+                status=random.choice(['active', 'active', 'active', 'cancelled', 'expired']) if random.random() > 0.2 else 'active',
+                end_date=end_date,
                 auto_renew=random.choice([True, False]),
-                payment_method=random.choice(['card', 'paypal'])
+                gateway_subscription_id=f"sub_{uuid.uuid4().hex[:24]}" if random.random() > 0.3 else ''
             )
 
         # --- 8. FACULTIES (Created by ADMINS) ---
@@ -411,50 +419,84 @@ class Command(BaseCommand):
         faculty_data = [
             {
                 'name': 'Faculty of Computer Science & IT',
-                'description': 'Leading education in computing, software development, and information technology.',
+                'code': 'CSIT',
+                'tagline': 'Leading the digital revolution',
+                'description': 'Leading education in computing, software development, and information technology. We prepare students for the future of tech.',
                 'icon': 'cpu',
-                'color': 'blue',
-                'dean': random.choice(users['instructors']).get_full_name()
+                'color_primary': 'blue',
+                'color_secondary': 'cyan',
+                'student_count': random.randint(500, 2000),
+                'placement_rate': random.randint(85, 98)
             },
             {
                 'name': 'Faculty of Engineering',
-                'description': 'Excellence in engineering education across multiple disciplines.',
+                'code': 'ENG',
+                'tagline': 'Building tomorrow, today',
+                'description': 'Excellence in engineering education across multiple disciplines. Fostering innovation and practical problem-solving.',
                 'icon': 'cog',
-                'color': 'orange',
-                'dean': random.choice(users['instructors']).get_full_name()
+                'color_primary': 'orange',
+                'color_secondary': 'amber',
+                'student_count': random.randint(400, 1800),
+                'placement_rate': random.randint(80, 95)
             },
             {
                 'name': 'Faculty of Business & Management',
-                'description': 'Preparing future business leaders and entrepreneurs.',
+                'code': 'BUS',
+                'tagline': 'Shaping future leaders',
+                'description': 'Preparing future business leaders and entrepreneurs. Combining theory with real-world business practice.',
                 'icon': 'briefcase',
-                'color': 'green',
-                'dean': random.choice(users['instructors']).get_full_name()
+                'color_primary': 'green',
+                'color_secondary': 'emerald',
+                'student_count': random.randint(600, 2500),
+                'placement_rate': random.randint(82, 96)
             },
             {
                 'name': 'Faculty of Health Sciences',
-                'description': 'Comprehensive health education and medical training programs.',
+                'code': 'HLTH',
+                'tagline': 'Caring for tomorrow',
+                'description': 'Comprehensive health education and medical training programs. Developing compassionate healthcare professionals.',
                 'icon': 'heart',
-                'color': 'red',
-                'dean': random.choice(users['instructors']).get_full_name()
+                'color_primary': 'red',
+                'color_secondary': 'rose',
+                'student_count': random.randint(300, 1200),
+                'placement_rate': random.randint(90, 99)
             },
             {
                 'name': 'Faculty of Arts & Humanities',
-                'description': 'Fostering creativity and critical thinking in arts and humanities.',
+                'code': 'ART',
+                'tagline': 'Inspiring creativity and critical thinking',
+                'description': 'Fostering creativity and critical thinking in arts and humanities. Exploring human culture and expression.',
                 'icon': 'palette',
-                'color': 'purple',
-                'dean': random.choice(users['instructors']).get_full_name()
+                'color_primary': 'purple',
+                'color_secondary': 'violet',
+                'student_count': random.randint(400, 1500),
+                'placement_rate': random.randint(75, 88)
             }
         ]
-        for fd in faculty_data:
+        for idx, fd in enumerate(faculty_data):
             faculty = Faculty.objects.create(
                 name=fd['name'],
+                code=fd['code'],
+                tagline=fd['tagline'],
                 description=fd['description'],
                 icon=fd['icon'],
-                color=fd['color'],
-                dean_name=fd['dean'],
-                email=fake.company_email(),
-                phone=fake.phone_number()[:20],
-                is_active=True
+                color_primary=fd['color_primary'],
+                color_secondary=fd['color_secondary'],
+                student_count=fd['student_count'],
+                placement_rate=fd['placement_rate'],
+                partner_count=random.randint(10, 50),
+                international_faculty=random.randint(15, 40),
+                mission=fake.text(max_nb_chars=300),
+                vision=fake.text(max_nb_chars=300),
+                accreditation=f"Accredited by {fake.company()} - {random.randint(2015, 2024)}",
+                special_features=[
+                    f"State-of-the-art {fake.word()} facilities",
+                    f"Industry partnerships with {fake.company()}",
+                    f"International exchange programs",
+                    f"Research opportunities in {fake.word()}"
+                ],
+                is_active=True,
+                display_order=idx
             )
             faculties.append(faculty)
 
@@ -949,11 +991,13 @@ class Command(BaseCommand):
                 enrollment = Enrollment.objects.create(
                     student=student,
                     course=course,
-                    enrollment_date=timezone.now() - timedelta(days=random.randint(1, 120)),
+                    enrolled_by=random.choice(users['admins']) if random.random() > 0.5 else None,
                     status=random.choice(['active', 'active', 'active', 'completed', 'dropped']),
-                    progress=Decimal(str(random.uniform(0, 100))),
-                    grade=Decimal(str(random.uniform(60, 100))) if random.random() > 0.5 else None,
-                    completed_at=timezone.now() - timedelta(days=random.randint(1, 60)) if random.random() > 0.7 else None
+                    progress_percentage=Decimal(str(random.uniform(0, 100))),
+                    completed_lessons=random.randint(0, 20),
+                    current_grade=Decimal(str(random.uniform(60, 100))) if random.random() > 0.5 else None,
+                    completed_at=timezone.now() - timedelta(days=random.randint(1, 60)) if random.random() > 0.7 else None,
+                    last_accessed=timezone.now() - timedelta(hours=random.randint(1, 168))
                 )
                 enrollments.append(enrollment)
 
@@ -961,7 +1005,7 @@ class Command(BaseCommand):
         self.stdout.write("📊 Creating lesson progress...")
         for enrollment in random.sample(enrollments, k=min(len(enrollments), 200)):
             lessons = list(enrollment.course.lessons.all())
-            num_completed = int(len(lessons) * float(enrollment.progress) / 100)
+            num_completed = int(len(lessons) * float(enrollment.progress_percentage) / 100)
             for lesson in lessons[:num_completed]:
                 LessonProgress.objects.create(
                     enrollment=enrollment,
@@ -970,7 +1014,7 @@ class Command(BaseCommand):
                     completion_percentage=Decimal('100.00'),
                     time_spent_minutes=random.randint(5, 60),
                     video_progress_seconds=lesson.video_duration_minutes * 60 if lesson.lesson_type == 'video' else 0,
-                    started_at=enrollment.enrollment_date,
+                    started_at=enrollment.enrolled_at,
                     completed_at=timezone.now() - timedelta(days=random.randint(1, 30))
                 )
 
@@ -1041,25 +1085,40 @@ class Command(BaseCommand):
         for quiz in quizzes:
             num_questions = random.randint(5, 15)
             for i in range(num_questions):
+                question_type = random.choice(['multiple_choice', 'multiple_choice', 'true_false'])
                 question = QuizQuestion.objects.create(
                     quiz=quiz,
-                    question_type=random.choice(['single', 'single', 'multiple', 'true_false']),
+                    question_type=question_type,
                     question_text=f"{fake.sentence()}?",
                     explanation=fake.text(max_nb_chars=150) if random.random() > 0.5 else '',
-                    points=random.choice([1, 2, 5, 10]),
+                    points=Decimal(str(random.choice([1, 2, 5, 10]))),
                     display_order=i
                 )
                 
-                num_answers = 4 if question.question_type in ['single', 'multiple'] else 2
-                correct_count = 1 if question.question_type == 'single' else random.randint(1, 2)
-                for j in range(num_answers):
+                # Create answers for multiple choice and true/false
+                if question_type == 'multiple_choice':
+                    num_answers = 4
+                    correct_index = random.randint(0, 3)
+                    for j in range(num_answers):
+                        QuizAnswer.objects.create(
+                            question=question,
+                            answer_text=fake.sentence(nb_words=6),
+                            is_correct=(j == correct_index),
+                            display_order=j
+                        )
+                elif question_type == 'true_false':
+                    correct_answer = random.choice([True, False])
                     QuizAnswer.objects.create(
                         question=question,
-                        answer_text='True' if question.question_type == 'true_false' and j == 0 else 
-                                   'False' if question.question_type == 'true_false' else 
-                                   fake.sentence(nb_words=6),
-                        is_correct=j < correct_count,
-                        display_order=j
+                        answer_text='True',
+                        is_correct=correct_answer,
+                        display_order=0
+                    )
+                    QuizAnswer.objects.create(
+                        question=question,
+                        answer_text='False',
+                        is_correct=not correct_answer,
+                        display_order=1
                     )
 
         # --- 24. QUIZ ATTEMPTS (STUDENTS take quizzes) ---
@@ -1096,12 +1155,8 @@ class Command(BaseCommand):
                     course=course,
                     student=enrollment.student,
                     rating=random.randint(3, 5),
-                    title=fake.sentence(nb_words=6),
-                    comment=fake.text(max_nb_chars=400),
-                    is_verified_purchase=True,
-                    is_approved=random.random() > 0.1,
-                    approved_by=random.choice(users['admins']) if random.random() > 0.5 else None,
-                    approved_at=timezone.now() - timedelta(days=random.randint(1, 30)) if random.random() > 0.5 else None
+                    review_text=fake.text(max_nb_chars=400),
+                    is_approved=random.random() > 0.1
                 )
 
         # --- 26. CERTIFICATES (Issued to STUDENTS, verified by ADMINS) ---
@@ -1111,10 +1166,9 @@ class Command(BaseCommand):
             Certificate.objects.create(
                 student=enrollment.student,
                 course=enrollment.course,
-                certificate_number=f"CERT-{uuid.uuid4().hex[:12].upper()}",
-                issue_date=enrollment.completed_at or timezone.now(),
-                verification_code=uuid.uuid4().hex[:8].upper(),
-                grade=enrollment.grade or Decimal('85.00'),
+                completion_date=(enrollment.completed_at or timezone.now()).date(),
+                grade=str(int(enrollment.current_grade)) if enrollment.current_grade else 'A',
+                verification_code=uuid.uuid4(),
                 is_verified=True
             )
 

@@ -1,0 +1,391 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Payment Management - MIU Portal{% endblock %}
+{% block meta_description %}Manage and track all payment transactions{% endblock %}
+{% block meta_keywords %}payments, transactions, finance, management{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">
+                    <i class="fas fa-credit-card text-primary-600 mr-2" aria-hidden="true"></i>
+                    Payment Management
+                </h1>
+                <p class="mt-1 text-sm text-gray-600">Track and manage all payment transactions</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-3">
+                <button id="exportBtn" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-primary-500 focus:ring-offset-2" aria-label="Export data">
+                    <i class="fas fa-download mr-2" aria-hidden="true"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<main class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- Stats Cards -->
+    <section aria-labelledby="payment-stats-heading" class="mb-8">
+        <h2 id="payment-stats-heading" class="sr-only">Payment Statistics</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            
+            <!-- Total Payments -->
+            <article class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Total Payments</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_payments }}</p>
+                    </div>
+                    <div class="bg-blue-100 rounded-full p-3">
+                        <i class="fas fa-receipt text-blue-600 text-xl" aria-hidden="true"></i>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Completed -->
+            <article class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Completed</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ completed_payments }}</p>
+                    </div>
+                    <div class="bg-green-100 rounded-full p-3">
+                        <i class="fas fa-check-circle text-green-600 text-xl" aria-hidden="true"></i>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Pending -->
+            <article class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Pending</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ pending_payments }}</p>
+                    </div>
+                    <div class="bg-yellow-100 rounded-full p-3">
+                        <i class="fas fa-clock text-yellow-600 text-xl" aria-hidden="true"></i>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Failed -->
+            <article class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Failed</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ failed_payments }}</p>
+                    </div>
+                    <div class="bg-red-100 rounded-full p-3">
+                        <i class="fas fa-times-circle text-red-600 text-xl" aria-hidden="true"></i>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Total Amount -->
+            <article class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm font-medium">Total Amount</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">${{ total_amount|floatformat:2 }}</p>
+                    </div>
+                    <div class="bg-purple-100 rounded-full p-3">
+                        <i class="fas fa-dollar-sign text-purple-600 text-xl" aria-hidden="true"></i>
+                    </div>
+                </div>
+            </article>
+
+        </div>
+    </section>
+
+    <!-- Filters Section -->
+    <section aria-labelledby="filters-heading" class="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h2 id="filters-heading" class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-filter text-primary-600 mr-2" aria-hidden="true"></i>Filters
+        </h2>
+        <form method="get" id="filterForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            
+            <!-- Status Filter -->
+            <div>
+                <label for="{{ filter_form.status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                {{ filter_form.status }}
+            </div>
+
+            <!-- Payment Method Filter -->
+            <div>
+                <label for="{{ filter_form.payment_method.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                {{ filter_form.payment_method }}
+            </div>
+
+            <!-- Date From -->
+            <div>
+                <label for="{{ filter_form.date_from.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+                {{ filter_form.date_from }}
+            </div>
+
+            <!-- Date To -->
+            <div>
+                <label for="{{ filter_form.date_to.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+                {{ filter_form.date_to }}
+            </div>
+
+            <!-- Search -->
+            <div>
+                <label for="{{ filter_form.search.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                {{ filter_form.search }}
+            </div>
+
+            <!-- Filter Buttons -->
+            <div class="md:col-span-2 lg:col-span-5 flex gap-3">
+                <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                    <i class="fas fa-search mr-2" aria-hidden="true"></i>Apply Filters
+                </button>
+                <a href="{% url 'finance:payment_management' %}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+                    <i class="fas fa-redo mr-2" aria-hidden="true"></i>Reset
+                </a>
+            </div>
+        </form>
+    </section>
+
+    <!-- Payments Table -->
+    <section aria-labelledby="payments-table-heading" class="bg-white rounded-xl shadow-lg p-6">
+        <h2 id="payments-table-heading" class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-list text-primary-600 mr-2" aria-hidden="true"></i>Payment Transactions
+        </h2>
+        <div class="overflow-x-auto">
+            <table id="paymentsTable" class="min-w-full divide-y divide-gray-200 display nowrap" style="width:100%">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for payment in payments %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-mono text-gray-900">{{ payment.payment_reference }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-8 w-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
+                                    <span class="text-white text-xs font-semibold">
+                                        {% if payment.application and payment.application.user %}
+                                            {{ payment.application.user.first_name.0|default:'U' }}{{ payment.application.user.last_name.0|default:'' }}
+                                        {% else %}
+                                            U
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {% if payment.application and payment.application.user %}
+                                            {{ payment.application.user.get_full_name|default:payment.application.user.username }}
+                                        {% else %}
+                                            Unknown User
+                                        {% endif %}
+                                    </div>
+                                    {% if payment.application and payment.application.user %}
+                                    <div class="text-xs text-gray-500">{{ payment.application.user.email }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900 max-w-xs truncate">
+                                {% if payment.application and payment.application.course %}
+                                    {{ payment.application.course.name }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-semibold text-gray-900">${{ payment.amount|floatformat:2 }}</div>
+                            <div class="text-xs text-gray-500">{{ payment.currency }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if payment.payment_method == 'card' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    <i class="fas fa-credit-card mr-1" aria-hidden="true"></i> Card
+                                </span>
+                            {% elif payment.payment_method == 'paypal' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                    <i class="fab fa-paypal mr-1" aria-hidden="true"></i> PayPal
+                                </span>
+                            {% elif payment.payment_method == 'bank_transfer' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    <i class="fas fa-university mr-1" aria-hidden="true"></i> Bank
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    {{ payment.get_payment_method_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if payment.status == 'success' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1" aria-hidden="true"></i> Success
+                                </span>
+                            {% elif payment.status == 'pending' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-clock mr-1" aria-hidden="true"></i> Pending
+                                </span>
+                            {% elif payment.status == 'processing' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    <i class="fas fa-spinner mr-1" aria-hidden="true"></i> Processing
+                                </span>
+                            {% elif payment.status == 'failed' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <i class="fas fa-times-circle mr-1" aria-hidden="true"></i> Failed
+                                </span>
+                            {% elif payment.status == 'refunded' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    <i class="fas fa-undo mr-1" aria-hidden="true"></i> Refunded
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    {{ payment.get_status_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ payment.created_at|date:"M d, Y" }}</div>
+                            <div class="text-xs text-gray-500">{{ payment.created_at|date:"g:i A" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <a href="{% url 'finance:payment_detail' payment.id %}" class="text-primary-600 hover:text-primary-900 font-medium transition-colors">
+                                <i class="fas fa-eye mr-1" aria-hidden="true"></i>View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2 block" aria-hidden="true"></i>
+                            <p>No payments found</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable with export buttons
+    const table = $('#paymentsTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: 'excel',
+                text: '<i class="fas fa-file-excel mr-2"></i>Excel',
+                className: 'dt-button-excel',
+                exportOptions: {
+                    columns: ':not(:last-child)'
+                }
+            },
+            {
+                extend: 'csv',
+                text: '<i class="fas fa-file-csv mr-2"></i>CSV',
+                className: 'dt-button-csv',
+                exportOptions: {
+                    columns: ':not(:last-child)'
+                }
+            },
+            {
+                extend: 'pdf',
+                text: '<i class="fas fa-file-pdf mr-2"></i>PDF',
+                className: 'dt-button-pdf',
+                exportOptions: {
+                    columns: ':not(:last-child)'
+                }
+            },
+            {
+                extend: 'print',
+                text: '<i class="fas fa-print mr-2"></i>Print',
+                className: 'dt-button-print',
+                exportOptions: {
+                    columns: ':not(:last-child)'
+                }
+            }
+        ],
+        responsive: true,
+        pageLength: 25,
+        order: [[6, 'desc']], // Sort by date column (descending)
+        language: {
+            search: "_INPUT_",
+            searchPlaceholder: "Search payments...",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ payments",
+            infoEmpty: "No payments to display",
+            infoFiltered: "(filtered from _MAX_ total payments)",
+            emptyTable: "No payment data available"
+        }
+    });
+
+    // Custom export button
+    $('#exportBtn').on('click', function() {
+        table.button('.buttons-excel').trigger();
+    });
+
+    // Custom DataTables button styling
+    $('.dt-buttons').addClass('flex gap-2 mb-4');
+    $('.dt-button').addClass('px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium');
+});
+</script>
+
+<style>
+/* DataTables Custom Styling */
+.dataTables_wrapper .dataTables_length select {
+    @apply form-select rounded-lg border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    @apply form-input rounded-lg border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ml-2;
+}
+
+.dataTables_wrapper .dataTables_info {
+    @apply text-sm text-gray-700 pt-4;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+    @apply pt-4;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    @apply px-3 py-1 border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-md mx-1 transition-colors;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    @apply bg-primary-600 text-white border-primary-600 hover:bg-primary-700;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    @apply opacity-50 cursor-not-allowed hover:bg-white;
+}
+
+/* Buttons container */
+.dt-buttons {
+    margin-bottom: 1rem !important;
+}
+</style>
+{% endblock %}

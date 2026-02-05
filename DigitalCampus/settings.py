@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'student',
     'parent',
     'instructor',
+    'finance',
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [

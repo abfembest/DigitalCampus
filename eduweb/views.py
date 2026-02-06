@@ -60,17 +60,31 @@ def generate_captcha():
     return question, answer
 
 
-
 def auth_page(request):
     """Combined authentication page for login and signup"""
 
     # Redirect if user is already logged in
     if request.user.is_authenticated:
         messages.info(request, 'You are already logged in.')
-        # Redirect based on user type
-        if request.user.is_staff:
+        # Redirect based on user role
+        role = request.user.profile.role
+        
+        if role == 'admin' or request.user.is_superuser:
             return redirect('management:dashboard')
+        elif role == 'instructor':
+            return redirect('instructor:dashboard')
+        elif role == 'student':
+            return redirect('eduweb:apply')
+        elif role == 'finance':
+            return redirect('finance:dashboard')
+        elif role == 'content_manager':
+            pass  # Placeholder - add content manager dashboard redirect when ready
+        elif role == 'support':
+            pass  # Placeholder - add support dashboard redirect when ready
+        elif role == 'qa':
+            pass  # Placeholder - add QA dashboard redirect when ready
         else:
+            # Unknown role - redirect to apply page as default
             return redirect('eduweb:apply')
     
     # Generate captcha only on GET request (initial page load)

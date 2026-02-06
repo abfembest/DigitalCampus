@@ -92,7 +92,7 @@ class Command(BaseCommand):
         # --- 1. CLEANUP (keep existing users) ---
         self.stdout.write("🧹 Cleaning up existing data (preserving users)...")
         models_to_clear = [
-            AuditLog, Notification, Message, TicketReply, SupportTicket, StudentBadge, Badge,
+            User, AuditLog, Notification, Message, TicketReply, SupportTicket, StudentBadge, Badge,
             QuizResponse, QuizAttempt, QuizAnswer, QuizQuestion, Quiz, AssignmentSubmission,
             Assignment, LessonProgress, Certificate, Review, Enrollment, DiscussionReply,
             Discussion, Lesson, LessonSection, LMSCourse, CourseCategory, ApplicationPayment,

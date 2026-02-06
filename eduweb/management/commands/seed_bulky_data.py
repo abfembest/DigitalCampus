@@ -89,10 +89,10 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING("🚀 Starting COMPREHENSIVE database seeding..."))
         self.stdout.write(self.style.WARNING("   Ensuring ALL user roles actively participate in the system!"))
 
-        # --- 1. CLEANUP (keep existing users) ---
-        self.stdout.write("🧹 Cleaning up existing data (preserving users)...")
+        # --- 1. CLEANUP (including ALL users) ---
+        self.stdout.write("🧹 Cleaning up ALL existing data (including users)...")
         models_to_clear = [
-            User, AuditLog, Notification, Message, TicketReply, SupportTicket, StudentBadge, Badge,
+            AuditLog, Notification, Message, TicketReply, SupportTicket, StudentBadge, Badge,
             QuizResponse, QuizAttempt, QuizAnswer, QuizQuestion, Quiz, AssignmentSubmission,
             Assignment, LessonProgress, Certificate, Review, Enrollment, DiscussionReply,
             Discussion, Lesson, LessonSection, LMSCourse, CourseCategory, ApplicationPayment,
@@ -102,6 +102,11 @@ class Command(BaseCommand):
         ]
         for model in models_to_clear:
             model.objects.all().delete()
+        
+        # Clear UserProfile and User
+        UserProfile.objects.all().delete()
+        User.objects.all().delete()
+        self.stdout.write(self.style.SUCCESS("   ✅ All users and data cleared"))
 
         # --- 2. CREATE USERS WITH DIFFERENT ROLES ---
         self.stdout.write("👥 Creating users with different roles...")
@@ -111,9 +116,9 @@ class Command(BaseCommand):
         # Create 40 Students
         for i in range(40):
             u = User.objects.create_user(
-                username=f"student_{i}_{uuid.uuid4().hex[:4]}",
+                username=f"student_{i}",
                 email=fake.unique.email(),
-                password="password123",
+                password="12345",
                 first_name=fake.first_name(),
                 last_name=fake.last_name()
             )
@@ -137,9 +142,9 @@ class Command(BaseCommand):
         # Create 12 Instructors
         for i in range(12):
             u = User.objects.create_user(
-                username=f"instructor_{i}_{uuid.uuid4().hex[:4]}",
+                username=f"instructor_{i}",
                 email=fake.unique.email(),
-                password="password123",
+                password="12345",
                 first_name=fake.first_name(),
                 last_name=fake.last_name()
             )
@@ -160,9 +165,9 @@ class Command(BaseCommand):
         # Create 3 Admins
         for i in range(3):
             u = User.objects.create_user(
-                username=f"admin_{i}_{uuid.uuid4().hex[:4]}",
+                username=f"admin_{i}",
                 email=fake.unique.email(),
-                password="password123",
+                password="12345",
                 first_name=fake.first_name(),
                 last_name=fake.last_name(),
                 is_staff=True
@@ -178,9 +183,9 @@ class Command(BaseCommand):
         # Create 4 Support Staff
         for i in range(4):
             u = User.objects.create_user(
-                username=f"support_{i}_{uuid.uuid4().hex[:4]}",
+                username=f"support_{i}",
                 email=fake.unique.email(),
-                password="password123",
+                password="12345",
                 first_name=fake.first_name(),
                 last_name=fake.last_name()
             )
@@ -195,9 +200,9 @@ class Command(BaseCommand):
         # Create 2 Content Managers
         for i in range(2):
             u = User.objects.create_user(
-                username=f"content_mgr_{i}_{uuid.uuid4().hex[:4]}",
+                username=f"content_mgr_{i}",
                 email=fake.unique.email(),
-                password="password123",
+                password="12345",
                 first_name=fake.first_name(),
                 last_name=fake.last_name()
             )
@@ -212,9 +217,9 @@ class Command(BaseCommand):
         # Create 2 Finance Managers
         for i in range(2):
             u = User.objects.create_user(
-                username=f"finance_{i}_{uuid.uuid4().hex[:4]}",
+                username=f"finance_{i}",
                 email=fake.unique.email(),
-                password="password123",
+                password="12345",
                 first_name=fake.first_name(),
                 last_name=fake.last_name()
             )
@@ -229,9 +234,9 @@ class Command(BaseCommand):
         # Create 2 QA Reviewers
         for i in range(2):
             u = User.objects.create_user(
-                username=f"qa_{i}_{uuid.uuid4().hex[:4]}",
+                username=f"qa_{i}",
                 email=fake.unique.email(),
-                password="password123",
+                password="12345",
                 first_name=fake.first_name(),
                 last_name=fake.last_name()
             )
@@ -1074,7 +1079,7 @@ class Command(BaseCommand):
                             instructions='Answer all questions to the best of your ability.',
                             passing_score=Decimal('70.00'),
                             time_limit_minutes=random.choice([15, 30, 45, 60]),
-                            max_attempts=random.choice([1, 3, 5, None]),
+                            max_attempts=random.choice([1, 2, 3, 5, 10]),
                             is_active=True,
                             display_order=random.randint(0, 10)
                         )

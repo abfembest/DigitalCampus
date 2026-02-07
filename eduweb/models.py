@@ -716,6 +716,7 @@ class CourseApplication(models.Model):
         ('pending_payment', 'Pending Payment'),
         ('payment_complete', 'Payment Complete'),
         ('under_review', 'Under Review'),
+        ('documents_uploaded', 'Documents Uploaded'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
         ('withdrawn', 'Withdrawn'),
@@ -813,6 +814,26 @@ class CourseApplication(models.Model):
         if not hasattr(self, 'payment'):
             return False
         return self.payment.status == 'success'
+
+    def can_upload_documents(self):
+        """Check if application allows document uploads"""
+        allowed_statuses = ['payment_complete', 'documents_uploaded', 'under_review']
+        return self.status in allowed_statuses and self.is_paid
+
+    def can_submit(self):
+        """Check if application can be submitted"""
+        allowed_statuses = ['payment_complete', 'documents_uploaded']
+        has_documents = self.documents.exists()
+        return self.is_paid and has_documents and self.status in allowed_statuses
+    
+    def mark_as_submitted(self):
+        """Mark application as submitted"""
+        if self.can_submit():
+            self.status = 'under_review'
+            self.submitted_at = timezone.now()
+            self.save(update_fields=['status', 'submitted_at'])
+            return True
+        return False 
     
     def save(self, *args, **kwargs):
         if not self.application_id:
@@ -850,6 +871,15 @@ class ApplicationDocument(models.Model):
     
     def __str__(self):
         return f"{self.application.application_id} - {self.get_file_type_display()}"
+    
+    def get_file_size_display(self):
+        """Return human-readable file size"""
+        size = self.file_size
+        for unit in ['bytes', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"
 
 
 class ApplicationPayment(models.Model):

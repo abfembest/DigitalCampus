@@ -1664,12 +1664,6 @@ def mark_payment_successful(request, application_id):
     
     return redirect('eduweb:application_status')
 
-# def finalize_application(application):
-#     application.status = "submitted"
-#     application.submitted_at = timezone.now()
-#     application.save()
-
-
 from django.shortcuts import get_object_or_404
 from .models import Faculty, Course
 

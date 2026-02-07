@@ -54,13 +54,23 @@ urlpatterns = [
     path('assessments/quizzes/', views.all_quizzes, name='all_quizzes'),
     path('assessments/assignments/', views.all_assignments, name='all_assignments'),
 
+    # Quiz Question Answer Delete (add after question_answers line)
+    path('courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/<slug:quiz_slug>/questions/<int:question_id>/answers/<int:answer_id>/delete/', 
+        views.delete_answer, 
+        name='delete_answer'),
+
+    # Quiz Question Delete (add after question_create line)
+    path('courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/<slug:quiz_slug>/questions/<int:question_id>/delete/', 
+        views.delete_question, 
+        name='delete_question'),
+
     # ==================== ANALYTICS & REPORTS ====================
     path('analytics/courses/', 
         views.course_statistics, 
         name='analytics_course_stats'),
 
     path('analytics/students/', 
-        views.student_progress, 
+        views.student_analytics_progress, 
         name='analytics_student_progress'),
 
     path('analytics/reviews/', 

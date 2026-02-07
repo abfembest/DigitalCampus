@@ -59,7 +59,6 @@ def generate_captcha():
     question = f"{num1} {operation} {num2}"
     return question, answer
 
-
 def auth_page(request):
     """Combined authentication page for login and signup"""
 

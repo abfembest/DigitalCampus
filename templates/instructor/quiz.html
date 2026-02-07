@@ -169,9 +169,22 @@
 
 <script>
 function deleteQuestion(questionId) {
-    if (confirm('Are you sure you want to delete this question?')) {
-        // Implement delete functionality
-        console.log('Delete question:', questionId);
+    if (confirm('Are you sure you want to delete this question? This will also delete all associated answers.')) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{% url 'instructor:delete_question' course.slug lesson.slug quiz.slug 0 %}".replace('/0/', `/${questionId}/`);
+        
+        // Add CSRF token
+        const csrfToken = '{{ csrf_token }}';
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 </script>

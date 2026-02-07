@@ -44,6 +44,11 @@
                 </p>
             </div>
             <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="showTipsModal()" 
+                   class="inline-flex items-center justify-center px-6 py-3 bg-blue-50 border-2 border-blue-600 text-blue-600 font-medium rounded-lg hover:bg-blue-100 transition-all">
+                    <i class="fas fa-lightbulb mr-2"></i> 
+                    Quick Tips
+                </button>
                 <a href="{% url 'instructor:section_create' course.slug %}" 
                    class="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-primary-600 text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-all">
                     <i class="fas fa-folder-plus mr-2"></i> 
@@ -150,7 +155,7 @@
                            title="Edit Section">
                             <i class="fas fa-edit mr-2"></i> Edit
                         </a>
-                        <a href="{% url 'instructor:section_delete' course.slug section.id %}" 
+                        <a href="#" onclick="confirmDelete('section', {{ section.id }}, '{{ section.title|escapejs }}'); return false;" 
                            class="inline-flex items-center px-4 py-2 bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
                            title="Delete Section">
                             <i class="fas fa-trash mr-2"></i> Delete
@@ -250,10 +255,10 @@
                             </a>
                             {% endif %}
                             
-                            <a href="{% url 'instructor:lesson_delete' course.slug lesson.id %}" 
+                            <a href="#" onclick="confirmDelete('lesson', {{ lesson.id }}, '{{ lesson.title|escapejs }}'); return false;" 
                                class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
                                title="Delete Lesson">
-                                <i class="fas fa-trash"></i>
+                                <i class="fas fa-trash mr-2"></i> Delete
                             </a>
                         </div>
                     </div>
@@ -360,9 +365,9 @@
                                class="inline-flex items-center px-3 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium">
                                 <i class="fas fa-edit mr-2"></i> Edit
                             </a>
-                            <a href="{% url 'instructor:lesson_delete' course.slug lesson.id %}" 
+                            <a href="#" onclick="confirmDelete('lesson', {{ lesson.id }}, '{{ lesson.title|escapejs }}'); return false;" 
                                class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
-                                <i class="fas fa-trash"></i>
+                                <i class="fas fa-trash mr-2"></i> Delete
                             </a>
                         </div>
                     </div>
@@ -404,37 +409,100 @@
         </div>
     </div>
     {% endif %}
-
-    <!-- Quick Tips -->
-    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <div class="flex items-start gap-4">
-            <div class="flex-shrink-0">
-                <i class="fas fa-lightbulb text-3xl text-blue-600"></i>
-            </div>
-            <div>
-                <h3 class="text-lg font-semibold text-blue-900 mb-2">
-                    Tips for Organizing Course Content
-                </h3>
-                <ul class="space-y-2 text-blue-800">
-                    <li class="flex items-start">
-                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
-                        <span>Use sections to group related lessons together (e.g., "Week 1", "Introduction", "Advanced Topics")</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
-                        <span>Mix different lesson types (videos, text, quizzes) to keep learners engaged</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
-                        <span>Enable preview on introductory lessons to attract potential students</span>
-                    </li>
-                    <li class="flex items-start">
-                        <i class="fas fa-check-circle text-blue-600 mr-2 mt-1"></i>
-                        <span>Use display order to control the sequence of lessons within sections</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
 </div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+// Show tips modal
+function showTipsModal() {
+    Swal.fire({
+        title: '<i class="fas fa-lightbulb text-blue-600"></i> Tips for Organizing Course Content',
+        html: `
+            <div class="text-left space-y-4 px-4">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-check-circle text-blue-600 mt-1"></i>
+                    <p class="text-gray-700">
+                        <strong>Use sections wisely:</strong> Group related lessons together (e.g., "Week 1", "Introduction", "Advanced Topics") to create a logical learning path.
+                    </p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-check-circle text-blue-600 mt-1"></i>
+                    <p class="text-gray-700">
+                        <strong>Mix content types:</strong> Combine videos, text, quizzes, and assignments to keep learners engaged and cater to different learning styles.
+                    </p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-check-circle text-blue-600 mt-1"></i>
+                    <p class="text-gray-700">
+                        <strong>Enable previews:</strong> Allow students to preview introductory lessons to attract potential enrollments and showcase your teaching style.
+                    </p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-check-circle text-blue-600 mt-1"></i>
+                    <p class="text-gray-700">
+                        <strong>Control the sequence:</strong> Use display order to ensure lessons appear in the right sequence within sections.
+                    </p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-check-circle text-blue-600 mt-1"></i>
+                    <p class="text-gray-700">
+                        <strong>Start simple:</strong> Don't overwhelm students. Begin with foundational content and gradually increase complexity.
+                    </p>
+                </div>
+            </div>
+        `,
+        icon: null,
+        confirmButtonText: 'Got it!',
+        confirmButtonColor: '#3b82f6',
+        width: '600px',
+        customClass: {
+            confirmButton: 'px-6 py-2 rounded-lg font-medium',
+            htmlContainer: 'text-left'
+        }
+    });
+}
+
+function confirmDelete(type, id, title) {
+    const typeText = type === 'section' ? 'Section' : 'Lesson';
+    const deleteUrl = type === 'section' 
+        ? "{% url 'instructor:section_delete' course.slug 0 %}".replace('/0/', `/${id}/`)
+        : "{% url 'instructor:lesson_delete' course.slug 0 %}".replace('/0/', `/${id}/`);
+    
+    Swal.fire({
+        title: `Delete ${typeText}?`,
+        html: `Are you sure you want to delete <strong>"${title}"</strong>?<br><span class="text-sm text-gray-600">This action cannot be undone.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true,
+        customClass: {
+            confirmButton: 'px-4 py-2 rounded-lg font-medium',
+            cancelButton: 'px-4 py-2 rounded-lg font-medium'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Create a form and submit it
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = deleteUrl;
+            
+            // Add CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+}
+</script>
 {% endblock %}

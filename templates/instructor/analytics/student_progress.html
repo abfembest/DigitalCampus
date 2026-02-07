@@ -7,6 +7,135 @@
 Track student performance and progress across all your courses with detailed analytics.
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    /* DataTables Custom Styling - Matches Base Design */
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+    
+    /* Search input styling */
+    .dataTables_wrapper .dataTables_filter input {
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        margin-left: 0.5rem;
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+    
+    .dataTables_wrapper .dataTables_filter input:focus {
+        border-color: #4a6bff;
+        box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.1);
+    }
+    
+    /* Length menu styling */
+    .dataTables_wrapper .dataTables_length select {
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        padding: 0.5rem 2rem 0.5rem 0.75rem;
+        margin: 0 0.5rem;
+        font-size: 0.875rem;
+        outline: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        appearance: none;
+    }
+    
+    .dataTables_wrapper .dataTables_length select:focus {
+        border-color: #4a6bff;
+        box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.1);
+    }
+    
+    /* Info text styling */
+    .dataTables_wrapper .dataTables_info {
+        color: #6B7280;
+        font-size: 0.875rem;
+        padding-top: 0.5rem;
+    }
+    
+    /* Pagination styling */
+    .dataTables_wrapper .dataTables_paginate {
+        padding-top: 0.5rem;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.5rem 0.75rem;
+        margin: 0 0.125rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        color: #374151;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: #F3F4F6;
+        border-color: #9CA3AF;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: #4a6bff;
+        border-color: #4a6bff;
+        color: white;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        background: #3a56d4;
+        border-color: #3a56d4;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover {
+        background: white;
+        border-color: #D1D5DB;
+    }
+    
+    /* Sorting icons */
+    table.dataTable thead th {
+        position: relative;
+        cursor: pointer;
+    }
+    
+    table.dataTable thead .sorting:after,
+    table.dataTable thead .sorting_asc:after,
+    table.dataTable thead .sorting_desc:after {
+        position: absolute;
+        right: 0.75rem;
+        opacity: 0.3;
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        font-size: 0.75rem;
+    }
+    
+    table.dataTable thead .sorting:after {
+        content: '\f0dc';
+    }
+    
+    table.dataTable thead .sorting_asc:after {
+        content: '\f0de';
+        opacity: 0.7;
+    }
+    
+    table.dataTable thead .sorting_desc:after {
+        content: '\f0dd';
+        opacity: 0.7;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Page Header -->
 <header class="mb-8">
@@ -24,18 +153,25 @@ Track student performance and progress across all your courses with detailed ana
 
 <!-- Filter Section -->
 <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-    <form method="get" class="flex flex-col sm:flex-row gap-4" aria-label="Filter students">
+    <form method="get" class="flex flex-col sm:flex-row gap-4" 
+          aria-label="Filter students">
         <div class="flex-1">
-            <label for="courseFilter" class="block text-sm font-medium text-gray-700 mb-2">
+            <label for="courseFilter" 
+                   class="block text-sm font-medium text-gray-700 mb-2">
                 Filter by Course
             </label>
             <select name="course" 
                     id="courseFilter"
                     onchange="this.form.submit()"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg 
+                           focus:ring-2 focus:ring-primary-500 
+                           focus:border-primary-500">
                 <option value="">All Courses</option>
                 {% for course in courses %}
-                <option value="{{ course.id }}" {% if selected_course.id == course.id %}selected{% endif %}>
+                <option value="{{ course.id }}" 
+                        {% if selected_course and selected_course.id == course.id %}
+                            selected
+                        {% endif %}>
                     {{ course.title }}
                 </option>
                 {% endfor %}
@@ -43,7 +179,8 @@ Track student performance and progress across all your courses with detailed ana
         </div>
         <div class="flex items-end">
             <button type="submit" 
-                    class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    class="px-6 py-2 bg-primary-600 text-white rounded-lg 
+                           hover:bg-primary-700 transition-colors">
                 <i class="fas fa-filter mr-2" aria-hidden="true"></i>
                 Apply Filter
             </button>
@@ -52,23 +189,32 @@ Track student performance and progress across all your courses with detailed ana
 </section>
 
 <!-- Summary Cards -->
-<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" aria-label="Performance summary">
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" 
+         aria-label="Performance summary">
     <article class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-users text-2xl text-blue-600" aria-hidden="true"></i>
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex 
+                        items-center justify-center">
+                <i class="fas fa-users text-2xl text-blue-600" 
+                   aria-hidden="true"></i>
             </div>
-            <span class="text-3xl font-bold text-gray-900">{{ total_students }}</span>
+            <span class="text-3xl font-bold text-gray-900">
+                {{ total_students }}
+            </span>
         </div>
         <h2 class="text-sm font-medium text-gray-600">Total Students</h2>
     </article>
 
     <article class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-exclamation-triangle text-2xl text-red-600" aria-hidden="true"></i>
+            <div class="w-12 h-12 bg-red-100 rounded-lg flex 
+                        items-center justify-center">
+                <i class="fas fa-exclamation-triangle text-2xl text-red-600" 
+                   aria-hidden="true"></i>
             </div>
-            <span class="text-3xl font-bold text-gray-900">{{ struggling_students }}</span>
+            <span class="text-3xl font-bold text-gray-900">
+                {{ struggling_students }}
+            </span>
         </div>
         <h2 class="text-sm font-medium text-gray-600">Needs Attention</h2>
         <p class="text-xs text-gray-500 mt-1">&lt;30% progress</p>
@@ -76,10 +222,14 @@ Track student performance and progress across all your courses with detailed ana
 
     <article class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-trophy text-2xl text-green-600" aria-hidden="true"></i>
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex 
+                        items-center justify-center">
+                <i class="fas fa-trophy text-2xl text-green-600" 
+                   aria-hidden="true"></i>
             </div>
-            <span class="text-3xl font-bold text-gray-900">{{ high_performers }}</span>
+            <span class="text-3xl font-bold text-gray-900">
+                {{ high_performers }}
+            </span>
         </div>
         <h2 class="text-sm font-medium text-gray-600">High Performers</h2>
         <p class="text-xs text-gray-500 mt-1">≥80% progress</p>
@@ -90,33 +240,35 @@ Track student performance and progress across all your courses with detailed ana
 <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <header class="p-6 border-b border-gray-200">
         <h2 class="text-xl font-bold text-gray-900">Student Details</h2>
-        <p class="text-gray-600 text-sm mt-1">Individual progress and performance metrics</p>
+        <p class="text-gray-600 text-sm mt-1">
+            Individual progress and performance metrics
+        </p>
     </header>
     
     {% if enrollments %}
-    <div class="overflow-x-auto">
-        <table class="w-full" role="table" aria-label="Student progress data">
+    <div class="p-6">
+        <table id="studentProgressTable" class="w-full" role="table" aria-label="Student progress data">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
                         Student
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
                         Course
                     </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
                         Progress
                     </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
                         Lessons
                     </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
                         Avg Quiz Score
                     </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
                         Status
                     </th>
-                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
                         Actions
                     </th>
                 </tr>
@@ -126,7 +278,8 @@ Track student performance and progress across all your courses with detailed ana
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4">
                         <div class="flex items-center">
-                            <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <div class="w-10 h-10 bg-primary-100 rounded-full 
+                                        flex items-center justify-center flex-shrink-0">
                                 <span class="text-sm font-semibold text-primary-700">
                                     {{ enrollment.student.first_name.0|upper }}{{ enrollment.student.last_name.0|upper }}
                                 </span>
@@ -135,14 +288,18 @@ Track student performance and progress across all your courses with detailed ana
                                 <p class="text-sm font-semibold text-gray-900">
                                     {{ enrollment.student.get_full_name }}
                                 </p>
-                                <p class="text-xs text-gray-500">{{ enrollment.student.email }}</p>
+                                <p class="text-xs text-gray-500">
+                                    {{ enrollment.student.email }}
+                                </p>
                             </div>
                         </div>
                     </td>
                     <td class="px-6 py-4">
-                        <p class="text-sm text-gray-900">{{ enrollment.course.title }}</p>
+                        <p class="text-sm text-gray-900">
+                            {{ enrollment.course.title }}
+                        </p>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4" data-order="{{ enrollment.progress_percentage }}">
                         <div class="flex flex-col items-center space-y-2">
                             <div class="w-full bg-gray-200 rounded-full h-2">
                                 <div class="bg-primary-600 h-2 rounded-full" 
@@ -162,7 +319,8 @@ Track student performance and progress across all your courses with detailed ana
                             {{ enrollment.completed_lessons }}/{{ enrollment.total_lessons }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-center">
+                    <td class="px-6 py-4 text-center" 
+                        data-order="{{ enrollment.avg_quiz_score|default:0 }}">
                         {% if enrollment.avg_quiz_score %}
                         <span class="text-sm font-semibold text-gray-900">
                             {{ enrollment.avg_quiz_score|floatformat:0 }}%
@@ -173,15 +331,21 @@ Track student performance and progress across all your courses with detailed ana
                     </td>
                     <td class="px-6 py-4 text-center">
                         {% if enrollment.status == 'active' %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <span class="inline-flex items-center px-2.5 py-0.5 
+                                     rounded-full text-xs font-medium 
+                                     bg-blue-100 text-blue-800">
                             Active
                         </span>
                         {% elif enrollment.status == 'completed' %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span class="inline-flex items-center px-2.5 py-0.5 
+                                     rounded-full text-xs font-medium 
+                                     bg-green-100 text-green-800">
                             Completed
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span class="inline-flex items-center px-2.5 py-0.5 
+                                     rounded-full text-xs font-medium 
+                                     bg-gray-100 text-gray-800">
                             {{ enrollment.status|title }}
                         </span>
                         {% endif %}
@@ -201,12 +365,54 @@ Track student performance and progress across all your courses with detailed ana
     </div>
     {% else %}
     <div class="p-12 text-center">
-        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="fas fa-user-graduate text-4xl text-gray-400" aria-hidden="true"></i>
+        <div class="w-20 h-20 bg-gray-100 rounded-full flex 
+                    items-center justify-center mx-auto mb-4">
+            <i class="fas fa-user-graduate text-4xl text-gray-400" 
+               aria-hidden="true"></i>
         </div>
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">No Students Yet</h3>
-        <p class="text-gray-600">Students will appear here once they enroll in your courses</p>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">
+            No Students Yet
+        </h3>
+        <p class="text-gray-600">
+            Students will appear here once they enroll in your courses
+        </p>
     </div>
     {% endif %}
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#studentProgressTable').DataTable({
+        pageLength: 10,
+        order: [[2, 'desc']], // Sort by progress percentage
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ per page",
+            info: "Showing _START_ to _END_ of _TOTAL_ students",
+            infoEmpty: "No students found",
+            infoFiltered: "(filtered from _MAX_ total)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next »",
+                previous: "« Prev"
+            },
+            zeroRecords: "No matching students found"
+        },
+        columnDefs: [
+            { orderable: false, targets: [2, 6] }, // Disable sorting for Progress bar and Actions
+            { className: "text-center", targets: [2, 3, 4, 5, 6] }
+        ],
+        dom: '<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4"lf>rt<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4"ip>',
+        drawCallback: function() {
+            // Ensure Tailwind classes are maintained after DataTables redraw
+            $('.dataTables_paginate .paginate_button').addClass('transition-all duration-200');
+        }
+    });
+});
+</script>
 {% endblock %}

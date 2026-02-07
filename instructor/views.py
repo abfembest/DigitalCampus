@@ -9,6 +9,8 @@ from django.db.models.functions import TruncDate, TruncMonth
 from django.contrib.auth import update_session_auth_hash
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
+from django.views.decorators.http import require_POST
 
 from eduweb.models import (
     LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
@@ -291,18 +293,10 @@ def section_delete(request, course_slug, section_id):
         course=course
     )
     
-    if request.method == 'POST':
-        section.delete()
-        messages.success(request, 'Section deleted successfully!')
-        return redirect(
-            'instructor:lesson_list',
-            course_slug=course.slug
-        )
-    
-    return render(request, 'instructor/section_confirm_delete.html', {
-        'course': course,
-        'section': section,
-    })
+    section_title = section.title
+    section.delete()
+    messages.success(request, f'Section "{section_title}" deleted successfully!')
+    return redirect('instructor:lesson_list', course_slug=course.slug)
 
 
 # ==================== LESSON MANAGEMENT ====================
@@ -415,18 +409,10 @@ def lesson_delete(request, course_slug, lesson_id):
         course=course
     )
     
-    if request.method == 'POST':
-        lesson.delete()
-        messages.success(request, 'Lesson deleted successfully!')
-        return redirect(
-            'instructor:lesson_list',
-            course_slug=course.slug
-        )
-    
-    return render(request, 'instructor/lesson_confirm_delete.html', {
-        'course': course,
-        'lesson': lesson,
-    })
+    lesson_title = lesson.title
+    lesson.delete()
+    messages.success(request, f'Lesson "{lesson_title}" deleted successfully!')
+    return redirect('instructor:lesson_list', course_slug=course.slug)
 
 
 # ==================== QUIZ MANAGEMENT ====================
@@ -802,25 +788,24 @@ def assignment_submissions(request, course_slug, assignment_slug):
 
 
 @login_required
-def grade_submission(request, course_slug, assignment_slug, submission_id):
-    """Grade submission using course and assignment slugs"""
+def grade_submission(request, course_slug, submission_id):
+    """Grade submission using course slug and submission ID"""
+    # Get the submission first
+    submission = get_object_or_404(AssignmentSubmission, id=submission_id)
+    
+    # Get assignment from the submission
+    assignment = submission.assignment
+    
+    # Verify course ownership
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
         instructor=request.user
     )
     
-    assignment = get_object_or_404(
-        Assignment,
-        slug=assignment_slug,
-        lesson__course=course
-    )
-    
-    submission = get_object_or_404(
-        AssignmentSubmission,
-        id=submission_id,
-        assignment=assignment
-    )
+    # Verify the assignment belongs to this course
+    if assignment.lesson.course != course:
+        raise PermissionDenied("This submission does not belong to your course.")
     
     if request.method == 'POST':
         score = request.POST.get('score')
@@ -886,7 +871,7 @@ def student_progress(request, course_slug, student_id):
         'lesson'
     ).order_by('lesson__display_order')
     
-    return render(request, 'instructor/student_progress.html', {
+    return render(request, 'instructor/student_detail_progress.html', {
         'course': course,
         'enrollment': enrollment,
         'lesson_progress': lesson_progress,
@@ -1004,6 +989,42 @@ def all_assignments(request):
     return render(request, 'instructor/all_assignments.html', context)
 
 @login_required
+@require_POST
+def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, answer_id):
+    """Delete a quiz answer"""
+    course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    lesson = get_object_or_404(Lesson, slug=lesson_slug, course=course)
+    quiz = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
+    question = get_object_or_404(QuizQuestion, id=question_id, quiz=quiz)
+    answer = get_object_or_404(QuizAnswer, id=answer_id, question=question)
+    
+    answer.delete()
+    messages.success(request, 'Answer deleted successfully!')
+    
+    return redirect('instructor:question_answers', 
+                    course_slug=course.slug, 
+                    lesson_slug=lesson.slug, 
+                    quiz_slug=quiz.slug, 
+                    question_id=question.id)
+
+@login_required
+@require_POST
+def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
+    """Delete a quiz question"""
+    course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    lesson = get_object_or_404(Lesson, slug=lesson_slug, course=course)
+    quiz = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
+    question = get_object_or_404(QuizQuestion, id=question_id, quiz=quiz)
+    
+    question.delete()
+    messages.success(request, 'Question deleted successfully!')
+    
+    return redirect('instructor:quiz_questions', 
+                    course_slug=course.slug, 
+                    lesson_slug=lesson.slug, 
+                    quiz_slug=quiz.slug)
+
+@login_required
 def course_statistics(request):
     """
     Course statistics overview
@@ -1076,7 +1097,7 @@ def course_statistics(request):
 
 
 @login_required
-def student_progress(request):
+def student_analytics_progress(request):
     """
     Student progress tracking
     Shows individual student performance across all courses
@@ -1262,7 +1283,7 @@ def resources(request):
                 })
             
             # Documents
-            if lesson.document:
+            if lesson.file:
                 lesson_docs.append({
                     'course': course,
                     'lesson': lesson,

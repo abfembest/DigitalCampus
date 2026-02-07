@@ -1,13 +1,14 @@
 from functools import wraps
 from django.shortcuts import redirect
 from django.contrib import messages
+from django.contrib.auth import logout
 from .models import CourseApplication
 
 
 def check_for_auth(view_func):
     """
-    Prevents admin/staff/instructor/student users from accessing public pages.
-    Redirects each role to their respective destination.
+    Prevents authenticated users from accessing public pages.
+    Redirects based on role and account status.
     Anonymous users can proceed to public pages.
     """
     @wraps(view_func)
@@ -15,28 +16,65 @@ def check_for_auth(view_func):
         if not request.user.is_authenticated:
             return view_func(request, *args, **kwargs)
 
+        # Check if account is inactive
+        if not request.user.is_active:
+            messages.warning(
+                request, 
+                'Your account is inactive. Please verify your email.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        # Check if email is verified
+        if not request.user.profile.email_verified:
+            messages.warning(
+                request, 
+                'Please verify your email before accessing your account.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
         role = request.user.profile.role
 
         if role == 'administrator' or request.user.is_superuser:
-            messages.info(request, 'Admin users should use the admin dashboard.')
+            messages.info(
+                request, 
+                'Admin users should use the admin dashboard.'
+            )
             return redirect('management:dashboard')
 
         elif role == 'instructor':
-            messages.info(request, 'Instructor users should use the instructor dashboard.')
+            messages.info(
+                request, 
+                'Instructor users should use the instructor dashboard.'
+            )
             return redirect('instructor:dashboard')
+        
+        elif role == 'finance':
+            messages.info(
+                request, 
+                'Finance users should use the finance dashboard.'
+            )
+            return redirect('finance:dashboard')
 
         elif role == 'student':
-            # Student: redirect based on application status
-            has_application = CourseApplication.objects.filter(user=request.user).exists()
+            has_application = CourseApplication.objects.filter(
+                user=request.user
+            ).exists()
 
             if has_application:
-                messages.info(request, 'You have an active application. Check your status below.')
+                messages.info(
+                    request, 
+                    'You have an active application. Check your status.'
+                )
                 return redirect('eduweb:application_status')
             else:
-                messages.info(request, 'Complete your application to get started.')
+                messages.info(
+                    request, 
+                    'Complete your application to get started.'
+                )
                 return redirect('eduweb:apply')
 
-        # Any other unrecognised role — let them through to public pages
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
@@ -44,32 +82,63 @@ def check_for_auth(view_func):
 
 def applicant_required(view_func):
     """
-    For pages that require student role authentication (apply, application_status).
-    - Unauthenticated: Redirect to login
-    - Admin/Instructor: Redirect to their dashboard
-    - Student: Allow access
-    - Any other role: Denied
+    For pages that require student role authentication.
+    Checks: authentication, account status, email verification, role.
     """
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            messages.warning(request, 'Please login to access this page.')
+            messages.warning(
+                request, 
+                'Please login to access this page.'
+            )
+            return redirect('eduweb:auth_page')
+
+        # Check if account is inactive
+        if not request.user.is_active:
+            messages.warning(
+                request, 
+                'Your account is inactive. Please verify your email.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        # Check if email is verified
+        if not request.user.profile.email_verified:
+            messages.warning(
+                request, 
+                'Please verify your email before accessing your account.'
+            )
+            logout(request)
             return redirect('eduweb:auth_page')
 
         role = request.user.profile.role
 
         if role == 'administrator' or request.user.is_superuser:
-            messages.info(request, 'Admin users should use the admin dashboard.')
+            messages.info(
+                request, 
+                'Admin users should use the admin dashboard.'
+            )
             return redirect('management:dashboard')
 
         elif role == 'instructor':
-            messages.info(request, 'Instructor users should use the instructor dashboard.')
+            messages.info(
+                request, 
+                'Instructor users should use the instructor dashboard.'
+            )
             return redirect('instructor:dashboard')
+        
+        elif role == 'finance':
+            messages.info(
+                request, 
+                'Finance users should use the finance dashboard.'
+            )
+            return redirect('finance:dashboard')
 
         elif role == 'student':
             return view_func(request, *args, **kwargs)
 
-        # Fallback — unrecognised role
+        # Fallback - unrecognised role
         messages.warning(request, 'Access denied.')
         return redirect('eduweb:auth_page')
 
@@ -79,42 +148,220 @@ def applicant_required(view_func):
 def smart_redirect_applicant(view_func):
     """
     Smart redirect for student applicants on specific pages.
-    - If on 'apply' page and has application -> redirect to status
-    - If on 'application_status' and no application -> redirect to apply
-    - Only students should access these pages
+    Checks: authentication, account status, email verification, role.
     """
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            messages.warning(request, 'Please login to access this page.')
+            messages.warning(
+                request, 
+                'Please login to access this page.'
+            )
+            return redirect('eduweb:auth_page')
+
+        # Check if account is inactive
+        if not request.user.is_active:
+            messages.warning(
+                request, 
+                'Your account is inactive. Please verify your email.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        # Check if email is verified
+        if not request.user.profile.email_verified:
+            messages.warning(
+                request, 
+                'Please verify your email before accessing your account.'
+            )
+            logout(request)
             return redirect('eduweb:auth_page')
 
         role = request.user.profile.role
 
         if role == 'administrator' or request.user.is_superuser:
-            messages.info(request, 'Admin users should use the admin dashboard.')
+            messages.info(
+                request, 
+                'Admin users should use the admin dashboard.'
+            )
             return redirect('management:dashboard')
 
         elif role == 'instructor':
-            messages.info(request, 'Instructor users should use the instructor dashboard.')
+            messages.info(
+                request, 
+                'Instructor users should use the instructor dashboard.'
+            )
             return redirect('instructor:dashboard')
+        
+        elif role == 'finance':
+            messages.info(
+                request, 
+                'Finance users should use the finance dashboard.'
+            )
+            return redirect('finance:dashboard')
 
         elif role == 'student':
-            has_application = CourseApplication.objects.filter(user=request.user).exists()
+            has_application = CourseApplication.objects.filter(
+                user=request.user
+            ).exists()
             current_view = request.resolver_match.url_name
 
             if current_view == 'apply' and has_application:
-                messages.info(request, 'You already have an application. View your status below.')
+                messages.info(
+                    request, 
+                    'You already have an application. View your status.'
+                )
                 return redirect('eduweb:application_status')
 
             if current_view == 'application_status' and not has_application:
-                messages.info(request, 'Please submit your application first.')
+                messages.info(
+                    request, 
+                    'Please submit your application first.'
+                )
                 return redirect('eduweb:apply')
 
             return view_func(request, *args, **kwargs)
 
-        # Fallback — unrecognised role
+        # Fallback - unrecognised role
         messages.warning(request, 'Access denied.')
         return redirect('eduweb:auth_page')
+
+    return _wrapped_view
+
+
+def instructor_required(view_func):
+    """
+    For instructor dashboard and related pages.
+    Checks: authentication, account status, email verification, role.
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.warning(
+                request, 
+                'Please login to access the instructor dashboard.'
+            )
+            return redirect('eduweb:auth_page')
+
+        # Check if account is inactive
+        if not request.user.is_active:
+            messages.warning(
+                request, 
+                'Your account is inactive. Please verify your email.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        # Check if email is verified
+        if not request.user.profile.email_verified:
+            messages.warning(
+                request, 
+                'Please verify your email before accessing your account.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        role = request.user.profile.role
+
+        if role != 'instructor':
+            messages.warning(
+                request, 
+                'Access denied. Instructor role required.'
+            )
+            return redirect('eduweb:auth_page')
+
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped_view
+
+
+def admin_required(view_func):
+    """
+    For admin dashboard and related pages.
+    Checks: authentication, account status, email verification, role.
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.warning(
+                request, 
+                'Please login to access the admin dashboard.'
+            )
+            return redirect('eduweb:auth_page')
+
+        # Check if account is inactive
+        if not request.user.is_active:
+            messages.warning(
+                request, 
+                'Your account is inactive. Please verify your email.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        # Check if email is verified
+        if not request.user.profile.email_verified:
+            messages.warning(
+                request, 
+                'Please verify your email before accessing your account.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        role = request.user.profile.role
+
+        if role != 'administrator' and not request.user.is_superuser:
+            messages.warning(
+                request, 
+                'Access denied. Administrator role required.'
+            )
+            return redirect('eduweb:auth_page')
+
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped_view
+
+
+def finance_required(view_func):
+    """
+    For finance dashboard and related pages.
+    Checks: authentication, account status, email verification, role.
+    """
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.warning(
+                request, 
+                'Please login to access the finance dashboard.'
+            )
+            return redirect('eduweb:auth_page')
+
+        # Check if account is inactive
+        if not request.user.is_active:
+            messages.warning(
+                request, 
+                'Your account is inactive. Please verify your email.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        # Check if email is verified
+        if not request.user.profile.email_verified:
+            messages.warning(
+                request, 
+                'Please verify your email before accessing your account.'
+            )
+            logout(request)
+            return redirect('eduweb:auth_page')
+
+        role = request.user.profile.role
+
+        if role != 'finance':
+            messages.warning(
+                request, 
+                'Access denied. Finance role required.'
+            )
+            return redirect('eduweb:auth_page')
+
+        return view_func(request, *args, **kwargs)
 
     return _wrapped_view

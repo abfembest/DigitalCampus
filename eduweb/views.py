@@ -62,44 +62,54 @@ def generate_captcha():
 def auth_page(request):
     """Combined authentication page for login and signup"""
 
-    # Redirect if user is already logged in
+    # Check authenticated user with proper status
     if request.user.is_authenticated:
-        messages.info(request, 'You are already logged in.')
-        # Redirect based on user role
-        role = request.user.profile.role
-        
-        if role == 'admin' or request.user.is_superuser:
-            return redirect('management:dashboard')
-        elif role == 'instructor':
-            return redirect('instructor:dashboard')
-        elif role == 'student':
-            return redirect('eduweb:apply')
-        elif role == 'finance':
-            return redirect('finance:dashboard')
-        elif role == 'content_manager':
-            pass  # Placeholder - add content manager dashboard redirect when ready
-        elif role == 'support':
-            pass  # Placeholder - add support dashboard redirect when ready
-        elif role == 'qa':
-            pass  # Placeholder - add QA dashboard redirect when ready
+        # Check account status
+        if not request.user.is_active:
+            logout(request)
+            messages.warning(
+                request, 
+                'Your account is inactive. Please verify your email.'
+            )
+            # Don't redirect, show the auth page
+        elif not request.user.profile.email_verified:
+            logout(request)
+            messages.warning(
+                request,
+                'Please verify your email to continue. '
+                'Check your inbox for the verification link.'
+            )
+            # Don't redirect, show the auth page
         else:
-            # Unknown role - redirect to apply page as default
-            return redirect('eduweb:apply')
+            # User is authenticated and verified
+            messages.info(request, 'You are already logged in.')
+            role = request.user.profile.role
+            
+            if role == 'admin' or request.user.is_superuser:
+                return redirect('management:dashboard')
+            elif role == 'instructor':
+                return redirect('instructor:dashboard')
+            elif role == 'student':
+                return redirect('eduweb:apply')
+            elif role == 'finance':
+                return redirect('finance:dashboard')
+            else:
+                return redirect('eduweb:apply')
     
-    # Generate captcha only on GET request (initial page load)
+    # Generate captcha
     if request.method == 'GET':
         captcha_question, captcha_answer = generate_captcha()
         request.session['captcha_answer'] = captcha_answer
     else:
-        # On POST, retrieve the existing captcha from session
         captcha_answer = request.session.get('captcha_answer')
         if captcha_answer is None:
-            # Session expired, generate new captcha and return error
             captcha_question, captcha_answer = generate_captcha()
             request.session['captcha_answer'] = captcha_answer
             return JsonResponse({
                 'success': False,
-                'errors': {'captcha': ['Session expired. Please try again.']},
+                'errors': {
+                    'captcha': ['Session expired. Please try again.']
+                },
                 'captcha_question': captcha_question
             }, status=400)
         else:
@@ -109,7 +119,6 @@ def auth_page(request):
         action = request.POST.get('action')
         
         if action == 'signup':
-            # Get captcha from session
             session_captcha = request.session.get('captcha_answer')
             
             signup_form = SignUpForm(
@@ -118,20 +127,21 @@ def auth_page(request):
             )
             
             if signup_form.is_valid():
-                # Clear the captcha from session after successful validation
                 if 'captcha_answer' in request.session:
                     del request.session['captcha_answer']
                     
                 user = signup_form.save(commit=False)
-                user.is_active = False  # Deactivate until email verification
+                user.is_active = False
                 user.save()
                 
-                # Send verification email
                 send_verification_email(request, user)
                 
                 return JsonResponse({
                     'success': True,
-                    'message': 'Account created successfully! Please check your email to verify your account.',
+                    'message': (
+                        'Account created! Check your email '
+                        'to verify your account before logging in.'
+                    ),
                     'email': user.email
                 })
             else:
@@ -139,7 +149,6 @@ def auth_page(request):
                 for field, error_list in signup_form.errors.items():
                     errors[field] = [str(e) for e in error_list]
                 
-                # Generate new captcha on error
                 new_question, new_answer = generate_captcha()
                 request.session['captcha_answer'] = new_answer
                 
@@ -150,25 +159,42 @@ def auth_page(request):
                 }, status=400)
         
         elif action == 'login':
-            # Try to authenticate with username or email
-            username_or_email = request.POST.get('username')
-            password = request.POST.get('password')
-            captcha = request.POST.get('captcha')
+            username_or_email = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            captcha = request.POST.get('captcha', '').strip()
+            
+            # Validate inputs
+            if not username_or_email or not password:
+                new_question, new_answer = generate_captcha()
+                request.session['captcha_answer'] = new_answer
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'username': ['Username/email and password required.']
+                    },
+                    'captcha_question': new_question
+                }, status=400)
             
             # Verify captcha
             session_answer = request.session.get('captcha_answer')
             
             try:
-                # TYPE CAST BOTH TO INT FOR COMPARISON
                 captcha_int = int(captcha) if captcha else None
-                session_answer_int = int(session_answer) if session_answer is not None else None
+                session_answer_int = (
+                    int(session_answer) 
+                    if session_answer is not None 
+                    else None
+                )
                 
-                if session_answer_int is None or captcha_int != session_answer_int:
+                if (session_answer_int is None or 
+                    captcha_int != session_answer_int):
                     new_question, new_answer = generate_captcha()
                     request.session['captcha_answer'] = new_answer
                     return JsonResponse({
                         'success': False,
-                        'errors': {'captcha': ['Incorrect answer. Please try again.']},
+                        'errors': {
+                            'captcha': ['Incorrect answer. Try again.']
+                        },
                         'captcha_question': new_question
                     }, status=400)
             except (ValueError, TypeError):
@@ -176,59 +202,96 @@ def auth_page(request):
                 request.session['captcha_answer'] = new_answer
                 return JsonResponse({
                     'success': False,
-                    'errors': {'captcha': ['Invalid answer. Please enter a number.']},
+                    'errors': {
+                        'captcha': ['Invalid answer. Enter a number.']
+                    },
                     'captcha_question': new_question
                 }, status=400)
             
             # Check if input is email
-            user = None
             if '@' in username_or_email:
                 try:
-                    user_obj = User.objects.get(email=username_or_email)
+                    user_obj = User.objects.get(
+                        email=username_or_email
+                    )
                     username_or_email = user_obj.username
                 except User.DoesNotExist:
                     pass
             
-            user = authenticate(request, username=username_or_email, password=password)
+            user = authenticate(
+                request, 
+                username=username_or_email, 
+                password=password
+            )
             
             if user is not None:
+                # Check if account is active
                 if not user.is_active:
-                    # Generate new captcha for retry
                     new_question, new_answer = generate_captcha()
                     request.session['captcha_answer'] = new_answer
                     return JsonResponse({
                         'success': False,
-                        'errors': {'__all__': ['Please verify your email before logging in. Check your inbox for the verification link.']},
+                        'errors': {
+                            'username': [
+                                'Account inactive. '
+                                'Please verify your email first.'
+                            ]
+                        },
                         'captcha_question': new_question
                     }, status=400)
                 
-                # Clear captcha on successful login
-                if 'captcha_answer' in request.session:
-                    del request.session['captcha_answer']
-                    
+                # Check if email is verified
+                if not user.profile.email_verified:
+                    new_question, new_answer = generate_captcha()
+                    request.session['captcha_answer'] = new_answer
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'username': [
+                                'Email not verified. '
+                                'Check your inbox for verification link.'
+                            ]
+                        },
+                        'captcha_question': new_question
+                    }, status=400)
+                
+                # Login successful
                 login(request, user)
                 
-                # Check if user is admin/staff and redirect accordingly
-                if user.is_staff or user.is_superuser:
-                    redirect_url = reverse('management:dashboard')
-                else:
-                    redirect_url = reverse('eduweb:apply')
+                if 'captcha_answer' in request.session:
+                    del request.session['captcha_answer']
+                
+                role = user.profile.role
+                redirect_url = 'eduweb:apply'
+                
+                if role == 'admin' or user.is_superuser:
+                    redirect_url = 'management:dashboard'
+                elif role == 'instructor':
+                    redirect_url = 'instructor:dashboard'
+                elif role == 'student':
+                    redirect_url = 'eduweb:apply'
+                elif role == 'finance':
+                    redirect_url = 'finance:dashboard'
                 
                 return JsonResponse({
                     'success': True,
-                    'message': 'Login successful! Redirecting...',
-                    'redirect_url': redirect_url
+                    'message': 'Login successful!',
+                    'redirect_url': reverse(redirect_url)
                 })
             else:
                 new_question, new_answer = generate_captcha()
                 request.session['captcha_answer'] = new_answer
                 return JsonResponse({
                     'success': False,
-                    'errors': {'__all__': ['Invalid username/email or password.']},
+                    'errors': {
+                        'username': [
+                            'Invalid username/email or password.'
+                        ]
+                    },
                     'captcha_question': new_question
                 }, status=400)
     
-    # GET request - show forms
+    # GET request - render the auth page
     signup_form = SignUpForm()
     login_form = LoginForm()
     
@@ -239,6 +302,7 @@ def auth_page(request):
     }
     
     return render(request, 'auth/auth.html', context)
+
 
 
 def send_verification_email(request, user):

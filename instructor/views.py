@@ -22,10 +22,13 @@ from .forms import (
     QuizForm, QuizQuestionForm, QuizAnswerForm, AssignmentForm,
     AnnouncementForm, InstructorProfileForm, InstructorSettingsForm, PasswordChangeForm, SupportTicketForm
 )
+from eduweb.decorators import instructor_required
 
 
 # ==================== DASHBOARD ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
+@instructor_required
 def dashboard(request):
     """Instructor dashboard with comprehensive statistics"""
     courses = LMSCourse.objects.filter(
@@ -73,7 +76,8 @@ def dashboard(request):
 
 
 # ==================== COURSE MANAGEMENT ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def course_list(request):
     """List all instructor courses with statistics"""
     courses = LMSCourse.objects.filter(
@@ -87,7 +91,8 @@ def course_list(request):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def course_create(request):
     """Create new course"""
     if request.method == 'POST':
@@ -110,7 +115,8 @@ def course_create(request):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def course_edit(request, slug):
     """Edit course using slug"""
     course = get_object_or_404(
@@ -149,7 +155,8 @@ def course_edit(request, slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def course_objectives(request, slug):
     """Manage course objectives using slug"""
     course = get_object_or_404(
@@ -193,7 +200,8 @@ def course_objectives(request, slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def course_delete(request, slug):
     """Delete course using slug"""
     course = get_object_or_404(
@@ -217,7 +225,8 @@ def course_delete(request, slug):
 
 
 # ==================== SECTION MANAGEMENT ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def section_create(request, course_slug):
     """Create section using course slug"""
     course = get_object_or_404(
@@ -246,7 +255,8 @@ def section_create(request, course_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def section_edit(request, course_slug, section_id):
     """Edit section using course slug"""
     course = get_object_or_404(
@@ -279,7 +289,8 @@ def section_edit(request, course_slug, section_id):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def section_delete(request, course_slug, section_id):
     """Delete section using course slug"""
     course = get_object_or_404(
@@ -327,7 +338,8 @@ def lesson_list(request, course_slug):
     return render(request, 'instructor/lesson_list.html', context)
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def lesson_create(request, course_slug):
     """Create lesson using course slug"""
     course = get_object_or_404(
@@ -357,7 +369,8 @@ def lesson_create(request, course_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def lesson_edit(request, course_slug, lesson_id):
     """Edit lesson using course slug"""
     course = get_object_or_404(
@@ -395,7 +408,8 @@ def lesson_edit(request, course_slug, lesson_id):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def lesson_delete(request, course_slug, lesson_id):
     """Delete lesson using course slug"""
     course = get_object_or_404(
@@ -416,7 +430,8 @@ def lesson_delete(request, course_slug, lesson_id):
 
 
 # ==================== QUIZ MANAGEMENT ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def quiz_list(request, course_slug, lesson_slug):
     """List quizzes using slugs"""
     course = get_object_or_404(
@@ -441,7 +456,8 @@ def quiz_list(request, course_slug, lesson_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def quiz_create(request, course_slug, lesson_slug):
     """Create quiz using slugs"""
     course = get_object_or_404(
@@ -479,7 +495,8 @@ def quiz_create(request, course_slug, lesson_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     """Edit quiz using slugs"""
     course = get_object_or_404(
@@ -520,7 +537,8 @@ def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
     """Manage quiz questions using slugs"""
     course = get_object_or_404(
@@ -552,7 +570,8 @@ def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
 
 
 # ==================== QUESTION MANAGEMENT ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def question_create(request, course_slug, lesson_slug, quiz_slug):
     """Create question using slugs"""
     course = get_object_or_404(
@@ -604,7 +623,8 @@ def question_create(request, course_slug, lesson_slug, quiz_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
     """Manage question answers using slugs"""
     course = get_object_or_404(
@@ -658,7 +678,8 @@ def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
 
 # ==================== ASSIGNMENT MANAGEMENT ====================
 # ==================== ASSIGNMENT MANAGEMENT ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def assignment_list(request, course_slug, lesson_slug):
     """List assignments using slugs"""
     course = get_object_or_404(
@@ -681,7 +702,8 @@ def assignment_list(request, course_slug, lesson_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def assignment_create(request, course_slug, lesson_slug):
     """Create assignment using slugs"""
     course = get_object_or_404(
@@ -718,7 +740,8 @@ def assignment_create(request, course_slug, lesson_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     """Edit assignment using slugs"""
     course = get_object_or_404(
@@ -762,7 +785,8 @@ def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def assignment_submissions(request, course_slug, assignment_slug):
     """View submissions using slugs"""
     course = get_object_or_404(
@@ -787,7 +811,8 @@ def assignment_submissions(request, course_slug, assignment_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def grade_submission(request, course_slug, submission_id):
     """Grade submission using course slug and submission ID"""
     # Get the submission first
@@ -833,7 +858,8 @@ def grade_submission(request, course_slug, submission_id):
 
 
 # ==================== STUDENT MANAGEMENT ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def students_list(request, course_slug):
     """List students using course slug"""
     course = get_object_or_404(
@@ -852,7 +878,8 @@ def students_list(request, course_slug):
     })
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def student_progress(request, course_slug, student_id):
     """View student progress using course slug"""
     course = get_object_or_404(
@@ -877,7 +904,8 @@ def student_progress(request, course_slug, student_id):
         'lesson_progress': lesson_progress,
     })
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def enroll_student(request, course_slug):
     """Manually enroll a student in a course"""
     course = get_object_or_404(
@@ -927,7 +955,8 @@ def enroll_student(request, course_slug):
     return redirect('instructor:students_list', course_slug=course.slug)
 
 # ==================== ANNOUNCEMENTS ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def announcement_create(request, course_slug):
     """Create announcement using course slug"""
     course = get_object_or_404(
@@ -955,7 +984,8 @@ def announcement_create(request, course_slug):
     })
 
 # ==================== ASSESSMENT OVERVIEW VIEWS ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def all_quizzes(request):
     """View all quizzes across all instructor's courses"""
     courses = LMSCourse.objects.filter(instructor=request.user)
@@ -972,7 +1002,8 @@ def all_quizzes(request):
     return render(request, 'instructor/all_quizzes.html', context)
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def all_assignments(request):
     """View all assignments across all instructor's courses"""
     courses = LMSCourse.objects.filter(instructor=request.user)
@@ -988,7 +1019,8 @@ def all_assignments(request):
     }
     return render(request, 'instructor/all_assignments.html', context)
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 @require_POST
 def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, answer_id):
     """Delete a quiz answer"""
@@ -1007,7 +1039,8 @@ def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, ans
                     quiz_slug=quiz.slug, 
                     question_id=question.id)
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 @require_POST
 def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
     """Delete a quiz question"""
@@ -1024,7 +1057,8 @@ def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
                     lesson_slug=lesson.slug, 
                     quiz_slug=quiz.slug)
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def course_statistics(request):
     """
     Course statistics overview
@@ -1096,7 +1130,8 @@ def course_statistics(request):
     )
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def student_analytics_progress(request):
     """
     Student progress tracking
@@ -1162,7 +1197,8 @@ def student_analytics_progress(request):
     )
 
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def reviews_ratings(request):
     """
     Course reviews and ratings analysis
@@ -1253,7 +1289,8 @@ def reviews_ratings(request):
         context
     )
 
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def resources(request):
     """
     Pool and display all resources from courses
@@ -1328,7 +1365,8 @@ def resources(request):
     return render(request, 'instructor/resources.html', context)
 
 # ==================== PROFILE VIEW ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def instructor_profile(request):
     """View and edit instructor profile"""
     
@@ -1393,7 +1431,8 @@ def instructor_profile(request):
 
 
 # ==================== SETTINGS VIEW ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def instructor_settings(request):
     """Manage instructor account settings"""
     
@@ -1447,7 +1486,8 @@ def instructor_settings(request):
 
 
 # ==================== HELP & SUPPORT VIEW ====================
-@login_required
+@login_required(login_url='auth')
+@instructor_required
 def help_support(request):
     """Help and support page with FAQs and ticket submission"""
     

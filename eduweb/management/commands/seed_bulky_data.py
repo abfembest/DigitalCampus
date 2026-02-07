@@ -113,142 +113,59 @@ class Command(BaseCommand):
         users = {'students': [], 'instructors': [], 'admins': [], 'support': [], 
                  'content_managers': [], 'finance': [], 'qa': []}
         
-        # Create 40 Students
-        for i in range(40):
-            u = User.objects.create_user(
-                username=f"student_{i}",
-                email=fake.unique.email(),
-                password="12345",
-                first_name=fake.first_name(),
-                last_name=fake.last_name()
-            )
-            users['students'].append(u)
-            p = u.profile
-            p.role = 'student'
-            p.bio = fake.text(max_nb_chars=250)
-            p.phone = fake.phone_number()[:20]
-            p.date_of_birth = fake.date_of_birth(minimum_age=18, maximum_age=45)
-            p.address = fake.street_address()
-            p.city = fake.city()
-            p.country = fake.country()
-            p.website = fake.url() if random.random() > 0.6 else ''
-            p.linkedin = f"https://linkedin.com/in/{u.username}" if random.random() > 0.5 else ''
-            p.twitter = f"https://twitter.com/{u.username}" if random.random() > 0.7 else ''
-            p.email_notifications = random.choice([True, False])
-            p.marketing_emails = random.choice([True, False])
-            p.email_verified = random.random() > 0.2
-            p.save()
+        # Helper function to create users for a role
+        def create_role_users(role_name, role_key, count=6):
+            created_users = []
+            for i in range(count):
+                username = f"{role_name}{i+1}" if i > 0 else role_name
+                is_verified = i < 3  # First 3 are verified, last 3 are unverified
+                
+                u = User.objects.create_user(
+                    username=username,
+                    email=f"{username}@example.com",
+                    password="12345",
+                    first_name=fake.first_name(),
+                    last_name=fake.last_name(),
+                    is_staff=True if role_key == 'admin' else False  # Admins get is_staff
+                )
+                created_users.append(u)
+                
+                # Update profile
+                p = u.profile
+                p.role = role_key
+                p.bio = fake.text(max_nb_chars=250)
+                p.phone = fake.phone_number()[:20]
+                p.date_of_birth = fake.date_of_birth(minimum_age=22, maximum_age=55)
+                p.address = fake.street_address()
+                p.city = fake.city()
+                p.country = fake.country()
+                p.website = fake.url() if random.random() > 0.6 else ''
+                p.linkedin = f"https://linkedin.com/in/{username}" if random.random() > 0.5 else ''
+                p.twitter = f"https://twitter.com/{username}" if random.random() > 0.7 else ''
+                p.email_notifications = random.choice([True, False])
+                p.marketing_emails = random.choice([True, False])
+                p.email_verified = is_verified
+                p.save()
+            
+            return created_users
         
-        # Create 12 Instructors
-        for i in range(12):
-            u = User.objects.create_user(
-                username=f"instructor_{i}",
-                email=fake.unique.email(),
-                password="12345",
-                first_name=fake.first_name(),
-                last_name=fake.last_name()
-            )
-            users['instructors'].append(u)
-            p = u.profile
-            p.role = 'instructor'
-            p.bio = f"Expert instructor with {random.randint(5, 20)} years of experience in {fake.job()}. Passionate about teaching and student success. {fake.text(max_nb_chars=150)}"
-            p.phone = fake.phone_number()[:20]
-            p.date_of_birth = fake.date_of_birth(minimum_age=28, maximum_age=65)
-            p.address = fake.street_address()
-            p.city = fake.city()
-            p.country = fake.country()
-            p.website = fake.url()
-            p.linkedin = f"https://linkedin.com/in/{u.username}"
-            p.email_verified = True
-            p.save()
+        # Create 6 users for each role (3 verified, 3 unverified)
+        users['students'] = create_role_users('student', 'student', 6)
+        users['instructors'] = create_role_users('instructor', 'instructor', 6)
+        users['admins'] = create_role_users('admin', 'admin', 6)
+        users['content_managers'] = create_role_users('content_manager', 'content_manager', 6)
+        users['support'] = create_role_users('support', 'support', 6)
+        users['qa'] = create_role_users('qa', 'qa', 6)
+        users['finance'] = create_role_users('finance', 'finance', 6)
         
-        # Create 3 Admins
-        for i in range(3):
-            u = User.objects.create_user(
-                username=f"admin_{i}",
-                email=fake.unique.email(),
-                password="12345",
-                first_name=fake.first_name(),
-                last_name=fake.last_name(),
-                is_staff=True
-            )
-            users['admins'].append(u)
-            p = u.profile
-            p.role = 'admin'
-            p.bio = "System administrator responsible for platform management and oversight"
-            p.phone = fake.phone_number()[:20]
-            p.email_verified = True
-            p.save()
+        all_users = (users['students'] + users['instructors'] + users['admins'] + 
+                     users['support'] + users['content_managers'] + users['finance'] + users['qa'])
         
-        # Create 4 Support Staff
-        for i in range(4):
-            u = User.objects.create_user(
-                username=f"support_{i}",
-                email=fake.unique.email(),
-                password="12345",
-                first_name=fake.first_name(),
-                last_name=fake.last_name()
-            )
-            users['support'].append(u)
-            p = u.profile
-            p.role = 'support'
-            p.bio = "Customer support specialist dedicated to helping students succeed"
-            p.phone = fake.phone_number()[:20]
-            p.email_verified = True
-            p.save()
-        
-        # Create 2 Content Managers
-        for i in range(2):
-            u = User.objects.create_user(
-                username=f"content_mgr_{i}",
-                email=fake.unique.email(),
-                password="12345",
-                first_name=fake.first_name(),
-                last_name=fake.last_name()
-            )
-            users['content_managers'].append(u)
-            p = u.profile
-            p.role = 'content_manager'
-            p.bio = "Content management and curriculum development specialist"
-            p.phone = fake.phone_number()[:20]
-            p.email_verified = True
-            p.save()
-        
-        # Create 2 Finance Managers
-        for i in range(2):
-            u = User.objects.create_user(
-                username=f"finance_{i}",
-                email=fake.unique.email(),
-                password="12345",
-                first_name=fake.first_name(),
-                last_name=fake.last_name()
-            )
-            users['finance'].append(u)
-            p = u.profile
-            p.role = 'finance'
-            p.bio = "Finance manager handling billing and transactions"
-            p.phone = fake.phone_number()[:20]
-            p.email_verified = True
-            p.save()
-        
-        # Create 2 QA Reviewers
-        for i in range(2):
-            u = User.objects.create_user(
-                username=f"qa_{i}",
-                email=fake.unique.email(),
-                password="12345",
-                first_name=fake.first_name(),
-                last_name=fake.last_name()
-            )
-            users['qa'].append(u)
-            p = u.profile
-            p.role = 'qa'
-            p.bio = "Quality assurance specialist ensuring course quality"
-            p.phone = fake.phone_number()[:20]
-            p.email_verified = True
-            p.save()
-
-        all_users = users['students'] + users['instructors'] + users['admins'] + users['support'] + users['content_managers'] + users['finance'] + users['qa']
+        self.stdout.write(self.style.SUCCESS(f"   ✅ Created {len(all_users)} users across all roles"))
+        for role_name, role_users in users.items():
+            verified_count = sum(1 for u in role_users if u.profile.email_verified)
+            unverified_count = len(role_users) - verified_count
+            self.stdout.write(f"      - {role_name}: {len(role_users)} total ({verified_count} verified, {unverified_count} unverified)")
 
         # --- 3. VENDORS ---
         self.stdout.write("🏢 Creating vendors...")
@@ -398,7 +315,7 @@ class Command(BaseCommand):
 
         # --- 7. SUBSCRIPTIONS (STUDENTS subscribe) ---
         self.stdout.write("🎫 Creating user subscriptions...")
-        for student in random.sample(users['students'], k=25):
+        for student in random.sample(users['students'], k=min(5, len(users['students']))):
             plan = random.choice(plans)
             start_date = timezone.now().date() - timedelta(days=random.randint(0, 60))
             # Calculate end date based on billing cycle
@@ -1154,15 +1071,17 @@ class Command(BaseCommand):
         self.stdout.write("⭐ Creating course reviews...")
         for course in lms_courses:
             enrolled_students = list(Enrollment.objects.filter(course=course))
-            num_reviews = random.randint(5, min(20, len(enrolled_students)))
-            for enrollment in random.sample(enrolled_students, k=min(num_reviews, len(enrolled_students))):
-                Review.objects.create(
-                    course=course,
-                    student=enrollment.student,
-                    rating=random.randint(3, 5),
-                    review_text=fake.text(max_nb_chars=400),
-                    is_approved=random.random() > 0.1
-                )
+            if len(enrolled_students) > 0:
+                max_reviews = min(20, len(enrolled_students))
+                num_reviews = random.randint(1, max(1, max_reviews))
+                for enrollment in random.sample(enrolled_students, k=min(num_reviews, len(enrolled_students))):
+                    Review.objects.create(
+                        course=course,
+                        student=enrollment.student,
+                        rating=random.randint(3, 5),
+                        review_text=fake.text(max_nb_chars=400),
+                        is_approved=random.random() > 0.1
+                    )
 
         # --- 26. CERTIFICATES (Issued to STUDENTS, verified by ADMINS) ---
         self.stdout.write("🏆 Creating certificates...")
@@ -1179,7 +1098,7 @@ class Command(BaseCommand):
 
         # --- 27. TRANSACTIONS (STUDENTS pay, FINANCE processes) ---
         self.stdout.write("💳 Creating transactions...")
-        for student in random.sample(users['students'], k=30):
+        for student in random.sample(users['students'], k=min(5, len(users['students']))):
             for _ in range(random.randint(1, 5)):
                 gateway = random.choice(gateways)
                 amount = Decimal(str(random.uniform(50, 200)))
@@ -1250,7 +1169,7 @@ class Command(BaseCommand):
 
         # --- 30. STUDENT BADGES (Awarded by INSTRUCTORS and ADMINS to STUDENTS) ---
         self.stdout.write("🎖️ Awarding badges to students...")
-        for student in random.sample(users['students'], k=25):
+        for student in random.sample(users['students'], k=min(5, len(users['students']))):
             num_badges = random.randint(1, 5)
             for badge in random.sample(badges, k=min(num_badges, len(badges))):
                 StudentBadge.objects.create(
@@ -1357,15 +1276,17 @@ class Command(BaseCommand):
                 )
                 
                 enrolled_students = list(Enrollment.objects.filter(course=course).values_list('student', flat=True))
-                num_members = random.randint(2, min(study_group.max_members - 1, len(enrolled_students)))
-                for student_id in random.sample(enrolled_students, k=num_members):
-                    if student_id != creator.id:
-                        StudyGroupMember.objects.create(
-                            study_group=study_group,
-                            user=User.objects.get(id=student_id),
-                            role=random.choice(['member', 'member', 'member', 'moderator']),
-                            is_active=True
-                        )
+                if len(enrolled_students) > 1:
+                    max_members = min(study_group.max_members - 1, len(enrolled_students))
+                    num_members = random.randint(1, max(1, max_members))
+                    for student_id in random.sample(enrolled_students, k=num_members):
+                        if student_id != creator.id:
+                            StudyGroupMember.objects.create(
+                                study_group=study_group,
+                                user=User.objects.get(id=student_id),
+                                role=random.choice(['member', 'member', 'member', 'moderator']),
+                                is_active=True
+                            )
 
         # --- 35. MESSAGES (Between ALL user types) ---
         self.stdout.write("✉️ Creating messages...")

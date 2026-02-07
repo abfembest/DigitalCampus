@@ -30,7 +30,7 @@ from .models import (
 )
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-
+from .decorators import applicant_required
 
 def application_status_context(request):
     """Add application status to all template contexts"""
@@ -1584,13 +1584,16 @@ def upload_application_file(request, application_id):
         messages.error(request, f"Error uploading document: {str(e)}")
         return redirect('eduweb:application_status')
 
-@login_required
+@applicant_required
 def mark_payment_successful(request, application_id):
     """
-    TEST FUNCTION: Manually mark payment as successful
-    THIS SHOULD BE REMOVED IN PRODUCTION
+    TEST: Mark payment as successful
+    Remove in production
     """
     import uuid
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     try:
         application = get_object_or_404(
@@ -1599,54 +1602,67 @@ def mark_payment_successful(request, application_id):
             user=request.user
         )
         
-        # Generate unique payment reference
-        payment_ref = f"TEST-{uuid.uuid4().hex[:12].upper()}"
+        # Check if already paid
+        if (hasattr(application, 'payment') and 
+            application.payment.status == 'success'):
+            messages.info(
+                request, 
+                'Payment already completed.'
+            )
+            return redirect('eduweb:application_status')
+        
+        # Generate test payment reference
+        ref = f"TEST-{uuid.uuid4().hex[:12].upper()}"
         gateway_id = f"pi_test_{uuid.uuid4().hex[:24]}"
         
-        # Create or update payment record
+        # Create or update payment
+        from django.utils import timezone
         payment, created = ApplicationPayment.objects.get_or_create(
             application=application,
             defaults={
                 'amount': application.course.application_fee,
-                'currency': 'GBP',  # You can make this dynamic based on course
+                'currency': 'GBP',
                 'status': 'success',
                 'payment_method': 'stripe',
-                'payment_reference': payment_ref,
+                'payment_reference': ref,
                 'gateway_payment_id': gateway_id,
                 'paid_at': timezone.now(),
                 'card_last4': '4242',
                 'card_brand': 'visa',
                 'payment_metadata': {
-                    'test_payment': True,
-                    'created_via': 'manual_test_function',
+                    'test': True,
                     'timestamp': timezone.now().isoformat()
                 }
             }
         )
         
         if not created:
-            # Update existing payment to successful
             payment.status = 'success'
             payment.paid_at = timezone.now()
-            payment.payment_reference = payment_ref
+            payment.payment_reference = ref
             payment.gateway_payment_id = gateway_id
             payment.save()
         
-        # Update application status AFTER payment success
-        if application.status in ['draft', 'pending_payment']:
-            application.payment_status = 'success'  # Ready for document upload
-            application.save(update_fields=['payment_status'])
+        # Update application status
+        application.status = 'payment_complete'
+        application.payment_status = 'success'
+        application.save(
+            update_fields=['status', 'payment_status']
+        )
         
         messages.success(
-            request, 
-            f'✅ TEST Payment Successful! Reference: {payment_ref} | Amount: £{payment.amount}'
+            request,
+            f'✅ Payment successful! Reference: {ref}'
         )
-        return redirect('eduweb:application_status')
         
     except Exception as e:
-        logger.error(f"Error in mark_payment_successful: {str(e)}")
-        messages.error(request, f'❌ Error creating test payment: {str(e)}')
-        return redirect('eduweb:application_status')
+        logger.error(f"Test payment error: {str(e)}")
+        messages.error(
+            request, 
+            f'Payment failed: {str(e)}'
+        )
+    
+    return redirect('eduweb:application_status')
 
 # def finalize_application(application):
 #     application.status = "submitted"

@@ -806,6 +806,13 @@ class CourseApplication(models.Model):
     
     def __str__(self):
         return f"{self.application_id} - {self.first_name} {self.last_name}"
+
+    @property
+    def is_paid(self):
+        """Check if payment is complete"""
+        if not hasattr(self, 'payment'):
+            return False
+        return self.payment.status == 'success'
     
     def save(self, *args, **kwargs):
         if not self.application_id:

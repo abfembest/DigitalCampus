@@ -1,0 +1,571 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Invoice Generation - Finance Portal{% endblock %}
+
+{% block meta_description %}
+Generate and manage payment invoices for successful transactions
+{% endblock %}
+
+{% block meta_keywords %}
+invoice, generation, payment, billing, PDF, finance, receipts
+{% endblock %}
+
+{% block extra_head %}
+<!-- DataTables CSS -->
+<link rel="stylesheet" 
+      href="https://cdn.datatables.net/1.13.7/css/dataTables.tailwind.min.css">
+<link rel="stylesheet" 
+      href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    
+    <!-- Page Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-10 
+                   shadow-sm"
+            role="banner">
+        <div class="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col sm:flex-row sm:items-center 
+                        sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 
+                               font-display flex items-center">
+                        <i class="fas fa-file-invoice text-primary-600 mr-3" 
+                           aria-hidden="true"></i>
+                        Invoice Generation
+                    </h1>
+                    <p class="mt-1 text-sm text-gray-600">
+                        Generate and manage payment invoices
+                    </p>
+                </div>
+                <a href="{% url 'finance:dashboard' %}" 
+                   class="px-4 py-2 bg-white border border-gray-300 
+                          text-gray-700 rounded-lg hover:bg-gray-50 
+                          transition-colors focus:ring-2 
+                          focus:ring-primary-500 focus:ring-offset-2
+                          inline-flex items-center font-medium"
+                   aria-label="Return to finance dashboard">
+                    <i class="fas fa-arrow-left mr-2" aria-hidden="true"></i>
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-10xl mx-auto px-4 sm:px-6 lg:px-8 py-8" 
+          role="main">
+        
+        <!-- Quick Stats Cards (Moved to Top) -->
+        <section aria-labelledby="stats-heading" class="mb-8">
+            <h2 id="stats-heading" class="sr-only">
+                Invoice Statistics
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 
+                        gap-6">
+                
+                <!-- Available Invoices -->
+                <article class="bg-gradient-to-br from-blue-500 to-blue-600 
+                               rounded-xl shadow-lg p-6 text-white 
+                               hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-blue-100 text-xs font-medium 
+                                      uppercase tracking-wide mb-1">
+                                Available Invoices
+                            </p>
+                            <p class="text-3xl font-bold mt-1">
+                                {{ recent_payments|length }}
+                            </p>
+                            <p class="text-xs text-blue-100 mt-1">
+                                Ready to generate
+                            </p>
+                        </div>
+                        <div class="bg-white/20 rounded-lg p-3">
+                            <i class="fas fa-file-invoice text-2xl" 
+                               aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </article>
+                
+                <!-- This Month Payments -->
+                <article class="bg-gradient-to-br from-green-500 
+                               to-green-600 rounded-xl shadow-lg p-6 
+                               text-white hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-green-100 text-xs font-medium 
+                                      uppercase tracking-wide mb-1">
+                                This Month
+                            </p>
+                            <p class="text-3xl font-bold mt-1">
+                                {{ recent_payments|length }}
+                            </p>
+                            <p class="text-xs text-green-100 mt-1">
+                                Recent payments
+                            </p>
+                        </div>
+                        <div class="bg-white/20 rounded-lg p-3">
+                            <i class="fas fa-calendar-check text-2xl" 
+                               aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </article>
+                
+                <!-- Total Value -->
+                <article class="bg-gradient-to-br from-purple-500 
+                               to-purple-600 rounded-xl shadow-lg p-6 
+                               text-white hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-purple-100 text-xs font-medium 
+                                      uppercase tracking-wide mb-1">
+                                Total Value
+                            </p>
+                            <p class="text-3xl font-bold mt-1">
+                                {% load humanize %}
+                                ${% if recent_payments %}
+                                    {{ recent_payments|length|add:0 }}k
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </p>
+                            <p class="text-xs text-purple-100 mt-1">
+                                Estimated revenue
+                            </p>
+                        </div>
+                        <div class="bg-white/20 rounded-lg p-3">
+                            <i class="fas fa-dollar-sign text-2xl" 
+                               aria-hidden="true"></i>
+                        </div>
+                    </div>
+                </article>
+                
+            </div>
+        </section>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Invoice Generation Form -->
+            <section aria-labelledby="invoice-form-heading" 
+                     class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-sm p-6 border 
+                           border-gray-100 lg:sticky lg:top-24">
+                    <h2 id="invoice-form-heading" 
+                        class="text-lg font-semibold text-gray-900 mb-6 
+                               flex items-center">
+                        <i class="fas fa-plus-circle mr-2 text-primary-600" 
+                           aria-hidden="true"></i>
+                        Generate Invoice
+                    </h2>
+                    
+                    <form method="get" 
+                          id="invoiceForm" 
+                          aria-label="Invoice generation form">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="payment_select" 
+                                       class="block text-sm font-medium 
+                                              text-gray-700 mb-2">
+                                    Select Payment
+                                    <span class="text-red-500" 
+                                          aria-label="required">*</span>
+                                </label>
+                                <select id="payment_select" 
+                                        name="payment" 
+                                        class="w-full px-4 py-2.5 border 
+                                               border-gray-300 rounded-lg 
+                                               focus:ring-2 
+                                               focus:ring-primary-500 
+                                               focus:border-primary-500 
+                                               bg-white text-gray-900 
+                                               transition-colors text-sm"
+                                        required
+                                        aria-required="true">
+                                    <option value="">
+                                        -- Select a payment --
+                                    </option>
+                                    {% for payment in recent_payments %}
+                                    <option value="{{ payment.payment_reference }}">
+                                        {{ payment.payment_reference }} - 
+                                        {{ payment.application.user.get_full_name|default:payment.application.user.username }} 
+                                        (${{ payment.amount }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-start">
+                                <input type="checkbox" 
+                                       id="include_details" 
+                                       name="include_details" 
+                                       checked
+                                       class="rounded border-gray-300 
+                                              text-primary-600 
+                                              focus:ring-primary-500 
+                                              w-4 h-4 mt-0.5">
+                                <label for="include_details" 
+                                       class="ml-2 text-sm text-gray-700 
+                                              cursor-pointer">
+                                    Include payment details
+                                </label>
+                            </div>
+                            
+                            <div>
+                                <label for="notes" 
+                                       class="block text-sm font-medium 
+                                              text-gray-700 mb-2">
+                                    Additional Notes
+                                    <span class="text-gray-400">
+                                        (Optional)
+                                    </span>
+                                </label>
+                                <textarea id="notes" 
+                                          name="notes" 
+                                          rows="3" 
+                                          class="w-full px-4 py-2.5 border 
+                                                 border-gray-300 rounded-lg 
+                                                 focus:ring-2 
+                                                 focus:ring-primary-500 
+                                                 focus:border-primary-500 
+                                                 bg-white text-gray-900 
+                                                 transition-colors text-sm 
+                                                 resize-none"
+                                          placeholder="Add custom notes to invoice..."
+                                          aria-label="Invoice notes"></textarea>
+                            </div>
+                            
+                            <div class="pt-4">
+                                <button type="button" 
+                                        onclick="generateInvoice()" 
+                                        class="w-full px-6 py-2.5 
+                                               bg-primary-600 text-white 
+                                               rounded-lg hover:bg-primary-700 
+                                               transition-colors focus:ring-2 
+                                               focus:ring-primary-500 
+                                               focus:ring-offset-2 
+                                               inline-flex items-center 
+                                               justify-center font-medium
+                                               disabled:opacity-50 
+                                               disabled:cursor-not-allowed"
+                                        id="generateBtn"
+                                        aria-label="Generate PDF invoice">
+                                    <i class="fas fa-download mr-2" 
+                                       aria-hidden="true"></i>
+                                    Generate PDF Invoice
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg border 
+                               border-blue-200"
+                         role="note">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-blue-600 mt-1 
+                                      mr-3 flex-shrink-0" 
+                               aria-hidden="true"></i>
+                            <div class="text-sm text-blue-800">
+                                <p class="font-medium mb-1">
+                                    Invoice Information
+                                </p>
+                                <p class="text-blue-700">
+                                    Select a successful payment to generate 
+                                    a professional PDF invoice. The invoice 
+                                    will download automatically.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Recent Payments Table -->
+            <section aria-labelledby="recent-payments-heading" 
+                     class="lg:col-span-2">
+                
+                <div class="bg-white rounded-xl shadow-sm border 
+                           border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 id="recent-payments-heading" 
+                            class="text-lg font-semibold text-gray-900 
+                                   flex items-center">
+                            <i class="fas fa-clock mr-2 text-primary-600" 
+                               aria-hidden="true"></i>
+                            Recent Successful Payments
+                        </h2>
+                    </div>
+                    
+                    <div class="overflow-x-auto p-6">
+                        <table id="paymentsTable" 
+                               class="w-full display stripe hover" 
+                               style="width:100%"
+                               aria-label="Recent successful payments table">
+                            <thead>
+                                <tr>
+                                    <th class="text-left">Reference</th>
+                                    <th class="text-left">User</th>
+                                    <th class="text-left">Course</th>
+                                    <th class="text-right">Amount</th>
+                                    <th class="text-center">Date</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in recent_payments %}
+                                <tr>
+                                    <td>
+                                        <code class="text-xs bg-gray-100 
+                                                     px-2 py-1 rounded">
+                                            {{ payment.payment_reference }}
+                                        </code>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="h-8 w-8 rounded-full 
+                                                       bg-primary-100 
+                                                       flex items-center 
+                                                       justify-center 
+                                                       text-primary-600 
+                                                       font-semibold text-xs 
+                                                       mr-3">
+                                                {{ payment.application.user.first_name|first|upper }}{{ payment.application.user.last_name|first|upper }}
+                                            </div>
+                                            <div>
+                                                <p class="font-medium 
+                                                         text-gray-900 
+                                                         text-sm">
+                                                    {{ payment.application.user.get_full_name|default:payment.application.user.username }}
+                                                </p>
+                                                <p class="text-xs text-gray-500">
+                                                    {{ payment.application.email }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-sm text-gray-700">
+                                        {{ payment.application.course.name|truncatewords:5 }}
+                                    </td>
+                                    <td class="text-right">
+                                        <span class="font-semibold 
+                                                    text-green-600">
+                                            ${{ payment.amount|floatformat:2 }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center text-sm 
+                                              text-gray-600">
+                                        {{ payment.paid_at|date:"M d, Y" }}
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'finance:generate_invoice_pdf' payment.payment_reference %}" 
+                                           target="_blank"
+                                           class="inline-flex items-center 
+                                                  px-3 py-1.5 bg-primary-600 
+                                                  text-white text-xs 
+                                                  font-medium rounded-lg 
+                                                  hover:bg-primary-700 
+                                                  transition-colors 
+                                                  focus:ring-2 
+                                                  focus:ring-primary-500 
+                                                  focus:ring-offset-2"
+                                           aria-label="Download invoice for payment {{ payment.payment_reference }}">
+                                            <i class="fas fa-download mr-1.5" 
+                                               aria-hidden="true"></i>
+                                            Download
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" 
+                                        class="text-center py-12 text-gray-500">
+                                        <i class="fas fa-inbox text-4xl 
+                                                  text-gray-300 mb-3" 
+                                           aria-hidden="true"></i>
+                                        <p>No successful payments available</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+            </section>
+            
+        </div>
+
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.tailwind.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
+<script>
+// Initialize DataTable
+$(document).ready(function() {
+    $('#paymentsTable').DataTable({
+        responsive: true,
+        pageLength: 10,
+        order: [[4, 'desc']], // Sort by date column descending
+        language: {
+            search: "Search payments:",
+            lengthMenu: "Show _MENU_ payments",
+            info: "Showing _START_ to _END_ of _TOTAL_ payments",
+            emptyTable: "No payments available",
+            zeroRecords: "No matching payments found"
+        },
+        columnDefs: [
+            { orderable: false, targets: 5 } // Disable sorting on Actions column
+        ]
+    });
+});
+
+// Invoice generation function
+function generateInvoice() {
+    const paymentSelect = document.getElementById('payment_select');
+    const paymentReference = paymentSelect.value;
+    
+    if (!paymentReference) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Payment Selected',
+                text: 'Please select a payment to generate an invoice.',
+                confirmButtonColor: '#4a6bff',
+                confirmButtonText: 'OK'
+            });
+        } else {
+            alert('Please select a payment to generate an invoice.');
+        }
+        paymentSelect.focus();
+        return;
+    }
+    
+    // Disable button during generation
+    const btn = document.getElementById('generateBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
+    
+    // Open invoice in new window
+    const invoiceUrl = `/finance/invoices/generate/${paymentReference}/`;
+    window.open(invoiceUrl, '_blank');
+    
+    // Re-enable button after delay
+    setTimeout(function() {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Invoice Generated',
+                text: 'Your invoice is being downloaded...',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+    }, 1500);
+}
+
+// Allow Enter key to trigger invoice generation
+document.addEventListener('DOMContentLoaded', function() {
+    const invoiceForm = document.getElementById('invoiceForm');
+    if (invoiceForm) {
+        invoiceForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateInvoice();
+        });
+    }
+    
+    // Keyboard shortcut: Ctrl/Cmd + Enter to generate
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            generateInvoice();
+        }
+    });
+});
+</script>
+
+<style>
+/* DataTables custom styling */
+.dataTables_wrapper {
+    font-family: inherit;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    margin-left: 0.5rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.5rem 0.75rem;
+    margin: 0 0.125rem;
+    border-radius: 0.375rem;
+    border: 1px solid #d1d5db;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #4a6bff;
+    color: white !important;
+    border-color: #4a6bff;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+/* Sticky header enhancement */
+@media (min-width: 1024px) {
+    .lg\:sticky {
+        position: sticky;
+        max-height: calc(100vh - 8rem);
+        overflow-y: auto;
+    }
+}
+
+/* Smooth scroll */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Loading state */
+button:disabled {
+    cursor: not-allowed;
+}
+
+/* Table row hover */
+#paymentsTable tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* Responsive table on mobile */
+@media (max-width: 768px) {
+    table.dataTable thead th {
+        font-size: 0.75rem;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    table.dataTable tbody td {
+        font-size: 0.813rem;
+        padding: 0.75rem 0.5rem;
+    }
+}
+</style>
+{% endblock %}

@@ -691,11 +691,9 @@
 
                     <!-- Dashboard -->
                     <a href="{% url 'finance:dashboard' %}" 
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' and 'finance' in request.path %}bg-white/20{% endif %}">
-                        <div class="flex items-center">
-                            <i class="fas fa-chart-bar w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Finance Dashboard</span>
-                        </div>
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' and 'finance' in request.path %}bg-white/20{% endif %}">
+                        <i class="fas fa-chart-bar w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Dashboard</span>
                     </a>
 
                     <!-- Payment Management -->
@@ -717,51 +715,41 @@
 
                     <!-- Subscription Management -->
                     <a href="{% url 'finance:subscription_list' %}" 
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'subscription' in request.path %}bg-white/20{% endif %}">
-                        <div class="flex items-center">
-                            <i class="fas fa-users-cog w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Subscriptions</span>
-                        </div>
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'subscription' in request.path %}bg-white/20{% endif %}">
+                        <i class="fas fa-crown w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Subscriptions</span>
                     </a>
 
-                    <!-- Reports & Analytics -->
-                    <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                    <!-- Invoice Generation -->
+                    <a href="{% url 'finance:invoice_generation' %}" 
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'invoice' in request.path %}bg-white/20{% endif %}">
+                        <i class="fas fa-file-invoice w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Invoices</span>
+                    </a>
+
+                    <!-- Invoice Generation -->
+                    <a href="{% url 'finance:transaction_reports' %}" 
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'transaction' in request.path %}bg-white/20{% endif %}">
+                        <i class="fas fa-file-alt mr-2" aria-hidden="true"></i>
+                        <span class="ml-3">Transaction Reports</span>
+                    </a>
+
+                    <!-- Transaction Reports -->
+                    {% comment %} <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'report' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
-                                <i class="fas fa-file-invoice-dollar w-5 text-center" aria-hidden="true"></i>
+                                <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Reports</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="reportsMenu" class="mt-2 space-y-1 hidden">
-                            <a href="{% url 'finance:dashboard' %}" 
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-chart-line mr-2" aria-hidden="true"></i> Revenue Analytics
-                            </a>
-                            <a href="{% url 'finance:payment_management' %}" 
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-dollar-sign mr-2" aria-hidden="true"></i> Transaction Reports
+                            <a href="{% url 'finance:transaction_reports' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'transaction_reports' %}bg-white/20{% endif %}">
+                                <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Transaction Reports
                             </a>
                         </div>
-                    </div>
-
-                    <!-- Divider -->
-                    <div class="border-t border-white/10 my-4"></div>
-
-                    <!-- Quick Stats (Optional - shows key metrics) -->
-                    <div class="px-4 py-3">
-                        <p class="text-xs uppercase text-white/60 font-semibold mb-3">Quick Stats</p>
-                        <div class="space-y-2">
-                            <div class="bg-white/10 rounded-lg p-3">
-                                <p class="text-xs text-white/70">Total Revenue (MTD)</p>
-                                <p class="text-lg font-bold">$0.00</p>
-                            </div>
-                            <div class="bg-white/10 rounded-lg p-3">
-                                <p class="text-xs text-white/70">Pending Payments</p>
-                                <p class="text-lg font-bold">0</p>
-                            </div>
-                        </div>
-                    </div>
+                    </div> {% endcomment %}
 
                     {% elif request.user.profile.role == 'qa' %}
                     <!-- QA REVIEWER MENU (for future implementation) -->

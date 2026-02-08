@@ -1,6 +1,10 @@
 from django import forms
 from django.contrib.auth.models import User
-from eduweb.models import ApplicationPayment, Subscription, SubscriptionPlan
+from eduweb.models import (
+    ApplicationPayment, 
+    Subscription, 
+    SubscriptionPlan
+)
 
 
 class PaymentFilterForm(forms.Form):
@@ -25,49 +29,64 @@ class PaymentFilterForm(forms.Form):
         choices=STATUS_CHOICES,
         required=False,
         widget=forms.Select(attrs={
-            'class': 'form-select rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
-            'aria-label': 'Filter by payment status'
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            )
         })
     )
-    
+
     payment_method = forms.ChoiceField(
         choices=METHOD_CHOICES,
         required=False,
         widget=forms.Select(attrs={
-            'class': 'form-select rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
-            'aria-label': 'Filter by payment method'
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            )
         })
     )
-    
+
     date_from = forms.DateField(
         required=False,
         widget=forms.DateInput(attrs={
             'type': 'date',
-            'class': 'form-input rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
-            'aria-label': 'Filter from date'
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            )
         })
     )
-    
+
     date_to = forms.DateField(
         required=False,
         widget=forms.DateInput(attrs={
             'type': 'date',
-            'class': 'form-input rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
-            'aria-label': 'Filter to date'
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            )
         })
     )
-    
+
     search = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
-            'class': 'form-input rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'Search by reference or user...',
-            'aria-label': 'Search payments'
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            ),
+            'placeholder': 'Search by reference or user...'
         })
     )
 
@@ -85,8 +104,12 @@ class RefundForm(forms.Form):
     reason = forms.ChoiceField(
         choices=REASON_CHOICES,
         widget=forms.Select(attrs={
-            'class': 'form-select rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            ),
             'aria-label': 'Refund reason'
         })
     )
@@ -94,8 +117,12 @@ class RefundForm(forms.Form):
     notes = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
-            'class': 'form-textarea rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm resize-none'
+            ),
             'rows': 3,
             'placeholder': 'Additional notes about the refund...',
             'aria-label': 'Refund notes'
@@ -117,8 +144,12 @@ class SubscriptionFilterForm(forms.Form):
         choices=STATUS_CHOICES,
         required=False,
         widget=forms.Select(attrs={
-            'class': 'form-select rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            ),
             'aria-label': 'Filter by subscription status'
         })
     )
@@ -128,8 +159,12 @@ class SubscriptionFilterForm(forms.Form):
         required=False,
         empty_label='All Plans',
         widget=forms.Select(attrs={
-            'class': 'form-select rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            ),
             'aria-label': 'Filter by subscription plan'
         })
     )
@@ -137,8 +172,12 @@ class SubscriptionFilterForm(forms.Form):
     search = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
-            'class': 'form-input rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            ),
             'placeholder': 'Search by user...',
             'aria-label': 'Search subscriptions'
         })
@@ -162,8 +201,12 @@ class DateRangeForm(forms.Form):
         choices=RANGE_CHOICES,
         initial='this_month',
         widget=forms.Select(attrs={
-            'class': 'form-select rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            ),
             'id': 'rangeType',
             'aria-label': 'Select date range type'
         })
@@ -173,8 +216,12 @@ class DateRangeForm(forms.Form):
         required=False,
         widget=forms.DateInput(attrs={
             'type': 'date',
-            'class': 'form-input rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            ),
             'id': 'startDate',
             'aria-label': 'Start date'
         })
@@ -184,9 +231,49 @@ class DateRangeForm(forms.Form):
         required=False,
         widget=forms.DateInput(attrs={
             'type': 'date',
-            'class': 'form-input rounded-lg border-gray-300 focus:ring-2 '
-                     'focus:ring-primary-500 focus:border-primary-500',
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm'
+            ),
             'id': 'endDate',
             'aria-label': 'End date'
+        })
+    )
+
+
+class InvoiceGenerateForm(forms.Form):
+    """
+    Form for generating invoices
+    Note: This form is not actually used for submission.
+    The template manually creates the select dropdown to use 
+    payment_reference as the value instead of payment ID.
+    """
+    
+    include_details = forms.BooleanField(
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={
+            'class': (
+                'rounded border-gray-300 text-primary-600 '
+                'focus:ring-primary-500 w-4 h-4'
+            ),
+            'aria-label': 'Include payment details'
+        })
+    )
+    
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': (
+                'w-full px-4 py-2.5 border border-gray-300 '
+                'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                'focus:border-primary-500 bg-white text-gray-900 '
+                'transition-colors text-sm resize-none'
+            ),
+            'rows': 3,
+            'placeholder': 'Additional notes for invoice...',
+            'aria-label': 'Invoice notes'
         })
     )

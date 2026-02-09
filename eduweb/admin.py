@@ -10,7 +10,7 @@ from .models import (
     LMSCourse, Message, Notification,
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
     Review, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
-    SystemConfiguration, UserProfile, Vendor
+    SystemConfiguration, UserProfile, Vendor, BroadcastMessage
 )
 
 
@@ -1276,6 +1276,8 @@ class VendorAdmin(admin.ModelAdmin):
             'fields': ('is_active', 'created_at')
         }),
     )
+
+admin.site.register(BroadcastMessage)
 
 
 # Site customization

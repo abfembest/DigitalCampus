@@ -10,6 +10,8 @@ from django.conf import settings
 from django.urls import reverse
 from datetime import timedelta
 import json
+from django.core.mail import send_mass_mail
+import threading
 
 # Model imports
 from eduweb.models import (
@@ -18,7 +20,9 @@ from eduweb.models import (
     Faculty, 
     Course, 
     BlogPost, 
-    BlogCategory
+    BlogCategory,
+    BroadcastMessage,
+    LMSCourse
 )
 
 # Form imports
@@ -26,7 +30,8 @@ from management.forms import (
     FacultyForm, 
     CourseForm, 
     BlogPostForm, 
-    BlogCategoryForm
+    BlogCategoryForm,
+    BroadcastMessageForm
 )
 
 
@@ -184,7 +189,7 @@ def mark_reviewed(request, pk):
         application = get_object_or_404(CourseApplication, pk=pk)
         
         application.status = 'reviewed'
-        application.reviewed_by = request.user
+        application.reviewer = request.user
         application.reviewed_at = timezone.now()
         application.save()
         
@@ -1573,3 +1578,353 @@ def security_dashboard(request):
         'recent_permission_changes': recent_permission_changes
     }
     return render(request, 'management/security/dashboard.html', context)
+
+# ==================== BROADCAST CENTER ====================
+@login_required
+@user_passes_test(
+    lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin'
+)
+def broadcast_center(request):
+    """List all broadcasts with status counts"""
+    broadcasts = BroadcastMessage.objects.select_related('created_by').all()
+    
+    # Calculate status counts
+    sent_count = broadcasts.filter(status='sent').count()
+    draft_count = broadcasts.filter(status='draft').count()
+    failed_count = broadcasts.filter(status='failed').count()
+    
+    context = {
+        'broadcasts': broadcasts,
+        'sent_count': sent_count,
+        'draft_count': draft_count,
+        'failed_count': failed_count,
+        'page_title': 'Broadcast Center',
+    }
+    return render(
+        request, 
+        'management/broadcast/list.html', 
+        context
+    )
+
+
+@login_required
+@user_passes_test(
+    lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin'
+)
+def broadcast_create(request):
+    """Create new broadcast"""
+    if request.method == 'POST':
+        form = BroadcastMessageForm(request.POST)
+        if form.is_valid():
+            broadcast = form.save(commit=False)
+            broadcast.created_by = request.user
+            
+            # Collect filter values
+            filter_values = {}
+            filter_type = form.cleaned_data['filter_type']
+            
+            if filter_type == 'faculty':
+                filter_values['faculties'] = list(
+                    form.cleaned_data['faculties']
+                    .values_list('id', flat=True)
+                )
+            elif filter_type == 'course':
+                filter_values['courses'] = list(
+                    form.cleaned_data['courses']
+                    .values_list('id', flat=True)
+                )
+            elif filter_type == 'lms_course':
+                filter_values['lms_courses'] = list(
+                    form.cleaned_data['lms_courses']
+                    .values_list('id', flat=True)
+                )
+            elif filter_type == 'role':
+                filter_values['roles'] = form.cleaned_data['roles']
+            elif filter_type == 'application_status':
+                filter_values['application_statuses'] = (
+                    form.cleaned_data['application_statuses']
+                )
+            elif filter_type == 'enrollment_status':
+                filter_values['enrollment_statuses'] = (
+                    form.cleaned_data['enrollment_statuses']
+                )
+            
+            broadcast.filter_values = filter_values
+            
+            # Get recipient emails
+            emails = get_recipient_emails(filter_type, filter_values)
+            broadcast.recipient_emails = emails
+            broadcast.recipient_count = len(emails)
+            
+            broadcast.save()
+            
+            messages.success(
+                request, 
+                f'Broadcast created! {len(emails)} recipients identified.'
+            )
+            return redirect('management:broadcast_center')
+    else:
+        form = BroadcastMessageForm()
+    
+    context = {
+        'form': form,
+        'page_title': 'Create Broadcast',
+    }
+    return render(
+        request, 
+        'management/broadcast/form.html', 
+        context
+    )
+
+@login_required
+@user_passes_test(
+    lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin'
+)
+def broadcast_edit(request, slug):
+    """Edit draft broadcast"""
+    broadcast = get_object_or_404(BroadcastMessage, slug=slug)
+    
+    # Only allow editing drafts
+    if broadcast.status != 'draft':
+        messages.error(
+            request, 
+            'Only draft broadcasts can be edited.'
+        )
+        return redirect('management:broadcast_center')
+    
+    if request.method == 'POST':
+        form = BroadcastMessageForm(request.POST, instance=broadcast)
+        if form.is_valid():
+            broadcast = form.save(commit=False)
+            
+            # Update filter values
+            filter_values = {}
+            filter_type = form.cleaned_data['filter_type']
+            
+            if filter_type == 'faculty':
+                filter_values['faculties'] = list(
+                    form.cleaned_data['faculties']
+                    .values_list('id', flat=True)
+                )
+            elif filter_type == 'course':
+                filter_values['courses'] = list(
+                    form.cleaned_data['courses']
+                    .values_list('id', flat=True)
+                )
+            elif filter_type == 'lms_course':
+                filter_values['lms_courses'] = list(
+                    form.cleaned_data['lms_courses']
+                    .values_list('id', flat=True)
+                )
+            elif filter_type == 'role':
+                filter_values['roles'] = form.cleaned_data['roles']
+            elif filter_type == 'application_status':
+                filter_values['application_statuses'] = (
+                    form.cleaned_data['application_statuses']
+                )
+            elif filter_type == 'enrollment_status':
+                filter_values['enrollment_statuses'] = (
+                    form.cleaned_data['enrollment_statuses']
+                )
+            
+            broadcast.filter_values = filter_values
+            
+            # Recalculate recipient emails
+            emails = get_recipient_emails(filter_type, filter_values)
+            broadcast.recipient_emails = emails
+            broadcast.recipient_count = len(emails)
+            
+            broadcast.save()
+            
+            messages.success(
+                request, 
+                f'Broadcast updated! {len(emails)} recipients identified.'
+            )
+            return redirect('management:broadcast_center')
+    else:
+        # Pre-populate form with existing data
+        initial_data = {
+            'subject': broadcast.subject,
+            'message': broadcast.message,
+            'filter_type': broadcast.filter_type,
+        }
+        
+        # Pre-populate filter selections
+        filter_type = broadcast.filter_type
+        filter_values = broadcast.filter_values
+        
+        if filter_type == 'faculty' and 'faculties' in filter_values:
+            initial_data['faculties'] = Faculty.objects.filter(
+                id__in=filter_values['faculties']
+            )
+        elif filter_type == 'course' and 'courses' in filter_values:
+            initial_data['courses'] = Course.objects.filter(
+                id__in=filter_values['courses']
+            )
+        elif filter_type == 'lms_course' and 'lms_courses' in filter_values:
+            initial_data['lms_courses'] = LMSCourse.objects.filter(
+                id__in=filter_values['lms_courses']
+            )
+        elif filter_type == 'role' and 'roles' in filter_values:
+            initial_data['roles'] = filter_values['roles']
+        elif (filter_type == 'application_status' and 
+              'application_statuses' in filter_values):
+            initial_data['application_statuses'] = (
+                filter_values['application_statuses']
+            )
+        elif (filter_type == 'enrollment_status' and 
+              'enrollment_statuses' in filter_values):
+            initial_data['enrollment_statuses'] = (
+                filter_values['enrollment_statuses']
+            )
+        
+        form = BroadcastMessageForm(instance=broadcast, initial=initial_data)
+    
+    context = {
+        'form': form,
+        'broadcast': broadcast,
+        'is_edit': True,
+        'page_title': f'Edit Broadcast: {broadcast.subject}',
+    }
+    return render(
+        request, 
+        'management/broadcast/form.html', 
+        context
+    )
+
+@login_required
+@user_passes_test(lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin')
+def broadcast_send(request, slug):
+    """Send broadcast email - POST only"""
+    broadcast = get_object_or_404(BroadcastMessage, slug=slug)
+    
+    if broadcast.status == 'sent':
+        messages.warning(request, 'This broadcast has already been sent.')
+        return redirect('management:broadcast_center')
+    
+    if request.method == 'POST':
+        import threading
+        
+        def send_emails_background():
+            """Background thread to send emails"""
+            try:
+                # Send emails in smaller batches for better performance
+                batch_size = 50
+                email_list = broadcast.recipient_emails
+                
+                for i in range(0, len(email_list), batch_size):
+                    batch = email_list[i:i + batch_size]
+                    email_messages = [
+                        (
+                            broadcast.subject,
+                            broadcast.message,
+                            settings.DEFAULT_FROM_EMAIL,
+                            [email],
+                        )
+                        for email in batch
+                    ]
+                    send_mass_mail(email_messages, fail_silently=False)
+                
+                # Update status after all sent
+                broadcast.status = 'sent'
+                broadcast.sent_at = timezone.now()
+                broadcast.save()
+                
+            except Exception as e:
+                broadcast.status = 'failed'
+                broadcast.error_message = str(e)
+                broadcast.save()
+        
+        # Start background thread
+        thread = threading.Thread(target=send_emails_background)
+        thread.daemon = True
+        thread.start()
+        
+        # Immediate response to user
+        messages.success(
+            request, 
+            f'Sending broadcast to {broadcast.recipient_count} recipients...'
+        )
+    
+    return redirect('management:broadcast_center')
+
+@login_required
+@user_passes_test(lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin')
+def broadcast_delete(request, slug):
+    """Delete broadcast - POST only"""
+    broadcast = get_object_or_404(BroadcastMessage, slug=slug)
+    
+    if request.method == 'POST':
+        broadcast.delete()
+        messages.success(request, 'Broadcast deleted successfully.')
+    
+    return redirect('management:broadcast_center')
+
+
+# ==================== HELPER FUNCTIONS ====================
+def get_recipient_emails(filter_type, filter_values):
+    """Get recipient emails based on filter"""
+    emails = set()
+    
+    if filter_type == 'all_users':
+        # All active users
+        emails = set(
+            User.objects.filter(is_active=True)
+            .values_list('email', flat=True)
+        )
+    
+    elif filter_type == 'faculty':
+        # Users who applied to courses in selected faculties
+        faculty_ids = filter_values.get('faculties', [])
+        emails = set(
+            CourseApplication.objects.filter(
+                course__faculty_id__in=faculty_ids
+            ).values_list('email', flat=True)
+        )
+    
+    elif filter_type == 'course':
+        # Users who applied to selected courses
+        course_ids = filter_values.get('courses', [])
+        emails = set(
+            CourseApplication.objects.filter(
+                course_id__in=course_ids
+            ).values_list('email', flat=True)
+        )
+    
+    elif filter_type == 'lms_course':
+        # Users enrolled in selected LMS courses
+        lms_course_ids = filter_values.get('lms_courses', [])
+        user_emails = User.objects.filter(
+            enrollments__course_id__in=lms_course_ids
+        ).values_list('email', flat=True)
+        emails = set(user_emails)
+    
+    elif filter_type == 'role':
+        # Users with selected roles
+        roles = filter_values.get('roles', [])
+        user_emails = User.objects.filter(
+            profile__role__in=roles
+        ).values_list('email', flat=True)
+        emails = set(user_emails)
+    
+    elif filter_type == 'application_status':
+        # Users with specific application statuses
+        statuses = filter_values.get('application_statuses', [])
+        emails = set(
+            CourseApplication.objects.filter(
+                status__in=statuses
+            ).values_list('email', flat=True)
+        )
+    
+    elif filter_type == 'enrollment_status':
+        # Users with specific enrollment statuses
+        statuses = filter_values.get('enrollment_statuses', [])
+        user_emails = User.objects.filter(
+            enrollments__status__in=statuses
+        ).values_list('email', flat=True)
+        emails = set(user_emails)
+    
+    # Remove empty emails
+    emails = {e for e in emails if e}
+    
+    return list(emails)

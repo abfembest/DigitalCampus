@@ -1,5 +1,5 @@
 from django import forms
-from eduweb.models import Faculty, Course, BlogPost, BlogCategory
+from eduweb.models import Faculty, Course, BlogPost, BlogCategory, BroadcastMessage, LMSCourse, CourseApplication, Enrollment
 import json
 
 class FacultyForm(forms.ModelForm):
@@ -1074,3 +1074,106 @@ class AuditLogFilterForm(forms.Form):
             'placeholder': 'Search description...'
         })
     )
+
+# ==================== BROADCAST FORMS ====================
+class BroadcastMessageForm(forms.ModelForm):
+    """Form for creating broadcast messages"""
+    
+    # Faculty filter
+    faculties = forms.ModelMultipleChoiceField(
+        queryset=Faculty.objects.filter(is_active=True),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Select Faculties"
+    )
+    
+    # Course filter (Admission)
+    courses = forms.ModelMultipleChoiceField(
+        queryset=Course.objects.filter(is_active=True),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Select Courses (Admission)"
+    )
+    
+    # LMS Course filter
+    lms_courses = forms.ModelMultipleChoiceField(
+        queryset=LMSCourse.objects.filter(is_published=True),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Select LMS Courses"
+    )
+    
+    # Role filter
+    roles = forms.MultipleChoiceField(
+        choices=UserProfile.ROLE_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Select User Roles"
+    )
+    
+    # Application status filter
+    application_statuses = forms.MultipleChoiceField(
+        choices=CourseApplication.STATUS_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Select Application Statuses"
+    )
+    
+    # Enrollment status filter
+    enrollment_statuses = forms.MultipleChoiceField(
+        choices=Enrollment.STATUS_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Select Enrollment Statuses"
+    )
+    
+    class Meta:
+        model = BroadcastMessage
+        fields = ['subject', 'message', 'filter_type']
+        widgets = {
+            'subject': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border rounded-lg',
+                'placeholder': 'Email Subject'
+            }),
+            'message': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border rounded-lg',
+                'rows': 8,
+                'placeholder': 'Email Message Content'
+            }),
+            'filter_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border rounded-lg',
+                'id': 'id_filter_type'
+            }),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        filter_type = cleaned_data.get('filter_type')
+        
+        # Validate filter selections
+        if filter_type == 'faculty' and not cleaned_data.get('faculties'):
+            raise forms.ValidationError(
+                "Please select at least one faculty."
+            )
+        elif filter_type == 'course' and not cleaned_data.get('courses'):
+            raise forms.ValidationError(
+                "Please select at least one course."
+            )
+        elif filter_type == 'lms_course' and not cleaned_data.get('lms_courses'):
+            raise forms.ValidationError(
+                "Please select at least one LMS course."
+            )
+        elif filter_type == 'role' and not cleaned_data.get('roles'):
+            raise forms.ValidationError(
+                "Please select at least one role."
+            )
+        elif filter_type == 'application_status' and not cleaned_data.get('application_statuses'):
+            raise forms.ValidationError(
+                "Please select at least one application status."
+            )
+        elif filter_type == 'enrollment_status' and not cleaned_data.get('enrollment_statuses'):
+            raise forms.ValidationError(
+                "Please select at least one enrollment status."
+            )
+        
+        return cleaned_data

@@ -11,8 +11,6 @@ import uuid
 import os
 from decimal import Decimal
 
-
-
 # ==================== HELPER FUNCTIONS ====================
 def validate_file_size(file, max_size_mb=10):
     """Validate file size"""
@@ -2138,3 +2136,91 @@ class StudyGroupMember(models.Model):
     
     def __str__(self):
         return f"{self.user.username} in {self.study_group.name}"
+    
+# ==================== BROADCAST CENTER ====================
+class BroadcastMessage(models.Model):
+    """Email broadcasts to filtered recipients"""
+    FILTER_TYPE_CHOICES = [
+        ('all_users', 'All Users'),
+        ('role', 'By User Role'),
+        ('faculty', 'By Faculty'),
+        ('course', 'By Course (Admission)'),
+        ('lms_course', 'By LMS Course'),
+        ('application_status', 'By Application Status'),
+        ('enrollment_status', 'By Enrollment Status'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('failed', 'Failed'),
+    ]
+    
+    # Message Details
+    subject = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=250, unique=True, blank=True)
+    message = models.TextField()
+    
+    # Filtering
+    filter_type = models.CharField(
+        max_length=30, 
+        choices=FILTER_TYPE_CHOICES
+    )
+    
+    # Filter Values (JSON for flexibility)
+    filter_values = models.JSONField(
+        default=dict,
+        help_text="Stores selected filters"
+    )
+    
+    # Recipients
+    recipient_count = models.IntegerField(default=0)
+    recipient_emails = models.JSONField(
+        default=list,
+        help_text="List of recipient emails"
+    )
+    
+    # Status
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default='draft'
+    )
+    
+    # Metadata
+    created_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='broadcasts_created'
+    )
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Error tracking
+    error_message = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Broadcast Message'
+        verbose_name_plural = 'Broadcast Messages'
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['filter_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.subject} - {self.get_status_display()}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate slug from subject
+        if not self.slug:
+            base_slug = slugify(self.subject)
+            slug = base_slug
+            counter = 1
+            while BroadcastMessage.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)

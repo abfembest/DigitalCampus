@@ -78,6 +78,13 @@ urlpatterns = [
     path('audit-logs/<int:pk>/', views.audit_log_detail, name='audit_log_detail'),
     path('audit-logs/export/', views.audit_logs_export, name='audit_logs_export'),
     path('security/', views.security_dashboard, name='security_dashboard'),
+
+    # ==================== BROADCAST CENTER ====================
+    path('broadcast/', views.broadcast_center, name='broadcast_center'),
+    path('broadcast/create/', views.broadcast_create, name='broadcast_create'),
+    path('broadcast/<slug:slug>/edit/', views.broadcast_edit, name='broadcast_edit'),
+    path('broadcast/<slug:slug>/send/', views.broadcast_send, name='broadcast_send'),
+    path('broadcast/<slug:slug>/delete/', views.broadcast_delete, name='broadcast_delete'),
 ]
 
 # Serve media files during development

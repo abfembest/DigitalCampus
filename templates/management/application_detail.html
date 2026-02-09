@@ -684,7 +684,7 @@ document.addEventListener('keydown', function(e) {
                     <div class="flex-1">
                         <p class="text-sm font-medium text-gray-800">Application Reviewed</p>
                         <p class="text-xs text-gray-500 mt-1">
-                            By {{ application.reviewed_by.get_full_name|default:application.reviewed_by.username }}
+                            By {{ application.reviewer.get_full_name|default:application.reviewer }}
                         </p>
                         <p class="text-xs text-gray-500">
                             <time datetime="{{ application.reviewed_at|date:'Y-m-d\TH:i' }}">{{ application.reviewed_at|date:"M d, Y, g:i A" }}</time>

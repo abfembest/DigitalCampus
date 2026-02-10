@@ -391,7 +391,7 @@ def send_verification_email(request, user):
         token = profile.verification_token
         current_site = get_current_site(request)
         verification_url = request.build_absolute_uri(
-            reverse('verify_email', kwargs={'token': str(token)})
+            reverse('eduweb:verify_email', kwargs={'token': str(token)})
         )
         
         subject = 'Verify Your MIU Account'

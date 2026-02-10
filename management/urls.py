@@ -85,6 +85,12 @@ urlpatterns = [
     path('broadcast/<slug:slug>/edit/', views.broadcast_edit, name='broadcast_edit'),
     path('broadcast/<slug:slug>/send/', views.broadcast_send, name='broadcast_send'),
     path('broadcast/<slug:slug>/delete/', views.broadcast_delete, name='broadcast_delete'),
+
+    path(
+        'applications/<int:pk>/approve-department/', 
+        views.approve_department, 
+        name='approve_department'
+    ),
 ]
 
 # Serve media files during development

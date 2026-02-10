@@ -17,7 +17,7 @@ from eduweb.models import (
     Message, Notification, PaymentGateway, Transaction, Quiz, QuizQuestion,
     QuizAnswer, QuizAttempt, QuizResponse, Review, SubscriptionPlan,
     Subscription, SystemConfiguration, UserProfile, Vendor, StudyGroup,
-    StudyGroupMember
+    StudyGroupMember, BroadcastMessage
 )
 
 fake = Faker()
@@ -98,7 +98,8 @@ class Command(BaseCommand):
             Discussion, Lesson, LessonSection, LMSCourse, CourseCategory, ApplicationPayment,
             ApplicationDocument, CourseApplication, CourseIntake, Course, Faculty, Invoice,
             Transaction, Subscription, SubscriptionPlan, PaymentGateway, BlogPost, BlogCategory,
-            ContactMessage, Vendor, SystemConfiguration, Announcement, StudyGroupMember, StudyGroup
+            ContactMessage, Vendor, SystemConfiguration, Announcement, StudyGroupMember,
+            StudyGroup, BroadcastMessage
         ]
         for model in models_to_clear:
             model.objects.all().delete()
@@ -160,7 +161,18 @@ class Command(BaseCommand):
         
         all_users = (users['students'] + users['instructors'] + users['admins'] + 
                      users['support'] + users['content_managers'] + users['finance'] + users['qa'])
-        
+
+        # Separate verified users per role for activity seeding
+        verified_students = [u for u in users['students'] if u.profile.email_verified]
+        verified_instructors = [u for u in users['instructors'] if u.profile.email_verified]
+        verified_admins = [u for u in users['admins'] if u.profile.email_verified]
+        verified_support = [u for u in users['support'] if u.profile.email_verified]
+        verified_finance = [u for u in users['finance'] if u.profile.email_verified]
+        verified_content = [u for u in users['content_managers'] if u.profile.email_verified]
+        verified_qa = [u for u in users['qa'] if u.profile.email_verified]
+        verified_all = (verified_students + verified_instructors + verified_admins +
+                        verified_support + verified_content + verified_finance + verified_qa)
+
         self.stdout.write(self.style.SUCCESS(f"   ✅ Created {len(all_users)} users across all roles"))
         for role_name, role_users in users.items():
             verified_count = sum(1 for u in role_users if u.profile.email_verified)
@@ -315,7 +327,7 @@ class Command(BaseCommand):
 
         # --- 7. SUBSCRIPTIONS (STUDENTS subscribe) ---
         self.stdout.write("🎫 Creating user subscriptions...")
-        for student in random.sample(users['students'], k=min(5, len(users['students']))):
+        for student in random.sample(verified_students, k=min(5, len(verified_students))):
             plan = random.choice(plans)
             start_date = timezone.now().date() - timedelta(days=random.randint(0, 60))
             # Calculate end date based on billing cycle
@@ -548,22 +560,38 @@ class Command(BaseCommand):
                     )
                     intakes.append(intake)
 
-        # --- 11. COURSE APPLICATIONS (STUDENTS apply, ADMINS review) ---
+        # --- 11. COURSE APPLICATIONS (only VERIFIED STUDENTS, one each) ---
         self.stdout.write("📝 Creating course applications...")
         applications = []
-        for _ in range(30):
-            student = random.choice(users['students'])
+        for student in verified_students:
             course = random.choice(academic_courses)
             intake = random.choice([i for i in intakes if i.course == course])
-            
+
+            # Determine status first so we can set admission fields consistently
+            status = random.choice([
+                'draft', 'pending_payment', 'payment_complete',
+                'under_review', 'approved', 'rejected'
+            ])
+
+            # Only approved apps can have admission tracking data
+            is_approved = status == 'approved'
+            admitted = is_approved and random.random() > 0.4
+            dept_approved = admitted and random.random() > 0.5
+            dept_approver = random.choice(verified_admins) if dept_approved else None
+
+            # Admission number only if student accepted
+            adm_number = None
+            if admitted:
+                adm_number = f"ADM-{timezone.now().year}-{uuid.uuid4().hex[:8].upper()}"
+
             app = CourseApplication.objects.create(
-                user=student if random.random() > 0.3 else None,
+                user=student,
                 course=course,
                 intake=intake,
                 study_mode=random.choice(course.available_study_modes),
-                first_name=student.first_name if student else fake.first_name(),
-                last_name=student.last_name if student else fake.last_name(),
-                email=student.email if student else fake.email(),
+                first_name=student.first_name,
+                last_name=student.last_name,
+                email=student.email,
                 phone=fake.phone_number()[:20],
                 date_of_birth=fake.date_of_birth(minimum_age=18, maximum_age=40),
                 gender=random.choice(['male', 'female', 'other']),
@@ -574,27 +602,48 @@ class Command(BaseCommand):
                 state=fake.state(),
                 postal_code=fake.postcode(),
                 country=fake.country(),
-                highest_qualification=random.choice(['High School', 'Associate Degree', 'Bachelor Degree']),
+                highest_qualification=random.choice([
+                    'High School', 'Associate Degree', 'Bachelor Degree'
+                ]),
                 institution_name=fake.company(),
                 graduation_year=str(random.randint(2015, 2024)),
                 gpa_or_grade=f"{random.uniform(2.5, 4.0):.2f}",
                 language_skill=random.choice(['ielts', 'toefl', 'pte', None]),
-                language_score=Decimal(str(random.uniform(6.0, 9.0))) if random.random() > 0.3 else None,
+                language_score=Decimal(
+                    str(random.uniform(6.0, 9.0))
+                ) if random.random() > 0.3 else None,
                 work_experience_years=random.randint(0, 10),
                 personal_statement=fake.text(max_nb_chars=800),
-                how_did_you_hear=random.choice(['Social Media', 'Friend', 'Website', 'Advertisement']),
+                how_did_you_hear=random.choice([
+                    'Social Media', 'Friend', 'Website', 'Advertisement'
+                ]),
                 scholarship=random.choice([True, False]),
                 accept_privacy_policy=True,
                 accept_terms_conditions=True,
                 marketing_consent=random.choice([True, False]),
                 emergency_contact_name=fake.name(),
                 emergency_contact_phone=fake.phone_number()[:20],
-                emergency_contact_relationship=random.choice(['Parent', 'Sibling', 'Spouse', 'Friend']),
-                status=random.choice(['draft', 'pending_payment', 'payment_complete', 'under_review', 'approved', 'rejected']),
-                reviewer=random.choice(users['admins']) if random.random() > 0.5 else None,
+                emergency_contact_relationship=random.choice([
+                    'Parent', 'Sibling', 'Spouse', 'Friend'
+                ]),
+                status=status,
+                reviewer=random.choice(verified_admins) if random.random() > 0.5 else None,
                 review_notes=fake.text(max_nb_chars=200) if random.random() > 0.5 else '',
-                submitted_at=timezone.now() - timedelta(days=random.randint(1, 90)) if random.random() > 0.3 else None,
-                payment_status=random.choice(['pending', 'completed', 'failed'])
+                submitted_at=timezone.now() - timedelta(
+                    days=random.randint(1, 90)
+                ) if random.random() > 0.3 else None,
+                payment_status=random.choice(['pending', 'completed', 'failed']),
+                # --- NEW ADMISSION TRACKING FIELDS ---
+                admission_accepted=admitted,
+                admission_accepted_at=timezone.now() - timedelta(
+                    days=random.randint(1, 30)
+                ) if admitted else None,
+                admission_number=adm_number,
+                department_approved=dept_approved,
+                department_approved_at=timezone.now() - timedelta(
+                    days=random.randint(1, 15)
+                ) if dept_approved else None,
+                department_approved_by=dept_approver,
             )
             applications.append(app)
 
@@ -906,7 +955,7 @@ class Command(BaseCommand):
         # --- 18. ENROLLMENTS (STUDENTS enroll) ---
         self.stdout.write("🎓 Creating enrollments...")
         enrollments = []
-        for student in users['students']:
+        for student in verified_students:
             num_enrollments = random.randint(1, 8)
             enrolled_courses = random.sample(lms_courses, k=min(num_enrollments, len(lms_courses)))
             for course in enrolled_courses:
@@ -1098,7 +1147,7 @@ class Command(BaseCommand):
 
         # --- 27. TRANSACTIONS (STUDENTS pay, FINANCE processes) ---
         self.stdout.write("💳 Creating transactions...")
-        for student in random.sample(users['students'], k=min(5, len(users['students']))):
+        for student in random.sample(verified_students, k=min(5, len(verified_students))):
             for _ in range(random.randint(1, 5)):
                 gateway = random.choice(gateways)
                 amount = Decimal(str(random.uniform(50, 200)))
@@ -1169,7 +1218,7 @@ class Command(BaseCommand):
 
         # --- 30. STUDENT BADGES (Awarded by INSTRUCTORS and ADMINS to STUDENTS) ---
         self.stdout.write("🎖️ Awarding badges to students...")
-        for student in random.sample(users['students'], k=min(5, len(users['students']))):
+        for student in random.sample(verified_students, k=min(5, len(verified_students))):
             num_badges = random.randint(1, 5)
             for badge in random.sample(badges, k=min(num_badges, len(badges))):
                 StudentBadge.objects.create(
@@ -1235,7 +1284,7 @@ class Command(BaseCommand):
                     course=course,
                     title=f"{fake.catch_phrase()}?",
                     content=fake.text(max_nb_chars=500),
-                    author=random.choice(users['students']),
+                    author=random.choice(verified_students),
                     is_pinned=random.random() > 0.85,
                     is_locked=random.random() > 0.9,
                     views_count=random.randint(5, 500)
@@ -1256,7 +1305,7 @@ class Command(BaseCommand):
         study_groups = []
         for course in random.sample(lms_courses, k=min(10, len(lms_courses))):
             for _ in range(random.randint(1, 3)):
-                creator = random.choice(users['students'])
+                creator = random.choice(verified_students)
                 study_group = StudyGroup.objects.create(
                     name=f"{course.title[:30]} Study Group - {fake.word().title()}",
                     description=fake.text(max_nb_chars=200),
@@ -1291,7 +1340,7 @@ class Command(BaseCommand):
         # --- 35. MESSAGES (Between ALL user types) ---
         self.stdout.write("✉️ Creating messages...")
         # Ensure every user has sent and received messages
-        for user in all_users:
+        for user in verified_all:
             # Each user sends 2-5 messages
             for _ in range(random.randint(2, 5)):
                 recipient = random.choice([u for u in all_users if u != user])
@@ -1308,7 +1357,7 @@ class Command(BaseCommand):
         self.stdout.write("🎫 Creating support tickets...")
         tickets = []
         # Ensure every support staff member handles tickets
-        ticket_creators = users['students'] + random.sample(users['instructors'], k=5)
+        ticket_creators = verified_students + random.sample(verified_instructors, k=min(5, len(verified_instructors)))
         for creator in ticket_creators[:30]:
             ticket = SupportTicket.objects.create(
                 ticket_id=f"TKT-{random.randint(10000, 99999)}",
@@ -1334,7 +1383,7 @@ class Command(BaseCommand):
 
         # --- 37. NOTIFICATIONS (Sent to ALL users) ---
         self.stdout.write("🔔 Creating notifications...")
-        for user in all_users:
+        for user in verified_all:
             for _ in range(random.randint(3, 12)):
                 Notification.objects.create(
                     user=user,
@@ -1369,7 +1418,7 @@ class Command(BaseCommand):
         for _ in range(25):
             support_responder = random.choice(users['support']) if random.random() > 0.3 else None
             ContactMessage.objects.create(
-                user=random.choice(users['students']) if random.random() > 0.5 else None,
+                user=random.choice(verified_students) if random.random() > 0.5 else None,
                 name=fake.name(),
                 email=fake.email(),
                 subject=random.choice(['admissions', 'programs', 'campus', 'financial', 'support', 'other']),
@@ -1383,7 +1432,7 @@ class Command(BaseCommand):
 
         # --- 40. AUDIT LOGS (ALL user types have audit logs) ---
         self.stdout.write("📋 Creating audit logs...")
-        for user in all_users:
+        for user in verified_all:
             for _ in range(random.randint(3, 10)):
                 AuditLog.objects.create(
                     user=user,
@@ -1399,6 +1448,94 @@ class Command(BaseCommand):
                         'location': fake.city()
                     }
                 )
+
+        # --- 41. BROADCAST MESSAGES (Created by ADMINS and CONTENT MANAGERS) ---
+        self.stdout.write("📡 Creating broadcast messages...")
+        broadcast_creators = verified_admins + verified_content
+        broadcast_samples = [
+            {
+                'subject': 'Welcome to the New Semester!',
+                'message': fake.text(max_nb_chars=500),
+                'filter_type': 'all_users',
+                'filter_values': {},
+                'status': 'sent',
+            },
+            {
+                'subject': 'Important: Upcoming Maintenance Window',
+                'message': fake.text(max_nb_chars=400),
+                'filter_type': 'all_users',
+                'filter_values': {},
+                'status': 'sent',
+            },
+            {
+                'subject': 'Application Deadline Reminder',
+                'message': fake.text(max_nb_chars=400),
+                'filter_type': 'application_status',
+                'filter_values': {'application_statuses': ['draft', 'pending_payment']},
+                'status': 'sent',
+            },
+            {
+                'subject': 'Enrollment Confirmation for New Students',
+                'message': fake.text(max_nb_chars=500),
+                'filter_type': 'enrollment_status',
+                'filter_values': {'enrollment_statuses': ['active']},
+                'status': 'sent',
+            },
+            {
+                'subject': 'Draft Newsletter - Upcoming Events',
+                'message': fake.text(max_nb_chars=600),
+                'filter_type': 'all_users',
+                'filter_values': {},
+                'status': 'draft',
+            },
+            {
+                'subject': 'Course Update Notification',
+                'message': fake.text(max_nb_chars=350),
+                'filter_type': 'role',
+                'filter_values': {'roles': ['student']},
+                'status': 'sent',
+            },
+        ]
+        broadcasts = []
+        for b in broadcast_samples:
+            # Build recipient email list based on filter
+            if b['filter_type'] == 'all_users':
+                emails = [u.email for u in verified_all]
+            elif b['filter_type'] == 'role':
+                role = b['filter_values'].get('roles', ['student'])[0]
+                emails = [
+                    u.email for u in verified_all
+                    if u.profile.role == role
+                ]
+            elif b['filter_type'] == 'application_status':
+                statuses = b['filter_values'].get('application_statuses', [])
+                emails = list(set(
+                    a.email for a in applications
+                    if a.status in statuses
+                ))
+            elif b['filter_type'] == 'enrollment_status':
+                statuses = b['filter_values'].get('enrollment_statuses', [])
+                emails = list(set(
+                    e.student.email for e in enrollments
+                    if e.status in statuses
+                ))
+            else:
+                emails = []
+
+            broadcast = BroadcastMessage.objects.create(
+                subject=b['subject'],
+                message=b['message'],
+                filter_type=b['filter_type'],
+                filter_values=b['filter_values'],
+                recipient_emails=emails,
+                recipient_count=len(emails),
+                status=b['status'],
+                created_by=random.choice(broadcast_creators),
+                sent_at=timezone.now() - timedelta(
+                    days=random.randint(1, 30)
+                ) if b['status'] == 'sent' else None,
+            )
+            broadcasts.append(broadcast)
 
         # --- UPDATE STATISTICS ---
         self.stdout.write("📊 Updating course statistics...")
@@ -1463,4 +1600,5 @@ class Command(BaseCommand):
         self.stdout.write(f"   📢 {Announcement.objects.count()} Announcements")
         self.stdout.write(f"   📧 {ContactMessage.objects.count()} Contact Messages")
         self.stdout.write(f"   📋 {AuditLog.objects.count()} Audit Log Entries")
+        self.stdout.write(f"   📡 {BroadcastMessage.objects.count()} Broadcast Messages")
         self.stdout.write(self.style.SUCCESS("="*80 + "\n"))

@@ -229,6 +229,10 @@ def make_decision(request, pk):
         application.reviewed_by = request.user
         application.reviewed_at = timezone.now()
         application.save()
+
+        # Auto-issue admission number for accepted students
+        if decision == 'accepted':
+            application.issue_admission_number()
         
         # Send decision email
         send_decision_email(application)
@@ -242,6 +246,104 @@ def make_decision(request, pk):
     
     return redirect('management:applications_list')
 
+def send_application_submission_email(application):
+    """Send confirmation email when application is submitted"""
+    try:
+        subject = (
+            f'Application Received - {application.application_id}'
+        )
+        
+        program_name = (
+            f"{application.course.name} "
+            f"({application.course.get_degree_level_display()})"
+        )
+        
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; 
+                         line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; 
+                            padding: 20px; background-color: #f4f4f4;">
+                    <div style="background: linear-gradient(135deg, 
+                                #0F2A44 0%, #1D4ED8 100%); 
+                                padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">
+                            ✅ Application Submitted
+                        </h1>
+                    </div>
+                    
+                    <div style="background-color: white; 
+                                padding: 30px; margin-top: 20px;">
+                        <p style="font-size: 16px;">
+                            Dear <strong>
+                                {application.first_name} 
+                                {application.last_name}
+                            </strong>,
+                        </p>
+                        
+                        <div style="background-color: #10b98115; 
+                                    padding: 20px; border-radius: 8px; 
+                                    margin: 25px 0; 
+                                    border-left: 4px solid #10b981;">
+                            <h3 style="color: #10b981; margin-top: 0;">
+                                Application Successfully Submitted!
+                            </h3>
+                            <p style="font-size: 16px;">
+                                Your application for <strong>
+                                    {program_name}
+                                </strong> has been received.
+                            </p>
+                            <p>
+                                <strong>Application ID:</strong> 
+                                {application.application_id}
+                            </p>
+                            <p>
+                                <strong>Submission Date:</strong> 
+                                {timezone.now().strftime('%B %d, %Y')}
+                            </p>
+                        </div>
+                        
+                        <h4>What Happens Next?</h4>
+                        <ol>
+                            <li>
+                                Our admissions team will review 
+                                your application
+                            </li>
+                            <li>
+                                You will receive an email with 
+                                the decision within 5-7 business days
+                            </li>
+                            <li>
+                                You can track your application status 
+                                in your account
+                            </li>
+                        </ol>
+                        
+                        <p style="margin-top: 30px;">
+                            Best regards,<br>
+                            <strong style="color: #0F2A44;">
+                                The MIU Admissions Team
+                            </strong>
+                        </p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=f"Application Submitted - {application.application_id}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[application.email],
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        return True
+        
+    except Exception as e:
+        print(f"Error sending submission email: {str(e)}")
+        return False
 
 def send_decision_email(application):
     """Send admission decision email to applicant"""
@@ -1928,3 +2030,127 @@ def get_recipient_emails(filter_type, filter_values):
     emails = {e for e in emails if e}
     
     return list(emails)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def approve_department(request, pk):
+    """Department head approves admission"""
+    
+    if request.method == 'POST':
+        application = get_object_or_404(CourseApplication, pk=pk)
+        
+        if not application.admission_accepted:
+            messages.error(
+                request, 
+                'Student must accept admission first.'
+            )
+            return redirect('management:application_detail', pk=pk)
+        
+        application.department_approved = True
+        application.department_approved_at = timezone.now()
+        application.department_approved_by = request.user
+        application.save()
+        
+        # Send notification to student
+        send_department_approval_email(application)
+        
+        messages.success(
+            request,
+            f'Department approval granted for {application.admission_number}'
+        )
+        
+        return redirect('management:application_detail', pk=pk)
+    
+    return redirect('management:applications_list')
+
+
+def send_department_approval_email(application):
+    """Send email when department approves admission"""
+    try:
+        subject = f'Portal Access Granted - {application.admission_number}'
+        
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; 
+                         line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; 
+                            padding: 20px; background-color: #f4f4f4;">
+                    <div style="background: linear-gradient(135deg, 
+                                #0F2A44 0%, #1D4ED8 100%); 
+                                padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">
+                            🎉 Welcome to MIU Student Portal!
+                        </h1>
+                    </div>
+                    
+                    <div style="background-color: white; 
+                                padding: 30px; margin-top: 20px;">
+                        <p style="font-size: 16px;">
+                            Dear <strong>
+                                {application.first_name} 
+                                {application.last_name}
+                            </strong>,
+                        </p>
+                        
+                        <div style="background-color: #10b98115; 
+                                    padding: 20px; border-radius: 8px; 
+                                    margin: 25px 0; 
+                                    border-left: 4px solid #10b981;">
+                            <h3 style="color: #10b981; margin-top: 0;">
+                                Department Approval Complete!
+                            </h3>
+                            <p>
+                                Your admission has been approved by 
+                                the department.
+                            </p>
+                            <p>
+                                <strong>Admission Number:</strong> 
+                                {application.admission_number}
+                            </p>
+                        </div>
+                        
+                        <h4>You can now access:</h4>
+                        <ul>
+                            <li>Student Dashboard</li>
+                            <li>Course Materials</li>
+                            <li>Academic Resources</li>
+                            <li>Student Services</li>
+                        </ul>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{settings.SITE_URL}/login/" 
+                               style="background-color: #1D4ED8; 
+                                      color: white; padding: 12px 30px; 
+                                      text-decoration: none; 
+                                      border-radius: 5px; 
+                                      display: inline-block;">
+                                Access Student Portal
+                            </a>
+                        </div>
+                        
+                        <p style="margin-top: 30px;">
+                            Welcome to MIU!<br>
+                            <strong style="color: #0F2A44;">
+                                The MIU Team
+                            </strong>
+                        </p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=f"Portal Access Granted - {application.admission_number}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[application.email],
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        return True
+        
+    except Exception as e:
+        print(f"Error sending approval email: {str(e)}")
+        return False

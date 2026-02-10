@@ -78,7 +78,7 @@
 </style>
 
 <div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 py-12">
-    <div class="container mx-auto px-4 max-w-7xl">
+    <div class="container mx-auto px-4 max-w-[90rem]">
         
         <!-- Header -->
         <header class="mb-10 animate-fade-in">
@@ -95,14 +95,34 @@
                 {% if application %}
                 <div class="mt-4 md:mt-0 flex gap-3">
                     {% if application.status == 'approved' %}
-                    <a href="{% url 'eduweb:admission_letter' application.id %}" 
+                    <a href="{% url 'eduweb:admission_letter' application.application_id %}" 
                        class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
                         <i data-lucide="file-check" class="w-5 h-5"></i>
                         View Admission Letter
                     </a>
                     {% endif %}
+                    {% if application.status == 'approved' and not application.admission_accepted %}
+                    <!-- Accept Admission Button -->
+                    <form method="post" action="{% url 'eduweb:accept_admission' application.application_id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" 
+                        class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                            Accept Admission Offer
+                        </button>
+                    </form>
+                    {% endif %}
+                    {% if application.can_access_student_portal %}
+                    <!-- Student Dashboard Access -->
+                    <a href="{% url 'students:dashboard' %}" 
+                    class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        Go to Student Dashboard
+                    </a>
+                    {% endif %}
+
                     <a href="{% url 'eduweb:index' %}" 
-                       class="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all duration-300 shadow-sm hover:shadow-md">
+                    class="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all duration-300 shadow-sm hover:shadow-md">
                         <i data-lucide="home" class="w-5 h-5"></i>
                         Back to Home
                     </a>
@@ -128,14 +148,31 @@
                     </div>
                     <div class="ml-4 flex-1">
                         <h3 class="text-xl font-bold text-gray-900 mb-2">
-                            Current Status: 
-                            {% if application.status == 'approved' %}Accepted
-                            {% elif application.status == 'rejected' %}Not Accepted
-                            {% else %}{{ application.get_status_display }}{% endif %}
+                            {% if application.status == 'approved' %}
+                                <span class="text-green-700">Admission Approved</span>
+                            {% elif application.status == 'rejected' %}
+                                <span class="text-red-700">Application Not Approved</span>
+                            {% else %}
+                                Current Status: {{ application.get_status_display }}
+                            {% endif %}
                         </h3>
                         <p class="text-gray-700 leading-relaxed">
                             {% if application.status == 'approved' %}
-                                Congratulations! Your application has been accepted. Check your email for next steps and enrollment instructions.
+                                {% if application.admission_accepted %}
+                                    {% if application.department_approved %}
+                                        <strong>🎉 Congratulations!</strong> Your admission is fully approved. 
+                                        <br><strong>Admission Number:</strong> {{ application.admission_number }}
+                                        <br>You can now access the student dashboard.
+                                    {% elif application.admission_number %}
+                                        <strong>✅ Admission Accepted!</strong> Your admission number is <strong>{{ application.admission_number }}</strong>. 
+                                        <br>Awaiting department approval. You will receive an email when approved.
+                                    {% else %}
+                                        <strong>✅ Admission Accepted!</strong> Processing your admission number. You will receive confirmation shortly.
+                                    {% endif %}
+                                {% else %}
+                                    Congratulations! Your application has been accepted. 
+                                    <strong>Please accept the admission offer using the button above to proceed.</strong>
+                                {% endif %}
                             {% elif application.status == 'rejected' %}
                                 Thank you for your interest. Unfortunately, we are unable to offer you admission at this time. Detailed feedback has been sent to your email.
                             {% elif application.status == 'under_review' %}
@@ -191,7 +228,7 @@
                     <div class="hidden lg:block">
                         <div class="relative">
                             <!-- Progress Line -->
-                            <div class="absolute top-8 left-0 right-0 h-1 bg-gray-200 mx-8"></div>
+                            <div class="absolute top-8 left-0 h-1 bg-green-500 mx-8 transition-all duration-500" style="width: {% if application.can_access_student_portal %}calc(100% - 4rem){% elif application.admission_accepted %}calc(85% - 3.5rem){% elif application.status in 'approved,rejected' %}calc(75% - 3rem){% elif application.status == 'under_review' %}calc(60% - 2.5rem){% elif application.status == 'payment_complete' and application.documents.all %}calc(45% - 2rem){% elif application.is_paid %}calc(30% - 1.5rem){% elif application.status == 'draft' %}calc(15% - 1rem){% else %}0{% endif %}"></div>
                             <div class="absolute top-8 left-0 h-1 bg-green-500 mx-8 transition-all duration-500" 
                                 style="width: {% if application.status in 'approved,rejected' %}calc(100% - 4rem){% elif application.status == 'under_review' %}calc(75% - 3rem){% elif application.status == 'payment_complete' and application.documents.all %}calc(60% - 2.5rem){% elif application.is_paid %}calc(40% - 2rem){% elif application.status == 'draft' %}calc(20% - 1rem){% else %}0{% endif %}"></div>
                             
@@ -311,6 +348,35 @@
                                         {% else %}Pending{% endif %}
                                     </span>
                                 </div>
+
+                                <!-- Step 6: Admission Accepted (NEW) -->
+                                {% if application.status == 'approved' %}
+                                <div class="flex flex-col items-center">
+                                    <div class="w-16 h-16 rounded-full
+                                        {% if application.can_access_student_portal %}bg-green-500 shadow-xl
+                                        {% elif application.admission_accepted %}bg-blue-500 animate-pulse
+                                        {% else %}bg-gray-300{% endif %} 
+                                        text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
+                                        {% if application.can_access_student_portal %}
+                                        <i data-lucide="graduation-cap" class="w-8 h-8"></i>
+                                        {% elif application.admission_accepted %}
+                                        <i data-lucide="clock" class="w-8 h-8"></i>
+                                        {% else %}
+                                        <i data-lucide="user-check" class="w-8 h-8"></i>
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-sm font-semibold text-center 
+                                        {% if application.admission_accepted or application.can_access_student_portal %}text-gray-900
+                                        {% else %}text-gray-500{% endif %}">
+                                        Enrollment
+                                    </span>
+                                    <span class="text-xs text-gray-500 text-center mt-1">
+                                        {% if application.can_access_student_portal %}Portal Active
+                                        {% elif application.admission_accepted %}Pending Approval
+                                        {% else %}Accept Offer{% endif %}
+                                    </span>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -487,6 +553,7 @@
                                     <p class="text-sm text-gray-600">{{ document.uploaded_at|date:"M d, Y - g:i A" }}</p>
                                 </div>
                             </div>
+                            {% if document.file %}
                             <div class="flex items-center gap-2">
                                 <a href="{{ document.file.url }}" target="_blank" 
                                    class="px-4 py-2 bg-white border-2 border-primary-950 text-primary-950 rounded-lg text-sm font-semibold hover:bg-primary-950 hover:text-white transition-all duration-300 flex items-center gap-2">
@@ -494,6 +561,7 @@
                                     View
                                 </a>
                             </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
@@ -713,7 +781,7 @@
                             {% endif %}
                         </p>
                         {% if application.status == 'approved' %}
-                        <a href="{% url 'eduweb:admission_letter' application.id %}" 
+                        <a href="{% url 'eduweb:admission_letter' application.application_id %}" 
                            class="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
                             <i data-lucide="file-check" class="w-5 h-5"></i>
                             View Admission Letter
@@ -790,6 +858,72 @@
             <button onclick="closeUploadModal()" class="text-gray-500 hover:text-gray-700 transition-colors">
                 <i data-lucide="x" class="w-6 h-6"></i>
             </button>
+        </div>
+
+        <!-- Enhanced Instructions Section -->
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                        <i data-lucide="info" class="w-7 h-7 text-white"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="lightbulb" class="w-5 h-5 text-yellow-500"></i>
+                        How to Upload Your Documents
+                    </h3>
+                    <div class="space-y-3 text-sm text-gray-700">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">1</div>
+                            <div>
+                                <p class="font-semibold text-gray-900">Select Document Type</p>
+                                <p class="text-gray-600">Choose the appropriate category for each document (e.g., Academic Transcript, Certificate, ID Document)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">2</div>
+                            <div>
+                                <p class="font-semibold text-gray-900">Choose Your File</p>
+                                <p class="text-gray-600">Click to select files from your device. Accepted formats: <strong>PDF, JPG, PNG</strong> (Max 5MB per file)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">3</div>
+                            <div>
+                                <p class="font-semibold text-gray-900">Add Multiple Documents</p>
+                                <p class="text-gray-600">Click <strong>"Add Another Document"</strong> to upload additional files in one go</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">4</div>
+                            <div>
+                                <p class="font-semibold text-gray-900">Upload & Submit (Optional)</p>
+                                <p class="text-gray-600">
+                                    ✅ Check <strong>"Submit application after upload"</strong> if these are your final documents<br>
+                                    ⏸️ Leave unchecked if you want to upload more later
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Required Documents Alert -->
+                    <div class="mt-4 bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="alert-circle" class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"></i>
+                            <div>
+                                <p class="font-semibold text-yellow-900 text-sm">Required Documents:</p>
+                                <p class="text-xs text-yellow-800 mt-1">
+                                    • Academic Transcript/Results<br>
+                                    • Certificate/Diploma<br>
+                                    • Valid ID/Passport<br>
+                                    • CV/Resume (if applicable)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="uploadSections" class="space-y-4 max-h-96 overflow-y-auto mb-6">

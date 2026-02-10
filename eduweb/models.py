@@ -792,6 +792,39 @@ class CourseApplication(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     in_processing = models.BooleanField(default=False)
+
+    # Admission Acceptance Tracking
+    admission_accepted = models.BooleanField(
+        default=False,
+        help_text="Student accepted the admission offer"
+    )
+    admission_accepted_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Date when student accepted admission"
+    )
+    admission_number = models.CharField(
+        max_length=20, 
+        unique=True, 
+        null=True, 
+        blank=True,
+        help_text="Unique admission number issued to student"
+    )
+    department_approved = models.BooleanField(
+        default=False,
+        help_text="Department head approved the admission"
+    )
+    department_approved_at = models.DateTimeField(
+        null=True, 
+        blank=True
+    )
+    department_approved_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='department_approved_applications'
+    )
     
     class Meta:
         ordering = ['-created_at']
@@ -831,7 +864,46 @@ class CourseApplication(models.Model):
             self.submitted_at = timezone.now()
             self.save(update_fields=['status', 'submitted_at'])
             return True
-        return False 
+        return False
+
+    def accept_admission(self):
+        """Student accepts admission offer"""
+        if self.status == 'approved' and not self.admission_accepted:
+            self.admission_accepted = True
+            self.admission_accepted_at = timezone.now()
+            self.save(
+                update_fields=[
+                    'admission_accepted', 
+                    'admission_accepted_at'
+                ]
+            )
+            return True
+        return False
+
+    def issue_admission_number(self):
+        """Generate and assign admission number"""
+        if not self.admission_number and self.admission_accepted:
+            year = timezone.now().year
+            # Generate unique admission number
+            self.admission_number = (
+                f"ADM-{year}-{uuid.uuid4().hex[:8].upper()}"
+            )
+            self.save(update_fields=['admission_number'])
+            return True
+        return False
+
+    def can_access_student_portal(self):
+        """Check if student can access student dashboard"""
+        return (
+            self.status == 'approved' and
+            self.admission_accepted and
+            self.admission_number and
+            self.department_approved
+        )
+
+    def get_full_name(self):
+        """Return applicant's full name"""
+        return f"{self.first_name} {self.last_name}" 
     
     def save(self, *args, **kwargs):
         if not self.application_id:
@@ -1403,8 +1475,21 @@ class Lesson(models.Model):
     description = models.TextField(blank=True)
     content = models.TextField(blank=True)
     
-    # Video Content
-    video_url = models.URLField(blank=True, help_text="YouTube, Vimeo URL or local storage path")
+    # Video Content - URL or File Upload
+    video_url = models.URLField(
+        blank=True, 
+        null=True,
+        help_text="YouTube, Vimeo, or external video URL"
+    )
+    video_file = models.FileField(
+        upload_to=get_video_upload_path,
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(['mp4', 'webm', 'ogg', 'avi', 'mov'])
+        ],
+        help_text="Or upload video file (MP4, WebM, OGG, AVI, MOV)"
+    )
     video_duration_minutes = models.IntegerField(default=0)
     
     # File Content
@@ -1430,6 +1515,27 @@ class Lesson(models.Model):
     
     def __str__(self):
         return f"{self.course.title} - {self.title}"
+    
+    def clean(self):
+        """Validate video fields"""
+        from django.core.exceptions import ValidationError
+        
+        # For video lessons, ensure either URL or file is provided
+        if self.lesson_type == 'video':
+            if not self.video_url and not self.video_file:
+                raise ValidationError(
+                    "Video lessons require either video URL or video file"
+                )
+            if self.video_url and self.video_file:
+                raise ValidationError(
+                    "Provide either video URL or video file, not both"
+                )
+
+    def get_video_source(self):
+        """Return video source (URL or file path)"""
+        if self.video_file:
+            return self.video_file.url
+        return self.video_url or ''
     
     def save(self, *args, **kwargs):
         if not self.slug:

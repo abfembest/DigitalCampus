@@ -469,6 +469,9 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'course',
         'intake',
         'status',
+        'admission_accepted',
+        'admission_number',
+        'department_approved',
         'submitted_at', 
         'created_at',
         'payment_status',
@@ -476,6 +479,8 @@ class CourseApplicationAdmin(admin.ModelAdmin):
     )
     list_filter = (
         'status',
+        'admission_accepted',
+        'department_approved',
         'course__faculty',
         'course',
         'intake__year',
@@ -484,6 +489,7 @@ class CourseApplicationAdmin(admin.ModelAdmin):
     )
     search_fields = (
         'application_id',
+        'admission_number',
         'first_name',
         'last_name',
         'email',
@@ -491,8 +497,11 @@ class CourseApplicationAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         'application_id',
+        'admission_number',
         'submitted_at',
         'reviewed_at',
+        'admission_accepted_at',
+        'department_approved_at',
         'created_at',
         'updated_at'
     )
@@ -502,6 +511,18 @@ class CourseApplicationAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Application Info', {
             'fields': ('application_id', 'status', 'reviewer', 'review_notes')
+        }),
+        ('Admission Acceptance Tracking', {
+            'fields': (
+                'admission_accepted',
+                'admission_accepted_at',
+                'admission_number',
+                'department_approved',
+                'department_approved_at',
+                'department_approved_by'
+            ),
+            'classes': ('collapse',),
+            'description': 'Track student admission acceptance and department approval'
         }),
         ('Course Selection', {
             'fields': ('course', 'intake', 'study_mode')
@@ -540,7 +561,12 @@ class CourseApplicationAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Timestamps', {
-            'fields': ('submitted_at', 'reviewed_at', 'created_at', 'updated_at'),
+            'fields': (
+                'submitted_at', 
+                'reviewed_at', 
+                'created_at', 
+                'updated_at'
+            ),
             'classes': ('collapse',)
         }),
     )
@@ -1277,7 +1303,73 @@ class VendorAdmin(admin.ModelAdmin):
         }),
     )
 
-admin.site.register(BroadcastMessage)
+@admin.register(BroadcastMessage)
+class BroadcastMessageAdmin(admin.ModelAdmin):
+    list_display = (
+        'subject',
+        'filter_type',
+        'recipient_count',
+        'status',
+        'created_by',
+        'created_at',
+        'sent_at'
+    )
+    list_filter = (
+        'status',
+        'filter_type',
+        'created_at',
+        'sent_at'
+    )
+    search_fields = (
+        'subject',
+        'message',
+        'created_by__username'
+    )
+    readonly_fields = (
+        'slug',
+        'recipient_count',
+        'recipient_emails',
+        'sent_at',
+        'created_at',
+        'updated_at',
+        'error_message'
+    )
+    prepopulated_fields = {'slug': ('subject',)}
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Message Content', {
+            'fields': ('subject', 'slug', 'message')
+        }),
+        ('Recipients', {
+            'fields': (
+                'filter_type',
+                'filter_values',
+                'recipient_count',
+                'recipient_emails'
+            )
+        }),
+        ('Status', {
+            'fields': ('status', 'sent_at', 'error_message')
+        }),
+        ('Metadata', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Make fields readonly after message is sent"""
+        readonly = list(self.readonly_fields)
+        if obj and obj.status == 'sent':
+            readonly.extend(['subject', 'message', 'filter_type', 'filter_values'])
+        return readonly
+    
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of sent messages"""
+        if obj and obj.status == 'sent':
+            return False
+        return super().has_delete_permission(request, obj)
 
 
 # Site customization

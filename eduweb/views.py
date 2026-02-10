@@ -32,6 +32,52 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from .decorators import applicant_required
 
+def get_application_secure(application_id, user):
+    """
+    Securely retrieve application with triple validation.
+    
+    Security Layers:
+    1. Application ID match
+    2. Email match (constant user attribute)
+    3. User authentication (handled by @login_required)
+    
+    Args:
+        application_id (str): The application identifier (e.g., APP-C344D4731E41)
+        user (User): The authenticated user object
+        
+    Returns:
+        CourseApplication object or None if validation fails
+        
+    Example:
+        application = get_application_secure(application_id, request.user)
+        if not application:
+            messages.error(request, 'Access denied')
+            return redirect('eduweb:application_status')
+    """
+    try:
+        # Triple validation security check
+        application = CourseApplication.objects.get(
+            application_id=application_id,  # Layer 1: ID match
+            email=user.email,                # Layer 2: Email match (constant)
+            user=user                         # Layer 3: User FK match (constant)
+        )
+        return application
+    except CourseApplication.DoesNotExist:
+        # Log unauthorized access attempt (optional)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Unauthorized access attempt - User: {user.email}, "
+            f"Application ID: {application_id}"
+        )
+        return None
+    except Exception as e:
+        # Log unexpected errors
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in get_application_secure: {str(e)}")
+        return None
+    
 def application_status_context(request):
     """Add application status to all template contexts"""
     has_pending_application = False
@@ -41,6 +87,39 @@ def application_status_context(request):
             status__in=['draft', 'pending_payment', 'submitted', 'under_review', 'reviewed']
         ).exists()
     return {'has_pending_application': has_pending_application}
+
+# After successful login, check admission status
+def redirect_after_login(user):
+    """Determine redirect URL based on user status"""
+    
+    # Check if user is admin/staff
+    if user.is_staff or user.is_superuser:
+        return redirect('management:dashboard')
+    
+    # Check if user has accepted admission
+    accepted_application = CourseApplication.objects.filter(
+        user=user,
+        status='approved',
+        admission_accepted=True,
+        admission_number__isnull=False,
+        department_approved=True
+    ).first()
+    
+    if accepted_application:
+        # Student has completed admission - go to student dashboard
+        return redirect('student:dashboard')
+    
+    # Check if user has pending applications
+    has_application = CourseApplication.objects.filter(
+        user=user
+    ).exists()
+    
+    if has_application:
+        # User has application - go to application status
+        return redirect('eduweb:application_status')
+    
+    # Default redirect
+    return redirect('eduweb:index')
 
 def generate_captcha():
     """Generate a simple math captcha"""
@@ -973,56 +1052,56 @@ def blog_category(request, slug):
     
     return render(request, 'blog/blog_category.html', context)
 
-
-@login_required
 @smart_redirect_applicant
+@login_required(login_url='eduweb:auth_page')
 def application_status(request):
-    """Display user's application status"""
-    # Get the most recent application for this user
-    application = CourseApplication.objects.filter(
-        user=request.user
-    ).select_related('course', 'intake','course__faculty').prefetch_related('documents').order_by('-created_at').first()
-    
-    # Check if payment exists
-    has_payment = False
-    payment = None
-    if application:
-        try:
-            payment = application.payment
-            has_payment = True
-        except ApplicationPayment.DoesNotExist:
-            has_payment = False
+    """
+    Display application status page with progress tracking.
+    Shows the most recent application for the logged-in user.
+    """
+    try:
+        # Get user's most recent application
+        application = CourseApplication.objects.filter(
+            email=request.user.email
+        ).order_by('-created_at').first()
+        
+    except CourseApplication.DoesNotExist:
+        application = None
     
     context = {
         'application': application,
-        'has_payment': has_payment,
-        'payment': payment,
     }
     
     return render(request, 'applications/application_status.html', context)
 
 
-login_required
+@login_required(login_url='eduweb:auth_page')
 def admission_letter(request, application_id):
-    """Display admission letter for accepted application"""
-    # Allow both applicant and admin to view
-    application = get_object_or_404(CourseApplication, id=application_id)
+    """
+    Generate and display admission letter.
+    Secure version using application_id and email validation.
+    """
+    application = get_application_secure(application_id, request.user)
     
-    # Check permissions: either the application owner or staff
-    if not (request.user == application.user or request.user.is_staff):
-        messages.error(request, 'You do not have permission to view this admission letter.')
-        return redirect('eduweb:index')
+    if not application:
+        messages.error(
+            request, 
+            'Application not found or you do not have permission to access it.'
+        )
+        return redirect('eduweb:application_status')
     
-    # Check if application is accepted
-    if application.status != 'accepted':
-        messages.warning(request, 'Admission letter is only available for accepted applications.')
+    if application.status != 'approved':
+        messages.warning(
+            request, 
+            'Admission letter is only available for approved applications.'
+        )
         return redirect('eduweb:application_status')
     
     context = {
         'application': application,
+        'issue_date': timezone.now().date(),
     }
-    
-    return render(request, 'applications/admission_letter.html', context)
+    return render(request, 'eduweb/admission_letter.html', context)
 
 
 def payments(request):
@@ -1463,145 +1542,112 @@ def payment_details(request, application_id):
         "payment_status": app.payment_status if hasattr(app, 'payment') else 'pending'
     })
 
-@login_required
-@require_POST
+@login_required(login_url='eduweb:auth_page')
 def upload_application_file(request, application_id):
-    from eduweb.forms import ApplicationDocumentUploadForm
-    """Handle document upload for an application using Django Form"""
+    """
+    Upload document for application via AJAX.
+    Validates file type, size, and application status.
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False, 
+            'error': 'Invalid request method'
+        })
+    
+    application = get_application_secure(application_id, request.user)
+    
+    if not application:
+        return JsonResponse({
+            'success': False, 
+            'error': 'Application not found or access denied'
+        })
+    
+    # Check if documents can be uploaded
+    if not application.can_upload_documents():
+        return JsonResponse({
+            'success': False, 
+            'error': 'Document upload not allowed. Please complete payment first.'
+        })
+    
+    file_type = request.POST.get('file_type')
+    file = request.FILES.get('file')
+    auto_submit = request.POST.get('auto_submit') == 'true'
+    
+    if not file_type or not file:
+        return JsonResponse({
+            'success': False, 
+            'error': 'Both file type and file are required'
+        })
+    
+    # Validate file size (5MB limit)
+    max_size = 5 * 1024 * 1024  # 5MB in bytes
+    if file.size > max_size:
+        return JsonResponse({
+            'success': False, 
+            'error': f'File size exceeds 5MB limit. Your file is {file.size / 1024 / 1024:.2f}MB'
+        })
+    
+    # Validate file extension
+    allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
+    file_ext = file.name.lower()[-4:]
+    if not any(file_ext.endswith(ext) for ext in allowed_extensions):
+        return JsonResponse({
+            'success': False, 
+            'error': 'Invalid file type. Only PDF, JPG, and PNG files are allowed.'
+        })
+    
+    # Create document record
     try:
-        # Get the application
-        application = get_object_or_404(
-            CourseApplication, 
-            application_id=application_id,
-            user=request.user
+        document = ApplicationDocument.objects.create(
+            application=application,
+            file_type=file_type,
+            file=file,
+            original_filename=file.name,
+            file_size=file.size
         )
         
-        # Check if payment is completed
-        if not application.is_paid:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    "success": False,
-                    "error": "Payment must be completed before uploading documents"
-                }, status=403)
-            messages.error(request, "Payment must be completed before uploading documents")
-            return redirect('eduweb:application_status')
+        # Update application status if this is first document
+        if application.status == 'payment_complete':
+            application.status = 'documents_uploaded'
+            application.save(update_fields=['status'])
         
-        # Check if application allows document uploads
-        if not application.can_upload_documents():
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    "success": False,
-                    "error": "Application is not in a state that allows document uploads"
-                }, status=403)
-            messages.error(request, "Application is not in a state that allows document uploads")
-            return redirect('eduweb:application_status')
+        # Auto-submit if requested
+        if auto_submit:
+            application.mark_as_submitted()
         
-        # Process the form
-        form = ApplicationDocumentUploadForm(request.POST, request.FILES)
-        
-        if form.is_valid():
-            # Create document
-            document = form.save(commit=False)
-            document.application = application
-            document.original_filename = request.FILES['file'].name
-            document.file_size = request.FILES['file'].size
-            document.save()
-            
-            # Update status to documents_uploaded after first document
-            if application.status in ['payment_complete', 'pending_payment']:
-                application.status = 'documents_uploaded'
-                application.save(update_fields=['status'])
-            
-            # Check if user wants to auto-submit
-            auto_submit = form.cleaned_data.get('auto_submit', False)
-            
-            response_data = {
-                "success": True,
-                "message": "Document uploaded successfully",
-                "documents_count": application.documents.count(),
-                "can_submit": application.can_submit(),
-                "document": {
-                    "id": document.id,
-                    "file_type": document.get_file_type_display(),
-                    "original_filename": document.original_filename,
-                    "file_size": document.get_file_size_display(),
-                }
-            }
-            
-            # If auto_submit is true and application can be submitted, submit it
-            if auto_submit and application.can_submit():
-                if application.mark_as_submitted():
-                    # Send submission confirmation emails
-                    from threading import Thread
-                    
-                    def send_emails_async():
-                        send_application_confirmation_email(application)
-                        send_application_admin_notification(application)
-                    
-                    Thread(target=send_emails_async, daemon=True).start()
-                    
-                    response_data.update({
-                        "submitted": True,
-                        "message": "Document uploaded and application submitted successfully!",
-                        "redirect_url": reverse('eduweb:application_status')
-                    })
-            
-            # AJAX response
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse(response_data)
-            
-            # Regular form response
-            messages.success(request, response_data['message'])
-            if response_data.get('submitted'):
-                return redirect('eduweb:application_status')
-            return redirect('eduweb:application_status')
-        
-        else:
-            # Form has errors
-            error_messages = []
-            for field, errors in form.errors.items():
-                for error in errors:
-                    error_messages.append(f"{field}: {error}")
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    "success": False,
-                    "error": "; ".join(error_messages),
-                    "errors": form.errors
-                }, status=400)
-            
-            for error in error_messages:
-                messages.error(request, error)
-            return redirect('eduweb:application_status')
+        return JsonResponse({
+            'success': True,
+            'message': 'Document uploaded successfully',
+            'document_id': document.id,
+            'filename': document.original_filename,
+            'file_size': document.get_file_size_display()
+        })
         
     except Exception as e:
-        logger.error(f"Error uploading document: {str(e)}")
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                "success": False,
-                "error": str(e)
-            }, status=500)
-        messages.error(request, f"Error uploading document: {str(e)}")
-        return redirect('eduweb:application_status')
+        return JsonResponse({
+            'success': False, 
+            'error': f'Upload failed: {str(e)}'
+        })
 
-@applicant_required
+@login_required(login_url='eduweb:auth_page')
 def mark_payment_successful(request, application_id):
     """
-    TEST: Mark payment as successful
-    Remove in production
+    Mark payment as successful (for testing purposes only).
+    Remove or restrict in production.
     """
+
     import uuid
-    import logging
+
+    application = get_application_secure(application_id, request.user)
     
-    logger = logging.getLogger(__name__)
-    
-    try:
-        application = get_object_or_404(
-            CourseApplication,
-            application_id=application_id,
-            user=request.user
+    if not application:
+        messages.error(
+            request, 
+            'Application not found or you do not have permission to access it.'
         )
-        
+        return redirect('eduweb:application_status')
+    
+    try:        
         # Check if already paid
         if (hasattr(application, 'payment') and 
             application.payment.status == 'success'):
@@ -1691,3 +1737,347 @@ def course_detail(request, slug):
     }
     
     return render(request, 'programs/course_detail.html', context)
+
+@login_required(login_url='eduweb:auth_page')
+def submit_application(request, application_id):
+    """
+    Submit application for review.
+    Ensures payment and documents are complete before submission.
+    """
+    if request.method != 'POST':
+        return redirect('eduweb:application_status')
+    
+    application = get_application_secure(application_id, request.user)
+    
+    if not application:
+        messages.error(
+            request, 
+            'Application not found or you do not have permission to access it.'
+        )
+        return redirect('eduweb:application_status')
+    
+    # Validate payment completed
+    if not application.is_paid:
+        messages.error(
+            request, 
+            'Payment must be completed before submission. Please complete payment first.'
+        )
+        return redirect('eduweb:application_status')
+    
+    # Validate documents uploaded
+    if not application.documents.exists():
+        messages.error(
+            request, 
+            'Please upload required documents before submission.'
+        )
+        return redirect('eduweb:application_status')
+    
+    # Check application status allows submission
+    if application.status not in ['payment_complete', 'documents_uploaded']:
+        messages.warning(
+            request, 
+            f'Application cannot be submitted from status: {application.get_status_display()}'
+        )
+        return redirect('eduweb:application_status')
+    
+    # Submit application
+    if application.mark_as_submitted():
+        # Send notification email
+        try:
+            applicant_name = (
+                application.get_full_name() 
+                if hasattr(application, 'get_full_name') 
+                else f"{application.first_name} {application.last_name}"
+            )
+            
+            subject = 'Application Submitted Successfully - MIU'
+            html_message = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #840384 0%, #6B21A8 100%); 
+                               color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                    .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                    .info-box {{ background: #DBEAFE; padding: 15px; border-left: 4px solid #3B82F6; 
+                                margin: 20px 0; border-radius: 5px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>✅ Application Submitted!</h1>
+                    </div>
+                    <div class="content">
+                        <p>Dear {applicant_name},</p>
+                        
+                        <p>Your application <strong>({application.application_id})</strong> has been 
+                        successfully submitted for review.</p>
+                        
+                        <div class="info-box">
+                            <strong>📅 Submitted:</strong> {timezone.now().strftime('%B %d, %Y at %I:%M %p')}<br>
+                            <strong>📝 Documents:</strong> {application.documents.count()} file(s) uploaded<br>
+                            <strong>⏰ Review Time:</strong> 4-6 weeks
+                        </div>
+                        
+                        <h3>What Happens Next?</h3>
+                        <ol>
+                            <li>Our admissions committee will review your application</li>
+                            <li>You will receive email updates on your application status</li>
+                            <li>A final decision will be communicated within 4-6 weeks</li>
+                            <li>You can track your status anytime through your dashboard</li>
+                        </ol>
+                        
+                        <p>If you have any questions, contact us at 
+                        <a href="mailto:admissions@miu.edu">admissions@miu.edu</a></p>
+                        
+                        <p>Best regards,<br>
+                        <strong>Admissions Team</strong><br>
+                        Modern International University</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            email = EmailMultiAlternatives(
+                subject,
+                f"Your application {application.application_id} has been submitted.",
+                settings.DEFAULT_FROM_EMAIL,
+                [application.email]
+            )
+            email.attach_alternative(html_message, "text/html")
+            email.send(fail_silently=True)
+            
+        except Exception as e:
+            print(f"Error sending submission email: {e}")
+        
+        messages.success(
+            request, 
+            'Application submitted successfully! You will receive a decision within 4-6 weeks. '
+            'Check your email for confirmation.'
+        )
+    else:
+        messages.error(
+            request, 
+            'Unable to submit application. Please ensure all requirements are met.'
+        )
+    
+    return redirect('eduweb:application_status')
+
+
+@login_required(login_url='eduweb:auth_page')
+def accept_admission(request, application_id):
+    """
+    Student accepts admission offer.
+    Secure version with proper validation and email notification.
+    """
+    if request.method != 'POST':
+        return redirect('eduweb:application_status')
+    
+    application = get_application_secure(application_id, request.user)
+    
+    if not application:
+        messages.error(
+            request, 
+            'Application not found or you do not have permission to access it.'
+        )
+        return redirect('eduweb:application_status')
+    
+    # Validate application status
+    if application.status != 'approved':
+        messages.error(
+            request, 
+            'Only approved applications can be accepted.'
+        )
+        return redirect('eduweb:application_status')
+    
+    # Check if already accepted
+    if application.admission_accepted:
+        messages.info(
+            request, 
+            'You have already accepted this admission offer.'
+        )
+        return redirect('eduweb:application_status')
+    
+    # Accept admission
+    if application.accept_admission():
+        # Issue admission number
+        application.issue_admission_number()
+        
+        # Send confirmation email
+        try:
+            applicant_name = (
+                application.get_full_name() 
+                if hasattr(application, 'get_full_name') 
+                else f"{application.first_name} {application.last_name}"
+            )
+            
+            subject = 'Admission Acceptance Confirmed - Modern International University'
+            html_message = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #840384 0%, #6B21A8 100%); 
+                               color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                    .content {{ background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }}
+                    .highlight {{ background: #FEF3C7; padding: 15px; border-left: 4px solid #F59E0B; 
+                                 margin: 20px 0; border-radius: 5px; }}
+                    .button {{ display: inline-block; padding: 12px 30px; background: #840384; 
+                              color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🎉 Admission Acceptance Confirmed!</h1>
+                    </div>
+                    <div class="content">
+                        <p>Dear {applicant_name},</p>
+                        
+                        <p>Congratulations! We have received your acceptance of our admission offer.</p>
+                        
+                        <div class="highlight">
+                            <strong>Your Admission Number:</strong> {application.admission_number}
+                        </div>
+                        
+                        <h3>📋 Next Steps:</h3>
+                        <ol>
+                            <li>Your application is now pending <strong>department approval</strong></li>
+                            <li>You will receive another email once the department head approves your admission</li>
+                            <li>After approval, you will gain access to the <strong>Student Portal</strong></li>
+                            <li>Keep your admission number safe for future reference</li>
+                        </ol>
+                        
+                        <p><strong>Estimated Time:</strong> Department approval typically takes 2-3 business days.</p>
+                        
+                        <p>If you have any questions, please contact our admissions team at 
+                        <a href="mailto:admissions@miu.edu">admissions@miu.edu</a></p>
+                        
+                        <p>Best regards,<br>
+                        <strong>Admissions Team</strong><br>
+                        Modern International University</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            email = EmailMultiAlternatives(
+                subject,
+                f"Dear {applicant_name}, your admission number is {application.admission_number}",
+                settings.DEFAULT_FROM_EMAIL,
+                [application.email]
+            )
+            email.attach_alternative(html_message, "text/html")
+            email.send(fail_silently=True)
+            
+        except Exception as e:
+            print(f"Error sending confirmation email: {e}")
+        
+        messages.success(
+            request, 
+            f'Admission accepted successfully! Your admission number is {application.admission_number}. '
+            'Awaiting department approval to access the student portal.'
+        )
+    else:
+        messages.error(
+            request, 
+            'Unable to accept admission at this time. Please contact support.'
+        )
+    
+    return redirect('eduweb:application_status')
+
+
+def send_admission_acceptance_email(application):
+    """Send email when student accepts admission"""
+    try:
+        subject = (
+            f'Admission Accepted - {application.admission_number}'
+        )
+        
+        html_content = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; 
+                         line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; 
+                            padding: 20px; background-color: #f4f4f4;">
+                    <div style="background: linear-gradient(135deg, 
+                                #0F2A44 0%, #1D4ED8 100%); 
+                                padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">
+                            🎓 Welcome to MIU!
+                        </h1>
+                    </div>
+                    
+                    <div style="background-color: white; 
+                                padding: 30px; margin-top: 20px;">
+                        <p style="font-size: 16px;">
+                            Dear <strong>
+                                {application.first_name} 
+                                {application.last_name}
+                            </strong>,
+                        </p>
+                        
+                        <div style="background-color: #10b98115; 
+                                    padding: 20px; border-radius: 8px; 
+                                    margin: 25px 0; 
+                                    border-left: 4px solid #10b981;">
+                            <h3 style="color: #10b981; margin-top: 0;">
+                                Admission Acceptance Confirmed!
+                            </h3>
+                            <p>
+                                <strong>Admission Number:</strong> 
+                                {application.admission_number}
+                            </p>
+                            <p>
+                                <strong>Program:</strong> 
+                                {application.course.name}
+                            </p>
+                        </div>
+                        
+                        <h4>Next Steps:</h4>
+                        <ol>
+                            <li>
+                                Department approval is in progress
+                            </li>
+                            <li>
+                                You will receive portal access 
+                                once approved
+                            </li>
+                            <li>
+                                Keep this admission number for 
+                                all correspondence
+                            </li>
+                        </ol>
+                        
+                        <p style="margin-top: 30px;">
+                            Welcome aboard!<br>
+                            <strong style="color: #0F2A44;">
+                                The MIU Team
+                            </strong>
+                        </p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=f"Admission Accepted - {application.admission_number}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[application.email],
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        return True
+        
+    except Exception as e:
+        print(f"Error sending acceptance email: {str(e)}")
+        return False

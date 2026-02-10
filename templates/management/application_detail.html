@@ -3,7 +3,7 @@
 
 {% block title %}Application {{ application.application_id }} - MIU Admin Portal{% endblock %}
 
-{% block meta_description %}View and manage application details for {{ application.get_full_name }}{% endblock %}
+{% block meta_description %}View and manage application details for {{ application.first_name }} {{ application.last_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -318,19 +318,40 @@
             </button>
             {% endif %}
             
-            <!-- Generate Admission Letter (only for accepted status) -->
-            {% if application.status == 'accepted' %}
-            <a href="{% url 'eduweb:admission_letter' application.id %}" target="_blank" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center justify-center gap-2">
+            <!-- Generate Admission Letter (only for approved status) -->
+            {% if application.status == 'approved' %}
+            <a href="{% url 'eduweb:admission_letter' application.id %}" 
+            target="_blank" 
+            class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center justify-center gap-2">
                 <i class="fas fa-file-contract" aria-hidden="true"></i>
                 <span>Generate Admission Letter</span>
             </a>
             {% endif %}
 
             <!-- Show current status for final decisions -->
-            {% if application.status in 'accepted,rejected,waitlisted' %}
-            <div class="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium flex items-center justify-center gap-2">
+            {% if application.status in 'approved,rejected,waitlisted' %}
+            <div class="px-6 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2
+                {% if application.status == 'approved' %}bg-green-100 text-green-700
+                {% elif application.status == 'rejected' %}bg-red-100 text-red-700
+                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
                 <i class="fas fa-info-circle" aria-hidden="true"></i>
                 <span>Status: {{ application.get_status_display }}</span>
+                
+                {% if application.status == 'approved' %}
+                    {% if application.can_access_student_portal %}
+                    <span class="ml-2 px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs font-bold">
+                        PORTAL ACTIVE
+                    </span>
+                    {% elif application.admission_accepted %}
+                    <span class="ml-2 px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs font-bold">
+                        AWAITING DEPT
+                    </span>
+                    {% else %}
+                    <span class="ml-2 px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">
+                        AWAITING STUDENT
+                    </span>
+                    {% endif %}
+                {% endif %}
             </div>
             {% endif %}
         </div>
@@ -343,6 +364,150 @@
     </div>
     {% endif %}
 </section>
+
+<!-- Admission Acceptance Tracking (NEW SECTION) -->
+{% if application.status == 'approved' %}
+<section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
+    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <i class="fas fa-graduation-cap text-primary-600"></i>
+        Admission Acceptance Tracking
+    </h3>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <!-- Student Acceptance Status -->
+        <div class="p-4 rounded-lg border-2 
+            {% if application.admission_accepted %}border-green-500 bg-green-50
+            {% else %}border-gray-300 bg-gray-50{% endif %}">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full 
+                    {% if application.admission_accepted %}bg-green-500
+                    {% else %}bg-gray-400{% endif %} 
+                    flex items-center justify-center">
+                    <i class="fas fa-user-check text-white text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Student Acceptance</p>
+                    <p class="font-bold 
+                        {% if application.admission_accepted %}text-green-700
+                        {% else %}text-gray-700{% endif %}">
+                        {% if application.admission_accepted %}Accepted
+                        {% else %}Pending{% endif %}
+                    </p>
+                    {% if application.admission_accepted_at %}
+                    <p class="text-xs text-gray-500">
+                        {{ application.admission_accepted_at|date:"M d, Y g:i A" }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Admission Number Status -->
+        <div class="p-4 rounded-lg border-2 
+            {% if application.admission_number %}border-blue-500 bg-blue-50
+            {% else %}border-gray-300 bg-gray-50{% endif %}">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full 
+                    {% if application.admission_number %}bg-blue-500
+                    {% else %}bg-gray-400{% endif %} 
+                    flex items-center justify-center">
+                    <i class="fas fa-id-card text-white text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Admission Number</p>
+                    {% if application.admission_number %}
+                    <p class="font-bold text-blue-700 font-mono text-sm">
+                        {{ application.admission_number }}
+                    </p>
+                    {% else %}
+                    <p class="font-bold text-gray-700">Not Issued</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Department Approval Status -->
+        <div class="p-4 rounded-lg border-2 
+            {% if application.department_approved %}border-purple-500 bg-purple-50
+            {% else %}border-gray-300 bg-gray-50{% endif %}">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full 
+                    {% if application.department_approved %}bg-purple-500
+                    {% else %}bg-gray-400{% endif %} 
+                    flex items-center justify-center">
+                    <i class="fas fa-building text-white text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Department Approval</p>
+                    <p class="font-bold 
+                        {% if application.department_approved %}text-purple-700
+                        {% else %}text-gray-700{% endif %}">
+                        {% if application.department_approved %}Approved
+                        {% else %}Pending{% endif %}
+                    </p>
+                    {% if application.department_approved_at %}
+                    <p class="text-xs text-gray-500">
+                        {{ application.department_approved_at|date:"M d, Y" }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Department Approval Button -->
+    {% if application.admission_accepted and not application.department_approved %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4">
+        <div class="flex items-start">
+            <i class="fas fa-exclamation-triangle text-yellow-600 mt-1 mr-3"></i>
+            <div>
+                <p class="font-semibold text-yellow-800">Action Required</p>
+                <p class="text-sm text-yellow-700">
+                    Student has accepted admission. Department approval is needed to grant portal access.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <form method="post" action="{% url 'management:approve_department' application.id %}" class="inline">
+        {% csrf_token %}
+        <button type="submit" 
+            class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold flex items-center gap-2">
+            <i class="fas fa-stamp"></i>
+            Approve Department Access
+        </button>
+    </form>
+    {% elif application.department_approved %}
+    <div class="bg-green-50 border-l-4 border-green-500 p-4">
+        <div class="flex items-start">
+            <i class="fas fa-check-circle text-green-600 mt-1 mr-3"></i>
+            <div>
+                <p class="font-semibold text-green-800">Admission Process Complete</p>
+                <p class="text-sm text-green-700">
+                    Student has full access to the student portal.
+                    {% if application.department_approved_by %}
+                    Approved by {{ application.department_approved_by.get_full_name }}.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-gray-50 border-l-4 border-gray-400 p-4">
+        <div class="flex items-start">
+            <i class="fas fa-info-circle text-gray-600 mt-1 mr-3"></i>
+            <div>
+                <p class="font-semibold text-gray-800">Waiting for Student</p>
+                <p class="text-sm text-gray-600">
+                    Student has not yet accepted the admission offer. 
+                    Department approval will be available after student acceptance.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endif %}
 
 <!-- Decision Modal -->
 <div id="decisionModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">

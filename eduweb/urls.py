@@ -21,7 +21,7 @@ urlpatterns = [
     path('application_status/', views.application_status, name='application_status'),
     path('payments/', views.payments, name='payments'),
 
-    path('admission-letter/<int:application_id>/', views.admission_letter, name='admission_letter'),
+    path('admission-letter/<str:application_id>/', views.admission_letter, name='admission_letter'),
 
     # Faculty Pages
     path('faculty/<slug:slug>/', views.faculty_detail, name='faculty_detail'),
@@ -34,7 +34,16 @@ urlpatterns = [
     path('blog/<slug:slug>/', views.blog_detail, name='blog_detail'),
     path('blog/category/<slug:slug>/', views.blog_category, name='blog_category'),
 
-
+    path(
+        'application/<str:application_id>/submit/', 
+        views.submit_application, 
+        name='submit_application'
+    ),
+    path(
+        'application/<str:application_id>/accept-admission/', 
+        views.accept_admission, 
+        name='accept_admission'
+    ),
 
     ############### PAYMENT GATEWAY URLS################
 

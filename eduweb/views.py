@@ -31,6 +31,7 @@ from .models import (
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from .decorators import applicant_required
+from eduweb import emailservices
 
 def get_application_secure(application_id, user):
     """
@@ -138,6 +139,29 @@ def generate_captcha():
     question = f"{num1} {operation} {num2}"
     return question, answer
 
+
+def verify_email(request, token):
+    """Verify user email with token"""
+    try:
+        profile = UserProfile.objects.get(verification_token=token)
+        user = profile.user
+        
+        if not user.is_active:
+            user.is_active = True
+            user.save()
+            profile.email_verified = True
+            profile.save()
+            
+            messages.success(request, 'Your email has been verified! You can now log in.')
+        else:
+            messages.info(request, 'Your email is already verified.')
+        
+        return redirect('eduweb:auth_page')
+        
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'Invalid verification link.')
+        return redirect('eduweb:auth_page')
+
 def auth_page(request):
     """Combined authentication page for login and signup"""
 
@@ -213,7 +237,7 @@ def auth_page(request):
                 user.is_active = False
                 user.save()
                 
-                send_verification_email(request, user)
+                emailservices.send_verification_email(request, user)
                 
                 return JsonResponse({
                     'success': True,
@@ -384,93 +408,7 @@ def auth_page(request):
 
 
 
-def send_verification_email(request, user):
-    """Send email verification link to user"""
-    try:
-        profile = user.profile
-        token = profile.verification_token
-        current_site = get_current_site(request)
-        verification_url = request.build_absolute_uri(
-            reverse('eduweb:verify_email', kwargs={'token': str(token)})
-        )
-        
-        subject = 'Verify Your MIU Account'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-                    <div style="background: linear-gradient(135deg, #840384 0%, #a855f7 100%); padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">Welcome to MIU!</h1>
-                    </div>
-                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
-                        <p style="font-size: 16px;">Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
-                        <p>Thank you for creating an account with Modern International University. Please verify your email address to complete your registration.</p>
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="{verification_url}" style="display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #840384 0%, #a855f7 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-                                Verify Email Address
-                            </a>
-                        </div>
-                        <p style="font-size: 14px; color: #666;">Or copy and paste this link into your browser:</p>
-                        <p style="font-size: 14px; color: #1D4ED8; word-break: break-all;">{verification_url}</p>
-                        <p style="font-size: 14px; color: #666; margin-top: 30px;">This link will expire in 24 hours.</p>
-                        <p>Best regards,<br><strong style="color: #840384;">The MIU Team</strong></p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        text_content = f"""
-Welcome to Modern International University!
 
-Dear {user.get_full_name() or user.username},
-
-Thank you for creating an account. Please verify your email address by clicking the link below:
-
-{verification_url}
-
-This link will expire in 24 hours.
-
-Best regards,
-The MIU Team
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[user.email],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending verification email: {str(e)}")
-        return False
-
-
-def verify_email(request, token):
-    """Verify user email with token"""
-    try:
-        profile = UserProfile.objects.get(verification_token=token)
-        user = profile.user
-        
-        if not user.is_active:
-            user.is_active = True
-            user.save()
-            profile.email_verified = True
-            profile.save()
-            
-            messages.success(request, 'Your email has been verified! You can now log in.')
-        else:
-            messages.info(request, 'Your email is already verified.')
-        
-        return redirect('eduweb:auth_page')
-        
-    except UserProfile.DoesNotExist:
-        messages.error(request, 'Invalid verification link.')
-        return redirect('eduweb:auth_page')
 
 
 def user_logout(request):

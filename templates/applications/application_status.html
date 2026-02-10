@@ -227,10 +227,7 @@
                     <!-- Desktop Progress Steps -->
                     <div class="hidden lg:block">
                         <div class="relative">
-                            <!-- Progress Line -->
-                            <div class="absolute top-8 left-0 h-1 bg-green-500 mx-8 transition-all duration-500" style="width: {% if application.can_access_student_portal %}calc(100% - 4rem){% elif application.admission_accepted %}calc(85% - 3.5rem){% elif application.status in 'approved,rejected' %}calc(75% - 3rem){% elif application.status == 'under_review' %}calc(60% - 2.5rem){% elif application.status == 'payment_complete' and application.documents.all %}calc(45% - 2rem){% elif application.is_paid %}calc(30% - 1.5rem){% elif application.status == 'draft' %}calc(15% - 1rem){% else %}0{% endif %}"></div>
-                            <div class="absolute top-8 left-0 h-1 bg-green-500 mx-8 transition-all duration-500" 
-                                style="width: {% if application.status in 'approved,rejected' %}calc(100% - 4rem){% elif application.status == 'under_review' %}calc(75% - 3rem){% elif application.status == 'payment_complete' and application.documents.all %}calc(60% - 2.5rem){% elif application.is_paid %}calc(40% - 2rem){% elif application.status == 'draft' %}calc(20% - 1rem){% else %}0{% endif %}"></div>
+                            <div class="absolute top-8 left-0 h-1 bg-green-500 mx-8 transition-all duration-500" style="width: {% if application.status in 'approved,rejected' %}calc(100% - 4rem){% elif application.status == 'under_review' %}calc(75% - 3rem){% elif application.status == 'documents_uploaded' %}calc(60% - 2.5rem){% elif application.is_paid %}calc(40% - 2rem){% elif application.status == 'draft' %}calc(20% - 1rem){% else %}0{% endif %}"></div>
                             
                             <!-- Steps -->
                             <div class="relative grid grid-cols-5 gap-2">
@@ -301,7 +298,7 @@
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 rounded-full 
                                         {% if application.status in 'under_review,approved,rejected' %}bg-green-500
-                                        {% elif application.status == 'payment_complete' and application.documents.all %}bg-blue-500 shadow-xl animate-pulse
+                                        {% elif application.status == 'documents_uploaded' %}bg-blue-500 shadow-xl animate-pulse
                                         {% else %}bg-gray-300{% endif %} 
                                         text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
                                         {% if application.status in 'under_review,approved,rejected' %}
@@ -311,7 +308,7 @@
                                         {% endif %}
                                     </div>
                                     <span class="text-sm font-semibold text-center 
-                                        {% if application.status in 'payment_complete,under_review,approved,rejected' and application.documents.all %}text-gray-900
+                                        {% if application.status in 'documents_uploaded,under_review,approved,rejected' %}text-gray-900
                                         {% else %}text-gray-500{% endif %}">
                                         Submitted
                                     </span>

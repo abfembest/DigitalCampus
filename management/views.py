@@ -46,8 +46,8 @@ def dashboard(request):
     
     # Get statistics
     total_applications = CourseApplication.objects.count()
-    pending_applications = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
-    approved_applications = CourseApplication.objects.filter(status__in=['accepted', 'reviewed']).count()
+    pending_applications = CourseApplication.objects.filter(status__in=['payment_complete', 'under_review', 'documents_uploaded']).count()
+    approved_applications = CourseApplication.objects.filter(status='approved').count()
     total_students = User.objects.filter(is_staff=False, is_active=True).count()
     
     # Get recent applications (last 10)
@@ -122,14 +122,8 @@ def applications_list(request):
         )
     
     # Apply status filter
-    if status_filter == 'pending':
-        applications = applications.filter(status__in=['submitted', 'under_review'])
-    elif status_filter == 'reviewed':
-        applications = applications.filter(status='reviewed')
-    elif status_filter == 'accepted':
-        applications = applications.filter(status='accepted')
-    elif status_filter == 'rejected':
-        applications = applications.filter(status='rejected')
+    if status_filter:
+        applications = applications.filter(status=status_filter)
     
     # Apply program filter
     if program_filter:
@@ -141,13 +135,16 @@ def applications_list(request):
     page_obj = paginator.get_page(page_number)
     
     # Get pending count for sidebar
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     from eduweb.models import Course
 
     context = {
         'applications': page_obj,
-        'courses': Course.objects.filter(is_active=True).select_related('faculty'),
+        'programs': [
+            (str(c.id), f"{c.name} ({c.faculty.name})")
+            for c in Course.objects.filter(is_active=True).select_related('faculty')
+        ],
         'pending_count': pending_count,
     }
     
@@ -165,12 +162,12 @@ def application_detail(request, pk):
     )
     
     # Mark as under review when admin opens it (only if status is 'submitted')
-    if application.status == 'submitted':
+    if application.status == 'documents_uploaded':
+        CourseApplication.objects.filter(pk=pk).update(status='under_review')
         application.status = 'under_review'
-        application.save()
     
     # Get pending count for sidebar
-    pending_count = CourseApplication.objects.filter(status='submitted').count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded']).count()
     
     context = {
         'application': application,
@@ -183,25 +180,27 @@ def application_detail(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def mark_reviewed(request, pk):
-    """Mark an application as reviewed (completed review)"""
-    
-    if request.method == 'POST':
-        application = get_object_or_404(CourseApplication, pk=pk)
-        
-        application.status = 'reviewed'
-        application.reviewer = request.user
-        application.reviewed_at = timezone.now()
-        application.save()
-        
-        messages.success(
-            request, 
-            f'Application {application.application_id} has been marked as reviewed and is now awaiting decision.'
-        )
-        
-        return redirect('management:application_detail', pk=pk)
-    
-    return redirect('management:applications_list')
+    """Log reviewer + timestamp, then redirect to make decision."""
+    if request.method != 'POST':
+        return redirect('management:applications_list')
 
+    application = get_object_or_404(CourseApplication, pk=pk)
+
+    # Only act on applications that are under review
+    if application.status != 'under_review':
+        messages.warning(request, 'Application is not in under_review status.')
+        return redirect('management:application_detail', pk=pk)
+
+    # Record who reviewed it and when (status stays under_review until decision)
+    application.reviewer = request.user
+    application.reviewed_at = timezone.now()
+    application.save(update_fields=['reviewer', 'reviewed_at'])
+
+    messages.success(
+        request,
+        f'Review recorded for {application.application_id}. Now make your decision.'
+    )
+    return redirect('management:application_detail', pk=pk)
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
@@ -213,25 +212,24 @@ def make_decision(request, pk):
         decision = request.POST.get('decision')
         decision_notes = request.POST.get('decision_notes', '')
         
-        if decision not in ['accepted', 'rejected', 'waitlisted']:
-            messages.error(request, 'Invalid decision type.')
+        VALID_DECISIONS = ['approved', 'rejected']
+        if decision not in VALID_DECISIONS:
+            messages.error(request, 'Invalid decision. Choose Approved or Rejected.')
             return redirect('management:application_detail', pk=pk)
         
         # Update application status
-        if decision == 'accepted':
-            application.status = 'accepted'
+        if decision == 'approved':
+            application.status = 'approved'
         elif decision == 'rejected':
             application.status = 'rejected'
-        elif decision == 'waitlisted':
-            application.status = 'waitlisted'
 
-        application.review_notes = decision_notes  # ✅ Use review_notes instead
-        application.reviewed_by = request.user
+        application.review_notes = decision_notes
+        application.reviewer = request.user
         application.reviewed_at = timezone.now()
         application.save()
 
         # Auto-issue admission number for accepted students
-        if decision == 'accepted':
+        if decision == 'approved':
             application.issue_admission_number()
         
         # Send decision email
@@ -350,17 +348,12 @@ def send_decision_email(application):
     try:
         decision = application.status
         
-        if decision == 'accepted':
+        if decision == 'approved':
             subject = f'Congratulations! Admission Offer - {application.application_id}'
             decision_text = 'Congratulations! We are pleased to offer you admission to'
             color = '#10b981'  # green
             icon = '🎉'
-        elif decision == 'waitlisted':
-            subject = f'Application Update - Waitlisted - {application.application_id}'
-            decision_text = 'Your application has been placed on our waitlist for'
-            color = '#f59e0b'  # orange
-            icon = '⏳'
-        else:  # rejected
+        else:
             subject = f'Application Decision - {application.application_id}'
             decision_text = 'Thank you for your interest in'
             color = '#ef4444'  # red
@@ -386,7 +379,7 @@ def send_decision_email(application):
                         </div>
         """
         
-        if decision == 'accepted':
+        if decision == 'approved':
             html_content += f"""
                         <p>We are excited to welcome you to Modern International University!</p>
                         <h4>Next Steps:</h4>
@@ -397,11 +390,6 @@ def send_decision_email(application):
                             <li>Pay the enrollment deposit</li>
                         </ol>
                         <p>If you have any questions, please contact our admissions office.</p>
-            """
-        elif decision == 'waitlisted':
-            html_content += f"""
-                        <p>We received a large number of qualified applications this year. Your application was impressive, and you have been placed on our waitlist.</p>
-                        <p>We will notify you if a space becomes available. No further action is required at this time.</p>
             """
         else:
             html_content += f"""
@@ -451,7 +439,7 @@ from django.urls import reverse
 def faculties_list(request):
     """List all faculties"""
     faculties = Faculty.objects.all().order_by('display_order', 'name')
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'faculties': faculties,
@@ -476,7 +464,7 @@ def faculty_create(request):
     else:
         form = FacultyForm()
     
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'form': form,
@@ -504,7 +492,7 @@ def faculty_edit(request, pk):
     else:
         form = FacultyForm(instance=faculty)
     
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'form': form,
@@ -568,7 +556,7 @@ def course_create(request):
     else:
         form = CourseForm()
     
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'form': form,
@@ -596,7 +584,7 @@ def course_detail(request, pk):
     
     active_applications = CourseApplication.objects.filter(
         course=course,
-        status__in=['submitted', 'under_review', 'reviewed']
+        status__in=['payment_complete', 'documents_uploaded', 'under_review']
     ).count()
     
     accepted_applications = CourseApplication.objects.filter(
@@ -610,7 +598,7 @@ def course_detail(request, pk):
     ).select_related('user').order_by('-created_at')[:10]
     
     pending_count = CourseApplication.objects.filter(
-        status__in=['submitted', 'under_review']
+        status__in=['payment_complete', 'documents_uploaded', 'under_review']
     ).count()
     
     context = {
@@ -645,7 +633,7 @@ def course_edit(request, pk):
     else:
         form = CourseForm(instance=course)
     
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'form': form,
@@ -682,7 +670,7 @@ from management.forms import BlogPostForm, BlogCategoryForm
 def blog_posts_list(request):
     """List all blog posts"""
     posts = BlogPost.objects.select_related('category', 'author').all().order_by('-publish_date')
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     # Filter by status if provided
     status_filter = request.GET.get('status', '')
@@ -714,7 +702,7 @@ def blog_post_create(request):
     else:
         form = BlogPostForm()
     
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'form': form,
@@ -742,7 +730,7 @@ def blog_post_edit(request, pk):
     else:
         form = BlogPostForm(instance=post)
     
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'form': form,
@@ -774,7 +762,7 @@ def blog_post_delete(request, pk):
 def blog_categories_list(request):
     """List all blog categories"""
     categories = BlogCategory.objects.all().order_by('display_order', 'name')
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'categories': categories,
@@ -799,7 +787,7 @@ def blog_category_create(request):
     else:
         form = BlogCategoryForm()
     
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'form': form,
@@ -827,7 +815,7 @@ def blog_category_edit(request, pk):
     else:
         form = BlogCategoryForm(instance=category)
     
-    pending_count = CourseApplication.objects.filter(status__in=['submitted', 'under_review']).count()
+    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
         'form': form,

@@ -252,35 +252,30 @@
         <div>
             <h2 id="status-heading" class="text-lg font-semibold text-gray-800 mb-3">Current Application Status</h2>
             <div class="flex items-center gap-4 flex-wrap">
-                {% if application.status == 'submitted' %}
-                <span class="px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800" role="status">
-                    <i class="fas fa-inbox mr-1" aria-hidden="true"></i>
-                    <span>Submitted - Awaiting Review</span>
-                </span>
-                {% elif application.status == 'under_review' %}
+                {% if application.status == 'under_review' %}
                 <span class="px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" role="status">
                     <i class="fas fa-clock mr-1" aria-hidden="true"></i>
-                    <span>Under Review by Committee</span>
+                    <span>Under Review</span>
                 </span>
-                {% elif application.status == 'reviewed' %}
-                <span class="px-4 py-2 rounded-full text-sm font-medium bg-purple-100 text-purple-800" role="status">
-                    <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
-                    <span>Reviewed - Decision Pending</span>
-                </span>
-                {% elif application.status == 'accepted' %}
+                {% elif application.status == 'approved' %}
                 <span class="px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800" role="status">
                     <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
-                    <span>Accepted</span>
+                    <span>Approved</span>
                 </span>
                 {% elif application.status == 'rejected' %}
                 <span class="px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800" role="status">
                     <i class="fas fa-times-circle mr-1" aria-hidden="true"></i>
                     <span>Rejected</span>
                 </span>
-                {% elif application.status == 'waitlisted' %}
-                <span class="px-4 py-2 rounded-full text-sm font-medium bg-orange-100 text-orange-800" role="status">
-                    <i class="fas fa-hourglass-half mr-1" aria-hidden="true"></i>
-                    <span>Waitlisted</span>
+                {% elif application.status == 'payment_complete' %}
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-blue-100 text-blue-800" role="status">
+                    <i class="fas fa-credit-card mr-1" aria-hidden="true"></i>
+                    <span>Payment Complete</span>
+                </span>
+                {% elif application.status == 'documents_uploaded' %}
+                <span class="px-4 py-2 rounded-full text-sm font-medium bg-purple-100 text-purple-800" role="status">
+                    <i class="fas fa-upload mr-1" aria-hidden="true"></i>
+                    <span>Documents Uploaded</span>
                 </span>
                 {% else %}
                 <span class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800" role="status">
@@ -299,57 +294,49 @@
         </div>
         
         <div class="flex flex-col sm:flex-row gap-3">
-            <!-- Mark as Reviewed button (only for under_review status) -->
+            <!-- Log reviewer, then decision modal opens -->
             {% if application.status == 'under_review' %}
             <form method="post" action="{% url 'management:mark_reviewed' application.id %}" class="inline">
                 {% csrf_token %}
-                <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2">
+                <button type="submit"
+                    class="w-full sm:w-auto px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2">
                     <i class="fas fa-check-double" aria-hidden="true"></i>
-                    <span>Complete Review</span>
+                    <span>Log Review</span>
                 </button>
             </form>
-            {% endif %}
-            
-            <!-- Make Decision button (only for reviewed status) -->
-            {% if application.status == 'reviewed' %}
-            <button onclick="openDecisionModal()" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2">
+
+            <!-- Make Decision always available when under_review -->
+            <button onclick="openDecisionModal()"
+                class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2">
                 <i class="fas fa-gavel" aria-hidden="true"></i>
                 <span>Make Decision</span>
             </button>
             {% endif %}
-            
-            <!-- Generate Admission Letter (only for approved status) -->
+
+            <!-- Admission letter for approved -->
             {% if application.status == 'approved' %}
-            <a href="{% url 'eduweb:admission_letter' application.id %}" 
-            target="_blank" 
-            class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center justify-center gap-2">
+            <a href="{% url 'eduweb:admission_letter' application.application_id %}"
+                target="_blank"
+                class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center justify-center gap-2">
                 <i class="fas fa-file-contract" aria-hidden="true"></i>
                 <span>Generate Admission Letter</span>
             </a>
             {% endif %}
 
-            <!-- Show current status for final decisions -->
-            {% if application.status in 'approved,rejected,waitlisted' %}
+            <!-- Final status badge -->
+            {% if application.status == 'approved' or application.status == 'rejected' %}
             <div class="px-6 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2
                 {% if application.status == 'approved' %}bg-green-100 text-green-700
-                {% elif application.status == 'rejected' %}bg-red-100 text-red-700
-                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                {% else %}bg-red-100 text-red-700{% endif %}">
                 <i class="fas fa-info-circle" aria-hidden="true"></i>
                 <span>Status: {{ application.get_status_display }}</span>
-                
                 {% if application.status == 'approved' %}
                     {% if application.can_access_student_portal %}
-                    <span class="ml-2 px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs font-bold">
-                        PORTAL ACTIVE
-                    </span>
+                    <span class="ml-2 px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs font-bold">PORTAL ACTIVE</span>
                     {% elif application.admission_accepted %}
-                    <span class="ml-2 px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs font-bold">
-                        AWAITING DEPT
-                    </span>
+                    <span class="ml-2 px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs font-bold">AWAITING DEPT</span>
                     {% else %}
-                    <span class="ml-2 px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">
-                        AWAITING STUDENT
-                    </span>
+                    <span class="ml-2 px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">AWAITING STUDENT</span>
                     {% endif %}
                 {% endif %}
             </div>
@@ -528,23 +515,12 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-3">Select Decision</label>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <label class="relative cursor-pointer">
-                        <input type="radio" name="decision" value="accepted" class="peer sr-only" required>
+                        <input type="radio" name="decision" value="approved" class="peer sr-only" required>
                         <div class="p-4 border-2 border-gray-300 rounded-lg peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-green-400 transition-all">
                             <div class="flex flex-col items-center text-center">
                                 <i class="fas fa-check-circle text-3xl text-green-600 mb-2"></i>
                                 <span class="font-semibold text-gray-800">Accept</span>
                                 <span class="text-xs text-gray-600 mt-1">Offer admission</span>
-                            </div>
-                        </div>
-                    </label>
-                    
-                    <label class="relative cursor-pointer">
-                        <input type="radio" name="decision" value="waitlisted" class="peer sr-only">
-                        <div class="p-4 border-2 border-gray-300 rounded-lg peer-checked:border-orange-500 peer-checked:bg-orange-50 hover:border-orange-400 transition-all">
-                            <div class="flex flex-col items-center text-center">
-                                <i class="fas fa-hourglass-half text-3xl text-orange-600 mb-2"></i>
-                                <span class="font-semibold text-gray-800">Waitlist</span>
-                                <span class="text-xs text-gray-600 mt-1">Place on waitlist</span>
                             </div>
                         </div>
                     </label>
@@ -651,11 +627,15 @@ document.addEventListener('keydown', function(e) {
                     </div>
                     <div class="md:col-span-2">
                         <dt class="block text-sm font-medium text-gray-600 mb-1">Country</dt>
-                        <dd class="text-gray-800 font-medium">{{ application.get_country_display }}</dd>
+                        <dd class="text-gray-800 font-medium">{{ application.country }}</dd>
                     </div>
                     <div class="md:col-span-2">
                         <dt class="block text-sm font-medium text-gray-600 mb-1">Address</dt>
-                        <dd class="text-gray-800 font-medium">{{ application.address }}</dd>
+                        <dd class="text-gray-800 font-medium">
+                            {{ application.address_line1 }}
+                            {% if application.address_line2 %}, {{ application.address_line2 }}{% endif %},
+                            {{ application.city }}, {{ application.state }} {{ application.postal_code }}
+                        </dd>
                     </div>
                 </dl>
             </div>
@@ -672,12 +652,10 @@ document.addEventListener('keydown', function(e) {
                     {% for edu in application.academic_history %}
                     <article class="border-l-4 border-primary-500 pl-4 py-2 hover:bg-gray-50 transition-colors rounded-r">
                         <h3 class="font-semibold text-gray-800">{{ edu.institution }}</h3>
-                        <p class="text-sm text-gray-600 mt-1">{{ edu.degree }} in {{ edu.field }}</p>
+                        <p class="text-sm text-gray-600 mt-1">{{ edu.education_level }} in {{ edu.field_of_study }}</p>
                         <p class="text-sm text-gray-500 mt-1">
-                            <time datetime="{{ edu.start_year }}">{{ edu.start_year }}</time> - <time datetime="{{ edu.end_year }}">{{ edu.end_year }}</time>
-                            {% if edu.gpa %}
-                            <span aria-label="GPA"> | GPA: {{ edu.gpa }}</span>
-                            {% endif %}
+                            Graduated: {{ edu.graduation_year }}
+                            {% if edu.gpa %}<span> | GPA: {{ edu.gpa }}</span>{% endif %}
                         </p>
                     </article>
                     {% endfor %}
@@ -686,17 +664,13 @@ document.addEventListener('keydown', function(e) {
                 <p class="text-gray-500 text-center py-4">No academic history provided</p>
                 {% endif %}
                 
-                {% if application.english_proficiency_test %}
+                {% if application.language_skill %}
                 <div class="mt-6 pt-6 border-t border-gray-200">
                     <h3 class="font-semibold text-gray-800 mb-2">English Proficiency</h3>
-                    <p class="text-gray-700">{{ application.english_proficiency_test }}{% if application.english_proficiency_score %}: <span class="font-medium">{{ application.english_proficiency_score }}</span>{% endif %}</p>
-                </div>
-                {% endif %}
-                
-                {% if application.additional_qualifications %}
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h3 class="font-semibold text-gray-800 mb-2">Additional Qualifications</h3>
-                    <p class="text-gray-700">{{ application.additional_qualifications }}</p>
+                    <p class="text-gray-700">
+                        {{ application.get_language_skill_display }}
+                        {% if application.language_score %}: <span class="font-medium">{{ application.language_score }}</span>{% endif %}
+                    </p>
                 </div>
                 {% endif %}
             </div>
@@ -792,7 +766,7 @@ document.addEventListener('keydown', function(e) {
             <div>
                 <dt class="block text-sm font-medium text-gray-600 mb-1">Financial Aid</dt>
                 <dd class="text-gray-800 font-medium">
-                    {% if application.scholarship_requested or application.financial_aid_requested %}
+                    {% if application.scholarship %}
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
                         <i class="fas fa-check-circle mr-1" aria-hidden="true"></i>
                         <span>Requested</span>
@@ -849,7 +823,7 @@ document.addEventListener('keydown', function(e) {
                     <div class="flex-1">
                         <p class="text-sm font-medium text-gray-800">Application Reviewed</p>
                         <p class="text-xs text-gray-500 mt-1">
-                            By {{ application.reviewer.get_full_name|default:application.reviewer }}
+                            By {% if application.reviewer %}{{ application.reviewer.get_full_name|default:application.reviewer.username }}{% else %}—{% endif %}
                         </p>
                         <p class="text-xs text-gray-500">
                             <time datetime="{{ application.reviewed_at|date:'Y-m-d\TH:i' }}">{{ application.reviewed_at|date:"M d, Y, g:i A" }}</time>

@@ -84,7 +84,7 @@ def application_status_context(request):
     if request.user.is_authenticated:
         has_pending_application = CourseApplication.objects.filter(
             user=request.user,
-            status__in=['draft', 'pending_payment', 'submitted', 'under_review', 'reviewed']
+            status__in=['draft', 'pending_payment', 'payment_complete', 'documents_uploaded', 'under_review']
         ).exists()
     return {'has_pending_application': has_pending_application}
 
@@ -519,7 +519,7 @@ def apply(request):
     # Check if user already has a pending application
     existing_application = CourseApplication.objects.filter(
         user=request.user,
-        status__in=['draft', 'pending_payment', 'submitted', 'under_review']
+        status__in=['draft', 'pending_payment', 'payment_complete', 'documents_uploaded', 'under_review']
     ).first()
 
     if existing_application:
@@ -625,14 +625,14 @@ def apply(request):
                     return JsonResponse({
                         'success': True,
                         'application_id': application.application_id,
-                        'redirect_url': reverse('application_status')
+                        'redirect_url': reverse('eduweb:application_status')
                     })
 
                 messages.success(
                     request,
                     f'Application submitted successfully! Your ID: {application.application_id}'
                 )
-                return redirect('application_status')
+                return redirect('eduweb:application_status')
 
             except Exception as e:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1101,7 +1101,7 @@ def admission_letter(request, application_id):
         'application': application,
         'issue_date': timezone.now().date(),
     }
-    return render(request, 'eduweb/admission_letter.html', context)
+    return render(request, 'applications/admission_letter.html', context)
 
 
 def payments(request):
@@ -1196,15 +1196,15 @@ def stripe_webhook(request):
                         "application_id": intent.metadata.get("application_id"),
                         "amount": intent.amount / 100,
                         "currency": intent.currency.upper(),
-                        "status": "PAID",
+                        "status": "success",
                         "vendor_id": intent.metadata.get("vendor_id"),
                     },
                 )
 
-                if not created and payment.status == "PAID":
+                if not created and payment.status == "success":
                     return HttpResponse(status=200)
 
-                payment.status = "PAID"
+                payment.status = "success"
                 payment.save()
 
                 # send emails after commit
@@ -1298,7 +1298,7 @@ def payment_success(request, payment_id):
 def refund_payment(request, payment_id):
     payment = get_object_or_404(ApplicationPayment, id=payment_id)
 
-    if payment.status != "PAID":
+    if payment.status != "success":
         return JsonResponse({"error": "Cannot refund non-paid payment"}, status=400)
 
     try:
@@ -1308,7 +1308,7 @@ def refund_payment(request, payment_id):
                 payment_intent=payment.gateway_payment_id  # ✅ Correct
             )
             # Update DB
-            payment.status = "REFUNDED"
+            payment.status = "refunded"
             payment.refunded_at = timezone.now()
             payment.save()
     except stripe.error.StripeError as e:

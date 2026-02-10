@@ -431,41 +431,103 @@ def send_application_admin_notification(application):
 #######################################################
 # DOCUMENT UPLOAD SUCCESS - SENT TO APPLICANT
 #######################################################
-def send_document_upload_confirmation(application, document):
+def send_document_upload_confirmation(application, documents):
     """
-    Send confirmation email when document uploaded successfully.
+    Send confirmation email when documents uploaded successfully.
     
-    Trigger: Called in upload_application_file() view after upload
-    Purpose: Confirm receipt of uploaded document
+    Trigger: Called after upload(s) in upload_application_file() view
+    Purpose: Confirm receipt of uploaded document(s)
     Recipients: Applicant
     
     Args:
         application: CourseApplication object
-        document: ApplicationDocument object
+        documents: Single ApplicationDocument or list of ApplicationDocument objects
         
     Returns:
         bool: True if email sent successfully, False otherwise
     """
     try:
-        subject = (
-            f'Document Uploaded - {application.application_id}'
-        )
+        # Ensure documents is a list
+        if not isinstance(documents, list):
+            documents = [documents]
         
+        # Count documents
+        doc_count = len(documents)
+        
+        # Build subject
+        if doc_count == 1:
+            subject = (
+                f'Document Uploaded - {application.application_id}'
+            )
+        else:
+            subject = (
+                f'{doc_count} Documents Uploaded - '
+                f'{application.application_id}'
+            )
+        
+        # Build document list HTML
+        docs_html = ""
+        for idx, doc in enumerate(documents, 1):
+            docs_html += f"""
+            <div style="background-color: #f9fafb; 
+                        padding: 15px; 
+                        border-radius: 6px; 
+                        margin-bottom: 10px;">
+                <p style="margin: 5px 0;">
+                    <strong>Document {idx}:</strong>
+                </p>
+                <p style="margin: 5px 0; padding-left: 15px;">
+                    <strong>Type:</strong> 
+                    {doc.get_file_type_display()}
+                </p>
+                <p style="margin: 5px 0; padding-left: 15px;">
+                    <strong>File:</strong> 
+                    {doc.original_filename}
+                </p>
+                <p style="margin: 5px 0; padding-left: 15px;">
+                    <strong>Size:</strong> 
+                    {doc.get_file_size_display()}
+                </p>
+                <p style="margin: 5px 0; padding-left: 15px;">
+                    <strong>Uploaded:</strong> 
+                    {doc.uploaded_at.strftime('%B %d, %Y at %I:%M %p')}
+                </p>
+            </div>
+            """
+        
+        # Build document list text
+        docs_text = ""
+        for idx, doc in enumerate(documents, 1):
+            docs_text += f"""
+Document {idx}:
+  Type: {doc.get_file_type_display()}
+  File: {doc.original_filename}
+  Size: {doc.get_file_size_display()}
+  Uploaded: {doc.uploaded_at.strftime('%B %d, %Y at %I:%M %p')}
+
+"""
+        
+        # Build HTML email
         html_content = f"""
         <html>
             <body style="font-family: Arial, sans-serif; 
-                         line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; 
-                            padding: 20px; background-color: #f4f4f4;">
+                         line-height: 1.6; 
+                         color: #333;">
+                <div style="max-width: 600px; 
+                            margin: 0 auto; 
+                            padding: 20px; 
+                            background-color: #f4f4f4;">
                     <div style="background: linear-gradient(135deg, 
                                 #10b981 0%, #059669 100%); 
-                                padding: 30px; text-align: center;">
+                                padding: 30px; 
+                                text-align: center;">
                         <h1 style="color: white; margin: 0;">
-                            📄 Document Uploaded
+                            📄 {'Documents' if doc_count > 1 else 'Document'} Uploaded
                         </h1>
                     </div>
                     <div style="background-color: white; 
-                                padding: 30px; margin-top: 20px;">
+                                padding: 30px; 
+                                margin-top: 20px;">
                         <p style="font-size: 16px;">
                             Dear <strong>
                                 {application.first_name} 
@@ -473,33 +535,31 @@ def send_document_upload_confirmation(application, document):
                             </strong>,
                         </p>
                         <p>
-                            Your document has been successfully uploaded 
-                            to your application.
+                            Your {'documents have' if doc_count > 1 else 'document has'} 
+                            been successfully uploaded to your application.
                         </p>
                         
                         <div style="background-color: #E6F0FF; 
-                                    padding: 20px; border-radius: 8px; 
+                                    padding: 20px; 
+                                    border-radius: 8px; 
                                     margin: 25px 0;">
                             <h3 style="color: #0F2A44; margin-top: 0;">
-                                Document Details
+                                Upload Summary
                             </h3>
                             <p>
                                 <strong>Application ID:</strong> 
                                 {application.application_id}
                             </p>
                             <p>
-                                <strong>Document Type:</strong> 
-                                {document.get_file_type_display()}
-                            </p>
-                            <p>
-                                <strong>Filename:</strong> 
-                                {document.original_filename}
-                            </p>
-                            <p>
-                                <strong>Upload Time:</strong> 
-                                {document.uploaded_at.strftime('%B %d, %Y at %I:%M %p')}
+                                <strong>Total Documents:</strong> 
+                                {doc_count}
                             </p>
                         </div>
+                        
+                        <h3 style="color: #0F2A44;">
+                            {'Documents' if doc_count > 1 else 'Document'} Uploaded
+                        </h3>
+                        {docs_html}
                         
                         <p>
                             You can continue uploading additional documents 
@@ -518,18 +578,21 @@ def send_document_upload_confirmation(application, document):
         </html>
         """
         
+        # Build text email
         text_content = f"""
-Document Uploaded Successfully
+{'Documents' if doc_count > 1 else 'Document'} Uploaded Successfully
 
 Dear {application.first_name} {application.last_name},
 
-Your document has been successfully uploaded to your application.
+Your {'documents have' if doc_count > 1 else 'document has'} been 
+successfully uploaded to your application.
 
-Document Details:
+Upload Summary:
 - Application ID: {application.application_id}
-- Document Type: {document.get_file_type_display()}
-- Filename: {document.original_filename}
-- Upload Time: {document.uploaded_at.strftime('%B %d, %Y at %I:%M %p')}
+- Total Documents: {doc_count}
+
+{'Documents' if doc_count > 1 else 'Document'} Uploaded:
+{docs_text}
 
 You can continue uploading additional documents or submit your 
 application when ready.
@@ -538,6 +601,7 @@ Best regards,
 The MIU Admissions Team
         """
         
+        # Send email
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
@@ -549,90 +613,191 @@ The MIU Admissions Team
         return True
         
     except Exception as e:
-        print(f"Error sending document confirmation email: {str(e)}")
+        print(
+            f"Error sending document confirmation email: {str(e)}"
+        )
         return False
 
 
 #######################################################
 # DOCUMENT UPLOAD - SENT TO ADMIN
 #######################################################
-def send_document_upload_admin_notification(application, document):
+def send_document_upload_admin_notification(application, documents):
     """
-    Notify admin when applicant uploads a document.
+    Notify admin when applicant uploads document(s).
     
-    Trigger: Called in upload_application_file() view after upload
-    Purpose: Alert admin of new document requiring verification
+    Trigger: Called after upload(s) in upload_application_file() view
+    Purpose: Alert admin of new documents requiring verification
     Recipients: Admin team (settings.CONTACT_EMAIL)
     
     Args:
         application: CourseApplication object
-        document: ApplicationDocument object
+        documents: Single ApplicationDocument or list of ApplicationDocument objects
         
     Returns:
         bool: True if email sent successfully, False otherwise
     """
     try:
-        subject = (
-            f'New Document Uploaded - {application.application_id}'
-        )
+        # Ensure documents is a list
+        if not isinstance(documents, list):
+            documents = [documents]
         
+        # Count documents
+        doc_count = len(documents)
+        
+        # Build subject
+        if doc_count == 1:
+            subject = (
+                f'New Document Uploaded - '
+                f'{application.application_id}'
+            )
+        else:
+            subject = (
+                f'{doc_count} New Documents Uploaded - '
+                f'{application.application_id}'
+            )
+        
+        # Build document table rows
+        docs_html = ""
+        for idx, doc in enumerate(documents, 1):
+            docs_html += f"""
+            <tr>
+                <td style="padding: 10px; 
+                           border: 1px solid #ddd;">
+                    {idx}
+                </td>
+                <td style="padding: 10px; 
+                           border: 1px solid #ddd;">
+                    {doc.get_file_type_display()}
+                </td>
+                <td style="padding: 10px; 
+                           border: 1px solid #ddd;">
+                    {doc.original_filename}
+                </td>
+                <td style="padding: 10px; 
+                           border: 1px solid #ddd;">
+                    {doc.get_file_size_display()}
+                </td>
+                <td style="padding: 10px; 
+                           border: 1px solid #ddd;">
+                    {doc.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')}
+                </td>
+            </tr>
+            """
+        
+        # Build HTML email
         html_content = f"""
         <html>
             <body style="font-family: Arial, sans-serif;">
-                <h2>New Document Uploaded</h2>
+                <h2>
+                    {'New Documents Uploaded' if doc_count > 1 else 'New Document Uploaded'}
+                </h2>
                 <p>
-                    An applicant has uploaded a new document.
+                    An applicant has uploaded 
+                    {doc_count} 
+                    {'documents' if doc_count > 1 else 'document'}.
                 </p>
                 
                 <h3>Applicant Information</h3>
-                <p>
-                    <strong>Name:</strong> 
-                    {application.get_full_name()}
-                </p>
-                <p>
-                    <strong>Email:</strong> 
-                    {application.email}
-                </p>
-                <p>
-                    <strong>Application ID:</strong> 
-                    {application.application_id}
-                </p>
-                <p>
-                    <strong>Course:</strong> 
-                    {application.course.name}
-                </p>
+                <table style="border-collapse: collapse; 
+                              width: 100%; 
+                              max-width: 600px;">
+                    <tr>
+                        <td style="padding: 8px; 
+                                   font-weight: bold; 
+                                   width: 150px;">
+                            Name:
+                        </td>
+                        <td style="padding: 8px;">
+                            {application.get_full_name()}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; font-weight: bold;">
+                            Email:
+                        </td>
+                        <td style="padding: 8px;">
+                            {application.email}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; font-weight: bold;">
+                            Application ID:
+                        </td>
+                        <td style="padding: 8px;">
+                            {application.application_id}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; font-weight: bold;">
+                            Course:
+                        </td>
+                        <td style="padding: 8px;">
+                            {application.course.name}
+                        </td>
+                    </tr>
+                </table>
                 
-                <h3>Document Information</h3>
-                <p>
-                    <strong>Document Type:</strong> 
-                    {document.get_file_type_display()}
-                </p>
-                <p>
-                    <strong>Filename:</strong> 
-                    {document.original_filename}
-                </p>
-                <p>
-                    <strong>File Size:</strong> 
-                    {document.get_file_size_display()}
-                </p>
-                <p>
-                    <strong>Uploaded:</strong> 
-                    {document.uploaded_at.strftime('%Y-%m-%d %H:%M:%S')}
-                </p>
+                <h3>
+                    {'Documents' if doc_count > 1 else 'Document'} Uploaded
+                </h3>
+                <table style="border-collapse: collapse; 
+                              width: 100%; 
+                              max-width: 800px;">
+                    <thead>
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="padding: 10px; 
+                                       border: 1px solid #ddd; 
+                                       text-align: left;">
+                                #
+                            </th>
+                            <th style="padding: 10px; 
+                                       border: 1px solid #ddd; 
+                                       text-align: left;">
+                                Type
+                            </th>
+                            <th style="padding: 10px; 
+                                       border: 1px solid #ddd; 
+                                       text-align: left;">
+                                Filename
+                            </th>
+                            <th style="padding: 10px; 
+                                       border: 1px solid #ddd; 
+                                       text-align: left;">
+                                Size
+                            </th>
+                            <th style="padding: 10px; 
+                                       border: 1px solid #ddd; 
+                                       text-align: left;">
+                                Uploaded
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {docs_html}
+                    </tbody>
+                </table>
                 
-                <p>
-                    Please review the document in the admin panel.
+                <p style="margin-top: 20px;">
+                    Please review the 
+                    {'documents' if doc_count > 1 else 'document'} 
+                    in the admin panel.
                 </p>
             </body>
         </html>
         """
         
+        # Build text email
+        text_body = (
+            f"{'New documents' if doc_count > 1 else 'New document'} "
+            f"uploaded by {application.get_full_name()} "
+            f"for application {application.application_id}"
+        )
+        
+        # Send email
         email = EmailMultiAlternatives(
             subject=subject,
-            body=(
-                f"New document uploaded by {application.get_full_name()} "
-                f"for application {application.application_id}"
-            ),
+            body=text_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[settings.CONTACT_EMAIL],
         )
@@ -645,7 +810,6 @@ def send_document_upload_admin_notification(application, document):
             f"Error sending document admin notification: {str(e)}"
         )
         return False
-
 
 #######################################################
 # CONTACT FORM - SENT TO ADMIN

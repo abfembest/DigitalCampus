@@ -34,32 +34,46 @@
                 <!-- Video Content -->
                 {% if lesson.lesson_type == 'video' %}
                 <div class="bg-black aspect-video">
-                    {% if lesson.video_url %}
-                        {% if 'youtube.com' in lesson.video_url or 'youtu.be' in lesson.video_url %}
-                        <iframe class="w-full h-full" 
-                                src="{{ lesson.video_url }}" 
-                                frameborder="0" 
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                allowfullscreen></iframe>
-                        {% elif 'vimeo.com' in lesson.video_url %}
-                        <iframe class="w-full h-full" 
-                                src="{{ lesson.video_url }}" 
-                                frameborder="0" 
-                                allow="autoplay; fullscreen; picture-in-picture" 
-                                allowfullscreen></iframe>
-                        {% else %}
-                        <video class="w-full h-full" controls>
-                            <source src="{{ lesson.video_url }}" type="video/mp4">
+                    {% if lesson.video_file %}
+                        {# Local uploaded video file - Priority #1 #}
+                        <video class="w-full h-full" controls controlsList="nodownload">
+                            <source src="{{ lesson.video_file.url }}" type="video/mp4">
+                            <source src="{{ lesson.video_file.url }}" type="video/webm">
+                            <source src="{{ lesson.video_file.url }}" type="video/ogg">
                             Your browser does not support the video tag.
                         </video>
+                    {% elif lesson.video_url %}
+                        {# External video URL - YouTube, Vimeo, or direct URL #}
+                        {% if 'youtube.com' in lesson.video_url or 'youtu.be' in lesson.video_url %}
+                            {# YouTube Video #}
+                            <iframe class="w-full h-full" 
+                                    src="{{ lesson.video_url }}" 
+                                    frameborder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowfullscreen></iframe>
+                        {% elif 'vimeo.com' in lesson.video_url %}
+                            {# Vimeo Video #}
+                            <iframe class="w-full h-full" 
+                                    src="{{ lesson.video_url }}" 
+                                    frameborder="0" 
+                                    allow="autoplay; fullscreen; picture-in-picture" 
+                                    allowfullscreen></iframe>
+                        {% else %}
+                            {# Generic video URL #}
+                            <video class="w-full h-full" controls>
+                                <source src="{{ lesson.video_url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
                         {% endif %}
                     {% else %}
-                    <div class="w-full h-full flex items-center justify-center">
-                        <div class="text-center text-white">
-                            <i class="fas fa-video text-6xl mb-4 opacity-50"></i>
-                            <p>Video content coming soon</p>
+                        {# No video available #}
+                        <div class="w-full h-full flex items-center justify-center">
+                            <div class="text-center text-white">
+                                <i class="fas fa-video text-6xl mb-4 opacity-50"></i>
+                                <p class="text-lg font-medium mb-2">Video content coming soon</p>
+                                <p class="text-sm text-gray-400">The instructor is preparing video content for this lesson</p>
+                            </div>
                         </div>
-                    </div>
                     {% endif %}
                 </div>
                 {% endif %}

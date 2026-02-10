@@ -31,7 +31,7 @@ from .models import (
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from .decorators import applicant_required
-from eduweb import emailservices
+from .emailservices import *
 
 def get_application_secure(application_id, user):
     """
@@ -153,6 +153,8 @@ def verify_email(request, token):
             profile.save()
             
             messages.success(request, 'Your email has been verified! You can now log in.')
+            # Send welcome email after successful verification
+            send_verification_success_email(user)
         else:
             messages.info(request, 'Your email is already verified.')
         
@@ -237,7 +239,7 @@ def auth_page(request):
                 user.is_active = False
                 user.save()
                 
-                emailservices.send_verification_email(request, user)
+                send_verification_email(request, user)
                 
                 return JsonResponse({
                     'success': True,
@@ -405,11 +407,6 @@ def auth_page(request):
     }
     
     return render(request, 'auth/auth.html', context)
-
-
-
-
-
 
 def user_logout(request):
     """Logout user"""
@@ -602,90 +599,6 @@ def apply(request):
         'courses_json': courses_json,
     })
 
-
-
-
-def send_application_confirmation_email(application):
-    """Send confirmation email to applicant"""
-    try:
-        subject = f'Application Received - {application.application_id}'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-                    <div style="background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%); padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">Application Received!</h1>
-                    </div>
-                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
-                        <p style="font-size: 16px;">Dear <strong>{application.first_name} {application.last_name}</strong>,</p>
-                        <p>Thank you for applying to Modern International University. We have received your application.</p>
-                        <div style="background-color: #E6F0FF; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                            <h3 style="color: #0F2A44; margin-top: 0;">Application Details</h3>
-                            <p><strong>Application ID:</strong> {application.application_id}</p>
-                            <p><strong>Program:</strong> {application.course.name}</p>
-                            <p><strong>Degree Level:</strong> {application.course.get_degree_level_display()}</p>
-                            <p><strong>Faculty:</strong> {application.course.faculty.name}</p>
-                            <p><strong>Submission Date:</strong> {application.submitted_at.strftime('%B %d, %Y') if application.submitted_at else 'Pending'}</p>
-                        </div>
-                        <p>Our admissions team will review your application and contact you within 5-7 business days.</p>
-                        <p>Best regards,<br><strong style="color: #0F2A44;">The MIU Admissions Team</strong></p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"Application ID: {application.application_id}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[application.email],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending confirmation email: {str(e)}")
-        return False
-
-
-def send_application_admin_notification(application):
-    """Send notification email to admin"""
-    try:
-        subject = f'New Application - {application.application_id}'
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif;">
-                <h2>New Course Application Received</h2>
-                <p><strong>Application ID:</strong> {application.application_id}</p>
-                <p><strong>Name:</strong> {application.get_full_name()}</p>
-                <p><strong>Email:</strong> {application.email}</p>
-                <p><strong>Course:</strong> {application.course.name} ({application.course.code})</p>
-                <p><strong>Degree Level:</strong> {application.course.get_degree_level_display()}</p>
-                <p><strong>Faculty:</strong> {application.course.faculty.name}</p>
-                <p><strong>Intake:</strong> {application.intake.get_intake_period_display()} {application.intake.year}</p>
-                <p><strong>Study Mode:</strong> {application.get_study_mode_display()}</p>
-                <p><strong>Submitted:</strong> {application.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if application.submitted_at else 'Draft'}</p>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"New application from {application.get_full_name()}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[settings.CONTACT_EMAIL],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-    except Exception as e:
-        print(f"Error sending admin notification: {str(e)}")
-        return False
-
-
 @check_for_auth
 def detail(request):
     return render(request, 'detail.html')
@@ -727,152 +640,6 @@ def contact_submit(request):
             return render(request, 'index.html', {'form': form})
     else:
         return redirect('index')
-
-
-def send_admin_email(contact_message):
-    """Send notification email to admin"""
-    try:
-        subject = f'New Contact Form Submission - {contact_message.get_subject_display()}'
-        
-        text_content = f"""
-New contact form submission from MIU website:
-
-Name: {contact_message.name}
-Email: {contact_message.email}
-Subject: {contact_message.get_subject_display()}
-
-Message:
-{contact_message.message}
-
-Submitted at: {contact_message.created_at.strftime('%Y-%m-%d %H:%M:%S')}
-        """
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-                    <div style="background-color: #0F2A44; padding: 20px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">New Contact Form Submission</h1>
-                    </div>
-                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
-                        <h2 style="color: #0F2A44; border-bottom: 2px solid #1D4ED8; padding-bottom: 10px;">
-                            Contact Details
-                        </h2>
-                        <table style="width: 100%; margin-top: 20px;">
-                            <tr>
-                                <td style="padding: 10px; font-weight: bold; width: 30%;">Name:</td>
-                                <td style="padding: 10px;">{contact_message.name}</td>
-                            </tr>
-                            <tr style="background-color: #f9f9f9;">
-                                <td style="padding: 10px; font-weight: bold;">Email:</td>
-                                <td style="padding: 10px;">{contact_message.email}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px; font-weight: bold;">Subject:</td>
-                                <td style="padding: 10px;">{contact_message.get_subject_display()}</td>
-                            </tr>
-                            <tr style="background-color: #f9f9f9;">
-                                <td style="padding: 10px; font-weight: bold;">Submitted:</td>
-                                <td style="padding: 10px;">{contact_message.created_at.strftime('%Y-%m-%d %H:%M:%S')}</td>
-                            </tr>
-                        </table>
-                        <h3 style="color: #0F2A44; margin-top: 30px; border-bottom: 2px solid #1D4ED8; padding-bottom: 10px;">
-                            Message
-                        </h3>
-                        <div style="background-color: #f9f9f9; padding: 20px; margin-top: 15px; border-left: 4px solid #1D4ED8;">
-                            {contact_message.message}
-                        </div>
-                        <div style="margin-top: 30px; padding: 15px; background-color: #E6F0FF; border-radius: 5px;">
-                            <p style="margin: 0; color: #0F2A44;">
-                                <strong>Reply to:</strong> <a href="mailto:{contact_message.email}" style="color: #1D4ED8;">{contact_message.email}</a>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[settings.CONTACT_EMAIL],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        
-        print(f"✅ Admin email sent successfully to {settings.CONTACT_EMAIL}")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error sending admin email: {str(e)}")
-        return False
-
-
-def send_user_confirmation_email(contact_message):
-    """Send confirmation email to user"""
-    try:
-        subject = 'Thank you for contacting MIU - We received your message'
-        
-        text_content = f"""
-Dear {contact_message.name},
-
-Thank you for contacting Modern International University (MIU). We have received your message and will respond within 1-2 business days.
-
-Your Message Details:
-Subject: {contact_message.get_subject_display()}
-Message: {contact_message.message}
-
-If you have any urgent questions, please call us at +1 (555) 123-4567.
-
-Best regards,
-The MIU Admissions Team
-        """
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
-                    <div style="background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%); padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">Thank You for Contacting Us!</h1>
-                    </div>
-                    <div style="background-color: white; padding: 30px; margin-top: 20px;">
-                        <p style="font-size: 16px; margin-bottom: 20px;">Dear <strong>{contact_message.name}</strong>,</p>
-                        <p style="font-size: 16px; margin-bottom: 20px;">
-                            Thank you for reaching out to Modern International University. We have received your message 
-                            and our team will review it carefully.
-                        </p>
-                        <div style="background-color: #E6F0FF; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                            <h3 style="color: #0F2A44; margin-top: 0;">Your Message Summary</h3>
-                            <p><strong>Subject:</strong> {contact_message.get_subject_display()}</p>
-                        </div>
-                        <p style="font-size: 16px;">
-                            Best regards,<br>
-                            <strong style="color: #0F2A44;">The MIU Admissions Team</strong>
-                        </p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[contact_message.email],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        
-        print(f"✅ Confirmation email sent successfully to {contact_message.email}")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error sending user confirmation email: {str(e)}")
-        return False
-
 
 # Additional Pages
 @check_for_auth
@@ -1153,44 +920,6 @@ def stripe_webhook(request):
 
     return HttpResponse(status=200)
 
-
-
-#Send Emails Helper
-
-
-def send_payment_emails(payment):
-    if payment.user and payment.user.email:
-        send_mail(
-            "Payment Receipt",
-            f"""
-    Payment Successful
-
-    Amount: £{payment.amount}
-    Application ID: {payment.application_id}
-    Transaction: {payment.stripe_payment_intent}
-    """,
-                settings.DEFAULT_FROM_EMAIL,
-                [payment.user.email],
-                fail_silently=True,
-            )
-
-        send_mail(
-            "New Payment Received",
-            f"""
-    Vendor Payment Alert
-
-    Application ID: {payment.application_id}
-    Amount: £{payment.amount}
-    """,
-            settings.DEFAULT_FROM_EMAIL,
-            [payment.vendor.email],
-            fail_silently=True,
-    )
-
-
-
-#Confirm Payment (Frontend POST fallback)
-
 @require_POST
 def confirm_payment(request):
     if not request.body:
@@ -1219,18 +948,12 @@ def confirm_payment(request):
 
     return JsonResponse({"status": "success", "payment_id": payment.id})
 
-
-#Payment Success Page (Receipt)
-
 def payment_success(request, payment_id):
     payment = get_object_or_404(ApplicationPayment, id=payment_id, status="success")
 
     return render(request, "applications/payment_success.html", {
         "payment": payment
     })
-
-
-#Atomic Refunds
 
 @require_POST
 def refund_payment(request, payment_id):
@@ -1253,9 +976,6 @@ def refund_payment(request, payment_id):
         return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"status": "refunded"})
-
-
-
 
 @require_GET
 def get_payment_summary(request, application_id):
@@ -1301,9 +1021,6 @@ def get_payment_summary(request, application_id):
             'success': False, 
             'error': 'Unable to load payment details'
         }, status=500)
-
-
-
 
 ###################### APPLICATION SUBMISSION ##############################################
 
@@ -1460,10 +1177,6 @@ def save_application_draft(request):
             "error": str(e)
         }, status=400)
 
-
-
-
-
 @login_required
 def payment_details(request, application_id):
     app = CourseApplication.objects.get(
@@ -1548,6 +1261,11 @@ def upload_application_file(request, application_id):
         if application.status == 'payment_complete':
             application.status = 'documents_uploaded'
             application.save(update_fields=['status'])
+
+            # Send confirmation email to applicant
+            send_document_upload_confirmation(application, document)
+            # Send notification email to admin
+            send_document_upload_admin_notification(application, document)
         
         # Auto-submit if requested
         if auto_submit:
@@ -1930,92 +1648,3 @@ def accept_admission(request, application_id):
         )
     
     return redirect('eduweb:application_status')
-
-
-def send_admission_acceptance_email(application):
-    """Send email when student accepts admission"""
-    try:
-        subject = (
-            f'Admission Accepted - {application.admission_number}'
-        )
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; 
-                         line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; 
-                            padding: 20px; background-color: #f4f4f4;">
-                    <div style="background: linear-gradient(135deg, 
-                                #0F2A44 0%, #1D4ED8 100%); 
-                                padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">
-                            🎓 Welcome to MIU!
-                        </h1>
-                    </div>
-                    
-                    <div style="background-color: white; 
-                                padding: 30px; margin-top: 20px;">
-                        <p style="font-size: 16px;">
-                            Dear <strong>
-                                {application.first_name} 
-                                {application.last_name}
-                            </strong>,
-                        </p>
-                        
-                        <div style="background-color: #10b98115; 
-                                    padding: 20px; border-radius: 8px; 
-                                    margin: 25px 0; 
-                                    border-left: 4px solid #10b981;">
-                            <h3 style="color: #10b981; margin-top: 0;">
-                                Admission Acceptance Confirmed!
-                            </h3>
-                            <p>
-                                <strong>Admission Number:</strong> 
-                                {application.admission_number}
-                            </p>
-                            <p>
-                                <strong>Program:</strong> 
-                                {application.course.name}
-                            </p>
-                        </div>
-                        
-                        <h4>Next Steps:</h4>
-                        <ol>
-                            <li>
-                                Department approval is in progress
-                            </li>
-                            <li>
-                                You will receive portal access 
-                                once approved
-                            </li>
-                            <li>
-                                Keep this admission number for 
-                                all correspondence
-                            </li>
-                        </ol>
-                        
-                        <p style="margin-top: 30px;">
-                            Welcome aboard!<br>
-                            <strong style="color: #0F2A44;">
-                                The MIU Team
-                            </strong>
-                        </p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"Admission Accepted - {application.admission_number}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[application.email],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-        
-    except Exception as e:
-        print(f"Error sending acceptance email: {str(e)}")
-        return False

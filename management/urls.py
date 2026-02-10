@@ -11,7 +11,7 @@ urlpatterns = [
     
     # Applications Management
     path('applications/', views.applications_list, name='applications_list'),
-    path('applications/<int:pk>/', views.application_detail, name='application_detail'),
+    path('applications/<str:application_id>/', views.application_detail, name='application_detail'),
     path('applications/<int:pk>/mark-reviewed/', views.mark_reviewed, name='mark_reviewed'),
     path('applications/<int:pk>/make-decision/', views.make_decision, name='make_decision'),
     

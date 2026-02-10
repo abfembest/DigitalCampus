@@ -157,7 +157,7 @@ class LessonForm(forms.ModelForm):
         model = Lesson
         fields = [
             'section', 'title', 'lesson_type', 'description',
-            'content', 'video_url', 'video_duration_minutes',
+            'content', 'video_url', 'video_file', 'video_duration_minutes',
             'file', 'is_preview', 'display_order'
         ]
         widgets = {
@@ -184,6 +184,10 @@ class LessonForm(forms.ModelForm):
             'video_url': forms.URLInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'YouTube, Vimeo, or storage URL'
+            }),
+            'video_file': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100',
+                'accept': 'video/mp4,video/webm,video/ogg,video/x-msvideo,video/quicktime'
             }),
             'video_duration_minutes': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',

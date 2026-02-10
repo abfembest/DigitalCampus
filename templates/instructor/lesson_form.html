@@ -144,23 +144,65 @@
                         Video Content
                     </h2>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="md:col-span-2">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <p class="text-sm text-blue-800">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>Choose one option:</strong> Either provide a video URL (YouTube/Vimeo) 
+                            <strong>OR</strong> upload a video file directly. Do not use both.
+                        </p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Video URL Option -->
+                        <div class="bg-white border-2 border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center mb-3">
+                                <i class="fas fa-link text-purple-600 mr-2"></i>
+                                <h3 class="font-semibold text-gray-900">Option 1: Video URL</h3>
+                            </div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Video URL
+                                Video URL (YouTube/Vimeo)
                             </label>
                             {{ form.video_url }}
-                            <p class="mt-1 text-sm text-gray-500">
-                                YouTube, Vimeo, or direct video URL
+                            <p class="mt-2 text-sm text-gray-500">
+                                Paste the URL of your video from YouTube, Vimeo, or other platforms
                             </p>
                         </div>
 
-                        <div>
+                        <!-- Video File Upload Option -->
+                        <div class="bg-white border-2 border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center mb-3">
+                                <i class="fas fa-upload text-purple-600 mr-2"></i>
+                                <h3 class="font-semibold text-gray-900">Option 2: Upload Video</h3>
+                            </div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Duration (minutes)
+                                Video File
                             </label>
+                            {{ form.video_file }}
+                            {% if lesson and lesson.video_file %}
+                            <div class="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                                <p class="text-sm text-green-800 flex items-center">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    Current: <strong class="ml-1">{{ lesson.video_file.name|slice:"7:" }}</strong>
+                                </p>
+                            </div>
+                            {% endif %}
+                            <p class="mt-2 text-sm text-gray-500">
+                                Upload MP4, WebM, OGG, AVI, or MOV (Max recommended: 500MB)
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Video Duration -->
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Duration (minutes)
+                        </label>
+                        <div class="max-w-xs">
                             {{ form.video_duration_minutes }}
                         </div>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Approximate video length for progress tracking
+                        </p>
                     </div>
                 </div>
 

@@ -153,12 +153,12 @@ def applications_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
-def application_detail(request, pk):
+def application_detail(request, application_id):
     """View detailed information about a specific application"""
     
     application = get_object_or_404(
         CourseApplication.objects.prefetch_related('documents'),  # ✅ Correct related name
-        pk=pk
+        application_id=application_id
     )
     
     # Mark as under review when admin opens it (only if status is 'submitted')

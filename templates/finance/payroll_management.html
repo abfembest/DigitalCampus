@@ -1,0 +1,408 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Payroll Management - Finance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">
+                Payroll Management
+            </h1>
+            <p class="text-gray-600 mt-1">
+                Manage staff salary and payments
+            </p>
+        </div>
+        <button onclick="openCreateModal()" 
+                class="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-lg">
+            <i class="fas fa-plus mr-2"></i>
+            Create Payroll
+        </button>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 mb-1">Total Gross Salary</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        ${{ total_amount|default:0|floatformat:2 }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-dollar-sign text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 mb-1">Total Net Salary</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        ${{ paid_amount|default:0|floatformat:2 }}
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-wallet text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 mb-1">Total Tax Deductions</p>
+                    <p class="text-2xl font-bold text-gray-900">
+                        $0.00
+                    </p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-receipt text-red-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                {{ filter_form.status }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Month</label>
+                {{ filter_form.month }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                {{ filter_form.year }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                {{ filter_form.search }}
+            </div>
+            <div class="flex items-end gap-2">
+                <button type="submit" 
+                        class="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                    <i class="fas fa-filter mr-2"></i> Filter
+                </button>
+                <a href="{% url 'finance:payroll_management' %}" 
+                   class="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Payroll Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gross</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deductions</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Net</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for payroll in payrolls %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                                    <span class="text-primary-700 font-semibold text-sm">
+                                        {{ payroll.staff.first_name.0|default:payroll.staff.username.0 }}{{ payroll.staff.last_name.0|default:'' }}
+                                    </span>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ payroll.staff.get_full_name|default:payroll.staff.username }}
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        Staff
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {{ payroll.get_month_name }} {{ payroll.year }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {{ payroll.payroll_reference }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                            ${{ payroll.gross_salary|floatformat:2 }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                ${{ payroll.tax_deduction|floatformat:2 }}
+                            </div>
+                            {% if payroll.other_deductions > 0 %}
+                            <div class="text-xs text-gray-500">
+                                +${{ payroll.other_deductions|floatformat:2 }} other
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
+                            ${{ payroll.net_salary|floatformat:2 }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if payroll.payment_status == 'paid' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Paid</span>
+                            {% elif payroll.payment_status == 'processing' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Processing</span>
+                            {% elif payroll.payment_status == 'pending' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
+                            {% elif payroll.payment_status == 'failed' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Failed</span>
+                            {% else %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{{ payroll.get_payment_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <a href="{% url 'finance:payroll_detail' payroll.payroll_reference %}" 
+                               class="text-primary-600 hover:text-primary-900 font-medium">
+                                View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center">
+                            <div class="text-gray-400">
+                                <i class="fas fa-inbox text-4xl mb-3"></i>
+                                <p class="text-lg">No payroll records found</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_payrolls }} results
+            </div>
+            <div class="flex space-x-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Previous</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create Payroll Modal -->
+<div id="createModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+            <h2 class="text-2xl font-bold text-gray-900">Create Payroll</h2>
+            <button onclick="closeCreateModal()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" class="p-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Staff -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Staff Member *</label>
+                    {{ form.staff }}
+                </div>
+                
+                <!-- Month -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Month *</label>
+                    {{ form.month }}
+                </div>
+                
+                <!-- Year -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Year *</label>
+                    {{ form.year }}
+                </div>
+                
+                <!-- Base Salary -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Base Salary *</label>
+                    {{ form.base_salary }}
+                </div>
+                
+                <!-- Allowances -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Allowances</label>
+                    {{ form.allowances }}
+                </div>
+                
+                <!-- Bonuses -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Bonuses</label>
+                    {{ form.bonuses }}
+                </div>
+                
+                <!-- Tax Deduction -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tax Deduction</label>
+                    {{ form.tax_deduction }}
+                </div>
+                
+                <!-- Other Deductions -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Other Deductions</label>
+                    {{ form.other_deductions }}
+                </div>
+                
+                <!-- Payment Method -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                    {{ form.payment_method }}
+                </div>
+                
+                <!-- Bank Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Bank Name</label>
+                    {{ form.bank_name }}
+                </div>
+                
+                <!-- Account Number -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Account Number</label>
+                    {{ form.account_number }}
+                </div>
+            </div>
+            
+            <!-- Attachments Section -->
+            <div class="mt-6 border-t pt-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Attachments (Optional)</h3>
+                
+                <div class="space-y-4">
+                    <!-- Attachment 1 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_file_1.label }}</label>
+                            {{ form.attachment_file_1 }}
+                            {% if form.attachment_file_1.help_text %}
+                            <p class="text-xs text-gray-500 mt-1">{{ form.attachment_file_1.help_text }}</p>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_name_1.label }}</label>
+                            {{ form.attachment_name_1 }}
+                        </div>
+                    </div>
+                    
+                    <!-- Attachment 2 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_file_2.label }}</label>
+                            {{ form.attachment_file_2 }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_name_2.label }}</label>
+                            {{ form.attachment_name_2 }}
+                        </div>
+                    </div>
+                    
+                    <!-- Attachment 3 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_file_3.label }}</label>
+                            {{ form.attachment_file_3 }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_name_3.label }}</label>
+                            {{ form.attachment_name_3 }}
+                        </div>
+                    </div>
+                    
+                    <!-- Attachment 4 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_file_4.label }}</label>
+                            {{ form.attachment_file_4 }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_name_4.label }}</label>
+                            {{ form.attachment_name_4 }}
+                        </div>
+                    </div>
+                    
+                    <!-- Attachment 5 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_file_5.label }}</label>
+                            {{ form.attachment_file_5 }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.attachment_name_5.label }}</label>
+                            {{ form.attachment_name_5 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notes -->
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                {{ form.notes }}
+            </div>
+            
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="closeCreateModal()" 
+                        class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    <i class="fas fa-save mr-2"></i> Create Payroll
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openCreateModal() {
+    document.getElementById('createModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCreateModal() {
+    document.getElementById('createModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Close on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCreateModal();
+});
+
+// Close on backdrop click
+document.getElementById('createModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCreateModal();
+});
+</script>
+{% endblock %}

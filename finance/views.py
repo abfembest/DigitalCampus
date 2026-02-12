@@ -11,12 +11,14 @@ from decimal import Decimal
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 import json
+from django.core.paginator import Paginator
 
 from eduweb.models import (
     ApplicationPayment, 
     Subscription, 
     SubscriptionPlan, 
-    CourseApplication
+    CourseApplication,
+    StaffPayroll,
 )
 
 from .forms import (
@@ -25,6 +27,7 @@ from .forms import (
     SubscriptionFilterForm, 
     DateRangeForm,
     InvoiceGenerateForm,
+    PayrollCreateForm, PayrollFilterForm,PayrollStatusForm
 )
 
 
@@ -570,4 +573,264 @@ def transaction_reports(request):
         request, 
         'finance/transaction_reports.html', 
         context
+    )
+
+# ==================== PAYROLL VIEWS ====================
+
+@login_required
+@user_passes_test(is_finance_manager)
+def payroll_management(request):
+    """
+    Main payroll management page
+    List view with create modal
+    """
+    
+    # Handle form submission (Create new payroll)
+    if request.method == 'POST':
+        form = PayrollCreateForm(
+            request.POST,
+            request.FILES
+        )
+        if form.is_valid():
+            payroll = form.save(commit=False)
+            payroll.created_by = request.user
+            payroll.save()
+            
+            # Handle file attachments (1-5)
+            for i in range(1, 6):
+                file_key = f'attachment_file_{i}'
+                name_key = f'attachment_name_{i}'
+                
+                file_data = request.FILES.get(file_key)
+                name_data = request.POST.get(name_key, '')
+                
+                if file_data:
+                    setattr(payroll, f'attachment_{i}', file_data)
+                    if name_data:
+                        setattr(
+                            payroll,
+                            f'attachment_{i}_name',
+                            name_data
+                        )
+            
+            payroll.save()
+            
+            messages.success(
+                request,
+                f'Payroll created successfully: '
+                f'{payroll.payroll_reference}'
+            )
+            return redirect('finance:payroll_management')
+    else:
+        form = PayrollCreateForm()
+    
+    # Get filter parameters
+    filter_form = PayrollFilterForm(request.GET or None)
+    
+    # Base queryset
+    payrolls = StaffPayroll.objects.select_related(
+        'staff',
+        'created_by',
+        'approved_by'
+    ).order_by('-year', '-month', 'staff__username')
+    
+    # Apply filters
+    if filter_form.is_valid():
+        status = filter_form.cleaned_data.get('status')
+        month = filter_form.cleaned_data.get('month')
+        year = filter_form.cleaned_data.get('year')
+        search = filter_form.cleaned_data.get('search')
+        
+        if status:
+            payrolls = payrolls.filter(payment_status=status)
+        
+        if month:
+            payrolls = payrolls.filter(month=int(month))
+        
+        if year:
+            payrolls = payrolls.filter(year=year)
+        
+        if search:
+            payrolls = payrolls.filter(
+                Q(payroll_reference__icontains=search) |
+                Q(staff__username__icontains=search) |
+                Q(staff__first_name__icontains=search) |
+                Q(staff__last_name__icontains=search)
+            )
+    
+    # Pagination
+    paginator = Paginator(payrolls, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    total_payrolls = payrolls.count()
+    pending_count = payrolls.filter(
+        payment_status='pending'
+    ).count()
+    paid_count = payrolls.filter(
+        payment_status='paid'
+    ).count()
+    
+    total_amount = payrolls.aggregate(
+        total=Sum('net_salary')
+    )['total'] or Decimal('0')
+    
+    paid_amount = payrolls.filter(
+        payment_status='paid'
+    ).aggregate(
+        total=Sum('net_salary')
+    )['total'] or Decimal('0')
+    
+    context = {
+        'form': form,
+        'filter_form': filter_form,
+        'page_obj': page_obj,
+        'payrolls': page_obj.object_list,
+        'total_payrolls': total_payrolls,
+        'pending_count': pending_count,
+        'paid_count': paid_count,
+        'total_amount': total_amount,
+        'paid_amount': paid_amount,
+    }
+    
+    return render(
+        request,
+        'finance/payroll_management.html',
+        context
+    )
+
+
+@login_required
+@user_passes_test(is_finance_manager)
+def payroll_detail(request, payroll_reference):
+    """
+    Detail view for a specific payroll
+    View and update payroll information
+    """
+    
+    payroll = get_object_or_404(
+        StaffPayroll.objects.select_related(
+            'staff',
+            'created_by',
+            'approved_by'
+        ),
+        payroll_reference=payroll_reference
+    )
+    
+    # Handle status update form
+    if request.method == 'POST':
+        status_form = PayrollStatusForm(
+            request.POST,
+            instance=payroll
+        )
+        if status_form.is_valid():
+            updated_payroll = status_form.save(commit=False)
+            
+            # If marking as paid, set approval info
+            if (updated_payroll.payment_status == 'paid' and
+                payroll.payment_status != 'paid'):
+                updated_payroll.approved_by = request.user
+                updated_payroll.approved_at = timezone.now()
+            
+            updated_payroll.save()
+            
+            messages.success(
+                request,
+                'Payroll status updated successfully'
+            )
+            return redirect(
+                'finance:payroll_detail',
+                payroll_reference=payroll_reference
+            )
+    else:
+        status_form = PayrollStatusForm(instance=payroll)
+    
+    # Get attachments
+    attachments = payroll.get_attachments()
+    
+    context = {
+        'payroll': payroll,
+        'status_form': status_form,
+        'attachments': attachments,
+    }
+    
+    return render(
+        request,
+        'finance/payroll_detail.html',
+        context
+    )
+
+
+@login_required
+@user_passes_test(is_finance_manager)
+def payroll_delete(request, payroll_reference):
+    """Delete a payroll record"""
+    
+    payroll = get_object_or_404(
+        StaffPayroll,
+        payroll_reference=payroll_reference
+    )
+    
+    # Check if can be deleted
+    if not payroll.can_delete():
+        messages.error(
+            request,
+            'Cannot delete a paid payroll record'
+        )
+        return redirect(
+            'finance:payroll_detail',
+            payroll_reference=payroll_reference
+        )
+    
+    if request.method == 'POST':
+        # Delete all attachments
+        for i in range(1, 6):
+            file_field = getattr(payroll, f'attachment_{i}')
+            if file_field:
+                file_field.delete(save=False)
+        
+        payroll.delete()
+        
+        messages.success(
+            request,
+            f'Payroll {payroll_reference} deleted successfully'
+        )
+        return redirect('finance:payroll_management')
+    
+    return redirect(
+        'finance:payroll_detail',
+        payroll_reference=payroll_reference
+    )
+
+
+@login_required
+@user_passes_test(is_finance_manager)
+def payroll_attachment_delete(
+    request,
+    payroll_reference,
+    attachment_number
+):
+    """Delete a specific attachment from payroll"""
+    
+    payroll = get_object_or_404(
+        StaffPayroll,
+        payroll_reference=payroll_reference
+    )
+    
+    if request.method == 'POST':
+        if payroll.delete_attachment(attachment_number):
+            messages.success(
+                request,
+                f'Attachment {attachment_number} deleted successfully'
+            )
+        else:
+            messages.error(
+                request,
+                'Failed to delete attachment'
+            )
+    
+    return redirect(
+        'finance:payroll_detail',
+        payroll_reference=payroll_reference
     )

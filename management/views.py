@@ -189,7 +189,7 @@ def mark_reviewed(request, pk):
     # Only act on applications that are under review
     if application.status != 'under_review':
         messages.warning(request, 'Application is not in under_review status.')
-        return redirect('management:application_detail', pk=pk)
+        return redirect('management:application_detail', application_id=application.application_id)
 
     # Record who reviewed it and when (status stays under_review until decision)
     application.reviewer = request.user
@@ -200,7 +200,7 @@ def mark_reviewed(request, pk):
         request,
         f'Review recorded for {application.application_id}. Now make your decision.'
     )
-    return redirect('management:application_detail', pk=pk)
+    return redirect('management:application_detail', application_id=application.application_id)
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
@@ -215,7 +215,7 @@ def make_decision(request, pk):
         VALID_DECISIONS = ['approved', 'rejected']
         if decision not in VALID_DECISIONS:
             messages.error(request, 'Invalid decision. Choose Approved or Rejected.')
-            return redirect('management:application_detail', pk=pk)
+            return redirect('management:application_detail', application_id=application.application_id)
         
         # Update application status
         if decision == 'approved':
@@ -240,7 +240,7 @@ def make_decision(request, pk):
             f'Decision "{decision.capitalize()}" has been recorded and email sent to applicant.'
         )
         
-        return redirect('management:application_detail', pk=pk)
+        return redirect('management:application_detail', application_id=application.application_id)
     
     return redirect('management:applications_list')
 
@@ -2033,7 +2033,7 @@ def approve_department(request, pk):
                 request, 
                 'Student must accept admission first.'
             )
-            return redirect('management:application_detail', pk=pk)
+            return redirect('management:application_detail', application_id=application.application_id)
         
         application.department_approved = True
         application.department_approved_at = timezone.now()
@@ -2048,7 +2048,7 @@ def approve_department(request, pk):
             f'Department approval granted for {application.admission_number}'
         )
         
-        return redirect('management:application_detail', pk=pk)
+        return redirect('management:application_detail', application_id=application.application_id)
     
     return redirect('management:applications_list')
 

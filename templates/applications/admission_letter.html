@@ -9,11 +9,15 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link 
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" 
+        rel="stylesheet"
+    >
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -21,9 +25,12 @@
                 extend: {
                     colors: {
                         primary: {
-                            50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe',
-                            400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce',
-                            800: '#6b21a8', 900: '#581c87', 950: '#840384',
+                            50: '#faf5ff', 100: '#f3e8ff', 
+                            200: '#e9d5ff', 300: '#d8b4fe',
+                            400: '#c084fc', 500: '#a855f7', 
+                            600: '#9333ea', 700: '#7e22ce',
+                            800: '#6b21a8', 900: '#581c87', 
+                            950: '#840384',
                         }
                     },
                     fontFamily: {
@@ -43,8 +50,34 @@
             user-select: none;
         }
         
+        /* A4 Paper: 210mm x 297mm */
+        .a4-container {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .a4-content {
+            padding: 12mm 18mm;
+            box-sizing: border-box;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .body-text {
+            text-align: justify;
+            text-justify: inter-word;
+        }
+        
         @media print {
-            .no-print { display: none !important; }
+            .no-print { 
+                display: none !important; 
+            }
             
             body {
                 background: white !important;
@@ -52,14 +85,11 @@
                 padding: 0;
             }
             
-            .letter-content {
+            .a4-container {
                 box-shadow: none !important;
-                border: none !important;
-                border-radius: 0 !important;
-                page-break-inside: avoid;
-                max-width: 100% !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
             }
             
             * {
@@ -68,164 +98,220 @@
                 color-adjust: exact !important;
             }
             
-            .watermark-print {
-                position: fixed !important;
-                top: 50% !important;
-                left: 50% !important;
-                transform: translate(-50%, -50%) !important;
-                opacity: 0.05 !important;
-                width: 400px !important;
-                height: 400px !important;
-                z-index: 0 !important;
-            }
-            
-            .letter-inner {
-                position: relative !important;
-                z-index: 1 !important;
-            }
-            
             @page {
                 size: A4;
-                margin: 15mm 20mm;
+                margin: 0;
             }
         }
         
-        .watermark-screen {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0.05;
-            width: 400px;
-            height: 400px;
-            z-index: 0;
-            pointer-events: none;
+        @media screen and (max-width: 768px) {
+            .a4-container {
+                width: 100%;
+                height: auto;
+                min-height: 297mm;
+            }
+            
+            .a4-content {
+                padding: 5mm;
+            }
         }
     </style>
 </head>
-<body class="bg-gray-50 antialiased font-sans">
-    <div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 py-12">
-        <div class="container mx-auto px-4 max-w-5xl">
+<body class="bg-gray-100 antialiased font-sans">
+    <div class="min-h-screen py-8">
+        <div class="container mx-auto px-4 max-w-[210mm]">
             
             <!-- Actions -->
-            <div class="flex justify-between items-center mb-8 no-print">
-                <a href="{% if user.is_staff %}{% url 'management:application_detail' application.id %}{% else %}{% url 'eduweb:application_status' %}{% endif %}" 
-                   class="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all duration-300">
-                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            <div class="flex justify-between items-center mb-6 no-print">
+                <a 
+                    href="{% if user.is_staff %}{% url 'management:application_detail' application.application_id %}{% elif application.can_access_student_portal %}{% url 'students:dashboard' %}{% else %}{% url 'eduweb:application_status' %}{% endif %}" 
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all"
+                >
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
                     Back
                 </a>
-                <button onclick="generatePDF()" class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                    <i data-lucide="download" class="w-5 h-5"></i>
+                <button 
+                    onclick="downloadPDF()" 
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                >
+                    <i data-lucide="download" class="w-4 h-4"></i>
                     Download PDF
                 </button>
             </div>
 
-            <!-- Watermark for Print -->
-            <div class="watermark-print" style="display: none;">
-                <img src="{% static 'Miulogo.png' %}" alt="">
-            </div>
-
-            <!-- Letter -->
-            <div id="letterContent" class="bg-white rounded-xl shadow-2xl overflow-hidden relative letter-content">
-                <!-- Watermark for Screen -->
-                <div class="watermark-screen no-print">
-                    <img src="{% static 'Miulogo.png' %}" alt="" class="w-full h-full object-contain">
-                </div>
-
-                <!-- Content -->
-                <div class="relative z-10 p-12 md:p-16 letter-inner">
+            <!-- A4 Letter Container -->
+            <div id="letterContent" class="a4-container">
+                <div class="a4-content">
+                    
                     <!-- Header -->
-                    <div class="text-center mb-12 pb-8 border-b-4 border-primary-950">
-                        <img src="{% static 'Miulogo.png' %}" alt="MIU Logo" class="h-24 mx-auto mb-6">
-                        <h1 class="text-3xl font-bold text-primary-950 mb-2 font-display">MELCHISEDEC INTERNATIONAL UNIVERSITY</h1>
-                        <p class="text-gray-600">123 University Avenue, Knowledge City, KC 10101</p>
-                        <p class="text-gray-600">Tel: +1 (555) 123-4567 | Email: admissions@miu.edu</p>
+                    <div class="text-center mb-4 pb-3 border-b-4 border-primary-950">
+                        <img 
+                            src="{% static 'Miulogo.png' %}" 
+                            alt="MIU Logo" 
+                            class="h-24 mx-auto mb-1"
+                        >
+                        <h1 class="text-2xl font-bold text-primary-950 mb-0.5 font-display leading-tight">
+                            MELCHISEDEC INTERNATIONAL UNIVERSITY
+                        </h1>
+                        <p class="text-xs text-gray-600 leading-tight">
+                            123 University Avenue, Knowledge City, KC 10101
+                        </p>
+                        <p class="text-xs text-gray-600 leading-tight">
+                            Tel: +1 (555) 123-4567 | Email: admissions@miu.edu
+                        </p>
                     </div>
 
                     <!-- Title -->
-                    <div class="text-center mb-8">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-2 font-display">LETTER OF ADMISSION</h2>
-                        <p class="text-gray-600">Academic Year {{ application.get_intake_display }}</p>
+                    <div class="text-center mb-3">
+                        <h2 class="text-xl font-bold text-gray-900 mb-0.5 font-display">
+                            LETTER OF ADMISSION
+                        </h2>
+                        <p class="text-xs text-gray-600">
+                            Academic Year {{ application.intake.name }}
+                        </p>
                     </div>
 
                     <!-- Date & Reference -->
-                    <div class="mb-8">
-                        <p class="text-gray-700 mb-2"><strong>Date:</strong> {{ application.decision_date|date:"F d, Y" }}</p>
-                        <p class="text-gray-700"><strong>Reference Number:</strong> {{ application.application_id }}</p>
+                    <div class="mb-3 text-xs">
+                        <p class="text-gray-700 mb-0.5">
+                            <strong>Date:</strong> 
+                            {% if application.reviewed_at %}
+                                {{ application.reviewed_at|date:"F d, Y" }}
+                            {% else %}
+                                {% now "F d, Y" %}
+                            {% endif %}
+                        </p>
+                        <p class="text-gray-700">
+                            <strong>Reference Number:</strong> 
+                            {{ application.application_id }}
+                        </p>
                     </div>
 
                     <!-- Recipient -->
-                    <div class="mb-8">
-                        <p class="text-gray-900 font-semibold text-lg">{{ application.get_full_name }}</p>
-                        <p class="text-gray-700">{{ application.address }}</p>
-                        <p class="text-gray-700">{{ application.get_country_display }}</p>
+                    <div class="mb-3">
+                        <p class="text-gray-900 font-semibold text-sm">
+                            {{ application.get_full_name }}
+                        </p>
+                        <p class="text-xs text-gray-700 leading-tight">
+                            {{ application.address_line1 }}{% if application.address_line2 %}, {{ application.address_line2 }}{% endif %}
+                        </p>
+                        <p class="text-xs text-gray-700 leading-tight">
+                            {{ application.city }}, {{ application.state }} {{ application.postal_code }}
+                        </p>
+                        <p class="text-xs text-gray-700 leading-tight">
+                            {{ application.country }}
+                        </p>
                     </div>
 
                     <!-- Body -->
-                    <div class="mb-8 space-y-4 text-gray-700 leading-relaxed">
-                        <p class="text-lg">Dear {{ application.first_name }},</p>
+                    <div class="mb-3 space-y-2 text-xs text-gray-700 leading-snug">
+                        <p>Dear {{ application.first_name }},</p>
                         
-                        <p><strong class="text-primary-950">Congratulations!</strong> On behalf of the Admissions Committee, I am delighted to inform you that you have been accepted to Melchisedec International University for the <strong>{{ application.get_program_display_name }}</strong> program leading to a <strong>{{ application.get_degree_level_display_name }}</strong>.</p>
+                        <p class="body-text">
+                            <strong class="text-primary-950">Congratulations!</strong> 
+                            On behalf of the Admissions Committee, I am delighted 
+                            to inform you that you have been accepted to 
+                            Melchisedec International University for the 
+                            <strong>{{ application.course.name }}</strong> program 
+                            leading to a 
+                            <strong>{{ application.course.get_degree_level_display }}</strong>.
+                        </p>
                         
-                        <p>Your academic achievements and demonstrated potential have impressed our selection committee. We believe you will make significant contributions to our academic community and benefit greatly from the rigorous educational experience MIU offers.</p>
+                        <p class="body-text">
+                            Your academic achievements and demonstrated potential 
+                            have impressed our selection committee. We believe you 
+                            will make significant contributions to our academic 
+                            community.
+                        </p>
                         
-                        <p><strong>Program Details:</strong></p>
-                        <ul class="list-disc list-inside ml-4 space-y-2">
-                            <li><strong>Program:</strong> {{ application.get_program_display_name }}</li>
-                            <li><strong>Degree Level:</strong> {{ application.get_degree_level_display_name }}</li>
+                        <p class="font-semibold">Program Details:</p>
+                        <ul class="list-disc list-inside ml-3 space-y-0.5 text-xs leading-snug">
+                            <li><strong>Program:</strong> {{ application.course.name }}</li>
+                            <li><strong>Faculty:</strong> {{ application.course.faculty.name }}</li>
+                            <li><strong>Degree Level:</strong> {{ application.course.get_degree_level_display }}</li>
                             <li><strong>Study Mode:</strong> {{ application.get_study_mode_display }}</li>
-                            <li><strong>Start Date:</strong> {{ application.get_intake_display }}</li>
+                            <li><strong>Start Date:</strong> {{ application.intake.name }}</li>
                             {% if application.scholarship %}
-                            <li><strong>Scholarship:</strong> Awarded - Details will be sent separately</li>
+                            <li><strong>Scholarship:</strong> Awarded - Details sent separately</li>
                             {% endif %}
                         </ul>
                         
-                        <p><strong>Next Steps:</strong></p>
-                        <ol class="list-decimal list-inside ml-4 space-y-2">
-                            <li>Accept your admission offer within 30 days of this letter</li>
+                        <p class="font-semibold">Next Steps:</p>
+                        <ol class="list-decimal list-inside ml-3 space-y-0.5 text-xs leading-snug">
+                            <li>Accept your admission offer within 30 days</li>
                             <li>Complete enrollment registration through your student portal</li>
                             <li>Submit required enrollment documents</li>
                             <li>Pay the enrollment deposit of $500 (non-refundable)</li>
                             <li>Attend the mandatory orientation session</li>
                         </ol>
                         
-                        <p>Detailed enrollment instructions and access to your student portal will be sent to your email address (<strong>{{ application.email }}</strong>) within 3 business days.</p>
+                        <p class="body-text">
+                            Detailed enrollment instructions and portal access 
+                            will be sent to <strong>{{ application.email }}</strong> 
+                            within 3 business days.
+                        </p>
                         
-                        <p>Should you have any questions, please contact our Admissions Office at admissions@miu.edu or call +1 (555) 123-4567.</p>
+                        <p class="body-text">
+                            For questions, contact our Admissions Office at 
+                            admissions@miu.edu or call +1 (555) 123-4567.
+                        </p>
                         
-                        <p>Once again, congratulations on your acceptance. We look forward to welcoming you to the MIU community!</p>
+                        <p class="body-text">
+                            Once again, congratulations on your acceptance. 
+                            We look forward to welcoming you to the MIU community!
+                        </p>
                     </div>
 
                     <!-- Signature -->
-                    <div class="mt-12 mb-8">
-                        <p class="text-gray-700 mb-6">Sincerely,</p>
-                        <img src="{% static 'signature.png' %}" alt="Signature" class="h-16 mb-2" oncontextmenu="return false;" ondragstart="return false;">
-                        <div class="border-t-2 border-gray-300 pt-2 inline-block">
-                            <p class="text-gray-900 font-bold text-lg">Dr. Sarah Johnson</p>
-                            <p class="text-gray-700">Director of Admissions</p>
-                            <p class="text-gray-700">Melchisedec International University</p>
+                    <div class="mt-4 mb-3">
+                        <p class="text-xs text-gray-700 mb-2">Sincerely,</p>
+                        <img 
+                            src="{% static 'signature.png' %}" 
+                            alt="Signature" 
+                            class="h-10 mb-1" 
+                            oncontextmenu="return false;" 
+                            ondragstart="return false;"
+                        >
+                        <div class="border-t-2 border-gray-300 pt-1 inline-block">
+                            <p class="text-gray-900 font-bold text-sm">
+                                Dr. Sarah Johnson
+                            </p>
+                            <p class="text-xs text-gray-700 leading-tight">
+                                Director of Admissions
+                            </p>
+                            <p class="text-xs text-gray-700 leading-tight">
+                                Melchisedec International University
+                            </p>
                         </div>
                     </div>
 
-                    <!-- Footer -->
-                    <div class="mt-12 pt-8 border-t-2 border-gray-200 text-center text-sm text-gray-600">
-                        <p class="mb-2">This is an official letter of admission from Melchisedec International University.</p>
-                        <p>Document ID: {{ application.application_id }} | Generated on {% now "F d, Y" %}</p>
+                    <!-- Footer - Push to bottom -->
+                    <div class="mt-auto pt-3 border-t border-gray-300 text-center text-xs text-gray-600 leading-tight">
+                        <p class="mb-1">
+                            This is an official letter of admission from 
+                            Melchisedec International University.
+                        </p>
+                        <p>
+                            Document ID: {{ application.application_id }} | 
+                            Generated on {% now "F d, Y" %}
+                        </p>
                     </div>
                 </div>
             </div>
 
             <!-- Help Info -->
-            <div class="mt-8 bg-blue-50 border-2 border-blue-200 rounded-xl p-6 no-print">
-                <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="info" class="w-6 h-6 text-white"></i>
+            <div class="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5 no-print">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="info" class="w-5 h-5 text-white"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold text-gray-900 mb-2">Download Instructions</h3>
-                        <ul class="text-gray-700 space-y-2">
-                            <li>• Click "Download PDF" to generate a high-quality PDF</li>
-                            <li>• The letter is formatted for A4 paper size</li>
+                        <h3 class="text-base font-bold text-gray-900 mb-2">
+                            Download Instructions
+                        </h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• Click "Download PDF" for a high-quality PDF</li>
+                            <li>• Letter is formatted for A4 paper size</li>
                             <li>• All colors and formatting will be preserved</li>
                         </ul>
                     </div>
@@ -235,11 +321,114 @@
     </div>
 
     <script>
-        // Security Layer - Obfuscated
-        (function(){const a=['contextmenu','keydown','selectstart','copy','cut','F12','I','J','C','u','preventDefault','stopPropagation','ctrlKey','shiftKey','metaKey','altKey','key'];document.addEventListener(a[0],e=>{e[a[10]]();return!1});document.addEventListener(a[1],e=>{if(e[a[16]]===a[5]||(e[a[12]]&&e[a[13]]&&[a[6],a[7],a[8]].includes(e[a[16]]))||(e[a[12]]&&e[a[16]]===a[9])||(e[a[14]]&&e[a[15]]&&['i','j','c'].includes(e[a[16]]))){e[a[10]]();e[a[11]]();return!1}});[a[2],a[3],a[4]].forEach(b=>{document.addEventListener(b,e=>e[a[10]]())});const c=()=>{};['log','debug','info','warn','error','table','clear','dir','dirxml','trace','group','groupEnd'].forEach(d=>console[d]=c);let e=!1;const f=()=>{const g=window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160;if(g&&!e){e=!0;document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#667eea,#764ba2)"><div style="text-align:center;color:#fff;padding:30px;max-width:500px"><div style="font-size:60px;margin-bottom:15px">🔒</div><h1 style="font-size:28px;margin-bottom:15px">Access Restricted</h1><p style="font-size:16px;line-height:1.6">Developer tools detected. Close them and <a href="javascript:location.reload()" style="color:#ffd700;text-decoration:underline">refresh</a>.</p></div></div>'}else if(!g)e=!1};setInterval(f,500);setInterval(()=>{const h=Date.now();try{(function(){}).constructor('debugger')()}catch(i){}if(Date.now()-h>100)f()},1000);document.addEventListener('DOMContentLoaded',()=>{lucide.createIcons();f()})})();
+        // Initialize Lucide icons
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
 
-        // PDF Generation
-        async function generatePDF(){const btn=event.target.closest('button');const orig=btn.innerHTML;btn.innerHTML='<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>Generating...</span>';btn.disabled=!0;lucide.createIcons();try{await html2pdf().set({margin:[15,20,15,20],filename:'Admission_Letter_{{ application.get_full_name|escapejs }}_{{ application.application_id }}.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:!0,logging:!1,backgroundColor:'#ffffff'},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:'avoid-all'}}).from(document.getElementById('letterContent')).save();btn.innerHTML='<i data-lucide="check" class="w-5 h-5"></i><span>Downloaded!</span>';btn.classList.remove('from-primary-950','to-purple-700');btn.classList.add('from-green-600','to-green-700');lucide.createIcons();setTimeout(()=>{btn.innerHTML=orig;btn.classList.remove('from-green-600','to-green-700');btn.classList.add('from-primary-950','to-purple-700');btn.disabled=!1;lucide.createIcons()},2500)}catch(err){btn.innerHTML='<i data-lucide="alert-circle" class="w-5 h-5"></i><span>Failed</span>';btn.classList.remove('from-primary-950','to-purple-700');btn.classList.add('from-red-600','to-red-700');lucide.createIcons();setTimeout(()=>{btn.innerHTML=orig;btn.classList.remove('from-red-600','to-red-700');btn.classList.add('from-primary-950','to-purple-700');btn.disabled=!1;lucide.createIcons()},3000)}}
+        // PDF Generation - Optimized
+        async function downloadPDF() {
+            const button = event.target.closest('button');
+            const originalHTML = button.innerHTML;
+            
+            button.innerHTML = `
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                <span>Generating...</span>
+            `;
+            button.disabled = true;
+            lucide.createIcons();
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const element = document.getElementById('letterContent');
+                
+                const a4WidthPx = 794;
+                const a4HeightPx = 1123;
+                
+                const canvas = await html2canvas(element, {
+                    scale: 2.5,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    width: a4WidthPx,
+                    height: a4HeightPx,
+                    windowWidth: a4WidthPx,
+                    windowHeight: a4HeightPx,
+                    scrollY: -window.scrollY,
+                    scrollX: -window.scrollX
+                });
+                
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true
+                });
+                
+                const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                
+                pdf.addImage(
+                    imgData, 
+                    'JPEG', 
+                    0, 
+                    0, 
+                    210, 
+                    297,
+                    undefined,
+                    'FAST'
+                );
+                
+                const filename = 'Admission_Letter_{{ application.get_full_name|escapejs }}_{{ application.application_id }}.pdf';
+                pdf.save(filename);
+                
+                button.innerHTML = `
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>Downloaded!</span>
+                `;
+                button.classList.remove('from-primary-950', 'to-purple-700');
+                button.classList.add('from-green-600', 'to-green-700');
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('from-green-600', 'to-green-700');
+                    button.classList.add('from-primary-950', 'to-purple-700');
+                    button.disabled = false;
+                    lucide.createIcons();
+                }, 2500);
+                
+            } catch (error) {
+                console.error('PDF generation failed:', error);
+                
+                button.innerHTML = `
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                    <span>Failed</span>
+                `;
+                button.classList.remove('from-primary-950', 'to-purple-700');
+                button.classList.add('from-red-600', 'to-red-700');
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('from-red-600', 'to-red-700');
+                    button.classList.add('from-primary-950', 'to-purple-700');
+                    button.disabled = false;
+                    lucide.createIcons();
+                }, 3000);
+            }
+        }
+
+        // Basic security
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        
+        document.addEventListener('keydown', e => {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) ||
+                (e.ctrlKey && e.key === 'u')) {
+                e.preventDefault();
+                return false;
+            }
+        });
     </script>
 </body>
 </html>

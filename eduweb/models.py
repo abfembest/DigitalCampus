@@ -2330,3 +2330,363 @@ class BroadcastMessage(models.Model):
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
+
+class StaffPayroll(models.Model):
+    """
+    Consolidated payroll model with integrated file storage
+    Combines salary information and attachments in one table
+    """
+    
+    # Status choices
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+        ('on_hold', 'On Hold'),
+    ]
+    
+    # Payment method choices
+    PAYMENT_METHOD_CHOICES = [
+        ('bank_transfer', 'Bank Transfer'),
+        ('check', 'Check'),
+        ('cash', 'Cash'),
+        ('mobile_money', 'Mobile Money'),
+    ]
+    
+    # Month choices
+    MONTH_CHOICES = [
+        (1, 'January'), (2, 'February'), (3, 'March'),
+        (4, 'April'), (5, 'May'), (6, 'June'),
+        (7, 'July'), (8, 'August'), (9, 'September'),
+        (10, 'October'), (11, 'November'), (12, 'December'),
+    ]
+    
+    # =========================================================================
+    # CORE FIELDS
+    # =========================================================================
+    
+    payroll_reference = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False,
+        db_index=True
+    )
+    
+    staff = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='payrolls',
+        limit_choices_to={
+            'profile__role__in': [
+                'instructor',
+                'support',
+                'admin',
+                'content_manager',
+                'finance'
+            ]
+        },
+        help_text='Select staff member (non-students only)'
+    )
+    
+    month = models.IntegerField(choices=MONTH_CHOICES)
+    year = models.IntegerField()
+    
+    # =========================================================================
+    # SALARY FIELDS
+    # =========================================================================
+    
+    base_salary = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00')
+    )
+    
+    allowances = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Housing, transport, etc.'
+    )
+    
+    bonuses = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Performance bonuses'
+    )
+    
+    gross_salary = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        editable=False
+    )
+    
+    # =========================================================================
+    # DEDUCTION FIELDS
+    # =========================================================================
+    
+    tax_deduction = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Income tax'
+    )
+    
+    other_deductions = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Insurance, loans, etc.'
+    )
+    
+    net_salary = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        editable=False
+    )
+    
+    # =========================================================================
+    # PAYMENT FIELDS
+    # =========================================================================
+    
+    payment_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+    
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        default='bank_transfer'
+    )
+    
+    payment_date = models.DateField(null=True, blank=True)
+    
+    bank_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default=''
+    )
+    
+    account_number = models.CharField(
+        max_length=50,
+        blank=True,
+        default=''
+    )
+    
+    # =========================================================================
+    # FILE ATTACHMENTS - CONSOLIDATED
+    # =========================================================================
+    
+    attachment_1 = models.FileField(
+        upload_to='payroll/attachments/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Salary slip, contract, etc.'
+    )
+    
+    attachment_1_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Display name for attachment 1'
+    )
+    
+    attachment_2 = models.FileField(
+        upload_to='payroll/attachments/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Additional document'
+    )
+    
+    attachment_2_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Display name for attachment 2'
+    )
+    
+    attachment_3 = models.FileField(
+        upload_to='payroll/attachments/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Additional document'
+    )
+    
+    attachment_3_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Display name for attachment 3'
+    )
+    
+    attachment_4 = models.FileField(
+        upload_to='payroll/attachments/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Additional document'
+    )
+    
+    attachment_4_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Display name for attachment 4'
+    )
+    
+    attachment_5 = models.FileField(
+        upload_to='payroll/attachments/%Y/%m/',
+        blank=True,
+        null=True,
+        help_text='Additional document'
+    )
+    
+    attachment_5_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Display name for attachment 5'
+    )
+    
+    # =========================================================================
+    # METADATA FIELDS
+    # =========================================================================
+    
+    notes = models.TextField(blank=True, default='')
+    
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='payrolls_created'
+    )
+    
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payrolls_approved'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-year', '-month', 'staff__username']
+        unique_together = ['staff', 'month', 'year']
+        verbose_name = 'Staff Payroll'
+        verbose_name_plural = 'Staff Payrolls'
+        indexes = [
+            models.Index(fields=['payroll_reference']),
+            models.Index(fields=['staff', 'month', 'year']),
+            models.Index(fields=['payment_status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.staff.get_full_name()} - {self.get_month_name()} {self.year}"
+    
+    def save(self, *args, **kwargs):
+        # Generate unique reference
+        if not self.payroll_reference:
+            self.payroll_reference = self.generate_reference()
+        
+        # Calculate gross salary
+        self.gross_salary = (
+            self.base_salary +
+            self.allowances +
+            self.bonuses
+        )
+        
+        # Calculate net salary
+        self.net_salary = (
+            self.gross_salary -
+            self.tax_deduction -
+            self.other_deductions
+        )
+        
+        # Auto-set attachment names from filename if not set
+        for i in range(1, 6):
+            file_field = getattr(self, f'attachment_{i}')
+            name_field = getattr(self, f'attachment_{i}_name')
+            
+            if file_field and not name_field:
+                setattr(
+                    self,
+                    f'attachment_{i}_name',
+                    file_field.name.split('/')[-1]
+                )
+        
+        super().save(*args, **kwargs)
+    
+    def generate_reference(self):
+        """Generate unique payroll reference"""
+        prefix = f"PAY{self.year}{self.month:02d}"
+        unique_id = str(uuid.uuid4().hex)[:8].upper()
+        return f"{prefix}-{unique_id}"
+    
+    def get_month_name(self):
+        """Get month name from number"""
+        months = [
+            'January', 'February', 'March', 'April',
+            'May', 'June', 'July', 'August',
+            'September', 'October', 'November', 'December'
+        ]
+        return months[self.month - 1] if 1 <= self.month <= 12 else ''
+    
+    def get_attachments(self):
+        """
+        Get list of all attachments with metadata
+        Returns list of dicts with 'file', 'name', 'number'
+        """
+        attachments = []
+        for i in range(1, 6):
+            file_field = getattr(self, f'attachment_{i}')
+            if file_field:
+                attachments.append({
+                    'number': i,
+                    'file': file_field,
+                    'name': getattr(self, f'attachment_{i}_name') or file_field.name.split('/')[-1],
+                    'url': file_field.url,
+                    'size': file_field.size if hasattr(file_field, 'size') else 0,
+                })
+        return attachments
+    
+    def has_attachments(self):
+        """Check if payroll has any attachments"""
+        return any([
+            self.attachment_1,
+            self.attachment_2,
+            self.attachment_3,
+            self.attachment_4,
+            self.attachment_5,
+        ])
+    
+    def get_attachment_count(self):
+        """Get count of attachments"""
+        return len(self.get_attachments())
+    
+    def can_delete(self):
+        """Check if payroll can be deleted"""
+        return self.payment_status != 'paid'
+    
+    def delete_attachment(self, number):
+        """
+        Delete specific attachment by number (1-5)
+        """
+        if 1 <= number <= 5:
+            file_field = getattr(self, f'attachment_{number}')
+            if file_field:
+                # Delete the file from storage
+                file_field.delete(save=False)
+                # Clear the fields
+                setattr(self, f'attachment_{number}', None)
+                setattr(self, f'attachment_{number}_name', '')
+                self.save()
+                return True
+        return False

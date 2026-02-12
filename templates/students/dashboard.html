@@ -411,6 +411,161 @@ check assignments, and stay updated with announcements.
                 </div>
             </section>
 
+            <!-- Admission History -->
+            <section 
+                class="bg-white rounded-xl shadow-sm border 
+                       border-gray-200"
+                aria-labelledby="admission-heading">
+                
+                <div class="p-4 sm:p-6 border-b border-gray-200">
+                    <h2 id="admission-heading" 
+                        class="text-lg sm:text-xl font-bold 
+                               text-gray-900">
+                        Admission History
+                    </h2>
+                </div>
+                
+                <div class="p-4 sm:p-6">
+                    {% if admission_history %}
+                        <div class="space-y-3">
+                            {% for application in admission_history %}
+                            <article 
+                                class="border border-gray-200 rounded-lg 
+                                       p-3 hover:border-primary-300 
+                                       transition-colors">
+                                
+                                <!-- Application Info -->
+                                <div class="mb-2">
+                                    <h3 class="font-semibold text-gray-900 
+                                               text-sm mb-1 truncate">
+                                        {{ application.course.name }}
+                                    </h3>
+                                    <p class="text-xs text-gray-600 
+                                              truncate">
+                                        {{ application.course.faculty.name }}
+                                    </p>
+                                </div>
+                                
+                                <!-- Status Badge -->
+                                <div class="flex items-center 
+                                            justify-between mb-2">
+                                    {% if application.status == 'approved' %}
+                                        {% if application.can_access_student_portal %}
+                                        <span class="px-2 py-1 bg-purple-100 
+                                                     text-purple-700 
+                                                     rounded-full text-xs 
+                                                     font-medium">
+                                            <i class="fas fa-graduation-cap 
+                                                      mr-1" 
+                                               aria-hidden="true"></i>
+                                            Enrolled
+                                        </span>
+                                        {% elif application.admission_accepted %}
+                                        <span class="px-2 py-1 bg-blue-100 
+                                                     text-blue-700 
+                                                     rounded-full text-xs 
+                                                     font-medium">
+                                            <i class="fas fa-clock mr-1" 
+                                               aria-hidden="true"></i>
+                                            Processing
+                                        </span>
+                                        {% else %}
+                                        <span class="px-2 py-1 bg-green-100 
+                                                     text-green-700 
+                                                     rounded-full text-xs 
+                                                     font-medium">
+                                            <i class="fas fa-check-circle 
+                                                      mr-1" 
+                                               aria-hidden="true"></i>
+                                            Approved
+                                        </span>
+                                        {% endif %}
+                                    {% elif application.status == 'under_review' %}
+                                    <span class="px-2 py-1 bg-yellow-100 
+                                                 text-yellow-700 
+                                                 rounded-full text-xs 
+                                                 font-medium">
+                                        <i class="fas fa-search mr-1" 
+                                           aria-hidden="true"></i>
+                                        Under Review
+                                    </span>
+                                    {% elif application.status == 'rejected' %}
+                                    <span class="px-2 py-1 bg-red-100 
+                                                 text-red-700 rounded-full 
+                                                 text-xs font-medium">
+                                        <i class="fas fa-times-circle mr-1" 
+                                           aria-hidden="true"></i>
+                                        Rejected
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-gray-100 
+                                                 text-gray-700 rounded-full 
+                                                 text-xs font-medium">
+                                        <i class="fas fa-hourglass mr-1" 
+                                           aria-hidden="true"></i>
+                                        {{ application.get_status_display }}
+                                    </span>
+                                    {% endif %}
+                                    
+                                    <time datetime="{{ application.created_at|date:'c' }}" 
+                                          class="text-xs text-gray-500">
+                                        {{ application.created_at|date:"M d, Y" }}
+                                    </time>
+                                </div>
+                                
+                                <!-- Application ID -->
+                                <div class="text-xs text-gray-500">
+                                    <span class="font-mono">
+                                        {{ application.application_id }}
+                                    </span>
+                                </div>
+                                
+                                <!-- View Letter Link (if approved) -->
+                                {% if application.status == 'approved' %}
+                                <div class="mt-2 pt-2 border-t 
+                                            border-gray-200">
+                                    <a href="{% url 'eduweb:admission_letter' application.application_id %}" target="_blank"
+                                       class="text-xs text-primary-600 
+                                              hover:text-primary-700 
+                                              font-medium inline-flex 
+                                              items-center">
+                                        <i class="fas fa-file-pdf mr-1" 
+                                           aria-hidden="true"></i>
+                                        View Admission Letter
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </article>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- View All Link -->
+                        {% if admission_history.count > 3 %}
+                        <div class="mt-4 text-center">
+                            <a href="{% url 'eduweb:application_status' %}"
+                               class="text-sm text-primary-600 
+                                      hover:text-primary-700 
+                                      font-medium inline-flex 
+                                      items-center">
+                                View All Applications
+                                <i class="fas fa-arrow-right ml-2 text-xs" 
+                                   aria-hidden="true"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-alt text-3xl 
+                                      text-gray-300 mb-2" 
+                               aria-hidden="true"></i>
+                            <p class="text-sm text-gray-600">
+                                No application history
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
             <!-- Quick Actions -->
             <nav 
                 class="bg-white rounded-xl shadow-sm border 

@@ -58,13 +58,18 @@ def check_for_auth(view_func):
             return redirect('finance:dashboard')
 
         elif role == 'student':
-            has_application = CourseApplication.objects.filter(
-                user=request.user
-            ).exists()
-
-            if has_application:
+            application = (
+                CourseApplication.objects
+                .filter(user=request.user)
+                .first()
+            )
+            
+            if application and application.can_access_student_portal():
+                return redirect('students:dashboard')
+            
+            if application:
                 messages.info(
-                    request, 
+                    request,
                     'You have an active application. Check your status.'
                 )
                 return redirect('eduweb:application_status')
@@ -201,9 +206,20 @@ def smart_redirect_applicant(view_func):
             return redirect('finance:dashboard')
 
         elif role == 'student':
-            has_application = CourseApplication.objects.filter(
-                user=request.user
-            ).exists()
+            application = (
+                CourseApplication.objects
+                .filter(user=request.user)
+                .first()
+            )
+            
+            if application and application.can_access_student_portal():
+                messages.success(
+                    request,
+                    'Welcome! Your admission is complete.'
+                )
+                return redirect('students:dashboard')
+            
+            has_application = application is not None
             current_view = request.resolver_match.url_name
 
             if current_view == 'apply' and has_application:

@@ -49,4 +49,28 @@ urlpatterns = [
         views.transaction_reports, 
         name='transaction_reports'
     ),
+
+    # Single management page (list + create modal)
+    path('payroll/', views.payroll_management, name='payroll_management'),
+    
+    # Detail page (view + update)
+    path(
+        'payroll/<str:payroll_reference>/',
+        views.payroll_detail,
+        name='payroll_detail'
+    ),
+    
+    # Delete payroll
+    path(
+        'payroll/<str:payroll_reference>/delete/',
+        views.payroll_delete,
+        name='payroll_delete'
+    ),
+    
+    # Delete specific attachment (1-5)
+    path(
+        'payroll/<str:payroll_reference>/attachment/<int:attachment_number>/delete/',
+        views.payroll_attachment_delete,
+        name='payroll_attachment_delete'
+    ),
 ]

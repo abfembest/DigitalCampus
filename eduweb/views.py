@@ -783,31 +783,56 @@ def application_status(request):
 @login_required(login_url='eduweb:auth_page')
 def admission_letter(request, application_id):
     """
-    Generate and display admission letter.
-    Secure version using application_id and email validation.
+    Display admission letter for approved applications.
+    Accessible by both applicants and admin staff.
     """
-    application = get_application_secure(application_id, request.user)
+    application = get_object_or_404(
+        CourseApplication, 
+        application_id=application_id
+    )
     
-    if not application:
-        messages.error(
-            request, 
-            'Application not found or you do not have permission to access it.'
+    # Check permissions
+    user = request.user
+    is_owner = (
+        application.user == user or 
+        application.email == user.email
+    )
+    is_admin = user.is_staff or user.is_superuser
+    
+    # Only owner or admin can view
+    if not (is_owner or is_admin):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden(
+            "You don't have permission to view this letter."
         )
-        return redirect('eduweb:application_status')
     
+    # Only show letter for approved applications
     if application.status != 'approved':
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        
         messages.warning(
             request, 
             'Admission letter is only available for approved applications.'
         )
-        return redirect('eduweb:application_status')
+        
+        if is_admin:
+            return redirect(
+                'management:application_detail', 
+                application.application_id
+            )
+        else:
+            return redirect('eduweb:application_status')
     
     context = {
         'application': application,
-        'issue_date': timezone.now().date(),
     }
-    return render(request, 'applications/admission_letter.html', context)
-
+    
+    return render(
+        request, 
+        'applications/admission_letter.html', 
+        context
+    )
 
 def payments(request):
     """payments page"""

@@ -748,6 +748,13 @@
                         <span class="ml-3">Transaction Reports</span>
                     </a>
 
+                    <!-- Payroll Management -->
+                    <a href="{% url 'finance:payroll_management' %}" 
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payroll' in request.path %}bg-white/20{% endif %}">
+                        <i class="fas fa-money-bill-wave w-5 text-center" aria-hidden="true"></i>
+                        <span class="ml-3">Payroll</span>
+                    </a>
+
                     <!-- Transaction Reports -->
                     {% comment %} <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'report' in request.path %}bg-white/20{% endif %}">

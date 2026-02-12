@@ -94,7 +94,7 @@ def dashboard(request):
             )
             enrollment.completed_lessons_count = completed_count
         
-        # Get pending assignments - only those not submitted or graded
+        # Get pending assignments
         pending_assignments = (
             Assignment.objects
             .filter(
@@ -132,6 +132,18 @@ def dashboard(request):
             .order_by('-priority', '-publish_date')[:5]
         )
         
+        # ===== NEW: Get admission history =====
+        from eduweb.models import CourseApplication
+        
+        admission_history = (
+            CourseApplication.objects
+            .filter(
+                Q(user=user) | Q(email=user.email)
+            )
+            .select_related('course', 'course__faculty', 'intake')
+            .order_by('-created_at')[:5]
+        )
+        
         # Calculate statistics
         stats = {
             'total_enrolled': (
@@ -162,6 +174,7 @@ def dashboard(request):
         enrollments = []
         pending_assignments = []
         announcements = []
+        admission_history = []
         stats = {
             'total_enrolled': 0,
             'completed_courses': 0,
@@ -173,14 +186,13 @@ def dashboard(request):
         'enrollments': enrollments,
         'pending_assignments': pending_assignments,
         'announcements': announcements,
+        'admission_history': admission_history,  # NEW
         'total_enrolled': stats['total_enrolled'],
         'completed_courses': stats['completed_courses'],
         'certificates_earned': stats['certificates_earned'],
     }
     
     return render(request, 'students/dashboard.html', context)
-
-
 
 @login_required
 @student_required

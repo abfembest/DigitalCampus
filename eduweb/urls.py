@@ -19,7 +19,7 @@ urlpatterns = [
     path('admission/detail/', views.detail, name='detail'),
     path('contact/submit/', views.contact_submit, name='contact_submit'),
     path('application_status/', views.application_status, name='application_status'),
-    path('payments/', views.payments, name='payments'),
+
 
     path('admission-letter/<str:application_id>/', views.admission_letter, name='admission_letter'),
 
@@ -47,12 +47,29 @@ urlpatterns = [
 
     ############### PAYMENT GATEWAY URLS################
 
+    
+    # Payment API endpoints (secure, require login)
     path("pay/", views.payment_page),
-    path("create-intent/", views.create_payment_intent),
-    path("confirm/", views.confirm_payment),
-    path("success/<int:payment_id>/", views.payment_success),
-    path("stripe/webhook/", views.stripe_webhook),
-    path("refund/<int:payment_id>/", views.refund_payment),
+     
+    # --------------------
+    path("payments/", views.payments, name="payments"),
+
+    # --------------------
+    # Payment API (AJAX)
+    # --------------------
+    path("api/payment/summary/<str:application_id>/", views.get_payment_summary, name="get_payment_summary"),
+    path("create-intent/", views.create_payment_intent, name="create_payment_intent"),
+    path("confirm/", views.confirm_payment, name="confirm_payment"),
+
+    # --------------------
+    # Stripe Webhook
+    # --------------------
+    path("stripe/webhook/", views.stripe_webhook, name="stripe_webhook"),
+
+    # --------------------
+    # Admin / Support
+    # --------------------
+    path("refund/<int:payment_id>/", views.refund_payment, name="refund_payment"),
 
 
     ################## APPLICATION SUBMISSIONS #######

@@ -4,8 +4,7 @@
 {% block title %}Complete Your Application Payments - Modern International University{% endblock %}
 
 {% block content %}
-
-<body class="bg-gray-50 min-h-screen">
+<div class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-6xl">
         <!-- Header -->
         <header class="mb-8">
@@ -29,87 +28,18 @@
 
                     <!-- Payment Form -->
                     <form id="payment-form" class="space-y-6">
-                        <!-- Card Number -->
+                        {% csrf_token %}
+
+                        <!-- Stripe Card Element (PCI compliant) -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Card Number
+                                Card Information
                             </label>
-                            <div class="relative">
-                                <input type="text"
-                                       id="card-number"
-                                       name="card-number"
-                                       maxlength="19"
-                                       placeholder="1234 5678 9012 3456"
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                       autocomplete="cc-number" />
-                                <div class="absolute right-3 top-3">
-                                    <div class="flex space-x-2">
-                                        <i class="fab fa-cc-visa text-blue-600"></i>
-                                        <i class="fab fa-cc-mastercard text-red-600"></i>
-                                        <i class="fab fa-cc-amex text-blue-500"></i>
-                                        <i class="fab fa-cc-discover text-orange-600"></i>
-                                    </div>
-                                </div>
+                            <div id="stripe-card-element"
+                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white">
+                                <!-- Stripe.js will inject the iframe here -->
                             </div>
-                            <div id="card-number-error" class="text-red-500 text-sm mt-1 hidden"></div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <!-- Expiry Date -->
-                            <div class="md:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Expiry Date
-                                </label>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <select id="expiry-month"
-                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                            <option value="">Month</option>
-                                            <option value="01">01 - January</option>
-                                            <option value="02">02 - February</option>
-                                            <option value="03">03 - March</option>
-                                            <option value="04">04 - April</option>
-                                            <option value="05">05 - May</option>
-                                            <option value="06">06 - June</option>
-                                            <option value="07">07 - July</option>
-                                            <option value="08">08 - August</option>
-                                            <option value="09">09 - September</option>
-                                            <option value="10">10 - October</option>
-                                            <option value="11">11 - November</option>
-                                            <option value="12">12 - December</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <select id="expiry-year"
-                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                            <option value="">Year</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div id="expiry-error" class="text-red-500 text-sm mt-1 hidden"></div>
-                            </div>
-
-                            <!-- CVC -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    CVC
-                                    <span class="text-gray-400 text-xs">(3 or 4 digits)</span>
-                                </label>
-                                <div class="relative">
-                                    <input type="text"
-                                           id="cvc"
-                                           name="cvc"
-                                           maxlength="4"
-                                           placeholder="123"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                           autocomplete="cc-csc" />
-                                    <div class="absolute right-3 top-3">
-                                        <i class="fas fa-question-circle text-gray-400"
-                                           title="3-digit code on back of card, 4-digit on front for Amex"></i>
-                                    </div>
-                                </div>
-                                <div id="cvc-error" class="text-red-500 text-sm mt-1 hidden"></div>
-                            </div>
+                            <div id="card-errors" class="text-red-500 text-sm mt-2"></div>
                         </div>
 
                         <!-- Cardholder Name -->
@@ -197,7 +127,7 @@
                 </div>
             </div>
 
-            <!-- Right Column: Payment Summary -->
+            <!-- Right Column: Payment Summary (unchanged, but ensure IDs exist) -->
             <div class="lg:w-1/3">
                 <div class="bg-white rounded-xl shadow-lg p-6 sticky top-8">
                     <h2 class="text-xl font-semibold text-gray-800 mb-6">Payment Summary</h2>
@@ -250,7 +180,7 @@
                             <p class="text-sm text-gray-500 mt-1">USD • Payment processed by Stripe</p>
                         </div>
 
-                        <!-- Security Features -->
+                        <!-- Security Features (unchanged) -->
                         <div class="bg-gray-50 rounded-lg p-4">
                             <h4 class="font-medium text-gray-700 mb-3">Security Features</h4>
                             <ul class="space-y-3">
@@ -279,7 +209,7 @@
                                 <i class="fas fa-question-circle mr-3"></i>
                                 <div>
                                     <p class="text-sm font-medium">Need help?</p>
-                                    <p class="text-xs">Contact support@yourapp.com</p>
+                                    <p class="text-xs">contact support@moderninternational.edu</p>
                                 </div>
                             </div>
                         </div>
@@ -288,78 +218,73 @@
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-// Configuration
-const config = {
+<!-- Stripe.js (loaded once) -->
+<script src="https://js.stripe.com/v3/"></script>
+
+<script>
+    (function () {
+        /* ============================
+           CONFIG & STATE
+        ============================ */
+        const config = {
             applicationId: new URLSearchParams(window.location.search).get('application_id'),
-            apiBaseUrl: '/api/payment',
-            stripe: null
-};
+            // API endpoints (absolute paths as defined in urls.py)
+            summaryUrl: '/api/payment/summary/',
+            createIntentUrl: '/create-intent/',
+            confirmUrl: '/confirm/',
+            stripePublishableKey: null
+        };
 
-// State
-let state = {
+        const state = {
             paymentIntentClientSecret: null,
             paymentId: null,
-            isLoading: false
-};
+            isLoading: false,
+            stripe: null,
+            cardElement: null
+        };
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function () {
-            initializePaymentPage();
-});
+        /* ============================
+           INIT
+        ============================ */
+        document.addEventListener('DOMContentLoaded', initializePaymentPage);
 
-async function initializePaymentPage() {
+        async function initializePaymentPage() {
             try {
-                // Load payment summary
                 await loadPaymentSummary();
-
-                // Initialize Stripe
-                await initializeStripe();
-
-                // Initialize form validation
-                initializeFormValidation();
-
-                // Initialize year dropdown
-                initializeYearDropdown();
-
-                // Format card number input
-                initializeCardNumberFormatting();
-
-            } catch (error) {
-                console.error('Initialization error:', error);
-                showError('Failed to initialize payment page. Please refresh.');
-            }
-}
-
-async function loadPaymentSummary() {
-            if (!config.applicationId) {
-                showError('Application ID is missing');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${config.apiBaseUrl}/summary/${config.applicationId}/`, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    displaySummary(data.data);
-                } else {
-                    throw new Error(data.error || 'Failed to load summary');
+                if (!config.stripePublishableKey) {
+                    throw new Error('Stripe publishable key is missing. Please contact support.');
                 }
-            } catch (error) {
-                console.error('Error loading summary:', error);
-                showError('Could not load payment details. Please try again.');
+                initializeStripe();
+                setupEventListeners();
+            } catch (err) {
+                console.error('Initialization error:', err);
+                showFatalError(err.message);
             }
-}
+        }
 
-function displaySummary(summary) {
+        /* ============================
+           PAYMENT SUMMARY
+        ============================ */
+        async function loadPaymentSummary() {
+            if (!config.applicationId) {
+                throw new Error('Application ID is missing from the URL.');
+            }
+
+            const response = await fetch(`${config.summaryUrl}${config.applicationId}/`, {
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to load payment summary.');
+            }
+
+            displaySummary(data.data);
+        }
+
+        function displaySummary(summary) {
             document.getElementById('summary-loading').classList.add('hidden');
             document.getElementById('summary-content').classList.remove('hidden');
 
@@ -368,373 +293,254 @@ function displaySummary(summary) {
             document.getElementById('summary-amount').textContent = formatCurrency(summary.amount);
             document.getElementById('summary-total').textContent = formatCurrency(summary.amount);
 
-            // Store Stripe key for later use
             config.stripePublishableKey = summary.stripe_public_key;
-}
+        }
 
-async function initializeStripe() {
-            if (!config.stripePublishableKey) {
-                throw new Error('Stripe publishable key not available');
-            }
+        /* ============================
+           STRIPE
+        ============================ */
+        function initializeStripe() {
+            state.stripe = Stripe(config.stripePublishableKey);
+            const elements = state.stripe.elements();
 
-            config.stripe = Stripe(config.stripePublishableKey);
-}
+            state.cardElement = elements.create('card', {
+                hidePostalCode: true,
+                style: {
+                    base: {
+                        fontSize: '16px',
+                        color: '#424770',
+                        '::placeholder': { color: '#aab7c4' }
+                    }
+                }
+            });
+            state.cardElement.mount('#stripe-card-element');
 
-function initializeFormValidation() {
+            state.cardElement.on('change', function (event) {
+                const displayError = document.getElementById('card-errors');
+                displayError.textContent = event.error ? event.error.message : '';
+            });
+        }
+
+        /* ============================
+           EVENT LISTENERS
+        ============================ */
+        function setupEventListeners() {
             const form = document.getElementById('payment-form');
-            const submitButton = document.getElementById('submit-payment');
             const termsCheckbox = document.getElementById('terms');
+            const submitButton = document.getElementById('submit-payment');
+            const cardholderName = document.getElementById('cardholder-name');
 
-            // Enable/disable submit button based on terms
-            termsCheckbox.addEventListener('change', function () {
-                submitButton.disabled = !this.checked || state.isLoading;
+            termsCheckbox.addEventListener('change', () => {
+                submitButton.disabled = !termsCheckbox.checked || state.isLoading;
             });
 
-            // Form submission
+            cardholderName.addEventListener('input', validateCardholderName);
+
             form.addEventListener('submit', handleFormSubmit);
+        }
 
-            // Real-time validation
-            document.getElementById('card-number').addEventListener('input', validateCardNumber);
-            document.getElementById('expiry-month').addEventListener('change', validateExpiryDate);
-            document.getElementById('expiry-year').addEventListener('change', validateExpiryDate);
-            document.getElementById('cvc').addEventListener('input', validateCVC);
-            document.getElementById('cardholder-name').addEventListener('input', validateCardholderName);
-}
-
-function initializeYearDropdown() {
-            const yearSelect = document.getElementById('expiry-year');
-            const currentYear = new Date().getFullYear();
-
-            for (let i = 0; i < 10; i++) {
-                const year = currentYear + i;
-                const option = document.createElement('option');
-                option.value = year.toString().slice(2);
-                option.textContent = year;
-                yearSelect.appendChild(option);
-            }
-}
-
-function initializeCardNumberFormatting() {
-            const cardNumberInput = document.getElementById('card-number');
-
-            cardNumberInput.addEventListener('input', function (e) {
-                let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-                let formatted = '';
-
-                for (let i = 0; i < value.length; i++) {
-                    if (i > 0 && i % 4 === 0) {
-                        formatted += ' ';
-                    }
-                    formatted += value[i];
-                }
-
-                e.target.value = formatted;
-            });
-}
-
-function validateCardNumber() {
-            const input = document.getElementById('card-number');
-            const errorElement = document.getElementById('card-number-error');
-            const value = input.value.replace(/\s+/g, '');
-
-            // Basic validation
-            if (!value) {
-                showErrorField(errorElement, 'Card number is required');
-                return false;
-            }
-
-            if (!/^\d{13,19}$/.test(value)) {
-                showErrorField(errorElement, 'Card number must be 13-19 digits');
-                return false;
-            }
-
-            // Luhn algorithm validation
-            if (!validateLuhn(value)) {
-                showErrorField(errorElement, 'Invalid card number');
-                return false;
-            }
-
-            hideErrorField(errorElement);
-            return true;
-}
-
-function validateExpiryDate() {
-            const month = document.getElementById('expiry-month').value;
-            const year = document.getElementById('expiry-year').value;
-            const errorElement = document.getElementById('expiry-error');
-
-            if (!month || !year) {
-                showErrorField(errorElement, 'Expiry date is required');
-                return false;
-            }
-
-            const currentDate = new Date();
-            const currentYear = currentDate.getFullYear() % 100;
-            const currentMonth = currentDate.getMonth() + 1;
-
-            const expiryYear = parseInt(year);
-            const expiryMonth = parseInt(month);
-
-            if (expiryYear < currentYear ||
-                (expiryYear === currentYear && expiryMonth < currentMonth)) {
-                showErrorField(errorElement, 'Card has expired');
-                return false;
-            }
-
-            hideErrorField(errorElement);
-            return true;
-}
-
-function validateCVC() {
-            const input = document.getElementById('cvc');
-            const errorElement = document.getElementById('cvc-error');
-            const value = input.value;
-
-            if (!value) {
-                showErrorField(errorElement, 'CVC is required');
-                return false;
-            }
-
-            if (!/^\d{3,4}$/.test(value)) {
-                showErrorField(errorElement, 'CVC must be 3 or 4 digits');
-                return false;
-            }
-
-            hideErrorField(errorElement);
-            return true;
-}
-
-function validateCardholderName() {
-            const input = document.getElementById('cardholder-name');
-            const errorElement = document.getElementById('cardholder-error');
-            const value = input.value.trim();
-
-            if (!value) {
-                showErrorField(errorElement, 'Cardholder name is required');
-                return false;
-            }
-
-            if (value.length < 2) {
-                showErrorField(errorElement, 'Enter full name');
-                return false;
-            }
-
-            hideErrorField(errorElement);
-            return true;
-}
-
-function validateLuhn(cardNumber) {
-            let sum = 0;
-            let isEven = false;
-
-            for (let i = cardNumber.length - 1; i >= 0; i--) {
-                let digit = parseInt(cardNumber.charAt(i), 10);
-
-                if (isEven) {
-                    digit *= 2;
-                    if (digit > 9) {
-                        digit -= 9;
-                    }
-                }
-
-                sum += digit;
-                isEven = !isEven;
-            }
-
-            return sum % 10 === 0;
-}
-
-async function handleFormSubmit(e) {
+        /* ============================
+           SUBMIT PAYMENT
+        ============================ */
+        async function handleFormSubmit(e) {
             e.preventDefault();
 
-            if (!validateAllFields()) {
+            // Basic validations
+            if (!validateCardholderName()) return;
+            if (!document.getElementById('terms').checked) {
+                showTemporaryError('terms-error', 'You must agree to the terms.');
                 return;
             }
 
             setLoading(true);
 
             try {
-                // Create payment intent
-                const { clientSecret, paymentId } = await createPaymentIntent();
-                state.paymentIntentClientSecret = clientSecret;
-                state.paymentId = paymentId;
 
-                // Create payment method
-                const cardElement = createCardElement();
-                const { error: paymentMethodError, paymentMethod } = await config.stripe.createPaymentMethod({
-                    type: 'card',
-                    card: cardElement,
-                    billing_details: {
-                        name: document.getElementById('cardholder-name').value.trim()
+                // 1. Create PaymentIntent on the server (amount derived server‑side)
+                const { clientSecret } = await createPaymentIntent();
+                state.paymentIntentClientSecret = clientSecret;
+
+                // 2. Confirm the payment with Stripe
+                const { error, paymentIntent } = await state.stripe.confirmCardPayment(clientSecret, {
+                    payment_method: {
+                        card: state.cardElement,
+                        billing_details: {
+                            name: document.getElementById('cardholder-name').value.trim()
+                        }
                     }
                 });
 
-                if (paymentMethodError) {
-                    throw new Error(paymentMethodError.message);
-                }
+                if (error) throw new Error(error.message);
 
-                // Confirm payment
-                const { error: confirmError, paymentIntent } = await config.stripe.confirmCardPayment(
-                    clientSecret,
-                    {
-                        payment_method: paymentMethod.id
-                    }
-                );
-
-                if (confirmError) {
-                    throw new Error(confirmError.message);
-                }
-
-                // Handle successful payment
+                // 3. Notify backend of successful payment (idempotent)
                 await handleSuccessfulPayment(paymentIntent.id);
 
-            } catch (error) {
-                console.error('Payment error:', error);
-                showPaymentError(error.message);
-            } finally {
+            } catch (err) {
+                console.error('Payment error:', err);
+                showPaymentError(err.message);
                 setLoading(false);
             }
-}
+            // `setLoading(false)` is called inside handleSuccessfulPayment on success,
+            // and in the catch block on error. In case of success, we don't want to setLoading(false)
+            // because the form is hidden. But we need to reset loading if something fails before.
+            // We'll handle it more explicitly.
+        }
 
-function createCardElement() {
-            return {
-                number: document.getElementById('card-number').value.replace(/\s+/g, ''),
-                exp_month: document.getElementById('expiry-month').value,
-                exp_year: document.getElementById('expiry-year').value,
-                cvc: document.getElementById('cvc').value
-            };
-}
+        /* ============================
+           BACKEND CALLS
+        ============================ */
 
-async function createPaymentIntent() {
-            const response = await fetch(`${config.apiBaseUrl}/create-intent/`, {
+        async function createPaymentIntent() {
+            const response = await fetch(config.createIntentUrl, {
                 method: 'POST',
+                credentials: 'same-origin', // 🔥 REQUIRED
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
+                    'X-CSRFToken': getCsrfToken(),
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     application_id: config.applicationId
                 })
             });
 
+            // ✅ Prevent JSON crash
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || 'Server error while creating payment.');
+            }
+
             const data = await response.json();
 
             if (!data.success) {
-                throw new Error(data.error || 'Failed to create payment');
+                throw new Error(data.error || 'Failed to create payment.');
             }
 
-            return {
-                clientSecret: data.clientSecret,
-                paymentId: data.payment_id
-            };
-}
+            return { clientSecret: data.clientSecret };
+        }
 
-async function handleSuccessfulPayment(paymentIntentId) {
-            // Confirm with backend
-            const response = await fetch(`${config.apiBaseUrl}/confirm/`, {
+
+
+       
+        async function handleSuccessfulPayment(paymentIntentId) {
+            const response = await fetch(config.confirmUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCsrfToken()
                 },
-                body: JSON.stringify({
-                    payment_intent_id: paymentIntentId
-                })
+                body: JSON.stringify({ payment_intent_id: paymentIntentId })
             });
-
             const data = await response.json();
 
-            if (data.success) {
-                showPaymentSuccess();
-            } else {
-                throw new Error(data.error || 'Payment confirmation failed');
+            if (!response.ok || !data.status) {
+                throw new Error(data.error || 'Payment confirmation failed.');
             }
-}
 
-function validateAllFields() {
-            return validateCardNumber() &&
-                validateExpiryDate() &&
-                validateCVC() &&
-                validateCardholderName();
-}
+            // Payment succeeded and recorded
+            showPaymentSuccess(data.payment_id);
+            setLoading(false);  // in case the success display does not hide the form immediately
+        }
 
-function setLoading(isLoading) {
+        /* ============================
+           UI HELPERS
+        ============================ */
+        function setLoading(isLoading) {
             state.isLoading = isLoading;
-
             const submitButton = document.getElementById('submit-payment');
-            const buttonText = document.getElementById('button-text');
-            const buttonSpinner = document.getElementById('button-spinner');
-
+            // Only disable if loading OR terms not checked
             submitButton.disabled = isLoading || !document.getElementById('terms').checked;
 
-            if (isLoading) {
-                buttonText.classList.add('hidden');
-                buttonSpinner.classList.remove('hidden');
-            } else {
-                buttonText.classList.remove('hidden');
-                buttonSpinner.classList.add('hidden');
-            }
-}
+            document.getElementById('button-text').classList.toggle('hidden', isLoading);
+            document.getElementById('button-spinner').classList.toggle('hidden', !isLoading);
+        }
 
-function showPaymentSuccess() {
+        function showPaymentSuccess(paymentId) {
+            // Hide the form
             document.getElementById('payment-form').classList.add('hidden');
+            // Show success message
             document.getElementById('payment-success').classList.remove('hidden');
-}
+            document.getElementById('payment-error').classList.add('hidden');
+            // Update the "View Application Status" link to include payment ID if desired
+            const successLink = document.querySelector('#payment-success a');
+            if (successLink) {
+                successLink.href = `/application/confirmation/?payment_id=${paymentId}`;
+            }
+        }
 
-function showPaymentError(message) {
+        function showPaymentError(message) {
             document.getElementById('error-message').textContent = message;
             document.getElementById('payment-error').classList.remove('hidden');
-}
+            document.getElementById('payment-success').classList.add('hidden');
+            // Keep the form visible so user can try again
+        }
 
-function resetPaymentForm() {
-            document.getElementById('payment-error').classList.add('hidden');
+        // Reset form to try again (called from "Try Again" button)
+        window.resetPaymentForm = function () {
             document.getElementById('payment-form').classList.remove('hidden');
-}
+            document.getElementById('payment-success').classList.add('hidden');
+            document.getElementById('payment-error').classList.add('hidden');
+            document.getElementById('terms-error').classList.add('hidden');
+            // Clear Stripe card element
+            if (state.cardElement) {
+                state.cardElement.clear();
+            }
+            // Reset loading state if necessary
+            setLoading(false);
+        };
 
-function showError(message) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6';
-            errorDiv.innerHTML = `
-                        <div class="flex items-center">
-                            <i class="fas fa-exclamation-circle mr-3"></i>
-                            <span>${message}</span>
-                        </div>
-                    `;
+        function showFatalError(message) {
+            const formContainer = document.getElementById('payment-form');
+            formContainer.innerHTML = `
+            <div class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                <i class="fas fa-exclamation-triangle text-red-600 text-4xl mb-4"></i>
+                <h3 class="text-lg font-semibold text-red-800">System Error</h3>
+                <p class="text-red-600">${message}</p>
+                <p class="text-sm text-gray-500 mt-4">Please refresh the page or contact support.</p>
+            </div>
+        `;
+        }
 
-            document.querySelector('.container').prepend(errorDiv);
-}
+        function showTemporaryError(elementId, message) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.textContent = message;
+                el.classList.remove('hidden');
+                setTimeout(() => el.classList.add('hidden'), 5000);
+            }
+        }
 
-function showErrorField(element, message) {
-            element.textContent = message;
-            element.classList.remove('hidden');
-}
+        /* ============================
+           VALIDATIONS
+        ============================ */
+        function validateCardholderName() {
+            const input = document.getElementById('cardholder-name');
+            const error = document.getElementById('cardholder-error');
+            const value = input.value.trim();
 
-function hideErrorField(element) {
-            element.textContent = '';
-            element.classList.add('hidden');
-}
+            if (value.length < 2) {
+                error.textContent = 'Enter the full name as it appears on the card.';
+                error.classList.remove('hidden');
+                return false;
+            }
+            error.classList.add('hidden');
+            return true;
+        }
 
-function formatCurrency(amount) {
+        /* ============================
+           GENERAL HELPERS
+        ============================ */
+        function formatCurrency(amount) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 2
+                currency: 'USD'
             }).format(amount);
-}
+        }
 
-function getCsrfToken() {
-            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-}
-
-// Add CSRF token to fetch headers globally
-const originalFetch = window.fetch;
-window.fetch = function (resource, options = {}) {
-            options.headers = {
-                ...options.headers,
-                'X-CSRFToken': getCsrfToken()
-            };
-            return originalFetch(resource, options);
-};
-    </script>
-</body>
+        function getCsrfToken() {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]');
+            return token ? token.value : '';
+        }
+    })();
+</script>
 {% endblock %}

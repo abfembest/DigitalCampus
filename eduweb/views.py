@@ -6,7 +6,7 @@ from django.conf import settings
 from .forms import ContactForm, CourseApplicationForm
 from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor
 from eduweb.models import Faculty, Course, BlogPost, BlogCategory
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.utils import timezone
 from .decorators import check_for_auth, smart_redirect_applicant
 from django.core.serializers.json import DjangoJSONEncoder
@@ -863,45 +863,200 @@ def payment_page(request):
     })
 
 
-
-@require_POST
-def create_payment_intent(request):
-    if not request.body:
-        return JsonResponse({"error": "Empty request body"}, status=400)
+@require_GET
+@login_required
+def get_payment_summary(request, application_id):
+    """
+    Returns payment summary for an application.
+    ALWAYS returns JSON.
+    """
 
     try:
-        data = json.loads(request.body.decode("utf-8"))
-        print(data)
+        application_id = application_id.strip()
+
+        application = CourseApplication.objects.select_related(
+            "course", "course__faculty"
+        ).get(application_id__iexact=application_id)
+
+        if application.user != request.user and not request.user.is_staff:
+            return JsonResponse(
+                {"success": False, "error": "Permission denied"},
+                status=403
+            )
+
+        summary = {
+            "application_id": application.application_id,
+            "full_name": application.get_full_name(),
+            "email": application.email,
+            "course_name": application.course.name,
+            "faculty": application.course.faculty.name,
+            "amount": float(application.course.application_fee),
+            "currency": "GBP",
+            "description": "Application Processing Fee",
+            "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
+        }
+
+        return JsonResponse({"success": True, "data": summary})
+
+    except CourseApplication.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "error": "Application not found"},
+            status=404
+        )
+
+    except Exception as e:
+        logger.exception("get_payment_summary failed")
+        return JsonResponse(
+            {"success": False, "error": "Unable to load payment summary"},
+            status=500
+        )
+
+
+@require_POST
+@login_required
+def create_payment_intent(request):
+
+    try:
+        payload = request.body.decode("utf-8")
+        if not payload:
+            return JsonResponse({"success": False, "error": "Empty request body"}, status=400)
+
+        data = json.loads(payload)
+
+        application_id = data.get("application_id")
+        if not application_id:
+            return JsonResponse({"success": False, "error": "Missing application_id"}, status=400)
+
+        application_id = application_id.strip()
+
+        application = get_object_or_404(
+            CourseApplication,
+            application_id__iexact=application_id,
+            user=request.user
+        )
+
+        if application.is_paid:
+            return JsonResponse({"success": False, "error": "Application already paid"}, status=400)
+
+        amount_decimal = application.course.application_fee
+        amount_pence = int(amount_decimal * Decimal("100"))
+
+        with transaction.atomic():
+
+            existing_payment = ApplicationPayment.objects.filter(
+                application=application,
+                status="pending"
+            ).select_for_update().first()
+
+            if existing_payment:
+                intent = stripe.PaymentIntent.retrieve(existing_payment.gateway_payment_id)
+
+                return JsonResponse({
+                    "success": True,
+                    "clientSecret": intent.client_secret
+                })
+
+            intent = stripe.PaymentIntent.create(
+                amount=amount_pence,
+                currency="gbp",
+                metadata={
+                    "application_id": application.application_id,
+                    "user_id": request.user.id,
+                },
+                automatic_payment_methods={"enabled": True},
+            )
+
+            ApplicationPayment.objects.create(
+                application=application,
+                gateway_payment_id=intent.id,
+                amount=amount_decimal,
+                currency="GBP",
+                status="pending",
+            )
+
+        return JsonResponse({
+            "success": True,
+            "clientSecret": intent.client_secret
+        })
+
     except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
 
-    amount = data.get("amount")
-    application_id = data.get("application_id")
-    vendor_id = data.get("vendor_id")  # pass vendor ID from frontend
+    except stripe.error.StripeError as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
 
-    vendor = get_object_or_404(Vendor, id=vendor_id)
-
-    if not amount or not application_id:
-        return JsonResponse({"error": "Missing fields"}, status=400)
-
-    intent = stripe.PaymentIntent.create(
-        amount=int(amount),
-        currency="gbp",
-        metadata={
-            "application_id": application_id,
-            "vendor_id": vendor.id,
-            "user_id": request.user.id if request.user.is_authenticated else "",
-        },
-        automatic_payment_methods={"enabled": True}
-    )
-
-    return JsonResponse({"clientSecret": intent.client_secret})
+    except Exception as e:
+        logger.exception("create_payment_intent crash")
+        return JsonResponse({"success": False, "error": "Unable to create payment"}, status=500)
 
 
 
+@require_POST
+@login_required
+def confirm_payment(request):
+    """
+    Confirms a payment after Stripe confirmation.
+    ALWAYS returns JSON.
+    """
+
+    try:
+        body = request.body.decode("utf-8")
+        if not body:
+            return JsonResponse(
+                {"success": False, "error": "Empty request body"},
+                status=400
+            )
+
+        data = json.loads(body)
+
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"success": False, "error": "Invalid JSON"},
+            status=400
+        )
+
+    payment_intent_id = data.get("payment_intent_id")
+    if not payment_intent_id:
+        return JsonResponse(
+            {"success": False, "error": "Missing payment_intent_id"},
+            status=400
+        )
+
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+    except stripe.error.StripeError as e:
+        return JsonResponse(
+            {"success": False, "error": str(e)},
+            status=400
+        )
+
+    if intent.status != "succeeded":
+        return JsonResponse(
+            {"success": False, "error": "Payment not successful"},
+            status=400
+        )
+
+    payment = ApplicationPayment.objects.filter(
+        gateway_payment_id=intent.id
+    ).first()
+
+    # ⚠️ Webhook may not have run yet
+    if not payment:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Payment is processing. Please wait a moment."
+            },
+            status=202
+        )
+
+    return JsonResponse({
+        "success": True,
+        "payment_id": payment.id
+    })
 
 
-#Stripe Webhook (Atomic, Idempotent, Safe)
+
 
 @csrf_exempt
 def stripe_webhook(request):
@@ -921,13 +1076,12 @@ def stripe_webhook(request):
         try:
             with transaction.atomic():
                 payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
-                    gateway_payment_id=intent.id,  # ✅ Correct field name
+                    gateway_payment_id=intent.id,
                     defaults={
                         "application_id": intent.metadata.get("application_id"),
-                        "amount": intent.amount / 100,
+                        "amount": Decimal(intent.amount) / 100,
                         "currency": intent.currency.upper(),
                         "status": "success",
-                        "vendor_id": intent.metadata.get("vendor_id"),
                     },
                 )
 
@@ -935,53 +1089,20 @@ def stripe_webhook(request):
                     return HttpResponse(status=200)
 
                 payment.status = "success"
+                payment.paid_at = timezone.now()
                 payment.save()
 
-                # send emails after commit
-                transaction.on_commit(lambda: send_payment_emails(payment))
-
         except IntegrityError:
-            return HttpResponse(status=200)
+            pass
 
     return HttpResponse(status=200)
 
 @require_POST
-def confirm_payment(request):
-    if not request.body:
-        return JsonResponse({"error": "Empty body"}, status=400)
-
-    try:
-        data = json.loads(request.body.decode("utf-8"))
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-    payment_intent_id = data.get("payment_intent")
-    if not payment_intent_id:
-        return JsonResponse({"error": "Missing payment_intent"}, status=400)
-
-    intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-
-    if intent.status != "succeeded":
-        return JsonResponse({"status": "failed"}, status=400)
-
-    payment = ApplicationPayment.objects.filter(
-        gateway_payment_id=intent.id  # ✅ Correct
-    ).first()
-
-    if not payment:
-        return JsonResponse({"error": "Payment not recorded yet"}, status=400)
-
-    return JsonResponse({"status": "success", "payment_id": payment.id})
-
-def payment_success(request, payment_id):
-    payment = get_object_or_404(ApplicationPayment, id=payment_id, status="success")
-
-    return render(request, "applications/payment_success.html", {
-        "payment": payment
-    })
-
-@require_POST
+@login_required
 def refund_payment(request, payment_id):
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
     payment = get_object_or_404(ApplicationPayment, id=payment_id)
 
     if payment.status != "success":
@@ -989,63 +1110,21 @@ def refund_payment(request, payment_id):
 
     try:
         with transaction.atomic():
-            # Refund via Stripe
-            refund = stripe.Refund.create(
-                payment_intent=payment.gateway_payment_id  # ✅ Correct
+            stripe.Refund.create(
+                payment_intent=payment.gateway_payment_id
             )
-            # Update DB
             payment.status = "refunded"
             payment.refunded_at = timezone.now()
             payment.save()
+
     except stripe.error.StripeError as e:
         return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"status": "refunded"})
 
-@require_GET
-def get_payment_summary(request, application_id):
-    """Get payment summary for an application"""
-    try:
-        # Fix 1: Use correct model name 'CourseApplication'
-        # Fix 2: Use application_id field instead of id
-        application = get_object_or_404(
-            CourseApplication, 
-            application_id=application_id
-        )
-        
-        # Fix 3: Verify user has permission to view this application
-        if request.user.is_authenticated:
-            if not (request.user == application.user or request.user.is_staff):
-                return JsonResponse({
-                    'success': False, 
-                    'error': 'Permission denied'
-                }, status=403)
-        
-        summary = {
-            'application_id': application.application_id,  # ✅ Use the actual application_id field
-            'full_name': application.get_full_name(),  # ✅ Use the method (with parentheses)
-            'email': application.email,
-            'course_name': application.course.name,  # ✅ Added course info
-            'faculty': application.course.faculty.name,  # ✅ Added faculty info
-            'amount': float(application.course.application_fee),  # ✅ Get fee from course
-            'currency': 'GBP',  # ✅ Added currency
-            'description': 'Application Processing Fee',
-            'stripe_public_key': settings.STRIPE_PUBLIC_KEY,  # ✅ Correct setting name
-        }
-        
-        return JsonResponse({'success': True, 'data': summary})
-    except CourseApplication.DoesNotExist:
-        logger.error(f"Application not found: {application_id}")
-        return JsonResponse({
-            'success': False, 
-            'error': 'Application not found'
-        }, status=404)
-    except Exception as e:
-        logger.error(f"Error getting payment summary: {str(e)}")
-        return JsonResponse({
-            'success': False, 
-            'error': 'Unable to load payment details'
-        }, status=500)
+
+
+
 
 ###################### APPLICATION SUBMISSION ##############################################
 
@@ -1343,7 +1422,6 @@ def mark_payment_successful(request, application_id):
         gateway_id = f"pi_test_{uuid.uuid4().hex[:24]}"
         
         # Create or update payment
-        from django.utils import timezone
         payment, created = ApplicationPayment.objects.get_or_create(
             application=application,
             defaults={

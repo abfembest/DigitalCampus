@@ -101,12 +101,12 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-green-800">Payment Successful!</h3>
-                            <p class="text-green-600">Your application has been submitted successfully.</p>
+                            <p class="text-green-600">Your payment has been made successfully.</p>
                         </div>
                     </div>
                     <div class="mt-4">
-                        <a href="/application/confirmation/" class="inline-block bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                            View Application Status
+                        <a href="/application_status/" class="inline-block bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                            Continue to Application Status
                         </a>
                     </div>
                 </div>
@@ -230,10 +230,9 @@
         ============================ */
         const config = {
             applicationId: new URLSearchParams(window.location.search).get('application_id'),
-            // API endpoints (absolute paths as defined in urls.py)
             summaryUrl: '/api/payment/summary/',
             createIntentUrl: '/create-intent/',
-            confirmUrl: '/confirm/',
+            confirmUrl: '/application/confirmation',   // ✅ fixed: removed trailing slash
             stripePublishableKey: null
         };
 
@@ -242,7 +241,8 @@
             paymentId: null,
             isLoading: false,
             stripe: null,
-            cardElement: null
+            cardElement: null,
+            currency: 'USD' // default, will be updated from summary
         };
 
         /* ============================
@@ -290,8 +290,12 @@
 
             document.getElementById('summary-name').textContent = summary.full_name;
             document.getElementById('summary-id').textContent = summary.application_id.slice(0, 8);
-            document.getElementById('summary-amount').textContent = formatCurrency(summary.amount);
-            document.getElementById('summary-total').textContent = formatCurrency(summary.amount);
+
+            // Store currency from summary
+            state.currency = summary.currency || 'USD';
+
+            document.getElementById('summary-amount').textContent = formatCurrency(summary.amount, state.currency);
+            document.getElementById('summary-total').textContent = formatCurrency(summary.amount, state.currency);
 
             config.stripePublishableKey = summary.stripe_public_key;
         }
@@ -355,7 +359,6 @@
             setLoading(true);
 
             try {
-
                 // 1. Create PaymentIntent on the server (amount derived server‑side)
                 const { clientSecret } = await createPaymentIntent();
                 state.paymentIntentClientSecret = clientSecret;
@@ -380,10 +383,6 @@
                 showPaymentError(err.message);
                 setLoading(false);
             }
-            // `setLoading(false)` is called inside handleSuccessfulPayment on success,
-            // and in the catch block on error. In case of success, we don't want to setLoading(false)
-            // because the form is hidden. But we need to reset loading if something fails before.
-            // We'll handle it more explicitly.
         }
 
         /* ============================
@@ -393,7 +392,7 @@
         async function createPaymentIntent() {
             const response = await fetch(config.createIntentUrl, {
                 method: 'POST',
-                credentials: 'same-origin', // 🔥 REQUIRED
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCsrfToken(),
@@ -404,7 +403,6 @@
                 })
             });
 
-            // ✅ Prevent JSON crash
             if (!response.ok) {
                 const text = await response.text();
                 throw new Error(text || 'Server error while creating payment.');
@@ -419,9 +417,6 @@
             return { clientSecret: data.clientSecret };
         }
 
-
-
-       
         async function handleSuccessfulPayment(paymentIntentId) {
             const response = await fetch(config.confirmUrl, {
                 method: 'POST',
@@ -433,13 +428,12 @@
             });
             const data = await response.json();
 
-            if (!response.ok || !data.status) {
+            if (!response.ok || !data.success) {
                 throw new Error(data.error || 'Payment confirmation failed.');
             }
 
-            // Payment succeeded and recorded
             showPaymentSuccess(data.payment_id);
-            setLoading(false);  // in case the success display does not hide the form immediately
+            setLoading(false);
         }
 
         /* ============================
@@ -448,7 +442,6 @@
         function setLoading(isLoading) {
             state.isLoading = isLoading;
             const submitButton = document.getElementById('submit-payment');
-            // Only disable if loading OR terms not checked
             submitButton.disabled = isLoading || !document.getElementById('terms').checked;
 
             document.getElementById('button-text').classList.toggle('hidden', isLoading);
@@ -456,15 +449,17 @@
         }
 
         function showPaymentSuccess(paymentId) {
-            // Hide the form
             document.getElementById('payment-form').classList.add('hidden');
-            // Show success message
             document.getElementById('payment-success').classList.remove('hidden');
             document.getElementById('payment-error').classList.add('hidden');
-            // Update the "View Application Status" link to include payment ID if desired
+
             const successLink = document.querySelector('#payment-success a');
             if (successLink) {
-                successLink.href = `/application/confirmation/?payment_id=${paymentId}`;
+                if (paymentId) {
+                    successLink.href = `/application/confirmation/?payment_id=${paymentId}`;
+                } else {
+                    successLink.href = '/application/confirmation/';
+                }
             }
         }
 
@@ -472,33 +467,29 @@
             document.getElementById('error-message').textContent = message;
             document.getElementById('payment-error').classList.remove('hidden');
             document.getElementById('payment-success').classList.add('hidden');
-            // Keep the form visible so user can try again
         }
 
-        // Reset form to try again (called from "Try Again" button)
         window.resetPaymentForm = function () {
             document.getElementById('payment-form').classList.remove('hidden');
             document.getElementById('payment-success').classList.add('hidden');
             document.getElementById('payment-error').classList.add('hidden');
             document.getElementById('terms-error').classList.add('hidden');
-            // Clear Stripe card element
             if (state.cardElement) {
                 state.cardElement.clear();
             }
-            // Reset loading state if necessary
             setLoading(false);
         };
 
         function showFatalError(message) {
             const formContainer = document.getElementById('payment-form');
             formContainer.innerHTML = `
-            <div class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-                <i class="fas fa-exclamation-triangle text-red-600 text-4xl mb-4"></i>
-                <h3 class="text-lg font-semibold text-red-800">System Error</h3>
-                <p class="text-red-600">${message}</p>
-                <p class="text-sm text-gray-500 mt-4">Please refresh the page or contact support.</p>
-            </div>
-        `;
+                <div class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-4xl mb-4"></i>
+                    <h3 class="text-lg font-semibold text-red-800">System Error</h3>
+                    <p class="text-red-600">${message}</p>
+                    <p class="text-sm text-gray-500 mt-4">Please refresh the page or contact support.</p>
+                </div>
+            `;
         }
 
         function showTemporaryError(elementId, message) {
@@ -530,10 +521,10 @@
         /* ============================
            GENERAL HELPERS
         ============================ */
-        function formatCurrency(amount) {
+        function formatCurrency(amount, currency = 'USD') {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: 'USD'
+                currency: currency
             }).format(amount);
         }
 

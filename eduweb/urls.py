@@ -49,7 +49,6 @@ urlpatterns = [
 
     
     # Payment API endpoints (secure, require login)
-    path("pay/", views.payment_page),
      
     # --------------------
     path("payments/", views.payments, name="payments"),
@@ -59,7 +58,7 @@ urlpatterns = [
     # --------------------
     path("api/payment/summary/<str:application_id>/", views.get_payment_summary, name="get_payment_summary"),
     path("create-intent/", views.create_payment_intent, name="create_payment_intent"),
-    path("confirm/", views.confirm_payment, name="confirm_payment"),
+    path("application/confirmation", views.confirm_payment, name="confirm_payment"),
 
     # --------------------
     # Stripe Webhook

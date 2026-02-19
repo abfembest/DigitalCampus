@@ -833,7 +833,7 @@ def admission_letter(request, application_id):
         'applications/admission_letter.html', 
         context
     )
-
+@login_required
 def payments(request):
     """payments page"""
     return render(request, 'payments.html')
@@ -855,12 +855,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize Stripe
 stripe.api_key = settings.STRIPE_SECRET_KEY
-
-def payment_page(request):
-    return render(request, "applications/pay.html", {
-        "stripe_key": settings.STRIPE_PUBLIC_KEY,
-        "amount": 25000  # £250.00
-    })
 
 
 @require_GET
@@ -934,7 +928,7 @@ def create_payment_intent(request):
             application_id__iexact=application_id,
             user=request.user
         )
-
+        
         if application.is_paid:
             return JsonResponse({"success": False, "error": "Application already paid"}, status=400)
 
@@ -991,6 +985,7 @@ def create_payment_intent(request):
 
 
 
+
 @require_POST
 @login_required
 def confirm_payment(request):
@@ -998,104 +993,110 @@ def confirm_payment(request):
     Confirms a payment after Stripe confirmation.
     ALWAYS returns JSON.
     """
-
     try:
-        body = request.body.decode("utf-8")
-        if not body:
-            return JsonResponse(
-                {"success": False, "error": "Empty request body"},
-                status=400
-            )
-
-        data = json.loads(body)
-
+        data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse(
-            {"success": False, "error": "Invalid JSON"},
-            status=400
-        )
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
 
     payment_intent_id = data.get("payment_intent_id")
     if not payment_intent_id:
-        return JsonResponse(
-            {"success": False, "error": "Missing payment_intent_id"},
-            status=400
-        )
+        return JsonResponse({"success": False, "error": "Missing payment_intent_id"}, status=400)
 
     try:
         intent = stripe.PaymentIntent.retrieve(payment_intent_id)
     except stripe.error.StripeError as e:
-        return JsonResponse(
-            {"success": False, "error": str(e)},
-            status=400
-        )
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
 
     if intent.status != "succeeded":
-        return JsonResponse(
-            {"success": False, "error": "Payment not successful"},
-            status=400
+        return JsonResponse({"success": False, "error": "Payment not successful"}, status=400)
+
+    # Check if payment record already exists
+    payment = ApplicationPayment.objects.filter(gateway_payment_id=intent.id).first()
+    if payment:
+        return JsonResponse({"success": True, "payment_id": payment.id})
+
+    # No payment record yet – create it from the intent metadata
+    application_id = intent.metadata.get("application_id")
+    if not application_id:
+        return JsonResponse({"success": False, "error": "Application ID missing in payment intent"}, status=400)
+
+    try:
+        application = CourseApplication.objects.get(application_id=application_id, user=request.user)
+    except CourseApplication.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Application not found or access denied"}, status=404)
+
+    # Create payment record atomically (idempotent)
+    with transaction.atomic():
+        payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
+            gateway_payment_id=intent.id,
+            defaults={
+                "application": application,
+                "amount": Decimal(intent.amount) / Decimal(100),
+                "currency": intent.currency.upper(),
+                "status": "success",
+                "paid_at": timezone.now(),
+            }
         )
+        # If created is False, the record already existed (race with webhook) – still return success.
 
-    payment = ApplicationPayment.objects.filter(
-        gateway_payment_id=intent.id
-    ).first()
-
-    # ⚠️ Webhook may not have run yet
-    if not payment:
-        return JsonResponse(
-            {
-                "success": False,
-                "error": "Payment is processing. Please wait a moment."
-            },
-            status=202
-        )
-
-    return JsonResponse({
-        "success": True,
-        "payment_id": payment.id
-    })
-
+    return JsonResponse({"success": True, "payment_id": payment.id})
 
 
 
 @csrf_exempt
 def stripe_webhook(request):
+
     payload = request.body
     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
 
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+            payload,
+            sig_header,
+            settings.STRIPE_WEBHOOK_SECRET
         )
-    except Exception:
+    except Exception as e:
+        print("Webhook verification failed:", str(e))
         return HttpResponse(status=400)
 
     if event["type"] == "payment_intent.succeeded":
         intent = event["data"]["object"]
 
+        application_id = intent.metadata.get("application_id")
+        if not application_id:
+            return HttpResponse(status=200)
+
         try:
-            with transaction.atomic():
-                payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
-                    gateway_payment_id=intent.id,
-                    defaults={
-                        "application_id": intent.metadata.get("application_id"),
-                        "amount": Decimal(intent.amount) / 100,
-                        "currency": intent.currency.upper(),
-                        "status": "success",
-                    },
-                )
+            application = CourseApplication.objects.get(
+                application_id=application_id
+            )
+        except CourseApplication.DoesNotExist:
+            return HttpResponse(status=200)
+        with transaction.atomic():
+            print('immediate atomic hook')
+            payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
+                gateway_payment_id=intent.id,
+                defaults={
+                    "application": application,
+                    "amount": Decimal(intent.amount) / Decimal(100),
+                    "currency": intent.currency.upper(),
+                    "status": "success",
+                    "paid_at": timezone.now(),
+                },
+            )
 
-                if not created and payment.status == "success":
-                    return HttpResponse(status=200)
+            if not created and payment.status == "success":
+                return HttpResponse(status=200)
 
-                payment.status = "success"
-                payment.paid_at = timezone.now()
-                payment.save()
+            payment.status = "success"
+            payment.paid_at = timezone.now()
+            payment.save()
 
-        except IntegrityError:
-            pass
-
+            # Optional but recommended
+            #application.is_paid = True
+            #application.save(update_fields=["is_paid"])
     return HttpResponse(status=200)
+
 
 @require_POST
 @login_required

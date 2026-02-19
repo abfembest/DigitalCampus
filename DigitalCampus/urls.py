@@ -27,6 +27,7 @@ urlpatterns = [
     # path('parent/', include('parent.urls')),
     path('instructor/', include('instructor.urls')),
     path('finance/', include('finance.urls')),
+    path('payment/', include('payment.urls')),
 ]
 
 # Serve media files during development

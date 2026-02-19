@@ -412,7 +412,7 @@ def user_logout(request):
     """Logout user"""
     logout(request)
     messages.success(request, 'You have been logged out successfully.')
-    return redirect('eduweb:index')
+    return redirect('eduweb:auth_page')
 
 
 @login_required
@@ -1096,36 +1096,6 @@ def stripe_webhook(request):
             #application.is_paid = True
             #application.save(update_fields=["is_paid"])
     return HttpResponse(status=200)
-
-
-@require_POST
-@login_required
-def refund_payment(request, payment_id):
-    if not request.user.is_staff:
-        return JsonResponse({"error": "Forbidden"}, status=403)
-
-    payment = get_object_or_404(ApplicationPayment, id=payment_id)
-
-    if payment.status != "success":
-        return JsonResponse({"error": "Cannot refund non-paid payment"}, status=400)
-
-    try:
-        with transaction.atomic():
-            stripe.Refund.create(
-                payment_intent=payment.gateway_payment_id
-            )
-            payment.status = "refunded"
-            payment.refunded_at = timezone.now()
-            payment.save()
-
-    except stripe.error.StripeError as e:
-        return JsonResponse({"error": str(e)}, status=400)
-
-    return JsonResponse({"status": "refunded"})
-
-
-
-
 
 ###################### APPLICATION SUBMISSION ##############################################
 

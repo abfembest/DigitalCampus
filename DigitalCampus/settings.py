@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "parent",
     "instructor",
     "finance",
+    "payment",
 
     "django.contrib.humanize",
 ]

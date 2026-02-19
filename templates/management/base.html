@@ -712,7 +712,7 @@
 
                     <!-- Payment Management -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payment' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payments' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-credit-card w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Payments</span>
@@ -720,9 +720,17 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="paymentsMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
-                            <a href="{% url 'finance:payment_management' %}" 
+                            <a href="{% url 'payments:payment_management' %}" 
                             class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'payment_management' or request.resolver_match.url_name == 'payment_detail' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> All Payments
+                            </a>
+                            <a href="{% url 'payments:transaction_reports' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'transaction_reports' %}bg-white/20{% endif %}">
+                                <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Transaction Reports
+                            </a>
+                            <a href="{% url 'payments:invoice_generation' %}" 
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'invoice' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-file-invoice mr-2" aria-hidden="true"></i> Invoices
                             </a>
                         </div>
                     </div>
@@ -734,43 +742,12 @@
                         <span class="ml-3">Subscriptions</span>
                     </a>
 
-                    <!-- Invoice Generation -->
-                    <a href="{% url 'finance:invoice_generation' %}" 
-                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'invoice' in request.path %}bg-white/20{% endif %}">
-                        <i class="fas fa-file-invoice w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Invoices</span>
-                    </a>
-
-                    <!-- Invoice Generation -->
-                    <a href="{% url 'finance:transaction_reports' %}" 
-                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'transaction' in request.path %}bg-white/20{% endif %}">
-                        <i class="fas fa-file-alt mr-2" aria-hidden="true"></i>
-                        <span class="ml-3">Transaction Reports</span>
-                    </a>
-
                     <!-- Payroll Management -->
                     <a href="{% url 'finance:payroll_management' %}" 
                     class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payroll' in request.path %}bg-white/20{% endif %}">
                         <i class="fas fa-money-bill-wave w-5 text-center" aria-hidden="true"></i>
                         <span class="ml-3">Payroll</span>
                     </a>
-
-                    <!-- Transaction Reports -->
-                    {% comment %} <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'report' in request.path %}bg-white/20{% endif %}">
-                            <div class="flex items-center">
-                                <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Reports</span>
-                            </div>
-                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
-                        </button>
-                        <div id="reportsMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
-                            <a href="{% url 'finance:transaction_reports' %}" 
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'transaction_reports' %}bg-white/20{% endif %}">
-                                <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Transaction Reports
-                            </a>
-                        </div>
-                    </div> {% endcomment %}
 
                     {% elif request.user.profile.role == 'qa' %}
                     <!-- QA REVIEWER MENU (for future implementation) -->

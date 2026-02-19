@@ -1,76 +1,40 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 app_name = 'finance'
 
 urlpatterns = [
+
     # Dashboard
+    path('', views.finance_dashboard, name='dashboard'),
+
+    # Payments — delegated to the payments app
+    # All payment URLs are now under payments/ namespace
+    path('payments/', include('payment.urls', namespace='payment')),
+
+    # Subscriptions
     path(
-        '', 
-        views.finance_dashboard, 
-        name='dashboard'
-    ),
-    
-    # Payment Management
-    path(
-        'payments/', 
-        views.payment_management, 
-        name='payment_management'
-    ),
-    
-    # Payment Detail - Using payment_reference (slug)
-    path(
-        'payments/<str:payment_reference>/', 
-        views.payment_detail, 
-        name='payment_detail'
-    ),
-    
-    # Subscription Management
-    path(
-        'subscriptions/', 
-        views.subscription_list, 
-        name='subscription_list'
+        'subscriptions/',
+        views.subscription_list,
+        name='subscription_list',
     ),
 
-    # Invoice Generation
-    path(
-        'invoices/', 
-        views.invoice_generation, 
-        name='invoice_generation'
-    ),
-    path(
-        'invoices/generate/<str:payment_reference>/', 
-        views.generate_invoice_pdf, 
-        name='generate_invoice_pdf'
-    ),
-    
-    path(
-        'reports/transactions/', 
-        views.transaction_reports, 
-        name='transaction_reports'
-    ),
-
-    # Single management page (list + create modal)
+    # Payroll
     path('payroll/', views.payroll_management, name='payroll_management'),
-    
-    # Detail page (view + update)
     path(
         'payroll/<str:payroll_reference>/',
         views.payroll_detail,
-        name='payroll_detail'
+        name='payroll_detail',
     ),
-    
-    # Delete payroll
     path(
         'payroll/<str:payroll_reference>/delete/',
         views.payroll_delete,
-        name='payroll_delete'
+        name='payroll_delete',
     ),
-    
-    # Delete specific attachment (1-5)
     path(
-        'payroll/<str:payroll_reference>/attachment/<int:attachment_number>/delete/',
+        'payroll/<str:payroll_reference>/attachment/'
+        '<int:attachment_number>/delete/',
         views.payroll_attachment_delete,
-        name='payroll_attachment_delete'
+        name='payroll_attachment_delete',
     ),
 ]

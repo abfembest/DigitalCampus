@@ -65,12 +65,6 @@ urlpatterns = [
     # --------------------
     path("stripe/webhook/", views.stripe_webhook, name="stripe_webhook"),
 
-    # --------------------
-    # Admin / Support
-    # --------------------
-    path("refund/<int:payment_id>/", views.refund_payment, name="refund_payment"),
-
-
     ################## APPLICATION SUBMISSIONS #######
 
     # ================= STAGE 4 =================

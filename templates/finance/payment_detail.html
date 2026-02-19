@@ -25,7 +25,7 @@ payment, details, transaction, finance, invoice
                     </a>
                     <i class="fas fa-chevron-right text-xs" 
                        aria-hidden="true"></i>
-                    <a href="{% url 'finance:payment_management' %}" 
+                    <a href="{% url 'payments:payment_management' %}" 
                        class="hover:text-primary-600 transition-colors">
                         Payments
                     </a>
@@ -45,7 +45,7 @@ payment, details, transaction, finance, invoice
             
             <!-- Action Buttons -->
             <div class="flex items-center gap-3 flex-wrap">
-                <a href="{% url 'finance:payment_management' %}" 
+                <a href="{% url 'payments:payment_management' %}" 
                    class="px-4 py-2 bg-white border border-gray-300 
                           text-gray-700 rounded-lg hover:bg-gray-50 
                           transition-colors focus:ring-2 
@@ -57,7 +57,7 @@ payment, details, transaction, finance, invoice
                     Back
                 </a>
                 {% if payment.status == 'success' %}
-                <a href="{% url 'finance:generate_invoice_pdf' payment.payment_reference %}" 
+                <a href="{% url 'payments:generate_invoice_pdf' payment.payment_reference %}" 
                    class="px-4 py-2 bg-blue-600 text-white rounded-lg 
                           hover:bg-blue-700 transition-colors 
                           focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
@@ -206,7 +206,7 @@ payment, details, transaction, finance, invoice
                                 Amount
                             </dt>
                             <dd class="mt-1 text-2xl font-bold text-gray-900">
-                                ${{ payment.amount|floatformat:2 }} 
+                                {{ payment.amount|floatformat:2 }} 
                                 <span class="text-sm text-gray-500">
                                     {{ payment.currency|default:"USD" }}
                                 </span>
@@ -614,7 +614,7 @@ payment, details, transaction, finance, invoice
                     </h2>
                 </div>
                 <div class="p-6 space-y-3">
-                    <a href="{% url 'finance:payment_management' %}" 
+                    <a href="{% url 'payments:payment_management' %}" 
                        class="block w-full px-4 py-2.5 bg-gray-100 
                               hover:bg-gray-200 text-gray-800 rounded-lg 
                               text-center transition-colors font-medium">
@@ -671,28 +671,50 @@ payment, details, transaction, finance, invoice
                 </button>
             </div>
         </div>
-        <form method="post" class="p-6">
+        <form method="post" 
+            action="{% url 'payments:refund_payment' payment.payment_reference %}" 
+            class="p-6">
             {% csrf_token %}
             
             <div class="mb-6">
                 <p class="text-gray-700 mb-4">
-                    Are you sure you want to refund this payment of 
-                    <strong>${{ payment.amount|floatformat:2 }}</strong>?
+                    Refunding payment of 
+                    <strong>{{ payment.amount|floatformat:2 }} {{ payment.currency|default:"USD" }}</strong>.
+                    You may issue a partial or full refund.
                 </p>
-                
+
+                <!-- Refund Amount -->
                 <div class="mb-4">
-                    <label for="{{ refund_form.reason.id_for_label }}" 
-                           class="block text-sm font-medium 
-                                  text-gray-700 mb-2">
+                    <label for="{{ refund_form.refund_amount.id_for_label }}"
+                        class="block text-sm font-medium text-gray-700 mb-2">
+                        Refund Amount *
+                    </label>
+                    {{ refund_form.refund_amount }}
+                    {% if refund_form.refund_amount.errors %}
+                    <p class="text-red-500 text-xs mt-1">
+                        {{ refund_form.refund_amount.errors|join:', ' }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Reason -->
+                <div class="mb-4">
+                    <label for="{{ refund_form.reason.id_for_label }}"
+                        class="block text-sm font-medium text-gray-700 mb-2">
                         Refund Reason *
                     </label>
                     {{ refund_form.reason }}
+                    {% if refund_form.reason.errors %}
+                    <p class="text-red-500 text-xs mt-1">
+                        {{ refund_form.reason.errors|join:', ' }}
+                    </p>
+                    {% endif %}
                 </div>
-                
+
+                <!-- Notes -->
                 <div class="mb-4">
-                    <label for="{{ refund_form.notes.id_for_label }}" 
-                           class="block text-sm font-medium 
-                                  text-gray-700 mb-2">
+                    <label for="{{ refund_form.notes.id_for_label }}"
+                        class="block text-sm font-medium text-gray-700 mb-2">
                         Additional Notes
                     </label>
                     {{ refund_form.notes }}

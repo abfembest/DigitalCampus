@@ -228,7 +228,7 @@
                     <div class="hidden lg:block">
                         <div class="relative">
                             <div class="absolute top-8 left-0 h-1 bg-green-500 mx-8 transition-all duration-500" style="width: {% if application.status in 'approved,rejected' %}calc(100% - 4rem){% elif application.status == 'under_review' %}calc(75% - 3rem){% elif application.status == 'documents_uploaded' %}calc(60% - 2.5rem){% elif application.is_paid %}calc(40% - 2rem){% elif application.status == 'draft' %}calc(20% - 1rem){% else %}0{% endif %}"></div>
-                            
+
                             <!-- Steps -->
                             <div class="relative grid grid-cols-5 gap-2">
                                 <!-- Step 1: Draft Saved -->
@@ -285,7 +285,7 @@
                                     </span>
 
                                     {% if application.is_paid and not application.documents.all %}
-                                    <button onclick="openUploadModal()" 
+                                    <button onclick="openUploadModal()"
                                             class="mt-3 px-4 py-2 bg-primary-950 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition">
                                         Upload Documents
                                     </button>
@@ -298,10 +298,10 @@
 
                                 <!-- Step 4: Submitted -->
                                 <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full 
+                                    <div class="w-16 h-16 rounded-full
                                         {% if application.status in 'under_review,approved,rejected' %}bg-green-500
                                         {% elif application.status == 'documents_uploaded' %}bg-blue-500 shadow-xl animate-pulse
-                                        {% else %}bg-gray-300{% endif %} 
+                                        {% else %}bg-gray-300{% endif %}
                                         text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
                                         {% if application.status in 'under_review,approved,rejected' %}
                                         <i data-lucide="check" class="w-8 h-8"></i>
@@ -309,7 +309,7 @@
                                         <i data-lucide="send" class="w-8 h-8"></i>
                                         {% endif %}
                                     </div>
-                                    <span class="text-sm font-semibold text-center 
+                                    <span class="text-sm font-semibold text-center
                                         {% if application.status in 'documents_uploaded,under_review,approved,rejected' %}text-gray-900
                                         {% else %}text-gray-500{% endif %}">
                                         Submitted
@@ -354,7 +354,7 @@
                                     <div class="w-16 h-16 rounded-full
                                         {% if application.can_access_student_portal %}bg-green-500 shadow-xl
                                         {% elif application.admission_accepted %}bg-blue-500 animate-pulse
-                                        {% else %}bg-gray-300{% endif %} 
+                                        {% else %}bg-gray-300{% endif %}
                                         text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
                                         {% if application.can_access_student_portal %}
                                         <i data-lucide="graduation-cap" class="w-8 h-8"></i>
@@ -364,7 +364,7 @@
                                         <i data-lucide="user-check" class="w-8 h-8"></i>
                                         {% endif %}
                                     </div>
-                                    <span class="text-sm font-semibold text-center 
+                                    <span class="text-sm font-semibold text-center
                                         {% if application.admission_accepted or application.can_access_student_portal %}text-gray-900
                                         {% else %}text-gray-500{% endif %}">
                                         Enrollment
@@ -380,94 +380,153 @@
                         </div>
                     </div>
 
-                    <!-- Mobile/Tablet Progress -->
-                    <div class="lg:hidden space-y-3">
-                        <div class="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-500">
-                            <div class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center shadow flex-shrink-0">
-                                <i data-lucide="check" class="w-5 h-5"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-sm text-gray-900">Saved</h4>
-                                <p class="text-xs text-gray-600 truncate">Draft created</p>
-                            </div>
+
+                    <!-- Mobile/Tablet Progress (Enhanced – Same as Desktop) -->
+                    <div class="lg:hidden space-y-4">
+
+                        <!-- STEP 1: Draft -->
+                        <div class="p-4 rounded-xl border bg-green-50 border-green-400">
+                            <h4 class="font-bold text-gray-900">✔ Application Draft</h4>
+                            <p class="text-sm text-gray-600">Draft created successfully</p>
                         </div>
 
-                        <div class="flex items-center gap-3 p-3 rounded-lg {% if application.is_paid %}bg-green-50 border border-green-500{% elif application.status == 'draft' %}bg-blue-50 border border-blue-500{% else %}bg-gray-50 border border-gray-300{% endif %}">
-                            <div class="w-10 h-10 rounded-full {% if application.is_paid %}bg-green-500{% elif application.status == 'draft' %}bg-blue-500 animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow flex-shrink-0">
-                                {% if application.is_paid %}
-                                <i data-lucide="check" class="w-5 h-5"></i>
+                        <!-- STEP 2: Payment -->
+                        <div class="p-4 rounded-xl border
+        {% if application.is_paid %}bg-green-50 border-green-400
+        {% else %}bg-blue-50 border-blue-400{% endif %}">
+                            <h4 class="font-bold text-gray-900">💳 Payment</h4>
+                            <p class="text-sm text-gray-600">
+                                {% if application.is_paid %}Payment completed{% else %}Payment required{% endif %}
+                            </p>
+
+                            {% if not application.is_paid %}
+                            <a href="{% url 'eduweb:payments' %}?application_id={{ application.application_id }}"
+                               class="mt-3 inline-block w-full text-center px-4 py-2 bg-primary-950 text-white rounded-lg text-sm font-semibold">
+                                Make Payment
+                            </a>
+                            {% endif %}
+                        </div>
+
+                        <!-- STEP 3: Documents -->
+                        <div class="p-4 rounded-xl border
+        {% if application.documents.all %}bg-green-50 border-green-400
+        {% elif application.is_paid %}bg-blue-50 border-blue-400
+        {% else %}bg-gray-50 border-gray-300{% endif %}">
+                            <h4 class="font-bold text-gray-900">📄 Documents</h4>
+                            <p class="text-sm text-gray-600">
+                                {% if application.documents.all %}
+                                {{ application.documents.count }} document{{ application.documents.count|pluralize }} uploaded
+                                {% elif application.is_paid %}
+                                Upload required
                                 {% else %}
-                                <i data-lucide="credit-card" class="w-5 h-5"></i>
+                                Locked until payment
                                 {% endif %}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-sm {% if application.is_paid or application.status == 'draft' %}text-gray-900{% else %}text-gray-500{% endif %}">Payment</h4>
-                                <p class="text-xs text-gray-600 truncate">{% if application.is_paid %}Paid{% elif application.status == 'draft' %}Required{% else %}Pending{% endif %}</p>
-                            </div>
+                            </p>
+
+                            {% if application.is_paid and not application.documents.all %}
+                            <button onclick="openUploadModal()"
+                                    class="mt-3 w-full px-4 py-2 bg-primary-950 text-white rounded-lg text-sm font-semibold">
+                                Upload Documents
+                            </button>
+                            {% endif %}
                         </div>
 
-                        <div class="flex items-center gap-3 p-3 rounded-lg {% if application.status == 'documents_uploaded' or application.status in 'submitted,under_review,reviewed,accepted,rejected,waitlisted' %}bg-green-50 border border-green-500{% elif application.status == 'payment_complete' %}bg-blue-50 border border-blue-500{% else %}bg-gray-50 border border-gray-300{% endif %}">
-                            <div class="w-10 h-10 rounded-full {% if application.status == 'documents_uploaded' or application.status in 'submitted,under_review,reviewed,accepted,rejected,waitlisted' %}bg-green-500{% elif application.status == 'payment_complete' %}bg-blue-500 animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow flex-shrink-0">
-                                {% if application.status == 'documents_uploaded' or application.status in 'submitted,under_review,reviewed,accepted,rejected,waitlisted' %}
-                                <i data-lucide="check" class="w-5 h-5"></i>
+                        <!-- STEP 4: Submission -->
+                        <div class="p-4 rounded-xl border
+        {% if application.status in 'under_review,approved,rejected' %}
+            bg-green-50 border-green-400
+        {% elif application.documents.all %}
+            bg-blue-50 border-blue-400
+        {% else %}
+            bg-gray-50 border-gray-300
+        {% endif %}">
+                            <h4 class="font-bold text-gray-900">📤 Submission</h4>
+                            <p class="text-sm text-gray-600">
+                                {% if application.status in 'under_review,approved,rejected' %}
+                                Application submitted
+                                {% elif application.documents.all %}
+                                Ready to submit
                                 {% else %}
-                                <i data-lucide="upload" class="w-5 h-5"></i>
+                                Pending
                                 {% endif %}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-sm {% if application.status in 'payment_complete,documents_uploaded,submitted,under_review,reviewed,accepted,rejected,waitlisted' %}text-gray-900{% else %}text-gray-500{% endif %}">Documents</h4>
-                                <p class="text-xs text-gray-600 truncate">{% if application.documents.all %}{{ application.documents.count }} uploaded{% elif application.status == 'payment_complete' %}Required{% else %}Pending{% endif %}</p>
-                            </div>
+                            </p>
                         </div>
 
-                        <div class="flex items-center gap-3 p-3 rounded-lg {% if application.status in 'submitted,under_review,reviewed,accepted,rejected,waitlisted' %}bg-green-50 border border-green-500{% elif application.status == 'documents_uploaded' %}bg-blue-50 border border-blue-500{% else %}bg-gray-50 border border-gray-300{% endif %}">
-                            <div class="w-10 h-10 rounded-full {% if application.status in 'submitted,under_review,reviewed,accepted,rejected,waitlisted' %}bg-green-500{% elif application.status == 'documents_uploaded' %}bg-blue-500 animate-pulse{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow flex-shrink-0">
-                                {% if application.status in 'submitted,under_review,reviewed,accepted,rejected,waitlisted' %}
-                                <i data-lucide="check" class="w-5 h-5"></i>
-                                {% else %}
-                                <i data-lucide="send" class="w-5 h-5"></i>
-                                {% endif %}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-sm {% if application.status in 'documents_uploaded,submitted,under_review,reviewed,accepted,rejected,waitlisted' %}text-gray-900{% else %}text-gray-500{% endif %}">Submitted</h4>
-                                <p class="text-xs text-gray-600 truncate">
-                                    {% if application.status in 'submitted,under_review,reviewed,accepted,rejected,waitlisted' %}Complete
-                                    {% elif application.status == 'documents_uploaded' %}Ready
-                                    {% else %}Pending{% endif %}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-3 p-3 rounded-lg 
-                            {% if application.status == 'approved' %}bg-green-50 border border-green-500
-                            {% elif application.status == 'rejected' %}bg-red-50 border border-red-500
-                            {% elif application.status in 'under_review,reviewed' %}bg-blue-50 border border-blue-500
-                            {% else %}bg-gray-50 border border-gray-300{% endif %}">
-                            <div class="w-10 h-10 rounded-full 
-                                {% if application.status == 'approved' %}bg-green-500
-                                {% elif application.status == 'rejected' %}bg-red-500
-                                {% elif application.status in 'under_review,reviewed' %}bg-blue-500 animate-pulse
-                                {% else %}bg-gray-300{% endif %} text-white flex items-center justify-center shadow flex-shrink-0">
+                        <!-- STEP 5: Decision -->
+                        <div class="p-4 rounded-xl border
+        {% if application.status == 'approved' %}
+            bg-green-50 border-green-400
+        {% elif application.status == 'rejected' %}
+            bg-red-50 border-red-400
+        {% elif application.status in 'under_review,reviewed' %}
+            bg-blue-50 border-blue-400
+        {% else %}
+            bg-gray-50 border-gray-300
+        {% endif %}">
+                            <h4 class="font-bold text-gray-900">🏆 Decision</h4>
+                            <p class="text-sm text-gray-600">
                                 {% if application.status == 'approved' %}
-                                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                                Accepted
                                 {% elif application.status == 'rejected' %}
-                                <i data-lucide="x-circle" class="w-5 h-5"></i>
+                                Not Accepted
+                                {% elif application.status in 'under_review,reviewed' %}
+                                Under Review
                                 {% else %}
-                                <i data-lucide="award" class="w-5 h-5"></i>
+                                Pending
                                 {% endif %}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-bold text-sm {% if application.status in 'under_review,reviewed,accepted,rejected,waitlisted' %}text-gray-900{% else %}text-gray-500{% endif %}">Decision</h4>
-                                <p class="text-xs text-gray-600 truncate">
-                                    {% if application.status == 'approved' %}Accepted
-                                    {% elif application.status == 'rejected' %}Not Accepted
-                                    {% elif application.status == 'waitlisted' %}Waitlisted
-                                    {% elif application.status in 'under_review,reviewed' %}In Review
-                                    {% else %}Pending{% endif %}
-                                </p>
-                            </div>
+                            </p>
+
+                            {% if application.status == 'approved' %}
+                            <a href="{% url 'eduweb:admission_letter' application.application_id %}"
+                               class="mt-3 inline-block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">
+                                View Admission Letter
+                            </a>
+                            {% endif %}
                         </div>
+
+                        <!-- STEP 6: Admission Acceptance / Portal -->
+                        {% if application.status == 'approved' %}
+                        <div class="p-4 rounded-xl border
+        {% if application.can_access_student_portal %}
+            bg-green-50 border-green-400
+        {% elif application.admission_accepted %}
+            bg-blue-50 border-blue-400
+        {% else %}
+            bg-gray-50 border-gray-300
+        {% endif %}">
+                            <h4 class="font-bold text-gray-900">🎓 Enrollment</h4>
+                            <p class="text-sm text-gray-600">
+                                {% if application.can_access_student_portal %}
+                                Student portal active
+                                {% elif application.admission_accepted %}
+                                Awaiting department approval
+                                {% else %}
+                                Accept admission offer
+                                {% endif %}
+                            </p>
+
+                            {% if application.status == 'approved' and not application.admission_accepted %}
+                            <form method="post" action="{% url 'eduweb:accept_admission' application.application_id %}">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">
+                                    Accept Admission Offer
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            {% if application.can_access_student_portal %}
+                            <a href="{% url 'students:dashboard' %}"
+                               class="mt-3 inline-block w-full text-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold">
+                                Go to Student Dashboard
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
                     </div>
+
+                    
                 </section>
 
                 <!-- Application Summary -->
@@ -717,7 +776,7 @@
                         </div>
                         <h3 class="text-xl font-bold text-gray-900 mb-3">Complete Payment</h3>
                         <p class="text-gray-600 mb-6 leading-relaxed">Pay the application fee to proceed with document upload and submission.</p>
-                        <a href="{% url 'eduweb:mark_payment_successful' application.application_id %}" 
+                        <a href="{% url 'eduweb:payments' %}?application_id={{ application.application_id }}" 
                            class="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
                             <i data-lucide="arrow-right" class="w-5 h-5"></i>
                             Proceed to Payment

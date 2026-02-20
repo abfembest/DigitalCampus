@@ -760,6 +760,64 @@ class Course(models.Model):
         super().save(*args, **kwargs)
 
 
+
+
+class AllRequiredPayments(models.Model):
+    WHO_TO_PAY_CHOICES = [
+        ("student", "Student"),
+        ("staff", "Staff"),
+        ("applicant", "Applicant"),
+        ("other", "Other"),
+    ]
+
+    faculty = models.ForeignKey(
+        Faculty,
+        on_delete=models.CASCADE,
+        related_name="required_payments"
+    )
+
+    department = models.ForeignKey(
+        "eduweb.Department",
+        on_delete=models.CASCADE,
+        related_name="required_payments"
+    )
+
+    purpose = models.CharField(
+        max_length=255,
+        help_text="Purpose of the payment (e.g., School Fees, Library Fees)"
+    )
+
+    who_to_pay = models.CharField(
+        max_length=20,
+        choices=WHO_TO_PAY_CHOICES,
+        default="student"
+    )
+
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Amount to be paid"
+    )
+
+    due_date = models.DateField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Controls visibility of this payment"
+    )
+
+    class Meta:
+        verbose_name = "Required Payment"
+        verbose_name_plural = "All Required Payments"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.purpose} - {self.faculty.code}/{self.department.code}"
+
+
+
 class CourseIntake(models.Model):
     """Course intake periods"""
     INTAKE_PERIOD_CHOICES = [

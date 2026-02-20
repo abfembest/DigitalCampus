@@ -33,6 +33,13 @@ from django.shortcuts import get_object_or_404
 from .decorators import applicant_required
 from .emailservices import *
 
+
+
+def basefile(request):
+    return render(request, 'base.html')
+
+
+
 def get_application_secure(application_id, user):
     """
     Securely retrieve application with triple validation.

@@ -11,6 +11,16 @@ import uuid
 import os
 from decimal import Decimal
 
+
+DEGREE_LEVEL_CHOICES = [
+    ('certificate', 'Certificate'),
+    ('diploma', 'Diploma'),
+    ('undergraduate', 'Undergraduate'),
+    ('postgraduate', 'Postgraduate'),
+    ('masters', 'Masters'),
+    ('phd', 'PhD')
+]
+
 # ==================== HELPER FUNCTIONS ====================
 def validate_file_size(file, max_size_mb=10):
     """Validate file size"""
@@ -594,16 +604,82 @@ class Faculty(models.Model):
         super().save(*args, **kwargs)
 
 
+#################### DEPARTMENTS #####################
+
+class Department(models.Model):
+    faculty = models.ForeignKey(
+        Faculty,
+        on_delete=models.CASCADE,
+        related_name="departments"
+    )
+
+    name = models.CharField(
+        max_length=200,
+        help_text="Department name (e.g., Electrical Engineering)"
+    )
+    slug = models.SlugField(max_length=200, unique=True)
+    code = models.CharField(
+        max_length=20,
+        help_text="Department code (e.g., EEE)"
+    )
+
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    display_order = models.IntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("faculty", "code")
+        ordering = ["display_order", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.faculty.code})"
+
+
+
+    ############################# PROGRAMS ########
+
+
+class Program(models.Model):
+    department = models.ForeignKey(
+        "eduweb.Department",
+        on_delete=models.CASCADE,
+        related_name="programs"
+    )
+
+    name = models.CharField(
+        max_length=200,
+        help_text="Program name (e.g., BSc Electrical Engineering)"
+    )
+    slug = models.SlugField(max_length=200, unique=True)
+    code = models.CharField(
+        max_length=30,
+        help_text="Program code (e.g., BSC-EEE)"
+    )
+
+    degree_level = models.CharField(
+        max_length=50,
+        choices= DEGREE_LEVEL_CHOICES
+    )
+
+    duration_years = models.DecimalField(max_digits=3, decimal_places=1)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("department", "code")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Course(models.Model):
-    """Academic programs/courses for admissions"""
-    DEGREE_LEVEL_CHOICES = [
-        ('certificate', 'Certificate'),
-        ('diploma', 'Diploma'),
-        ('undergraduate', 'Undergraduate'),
-        ('postgraduate', 'Postgraduate'),
-        ('masters', 'Masters'),
-        ('phd', 'PhD')
-    ]
+   
 
     STUDY_MODE_CHOICES = [
         ('full_time', 'Full Time'),
@@ -616,6 +692,9 @@ class Course(models.Model):
     name = models.CharField(max_length=200, help_text="Course name")
     slug = models.SlugField(max_length=200, unique=True)
     code = models.CharField(max_length=20, unique=True, help_text="Course code")
+    program = models.ForeignKey(Program, on_delete=models.CASCADE,related_name="courses", null=True,
+    blank=True)
+
     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='courses')
     
     # Display
@@ -2047,12 +2126,24 @@ class UserProfile(models.Model):
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=30, choices=ROLE_CHOICES, default='student')
+    faculty = models.ForeignKey(
+    Faculty,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="students"
+)
+
+    department = models.OneToOneField("eduweb.Department", on_delete=models.CASCADE, related_name='department',null=True, blank=True, unique=False)
+    program = models.OneToOneField(Program, on_delete=models.CASCADE, related_name='program',null=True, blank=True, unique=False)
     
     # Personal Information
     bio = models.TextField(blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
+
+
     
     # Address
     address = models.TextField(blank=True)
@@ -2087,6 +2178,10 @@ class UserProfile(models.Model):
         self.verification_token = uuid.uuid4()
         self.save()
         return self.verification_token
+
+
+   
+
 
 
 # ==================== VENDOR MANAGEMENT ====================

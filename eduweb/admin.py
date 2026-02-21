@@ -6,10 +6,12 @@ from .models import (
     Certificate, ContactMessage,
     Course, CourseIntake, CourseApplication, ApplicationDocument, ApplicationPayment,
     CourseCategory, Discussion, DiscussionReply,
+    Department, Program, AllRequiredPayments,
     Enrollment, Faculty, Invoice, Lesson, LessonSection, LessonProgress,
     LMSCourse, Message, Notification,
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
     Review, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
+    StaffPayroll, StudyGroup, StudyGroupMember,
     SystemConfiguration, UserProfile, Vendor, BroadcastMessage
 )
 
@@ -121,6 +123,7 @@ class BadgeAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'created_at')
     search_fields = ('name', 'description')
     prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created_at',)
     
     fieldsets = (
         ('Basic Information', {
@@ -130,7 +133,11 @@ class BadgeAdmin(admin.ModelAdmin):
             'fields': ('criteria', 'points')
         }),
         ('Status', {
-            'fields': ('is_active', 'created_at')
+            'fields': ('is_active',)
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
         }),
     )
 
@@ -336,10 +343,10 @@ class FacultyAdmin(admin.ModelAdmin):
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     list_display = (
-        'name', 'code', 'faculty', 'degree_level', 'duration_years', 
+        'name', 'code', 'faculty', 'department', 'program', 'degree_level', 'duration_years', 
         'application_fee', 'tuition_fee', 'is_active', 'is_featured', 'display_order'
     )
-    list_filter = ('faculty', 'degree_level', 'is_active', 'is_featured', 'created_at')
+    list_filter = ('faculty', 'department', 'degree_level', 'is_active', 'is_featured', 'created_at')
     search_fields = ('name', 'code', 'description')
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ('is_active', 'is_featured', 'display_order')
@@ -347,7 +354,7 @@ class CourseAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'code', 'faculty', 'is_active', 'is_featured', 'display_order')
+            'fields': ('name', 'slug', 'code', 'faculty', 'department', 'program', 'is_active', 'is_featured', 'display_order')
         }),
         ('Display Settings', {
             'fields': ('icon', 'color_primary', 'color_secondary', 'tagline')
@@ -1334,7 +1341,6 @@ class BroadcastMessageAdmin(admin.ModelAdmin):
         'updated_at',
         'error_message'
     )
-    prepopulated_fields = {'slug': ('subject',)}
     date_hierarchy = 'created_at'
     
     fieldsets = (
@@ -1368,6 +1374,192 @@ class BroadcastMessageAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Prevent deletion of sent messages"""
         if obj and obj.status == 'sent':
+            return False
+        return super().has_delete_permission(request, obj)
+
+
+# ==================== DEPARTMENT ====================
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'faculty', 'is_active', 'display_order', 'created_at')
+    list_filter = ('faculty', 'is_active', 'created_at')
+    search_fields = ('name', 'code', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('is_active', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'code', 'faculty', 'is_active', 'display_order')
+        }),
+        ('Content', {
+            'fields': ('description',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== PROGRAM ====================
+@admin.register(Program)
+class ProgramAdmin(admin.ModelAdmin):
+    list_display = (
+        'name', 'code', 'department', 'degree_level', 'duration_years',
+        'application_fee', 'tuition_fee', 'is_active', 'is_featured', 'display_order'
+    )
+    list_filter = ('department__faculty', 'department', 'degree_level', 'is_active', 'is_featured')
+    search_fields = ('name', 'code', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('is_active', 'is_featured', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'code', 'department', 'degree_level', 'is_active', 'is_featured', 'display_order')
+        }),
+        ('Program Details', {
+            'fields': ('duration_years', 'credits_required', 'max_students')
+        }),
+        ('Financial Information', {
+            'fields': ('application_fee', 'tuition_fee')
+        }),
+        ('Content', {
+            'fields': ('description', 'entry_requirements'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== ALL REQUIRED PAYMENTS ====================
+@admin.register(AllRequiredPayments)
+class AllRequiredPaymentsAdmin(admin.ModelAdmin):
+    list_display = (
+        'purpose', 'faculty', 'department', 'program', 'course',
+        'amount', 'who_to_pay', 'semester', 'academic_year', 'is_active', 'due_date'
+    )
+    list_filter = ('faculty', 'department', 'who_to_pay', 'semester', 'is_active', 'academic_year')
+    search_fields = ('purpose', 'faculty__name', 'department__name', 'program__name')
+    list_editable = ('is_active',)
+    readonly_fields = ('created_at',)
+
+    fieldsets = (
+        ('Scope', {
+            'fields': ('faculty', 'department', 'program', 'course')
+        }),
+        ('Payment Details', {
+            'fields': ('purpose', 'amount', 'who_to_pay', 'semester', 'academic_year', 'due_date')
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== STUDY GROUPS ====================
+@admin.register(StudyGroup)
+class StudyGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'course', 'created_by', 'max_members', 'is_active', 'is_public', 'created_at')
+    list_filter = ('is_active', 'is_public', 'course', 'created_at')
+    search_fields = ('name', 'description', 'created_by__username')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('is_active', 'is_public')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'description', 'course', 'created_by')
+        }),
+        ('Settings', {
+            'fields': ('max_members', 'is_active', 'is_public')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(StudyGroupMember)
+class StudyGroupMemberAdmin(admin.ModelAdmin):
+    list_display = ('study_group', 'user', 'role', 'is_active', 'joined_at')
+    list_filter = ('role', 'is_active', 'joined_at')
+    search_fields = ('study_group__name', 'user__username')
+    list_editable = ('role', 'is_active')
+    readonly_fields = ('joined_at', 'updated_at')
+
+    fieldsets = (
+        ('Membership', {
+            'fields': ('study_group', 'user', 'role', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('joined_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== STAFF PAYROLL ====================
+@admin.register(StaffPayroll)
+class StaffPayrollAdmin(admin.ModelAdmin):
+    list_display = (
+        'payroll_reference', 'staff', 'month', 'year',
+        'base_salary', 'gross_salary', 'net_salary',
+        'payment_status', 'payment_method', 'payment_date'
+    )
+    list_filter = ('payment_status', 'payment_method', 'month', 'year')
+    search_fields = ('payroll_reference', 'staff__username', 'staff__first_name', 'staff__last_name')
+    readonly_fields = (
+        'payroll_reference', 'gross_salary', 'net_salary',
+        'created_at', 'updated_at', 'approved_at'
+    )
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        ('Reference', {
+            'fields': ('payroll_reference', 'staff', 'month', 'year')
+        }),
+        ('Salary', {
+            'fields': ('base_salary', 'allowances', 'bonuses', 'gross_salary')
+        }),
+        ('Deductions', {
+            'fields': ('tax_deduction', 'other_deductions', 'net_salary')
+        }),
+        ('Payment', {
+            'fields': ('payment_status', 'payment_method', 'payment_date', 'bank_name', 'account_number')
+        }),
+        ('Attachments', {
+            'fields': (
+                'attachment_1', 'attachment_1_name',
+                'attachment_2', 'attachment_2_name',
+                'attachment_3', 'attachment_3_name',
+                'attachment_4', 'attachment_4_name',
+                'attachment_5', 'attachment_5_name',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Administration', {
+            'fields': ('notes', 'created_by', 'approved_by', 'approved_at'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of paid payrolls"""
+        if obj and obj.payment_status == 'paid':
             return False
         return super().has_delete_permission(request, obj)
 

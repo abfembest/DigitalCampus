@@ -153,4 +153,11 @@ urlpatterns = [
         views.help_support, 
         name='help_support'
     ),
+
+    # Outstanding fees table
+    path(
+        'payments/',
+        views.my_payments,
+        name='my_payments',
+    ),
 ]

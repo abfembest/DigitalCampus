@@ -243,10 +243,10 @@ class AssignmentSubmission(models.Model):
         if self.submitted_at and self.submitted_at > self.assignment.due_date:
             self.is_late = True
             
-            # Apply late penalty
-            if self.score and not self.assignment.allow_late_submission:
-                penalty = (self.assignment.late_penalty_percent / 100) * self.score
-                self.score = max(0, self.score - penalty)
+            # Apply late penalty only when late submission is allowed but penalized
+            if self.score and self.assignment.allow_late_submission and self.assignment.late_penalty_percent > 0:
+                penalty = (self.assignment.late_penalty_percent / 100) * float(self.score)
+                self.score = max(Decimal('0.00'), self.score - Decimal(str(penalty)))
         
         # Set submitted_at when status changes to submitted
         if self.status == 'submitted' and not self.submitted_at:
@@ -637,6 +637,16 @@ class Department(models.Model):
     def __str__(self):
         return f"{self.name} ({self.faculty.code})"
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+            original_slug = self.slug
+            counter = 1
+            while Department.objects.filter(slug=self.slug).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
+
 
 
     ############################# PROGRAMS ########
@@ -665,17 +675,34 @@ class Program(models.Model):
     )
 
     duration_years = models.DecimalField(max_digits=3, decimal_places=1)
+    credits_required = models.IntegerField(default=120)
     description = models.TextField(blank=True)
+    entry_requirements = models.JSONField(default=list, blank=True)
+    application_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    tuition_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    max_students = models.IntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-
+    is_featured = models.BooleanField(default=False)
+    display_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ("department", "code")
-        ordering = ["name"]
+        ordering = ["display_order", "name"]
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+            original_slug = self.slug
+            counter = 1
+            while Program.objects.filter(slug=self.slug).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
 
 
 class Course(models.Model):
@@ -692,9 +719,8 @@ class Course(models.Model):
     name = models.CharField(max_length=200, help_text="Course name")
     slug = models.SlugField(max_length=200, unique=True)
     code = models.CharField(max_length=20, unique=True, help_text="Course code")
-    program = models.ForeignKey(Program, on_delete=models.CASCADE,related_name="courses", null=True,
-    blank=True)
-
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="courses", null=True, blank=True)
+    department = models.ForeignKey('Department', on_delete=models.CASCADE, related_name='courses', null=True, blank=True)
     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='courses')
     
     # Display
@@ -780,6 +806,34 @@ class AllRequiredPayments(models.Model):
         "eduweb.Department",
         on_delete=models.CASCADE,
         related_name="required_payments"
+    )
+
+    program = models.ForeignKey(
+        Program,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="required_payments",
+        help_text="Scope this payment to a specific program (optional)"
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="required_payments",
+        help_text="Scope this payment to a specific course (optional)"
+    )
+    academic_year = models.CharField(
+        max_length=9,
+        blank=True,
+        help_text="e.g. 2024/2025"
+    )
+    semester = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[('first', 'First Semester'), ('second', 'Second Semester'), ('annual', 'Annual')],
+        default='annual'
     )
 
     purpose = models.CharField(
@@ -2184,16 +2238,9 @@ class UserProfile(models.Model):
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=30, choices=ROLE_CHOICES, default='student')
-    faculty = models.ForeignKey(
-    Faculty,
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name="students"
-)
-
-    department = models.OneToOneField("eduweb.Department", on_delete=models.CASCADE, related_name='department',null=True, blank=True, unique=False)
-    program = models.OneToOneField(Program, on_delete=models.CASCADE, related_name='program',null=True, blank=True, unique=False)
+    faculty = models.ForeignKey(Faculty, on_delete=models.SET_NULL, null=True, blank=True, related_name="faculty_students")
+    department = models.ForeignKey("Department", on_delete=models.SET_NULL, null=True, blank=True, related_name='department_students')
+    program = models.ForeignKey(Program, on_delete=models.SET_NULL, null=True, blank=True, related_name='program_students')
     
     # Personal Information
     bio = models.TextField(blank=True)

@@ -1,9 +1,16 @@
-from .models import Faculty, Course
+from .models import Faculty, Program
+
 
 def navigation_data(request):
-    """Provide faculties and courses for navigation"""
-    faculties = Faculty.objects.filter(is_active=True).prefetch_related('courses')[:11]
-    courses = Course.objects.filter(is_active=True).select_related('faculty')[:11]
+    """Inject navigation data into every template via base.html."""
+
+    faculties = Faculty.objects.filter(
+        is_active=True
+    ).only(
+        'name', 'slug', 'icon', 'color_primary', 'display_order'
+    ).order_by('display_order', 'name')
+
+    courses = Program.objects.filter(is_active=True).select_related('department__faculty')[:11]
     
     return {
         'all_faculties': faculties,

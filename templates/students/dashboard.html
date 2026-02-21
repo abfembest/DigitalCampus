@@ -16,15 +16,74 @@ check assignments, and stay updated with announcements.
 {% block content %}
 <div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Page Header -->
+    <!-- Page Header -->
     <header class="mb-6 lg:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
-            Welcome back, 
-            {{ request.user.first_name|default:request.user.username }}!
-        </h1>
-        <p class="text-sm sm:text-base text-gray-600 mt-2">
-            Here's what's happening with your learning journey
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+
+            <!-- Welcome Text (unchanged content, now flex child) -->
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+                    Welcome back, 
+                    {{ request.user.first_name|default:request.user.username }}!
+                </h1>
+                <p class="text-sm sm:text-base text-gray-600 mt-2">
+                    Here's what's happening with your learning journey
+                </p>
+            </div>
+
+            <!-- Outstanding Fees Button — only renders when student owes fees -->
+            {% if outstanding_count and outstanding_count > 0 %}
+            <div class="flex-shrink-0 self-start sm:self-center">
+                <a href="{% url 'students:my_payments' %}"
+                   class="outstanding-fees-btn inline-flex items-center gap-2
+                          px-4 py-2.5 bg-red-600 hover:bg-red-700
+                          text-white text-sm font-semibold rounded-xl
+                          shadow-md hover:shadow-lg ring-2 ring-red-200
+                          transition-all duration-200 group">
+                    <!-- Bell with badge -->
+                    <span class="relative">
+                        <i class="fas fa-bell text-base 
+                                  group-hover:animate-bounce"></i>
+                        <span class="absolute -top-2 -right-2
+                                     bg-yellow-400 text-red-900
+                                     text-[10px] font-black
+                                     rounded-full w-4 h-4
+                                     flex items-center justify-center
+                                     leading-none shadow-sm">
+                            {{ outstanding_count }}
+                        </span>
+                    </span>
+                    <span>Outstanding Fees</span>
+                    <i class="fas fa-arrow-right text-xs opacity-75
+                              group-hover:translate-x-0.5 
+                              transition-transform"></i>
+                </a>
+                <!-- Total amount hint shown on sm+ screens -->
+                <p class="hidden sm:block text-xs text-red-500 
+                           font-medium mt-1.5 text-right">
+                    ₦{{ outstanding_total|floatformat:2 }} total due
+                </p>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Mobile-only: amount shown below the button row -->
+        {% if outstanding_count and outstanding_count > 0 %}
+        <p class="sm:hidden text-xs text-red-500 font-medium mt-2">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            ₦{{ outstanding_total|floatformat:2 }} outstanding
         </p>
+        {% endif %}
     </header>
+
+    <style>
+    @keyframes pulse-ring {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.45); }
+        50%       { box-shadow: 0 0 0 7px rgba(220,38,38,0); }
+    }
+    .fee-alert-btn { animation: pulse-ring 2.4s ease-in-out infinite; }
+    </style>
 
     <!-- Stats Overview -->
     <section 

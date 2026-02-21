@@ -1452,27 +1452,47 @@ from .models import Faculty, Course
 
 @check_for_auth
 def faculty_detail(request, slug):
-    """Dynamic faculty detail page"""
+    """Faculty detail page with full hierarchy."""
     faculty = get_object_or_404(Faculty, slug=slug, is_active=True)
-    courses = faculty.courses.filter(is_active=True)
-    
+
+    departments = faculty.departments.filter(
+        is_active=True
+    ).prefetch_related(
+        'programs__courses'
+    ).order_by('display_order', 'name')
+
+    courses = faculty.courses.filter(
+        is_active=True
+    ).select_related('program', 'department')
+
     context = {
         'faculty': faculty,
+        'departments': departments,
         'courses': courses,
     }
-    
+
     return render(request, 'faculties/faculty_detail.html', context)
 
 
 @check_for_auth
 def course_detail(request, slug):
-    """Dynamic course detail page"""
-    course = get_object_or_404(Course, slug=slug, is_active=True)
-    
+    """Academic course/programme detail page."""
+    course = get_object_or_404(
+        Course.objects.select_related('faculty', 'department', 'program'),
+        slug=slug,
+        is_active=True
+    )
+
+    intakes = course.intakes.filter(
+        is_active=True,
+        application_deadline__gte=timezone.now().date()
+    ).order_by('year', 'intake_period')
+
     context = {
         'course': course,
+        'intakes': intakes,
     }
-    
+
     return render(request, 'programs/course_detail.html', context)
 
 @login_required(login_url='eduweb:auth_page')

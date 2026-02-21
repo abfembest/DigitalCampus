@@ -181,15 +181,28 @@ def dashboard(request):
             'certificates_earned': 0,
         }
     
+    # Outstanding fees for the dashboard alert button
+    try:
+        outstanding_items, _ = _get_outstanding_for_student(user)
+        outstanding_count = len(outstanding_items)
+        outstanding_total = sum(
+            item['payment'].amount for item in outstanding_items
+        )
+    except Exception:
+        outstanding_count = 0
+        outstanding_total = Decimal('0.00')
+
     context = {
         'page_title': 'My Dashboard',
         'enrollments': enrollments,
         'pending_assignments': pending_assignments,
         'announcements': announcements,
-        'admission_history': admission_history,  # NEW
+        'admission_history': admission_history,
         'total_enrolled': stats['total_enrolled'],
         'completed_courses': stats['completed_courses'],
         'certificates_earned': stats['certificates_earned'],
+        'outstanding_count': outstanding_count,
+        'outstanding_total': outstanding_total,
     }
     
     return render(request, 'students/dashboard.html', context)
@@ -2192,3 +2205,80 @@ Submission Time: {timezone.now()}
     }
     
     return render(request, 'students/help_support.html', context)
+
+def _get_outstanding_for_student(user):
+    """
+    Returns a list of dicts representing outstanding AllRequiredPayments
+    for this student (matched by faculty + department, who_to_pay='student',
+    and no corresponding 'success' ApplicationPayment exists).
+
+    NOTE: ApplicationPayment is currently tied to CourseApplication via a
+    OneToOneField. We use payment_metadata to flag student-fee payments
+    made outside the CourseApplication flow so we don't break existing logic.
+
+    Outstanding = AllRequiredPayments entry where no ApplicationPayment with
+    status='success' has payment_metadata containing
+    {'student_fee_id': <pk>, 'student_id': <user.pk>}.
+    """
+    profile = getattr(user, 'profile', None)
+    if not profile or not profile.faculty or not profile.department:
+        return [], []
+
+    from eduweb.models import AllRequiredPayments, ApplicationPayment
+    required_qs = AllRequiredPayments.objects.filter(
+        faculty=profile.faculty,
+        department=profile.department,
+        who_to_pay='student',
+        is_active=True,
+    ).select_related('faculty', 'department')
+
+    # Collect pk-s that the student has already paid
+    paid_ids = set(
+        ApplicationPayment.objects.filter(
+            status='success',
+            payment_metadata__student_fee_id__in=list(
+                required_qs.values_list('pk', flat=True)
+            ),
+            payment_metadata__student_id=user.pk,
+        ).values_list('payment_metadata__student_fee_id', flat=True)
+    )
+
+    today = timezone.now().date()
+    outstanding, paid = [], []
+
+    for rp in required_qs:
+        if rp.pk in paid_ids:
+            paid.append(rp)
+        else:
+            outstanding.append({
+                'payment': rp,
+                'is_overdue': rp.due_date < today,
+            })
+
+    return outstanding, paid
+
+
+# ==================== MY PAYMENTS (outstanding table) ====================
+
+@login_required
+def my_payments(request):
+    """
+    Student-facing outstanding fees dashboard.
+    Fetches all AllRequiredPayments for the student's faculty/department
+    that have not yet been paid.
+    """
+    outstanding_payments, paid_payments = _get_outstanding_for_student(
+        request.user
+    )
+
+    total_outstanding = sum(
+        item['payment'].amount for item in outstanding_payments
+    )
+
+    context = {
+        'page_title': 'My Payments',
+        'outstanding_payments': outstanding_payments,
+        'paid_payments': paid_payments,
+        'total_outstanding': total_outstanding,
+    }
+    return render(request, 'students/my_payments.html', context)

@@ -674,9 +674,15 @@
                             </div>
                             <div class="flex-1 pb-6">
                                 <h4 class="font-bold text-gray-900 mb-1">Payment Completed</h4>
-                                <p class="text-sm text-gray-600 mb-2">{{ application.payment.paid_at|date:"M d, Y" }} at {{ application.payment.paid_at|time:"g:i A" }}</p>
+                                <p class="text-sm text-gray-600 mb-2">
+                                    {% if application.payment.paid_at %}
+                                        {{ application.payment.paid_at|date:"M d, Y" }} at {{ application.payment.paid_at|time:"g:i A" }}
+                                    {% else %}
+                                        {{ application.payment.created_at|date:"M d, Y" }} at {{ application.payment.created_at|time:"g:i A" }}
+                                    {% endif %}
+                                </p>
                                 <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    Payment of ${{ application.payment.amount }} confirmed
+                                    Payment of {{application.payment.currency}} {{ application.payment.amount }} confirmed
                                 </p>
                             </div>
                         </div>

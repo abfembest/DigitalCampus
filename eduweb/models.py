@@ -1033,9 +1033,14 @@ class CourseApplication(models.Model):
     @property
     def is_paid(self):
         """Check if payment is complete"""
-        if not hasattr(self, 'payment'):
+        # First check the status field directly — most reliable
+        if self.status in ['payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
+            return True
+        # Fallback: check the related payment record
+        try:
+            return self.payment.status == 'success'
+        except Exception:
             return False
-        return self.payment.status == 'success'
 
     def can_upload_documents(self):
         """Check if application allows document uploads"""

@@ -1,8 +1,13 @@
 from email.mime import application
+from urllib import request
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
+
+import payment
+
+import payment
 from .forms import ContactForm, CourseApplicationForm
 from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor
 from eduweb.models import Faculty, Course, BlogPost, BlogCategory
@@ -1020,7 +1025,23 @@ def confirm_payment(request):
     # Check if payment record already exists
     payment = ApplicationPayment.objects.filter(gateway_payment_id=intent.id).first()
     if payment:
-        return JsonResponse({"success": True, "payment_id": payment.id})
+        # Ensure paid_at is always set even if webhook created the record first
+        if not payment.paid_at:
+            payment.paid_at = timezone.now()
+            payment.save(update_fields=['paid_at'])
+        # Ensure application status is synced
+        application_id = intent.metadata.get("application_id")
+        if application_id:
+            try:
+                app = CourseApplication.objects.get(application_id=application_id, user=request.user)
+                if app.status in ['draft', 'pending_payment']:
+                    app.status = 'payment_complete'
+                    app.payment_status = 'success'
+                    app.save(update_fields=['status', 'payment_status'])
+            except CourseApplication.DoesNotExist:
+                pass
+        redirect_url = reverse("eduweb:application_status")
+        return JsonResponse({"success": True, "payment_id": payment.id, "redirect_url": redirect_url})
 
     # No payment record yet – create it from the intent metadata
     application_id = intent.metadata.get("application_id")

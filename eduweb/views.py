@@ -1032,7 +1032,7 @@ def confirm_payment(request):
     except CourseApplication.DoesNotExist:
         return JsonResponse({"success": False, "error": "Application not found or access denied"}, status=404)
 
-    # Create/update ApplicationPayment record + sync CourseApplication atomically
+    # Create payment record AND update CourseApplication atomically
     with transaction.atomic():
         payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
             gateway_payment_id=intent.id,
@@ -1045,13 +1045,13 @@ def confirm_payment(request):
             }
         )
 
-        # If record already existed (webhook race), ensure status is correct
+        # If webhook already created it, ensure status is correct
         if not created and payment.status != "success":
             payment.status = "success"
             payment.paid_at = timezone.now()
             payment.save(update_fields=["status", "paid_at"])
 
-        # ✅ Always sync CourseApplication — both status AND payment_status
+        # ✅ Update CourseApplication — this is the missing piece
         application.status = "payment_complete"
         application.payment_status = "success"
         application.save(update_fields=["status", "payment_status"])

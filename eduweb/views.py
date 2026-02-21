@@ -1032,7 +1032,7 @@ def confirm_payment(request):
     except CourseApplication.DoesNotExist:
         return JsonResponse({"success": False, "error": "Application not found or access denied"}, status=404)
 
-    # Create payment record atomically (idempotent)
+    # Create/update ApplicationPayment record + sync CourseApplication atomically
     with transaction.atomic():
         payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
             gateway_payment_id=intent.id,
@@ -1044,9 +1044,20 @@ def confirm_payment(request):
                 "paid_at": timezone.now(),
             }
         )
-        # If created is False, the record already existed (race with webhook) – still return success.
 
-    return JsonResponse({"success": True, "payment_id": payment.id})
+        # If record already existed (webhook race), ensure status is correct
+        if not created and payment.status != "success":
+            payment.status = "success"
+            payment.paid_at = timezone.now()
+            payment.save(update_fields=["status", "paid_at"])
+
+        # ✅ Always sync CourseApplication — both status AND payment_status
+        application.status = "payment_complete"
+        application.payment_status = "success"
+        application.save(update_fields=["status", "payment_status"])
+
+    redirect_url = reverse("eduweb:application_status")
+    return JsonResponse({"success": True, "payment_id": payment.id, "redirect_url": redirect_url})
 
 
 
@@ -1099,9 +1110,10 @@ def stripe_webhook(request):
             payment.paid_at = timezone.now()
             payment.save()
 
-            # Optional but recommended
-            #application.is_paid = True
-            #application.save(update_fields=["is_paid"])
+            # Sync CourseApplication status when webhook fires
+            application.status = "payment_complete"
+            application.payment_status = "success"
+            application.save(update_fields=["status", "payment_status"])
     return HttpResponse(status=200)
 
 ###################### APPLICATION SUBMISSION ##############################################

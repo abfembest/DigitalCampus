@@ -222,6 +222,8 @@
 
 <!-- Stripe.js (loaded once) -->
 <script src="https://js.stripe.com/v3/"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     (function () {
@@ -432,7 +434,7 @@
                 throw new Error(data.error || 'Payment confirmation failed.');
             }
 
-            showPaymentSuccess(data.payment_id);
+            showPaymentSuccess(data.payment_id, data.redirect_url);
             setLoading(false);
         }
 
@@ -448,19 +450,25 @@
             document.getElementById('button-spinner').classList.toggle('hidden', !isLoading);
         }
 
-        function showPaymentSuccess(paymentId) {
+        function showPaymentSuccess(paymentId, redirectUrl) {
             document.getElementById('payment-form').classList.add('hidden');
-            document.getElementById('payment-success').classList.remove('hidden');
             document.getElementById('payment-error').classList.add('hidden');
 
-            const successLink = document.querySelector('#payment-success a');
-            if (successLink) {
-                if (paymentId) {
-                    successLink.href = `/application/confirmation/?payment_id=${paymentId}`;
-                } else {
-                    successLink.href = '/application/confirmation/';
-                }
-            }
+            Swal.fire({
+                icon: 'success',
+                title: '🎉 Payment Successful!',
+                html: `
+                    <p class="text-gray-600">Your application fee has been paid successfully.</p>
+                    <p class="text-sm text-gray-500 mt-2">You will now be redirected to your application status page.</p>
+                `,
+                confirmButtonText: 'View Application Status',
+                confirmButtonColor: '#2563EB',
+                allowOutsideClick: false,
+                timer: 4000,
+                timerProgressBar: true,
+            }).then(() => {
+                window.location.href = redirectUrl || '/application_status/';
+            });
         }
 
         function showPaymentError(message) {

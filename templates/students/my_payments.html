@@ -281,7 +281,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
 
                         <!-- Action -->
                         <td class="px-6 py-4">
-                            <a href="{% url 'students:my_payments' %}?pay={{ item.payment.pk }}"
+                            <a href="{% url 'eduweb:payments' %}?student_fee_id={{ item.payment.pk }}"
                                class="inline-flex items-center gap-1.5 px-4 py-2
                                       bg-primary-600 hover:bg-primary-700
                                       text-white text-xs font-semibold
@@ -357,7 +357,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                             Due: {{ item.payment.due_date|date:"M d, Y" }}
                         </p>
                     </div>
-                    <a href="{% url 'students:my_payments' %}?pay={{ item.payment.pk }}"
+                    <a href="{% url 'eduweb:payments' %}?student_fee_id={{ item.payment.pk }}"
                        class="inline-flex items-center gap-1.5 px-4 py-2
                               bg-primary-600 hover:bg-primary-700
                               text-white text-xs font-semibold

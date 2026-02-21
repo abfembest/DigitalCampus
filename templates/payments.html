@@ -230,11 +230,15 @@
         /* ============================
            CONFIG & STATE
         ============================ */
+        const params = new URLSearchParams(window.location.search);
         const config = {
-            applicationId: new URLSearchParams(window.location.search).get('application_id'),
+            applicationId: params.get('application_id'),
+            studentFeeId: params.get('student_fee_id'),          // NEW
+            mode: params.get('student_fee_id') ? 'student_fee' : 'application',  // NEW
             summaryUrl: '/api/payment/summary/',
+            studentFeeSummaryUrl: '/api/student-fee/summary/',   // NEW — you'll wire this up in eduweb views
             createIntentUrl: '/create-intent/',
-            confirmUrl: '/application/confirmation',   // ✅ fixed: removed trailing slash
+            confirmUrl: '/application/confirmation',
             stripePublishableKey: null
         };
 
@@ -270,19 +274,30 @@
            PAYMENT SUMMARY
         ============================ */
         async function loadPaymentSummary() {
-            if (!config.applicationId) {
-                throw new Error('Application ID is missing from the URL.');
+            let response;
+
+            if (config.mode === 'student_fee') {
+                // Student outstanding fee mode
+                if (!config.studentFeeId) {
+                    throw new Error('Fee ID is missing from the URL.');
+                }
+                response = await fetch(`${config.studentFeeSummaryUrl}${config.studentFeeId}/`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+            } else {
+                // Original application fee mode
+                if (!config.applicationId) {
+                    throw new Error('Application ID is missing from the URL.');
+                }
+                response = await fetch(`${config.summaryUrl}${config.applicationId}/`, {
+                    headers: { 'Accept': 'application/json' }
+                });
             }
 
-            const response = await fetch(`${config.summaryUrl}${config.applicationId}/`, {
-                headers: { 'Accept': 'application/json' }
-            });
             const data = await response.json();
-
             if (!data.success) {
                 throw new Error(data.error || 'Failed to load payment summary.');
             }
-
             displaySummary(data.data);
         }
 
@@ -291,14 +306,20 @@
             document.getElementById('summary-content').classList.remove('hidden');
 
             document.getElementById('summary-name').textContent = summary.full_name;
-            document.getElementById('summary-id').textContent = summary.application_id.slice(0, 8);
 
-            // Store currency from summary
+            // Show fee purpose OR application ID depending on mode
+            const idEl = document.getElementById('summary-id');
+            if (config.mode === 'student_fee') {
+                idEl.textContent = summary.purpose || 'University Fee';   // NEW — your API returns this
+            } else {
+                idEl.textContent = summary.application_id
+                    ? summary.application_id.slice(0, 8)
+                    : '—';
+            }
+
             state.currency = summary.currency || 'USD';
-
             document.getElementById('summary-amount').textContent = formatCurrency(summary.amount, state.currency);
             document.getElementById('summary-total').textContent = formatCurrency(summary.amount, state.currency);
-
             config.stripePublishableKey = summary.stripe_public_key;
         }
 
@@ -400,9 +421,11 @@
                     'X-CSRFToken': getCsrfToken(),
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({
-                    application_id: config.applicationId
-                })
+                body: JSON.stringify(
+                    config.mode === 'student_fee'
+                        ? { student_fee_id: config.studentFeeId }
+                        : { application_id: config.applicationId }
+                )
             });
 
             if (!response.ok) {
@@ -467,7 +490,9 @@
                 timer: 4000,
                 timerProgressBar: true,
             }).then(() => {
-                window.location.href = redirectUrl || '/application_status/';
+                // After student fee payment, go back to outstanding fees page; else application status
+                window.location.href = redirectUrl
+                    || (config.mode === 'student_fee' ? '/student/payments/' : '/application_status/');
             });
         }
 

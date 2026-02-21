@@ -1137,6 +1137,27 @@ def stripe_webhook(request):
             application.save(update_fields=["status", "payment_status"])
     return HttpResponse(status=200)
 
+# eduweb/views.py — add this view
+@login_required
+def get_student_fee_summary(request, fee_pk):
+    from eduweb.models import AllRequiredPayments
+    from django.conf import settings
+    try:
+        fee = AllRequiredPayments.objects.select_related('faculty', 'department').get(pk=fee_pk, is_active=True)
+    except AllRequiredPayments.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Fee not found'}, status=404)
+
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'full_name': request.user.get_full_name() or request.user.username,
+            'purpose': fee.purpose,
+            'amount': float(fee.amount),
+            'currency': 'NGN',
+            'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
+        }
+    })
+
 ###################### APPLICATION SUBMISSION ##############################################
 
 @login_required

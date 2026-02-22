@@ -244,6 +244,7 @@ def make_decision(request, pk):
     
     return redirect('management:applications_list')
 
+
 def send_application_submission_email(application):
     """Send confirmation email when application is submitted"""
     try:

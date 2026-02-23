@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}All Programs – MIU | Browse Faculties, Departments & Programs{% endblock %}
+
+{% block content %}
+
+<!-- ===== HERO ===== -->
+<section class="relative pt-32 pb-20 lg:pt-40 lg:pb-24 overflow-hidden bg-gradient-to-br from-primary-950 via-purple-900 to-primary-800">
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-20 left-10 w-72 h-72 bg-purple-400 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-pink-400 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-700 rounded-full blur-3xl opacity-30"></div>
+    </div>
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-white/20">
+                <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                <span>Explore Academic Offerings</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight font-display text-white">
+                Faculties, Departments<br>
+                <span class="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-300 bg-clip-text text-transparent">&amp; Programs</span>
+            </h1>
+            <p class="text-xl text-gray-200 mb-10 leading-relaxed max-w-2xl mx-auto">
+                Browse all of MIU's academic programs organized by faculty and department. Find the perfect program for your career journey.
+            </p>
+
+            <!-- Search & Filter Bar -->
+            <div class="max-w-2xl mx-auto">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"></i>
+                    <input
+                        type="text"
+                        id="programSearch"
+                        placeholder="Search programs, departments, or faculties…"
+                        class="w-full pl-12 pr-4 py-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:bg-white/20 transition-all text-base"
+                    >
+                </div>
+                <!-- Degree Level Quick Filters -->
+                <div class="flex flex-wrap gap-2 justify-center mt-4" id="degreeFilters">
+                    <button data-filter="all"
+                        class="filter-btn active px-4 py-2 rounded-full text-sm font-semibold bg-white text-primary-950 transition-all hover:scale-105">
+                        All Levels
+                    </button>
+                    <button data-filter="certificate"
+                        class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-white/10 text-white border border-white/20 transition-all hover:bg-white hover:text-primary-950">
+                        Certificate
+                    </button>
+                    <button data-filter="diploma"
+                        class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-white/10 text-white border border-white/20 transition-all hover:bg-white hover:text-primary-950">
+                        Diploma
+                    </button>
+                    <button data-filter="undergraduate"
+                        class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-white/10 text-white border border-white/20 transition-all hover:bg-white hover:text-primary-950">
+                        Undergraduate
+                    </button>
+                    <button data-filter="masters"
+                        class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-white/10 text-white border border-white/20 transition-all hover:bg-white hover:text-primary-950">
+                        Masters
+                    </button>
+                    <button data-filter="phd"
+                        class="filter-btn px-4 py-2 rounded-full text-sm font-semibold bg-white/10 text-white border border-white/20 transition-all hover:bg-white hover:text-primary-950">
+                        PhD
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== QUICK FACULTY NAV ===== -->
+<nav class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm" aria-label="Jump to faculty">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex gap-1 overflow-x-auto py-3 scrollbar-hide" id="facultyNav">
+            {% for faculty in faculties %}
+            <a href="#faculty-{{ faculty.slug }}"
+               class="faculty-nav-link flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-primary-50 hover:text-primary-950 transition-all whitespace-nowrap"
+               data-faculty="{{ faculty.slug }}">
+                <i data-lucide="{{ faculty.icon }}" class="w-4 h-4"></i>
+                {{ faculty.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</nav>
+
+<!-- ===== RESULTS COUNTER ===== -->
+<div class="bg-gray-50 border-b border-gray-200 py-3">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <p class="text-sm text-gray-500" id="resultsCount"></p>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT: FACULTIES ===== -->
+<main class="py-12 lg:py-20 bg-gray-50" id="main-content">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- No Results Message -->
+        <div id="noResults" class="hidden text-center py-20">
+            <i data-lucide="search-x" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+            <h3 class="text-xl font-bold text-gray-500 mb-2">No programs found</h3>
+            <p class="text-gray-400">Try adjusting your search or filter.</p>
+        </div>
+
+        {% for faculty in faculties %}
+        <!-- ===== FACULTY BLOCK ===== -->
+        <section id="faculty-{{ faculty.slug }}"
+                 class="faculty-section mb-16 lg:mb-24"
+                 data-faculty-name="{{ faculty.name|lower }}">
+
+            <!-- Faculty Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-primary-100 to-purple-200 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
+                        <i data-lucide="{{ faculty.icon }}" class="w-7 h-7 text-primary-950"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-primary-950 font-display">{{ faculty.name }}</h2>
+                        <p class="text-gray-500 text-sm mt-0.5">{{ faculty.tagline }}</p>
+                    </div>
+                </div>
+                <a href="{% url 'eduweb:faculty_detail' faculty.slug %}"
+                   class="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-primary-50 text-primary-950 hover:bg-primary-100 border border-primary-200 transition-all hover:scale-105">
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                    Faculty Page
+                </a>
+            </div>
+
+            {% for department in faculty.departments.all %}
+            {% if department.is_active %}
+            <!-- Department -->
+            <div class="department-block mb-8" data-dept-name="{{ department.name|lower }}">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-2 h-2 rounded-full bg-primary-950"></div>
+                    <h3 class="text-lg font-bold text-gray-800">{{ department.name }}</h3>
+                    <div class="flex-1 h-px bg-gray-200"></div>
+                    <span class="text-xs text-gray-400 font-mono uppercase tracking-wide">{{ department.code }}</span>
+                </div>
+
+                <!-- Programs Grid -->
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 pl-5">
+                    {% for program in department.programs.all %}
+                    {% if program.is_active %}
+                    <!-- Program Card -->
+                    <article class="program-card group bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 hover:border-primary-200 transition-all duration-300 hover:-translate-y-1 overflow-hidden cursor-pointer"
+                             data-program-name="{{ program.name|lower }}"
+                             data-degree="{{ program.degree_level }}"
+                             onclick="window.location='{% url 'eduweb:program_detail' program.slug %}'">
+                        <div class="p-5">
+                            <!-- Degree badge -->
+                            <div class="flex items-start justify-between gap-2 mb-3">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide
+                                    {% if program.degree_level == 'phd' %}bg-red-50 text-red-700
+                                    {% elif program.degree_level == 'masters' %}bg-blue-50 text-blue-700
+                                    {% elif program.degree_level == 'undergraduate' or program.degree_level == 'postgraduate' %}bg-green-50 text-green-700
+                                    {% elif program.degree_level == 'diploma' %}bg-yellow-50 text-yellow-700
+                                    {% else %}bg-gray-50 text-gray-700
+                                    {% endif %}">
+                                    {{ program.get_degree_level_display }}
+                                </span>
+                                {% if program.is_featured %}
+                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-gold-50 text-gold-700 border border-gold-200">
+                                    <i data-lucide="star" class="w-3 h-3 fill-current"></i>
+                                    Featured
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <h4 class="font-bold text-gray-900 text-base leading-snug mb-2 group-hover:text-primary-950 transition-colors">
+                                {{ program.name }}
+                            </h4>
+
+                            <div class="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                    {{ program.duration_years }} yr{% if program.duration_years != 1 %}s{% endif %}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="book" class="w-3.5 h-3.5"></i>
+                                    {{ program.credits_required }} credits
+                                </span>
+                            </div>
+
+                            {% if program.description %}
+                            <p class="text-gray-500 text-xs leading-relaxed line-clamp-2">{{ program.description|truncatewords:20 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="px-5 pb-4">
+                            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                                <span class="text-xs text-gray-400">{{ program.code }}</span>
+                                <span class="text-xs font-semibold text-primary-950 flex items-center gap-1 group-hover:gap-2 transition-all">
+                                    View Program
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+                    {% endif %}
+                    {% empty %}
+                    <p class="text-gray-400 text-sm col-span-3 py-4 italic">No programs listed yet for this department.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400">
+                <i data-lucide="folder-open" class="w-10 h-10 mx-auto mb-3 opacity-40"></i>
+                <p class="text-sm">No departments found for this faculty.</p>
+            </div>
+            {% endfor %}
+
+            <!-- Faculty footer divider -->
+            <div class="mt-10 border-t-2 border-dashed border-gray-200"></div>
+        </section>
+        {% empty %}
+        <div class="text-center py-20">
+            <i data-lucide="building" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+            <h3 class="text-xl font-bold text-gray-400">No faculties available at the moment.</h3>
+        </div>
+        {% endfor %}
+
+    </div>
+</main>
+
+<!-- ===== BOTTOM CTA ===== -->
+<section class="py-16 bg-gradient-to-r from-primary-950 to-primary-700">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl font-bold text-white mb-4 font-display">Found your program?</h2>
+        <p class="text-purple-200 mb-8 max-w-xl mx-auto">Start your application today and take the first step toward your future at MIU.</p>
+        <a href="{% url 'eduweb:apply' %}"
+           class="inline-flex items-center gap-2 bg-gold-400 text-primary-950 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gold-300 transition-all shadow-xl hover:scale-105">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+            Apply Now
+        </a>
+    </div>
+</section>
+
+<script>
+(function () {
+    const searchInput = document.getElementById('programSearch');
+    const filterBtns  = document.querySelectorAll('.filter-btn');
+    const resultsCount = document.getElementById('resultsCount');
+    const noResults   = document.getElementById('noResults');
+
+    let activeFilter = 'all';
+    let searchTerm   = '';
+
+    function updateVisibility() {
+        const programCards = document.querySelectorAll('.program-card');
+        const facultySections = document.querySelectorAll('.faculty-section');
+        const departmentBlocks = document.querySelectorAll('.department-block');
+
+        let visible = 0;
+
+        programCards.forEach(card => {
+            const name   = card.dataset.programName || '';
+            const degree = card.dataset.degree || '';
+            const deptBlock = card.closest('.department-block');
+            const facultySection = card.closest('.faculty-section');
+
+            const matchesSearch = !searchTerm ||
+                name.includes(searchTerm) ||
+                (deptBlock && deptBlock.dataset.deptName.includes(searchTerm)) ||
+                (facultySection && facultySection.dataset.facultyName.includes(searchTerm));
+
+            const matchesDegree = activeFilter === 'all' || degree === activeFilter;
+
+            if (matchesSearch && matchesDegree) {
+                card.classList.remove('hidden');
+                visible++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        // Hide department blocks that have no visible cards
+        departmentBlocks.forEach(dept => {
+            const anyVisible = dept.querySelectorAll('.program-card:not(.hidden)').length > 0;
+            dept.style.display = anyVisible ? '' : 'none';
+        });
+
+        // Hide faculty sections with no visible departments
+        facultySections.forEach(section => {
+            const anyVisible = Array.from(section.querySelectorAll('.department-block')).some(d => d.style.display !== 'none');
+            section.style.display = anyVisible ? '' : 'none';
+        });
+
+        resultsCount.textContent = visible === 0 ? '' : `Showing ${visible} program${visible !== 1 ? 's' : ''}`;
+        noResults.classList.toggle('hidden', visible > 0);
+    }
+
+    searchInput.addEventListener('input', function () {
+        searchTerm = this.value.toLowerCase().trim();
+        updateVisibility();
+    });
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function () {
+            filterBtns.forEach(b => {
+                b.classList.remove('active', 'bg-white', 'text-primary-950');
+                b.classList.add('bg-white/10', 'text-white', 'border', 'border-white/20');
+            });
+            this.classList.add('active', 'bg-white', 'text-primary-950');
+            this.classList.remove('bg-white/10', 'text-white', 'border', 'border-white/20');
+            activeFilter = this.dataset.filter;
+            updateVisibility();
+        });
+    });
+
+    // Smooth scroll for faculty nav
+    document.querySelectorAll('.faculty-nav-link').forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                // Account for sticky nav height (~56px) + a bit of breathing room
+                const offset = 100;
+                const top = target.getBoundingClientRect().top + window.scrollY - offset;
+                window.scrollTo({ top, behavior: 'smooth' });
+            }
+        });
+    });
+
+    // Highlight active faculty in nav on scroll
+    const sections = document.querySelectorAll('.faculty-section');
+    const navLinks = document.querySelectorAll('.faculty-nav-link');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const slug = entry.target.id.replace('faculty-', '');
+                navLinks.forEach(link => {
+                    if (link.dataset.faculty === slug) {
+                        link.classList.add('bg-primary-50', 'text-primary-950');
+                    } else {
+                        link.classList.remove('bg-primary-50', 'text-primary-950');
+                    }
+                });
+            }
+        });
+    }, { rootMargin: '-100px 0px -60% 0px' });
+
+    sections.forEach(s => observer.observe(s));
+
+    updateVisibility();
+    lucide.createIcons();
+})();
+</script>
+
+{% endblock %}

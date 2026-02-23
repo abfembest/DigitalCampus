@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@source "../templates";
+@source "../eduweb/templates";
+
 /* Custom theme configuration for Tailwind v4 */
 @theme {
   /* Custom Colors */
@@ -37,9 +40,9 @@
   --color-gold-800: #92400e;
   --color-gold-900: #78350f;
 
-  /* Custom Fonts */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Poppins', system-ui, -apple-system, sans-serif;
+  /* Custom Fonts - no quotes, and avoid 'font-display' name (conflicts with CSS font-display property) */
+  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+  --font-heading: Poppins, system-ui, -apple-system, sans-serif;
 
   /* Custom Animations */
   --animate-fade-in: fade-in 0.6s ease-out;
@@ -50,49 +53,32 @@
 
 /* Custom Keyframes */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slide-up {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes slide-down {
-  from {
-    transform: translateY(-10px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes scale-in {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 /* Custom utility classes */
 @layer utilities {
+  /* font-display alias — maps to font-heading so templates using font-display still work */
+  .font-display {
+    font-family: Poppins, system-ui, -apple-system, sans-serif;
+  }
+
   .gradient-text {
     background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
     -webkit-background-clip: text;
@@ -125,9 +111,7 @@
 
 /* Reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

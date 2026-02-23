@@ -26,10 +26,11 @@ urlpatterns = [
 
     # Faculty Pages
     path('faculty/<slug:slug>/', views.faculty_detail, name='faculty_detail'),
-    path('program/<slug:slug>/', views.course_detail, name='course_detail'),
+    path('program/<slug:slug>/', views.program_detail, name='program_detail'),
 
     # Additional Pages
     path('research/', views.research, name='research'),
+    path('all-programs/', views.all_programs, name='all_programs'),
     path('campus-life/', views.campus_life, name='campus_life'),
     path('blog/', views.blog, name='blog'),
     path('blog/<slug:slug>/', views.blog_detail, name='blog_detail'),

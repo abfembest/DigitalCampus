@@ -448,11 +448,37 @@ def resend_verification(request):
 
 @check_for_auth
 def index(request):
-    return render(request, 'index.html')
+    from .models import Program, Faculty
+    featured_programs = Program.objects.filter(
+        is_active=True, is_featured=True
+    ).select_related('department__faculty').order_by('display_order', 'name')[:6]
+    faculties = Faculty.objects.filter(is_active=True).order_by('display_order', 'name')[:6]
+    return render(request, 'index.html', {
+        'featured_programs': featured_programs,
+        'faculties': faculties,
+    })
 
 @check_for_auth
 def about(request):
-    return render(request, 'about.html')
+    from .models import Faculty
+    faculties = Faculty.objects.filter(is_active=True).prefetch_related('departments').order_by('display_order', 'name')
+    return render(request, 'about.html', {'faculties': faculties})
+
+def all_programs(request):
+    from .models import Faculty, Department, Program
+    from django.db.models import Prefetch
+    faculties = Faculty.objects.filter(is_active=True).prefetch_related(
+        Prefetch(
+            'departments',
+            queryset=Department.objects.filter(is_active=True).prefetch_related(
+                Prefetch(
+                    'programs',
+                    queryset=Program.objects.filter(is_active=True).order_by('display_order', 'name')
+                )
+            ).order_by('display_order', 'name')
+        )
+    ).order_by('display_order', 'name')
+    return render(request, 'all_programs.html', {'faculties': faculties})
 
 
 @login_required
@@ -1502,52 +1528,63 @@ def mark_payment_successful(request, application_id):
     return redirect('eduweb:application_status')
 
 from django.shortcuts import get_object_or_404
-from .models import Faculty, Course
+from .models import Faculty, Course, Department, Program
+from django.db import models
 
-@check_for_auth
+from django.db.models import Prefetch
 def faculty_detail(request, slug):
-    """Faculty detail page with full hierarchy."""
+    """Faculty detail — departments → programs hierarchy, single efficient query."""
+
     faculty = get_object_or_404(Faculty, slug=slug, is_active=True)
 
-    departments = faculty.departments.filter(
-        is_active=True
-    ).prefetch_related(
-        'programs__courses'
-    ).order_by('display_order', 'name')
-
-    courses = faculty.courses.filter(
-        is_active=True
-    ).select_related('program', 'department')
+    departments = (
+        faculty.departments
+        .filter(is_active=True)
+        .prefetch_related(
+            Prefetch(
+                'programs',
+                queryset=Program.objects.filter(is_active=True)
+                                        .order_by('display_order', 'name'),
+                to_attr='active_programs',   # accessed as dept.active_programs in template
+            )
+        )
+        .order_by('display_order', 'name')
+    )
 
     context = {
-        'faculty': faculty,
+        'faculty':     faculty,
         'departments': departments,
-        'courses': courses,
     }
 
     return render(request, 'faculties/faculty_detail.html', context)
 
 
+
 @check_for_auth
-def course_detail(request, slug):
-    """Academic course/programme detail page."""
-    course = get_object_or_404(
-        Course.objects.select_related('faculty', 'department', 'program'),
+def program_detail(request, slug):
+    """Program detail page — shows program info and all courses under it."""
+
+    program = get_object_or_404(
+        Program.objects.select_related(
+            'department',
+            'department__faculty',
+        ),
         slug=slug,
-        is_active=True
+        is_active=True,
     )
 
-    intakes = course.intakes.filter(
-        is_active=True,
-        application_deadline__gte=timezone.now().date()
-    ).order_by('year', 'intake_period')
+    courses = program.courses.filter(
+        is_active=True
+    ).order_by('display_order', 'name')
 
     context = {
-        'course': course,
-        'intakes': intakes,
+        'program': program,
+        'courses': courses,
+        'department': program.department,
+        'faculty': program.department.faculty,
     }
 
-    return render(request, 'programs/course_detail.html', context)
+    return render(request, 'programs/program_detail.html', context)
 
 @login_required(login_url='eduweb:auth_page')
 def submit_application(request, application_id):

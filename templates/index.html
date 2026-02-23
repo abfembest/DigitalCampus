@@ -2,7 +2,7 @@
 
 {% load static %}
 
-{% block title %}MIU – Modern International University | Empowering Global Education{% endblock %}
+{% block title %}MIU – Melchisedec International University | Empowering Global Education{% endblock %}
 
 {% block content %}
 
@@ -113,7 +113,7 @@
                     <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center animate-scale-in" style="animation-delay: 0.6s;">
                         
                         <!-- Secular Programs Button -->
-                        <a href="#about" 
+                        <a href="{% url 'eduweb:all_programs' %}" 
                            class="group relative inline-flex items-center justify-center px-8 py-4 sm:px-10 sm:py-5 text-base sm:text-lg font-bold text-white bg-gradient-to-r from-primary-950 to-primary-800 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_60px_-15px_rgba(132,3,132,0.6)] focus:outline-none focus:ring-4 focus:ring-primary-400/50 min-w-[220px] border-2 border-primary-700"
                            aria-label="Explore Secular Programs">
                             <span class="relative z-10 flex items-center gap-3">
@@ -214,7 +214,7 @@
                     About MIU
                 </h2>
                 <p class="text-gray-700 mb-6 text-base lg:text-lg leading-relaxed">
-                    Modern International University is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence. Founded in 1995, we've been at the forefront of digital education transformation.
+                    Melchisedec International University is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence. Founded in 1995, we've been at the forefront of digital education transformation.
                 </p>
                 <p class="text-gray-600 mb-8 text-base lg:text-lg leading-relaxed">
                     Our mission is to provide accessible, world-class education that empowers students to achieve their personal and professional goals, regardless of geographic location.
@@ -244,54 +244,32 @@
         </div>
 
         <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            <!-- Business Administration -->
+            {% for program in featured_programs %}
             <article class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105 group">
                 <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                    <i data-lucide="trending-up" class="w-8 h-8 text-primary-950"></i>
+                    <i data-lucide="graduation-cap" class="w-8 h-8 text-primary-950"></i>
                 </div>
-                <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Business Administration</h3>
+                <span class="inline-block px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide bg-primary-50 text-primary-700 mb-3">
+                    {{ program.get_degree_level_display }}
+                </span>
+                <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">{{ program.name }}</h3>
                 <p class="text-gray-700 mb-6 text-base leading-relaxed">
-                    Develop leadership skills for global organizations with our AACSB-accredited program.
+                    {{ program.description|truncatewords:18|default:"A world-class program designed to prepare you for global success." }}
                 </p>
-                <a href="#" class="text-primary-950 font-semibold hover:text-primary-700 transition-colors inline-flex items-center group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
+                <a href="{% url 'eduweb:program_detail' program.slug %}"
+                class="text-primary-950 font-semibold hover:text-primary-700 transition-colors inline-flex items-center group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
                     Learn More
                     <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover/link:translate-x-1 transition-transform"></i>
                 </a>
             </article>
-
-            <!-- Computer Science -->
-            <article class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105 group">
-                <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                    <i data-lucide="code-2" class="w-8 h-8 text-primary-950"></i>
-                </div>
-                <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Computer Science</h3>
-                <p class="text-gray-700 mb-6 text-base leading-relaxed">
-                    Master modern software engineering, AI, and cybersecurity with industry-focused curriculum.
-                </p>
-                <a href="#" class="text-primary-950 font-semibold hover:text-primary-700 transition-colors inline-flex items-center group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
-                    Learn More
-                    <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover/link:translate-x-1 transition-transform"></i>
-                </a>
-            </article>
-
-            <!-- Data Science -->
-            <article class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105 group">
-                <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                    <i data-lucide="database" class="w-8 h-8 text-primary-950"></i>
-                </div>
-                <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Data Science</h3>
-                <p class="text-gray-700 mb-6 text-base leading-relaxed">
-                    Become an expert in analytics, machine learning, and big data with hands-on projects.
-                </p>
-                <a href="#" class="text-primary-950 font-semibold hover:text-primary-700 transition-colors inline-flex items-center group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
-                    Learn More
-                    <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover/link:translate-x-1 transition-transform"></i>
-                </a>
-            </article>
+            {% empty %}
+            <p class="col-span-3 text-center text-gray-400 py-10">Programs coming soon.</p>
+            {% endfor %}
         </div>
 
         <div class="text-center mt-12">
-            <a href="#" class="inline-flex items-center gap-2 border-2 border-primary-950 text-primary-950 px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:bg-primary-950 hover:text-white transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+            <a href="{% url 'eduweb:all_programs' %}"
+            class="inline-flex items-center gap-2 border-2 border-primary-950 text-primary-950 px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:bg-primary-950 hover:text-white transition-all shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                 View All Programs
                 <i data-lucide="grid-3x3" class="w-5 h-5"></i>
             </a>
@@ -312,79 +290,42 @@
         </div>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100 group">
-                <div class="p-8">
-                    <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="briefcase" class="w-8 h-8 text-primary-950"></i>
-                    </div>
-                    <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Faculty of Business & Economics</h3>
-                    <p class="text-gray-600 mb-6 text-base leading-relaxed">
-                        AACSB-accredited programs in business administration, economics, finance, and entrepreneurship.
-                    </p>
-                    <ul class="space-y-3 text-sm text-gray-600">
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
-                            <span>Business Administration</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
-                            <span>Economics & Finance</span>
-                        </li>
-                    </ul>
+        {% for faculty in faculties %}
+        <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100 group">
+            <div class="p-8">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <i data-lucide="{{ faculty.icon }}" class="w-8 h-8 text-primary-950"></i>
                 </div>
-            </article>
+                <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">{{ faculty.name }}</h3>
+                <p class="text-gray-600 mb-6 text-base leading-relaxed">{{ faculty.tagline }}</p>
+                <ul class="space-y-3 text-sm text-gray-600">
+                    {% for dept in faculty.departments.all|slice:":2" %}
+                    <li class="flex items-start gap-2">
+                        <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
+                        <span>{{ dept.name }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="px-8 pb-6">
+                <a href="{% url 'eduweb:faculty_detail' faculty.slug %}"
+                class="text-primary-950 font-semibold hover:text-primary-700 transition-colors inline-flex items-center gap-1 text-sm">
+                    Explore Faculty <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </article>
+        {% empty %}
+        <p class="col-span-3 text-center text-gray-400 py-10">Faculties coming soon.</p>
+        {% endfor %}
+    </div>
 
-            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100 group">
-                <div class="p-8">
-                    <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="cpu" class="w-8 h-8 text-primary-950"></i>
-                    </div>
-                    <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Faculty of Engineering & Technology</h3>
-                    <p class="text-gray-600 mb-6 text-base leading-relaxed">
-                        ABET-accredited programs in computer science, software engineering, and information systems.
-                    </p>
-                    <ul class="space-y-3 text-sm text-gray-600">
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
-                            <span>Computer Science</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
-                            <span>Software Engineering</span>
-                        </li>
-                    </ul>
-                </div>
-            </article>
-
-            <article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:scale-105 border border-gray-100 group">
-                <div class="p-8">
-                    <div class="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="heart-pulse" class="w-8 h-8 text-primary-950"></i>
-                    </div>
-                    <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-display">Faculty of Health & Life Sciences</h3>
-                    <p class="text-gray-600 mb-6 text-base leading-relaxed">
-                        ACPE-accredited programs in nursing, public health, and biomedical sciences.
-                    </p>
-                    <ul class="space-y-3 text-sm text-gray-600">
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
-                            <span>Nursing & Public Health</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <i data-lucide="check" class="w-5 h-5 flex-shrink-0 text-primary-950 mt-0.5"></i>
-                            <span>Biomedical Sciences</span>
-                        </li>
-                    </ul>
-                </div>
-            </article>
-        </div>
-
-        <div class="text-center">
-            <a href="#" class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
-                Explore All Faculties
-                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
-            </a>
-        </div>
+    <div class="text-center">
+        <a href="{% url 'eduweb:all_programs' %}"
+        class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+            Explore All Faculties & Programs
+            <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+        </a>
+    </div>
     </div>
 </section>
 
@@ -479,7 +420,7 @@
                         </ol>
 
                         <div class="mt-8 pt-8 border-t border-gray-200">
-                            <a href="#" class="inline-flex items-center gap-2 text-primary-950 font-semibold hover:text-primary-700 transition-colors group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
+                            <a href="{% url 'eduweb:admission_requirement' %}" class="inline-flex items-center gap-2 text-primary-950 font-semibold hover:text-primary-700 transition-colors group/link focus:outline-none focus:ring-2 focus:ring-primary-950 rounded">
                                 <span>View Detailed Guide</span>
                                 <i data-lucide="arrow-right" class="w-4 h-4 group-hover/link:translate-x-1 transition-transform"></i>
                             </a>
@@ -1096,7 +1037,7 @@
 
 /* Button hover effects with proper text color */
 a[href*="programs"] .relative.z-10,
-a[href="#"] .relative.z-10,
+a[href="{% url 'eduweb:admission_requirement' %}"] .relative.z-10,
 a[href*="eduweb:index"] .relative.z-10 {
     transition: color 0.3s ease;
 }
@@ -1105,7 +1046,7 @@ a[href*="eduweb:index"]:hover .relative.z-10 span {
     color: white;
 }
 
-a[href="#"]:hover .relative.z-10 span {
+a[href="{% url 'eduweb:admission_requirement' %}"]:hover .relative.z-10 span {
     color: #840384;
 }
 
@@ -1156,7 +1097,7 @@ a[href="#"]:hover .relative.z-10 span {
 /* Enhanced button shadows and interactions */
 @media (min-width: 640px) {
     a[href*="eduweb:index"]:hover,
-    a[href="#"]:hover {
+    a[href="{% url 'eduweb:admission_requirement' %}"]:hover {
         transform: scale(1.05) translateY(-2px);
     }
 }

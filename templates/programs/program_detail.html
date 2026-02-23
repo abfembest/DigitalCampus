@@ -1,0 +1,448 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ program.name }} | MIU – Modern International University{% endblock %}
+
+{% block meta_tags %}
+<meta name="description" content="{{ program.description|truncatewords:30 }}">
+<meta name="keywords" content="{{ program.name }}, {{ program.get_degree_level_display }}, MIU, university program">
+{% endblock %}
+
+{% block canonical %}
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+{% endblock %}
+
+{% block og_tags %}
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ program.name }} | MIU">
+<meta property="og:description" content="{{ program.description|truncatewords:30 }}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:image" content="{% static 'images/og-image.jpg' %}">
+{% endblock %}
+
+{% block twitter_tags %}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ program.name }} | MIU">
+<meta name="twitter:description" content="{{ program.description|truncatewords:30 }}">
+<meta name="twitter:image" content="{% static 'images/og-image.jpg' %}">
+{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "{{ program.name|escapejs }}",
+  "description": "{{ program.description|escapejs }}",
+  "provider": {
+    "@type": "CollegeOrUniversity",
+    "name": "Modern International University",
+    "url": "{{ request.scheme }}://{{ request.get_host }}"
+  },
+  "educationalLevel": "{{ program.get_degree_level_display }}",
+  "timeRequired": "P{{ program.duration_years }}Y"
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Degree badge colours */
+  .badge-certificate   { background:#fef3c7; color:#92400e; }
+  .badge-diploma       { background:#dbeafe; color:#1e40af; }
+  .badge-undergraduate { background:#d1fae5; color:#065f46; }
+  .badge-postgraduate  { background:#ede9fe; color:#5b21b6; }
+  .badge-masters       { background:#fce7f3; color:#9d174d; }
+  .badge-phd           { background:#fee2e2; color:#991b1b; }
+
+  .course-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .course-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(132,3,132,0.10);
+    border-color: #c084fc;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main id="main-content">
+
+  <!-- ══════════ HERO ══════════ -->
+  <section
+    class="relative bg-gradient-to-br from-primary-950 via-primary-900 to-purple-900 text-white overflow-hidden"
+    role="banner"
+    aria-labelledby="program-heading">
+
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+      <div class="absolute -top-24 -left-24 w-96 h-96 bg-purple-500 rounded-full blur-3xl opacity-20"></div>
+      <div class="absolute bottom-0 right-0 w-[480px] h-[480px] bg-primary-800 rounded-full blur-3xl opacity-25"></div>
+    </div>
+
+    <div class="container mx-auto relative z-10 pt-32 pb-20 lg:pt-40 lg:pb-28">
+
+      <!-- Breadcrumb -->
+      <nav aria-label="Breadcrumb" class="mb-8">
+        <ol class="flex flex-wrap items-center gap-1.5 text-sm"
+            itemscope itemtype="https://schema.org/BreadcrumbList">
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <a href="{% url 'eduweb:index' %}" itemprop="item"
+               class="text-purple-300 hover:text-white transition-colors duration-200 focus:outline-none focus:underline">
+              <span itemprop="name">Home</span>
+            </a>
+            <meta itemprop="position" content="1">
+          </li>
+          <li aria-hidden="true">
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-purple-500 inline-block align-middle"></i>
+          </li>
+          {% if faculty %}
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <a href="{% url 'eduweb:faculty_detail' faculty.slug %}" itemprop="item"
+               class="text-purple-300 hover:text-white transition-colors duration-200 focus:outline-none focus:underline">
+              <span itemprop="name">{{ faculty.name }}</span>
+            </a>
+            <meta itemprop="position" content="2">
+          </li>
+          <li aria-hidden="true">
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-purple-500 inline-block align-middle"></i>
+          </li>
+          {% endif %}
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            <span itemprop="name" class="text-white font-medium">{{ program.name }}</span>
+            <meta itemprop="position" content="3">
+          </li>
+        </ol>
+      </nav>
+
+      <!-- Identity -->
+      <div class="flex flex-col sm:flex-row items-start gap-5 mb-6">
+        <div class="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl flex-shrink-0 flex items-center justify-center"
+             style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);"
+             aria-hidden="true">
+          <i data-lucide="graduation-cap" class="w-8 h-8 lg:w-10 lg:h-10 text-white"></i>
+        </div>
+        <div class="flex-1">
+          <!-- Faculty & dept trail -->
+          <p class="text-purple-300 text-xs font-semibold mb-2 flex flex-wrap items-center gap-1.5">
+            {% if faculty %}
+            <span>{{ faculty.name }}</span>
+            <i data-lucide="chevron-right" class="w-3 h-3 inline-block" aria-hidden="true"></i>
+            {% endif %}
+            {% if department %}
+            <span>{{ department.name }}</span>
+            {% endif %}
+          </p>
+
+          <h1 id="program-heading"
+              class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-white">
+            {{ program.name }}
+          </h1>
+
+          <!-- Pills row -->
+          <div class="flex flex-wrap gap-2 mt-4">
+            <span class="px-3 py-1 text-xs font-bold uppercase tracking-wide rounded-full badge-{{ program.degree_level }}">
+              {{ program.get_degree_level_display }}
+            </span>
+            <span class="px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full"
+                  style="background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.15);">
+              {{ program.code }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {% if program.description %}
+      <p class="text-base lg:text-lg text-purple-100 leading-relaxed max-w-3xl mb-10">
+        {{ program.description|truncatewords:60 }}
+      </p>
+      {% endif %}
+
+      <!-- CTAs -->
+      <div class="flex flex-wrap gap-3">
+        <a href="{% url 'eduweb:apply' %}"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-950 rounded-xl font-semibold text-sm hover:bg-purple-50 hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950">
+          Apply Now
+          <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
+        </a>
+        <a href="#courses"
+           class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950"
+           style="border:1.5px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.08);">
+          View Courses
+          <i data-lucide="book-open" class="w-4 h-4" aria-hidden="true"></i>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════ STATS BAR ══════════ -->
+  <section class="bg-white border-b border-gray-100" aria-label="Program at a glance">
+    <div class="container mx-auto">
+      <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100">
+
+        <div class="py-8 px-6 text-center">
+          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">
+            {{ program.duration_years }} <span class="text-xl">yr{% if program.duration_years != 1 %}s{% endif %}</span>
+          </p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium">Duration</p>
+        </div>
+
+        <div class="py-8 px-6 text-center">
+          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">{{ program.credits_required }}</p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium">Credits Required</p>
+        </div>
+
+        {% if program.tuition_fee %}
+        <div class="py-8 px-6 text-center">
+          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">
+            ${{ program.tuition_fee|floatformat:0 }}
+          </p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium">Tuition / Year</p>
+        </div>
+        {% endif %}
+
+        {% if program.application_fee %}
+        <div class="py-8 px-6 text-center">
+          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">
+            ${{ program.application_fee|floatformat:0 }}
+          </p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium">Application Fee</p>
+        </div>
+        {% endif %}
+
+        {% if program.max_students %}
+        <div class="py-8 px-6 text-center">
+          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">{{ program.max_students }}</p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium">Max Intake</p>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ OVERVIEW ══════════ -->
+  {% if program.description %}
+  <section class="py-16 bg-white" aria-labelledby="overview-heading">
+    <div class="container mx-auto max-w-4xl">
+      <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-2">About This Program</p>
+      <h2 id="overview-heading" class="font-display text-3xl font-bold text-gray-900 mb-6">Program Overview</h2>
+      <div class="h-0.5 w-14 bg-gradient-to-r from-primary-600 to-purple-400 mb-8" aria-hidden="true"></div>
+      <p class="text-gray-600 leading-relaxed text-base lg:text-lg">{{ program.description }}</p>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══════════ ENTRY REQUIREMENTS ══════════ -->
+  {% if program.entry_requirements %}
+  <section class="py-16 bg-gray-50" aria-labelledby="req-heading">
+    <div class="container mx-auto max-w-4xl">
+      <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-2">Admissions</p>
+      <h2 id="req-heading" class="font-display text-3xl font-bold text-gray-900 mb-6">Entry Requirements</h2>
+      <div class="h-0.5 w-14 bg-gradient-to-r from-primary-600 to-purple-400 mb-8" aria-hidden="true"></div>
+
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+        <ul class="space-y-4" role="list">
+          {% for req in program.entry_requirements %}
+          <li class="flex items-start gap-3">
+            <div class="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 mt-0.5" aria-hidden="true">
+              <i data-lucide="check" class="w-3 h-3 text-primary-700"></i>
+            </div>
+            <span class="text-gray-700 text-sm lg:text-base">{{ req }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="mt-8 pt-6 border-t border-gray-100">
+          <a href="{% url 'eduweb:admission_requirement' %}"
+             class="inline-flex items-center gap-2 text-sm font-semibold text-primary-700 hover:text-primary-900 transition-colors focus:outline-none focus:underline">
+            View Full Admission Requirements
+            <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ══════════ COURSES UNDER THIS PROGRAM ══════════ -->
+  <section id="courses" class="py-16 lg:py-24 bg-white" aria-labelledby="courses-heading">
+    <div class="container mx-auto">
+
+      <div class="max-w-2xl mb-12">
+        <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-2">Curriculum</p>
+        <h2 id="courses-heading" class="font-display text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          Courses in This Program
+        </h2>
+        <p class="text-gray-500 text-base leading-relaxed">
+          The following courses make up the {{ program.name }} curriculum.
+          Each course page shows full details, study modes, and how to apply.
+        </p>
+      </div>
+
+      {% if courses %}
+      <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-100">
+        {% for course in courses %}
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors duration-150">
+
+          <!-- Icon -->
+          <div class="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+            <i data-lucide="{{ course.icon|default:'book-open' }}" class="w-4 h-4 text-primary-700"></i>
+          </div>
+
+          <!-- Name + code -->
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-sm text-gray-900 leading-tight truncate">{{ course.name }}</h3>
+            <p class="text-xs text-gray-400 font-mono mt-0.5">{{ course.code }}</p>
+          </div>
+
+          <!-- Meta pills -->
+          <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full badge-{{ course.degree_level }}">
+              {{ course.get_degree_level_display }}
+            </span>
+            <span class="text-xs text-gray-400 flex items-center gap-1">
+              <i data-lucide="clock" class="w-3 h-3" aria-hidden="true"></i>
+              {{ course.duration_years }}yr
+            </span>
+            <span class="text-xs text-gray-400 flex items-center gap-1">
+              <i data-lucide="book-open" class="w-3 h-3" aria-hidden="true"></i>
+              {{ course.credits_required }} cr
+            </span>
+            {% for mode in course.available_study_modes %}
+            <span class="text-xs text-gray-400 flex items-center gap-1">
+              <i data-lucide="monitor" class="w-3 h-3" aria-hidden="true"></i>
+              {{ mode|title }}
+            </span>
+            {% endfor %}
+          </div>
+
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div class="flex flex-col items-center justify-center text-center py-20 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50"
+           role="status">
+        <i data-lucide="folder-open" class="w-12 h-12 text-gray-300 mb-3" aria-hidden="true"></i>
+        <p class="font-semibold text-gray-400">No courses have been added to this program yet</p>
+        <p class="text-sm text-gray-400 mt-1">Check back soon, or contact the faculty office for more information.</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </section>
+
+  <!-- ══════════ WHY THIS PROGRAM ══════════ -->
+  <section class="py-16 bg-gray-50" aria-labelledby="why-heading">
+    <div class="container mx-auto">
+      <div class="max-w-2xl mb-12">
+        <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-2">Advantages</p>
+        <h2 id="why-heading" class="font-display text-3xl font-bold text-gray-900">Why Choose This Program?</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl">
+
+        <article class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div class="w-11 h-11 rounded-xl bg-primary-50 flex items-center justify-center mb-4" aria-hidden="true">
+            <i data-lucide="building-2" class="w-5 h-5 text-primary-700"></i>
+          </div>
+          <h3 class="font-display text-sm font-bold text-gray-900 mb-2">Industry Partnerships</h3>
+          <p class="text-xs text-gray-500 leading-relaxed">Collaborate with leading companies through internships and real-world projects.</p>
+        </article>
+
+        <article class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div class="w-11 h-11 rounded-xl bg-accent-50 flex items-center justify-center mb-4" aria-hidden="true">
+            <i data-lucide="users" class="w-5 h-5 text-accent-600"></i>
+          </div>
+          <h3 class="font-display text-sm font-bold text-gray-900 mb-2">Expert Faculty</h3>
+          <p class="text-xs text-gray-500 leading-relaxed">Learn from seasoned professionals and active researchers in the field.</p>
+        </article>
+
+        <article class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div class="w-11 h-11 rounded-xl bg-gold-50 flex items-center justify-center mb-4" aria-hidden="true">
+            <i data-lucide="hammer" class="w-5 h-5 text-gold-600"></i>
+          </div>
+          <h3 class="font-display text-sm font-bold text-gray-900 mb-2">Hands-On Experience</h3>
+          <p class="text-xs text-gray-500 leading-relaxed">Practical projects and lab work from your very first semester.</p>
+        </article>
+
+        <article class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div class="w-11 h-11 rounded-xl bg-primary-50 flex items-center justify-center mb-4" aria-hidden="true">
+            <i data-lucide="globe" class="w-5 h-5 text-primary-700"></i>
+          </div>
+          <h3 class="font-display text-sm font-bold text-gray-900 mb-2">Global Network</h3>
+          <p class="text-xs text-gray-500 leading-relaxed">Join a worldwide community of alumni and professional connections.</p>
+        </article>
+
+        <article class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div class="w-11 h-11 rounded-xl bg-accent-50 flex items-center justify-center mb-4" aria-hidden="true">
+            <i data-lucide="cpu" class="w-5 h-5 text-accent-600"></i>
+          </div>
+          <h3 class="font-display text-sm font-bold text-gray-900 mb-2">Modern Facilities</h3>
+          <p class="text-xs text-gray-500 leading-relaxed">State-of-the-art labs and cutting-edge technology infrastructure.</p>
+        </article>
+
+        <article class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          <div class="w-11 h-11 rounded-xl bg-gold-50 flex items-center justify-center mb-4" aria-hidden="true">
+            <i data-lucide="rocket" class="w-5 h-5 text-gold-600"></i>
+          </div>
+          <h3 class="font-display text-sm font-bold text-gray-900 mb-2">Career Services</h3>
+          <p class="text-xs text-gray-500 leading-relaxed">Dedicated placement support, CV workshops, and employer connections.</p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ CTA BANNER ══════════ -->
+  <section class="py-20 bg-white" aria-labelledby="cta-heading">
+    <div class="container mx-auto">
+      <div class="max-w-5xl mx-auto bg-gradient-to-br from-primary-950 via-primary-900 to-purple-900 rounded-3xl px-8 py-14 lg:px-16 relative overflow-hidden">
+
+        <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <div class="absolute -bottom-16 -right-16 w-64 h-64 bg-purple-600 rounded-full blur-3xl opacity-30"></div>
+          <div class="absolute top-0 left-0 w-48 h-48 bg-primary-700 rounded-full blur-3xl opacity-20"></div>
+        </div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+          <div class="flex-1">
+            <p class="text-purple-300 text-xs font-bold uppercase tracking-widest mb-3">Next Steps</p>
+            <h2 id="cta-heading" class="font-display text-2xl lg:text-3xl font-bold text-white mb-3">
+              Ready to Enrol in {{ program.name }}?
+            </h2>
+            <p class="text-purple-200 text-sm leading-relaxed max-w-lg">
+              Take the first step. Apply today and our admissions team will guide you through every stage of the process.
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3 flex-shrink-0">
+            <a href="{% url 'eduweb:apply' %}"
+               class="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-950 rounded-xl font-semibold text-sm hover:bg-purple-50 hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950">
+              Apply Now
+              <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
+            </a>
+            {% if faculty %}
+            <a href="{% url 'eduweb:faculty_detail' faculty.slug %}"
+               class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950"
+               style="border:1.5px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.08);">
+              Back to Faculty
+              <i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  lucide.createIcons();
+});
+</script>
+{% endblock %}

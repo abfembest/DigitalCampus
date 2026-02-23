@@ -8,17 +8,17 @@
     
     <!-- Dynamic Meta Tags - Allow child templates to override -->
     {% block meta_tags %}
-    <meta name="description" content="Modern International University - Empowering global education with flexible online programs, world-class faculty, and innovative learning experiences.">
+    <meta name="description" content="Melchisedec International University - Empowering global education with flexible online programs, world-class faculty, and innovative learning experiences.">
     <meta name="keywords" content="online university, distance learning, international education, online degrees, MIU, modern university, accredited online programs">
     {% endblock %}
     
-    <meta name="author" content="Modern International University">
+    <meta name="author" content="Melchisedec International University">
     <meta name="theme-color" content="#840384">
 
     <!-- Open Graph / Social Media Meta Tags -->
     {% block og_tags %}
     <meta property="og:type" content="website">
-    <meta property="og:title" content="MIU – Modern International University">
+    <meta property="og:title" content="MIU – Melchisedec International University">
     <meta property="og:description" content="Empowering global education with flexible online programs">
     <meta property="og:image" content="{% static 'images/miulogo.png' %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
@@ -27,12 +27,12 @@
     <!-- Twitter Card Meta Tags -->
     {% block twitter_tags %}
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="MIU – Modern International University">
+    <meta name="twitter:title" content="MIU – Melchisedec International University">
     <meta name="twitter:description" content="Empowering global education with flexible online programs">
     <meta name="twitter:image" content="{% static 'images/og-image.jpg' %}">
     {% endblock %}
 
-    <title>{% block title %}MIU – Modern International University{% endblock %}</title>
+    <title>{% block title %}MIU – Melchisedec International University{% endblock %}</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
@@ -46,132 +46,19 @@
     <!-- Preload critical resources -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preconnect" href="https://unpkg.com">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter & Poppins (must load before CSS so font-sans/font-display work) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS (compiled via CLI - includes all custom theme, fonts, animations) -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
     <!-- SweetAlert2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- Google Fonts - Inter & Poppins -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#faf5ff',
-                            100: '#f3e8ff',
-                            200: '#e9d5ff',
-                            300: '#d8b4fe',
-                            400: '#c084fc',
-                            500: '#a855f7',
-                            600: '#9333ea',
-                            700: '#7e22ce',
-                            800: '#6b21a8',
-                            900: '#581c87',
-                            950: '#840384',
-                        },
-                        accent: {
-                            50: '#fff7ed',
-                            100: '#ffedd5',
-                            200: '#fed7aa',
-                            300: '#fdba74',
-                            400: '#fb923c',
-                            500: '#f97316',
-                            600: '#ea580c',
-                            700: '#c2410c',
-                            800: '#9a3412',
-                            900: '#7c2d12',
-                        },
-                        gold: {
-                            50: '#fffbeb',
-                            100: '#fef3c7',
-                            200: '#fde68a',
-                            300: '#fcd34d',
-                            400: '#fbbf24',
-                            500: '#f59e0b',
-                            600: '#d97706',
-                            700: '#b45309',
-                            800: '#92400e',
-                            900: '#78350f',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                        display: ['Poppins', 'system-ui', '-apple-system', 'sans-serif'],
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.6s ease-out',
-                        'slide-up': 'slideUp 0.5s ease-out',
-                        'slide-down': 'slideDown 0.3s ease-out',
-                        'scale-in': 'scaleIn 0.3s ease-out',
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(20px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        },
-                        slideDown: {
-                            '0%': { transform: 'translateY(-10px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        },
-                        scaleIn: {
-                            '0%': { transform: 'scale(0.95)', opacity: '0' },
-                            '100%': { transform: 'scale(1)', opacity: '1' },
-                        },
-                    },
-                    container: {
-                        center: true,
-                        padding: {
-                            DEFAULT: '1rem',
-                            sm: '1.5rem',
-                            md: '2rem',
-                            lg: '3rem',
-                            xl: '4rem',
-                            '2xl': '6rem',
-                        },
-                    },
-                }
-            }
-        }
-    </script>
-
-    <style>
-        .gradient-text {
-            background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-    </style>
 
     <!-- Structured Data -->
     {% block structured_data %}{% endblock %}
@@ -197,7 +84,7 @@
                 <!-- Logo -->
                 <a href="{% url 'eduweb:index' %}"
                     class="flex items-center space-x-3 group focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2 rounded-lg"
-                    aria-label="Modern International University Home">
+                    aria-label="Melchisedec International University Home">
                     <div class="relative">
                         <img src="{% static 'images/miulogo.png' %}" alt="MIU Logo"
                             class="h-20 lg:h-32 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
@@ -255,7 +142,7 @@
                             role="menu">
                             <div class="p-2">
                                 {% for course in all_courses %}
-                                <a href="{% url 'eduweb:course_detail' course.slug %}"
+                                <a href="{% url 'eduweb:program_detail' course.slug %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600"
                                     role="menuitem">
                                     <i data-lucide="{{ course.icon }}" class="w-5 h-5 text-accent-600"></i>
@@ -408,7 +295,7 @@
                         </button>
                         <div id="mobileProgramsMenu" class="hidden bg-orange-50 space-y-1 py-2 mt-1 rounded-lg">
                             {% for course in all_courses %}
-                            <a href="{% url 'eduweb:course_detail' course.slug %}"
+                            <a href="{% url 'eduweb:program_detail' course.slug %}"
                                 class="flex items-center gap-3 px-10 py-2.5 text-sm rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 text-gray-600 hover:text-accent-700 hover:bg-white">
                                 <i data-lucide="{{ course.icon }}" class="w-4 h-4"></i>
                                 {{ course.name }}
@@ -504,7 +391,7 @@
                 <!-- About Section with Logo Image -->
                 <div class="space-y-6">
                     <div class="inline-flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-lg">
-                        <img src="{% static 'Miulogo.png' %}" alt="MIU Logo" class="h-10 w-auto object-contain">
+                        <img src="{% static 'images/miulogo.png' %}" alt="MIU Logo" class="h-10 w-auto object-contain">
                     </div>
                     <p class="text-purple-200 leading-relaxed">
                         Empowering global education since 1995 with innovative learning experiences and world-class
@@ -638,7 +525,7 @@
             <div class="border-t border-purple-700 pt-8">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
                     <p class="text-purple-300 text-sm">
-                        &copy; 2025 Modern International University (MIU). All rights reserved.
+                        &copy; 2025 Melchisedec International University (MIU). All rights reserved.
                     </p>
                     <div class="flex flex-wrap items-center justify-center gap-2 text-purple-300 text-sm">
                         <a href="tel:+15551234567"

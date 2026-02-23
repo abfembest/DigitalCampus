@@ -8,17 +8,17 @@
     
     <!-- Dynamic Meta Tags - Allow child templates to override -->
     {% block meta_tags %}
-    <meta name="description" content="Modern International University - Empowering global education with flexible online programs, world-class faculty, and innovative learning experiences.">
-    <meta name="keywords" content="online university, distance learning, international education, online degrees, MIU, modern university, accredited online programs">
+    <meta name="description" content="Melchizedec International University - Empowering global education with flexible online programs, world-class faculty, and innovative learning experiences.">
+    <meta name="keywords" content="online university, distance learning, international education, online degrees, MIU, Melchizedec university, accredited online programs">
     {% endblock %}
     
-    <meta name="author" content="Modern International University">
+    <meta name="author" content="Melchizedec International University">
     <meta name="theme-color" content="#840384">
 
     <!-- Open Graph / Social Media Meta Tags -->
     {% block og_tags %}
     <meta property="og:type" content="website">
-    <meta property="og:title" content="MIU – Modern International University">
+    <meta property="og:title" content="MIU – Melchizedec International University">
     <meta property="og:description" content="Empowering global education with flexible online programs">
     <meta property="og:image" content="{% static 'images/miulogo.png' %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
@@ -27,12 +27,12 @@
     <!-- Twitter Card Meta Tags -->
     {% block twitter_tags %}
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="MIU – Modern International University">
+    <meta name="twitter:title" content="MIU – Melchizedec International University">
     <meta name="twitter:description" content="Empowering global education with flexible online programs">
     <meta name="twitter:image" content="{% static 'images/og-image.jpg' %}">
     {% endblock %}
 
-    <title>{% block title %}MIU – Modern International University{% endblock %}</title>
+    <title>{% block title %}MIU – Melchizedec International University{% endblock %}</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
@@ -197,7 +197,7 @@
                 <!-- Logo -->
                 <a href="{% url 'eduweb:index' %}"
                     class="flex items-center space-x-3 group focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2 rounded-lg"
-                    aria-label="Modern International University Home">
+                    aria-label="Melchizedec International University Home">
                     <div class="relative">
                         <img src="{% static 'images/miulogo.png' %}" alt="MIU Logo"
                             class="h-20 lg:h-32 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
@@ -638,7 +638,7 @@
             <div class="border-t border-purple-700 pt-8">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
                     <p class="text-purple-300 text-sm">
-                        &copy; 2025 Modern International University (MIU). All rights reserved.
+                        &copy; 2025 Melchizedec International University (MIU). All rights reserved.
                     </p>
                     <div class="flex flex-wrap items-center justify-center gap-2 text-purple-300 text-sm">
                         <a href="tel:+15551234567"

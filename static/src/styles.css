@@ -1,7 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
 @import "tailwindcss";
 
-@source "../templates";
-@source "../eduweb/templates";
+/* @source "../../templates"; */
+@source "../../templates/";
+@source "../../";
+
 
 /* Custom theme configuration for Tailwind v4 */
 @theme {
@@ -74,8 +78,7 @@
 
 /* Custom utility classes */
 @layer utilities {
-  /* font-display alias — maps to font-heading so templates using font-display still work */
-  .font-display {
+  .font-heading {
     font-family: Poppins, system-ui, -apple-system, sans-serif;
   }
 

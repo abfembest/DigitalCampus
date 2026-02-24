@@ -1,4 +1,5 @@
 /*! tailwindcss v4.1.18 | MIT License | https://tailwindcss.com */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap');
 @layer properties;
 @layer theme, base, components, utilities;
 @layer theme {
@@ -6465,7 +6466,7 @@
   }
 }
 @layer utilities {
-  .font-display {
+  .font-heading {
     font-family: Poppins, system-ui, -apple-system, sans-serif;
   }
   .gradient-text {

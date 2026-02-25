@@ -1235,11 +1235,12 @@ def save_application_draft(request):
         # -------------------------------------------------
         # 2. COURSE & INTAKE
         # -------------------------------------------------
-        course_id = data.get("course")
-        if course_id:
+        program_id = data.get("program")
+        if program_id:
             try:
-                application.course = Course.objects.get(id=course_id)
-            except Course.DoesNotExist:
+                from .models import Program
+                application.program = Program.objects.get(id=program_id)
+            except Program.DoesNotExist:
                 pass
 
         intake_id = data.get("intake")
@@ -1353,9 +1354,9 @@ def payment_details(request, application_id):
     return JsonResponse({
         "application_id": app.application_id,
         "name": app.get_full_name(),
-        "course": app.course.name,
-        "faculty": app.course.faculty.name,
-        "amount": float(app.course.application_fee),
+        "program": app.program.name if app.program else '',
+        "faculty": app.program.department.faculty.name if app.program else '',
+        "amount": float(app.program.application_fee) if app.program else 0,
         "payment_status": app.payment_status if hasattr(app, 'payment') else 'pending'
     })
 

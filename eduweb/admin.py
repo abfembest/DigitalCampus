@@ -822,11 +822,10 @@ class LessonProgressAdmin(admin.ModelAdmin):
 @admin.register(LMSCourse)
 class LMSCourseAdmin(admin.ModelAdmin):
     list_display = (
-        'title', 'code', 'category', 'instructor_name', 'difficulty_level',
-        'price', 'is_free', 'is_published', 'is_featured', 'total_enrollments'
+        'title', 'code', 'category', 'instructor_name', 'difficulty_level', 'is_published', 'is_featured', 'total_enrollments'
     )
     list_filter = (
-        'category', 'difficulty_level', 'is_free', 'is_published',
+        'category', 'difficulty_level', 'is_published',
         'is_featured', 'created_at'
     )
     search_fields = ('title', 'code', 'description', 'instructor_name')
@@ -853,9 +852,6 @@ class LMSCourseAdmin(admin.ModelAdmin):
         ('Media', {
             'fields': ('thumbnail', 'promo_video_url'),
             'classes': ('collapse',)
-        }),
-        ('Pricing', {
-            'fields': ('is_free', 'price', 'discount_price')
         }),
         ('Enrollment', {
             'fields': ('max_students', 'enrollment_start_date', 'enrollment_end_date')

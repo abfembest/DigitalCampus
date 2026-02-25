@@ -1842,11 +1842,6 @@ class LMSCourse(models.Model):
     thumbnail = models.ImageField(upload_to='courses/thumbnails/', blank=True, null=True)
     promo_video_url = models.URLField(blank=True)
     
-    # Pricing
-    is_free = models.BooleanField(default=False)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
     # Enrollment
     max_students = models.IntegerField(null=True, blank=True)
     enrollment_start_date = models.DateField(null=True, blank=True)

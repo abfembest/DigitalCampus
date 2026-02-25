@@ -258,14 +258,61 @@
                                 </div>
                             </div>
 
+                            <div class="mb-6">
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    Nationality <span class="text-red-500">*</span>
+                                </label>
+                                {{ form.nationality }}
+                                {% if form.nationality.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.nationality.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
                             <div class="mb-6 py-1.5">
                                 <label class="block text-gray-700 font-medium mb-2">
-                                    Address Line  <span class="text-red-500">*</span>
+                                    Address Line 1 <span class="text-red-500">*</span>
                                 </label>
                                 {{ form.address_line1 }}
-                                {% if form.address.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ form.address.errors.0 }}</div>
+                                {% if form.address_line1.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.address_line1.errors.0 }}</div>
                                 {% endif %}
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    Address Line 2 <span class="text-gray-500 text-sm">(Optional)</span>
+                                </label>
+                                {{ form.address_line2 }}
+                            </div>
+
+                            <div class="grid md:grid-cols-3 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        City <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.city }}
+                                    {% if form.city.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.city.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        State / Province <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.state }}
+                                    {% if form.state.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.state.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        Postal / ZIP Code <span class="text-red-500">*</span>
+                                    </label>
+                                    {{ form.postal_code }}
+                                    {% if form.postal_code.errors %}
+                                        <div class="text-red-500 text-sm mt-1">{{ form.postal_code.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
 
@@ -312,13 +359,6 @@
                                 </div>
 
                             </div>
-
-                            <div class="mb-6">
-                                <label class="block text-gray-700 font-medium mb-2">
-                                    {{ form.additional_qualifications.label }}
-                                </label>
-                                {{ form.additional_qualifications }}
-                            </div>
                         </div>
 
                         <!-- STEP 3: Course Selection -->
@@ -329,11 +369,11 @@
 
                                 <div class="mb-6">
                                     <label class="block text-gray-700 font-medium mb-2">
-                                        {{ form.course.label }} <span class="text-red-500">*</span>
+                                        {{ form.program.label }} <span class="text-red-500">*</span>
                                     </label>
-                                    {{ form.course }}
-                                    {% if form.course.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ form.course.errors.0 }}</div>
+                                    {{ form.program }}
+                                    {% if form.program.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.program.errors.0 }}</div>
                                     {% endif %}
                                 </div>
 
@@ -374,6 +414,57 @@
                                         </p>
                                     </div>
                                 </label>
+                            </div>
+
+                            <!-- Personal Statement & Additional Info -->
+                            <div class="mb-6">
+                                <label class="block text-gray-700 font-medium mb-2">
+                                    {{ form.personal_statement.label }} <span class="text-red-500">*</span>
+                                </label>
+                                {{ form.personal_statement }}
+                                {% if form.personal_statement.errors %}
+                                    <div class="text-red-500 text-sm mt-1">{{ form.personal_statement.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.work_experience_years.label }}
+                                    </label>
+                                    {{ form.work_experience_years }}
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        {{ form.how_did_you_hear.label }}
+                                    </label>
+                                    {{ form.how_did_you_hear }}
+                                </div>
+                            </div>
+
+                            <!-- Emergency Contact -->
+                            <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 mb-6">
+                                <h4 class="font-semibold text-gray-800 mb-4">Emergency Contact</h4>
+                                <div class="grid md:grid-cols-3 gap-6">
+                                    <div>
+                                        <label class="block text-gray-700 font-medium mb-2">
+                                            {{ form.emergency_contact_name.label }} <span class="text-red-500">*</span>
+                                        </label>
+                                        {{ form.emergency_contact_name }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-700 font-medium mb-2">
+                                            {{ form.emergency_contact_phone.label }} <span class="text-red-500">*</span>
+                                        </label>
+                                        {{ form.emergency_contact_phone }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-gray-700 font-medium mb-2">
+                                            {{ form.emergency_contact_relationship.label }} <span class="text-red-500">*</span>
+                                        </label>
+                                        {{ form.emergency_contact_relationship }}
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Terms & Privacy -->
@@ -554,9 +645,10 @@
             }
 
         // Step 3 validation monitoring
-        const step3Inputs = document.querySelectorAll('#step3 input, #step3 select');
+        const step3Inputs = document.querySelectorAll('#step3 input, #step3 select, #step3 textarea');
             step3Inputs.forEach(input => {
             input.addEventListener('change', validateStep3);
+            input.addEventListener('input', validateStep3);
             });
 
         // Monitor checkboxes in Step 3
@@ -575,9 +667,13 @@
         'input[name="email"]',
         'input[name="phone"]',
         'input[name="date_of_birth"]',
-        'select[name="country"]',
+        'input[name="country"]',
         'select[name="gender"]',
-        'textarea[name="address_line1"]'
+        'input[name="nationality"]',
+        'textarea[name="address_line1"]',
+        'input[name="city"]',
+        'input[name="state"]',
+        'input[name="postal_code"]'
         ];
 
         let allValid = true;
@@ -724,18 +820,19 @@
         const errorDiv = languageSkill.parentElement.querySelector('.error-message');
         if (errorDiv) errorDiv.textContent = '';
 
-        // Validate score if test is selected (not 'native')
-        if (languageSkill.value !== 'native') {
+        // Validate score if test is selected (not 'none')
+        if (languageSkill.value !== 'none') {
                     if (!languageScore || !languageScore.value || languageScore.value.trim() === '') {
             allEntriesValid = false;
         languageScore.classList.add('border-red-500', 'error-highlight');
-        const errorDiv = languageScore.parentElement.querySelector('.error-message');
-        if (errorDiv) {
-            errorDiv.textContent = 'Test score is required';
+        const scoreErrorDiv = languageScore.parentElement.querySelector('.error-message');
+        if (scoreErrorDiv) {
+            scoreErrorDiv.textContent = 'Test score is required';
                         }
                     } else {
             languageScore.classList.remove('border-red-500', 'error-highlight');
-        if (errorDiv) errorDiv.textContent = '';
+        const scoreErrorDiv = languageScore.parentElement.querySelector('.error-message');
+        if (scoreErrorDiv) scoreErrorDiv.textContent = '';
 
         // Validate score format
         const scoreValue = parseFloat(languageScore.value);
@@ -743,16 +840,18 @@
                             if (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 9) {
             allEntriesValid = false;
         languageScore.classList.add('border-red-500', 'error-highlight');
-        if (errorDiv) {
-            errorDiv.textContent = 'IELTS score must be between 0 and 9';
+        const sErr = languageScore.parentElement.querySelector('.error-message');
+        if (sErr) {
+            sErr.textContent = 'IELTS score must be between 0 and 9';
                                 }
                             }
                         } else if (languageSkill.value === 'toefl') {
                             if (isNaN(scoreValue) || scoreValue < 0 || scoreValue > 120) {
             allEntriesValid = false;
         languageScore.classList.add('border-red-500', 'error-highlight');
-        if (errorDiv) {
-            errorDiv.textContent = 'TOEFL score must be between 0 and 120';
+        const sErr = languageScore.parentElement.querySelector('.error-message');
+        if (sErr) {
+            sErr.textContent = 'TOEFL score must be between 0 and 120';
                                 }
                             }
                         }
@@ -767,8 +866,8 @@
 
         function validateStep3() {
             // Required program selection
-            const courseSelect = document.querySelector('select[name="course"]');
-        const courseValid = courseSelect && courseSelect.value && courseSelect.value !== '' && courseSelect.value !== '--------';
+            const programSelect = document.querySelector('select[name="program"]');
+            const courseValid = programSelect && programSelect.value && programSelect.value !== '' && programSelect.value !== '--------';
 
         // Required intake
         const intakeSelect = document.querySelector('select[name="intake"]');
@@ -778,18 +877,34 @@
         const studyModeSelect = document.querySelector('select[name="study_mode"]');
         const studyModeValid = studyModeSelect && studyModeSelect.value && studyModeSelect.value !== '' && studyModeSelect.value !== '--------';
 
+        // Required personal statement
+        const personalStatement = document.querySelector('textarea[name="personal_statement"]');
+        const personalStatementValid = personalStatement && personalStatement.value && personalStatement.value.trim() !== '';
+
+        // Required emergency contact
+        const emergencyName = document.querySelector('input[name="emergency_contact_name"]');
+        const emergencyPhone = document.querySelector('input[name="emergency_contact_phone"]');
+        const emergencyRel = document.querySelector('input[name="emergency_contact_relationship"]');
+        const emergencyValid = (emergencyName && emergencyName.value.trim()) &&
+                               (emergencyPhone && emergencyPhone.value.trim()) &&
+                               (emergencyRel && emergencyRel.value.trim());
+
         // Required declaration and privacy
         const declaration = document.querySelector('input[name="accept_terms_conditions"]');
         const privacy = document.querySelector('input[name="accept_privacy_policy"]');
         const agreementsValid = declaration && declaration.checked && privacy && privacy.checked;
 
-        const allValid = courseValid && intakeValid && studyModeValid && agreementsValid;
+        const allValid = courseValid && intakeValid && studyModeValid && personalStatementValid && emergencyValid && agreementsValid;
 
         // Update UI for validation errors
         const fieldsToValidate = [
-        {element: courseSelect, valid: courseValid, message: 'Course selection is required' },
+        {element: programSelect, valid: courseValid, message: 'Program selection is required' },
         {element: intakeSelect, valid: intakeValid, message: 'Intake selection is required' },
-        {element: studyModeSelect, valid: studyModeValid, message: 'Study mode is required' }
+        {element: studyModeSelect, valid: studyModeValid, message: 'Study mode is required' },
+        {element: personalStatement, valid: personalStatementValid, message: 'Personal statement is required' },
+        {element: emergencyName, valid: !!(emergencyName && emergencyName.value.trim()), message: 'Emergency contact name is required' },
+        {element: emergencyPhone, valid: !!(emergencyPhone && emergencyPhone.value.trim()), message: 'Emergency contact phone is required' },
+        {element: emergencyRel, valid: !!(emergencyRel && emergencyRel.value.trim()), message: 'Relationship is required' }
         ];
 
             fieldsToValidate.forEach(field => {
@@ -846,8 +961,10 @@
         break;
             }
 
-        // Update next button state
-        nextBtn.disabled = !nextEnabled;
+        // Update next button state — keep always enabled, validation fires on click
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = nextEnabled ? '1' : '0.6';
+        nextBtn.style.cursor = nextEnabled ? 'pointer' : 'not-allowed';
 
         // Update button text for step 4
         const nextBtnText = document.getElementById('nextBtnText');
@@ -1141,8 +1258,7 @@
         const email = document.querySelector('input[name="email"]')?.value || '';
         const phone = document.querySelector('input[name="phone"]')?.value || '';
         const dateOfBirth = document.querySelector('input[name="date_of_birth"]')?.value || '';
-        const countrySelect = document.querySelector('select[name="country"]');
-        const country = countrySelect ? countrySelect.options[countrySelect.selectedIndex]?.text : 'Not selected';
+        const country = document.querySelector('input[name="country"]')?.value || 'Not provided';
         const genderSelect = document.querySelector('select[name="gender"]');
         const gender = genderSelect ? genderSelect.options[genderSelect.selectedIndex]?.text : 'Not selected';
         const address = document.querySelector('textarea[name="address_line1"]')?.value || '';
@@ -1157,7 +1273,8 @@
                 <div><strong>Date of Birth:</strong> ${dateOfBirth || 'Not provided'}</div>
                 <div><strong>Country:</strong> ${country}</div>
                 <div><strong>Gender:</strong> ${gender}</div>
-                <div class="md:col-span-2"><strong>Address:</strong> ${address}</div>
+                <div><strong>Nationality:</strong> ${document.querySelector('input[name="nationality"]')?.value || 'Not provided'}</div>
+                <div class="md:col-span-2"><strong>Address:</strong> ${address}${document.querySelector('input[name="city"]')?.value ? ', ' + document.querySelector('input[name="city"]')?.value : ''}${document.querySelector('input[name="state"]')?.value ? ', ' + document.querySelector('input[name="state"]')?.value : ''}${document.querySelector('input[name="postal_code"]')?.value ? ' ' + document.querySelector('input[name="postal_code"]')?.value : ''}</div>
             </div>
         </div>
         `;
@@ -1216,8 +1333,8 @@
             summaryHTML += `</div>`;
 
         // Step 3: Course Selection
-        const courseSelect = document.querySelector('select[name="course"]');
-        const course = courseSelect ? courseSelect.options[courseSelect.selectedIndex]?.text : 'Not selected';
+        const programSelect = document.querySelector('select[name="program"]');
+        const course = programSelect ? programSelect.options[programSelect.selectedIndex]?.text : 'Not selected';
         const intakeSelect = document.querySelector('select[name="intake"]');
         const intake = intakeSelect ? intakeSelect.options[intakeSelect.selectedIndex]?.text : 'Not selected';
         const studyModeSelect = document.querySelector('select[name="study_mode"]');
@@ -1230,12 +1347,16 @@
         <div class="mb-6">
             <h4 class="font-semibold mb-3 text-lg text-purple-900 border-b pb-2">Course Selection</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div><strong>Course:</strong> ${course}</div>
+                <div><strong>Program:</strong> ${course}</div>
                 <div><strong>Intake:</strong> ${intake}</div>
                 <div><strong>Study Mode:</strong> ${studyMode}</div>
                 <div><strong>Scholarship:</strong> ${scholarship}</div>
-                <div class="md:col-span-2"><strong>Terms Accepted:</strong> ${acceptTerms}</div>
-                <div class="md:col-span-2"><strong>Privacy Policy Accepted:</strong> ${acceptPrivacy}</div>
+                <div class="md:col-span-2"><strong>Personal Statement:</strong> ${document.querySelector('textarea[name="personal_statement"]')?.value || 'Not provided'}</div>
+                <div><strong>Work Experience (years):</strong> ${document.querySelector('input[name="work_experience_years"]')?.value || '0'}</div>
+                <div><strong>How Did You Hear:</strong> ${document.querySelector('input[name="how_did_you_hear"]')?.value || 'Not provided'}</div>
+                <div><strong>Emergency Contact:</strong> ${document.querySelector('input[name="emergency_contact_name"]')?.value || ''} (${document.querySelector('input[name="emergency_contact_relationship"]')?.value || ''})</div>
+                <div><strong>Emergency Phone:</strong> ${document.querySelector('input[name="emergency_contact_phone"]')?.value || ''}</div>
+                <div class="md:col-span-2"><strong>Terms Accepted:</strong> ${acceptTerms} | <strong>Privacy Policy:</strong> ${acceptPrivacy}</div>
             </div>
         </div>
         `;
@@ -1411,6 +1532,5 @@
         // Initialize form
         initForm();
     });
-</script>
 </script>
 {% endblock %}

@@ -474,151 +474,128 @@ class Command(BaseCommand):
                     p.program = random.choice(dept_progs)
                     p.save()
 
-        # ── 10. ACADEMIC COURSES ─────────────────────────────────────────────
+        # ── 10. ACADEMIC COURSES (units within programs) ──────────────────────────
         self.stdout.write("📚 Creating academic courses...")
+
+        # Map: (program, course_type, code, name, year, semester, credit_units, icon, col1, col2)
         ac_raw = [
-            (programs[0], departments[0], faculties[0],
-             'Bachelor of Science in Software Engineering', 'AC-BSC-SE',
-             'undergraduate', ['full_time', 'part_time'], Decimal('3.0'),
-             'Build the future with clean code', Decimal('50.00'), Decimal('9250.00'),
-             '£35K–£55K', 93, 'blue', 'indigo', 'laptop', True),
-            (programs[2], departments[1], faculties[0],
-             'Bachelor of Science in Artificial Intelligence', 'AC-BSC-AI',
-             'undergraduate', ['full_time'], Decimal('3.0'),
-             'Shape the age of intelligent systems', Decimal('50.00'), Decimal('9250.00'),
-             '£42K–£70K', 95, 'violet', 'purple', 'brain-circuit', True),
-            (programs[5], departments[3], faculties[1],
-             'BEng Civil Engineering', 'AC-BENG-CVE',
-             'undergraduate', ['full_time'], Decimal('4.0'),
-             'Design the world around us', Decimal('50.00'), Decimal('9250.00'),
-             '£38K–£60K', 90, 'orange', 'amber', 'building', False),
-            (programs[7], departments[6], faculties[2],
-             'BSc Finance & Accounting', 'AC-BSC-FNA',
-             'undergraduate', ['full_time', 'part_time', 'online'], Decimal('3.0'),
-             'Master money and markets', Decimal('50.00'), Decimal('9250.00'),
-             '£34K–£60K', 88, 'green', 'emerald', 'pound-sterling', True),
-            (programs[8], departments[6], faculties[2],
-             'Master of Business Administration (Finance)', 'AC-MBA-FIN',
-             'masters', ['full_time', 'part_time'], Decimal('1.0'),
-             'Lead with financial intelligence', Decimal('100.00'), Decimal('17500.00'),
-             '£65K–£110K', 92, 'emerald', 'teal', 'trending-up', True),
-            (programs[9], departments[9], faculties[3],
-             'Bachelor of Science in Nursing', 'AC-BSC-NRS',
-             'undergraduate', ['full_time'], Decimal('3.0'),
-             'Care with compassion and expertise', Decimal('50.00'), Decimal('9250.00'),
-             '£28K–£45K', 99, 'red', 'rose', 'heart-pulse', True),
-            (programs[10], departments[11], faculties[4],
-             'BA English & Creative Writing', 'AC-BA-ECW',
-             'undergraduate', ['full_time', 'part_time'], Decimal('3.0'),
-             'Find your voice, shape the world', Decimal('50.00'), Decimal('9250.00'),
-             '£25K–£40K', 80, 'purple', 'violet', 'pen-line', False),
-            (programs[11], departments[12], faculties[4],
-             'BA Digital Media & Design', 'AC-BA-DMD',
-             'undergraduate', ['full_time', 'blended'], Decimal('3.0'),
-             'Create the visual language of tomorrow', Decimal('50.00'), Decimal('9250.00'),
-             '£27K–£45K', 84, 'pink', 'rose', 'image', False),
+            # BSc Software Engineering — programs[0]
+            (programs[0], 'core', 'SE101', 'Introduction to Programming', 1, 'first', 3, 'terminal', 'blue', 'indigo'),
+            (programs[0], 'core', 'SE102', 'Data Structures & Algorithms', 1, 'second', 3, 'layers', 'blue', 'indigo'),
+            (programs[0], 'core', 'SE201', 'Software Design & Architecture', 2, 'first', 4, 'layout', 'blue', 'cyan'),
+            (programs[0], 'elective', 'SE301', 'Cloud Computing & DevOps', 3, 'first', 3, 'cloud', 'sky', 'blue'),
+            (programs[0], 'core', 'SE302', 'Capstone Software Project', 3, 'second', 6, 'rocket', 'indigo', 'violet'),
+
+            # BSc Artificial Intelligence — programs[2]
+            (programs[2], 'core', 'AI101', 'Foundations of Artificial Intelligence', 1, 'first', 3, 'brain-circuit', 'violet', 'purple'),
+            (programs[2], 'core', 'AI201', 'Machine Learning Fundamentals', 2, 'first', 4, 'cpu', 'purple', 'fuchsia'),
+            (programs[2], 'elective', 'AI301', 'Deep Learning & Neural Networks', 3, 'first', 3, 'network', 'violet', 'indigo'),
+
+            # BEng Civil Engineering — programs[5]
+            (programs[5], 'core', 'CVE101', 'Structural Analysis I', 1, 'first', 3, 'building', 'orange', 'amber'),
+            (programs[5], 'core', 'CVE201', 'Geotechnical Engineering', 2, 'second', 3, 'mountain', 'orange', 'yellow'),
+            (programs[5], 'elective', 'CVE301', 'Environmental Engineering', 3, 'first', 3, 'leaf', 'green', 'emerald'),
+
+            # BSc Finance & Accounting — programs[7]
+            (programs[7], 'core', 'FNA101', 'Financial Accounting Principles', 1, 'first', 3, 'book-open', 'green', 'emerald'),
+            (programs[7], 'core', 'FNA201', 'Corporate Finance', 2, 'first', 4, 'trending-up', 'emerald', 'teal'),
+            (programs[7], 'elective', 'FNA301', 'Investment Analysis', 3, 'second', 3, 'bar-chart-2', 'green', 'lime'),
+
+            # MBA Finance — programs[8]
+            (programs[8], 'core', 'MBA101', 'Managerial Economics', 1, 'first', 4, 'briefcase', 'teal', 'cyan'),
+            (programs[8], 'core', 'MBA201', 'Strategic Financial Management', 1, 'second', 4, 'pie-chart', 'emerald', 'teal'),
+
+            # BSc Nursing — programs[9]
+            (programs[9], 'core', 'NRS101', 'Anatomy & Physiology', 1, 'first', 4, 'heart-pulse', 'red', 'rose'),
+            (programs[9], 'core', 'NRS201', 'Clinical Nursing Practice', 2, 'first', 5, 'stethoscope', 'rose', 'pink'),
+
+            # BA English & Creative Writing — programs[10]
+            (programs[10], 'core', 'ECW101', 'Introduction to Literary Theory', 1, 'first', 3, 'book', 'purple', 'violet'),
+            (programs[10], 'elective', 'ECW201', 'Fiction Writing Workshop', 2, 'second', 3, 'pen-line', 'violet', 'purple'),
+
+            # BA Digital Media & Design — programs[11]
+            (programs[11], 'core', 'DMD101', 'Principles of Graphic Design', 1, 'first', 3, 'image', 'pink', 'rose'),
+            (programs[11], 'core', 'DMD201', 'UX & Interaction Design', 2, 'first', 3, 'mouse-pointer', 'pink', 'fuchsia'),
         ]
         academic_courses = []
-        for (prog, dept, fac, name, code, degree, modes, dur,
-             tagline, app_fee, tuit, salary, placement,
-             col1, col2, icon, featured) in ac_raw:
+        for (prog, ctype, code, name, year, semester, credits, icon, col1, col2) in ac_raw:
             c = Course.objects.create(
-                program=prog, department=dept, faculty=fac,
-                name=name, code=code, degree_level=degree,
-                available_study_modes=modes, duration_years=dur,
-                tagline=tagline, application_fee=app_fee, tuition_fee=tuit,
-                overview=fake.text(max_nb_chars=400),
-                description=fake.text(max_nb_chars=800),
+                program=prog,
+                name=name,
+                code=code,
+                course_type=ctype,
+                credit_units=credits,
+                year_of_study=year,
+                semester=semester,
+                description=fake.text(max_nb_chars=300),
                 learning_outcomes=[
-                    f"Demonstrate advanced knowledge of {name.split()[-1]}",
-                    "Apply theoretical concepts to practical industry problems",
-                    "Develop professional communication and teamwork skills",
-                    "Conduct independent research in your discipline",
-                    "Meet ethical and professional standards of the field",
+                    f"Understand core principles of {name}",
+                    "Apply concepts to practical scenarios",
+                    "Critically evaluate relevant literature and methods",
+                    "Demonstrate competence through assessed coursework",
                 ],
-                career_paths=[
-                    f"Graduate {name.split()[-1]} Professional",
-                    f"Senior {name.split()[-1]} Consultant",
-                    f"{name.split()[-1]} Manager",
-                    f"Head of {name.split()[-1]}",
-                ],
-                core_courses=[
-                    f"Introduction to {name.split()[-1]}",
-                    f"Advanced {name.split()[-2]} Theory",
-                    "Research Methods",
-                    "Capstone Project",
-                    "Professional Ethics and Practice",
-                ],
-                specialization_tracks=[
-                    f"{fake.word().title()} Track",
-                    f"{fake.word().title()} Specialisation",
-                ],
-                entry_requirements=[
-                    "UCAS tariff: 112–128 points",
-                    "A-Levels: including a relevant subject",
-                    "IELTS 6.0 (or equivalent) for international applicants",
-                ],
-                avg_starting_salary=salary,
-                job_placement_rate=placement,
-                credits_required=360,
-                color_primary=col1, color_secondary=col2, icon=icon,
-                meta_description=f"{name} at MIU — {tagline}",
-                meta_keywords=f"{name}, {degree}, MIU, university",
-                is_active=True, is_featured=featured,
+                lecturer=random.choice(verified_instructors) if verified_instructors else None,
+                icon=icon,
+                color_primary=col1,
+                color_secondary=col2,
+                is_active=True,
                 display_order=len(academic_courses),
             )
             academic_courses.append(c)
 
-        # ── 11. COURSE INTAKES ───────────────────────────────────────────────
+        # ── 11. COURSE INTAKES ───────────────────────────────────────────────────
         self.stdout.write("📅 Creating course intakes...")
         intakes = []
         period_months = {'january': 1, 'may': 5, 'september': 9}
-        for course in academic_courses:
+        for program in programs:
             for period, month in period_months.items():
                 for year in [2025, 2026]:
                     deadline = date(year, month, 1) - timedelta(days=45)
                     intakes.append(CourseIntake.objects.create(
-                        course=course, intake_period=period, year=year,
+                        program=program,
+                        intake_period=period,
+                        year=year,
                         start_date=date(year, month, 15),
                         application_deadline=deadline,
                         available_slots=random.randint(30, 100),
                         is_active=True,
                     ))
 
-        # ── 12. ALL REQUIRED PAYMENTS ────────────────────────────────────────
+        # ── 12. ALL REQUIRED PAYMENTS ────────────────────────────────────────────
         self.stdout.write("💷 Creating required payments...")
         payment_purposes = [
-            ('School Fees', 'student', Decimal('9250.00')),
-            ('Library Fees', 'student', Decimal('120.00')),
-            ('Laboratory Fees', 'student', Decimal('350.00')),
-            ('Student Union Fee', 'student', Decimal('80.00')),
-            ('Examination Fee', 'student', Decimal('200.00')),
-            ('Staff Development Levy', 'staff', Decimal('150.00')),
-            ('Application Processing Fee', 'applicant', Decimal('50.00')),
+            ('School Fees',               'student',   Decimal('9250.00')),
+            ('Library Fees',              'student',   Decimal('120.00')),
+            ('Laboratory Fees',           'student',   Decimal('350.00')),
+            ('Student Union Fee',         'student',   Decimal('80.00')),
+            ('Examination Fee',           'student',   Decimal('200.00')),
+            ('Staff Development Levy',    'staff',     Decimal('150.00')),
+            ('Application Processing Fee','applicant', Decimal('50.00')),
         ]
-        for fac in faculties:
-            fac_depts = [d for d in departments if d.faculty == fac]
-            fac_progs = [p for p in programs if p.department.faculty == fac]
-            fac_courses = [c for c in academic_courses if c.faculty == fac]
+        for program in programs:
+            prog_courses = [c for c in academic_courses if c.program == program]
             for purpose, who, amount in payment_purposes:
                 AllRequiredPayments.objects.create(
-                    faculty=fac,
-                    department=random.choice(fac_depts) if fac_depts else departments[0],
-                    program=random.choice(fac_progs) if fac_progs else None,
-                    course=random.choice(fac_courses) if fac_courses else None,
-                    purpose=purpose, who_to_pay=who, amount=amount,
-                    due_date=date(2025, 9, 30),
-                    academic_year='2025/2026',
+                    program=program,
+                    course=random.choice(prog_courses) if prog_courses and random.random() > 0.5 else None,
+                    academic_session=None,   # no AcademicSession seeded yet; set to None
                     semester=random.choice(['first', 'second', 'annual']),
+                    purpose=purpose,
+                    who_to_pay=who,
+                    amount=amount,
+                    due_date=date(2025, 9, 30),
                     is_active=True,
                 )
 
-        # ── 13. COURSE APPLICATIONS ──────────────────────────────────────────
+        # ── 13. COURSE APPLICATIONS ──────────────────────────────────────────────
         self.stdout.write("📝 Creating course applications...")
         applications = []
         for student in verified_students:
-            course = random.choice(academic_courses)
-            intake = random.choice([i for i in intakes if i.course == course])
+            program = random.choice(programs)
+            prog_intakes = [i for i in intakes if i.program == program]
+            if not prog_intakes:
+                continue
+            intake = random.choice(prog_intakes)
             status = random.choice([
                 'draft', 'pending_payment', 'payment_complete',
                 'under_review', 'approved', 'rejected',
@@ -630,9 +607,12 @@ class Command(BaseCommand):
                 f"ADM-{timezone.now().year}-{uuid.uuid4().hex[:8].upper()}"
                 if admitted else None
             )
+            study_mode_options = program.available_study_modes or ['full_time']
             app = CourseApplication.objects.create(
-                user=student, course=course, intake=intake,
-                study_mode=random.choice(course.available_study_modes),
+                user=student,
+                program=program,                          # ← was: course=course
+                intake=intake,
+                study_mode=random.choice(study_mode_options),
                 first_name=student.first_name, last_name=student.last_name,
                 email=student.email,
                 phone=fake.phone_number()[:20],
@@ -703,7 +683,7 @@ class Command(BaseCommand):
                     if a.status in ['payment_complete', 'under_review', 'approved']]:
             ApplicationPayment.objects.create(
                 application=app,
-                amount=app.course.application_fee,
+                amount=app.program.application_fee,
                 currency='GBP',
                 status='success',
                 payment_method=random.choice(['card', 'paypal', 'bank_transfer']),

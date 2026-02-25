@@ -343,55 +343,43 @@ class FacultyAdmin(admin.ModelAdmin):
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     list_display = (
-        'name', 'code', 'faculty', 'department', 'program', 'degree_level', 'duration_years', 
-        'application_fee', 'tuition_fee', 'is_active', 'is_featured', 'display_order'
+        'name', 'code', 'program', 'course_type',
+        'credit_units', 'year_of_study', 'semester',
+        'lecturer', 'is_active', 'display_order'
     )
-    list_filter = ('faculty', 'department', 'degree_level', 'is_active', 'is_featured', 'created_at')
+    list_filter = (
+        'program__department__faculty',
+        'program__department',
+        'program',
+        'course_type',
+        'semester',
+        'year_of_study',
+        'is_active',
+        'academic_session',
+    )
     search_fields = ('name', 'code', 'description')
-    prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('is_active', 'is_featured', 'display_order')
+    prepopulated_fields = {'slug': ('code', 'name')}
+    list_editable = ('is_active', 'display_order')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'slug', 'code', 'faculty', 'department', 'program', 'is_active', 'is_featured', 'display_order')
+        ('Hierarchy', {
+            'fields': ('program',)
         }),
-        ('Display Settings', {
-            'fields': ('icon', 'color_primary', 'color_secondary', 'tagline')
+        ('Identity', {
+            'fields': ('name', 'slug', 'code', 'is_active', 'display_order')
         }),
-        ('Program Details', {
-            'fields': (
-                'degree_level', 'available_study_modes', 'duration_years', 
-                'credits_required'
-            )
+        ('Academic Structure', {
+            'fields': ('course_type', 'credit_units', 'year_of_study', 'semester')
         }),
-        ('Financial Information', {
-            'fields': ('application_fee', 'tuition_fee')
+        ('Session & Instructor', {
+            'fields': ('academic_session', 'lecturer')
         }),
         ('Content', {
-            'fields': ('overview', 'description')
+            'fields': ('description', 'learning_outcomes')
         }),
-        ('Learning & Career', {
-            'fields': ('learning_outcomes', 'career_paths'),
-            'classes': ('collapse',)
-        }),
-        ('Curriculum', {
-            'fields': ('core_courses', 'specialization_tracks'),
-            'classes': ('collapse',)
-        }),
-        ('Admission Requirements', {
-            'fields': ('entry_requirements',),
-            'classes': ('collapse',)
-        }),
-        ('Statistics', {
-            'fields': ('avg_starting_salary', 'job_placement_rate')
-        }),
-        ('Media', {
-            'fields': ('hero_image',),
-            'classes': ('collapse',)
-        }),
-        ('SEO', {
-            'fields': ('meta_description', 'meta_keywords'),
+        ('Display', {
+            'fields': ('icon', 'color_primary', 'color_secondary'),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
@@ -404,17 +392,17 @@ class CourseAdmin(admin.ModelAdmin):
 @admin.register(CourseIntake)
 class CourseIntakeAdmin(admin.ModelAdmin):
     list_display = (
-        'course', 'intake_period', 'year', 'start_date', 
+        'program', 'intake_period', 'year', 'start_date', 
         'application_deadline', 'available_slots', 'is_active'
     )
-    list_filter = ('intake_period', 'year', 'is_active', 'course__faculty')
-    search_fields = ('course__name', 'course__code')
+    list_filter = ('intake_period', 'year', 'is_active', 'program__department__faculty')
+    search_fields = ('program__name', 'program__code')
     list_editable = ('is_active',)
     date_hierarchy = 'start_date'
     
     fieldsets = (
         ('Course & Period', {
-            'fields': ('course', 'intake_period', 'year')
+            'fields': ('program', 'intake_period', 'year')
         }),
         ('Dates', {
             'fields': ('start_date', 'application_deadline')
@@ -473,7 +461,7 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'application_id', 
         'get_full_name', 
         'email', 
-        'course',
+        'program',
         'intake',
         'status',
         'admission_accepted',
@@ -488,8 +476,8 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'status',
         'admission_accepted',
         'department_approved',
-        'course__faculty',
-        'course',
+        'program__department__faculty',
+        'program',
         'intake__year',
         'created_at',
         'payment_status'
@@ -532,7 +520,7 @@ class CourseApplicationAdmin(admin.ModelAdmin):
             'description': 'Track student admission acceptance and department approval'
         }),
         ('Course Selection', {
-            'fields': ('course', 'intake', 'study_mode')
+            'fields': ('program', 'intake', 'study_mode')
         }),
         ('Personal Information', {
             'fields': (
@@ -1032,7 +1020,7 @@ class TransactionAdmin(admin.ModelAdmin):
             'fields': ('gateway', 'gateway_transaction_id')
         }),
         ('Related Objects', {
-            'fields': ('course',)
+            'fields': ('program',)
         }),
         ('Metadata', {
             'fields': ('metadata',),
@@ -1440,20 +1428,28 @@ class ProgramAdmin(admin.ModelAdmin):
 @admin.register(AllRequiredPayments)
 class AllRequiredPaymentsAdmin(admin.ModelAdmin):
     list_display = (
-        'purpose', 'faculty', 'department', 'program', 'course',
-        'amount', 'who_to_pay', 'semester', 'academic_year', 'is_active', 'due_date'
+        'purpose', 'program', 'course',
+        'amount', 'who_to_pay', 'semester', 'academic_session', 'is_active', 'due_date'
     )
-    list_filter = ('faculty', 'department', 'who_to_pay', 'semester', 'is_active', 'academic_year')
-    search_fields = ('purpose', 'faculty__name', 'department__name', 'program__name')
+    list_filter = (
+        'program__department__faculty',
+        'program__department',
+        'program',
+        'who_to_pay',
+        'semester',
+        'academic_session',
+        'is_active',
+    )
+    search_fields = ('purpose', 'program__name', 'program__department__name')
     list_editable = ('is_active',)
     readonly_fields = ('created_at',)
 
     fieldsets = (
         ('Scope', {
-            'fields': ('faculty', 'department', 'program', 'course')
+            'fields': ('program', 'course')
         }),
         ('Payment Details', {
-            'fields': ('purpose', 'amount', 'who_to_pay', 'semester', 'academic_year', 'due_date')
+            'fields': ('purpose', 'amount', 'who_to_pay', 'semester', 'academic_session', 'due_date')
         }),
         ('Status', {
             'fields': ('is_active',)

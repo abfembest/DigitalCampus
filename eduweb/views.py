@@ -10,7 +10,7 @@ import payment
 import payment
 from .forms import ContactForm, CourseApplicationForm
 from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor
-from eduweb.models import Faculty, Course, BlogPost, BlogCategory
+from eduweb.models import Faculty, Course, Program, Department, BlogPost, BlogCategory
 from django.http import JsonResponse, HttpResponse, Http404
 from django.utils import timezone
 from .decorators import check_for_auth, smart_redirect_applicant
@@ -31,8 +31,10 @@ from django.views.decorators.csrf import csrf_protect
 from .models import (
     ContactMessage, CourseApplication, Vendor, 
     UserProfile, Course, CourseIntake, Faculty,
-    ApplicationDocument, ApplicationPayment
+    ApplicationDocument, ApplicationPayment,
+    Program, Department
 )
+from django.db.models import Prefetch
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from .decorators import applicant_required
@@ -502,33 +504,35 @@ def apply(request):
     # -------------------------------
     # FETCH COURSES (UPDATED)
     # -------------------------------
-    from .models import Course, Faculty, CourseIntake
+    from .models import Program, Faculty, CourseIntake
 
-    courses = Course.objects.filter(is_active=True).select_related('faculty')
+    programs = Program.objects.filter(
+        is_active=True
+    ).select_related('department__faculty')
     faculties = Faculty.objects.filter(is_active=True)
 
-    # Group courses by faculty
+    # Group programs by faculty
     courses_by_faculty = {}
-    for course in courses:
-        faculty_name = course.faculty.name
+    for program in programs:
+        faculty_name = program.department.faculty.name
         if faculty_name not in courses_by_faculty:
             courses_by_faculty[faculty_name] = []
-        
-        # Get active intakes for this course
+
+        # Get active intakes for this program
         intakes = CourseIntake.objects.filter(
-            course=course,
+            program=program,
             is_active=True,
             application_deadline__gte=timezone.now().date()
         ).values('id', 'intake_period', 'year', 'start_date')
-        
+
         courses_by_faculty[faculty_name].append({
-            "id": course.id,
-            "name": course.name,
-            "code": course.code,
-            "degree_level": course.degree_level,
-            "available_study_modes": course.available_study_modes,
-            "application_fee": str(course.application_fee),
-            "tuition_fee": str(course.tuition_fee),
+            "id": program.id,
+            "name": program.name,
+            "code": program.code,
+            "degree_level": program.degree_level,
+            "available_study_modes": program.available_study_modes,
+            "application_fee": str(program.application_fee),
+            "tuition_fee": str(program.tuition_fee),
             "intakes": list(intakes)
         })
 
@@ -633,7 +637,7 @@ def apply(request):
 
     return render(request, 'form.html', {
         'form': form,
-        'courses': courses,
+        'courses': programs,
         'courses_json': courses_json,
     })
 
@@ -907,7 +911,7 @@ def get_payment_summary(request, application_id):
         application_id = application_id.strip()
 
         application = CourseApplication.objects.select_related(
-            "course", "course__faculty"
+            "program", "program__department__faculty"
         ).get(application_id__iexact=application_id)
 
         if application.user != request.user and not request.user.is_staff:
@@ -920,9 +924,9 @@ def get_payment_summary(request, application_id):
             "application_id": application.application_id,
             "full_name": application.get_full_name(),
             "email": application.email,
-            "course_name": application.course.name,
-            "faculty": application.course.faculty.name,
-            "amount": float(application.course.application_fee),
+            "course_name": application.program.name,
+            "faculty": application.program.department.faculty.name,
+            "amount": float(application.program.application_fee),
             "currency": "GBP",
             "description": "Application Processing Fee",
             "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
@@ -970,7 +974,7 @@ def create_payment_intent(request):
         if application.is_paid:
             return JsonResponse({"success": False, "error": "Application already paid"}, status=400)
 
-        amount_decimal = application.course.application_fee
+        amount_decimal = application.program.application_fee
         amount_pence = int(amount_decimal * Decimal("100"))
 
         with transaction.atomic():
@@ -1533,8 +1537,11 @@ from django.db import models
 
 from django.db.models import Prefetch
 def faculty_detail(request, slug):
-    """Faculty detail — departments → programs hierarchy, single efficient query."""
-
+    """
+    Faculty detail page.
+    Hierarchy: Faculty → Departments → Programs → Courses
+    Template: faculties/faculty_detail.html
+    """
     faculty = get_object_or_404(Faculty, slug=slug, is_active=True)
 
     departments = (
@@ -1544,8 +1551,16 @@ def faculty_detail(request, slug):
             Prefetch(
                 'programs',
                 queryset=Program.objects.filter(is_active=True)
-                                        .order_by('display_order', 'name'),
-                to_attr='active_programs',   # accessed as dept.active_programs in template
+                    .prefetch_related(
+                        Prefetch(
+                            'courses',
+                            queryset=Course.objects.filter(is_active=True)
+                                .order_by('year_of_study', 'semester', 'display_order'),
+                            to_attr='active_courses',
+                        )
+                    )
+                    .order_by('display_order', 'name'),
+                to_attr='active_programs',
             )
         )
         .order_by('display_order', 'name')
@@ -1558,11 +1573,14 @@ def faculty_detail(request, slug):
 
     return render(request, 'faculties/faculty_detail.html', context)
 
-
-
 @check_for_auth
 def program_detail(request, slug):
-    """Program detail page — shows program info and all courses under it."""
+    """
+    Program detail page.
+    Shows program info, all active courses grouped by year/semester,
+    and the program's intake sessions.
+    Template: programs/program_detail.html
+    """
 
     program = get_object_or_404(
         Program.objects.select_related(
@@ -1573,15 +1591,27 @@ def program_detail(request, slug):
         is_active=True,
     )
 
-    courses = program.courses.filter(
-        is_active=True
-    ).order_by('display_order', 'name')
+    # All active courses for this program, ordered by year then semester
+    courses = (
+        program.courses
+        .filter(is_active=True)
+        .select_related('lecturer')
+        .order_by('year_of_study', 'semester', 'display_order', 'name')
+    )
+
+    # Active intake sessions for this program
+    active_intakes = (
+        program.intakes
+        .filter(is_active=True)
+        .order_by('-year', 'intake_period')
+    )
 
     context = {
-        'program': program,
-        'courses': courses,
-        'department': program.department,
-        'faculty': program.department.faculty,
+        'program':        program,
+        'courses':        courses,
+        'active_intakes': active_intakes,
+        'department':     program.department,
+        'faculty':        program.department.faculty,
     }
 
     return render(request, 'programs/program_detail.html', context)

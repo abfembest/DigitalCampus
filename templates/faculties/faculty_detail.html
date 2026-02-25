@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ faculty.name }} | MIU – Modern International University{% endblock %}
+{% block title %}{{ faculty.name }} | MIU – Melchisedec International University{% endblock %}
 
 {% block meta_tags %}
 <meta name="description" content="{{ faculty.meta_description|default:faculty.description|truncatewords:30 }}">
@@ -37,7 +37,7 @@
   "url": "{{ request.build_absolute_uri }}",
   "parentOrganization": {
     "@type": "CollegeOrUniversity",
-    "name": "Modern International University",
+    "name": "Melchisedec International University",
     "url": "{{ request.scheme }}://{{ request.get_host }}"
   }
 }
@@ -46,30 +46,31 @@
 
 {% block extra_css %}
 <style>
-  /* ── Department Tab States ──────────────────────── */
-  .dept-tab-active {
-    background: linear-gradient(135deg, #840384 0%, #9333ea 100%);
-    color: #fff;
-    border-color: transparent;
-    box-shadow: 0 4px 14px rgba(132,3,132,0.22);
-  }
-  .dept-tab-active .dept-code  { color: rgba(255,255,255,0.65); }
-  .dept-tab-active .dept-count { background: rgba(255,255,255,0.18); color: #fff; }
+  /* ── Degree badge colours ─────────────────────── */
+  .badge-certificate   { background:#fef3c7; color:#92400e; }
+  .badge-diploma       { background:#dbeafe; color:#1e40af; }
+  .badge-undergraduate { background:#d1fae5; color:#065f46; }
+  .badge-postgraduate  { background:#ede9fe; color:#5b21b6; }
+  .badge-masters       { background:#fce7f3; color:#9d174d; }
+  .badge-phd           { background:#fee2e2; color:#991b1b; }
 
-  .dept-tab-inactive {
-    background: #ffffff;
-    color: #374151;
-    border-color: #e5e7eb;
-  }
-  .dept-tab-inactive:hover {
-    border-color: #c084fc;
-    background: #faf5ff;
-    color: #1f2937;
-  }
-  .dept-tab-inactive .dept-code  { color: #9333ea; }
-  .dept-tab-inactive .dept-count { background: #f3e8ff; color: #7e22ce; }
+  /* ── Course type badge colours ───────────────── */
+  .ctype-core         { background:#d1fae5; color:#065f46; }
+  .ctype-elective     { background:#ede9fe; color:#5b21b6; }
+  .ctype-general      { background:#fef3c7; color:#92400e; }
+  .ctype-prerequisite { background:#fee2e2; color:#991b1b; }
 
-  /* ── Program card hover ─────────────────────────── */
+  /* ── Department accordion ────────────────────── */
+  .dept-accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .dept-accordion-content.open { max-height: 99999px; }
+  .dept-accordion-chevron { transition: transform 0.3s ease; }
+  .dept-accordion-header.open .dept-accordion-chevron { transform: rotate(180deg); }
+
+  /* ── Program card ─────────────────────────────── */
   .prog-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   }
@@ -79,24 +80,47 @@
     border-color: #c084fc;
   }
 
-  /* ── Degree level badge colours ─────────────────── */
-  .badge-certificate   { background:#fef3c7; color:#92400e; }
-  .badge-diploma       { background:#dbeafe; color:#1e40af; }
-  .badge-undergraduate { background:#d1fae5; color:#065f46; }
-  .badge-postgraduate  { background:#ede9fe; color:#5b21b6; }
-  .badge-masters       { background:#fce7f3; color:#9d174d; }
-  .badge-phd           { background:#fee2e2; color:#991b1b; }
+  /* ── Course row ──────────────────────────────── */
+  .course-row {
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .course-row:hover { background:#faf5ff; border-color:#d8b4fe; }
 
-  /* ── Panel fade-in ──────────────────────────────── */
-  .dept-panel { animation: panelIn 0.22s ease; }
-  @keyframes panelIn {
-    from { opacity:0; transform:translateY(8px); }
-    to   { opacity:1; transform:translateY(0); }
+  /* ── Course accordion inside program card ─────── */
+  .prog-courses-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .prog-courses-content.open { max-height: 9999px; }
+  .prog-courses-chevron { transition: transform 0.3s ease; }
+  .prog-courses-toggle.open .prog-courses-chevron { transform: rotate(180deg); }
+
+  /* ── Sticky sidebar ─────────────────────────── */
+  @media (min-width:1024px) {
+    .sidebar-sticky { position: sticky; top: 108px; }
   }
 
-  /* ── Sticky sidebar ─────────────────────────────── */
-  @media (min-width:1024px) {
-    .sidebar-sticky { position:sticky; top:108px; }
+  /* ── Panel animation ────────────────────────── */
+  .dept-panel-animate {
+    animation: fadeSlideUp 0.25s ease both;
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Search highlight ───────────────────────── */
+  .search-highlight { background:#fef08a; border-radius:2px; padding:0 2px; }
+  .search-hidden    { display: none !important; }
+  .search-no-results { display: none; }
+  .search-no-results.show { display: block; }
+
+  /* ── Search bar ─────────────────────────────── */
+  .faculty-search-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(132,3,132,0.15);
+    border-color: #a855f7;
   }
 </style>
 {% endblock %}
@@ -104,7 +128,9 @@
 {% block content %}
 <main id="main-content">
 
-  <!-- ══════════ HERO ══════════ -->
+  <!-- ══════════════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════════════ -->
   <section
     class="relative bg-gradient-to-br from-primary-950 via-primary-900 to-purple-900 text-white overflow-hidden"
     role="banner"
@@ -114,6 +140,7 @@
     <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
       <div class="absolute -top-24 -left-24 w-96 h-96 bg-purple-500 rounded-full blur-3xl opacity-20"></div>
       <div class="absolute bottom-0 right-0 w-[480px] h-[480px] bg-primary-800 rounded-full blur-3xl opacity-25"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-700 rounded-full blur-3xl opacity-10"></div>
     </div>
 
     {% if faculty.hero_image %}
@@ -123,11 +150,11 @@
     </div>
     {% endif %}
 
-    <div class="container mx-auto relative z-10 pt-32 pb-20 lg:pt-40 lg:pb-28">
+    <div class="container mx-auto relative z-10 pt-32 pb-20 lg:pt-40 lg:pb-28 px-4 lg:px-6">
 
       <!-- Breadcrumb -->
       <nav aria-label="Breadcrumb" class="mb-8">
-        <ol class="flex flex-wrap items-center gap-1.5 text-sm font-sans"
+        <ol class="flex flex-wrap items-center gap-1.5 text-sm font-['Inter']"
             itemscope itemtype="https://schema.org/BreadcrumbList">
           <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
             <a href="{% url 'eduweb:index' %}" itemprop="item"
@@ -136,16 +163,12 @@
             </a>
             <meta itemprop="position" content="1">
           </li>
-          <li aria-hidden="true">
-            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-purple-500 inline-block align-middle"></i>
-          </li>
+          <li aria-hidden="true"><i data-lucide="chevron-right" class="w-3.5 h-3.5 text-purple-500 inline-block align-middle"></i></li>
           <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
             <span itemprop="name" class="text-purple-300">Faculties</span>
             <meta itemprop="position" content="2">
           </li>
-          <li aria-hidden="true">
-            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-purple-500 inline-block align-middle"></i>
-          </li>
+          <li aria-hidden="true"><i data-lucide="chevron-right" class="w-3.5 h-3.5 text-purple-500 inline-block align-middle"></i></li>
           <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
             <span itemprop="name" class="text-white font-medium">{{ faculty.name }}</span>
             <meta itemprop="position" content="3">
@@ -153,22 +176,20 @@
         </ol>
       </nav>
 
-      <!-- Identity -->
+      <!-- Faculty identity -->
       <div class="flex flex-col sm:flex-row items-start gap-6 mb-8">
         <div class="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-2xl"
-             style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);"
-             aria-hidden="true">
+             style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);" aria-hidden="true">
           <i data-lucide="{{ faculty.icon }}" class="w-8 h-8 lg:w-10 lg:h-10 text-white"></i>
         </div>
         <div>
           {% if faculty.tagline %}
-          <p class="text-purple-300 text-xs font-semibold uppercase tracking-widest mb-2">{{ faculty.tagline }}</p>
+          <p class="text-purple-300 text-xs font-bold uppercase tracking-widest mb-2 font-['Inter']">{{ faculty.tagline }}</p>
           {% endif %}
-          <h1 id="faculty-heading"
-              class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-white">
+          <h1 id="faculty-heading" class="font-['Poppins'] text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-white">
             {{ faculty.name }}
           </h1>
-          <span class="inline-block mt-3 px-3 py-1 text-xs font-bold tracking-widest uppercase rounded-full"
+          <span class="inline-block mt-3 px-3 py-1 text-xs font-bold tracking-widest uppercase rounded-full font-['Inter']"
                 style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15);">
             {{ faculty.code }}
           </span>
@@ -176,7 +197,7 @@
       </div>
 
       {% if faculty.description %}
-      <p class="text-base lg:text-lg text-purple-100 leading-relaxed max-w-3xl mb-10 font-sans">
+      <p class="text-base lg:text-lg text-purple-100 leading-relaxed max-w-3xl mb-10 font-['Inter']">
         {{ faculty.description|truncatewords:55 }}
       </p>
       {% endif %}
@@ -184,13 +205,13 @@
       <!-- CTAs -->
       <div class="flex flex-wrap gap-3">
         <a href="{% url 'eduweb:apply' %}"
-           class="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-950 rounded-xl font-semibold text-sm hover:bg-purple-50 hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-950 rounded-xl font-semibold text-sm hover:bg-purple-50 hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950 font-['Inter']"
            aria-label="Apply to {{ faculty.name }}">
           Apply Now
           <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
         </a>
         <a href="#departments"
-           class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950"
+           class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950 font-['Inter']"
            style="border:1.5px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.08);"
            aria-label="Browse departments">
           Browse Departments
@@ -201,36 +222,38 @@
     </div>
   </section>
 
-  <!-- ══════════ STATS BAR ══════════ -->
+  <!-- ══════════════════════════════════════════════════
+       STATS BAR
+  ══════════════════════════════════════════════════ -->
   <section class="bg-white border-b border-gray-100" aria-label="Faculty statistics">
-    <div class="container mx-auto">
+    <div class="container mx-auto px-4 lg:px-6">
       <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gray-100">
 
         {% if faculty.student_count %}
         <div class="py-8 px-6 text-center">
-          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">{{ faculty.student_count }}+</p>
-          <p class="text-sm text-gray-400 mt-1.5 font-medium">Students Enrolled</p>
+          <p class="font-['Poppins'] text-3xl lg:text-4xl font-bold text-primary-950">{{ faculty.student_count }}+</p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium font-['Inter']">Students Enrolled</p>
         </div>
         {% endif %}
 
         {% if departments %}
         <div class="py-8 px-6 text-center">
-          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">{{ departments|length }}</p>
-          <p class="text-sm text-gray-400 mt-1.5 font-medium">Departments</p>
+          <p class="font-['Poppins'] text-3xl lg:text-4xl font-bold text-primary-950">{{ departments|length }}</p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium font-['Inter']">Departments</p>
         </div>
         {% endif %}
 
         {% if faculty.placement_rate %}
         <div class="py-8 px-6 text-center">
-          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">{{ faculty.placement_rate }}%</p>
-          <p class="text-sm text-gray-400 mt-1.5 font-medium">Placement Rate</p>
+          <p class="font-['Poppins'] text-3xl lg:text-4xl font-bold text-primary-950">{{ faculty.placement_rate }}%</p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium font-['Inter']">Placement Rate</p>
         </div>
         {% endif %}
 
         {% if faculty.partner_count %}
         <div class="py-8 px-6 text-center">
-          <p class="font-display text-3xl lg:text-4xl font-bold text-primary-950">{{ faculty.partner_count }}+</p>
-          <p class="text-sm text-gray-400 mt-1.5 font-medium">Industry Partners</p>
+          <p class="font-['Poppins'] text-3xl lg:text-4xl font-bold text-primary-950">{{ faculty.partner_count }}+</p>
+          <p class="text-sm text-gray-400 mt-1.5 font-medium font-['Inter']">Industry Partners</p>
         </div>
         {% endif %}
 
@@ -238,10 +261,12 @@
     </div>
   </section>
 
-  <!-- ══════════ MISSION / VISION ══════════ -->
+  <!-- ══════════════════════════════════════════════════
+       MISSION / VISION
+  ══════════════════════════════════════════════════ -->
   {% if faculty.mission or faculty.vision %}
   <section class="py-16 bg-gray-50" aria-labelledby="mv-heading">
-    <div class="container mx-auto">
+    <div class="container mx-auto px-4 lg:px-6">
       <h2 id="mv-heading" class="sr-only">Mission and Vision</h2>
       <div class="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
 
@@ -251,21 +276,21 @@
             <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0" aria-hidden="true">
               <i data-lucide="target" class="w-5 h-5 text-primary-700"></i>
             </div>
-            <h3 class="font-display text-base font-bold text-gray-900">Our Mission</h3>
+            <h3 class="font-['Poppins'] text-base font-bold text-gray-900">Our Mission</h3>
           </header>
-          <p class="text-gray-600 leading-relaxed text-sm">{{ faculty.mission }}</p>
+          <p class="text-gray-600 leading-relaxed text-sm font-['Inter']">{{ faculty.mission }}</p>
         </article>
         {% endif %}
 
         {% if faculty.vision %}
         <article class="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
           <header class="flex items-center gap-3 mb-5">
-            <div class="w-10 h-10 rounded-xl bg-accent-50 flex items-center justify-center flex-shrink-0" aria-hidden="true">
-              <i data-lucide="eye" class="w-5 h-5 text-accent-600"></i>
+            <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+              <i data-lucide="eye" class="w-5 h-5 text-purple-600"></i>
             </div>
-            <h3 class="font-display text-base font-bold text-gray-900">Our Vision</h3>
+            <h3 class="font-['Poppins'] text-base font-bold text-gray-900">Our Vision</h3>
           </header>
-          <p class="text-gray-600 leading-relaxed text-sm">{{ faculty.vision }}</p>
+          <p class="text-gray-600 leading-relaxed text-sm font-['Inter']">{{ faculty.vision }}</p>
         </article>
         {% endif %}
 
@@ -274,43 +299,213 @@
   </section>
   {% endif %}
 
-  <!-- ══════════ DEPARTMENTS & PROGRAMS ══════════ -->
+  <!-- ══════════════════════════════════════════════════
+       DEPARTMENTS, PROGRAMS & COURSES
+  ══════════════════════════════════════════════════ -->
   <section id="departments" class="py-16 lg:py-24 bg-white" aria-labelledby="depts-heading">
-    <div class="container mx-auto">
+    <div class="container mx-auto px-4 lg:px-6">
 
-      <!-- Section label -->
-      <div class="max-w-2xl mb-12 lg:mb-14">
-        <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-2">Academic Structure</p>
-        <h2 id="depts-heading" class="font-display text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-          Departments &amp; Programs
-        </h2>
-        <p class="text-gray-500 text-base leading-relaxed">
-          Select a department on the left to see its programs. From any program you can explore the full course schedule.
-        </p>
+      <!-- Section header -->
+      <div class="flex flex-col lg:flex-row lg:items-end gap-6 mb-10 lg:mb-14">
+        <div class="flex-1">
+          <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-2 font-['Inter']">Academic Structure</p>
+          <h2 id="depts-heading" class="font-['Poppins'] text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+            Departments, Programs &amp; Courses
+          </h2>
+          <p class="text-gray-500 text-base leading-relaxed font-['Inter'] max-w-2xl">
+            Explore our departments, the programs they offer, and every course within each program. Click a program to expand its full course list.
+          </p>
+        </div>
+
+        <!-- ── Search bar ── -->
+        <div class="w-full lg:w-80 flex-shrink-0">
+          <div class="relative">
+            <label for="facultySearch" class="sr-only">Search departments, programs, and courses</label>
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none" aria-hidden="true">
+              <i data-lucide="search" class="w-4 h-4 text-gray-400"></i>
+            </div>
+            <input
+              id="facultySearch"
+              type="search"
+              placeholder="Search programs, courses, departments…"
+              autocomplete="off"
+              class="faculty-search-input w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 placeholder-gray-400 transition-all duration-200 font-['Inter']"
+              aria-label="Search departments, programs, and courses">
+            <button
+              id="searchClearBtn"
+              type="button"
+              class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 hidden"
+              aria-label="Clear search">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <!-- Search result summary -->
+          <p id="searchSummary" class="text-xs text-gray-400 mt-2 font-['Inter'] hidden" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <!-- Global search: no results -->
+      <div id="searchNoResults" class="search-no-results text-center py-16 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50" role="status">
+        <i data-lucide="search-x" class="w-12 h-12 text-gray-300 mx-auto mb-3" aria-hidden="true"></i>
+        <p class="font-semibold text-gray-400 font-['Poppins']">No results found</p>
+        <p class="text-sm text-gray-400 mt-1 font-['Inter']">Try a different keyword or clear the search.</p>
       </div>
 
       {% if departments %}
-      <div class="flex flex-col lg:flex-row gap-8 items-start">
 
-        <!-- Sidebar -->
-        <aside class="lg:w-72 w-full flex-shrink-0 sidebar-sticky" aria-label="Department navigation">
+      <!-- ─────────────────────────────────────────────────
+           MOBILE / TABLET: Accordion Layout
+      ───────────────────────────────────────────────── -->
+      <div class="lg:hidden space-y-4" id="mobileAccordions">
+        {% for dept in departments %}
+        <div class="dept-item border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm"
+             data-dept-name="{{ dept.name|lower }}"
+             data-dept-code="{{ dept.code|lower }}">
+
+          <!-- Accordion header -->
+          <button
+            class="dept-accordion-header w-full flex items-center justify-between px-5 py-4 text-left focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-inset {% if forloop.first %}open{% endif %}"
+            data-target="mobile-panel-{{ dept.slug }}"
+            aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+            aria-controls="mobile-panel-{{ dept.slug }}">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                <i data-lucide="building-2" class="w-4 h-4 text-primary-700"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <span class="block text-xs font-bold text-primary-600 uppercase tracking-wide font-['Inter']">{{ dept.code }}</span>
+                <span class="block text-sm font-semibold text-gray-900 leading-snug font-['Inter'] truncate">{{ dept.name }}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-['Inter']">
+                {{ dept.active_programs|length }}
+              </span>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 dept-accordion-chevron flex-shrink-0"></i>
+            </div>
+          </button>
+
+          <!-- Accordion content: programs -->
+          <div
+            id="mobile-panel-{{ dept.slug }}"
+            class="dept-accordion-content {% if forloop.first %}open{% endif %}">
+            <div class="px-4 pb-4 pt-2 space-y-4 border-t border-gray-100">
+
+              {% if dept.description %}
+              <p class="text-xs text-gray-500 font-['Inter'] leading-relaxed pt-1">{{ dept.description }}</p>
+              {% endif %}
+
+              {% if dept.active_programs %}
+              {% for program in dept.active_programs %}
+              <div class="prog-item rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm"
+                   data-prog-name="{{ program.name|lower }}"
+                   data-prog-code="{{ program.code|lower }}"
+                   data-prog-level="{{ program.degree_level|lower }}">
+                <div class="h-0.5 bg-gradient-to-r from-primary-600 to-purple-400" aria-hidden="true"></div>
+                <div class="p-4">
+                  <span class="inline-block text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full mb-3 w-fit badge-{{ program.degree_level }} font-['Inter']">
+                    {{ program.get_degree_level_display }}
+                  </span>
+                  <h4 class="font-['Poppins'] text-sm font-bold text-gray-900 leading-snug mb-0.5">{{ program.name }}</h4>
+                  <p class="text-xs text-gray-400 font-mono mb-2">{{ program.code }}</p>
+                  {% if program.description %}
+                  <p class="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2 font-['Inter']">{{ program.description }}</p>
+                  {% endif %}
+
+                  <!-- Program quick meta -->
+                  <ul class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 mb-3 font-['Inter']">
+                    <li class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3 text-primary-400"></i>{{ program.duration_years }} yr{% if program.duration_years != 1 %}s{% endif %}</li>
+                    <li class="flex items-center gap-1"><i data-lucide="book-open" class="w-3 h-3 text-primary-400"></i>{{ program.credits_required }} credits</li>
+                    {% if program.tuition_fee %}<li class="flex items-center gap-1"><i data-lucide="dollar-sign" class="w-3 h-3 text-primary-400"></i>${{ program.tuition_fee|floatformat:0 }}/yr</li>{% endif %}
+                  </ul>
+
+                  <!-- Courses toggle -->
+                  {% if program.active_courses %}
+                  <button
+                    class="prog-courses-toggle w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:border-purple-300 hover:bg-purple-50 hover:text-primary-700 transition-all duration-200 mb-2 font-['Inter']"
+                    data-target="mobile-courses-{{ program.slug }}"
+                    aria-expanded="false">
+                    <span class="flex items-center gap-1.5">
+                      <i data-lucide="list" class="w-3.5 h-3.5 text-primary-400"></i>
+                      {{ program.active_courses|length }} Course{% if program.active_courses|length != 1 %}s{% endif %}
+                    </span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 prog-courses-chevron text-gray-400"></i>
+                  </button>
+                  <div id="mobile-courses-{{ program.slug }}" class="prog-courses-content">
+                    <div class="space-y-1.5 pt-1 pb-1">
+                      {% for course in program.active_courses %}
+                      <div class="course-item flex items-start gap-2.5 px-3 py-2.5 rounded-lg border border-gray-100 course-row"
+                           data-course-name="{{ course.name|lower }}"
+                           data-course-code="{{ course.code|lower }}"
+                           data-course-type="{{ course.course_type|lower }}">
+                        <div class="w-6 h-6 rounded-md bg-primary-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <i data-lucide="{{ course.icon|default:'book-open' }}" class="w-3 h-3 text-primary-700"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+                            <span class="text-xs font-bold uppercase px-1.5 py-0.5 rounded ctype-{{ course.course_type }} font-['Inter']">{{ course.get_course_type_display }}</span>
+                            <span class="text-xs text-gray-400 font-mono">{{ course.code }}</span>
+                            <span class="text-xs text-gray-400 font-['Inter']">Yr {{ course.year_of_study }} · {{ course.get_semester_display }}</span>
+                          </div>
+                          <p class="text-xs font-semibold text-gray-800 font-['Poppins'] truncate">{{ course.name }}</p>
+                          <p class="text-xs text-gray-400 font-['Inter']">{{ course.credit_units }} credit{% if course.credit_units != 1 %}s{% endif %}</p>
+                        </div>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <a href="{% url 'eduweb:program_detail' program.slug %}"
+                     class="mt-2 inline-flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl text-xs font-semibold bg-primary-950 text-white hover:bg-primary-800 transition-colors duration-200 font-['Inter']">
+                    View Full Program
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                  </a>
+                </div>
+              </div>
+              {% endfor %}
+              {% else %}
+              <div class="text-center py-8 text-gray-400 text-sm font-['Inter']">
+                <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
+                No programs in this department yet.
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div><!-- /mobile -->
+
+      <!-- ─────────────────────────────────────────────────
+           DESKTOP: Sidebar tabs + right panel
+      ───────────────────────────────────────────────── -->
+      <div class="hidden lg:flex gap-8 items-start" id="desktopLayout">
+
+        <!-- ── Sidebar tab list ── -->
+        <aside class="w-72 flex-shrink-0 sidebar-sticky" aria-label="Department navigation">
           <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
-            <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-2 pb-3">Departments</p>
-            <div role="tablist" aria-label="Select a department" class="space-y-1.5">
+            <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-2 pb-3 font-['Inter']">Departments</p>
+            <div role="tablist" aria-label="Select a department" class="space-y-1.5" id="deskTabList">
               {% for dept in departments %}
               <button
-                id="tab-{{ dept.slug }}"
+                id="desk-tab-{{ dept.slug }}"
                 role="tab"
                 data-dept="{{ dept.slug }}"
+                data-dept-name="{{ dept.name|lower }}"
+                data-dept-code="{{ dept.code|lower }}"
                 aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
-                aria-controls="panel-{{ dept.slug }}"
-                class="dept-tab w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-1 flex items-start justify-between gap-3
-                       {% if forloop.first %}dept-tab-active{% else %}dept-tab-inactive{% endif %}">
+                aria-controls="desk-panel-{{ dept.slug }}"
+                class="dept-desk-tab w-full text-left px-4 py-3.5 rounded-xl border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-1 flex items-start justify-between gap-3
+                       {% if forloop.first %}bg-gradient-to-r from-primary-950 to-purple-700 text-white border-transparent shadow-lg{% else %}bg-white text-gray-700 border-gray-200 hover:border-purple-300 hover:bg-purple-50{% endif %}">
                 <span class="flex-1 min-w-0">
-                  <span class="dept-code block text-xs font-bold uppercase tracking-wider mb-0.5 truncate">{{ dept.code }}</span>
-                  <span class="block text-sm font-semibold leading-snug">{{ dept.name }}</span>
+                  <span class="block text-xs font-bold uppercase tracking-wider mb-0.5 truncate font-['Inter']
+                    {% if forloop.first %}text-purple-200{% else %}text-primary-600{% endif %}">
+                    {{ dept.code }}
+                  </span>
+                  <span class="block text-sm font-semibold leading-snug font-['Inter']">{{ dept.name }}</span>
                 </span>
-                <span class="dept-count text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 whitespace-nowrap">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 whitespace-nowrap font-['Inter']
+                  {% if forloop.first %}bg-white/20 text-white{% else %}bg-purple-50 text-purple-700{% endif %}">
                   {{ dept.active_programs|length }}
                 </span>
               </button>
@@ -319,27 +514,27 @@
           </div>
         </aside>
 
-        <!-- Program panels -->
+        <!-- ── Program panels ── -->
         <div class="flex-1 min-w-0">
           {% for dept in departments %}
           <div
-            id="panel-{{ dept.slug }}"
+            id="desk-panel-{{ dept.slug }}"
             role="tabpanel"
-            aria-labelledby="tab-{{ dept.slug }}"
+            aria-labelledby="desk-tab-{{ dept.slug }}"
             tabindex="0"
-            class="dept-panel {% if not forloop.first %}hidden{% endif %} focus:outline-none">
+            class="dept-desk-panel {% if not forloop.first %}hidden{% endif %} focus:outline-none dept-panel-animate">
 
-            <!-- Department header -->
-            <div class="mb-6 pb-5 border-b border-gray-100">
-              <div class="flex flex-wrap items-start justify-between gap-2">
+            <!-- Dept header -->
+            <div class="mb-8 pb-6 border-b border-gray-100">
+              <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <span class="text-xs font-bold uppercase tracking-widest text-primary-600 mb-1 block">{{ dept.code }}</span>
-                  <h3 class="font-display text-2xl font-bold text-gray-900">{{ dept.name }}</h3>
+                  <span class="text-xs font-bold uppercase tracking-widest text-primary-600 mb-1 block font-['Inter']">{{ dept.code }}</span>
+                  <h3 class="font-['Poppins'] text-2xl font-bold text-gray-900">{{ dept.name }}</h3>
                   {% if dept.description %}
-                  <p class="text-gray-500 text-sm mt-2 leading-relaxed max-w-xl">{{ dept.description }}</p>
+                  <p class="text-gray-500 text-sm mt-2 leading-relaxed max-w-xl font-['Inter']">{{ dept.description }}</p>
                   {% endif %}
                 </div>
-                <span class="text-sm text-gray-400 font-medium pt-1">
+                <span class="text-sm text-gray-400 font-medium pt-1 font-['Inter']">
                   {{ dept.active_programs|length }} program{% if dept.active_programs|length != 1 %}s{% endif %}
                 </span>
               </div>
@@ -348,29 +543,28 @@
             {% if dept.active_programs %}
             <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {% for program in dept.active_programs %}
-              <article class="prog-card bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden">
-
-                <!-- Accent bar -->
+              <article class="prog-card bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden prog-item"
+                       data-prog-name="{{ program.name|lower }}"
+                       data-prog-code="{{ program.code|lower }}"
+                       data-prog-level="{{ program.degree_level|lower }}">
                 <div class="h-1 bg-gradient-to-r from-primary-600 to-purple-400" aria-hidden="true"></div>
-
                 <div class="p-5 lg:p-6 flex flex-col flex-1">
 
-                  <!-- Degree badge — dynamic via program.degree_level -->
-                  <span class="inline-block text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full mb-4 w-fit badge-{{ program.degree_level }}">
+                  <span class="inline-block text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full mb-4 w-fit badge-{{ program.degree_level }} font-['Inter']">
                     {{ program.get_degree_level_display }}
                   </span>
 
-                  <h4 class="font-display text-base font-bold text-gray-900 leading-snug mb-1">{{ program.name }}</h4>
+                  <h4 class="font-['Poppins'] text-base font-bold text-gray-900 leading-snug mb-1">{{ program.name }}</h4>
                   <p class="text-xs text-gray-400 font-mono mb-3">{{ program.code }}</p>
 
                   {% if program.description %}
-                  <p class="text-sm text-gray-500 leading-relaxed mb-4 flex-1 line-clamp-2">{{ program.description }}</p>
+                  <p class="text-sm text-gray-500 leading-relaxed mb-3 line-clamp-2 font-['Inter']">{{ program.description }}</p>
                   {% else %}
                   <div class="flex-1"></div>
                   {% endif %}
 
-                  <!-- Meta chips -->
-                  <ul class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-400 mb-5 pt-3 border-t border-gray-50"
+                  <!-- Program meta -->
+                  <ul class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-400 mb-3 pt-3 border-t border-gray-50 font-['Inter']"
                       aria-label="Program details">
                     <li class="flex items-center gap-1.5">
                       <i data-lucide="clock" class="w-3.5 h-3.5 text-primary-400" aria-hidden="true"></i>
@@ -388,11 +582,52 @@
                     {% endif %}
                   </ul>
 
-                  <!-- View Programs -->
+                  <!-- ── Courses collapse/expand ────────────────── -->
+                  {% if program.active_courses %}
+                  <div class="mb-3">
+                    <button
+                      class="prog-courses-toggle w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:border-purple-300 hover:bg-purple-50 hover:text-primary-700 transition-all duration-200 font-['Inter']"
+                      data-target="desk-courses-{{ program.slug }}"
+                      aria-expanded="false"
+                      aria-controls="desk-courses-{{ program.slug }}">
+                      <span class="flex items-center gap-2">
+                        <i data-lucide="layout-list" class="w-3.5 h-3.5 text-primary-500" aria-hidden="true"></i>
+                        {{ program.active_courses|length }} Course{% if program.active_courses|length != 1 %}s{% endif %}
+                      </span>
+                      <i data-lucide="chevron-down" class="w-3.5 h-3.5 prog-courses-chevron text-gray-400" aria-hidden="true"></i>
+                    </button>
+
+                    <div id="desk-courses-{{ program.slug }}" class="prog-courses-content">
+                      <div class="mt-2 space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                        {% for course in program.active_courses %}
+                        <div class="course-item flex items-start gap-2.5 px-3 py-2.5 rounded-lg border border-gray-100 course-row cursor-default"
+                             data-course-name="{{ course.name|lower }}"
+                             data-course-code="{{ course.code|lower }}"
+                             data-course-type="{{ course.course_type|lower }}">
+                          <div class="w-7 h-7 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0 mt-0.5" aria-hidden="true">
+                            <i data-lucide="{{ course.icon|default:'book-open' }}" class="w-3.5 h-3.5 text-primary-700"></i>
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+                              <span class="text-xs font-bold uppercase px-1.5 py-0.5 rounded ctype-{{ course.course_type }} font-['Inter']">{{ course.get_course_type_display }}</span>
+                              <span class="text-xs text-gray-400 font-mono">Yr {{ course.year_of_study }}</span>
+                              <span class="text-xs text-gray-400 font-['Inter']">{{ course.get_semester_display }}</span>
+                            </div>
+                            <p class="text-xs font-semibold text-gray-800 font-['Poppins'] leading-snug">{{ course.name }}</p>
+                            <p class="text-xs text-gray-400 font-['Inter']">{{ course.code }} · {{ course.credit_units }} credit{% if course.credit_units != 1 %}s{% endif %}</p>
+                          </div>
+                        </div>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
+                  <!-- /courses -->
+
                   <a href="{% url 'eduweb:program_detail' program.slug %}"
-                     class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary-950 text-white hover:bg-primary-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2"
-                     aria-label="View Programs in {{ program.name }}">
-                    View Programs
+                     class="mt-auto inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary-950 text-white hover:bg-primary-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 font-['Inter']"
+                     aria-label="View {{ program.name }} program details">
+                    View Program
                     <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
                   </a>
 
@@ -402,11 +637,10 @@
             </div>
 
             {% else %}
-            <div class="flex flex-col items-center justify-center text-center py-20 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50"
-                 role="status">
+            <div class="flex flex-col items-center justify-center text-center py-20 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50" role="status">
               <i data-lucide="folder-open" class="w-12 h-12 text-gray-300 mb-3" aria-hidden="true"></i>
-              <p class="font-semibold text-gray-400">No programs in this department yet</p>
-              <p class="text-sm text-gray-400 mt-1">Check back soon for updates.</p>
+              <p class="font-semibold text-gray-400 font-['Inter']">No programs in this department yet</p>
+              <p class="text-sm text-gray-400 mt-1 font-['Inter']">Check back soon for updates.</p>
             </div>
             {% endif %}
 
@@ -414,17 +648,16 @@
           {% endfor %}
         </div>
 
-      </div>
+      </div><!-- /desktop layout -->
 
       {% else %}
-      <!-- Whole-section empty state -->
-      <div class="flex flex-col items-center justify-center text-center py-24 rounded-2xl border-2 border-dashed border-gray-200"
-           role="status">
+      <!-- Empty state -->
+      <div class="flex flex-col items-center justify-center text-center py-24 rounded-2xl border-2 border-dashed border-gray-200" role="status">
         <i data-lucide="inbox" class="w-14 h-14 text-gray-300 mb-4" aria-hidden="true"></i>
-        <p class="font-display text-lg font-semibold text-gray-400 mb-2">No departments listed yet</p>
-        <p class="text-sm text-gray-400 mb-6">This faculty is being set up. Check back soon.</p>
+        <p class="font-['Poppins'] text-lg font-semibold text-gray-400 mb-2">No departments listed yet</p>
+        <p class="text-sm text-gray-400 mb-6 font-['Inter']">This faculty is being set up. Check back soon.</p>
         <a href="{% url 'eduweb:index' %}"
-           class="inline-flex items-center gap-2 text-sm font-semibold text-primary-700 hover:text-primary-900 transition-colors duration-200 focus:outline-none focus:underline">
+           class="inline-flex items-center gap-2 text-sm font-semibold text-primary-700 hover:text-primary-900 transition-colors duration-200 focus:outline-none focus:underline font-['Inter']">
           Explore Other Faculties
           <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
         </a>
@@ -434,91 +667,86 @@
     </div>
   </section>
 
-  <!-- ══════════ SPECIAL FEATURES ══════════
-       Rendered dynamically from faculty.special_features (JSONField).
-       Each item must be: { "title": "...", "description": "...", "icon": "..." }
-       Added/edited via Django Admin → Faculty → Special Features.
-       Section is hidden entirely if the JSON list is empty.
-  ══════════════════════════════════════════ -->
+  <!-- ══════════════════════════════════════════════════
+       SPECIAL FEATURES
+  ══════════════════════════════════════════════════ -->
   {% if faculty.special_features %}
   <section class="py-16 lg:py-20 bg-gray-50" aria-labelledby="features-heading">
-    <div class="container mx-auto">
-
+    <div class="container mx-auto px-4 lg:px-6">
       <div class="max-w-2xl mb-12">
-        <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-2">What Sets Us Apart</p>
-        <h2 id="features-heading" class="font-display text-3xl lg:text-4xl font-bold text-gray-900">
+        <p class="text-primary-700 text-xs font-bold uppercase tracking-widest mb-2 font-['Inter']">What Sets Us Apart</p>
+        <h2 id="features-heading" class="font-['Poppins'] text-3xl lg:text-4xl font-bold text-gray-900">
           Distinctive Features
         </h2>
       </div>
-
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {% for feature in faculty.special_features %}
         <article class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <div class="w-11 h-11 rounded-xl bg-primary-50 flex items-center justify-center mb-5 flex-shrink-0" aria-hidden="true">
             <i data-lucide="{{ feature.icon|default:'star' }}" class="w-5 h-5 text-primary-700"></i>
           </div>
-          <h3 class="font-display text-sm font-bold text-gray-900 mb-2">{{ feature.title }}</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">{{ feature.description }}</p>
+          <h3 class="font-['Poppins'] text-sm font-bold text-gray-900 mb-2">{{ feature.title }}</h3>
+          <p class="text-xs text-gray-500 leading-relaxed font-['Inter']">{{ feature.description }}</p>
         </article>
         {% endfor %}
       </div>
-
     </div>
   </section>
   {% endif %}
 
-  <!-- ══════════ ACCREDITATION ══════════ -->
+  <!-- ══════════════════════════════════════════════════
+       ACCREDITATION
+  ══════════════════════════════════════════════════ -->
   {% if faculty.accreditation %}
   <section class="py-12 bg-white border-y border-gray-100" aria-labelledby="accred-heading">
-    <div class="container mx-auto max-w-4xl">
+    <div class="container mx-auto px-4 lg:px-6 max-w-4xl">
       <div class="flex flex-col sm:flex-row items-start gap-5">
-        <div class="w-11 h-11 rounded-xl bg-gold-50 flex items-center justify-center flex-shrink-0" aria-hidden="true">
-          <i data-lucide="shield-check" class="w-5 h-5 text-gold-600"></i>
+        <div class="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0" aria-hidden="true">
+          <i data-lucide="shield-check" class="w-5 h-5 text-amber-600"></i>
         </div>
         <div>
-          <h2 id="accred-heading" class="font-display text-base font-bold text-gray-900 mb-2">Accreditation</h2>
-          <p class="text-gray-600 text-sm leading-relaxed">{{ faculty.accreditation }}</p>
+          <h2 id="accred-heading" class="font-['Poppins'] text-base font-bold text-gray-900 mb-2">Accreditation</h2>
+          <p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ faculty.accreditation }}</p>
         </div>
       </div>
     </div>
   </section>
   {% endif %}
 
-  <!-- ══════════ CTA BANNER ══════════ -->
+  <!-- ══════════════════════════════════════════════════
+       CTA BANNER
+  ══════════════════════════════════════════════════ -->
   <section class="py-20 lg:py-24 bg-white" aria-labelledby="cta-heading">
-    <div class="container mx-auto">
+    <div class="container mx-auto px-4 lg:px-6">
       <div class="max-w-5xl mx-auto bg-gradient-to-br from-primary-950 via-primary-900 to-purple-900 rounded-3xl px-8 py-14 lg:px-16 relative overflow-hidden">
-
         <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
           <div class="absolute -bottom-16 -right-16 w-64 h-64 bg-purple-600 rounded-full blur-3xl opacity-30"></div>
           <div class="absolute top-0 left-0 w-48 h-48 bg-primary-700 rounded-full blur-3xl opacity-20"></div>
         </div>
-
         <div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           <div class="flex-1">
-            <p class="text-purple-300 text-xs font-bold uppercase tracking-widest mb-3">Start Your Journey</p>
-            <h2 id="cta-heading" class="font-display text-2xl lg:text-3xl font-bold text-white mb-3">
+            <p class="text-purple-300 text-xs font-bold uppercase tracking-widest mb-3 font-['Inter']">Start Your Journey</p>
+            <h2 id="cta-heading" class="font-['Poppins'] text-2xl lg:text-3xl font-bold text-white mb-3">
               Ready to Join {{ faculty.name }}?
             </h2>
-            <p class="text-purple-200 text-sm leading-relaxed max-w-lg">
+            <p class="text-purple-200 text-sm leading-relaxed max-w-lg font-['Inter']">
               Apply today and become part of a community built for innovation, excellence, and real-world impact.
             </p>
           </div>
           <div class="flex flex-wrap gap-3 flex-shrink-0">
             <a href="{% url 'eduweb:apply' %}"
-               class="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-950 rounded-xl font-semibold text-sm hover:bg-purple-50 hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950">
+               class="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-950 rounded-xl font-semibold text-sm hover:bg-purple-50 hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950 font-['Inter']">
               Apply Now
               <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
             </a>
             <a href="{% url 'eduweb:admission_requirement' %}"
-               class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950"
+               class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950 font-['Inter']"
                style="border:1.5px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.08);">
               View Requirements
               <i data-lucide="list-checks" class="w-4 h-4" aria-hidden="true"></i>
             </a>
           </div>
         </div>
-
       </div>
     </div>
   </section>
@@ -531,51 +759,265 @@
 document.addEventListener('DOMContentLoaded', function () {
   lucide.createIcons();
 
-  const tabs   = Array.from(document.querySelectorAll('.dept-tab'));
-  const panels = Array.from(document.querySelectorAll('.dept-panel'));
+  /* ════════════════════════════════════════════
+     DESKTOP: Tab sidebar behaviour
+  ════════════════════════════════════════════ */
+  const deskTabs   = Array.from(document.querySelectorAll('.dept-desk-tab'));
+  const deskPanels = Array.from(document.querySelectorAll('.dept-desk-panel'));
 
-  function activate(slug) {
-    tabs.forEach(function (tab) {
+  function activateDesktopTab(slug) {
+    deskTabs.forEach(function (tab) {
       const isActive = tab.dataset.dept === slug;
       tab.setAttribute('aria-selected', String(isActive));
-
       if (isActive) {
-        tab.classList.remove('dept-tab-inactive');
-        tab.classList.add('dept-tab-active');
+        tab.classList.remove('bg-white', 'text-gray-700', 'border-gray-200', 'hover:border-purple-300', 'hover:bg-purple-50');
+        tab.classList.add('bg-gradient-to-r', 'from-primary-950', 'to-purple-700', 'text-white', 'border-transparent', 'shadow-lg');
+        const codeSpan = tab.querySelector('span span');
+        if (codeSpan) { codeSpan.classList.remove('text-primary-600'); codeSpan.classList.add('text-purple-200'); }
+        const badge = tab.querySelector('span + span');
+        if (badge) { badge.classList.remove('bg-purple-50', 'text-purple-700'); badge.classList.add('bg-white/20', 'text-white'); }
       } else {
-        tab.classList.remove('dept-tab-active');
-        tab.classList.add('dept-tab-inactive');
+        tab.classList.add('bg-white', 'text-gray-700', 'border-gray-200', 'hover:border-purple-300', 'hover:bg-purple-50');
+        tab.classList.remove('bg-gradient-to-r', 'from-primary-950', 'to-purple-700', 'text-white', 'border-transparent', 'shadow-lg');
+        const codeSpan = tab.querySelector('span span');
+        if (codeSpan) { codeSpan.classList.add('text-primary-600'); codeSpan.classList.remove('text-purple-200'); }
+        const badge = tab.querySelector('span + span');
+        if (badge) { badge.classList.add('bg-purple-50', 'text-purple-700'); badge.classList.remove('bg-white/20', 'text-white'); }
       }
     });
 
-    panels.forEach(function (panel) {
-      const show = panel.id === 'panel-' + slug;
+    deskPanels.forEach(function (panel) {
+      const show = panel.id === 'desk-panel-' + slug;
       panel.classList.toggle('hidden', !show);
-      if (show) { panel.focus({ preventScroll: true }); }
+      if (show) {
+        panel.classList.remove('dept-panel-animate');
+        void panel.offsetWidth;
+        panel.classList.add('dept-panel-animate');
+        panel.focus({ preventScroll: true });
+      }
     });
   }
 
-  tabs.forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      activate(tab.dataset.dept);
-    });
-
-    // Full ARIA keyboard pattern
+  deskTabs.forEach(function (tab) {
+    tab.addEventListener('click', function () { activateDesktopTab(tab.dataset.dept); });
     tab.addEventListener('keydown', function (e) {
-      const idx = tabs.indexOf(tab);
+      const idx = deskTabs.indexOf(tab);
       const map = {
-        ArrowDown:  (idx + 1) % tabs.length,
-        ArrowRight: (idx + 1) % tabs.length,
-        ArrowUp:    (idx - 1 + tabs.length) % tabs.length,
-        ArrowLeft:  (idx - 1 + tabs.length) % tabs.length,
-        Home:       0,
-        End:        tabs.length - 1,
+        ArrowDown:  (idx + 1) % deskTabs.length,
+        ArrowRight: (idx + 1) % deskTabs.length,
+        ArrowUp:    (idx - 1 + deskTabs.length) % deskTabs.length,
+        ArrowLeft:  (idx - 1 + deskTabs.length) % deskTabs.length,
+        Home: 0, End: deskTabs.length - 1
       };
-      if (e.key in map) {
-        e.preventDefault();
-        tabs[map[e.key]].focus();
+      if (e.key in map) { e.preventDefault(); deskTabs[map[e.key]].focus(); }
+    });
+  });
+
+  /* ════════════════════════════════════════════
+     MOBILE: Accordion behaviour
+  ════════════════════════════════════════════ */
+  document.querySelectorAll('.dept-accordion-header').forEach(function (header) {
+    header.addEventListener('click', function () {
+      const targetId = header.dataset.target;
+      const content  = document.getElementById(targetId);
+      const isOpen   = header.classList.contains('open');
+      if (isOpen) {
+        header.classList.remove('open');
+        content.classList.remove('open');
+        header.setAttribute('aria-expanded', 'false');
+      } else {
+        header.classList.add('open');
+        content.classList.add('open');
+        header.setAttribute('aria-expanded', 'true');
       }
     });
+  });
+
+  /* ════════════════════════════════════════════
+     PROGRAM COURSES: Expand / collapse
+  ════════════════════════════════════════════ */
+  document.querySelectorAll('.prog-courses-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const targetId = btn.dataset.target;
+      const panel    = document.getElementById(targetId);
+      if (!panel) return;
+      const isOpen = btn.classList.contains('open');
+      btn.classList.toggle('open', !isOpen);
+      panel.classList.toggle('open', !isOpen);
+      btn.setAttribute('aria-expanded', String(!isOpen));
+      if (!isOpen) {
+        setTimeout(function () {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 150);
+      }
+    });
+  });
+
+  /* ════════════════════════════════════════════
+     LIVE SEARCH — departments, programs, courses
+  ════════════════════════════════════════════ */
+  const searchInput    = document.getElementById('facultySearch');
+  const clearBtn       = document.getElementById('searchClearBtn');
+  const searchSummary  = document.getElementById('searchSummary');
+  const noResults      = document.getElementById('searchNoResults');
+
+  if (!searchInput) return;
+
+  function normalize(str) {
+    return (str || '').toLowerCase().trim();
+  }
+
+  function countVisible(selector) {
+    return document.querySelectorAll(selector + ':not(.search-hidden)').length;
+  }
+
+  function runSearch(query) {
+    const q = normalize(query);
+    const isSearching = q.length > 0;
+
+    clearBtn.classList.toggle('hidden', !isSearching);
+    searchSummary.classList.toggle('hidden', !isSearching);
+
+    let totalMatches = 0;
+
+    // ── Handle mobile accordion items
+    document.querySelectorAll('#mobileAccordions .dept-item').forEach(function (deptEl) {
+      const deptMatch = deptEl.dataset.deptName.includes(q) || deptEl.dataset.deptCode.includes(q);
+      let deptHasMatch = deptMatch;
+
+      deptEl.querySelectorAll('.prog-item').forEach(function (progEl) {
+        const progMatch = progEl.dataset.progName.includes(q) || progEl.dataset.progCode.includes(q) || progEl.dataset.progLevel.includes(q);
+        let progHasMatch = progMatch;
+
+        progEl.querySelectorAll('.course-item').forEach(function (courseEl) {
+          const courseMatch = courseEl.dataset.courseName.includes(q) || courseEl.dataset.courseCode.includes(q) || courseEl.dataset.courseType.includes(q);
+          if (isSearching) {
+            courseEl.classList.toggle('search-hidden', !courseMatch && !progMatch && !deptMatch);
+          } else {
+            courseEl.classList.remove('search-hidden');
+          }
+          if (courseMatch) progHasMatch = true;
+        });
+
+        if (isSearching) {
+          progEl.classList.toggle('search-hidden', !progHasMatch && !deptMatch);
+          // Auto-expand courses if searching
+          if (progHasMatch || deptMatch) {
+            progEl.querySelectorAll('.prog-courses-content').forEach(function(c){ c.classList.add('open'); });
+            progEl.querySelectorAll('.prog-courses-toggle').forEach(function(b){ b.classList.add('open'); });
+          }
+        } else {
+          progEl.classList.remove('search-hidden');
+          progEl.querySelectorAll('.prog-courses-content').forEach(function(c){ c.classList.remove('open'); });
+          progEl.querySelectorAll('.prog-courses-toggle').forEach(function(b){ b.classList.remove('open'); });
+        }
+
+        if (progHasMatch) deptHasMatch = true;
+      });
+
+      if (isSearching) {
+        deptEl.classList.toggle('search-hidden', !deptHasMatch);
+        if (deptHasMatch) {
+          // Auto-open accordion
+          const hdr = deptEl.querySelector('.dept-accordion-header');
+          const content = deptEl.querySelector('.dept-accordion-content');
+          if (hdr && content) {
+            hdr.classList.add('open');
+            content.classList.add('open');
+            hdr.setAttribute('aria-expanded', 'true');
+          }
+          totalMatches++;
+        }
+      } else {
+        deptEl.classList.remove('search-hidden');
+      }
+    });
+
+    // ── Handle desktop panel items
+    document.querySelectorAll('#desktopLayout .dept-desk-panel').forEach(function (panelEl) {
+      const tabId  = panelEl.id.replace('desk-panel-', '');
+      const tabEl  = document.getElementById('desk-tab-' + tabId);
+      const deptCode  = tabEl ? normalize(tabEl.dataset.deptCode || '') : '';
+      const deptName  = tabEl ? normalize(tabEl.dataset.deptName || '') : '';
+      const deptMatch = deptCode.includes(q) || deptName.includes(q);
+      let panelHasMatch = deptMatch;
+
+      panelEl.querySelectorAll('.prog-item').forEach(function (progEl) {
+        const progMatch = progEl.dataset.progName.includes(q) || progEl.dataset.progCode.includes(q) || progEl.dataset.progLevel.includes(q);
+        let progHasMatch = progMatch;
+
+        progEl.querySelectorAll('.course-item').forEach(function (courseEl) {
+          const courseMatch = courseEl.dataset.courseName.includes(q) || courseEl.dataset.courseCode.includes(q) || courseEl.dataset.courseType.includes(q);
+          if (isSearching) {
+            courseEl.classList.toggle('search-hidden', !courseMatch && !progMatch && !deptMatch);
+          } else {
+            courseEl.classList.remove('search-hidden');
+          }
+          if (courseMatch) progHasMatch = true;
+        });
+
+        if (isSearching) {
+          progEl.classList.toggle('search-hidden', !progHasMatch && !deptMatch);
+          if (progHasMatch || deptMatch) {
+            progEl.querySelectorAll('.prog-courses-content').forEach(function(c){ c.classList.add('open'); });
+            progEl.querySelectorAll('.prog-courses-toggle').forEach(function(b){ b.classList.add('open'); });
+          }
+        } else {
+          progEl.classList.remove('search-hidden');
+          progEl.querySelectorAll('.prog-courses-content').forEach(function(c){ c.classList.remove('open'); });
+          progEl.querySelectorAll('.prog-courses-toggle').forEach(function(b){ b.classList.remove('open'); });
+        }
+
+        if (progHasMatch) panelHasMatch = true;
+      });
+
+      // Show/hide the sidebar tab
+      if (tabEl) {
+        if (isSearching) {
+          tabEl.classList.toggle('search-hidden', !panelHasMatch);
+          if (panelHasMatch) totalMatches++;
+        } else {
+          tabEl.classList.remove('search-hidden');
+          panelEl.classList.remove('hidden');
+        }
+      }
+
+      // When searching: show all matching panels, hide non-matching ones
+      if (isSearching) {
+        panelEl.classList.toggle('hidden', !panelHasMatch);
+      }
+    });
+
+    // When not searching: restore first-tab active state
+    if (!isSearching && deskTabs.length > 0) {
+      const firstVisible = deskTabs.find(function(t){ return !t.classList.contains('search-hidden'); });
+      if (firstVisible) activateDesktopTab(firstVisible.dataset.dept);
+    }
+
+    // No-results state
+    const hasAnyMatch = isSearching ? (totalMatches > 0 || countVisible('.prog-item') > 0) : true;
+    noResults.classList.toggle('show', isSearching && !hasAnyMatch);
+
+    if (isSearching) {
+      const matchText = hasAnyMatch
+        ? `Showing results for "${query}"`
+        : 'No matches found';
+      searchSummary.textContent = matchText;
+    }
+  }
+
+  let searchTimeout;
+  searchInput.addEventListener('input', function () {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(function () {
+      runSearch(searchInput.value);
+    }, 180);
+  });
+
+  clearBtn.addEventListener('click', function () {
+    searchInput.value = '';
+    runSearch('');
+    searchInput.focus();
   });
 });
 </script>

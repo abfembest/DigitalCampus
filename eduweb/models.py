@@ -651,14 +651,30 @@ class Department(models.Model):
 
     ############################# PROGRAMS ########
 
+# ==============================================================================
+# PROGRAM
+# Represents the academic qualification / degree offering within a Department.
+# e.g. "BSc Computer Science", "MBA", "Diploma in Nursing"
+# ==============================================================================
 
 class Program(models.Model):
+
+    STUDY_MODE_CHOICES = [
+        ('full_time', 'Full Time'),
+        ('part_time', 'Part Time'),
+        ('online', 'Online'),
+        ('blended', 'Blended'),
+    ]
+
+    # ── Hierarchy ──────────────────────────────────────────────────────────────
     department = models.ForeignKey(
-        "eduweb.Department",
+        "Department",
         on_delete=models.CASCADE,
-        related_name="programs"
+        related_name="programs",
+        help_text="Department this program belongs to"
     )
 
+    # ── Identity ───────────────────────────────────────────────────────────────
     name = models.CharField(
         max_length=200,
         help_text="Program name (e.g., BSc Electrical Engineering)"
@@ -669,18 +685,121 @@ class Program(models.Model):
         help_text="Program code (e.g., BSC-EEE)"
     )
 
+    # ── Academic Structure ─────────────────────────────────────────────────────
     degree_level = models.CharField(
         max_length=50,
-        choices= DEGREE_LEVEL_CHOICES
+        choices=DEGREE_LEVEL_CHOICES,
+        help_text="The level of qualification awarded"
+    )
+    duration_years = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        help_text="Total duration of the program in years (e.g., 4.0)"
+    )
+    credits_required = models.IntegerField(
+        default=120,
+        help_text="Total credit units required to complete the program"
+    )
+    available_study_modes = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Study modes available: full_time, part_time, online, blended"
+    )
+    max_students = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Maximum student capacity per intake (leave blank for unlimited)"
     )
 
-    duration_years = models.DecimalField(max_digits=3, decimal_places=1)
-    credits_required = models.IntegerField(default=120)
-    description = models.TextField(blank=True)
-    entry_requirements = models.JSONField(default=list, blank=True)
-    application_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    tuition_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    max_students = models.IntegerField(null=True, blank=True)
+    # ── Marketing / Display Content ────────────────────────────────────────────
+    tagline = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Short marketing tagline shown on program cards and hero sections"
+    )
+    overview = models.TextField(
+        blank=True,
+        help_text="Short overview paragraph (used on listing pages)"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Full program description (used on detail page)"
+    )
+
+    # ── Curriculum ─────────────────────────────────────────────────────────────
+    entry_requirements = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of admission/entry requirements"
+    )
+    core_courses = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of compulsory course names/codes in this program"
+    )
+    specialization_tracks = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of available specialization tracks or majors"
+    )
+
+    # ── Outcomes & Career ──────────────────────────────────────────────────────
+    learning_outcomes = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="What graduates will know and be able to do"
+    )
+    career_paths = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Typical careers graduates pursue"
+    )
+    avg_starting_salary = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Average starting salary for graduates (e.g., '$45,000 - $60,000')"
+    )
+    job_placement_rate = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Graduate job placement rate as a percentage (0–100)"
+    )
+
+    # ── Financial ──────────────────────────────────────────────────────────────
+    application_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Fee to apply for this program"
+    )
+    tuition_fee = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0.00,
+        help_text="Tuition fee per academic year"
+    )
+
+    # ── Media ──────────────────────────────────────────────────────────────────
+    hero_image = models.ImageField(
+        upload_to='programs/heroes/',
+        blank=True,
+        null=True,
+        help_text="Hero/banner image for the program detail page"
+    )
+
+    # ── SEO ────────────────────────────────────────────────────────────────────
+    meta_description = models.CharField(
+        max_length=160,
+        blank=True,
+        help_text="SEO meta description (max 160 characters)"
+    )
+    meta_keywords = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="SEO meta keywords (comma separated)"
+    )
+
+    # ── Status & Display ───────────────────────────────────────────────────────
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
     display_order = models.IntegerField(default=0)
@@ -690,9 +809,16 @@ class Program(models.Model):
     class Meta:
         unique_together = ("department", "code")
         ordering = ["display_order", "name"]
+        verbose_name = "Program"
+        verbose_name_plural = "Programs"
+        indexes = [
+            models.Index(fields=["department", "is_active"]),
+            models.Index(fields=["degree_level"]),
+            models.Index(fields=["slug"]),
+        ]
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.code})"
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -704,89 +830,232 @@ class Program(models.Model):
                 counter += 1
         super().save(*args, **kwargs)
 
+    # ── Convenience Properties ─────────────────────────────────────────────────
+    @property
+    def faculty(self):
+        """Access faculty directly without storing a redundant FK."""
+        return self.department.faculty
 
-class Course(models.Model):
-   
+    def get_active_courses(self):
+        """Return all active courses under this program."""
+        return self.courses.filter(is_active=True).order_by('year_of_study', 'semester', 'display_order')
 
-    STUDY_MODE_CHOICES = [
-        ('full_time', 'Full Time'),
-        ('part_time', 'Part Time'),
-        ('online', 'Online'),
-        ('blended', 'Blended')
+    def get_total_credit_units(self):
+        """Sum of credit units across all active courses."""
+        return self.courses.filter(is_active=True).aggregate(
+            total=models.Sum('credit_units')
+        )['total'] or 0
+
+# ==============================================================================
+# ACADEMIC SESSION
+# Represents a single academic year and its semester breakdown.
+# e.g. "2024/2025" with First Semester: Sep–Jan, Second Semester: Feb–Jun
+# ==============================================================================
+
+class AcademicSession(models.Model):
+
+    STATUS_CHOICES = [
+        ('upcoming', 'Upcoming'),
+        ('active',   'Active'),
+        ('closed',   'Closed'),
     ]
 
-    # Basic Info
+    # ── Identity ───────────────────────────────────────────────────────────
+    name = models.CharField(
+        max_length=20,
+        unique=True,
+        help_text="Academic year label (e.g., 2024/2025)"
+    )
+
+    # ── Semester 1 ─────────────────────────────────────────────────────────
+    first_semester_start  = models.DateField(help_text="First semester start date")
+    first_semester_end    = models.DateField(help_text="First semester end date")
+
+    # ── Semester 2 ─────────────────────────────────────────────────────────
+    second_semester_start = models.DateField(help_text="Second semester start date")
+    second_semester_end   = models.DateField(help_text="Second semester end date")
+
+    # ── Registration Windows ───────────────────────────────────────────────
+    registration_start    = models.DateField(
+        null=True, blank=True,
+        help_text="When student course registration opens"
+    )
+    registration_end      = models.DateField(
+        null=True, blank=True,
+        help_text="When student course registration closes"
+    )
+
+    # ── Status ─────────────────────────────────────────────────────────────
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='upcoming',
+        help_text="Only one session should be 'active' at a time"
+    )
+    is_current = models.BooleanField(
+        default=False,
+        help_text="Mark this as the current running session"
+    )
+
+    # ── Timestamps ─────────────────────────────────────────────────────────
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-name']
+        verbose_name = 'Academic Session'
+        verbose_name_plural = 'Academic Sessions'
+        indexes = [
+            models.Index(fields=['is_current']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        # Ensure only one session is marked as current at a time
+        if self.is_current:
+            AcademicSession.objects.exclude(pk=self.pk).update(is_current=False)
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_current(cls):
+        """Fetch the active session. Use this everywhere instead of hardcoding."""
+        return cls.objects.filter(is_current=True).first()
+
+class Course(models.Model):
+
+    COURSE_TYPE_CHOICES = [
+        ('core', 'Core'),
+        ('elective', 'Elective'),
+        ('general', 'General Studies'),
+        ('prerequisite', 'Prerequisite'),
+    ]
+
+    SEMESTER_CHOICES = [
+        ('first', 'First Semester'),
+        ('second', 'Second Semester'),
+        ('annual', 'Annual'),
+    ]
+
+    # ── Hierarchy ──────────────────────────────────────────────────────────────
+    program = models.ForeignKey(
+        Program,
+        on_delete=models.CASCADE,
+        related_name="courses",
+        help_text="Program this course belongs to"
+    )
+
+    # ── Identity ───────────────────────────────────────────────────────────────
     name = models.CharField(max_length=200, help_text="Course name")
     slug = models.SlugField(max_length=200, unique=True)
-    code = models.CharField(max_length=20, unique=True, help_text="Course code")
-    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="courses", null=True, blank=True)
-    department = models.ForeignKey('Department', on_delete=models.CASCADE, related_name='courses', null=True, blank=True)
-    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, related_name='courses')
-    
-    # Display
-    icon = models.CharField(max_length=50, default='book-open', help_text="Lucide icon name")
+    code = models.CharField(max_length=20, help_text="Course code (e.g., CS101)")
+
+    # ── Academic Structure ─────────────────────────────────────────────────────
+    course_type = models.CharField(
+        max_length=20,
+        choices=COURSE_TYPE_CHOICES,
+        default='core',
+        help_text="Whether this is a core requirement, elective, or general studies unit"
+    )
+    credit_units = models.IntegerField(
+        default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+        help_text="Credit units this course carries"
+    )
+    year_of_study = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(7)],
+        help_text="Which year of the program this course is taught in (e.g., 1, 2, 3)"
+    )
+    semester = models.CharField(
+        max_length=20,
+        choices=SEMESTER_CHOICES,
+        default='first',
+        help_text="Which semester this course runs in"
+    )
+
+    # ── Session Link ───────────────────────────────────────────────────────────
+    academic_session = models.ForeignKey(
+        'AcademicSession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='courses',
+        help_text="The academic session/year this course offering is tied to"
+    )
+
+    # ── Instructor ─────────────────────────────────────────────────────────────
+    lecturer = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='academic_courses_teaching',
+        help_text="Primary lecturer/instructor for this course"
+    )
+
+    # ── Content ────────────────────────────────────────────────────────────────
+    description = models.TextField(
+        blank=True,
+        help_text="What this course covers"
+    )
+    learning_outcomes = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Specific learning outcomes for this course unit"
+    )
+
+    # ── Display ────────────────────────────────────────────────────────────────
+    icon = models.CharField(
+        max_length=50,
+        default='book-open',
+        help_text="Lucide icon name for display"
+    )
     color_primary = models.CharField(max_length=20, default='blue')
     color_secondary = models.CharField(max_length=20, default='cyan')
-    
-    # Program Details
-    degree_level = models.CharField(max_length=50, choices=DEGREE_LEVEL_CHOICES)
-    available_study_modes = models.JSONField(default=list, help_text="List of available study modes")
-    duration_years = models.DecimalField(max_digits=3, decimal_places=1, default=4.0)
-    credits_required = models.IntegerField(default=120)
-    
-    # Content
-    tagline = models.CharField(max_length=200)
-    overview = models.TextField()
-    description = models.TextField()
-    
-    # Learning Outcomes & Career
-    learning_outcomes = models.JSONField(default=list)
-    career_paths = models.JSONField(default=list)
-    
-    # Curriculum
-    core_courses = models.JSONField(default=list)
-    specialization_tracks = models.JSONField(default=list)
-    
-    # Requirements
-    entry_requirements = models.JSONField(default=list)
-    
-    # Financial Information
-    application_fee = models.DecimalField(max_digits=10, decimal_places=2)
-    tuition_fee = models.DecimalField(max_digits=12, decimal_places=2)
-    
-    # Statistics
-    avg_starting_salary = models.CharField(max_length=50, blank=True)
-    job_placement_rate = models.IntegerField(default=0, help_text="Percentage (0-100)")
-    
-    # Media
-    hero_image = models.ImageField(upload_to='courses/heroes/', blank=True, null=True)
-    
-    # SEO
-    meta_description = models.CharField(max_length=160, blank=True)
-    meta_keywords = models.CharField(max_length=255, blank=True)
-    
-    # Status
+
+    # ── Status & Display ───────────────────────────────────────────────────────
     is_active = models.BooleanField(default=True)
-    is_featured = models.BooleanField(default=False)
     display_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
+        unique_together = [['program', 'code']]
+        ordering = ['year_of_study', 'semester', 'display_order', 'name']
         verbose_name = 'Course'
         verbose_name_plural = 'Courses'
-        ordering = ['faculty', 'display_order', 'name']
-    
+        indexes = [
+            models.Index(fields=['program', 'is_active']),
+            models.Index(fields=['year_of_study', 'semester']),
+            models.Index(fields=['course_type']),
+            models.Index(fields=['academic_session']),
+        ]
+
     def __str__(self):
-        return self.name
-    
+        return f"{self.code} — {self.name}"
+
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = slugify(f"{self.code}-{self.name}")
+            original_slug = self.slug
+            counter = 1
+            while Course.objects.filter(slug=self.slug).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
         super().save(*args, **kwargs)
 
+    # ── Convenience Properties ─────────────────────────────────────────────────
+    @property
+    def department(self):
+        """Derived from program — no redundant FK needed."""
+        return self.program.department
 
-
+    @property
+    def faculty(self):
+        """Derived from program → department — no redundant FK needed."""
+        return self.program.department.faculty
 
 class AllRequiredPayments(models.Model):
     WHO_TO_PAY_CHOICES = [
@@ -795,26 +1064,12 @@ class AllRequiredPayments(models.Model):
         ("applicant", "Applicant"),
         ("other", "Other"),
     ]
-
-    faculty = models.ForeignKey(
-        Faculty,
-        on_delete=models.CASCADE,
-        related_name="required_payments"
-    )
-
-    department = models.ForeignKey(
-        "eduweb.Department",
-        on_delete=models.CASCADE,
-        related_name="required_payments"
-    )
-
+    
     program = models.ForeignKey(
         Program,
         on_delete=models.CASCADE,
-        null=True,
-        blank=True,
         related_name="required_payments",
-        help_text="Scope this payment to a specific program (optional)"
+        help_text="Program this payment applies to"
     )
     course = models.ForeignKey(
         Course,
@@ -824,10 +1079,13 @@ class AllRequiredPayments(models.Model):
         related_name="required_payments",
         help_text="Scope this payment to a specific course (optional)"
     )
-    academic_year = models.CharField(
-        max_length=9,
+    # Correct — proper FK reference
+    academic_session = models.ForeignKey(
+        'AcademicSession',
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        help_text="e.g. 2024/2025"
+        related_name='required_payments'
     )
     semester = models.CharField(
         max_length=20,
@@ -868,8 +1126,17 @@ class AllRequiredPayments(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.purpose} - {self.faculty.code}/{self.department.code}"
+        session = self.academic_session.name if self.academic_session else 'No Session'
+        program = self.program.code if self.program else 'All Programs'
+        return f"{self.purpose} - {program} ({session})"
 
+    @property
+    def faculty(self):
+        return self.program.department.faculty if self.program else None
+
+    @property
+    def department(self):
+        return self.program.department if self.program else None
 
 
 class CourseIntake(models.Model):
@@ -880,7 +1147,7 @@ class CourseIntake(models.Model):
         ('september', 'September'),
     ]
     
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='intakes')
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='intakes')
     intake_period = models.CharField(max_length=20, choices=INTAKE_PERIOD_CHOICES)
     year = models.IntegerField()
     start_date = models.DateField()
@@ -892,10 +1159,10 @@ class CourseIntake(models.Model):
         ordering = ['-year', 'intake_period']
         verbose_name = 'Course Intake'
         verbose_name_plural = 'Course Intakes'
-        unique_together = [['course', 'intake_period', 'year']]
+        unique_together = [['program', 'intake_period', 'year']]
     
     def __str__(self):
-        return f"{self.course.name} - {self.intake_period.title()} {self.year}"
+        return f"{self.program.name} - {self.intake_period.title()} {self.year}"
 
 
 class CourseApplication(models.Model):
@@ -925,9 +1192,9 @@ class CourseApplication(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
     
     # Course & Intake
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='applications')
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='applications')
     intake = models.ForeignKey(CourseIntake, on_delete=models.CASCADE, related_name='applications')
-    study_mode = models.CharField(max_length=20, choices=Course.STUDY_MODE_CHOICES)
+    study_mode = models.CharField(max_length=20, choices=Program.STUDY_MODE_CHOICES)
     
     # Personal Information
     first_name = models.CharField(max_length=100)
@@ -1196,7 +1463,7 @@ class ApplicationPayment(models.Model):
             self.payment_reference = f"PAY-{uuid.uuid4().hex[:12].upper()}"
         
         if not self.amount:
-            self.amount = self.application.course.application_fee
+            self.amount = self.application.course.program.application_fee
         
         if self.status == 'success' and not self.paid_at:
             self.paid_at = timezone.now()
@@ -1567,7 +1834,7 @@ class LMSCourse(models.Model):
     language = models.CharField(max_length=50, default='English')
     
     # Instructor
-    instructor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='courses_teaching')
+    instructor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='lms_courses_teaching')
     instructor_name = models.CharField(max_length=100, blank=True)
     instructor_bio = models.TextField(blank=True)
     

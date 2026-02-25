@@ -73,7 +73,7 @@ def dashboard(request):
         'data': applications_by_day
     })
     
-    program_distribution = CourseApplication.objects.values('course__name', 'course__faculty__name').annotate(
+    program_distribution = CourseApplication.objects.values('program__name', 'course__faculty__name').annotate(
         count=Count('id')
     ).order_by('-count')[:10]  # Top 10 courses
 

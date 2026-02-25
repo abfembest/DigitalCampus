@@ -174,7 +174,7 @@ class CourseApplicationForm(forms.ModelForm):
         model = CourseApplication
         fields = [
             # Course & Intake
-            'course', 'intake', 'study_mode',
+            'program', 'intake', 'study_mode',
             
             # Personal Information
             'first_name', 'last_name', 'email', 'phone',
@@ -200,7 +200,7 @@ class CourseApplicationForm(forms.ModelForm):
         
         widgets = {
             # Course & Intake
-            'course': forms.Select(attrs={
+            'program': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
             }),
             'intake': forms.Select(attrs={

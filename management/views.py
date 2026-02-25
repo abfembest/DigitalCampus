@@ -73,12 +73,16 @@ def dashboard(request):
         'data': applications_by_day
     })
     
-    program_distribution = CourseApplication.objects.values('program__name', 'course__faculty__name').annotate(
+    program_distribution = CourseApplication.objects.values(
+        'program__name', 'program__department__faculty__name'
+    ).annotate(
         count=Count('id')
-    ).order_by('-count')[:10]  # Top 10 courses
+    ).order_by('-count')[:10]
 
-    program_labels = [f"{item['course__name']} ({item['course__faculty__name']})" 
-                    for item in program_distribution]
+    program_labels = [
+        f"{item['program__name']} ({item['program__department__faculty__name'] or 'N/A'})"
+        for item in program_distribution
+    ]
     program_data = [item['count'] for item in program_distribution]
     
     program_chart_data = json.dumps({
@@ -127,7 +131,7 @@ def applications_list(request):
     
     # Apply program filter
     if program_filter:
-        applications = applications.filter(course__id=program_filter)
+        applications = applications.filter(program__id=program_filter)
     
     # Pagination
     paginator = Paginator(applications, 15)  # 15 applications per page
@@ -137,13 +141,13 @@ def applications_list(request):
     # Get pending count for sidebar
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
-    from eduweb.models import Course
+    from eduweb.models import Program
 
     context = {
         'applications': page_obj,
         'programs': [
-            (str(c.id), f"{c.name} ({c.faculty.name})")
-            for c in Course.objects.filter(is_active=True).select_related('faculty')
+            (str(p.id), f"{p.name} ({p.department.faculty.name})")
+            for p in Program.objects.filter(is_active=True).select_related('department__faculty')
         ],
         'pending_count': pending_count,
     }
@@ -1969,16 +1973,16 @@ def get_recipient_emails(filter_type, filter_values):
         faculty_ids = filter_values.get('faculties', [])
         emails = set(
             CourseApplication.objects.filter(
-                course__faculty_id__in=faculty_ids
+                program__department__faculty_id__in=faculty_ids
             ).values_list('email', flat=True)
         )
     
     elif filter_type == 'course':
-        # Users who applied to selected courses
-        course_ids = filter_values.get('courses', [])
+        # Users who applied to selected programs
+        program_ids = filter_values.get('courses', [])
         emails = set(
             CourseApplication.objects.filter(
-                course_id__in=course_ids
+                program_id__in=program_ids
             ).values_list('email', flat=True)
         )
     

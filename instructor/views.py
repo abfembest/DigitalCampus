@@ -1,3 +1,4 @@
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -23,6 +24,17 @@ from .forms import (
     AnnouncementForm, InstructorProfileForm, InstructorSettingsForm, PasswordChangeForm, SupportTicketForm
 )
 from eduweb.decorators import instructor_required
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Avg, Count, Q
+from django.utils import timezone
+from eduweb.models import (
+    LMSCourse, Announcement, QuizAttempt, QuizResponse,
+    Message, Discussion, DiscussionReply, Enrollment
+)
 
 
 # ==================== DASHBOARD ====================
@@ -372,7 +384,7 @@ def lesson_create(request, course_slug):
 
 @login_required(login_url='auth')
 @instructor_required
-def lesson_edit(request, course_slug, lesson_id):
+def lesson_edit(request, course_slug, lesson_slug):
     """Edit lesson using course slug"""
     course = get_object_or_404(
         LMSCourse,
@@ -381,7 +393,7 @@ def lesson_edit(request, course_slug, lesson_id):
     )
     lesson = get_object_or_404(
         Lesson,
-        id=lesson_id,
+        slug=lesson_slug,
         course=course
     )
     
@@ -411,7 +423,7 @@ def lesson_edit(request, course_slug, lesson_id):
 
 @login_required(login_url='auth')
 @instructor_required
-def lesson_delete(request, course_slug, lesson_id):
+def lesson_delete(request, course_slug, lesson_slug):
     """Delete lesson using course slug"""
     course = get_object_or_404(
         LMSCourse,
@@ -420,7 +432,7 @@ def lesson_delete(request, course_slug, lesson_id):
     )
     lesson = get_object_or_404(
         Lesson,
-        id=lesson_id,
+        slug=lesson_slug,
         course=course
     )
     
@@ -1128,7 +1140,7 @@ def course_statistics(request):
         'active_students': active_students,
         'completed_courses': completed_courses,
         'avg_course_rating': round(avg_course_rating, 1),
-        'daily_enrollments': enrollment_data,
+        'daily_enrollments': json.dumps(enrollment_data),
     }
     
     return render(
@@ -1288,7 +1300,7 @@ def reviews_ratings(request):
         'avg_rating': round(avg_rating, 1),
         'rating_distribution': rating_distribution,
         'course_ratings': course_ratings,
-        'monthly_reviews': monthly_data,
+        'monthly_reviews': json.dumps(monthly_data),
     }
     
     return render(
@@ -1332,8 +1344,8 @@ def resources(request):
                 lesson_docs.append({
                     'course': course,
                     'lesson': lesson,
-                    'file': lesson.document,
-                    'name': lesson.document.name.split('/')[-1],
+                    'file': lesson.file,
+                    'name': lesson.file.name.split('/')[-1],
                     'type': 'document',
                     'uploaded': lesson.created_at
                 })
@@ -1632,3 +1644,414 @@ Role: Instructor
         'page_title': 'Help & Support',
     }
     return render(request, 'instructor/help_support.html', context)
+
+# ============================================================
+# 1.  ANNOUNCEMENT LIST / EDIT / DELETE
+# ============================================================
+
+@login_required(login_url='auth')
+@instructor_required
+def announcement_list(request, course_slug):
+    """List all announcements for a course."""
+    course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    announcements_qs = course.announcements.all().order_by('-publish_date')
+
+    paginator = Paginator(announcements_qs, 10)
+    page = request.GET.get('page')
+    announcements = paginator.get_page(page)
+
+    return render(request, 'instructor/announcements_list.html', {
+        'course': course,
+        'announcements': announcements,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def announcement_edit(request, course_slug, announcement_slug):
+    """Edit an existing announcement."""
+    course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    announcement = get_object_or_404(Announcement, slug=announcement_slug, course=course)
+
+    if request.method == 'POST':
+        form = AnnouncementForm(request.POST, instance=announcement)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Announcement updated successfully!')
+            return redirect('instructor:announcement_list', course_slug=course.slug)
+    else:
+        form = AnnouncementForm(instance=announcement)
+
+    return render(request, 'instructor/announcement_form.html', {
+        'form': form,
+        'course': course,
+        'announcement': announcement,
+        'editing': True,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def announcement_delete(request, course_slug, announcement_slug):
+    """Delete an announcement (POST only)."""
+    course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    announcement = get_object_or_404(Announcement, slug=announcement_slug, course=course)
+
+    if request.method == 'POST':
+        announcement.delete()
+        messages.success(request, 'Announcement deleted.')
+    return redirect('instructor:announcement_list', course_slug=course.slug)
+
+
+# ============================================================
+# 2.  QUIZ RESULTS — QuizAttempt + QuizResponse
+# ============================================================
+
+@login_required(login_url='auth')
+@instructor_required
+def quiz_results(request, course_slug, lesson_slug, quiz_slug):
+    """Show all student attempts for a quiz."""
+    from eduweb.models import Lesson, Quiz
+    course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
+    quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
+
+    attempts = QuizAttempt.objects.filter(
+        quiz=quiz, is_completed=True
+    ).select_related('student').order_by('-started_at')
+
+    total_attempts = attempts.count()
+    passed_count   = attempts.filter(passed=True).count()
+    failed_count   = total_attempts - passed_count
+    pass_rate      = (passed_count / total_attempts * 100) if total_attempts else 0
+    avg_score      = attempts.aggregate(avg=Avg('percentage'))['avg'] or 0
+
+    return render(request, 'instructor/quiz_results.html', {
+        'course':        course,
+        'lesson':        lesson,
+        'quiz':          quiz,
+        'attempts':      attempts,
+        'total_attempts': total_attempts,
+        'passed_count':  passed_count,
+        'failed_count':  failed_count,
+        'pass_rate':     pass_rate,
+        'avg_score':     avg_score,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id):
+    """Detailed breakdown of a single student's quiz attempt."""
+    from eduweb.models import Lesson, Quiz
+    course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
+    quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
+    attempt = get_object_or_404(QuizAttempt, id=attempt_id, quiz=quiz)
+
+    responses       = attempt.responses.select_related(
+        'question', 'selected_answer'
+    ).prefetch_related('question__answers').order_by('question__display_order')
+    correct_count   = responses.filter(is_correct=True).count()
+    total_questions = responses.count()
+
+    return render(request, 'instructor/quiz_attempt_detail.html', {
+        'course':          course,
+        'lesson':          lesson,
+        'quiz':            quiz,
+        'attempt':         attempt,
+        'responses':       responses,
+        'correct_count':   correct_count,
+        'total_questions': total_questions,
+    })
+
+
+# ============================================================
+# 3.  MESSAGES — Inbox / Sent / Thread / Compose / Reply
+# ============================================================
+
+@login_required(login_url='auth')
+@instructor_required
+def messages_inbox(request):
+    """Show received messages (most recent per thread)."""
+    received = Message.objects.filter(
+        recipient=request.user, parent__isnull=True
+    ).select_related('sender').order_by('-created_at')
+
+    unread_count = received.filter(is_read=False).count()
+
+    return render(request, 'instructor/messages_inbox.html', {
+        'messages_list': received,
+        'active_folder': 'inbox',
+        'unread_count':  unread_count,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def messages_sent(request):
+    """Show sent messages."""
+    sent = Message.objects.filter(
+        sender=request.user, parent__isnull=True
+    ).select_related('recipient').order_by('-created_at')
+
+    return render(request, 'instructor/messages_inbox.html', {
+        'messages_list': sent,
+        'active_folder': 'sent',
+        'unread_count':  0,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def message_thread(request, message_id):
+    """Display a full conversation thread."""
+    root = get_object_or_404(
+        Message, id=message_id
+    )
+    # Security: only sender or recipient may view
+    if root.sender != request.user and root.recipient != request.user:
+        messages.error(request, 'You do not have access to this message.')
+        return redirect('instructor:messages_inbox')
+
+    # Mark as read if viewing as recipient
+    if root.recipient == request.user and not root.is_read:
+        root.mark_as_read()
+
+    thread_messages = [root] + list(
+        Message.objects.filter(parent=root).order_by('created_at')
+    )
+    other_user = root.recipient if root.sender == request.user else root.sender
+
+    return render(request, 'instructor/message_thread.html', {
+        'root_message':    root,
+        'thread_messages': thread_messages,
+        'thread_subject':  root.subject,
+        'other_user':      other_user,
+        'compose':         False,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def message_compose(request):
+    """Compose and send a new message."""
+    from .forms import MessageForm
+    initial = {}
+
+    # Pre-fill if coming from a student profile link: ?recipient=<id>&subject=...
+    recipient_id = request.GET.get('recipient')
+    subject      = request.GET.get('subject', '')
+    if recipient_id:
+        from django.contrib.auth.models import User as AuthUser
+        try:
+            initial['recipient'] = AuthUser.objects.get(pk=recipient_id)
+        except AuthUser.DoesNotExist:
+            pass
+    if subject:
+        initial['subject'] = subject
+
+    if request.method == 'POST':
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.sender = request.user
+            msg.save()
+            messages.success(request, f'Message sent to {msg.recipient.get_full_name()}!')
+            return redirect('instructor:messages_inbox')
+    else:
+        form = MessageForm(initial=initial)
+
+    # Build recipients list for the searchable UI (all active users except self)
+    from django.contrib.auth.models import User as AuthUser
+    recipients = AuthUser.objects.filter(
+        is_active=True
+    ).exclude(
+        id=request.user.id
+    ).select_related('profile').order_by('first_name', 'last_name')
+
+    return render(request, 'instructor/message_thread.html', {
+        'form':       form,
+        'compose':    True,
+        'recipients': recipients,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def message_reply(request, message_id):
+    """Post a reply to an existing thread (POST only)."""
+    root = get_object_or_404(Message, id=message_id)
+    if root.sender != request.user and root.recipient != request.user:
+        messages.error(request, 'Access denied.')
+        return redirect('instructor:messages_inbox')
+
+    if request.method == 'POST':
+        body = request.POST.get('body', '').strip()
+        if body:
+            other = root.recipient if root.sender == request.user else root.sender
+            Message.objects.create(
+                sender    = request.user,
+                recipient = other,
+                subject   = f'Re: {root.subject}',
+                body      = body,
+                parent    = root,
+            )
+            messages.success(request, 'Reply sent.')
+        else:
+            messages.error(request, 'Reply cannot be empty.')
+
+    return redirect('instructor:message_thread', message_id=root.id)
+
+
+@login_required(login_url='auth')
+@instructor_required
+def messages_mark_all_read(request):
+    """Mark all inbox messages as read."""
+    Message.objects.filter(recipient=request.user, is_read=False).update(
+        is_read=True, read_at=timezone.now()
+    )
+    messages.success(request, 'All messages marked as read.')
+    return redirect('instructor:messages_inbox')
+
+
+# ============================================================
+# 4.  DISCUSSIONS — List / Detail / Reply / Pin / Lock / Delete
+# ============================================================
+
+@login_required(login_url='auth')
+@instructor_required
+def discussions(request, course_slug):
+    """List all discussion threads for a course."""
+    course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    discussions_qs = Discussion.objects.filter(course=course).select_related(
+        'author'
+    ).prefetch_related('replies').order_by('-is_pinned', '-created_at')
+
+    return render(request, 'instructor/discussions.html', {
+        'course':      course,
+        'discussions': discussions_qs,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def discussion_detail(request, course_slug, discussion_slug):
+    """View a single discussion thread and its replies."""
+    course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
+
+    # Increment views
+    discussion.views_count += 1
+    discussion.save(update_fields=['views_count'])
+
+    replies = discussion.replies.select_related('author').order_by('created_at')
+
+    return render(request, 'instructor/discussion_detail.html', {
+        'course':     course,
+        'discussion': discussion,
+        'replies':    replies,
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def discussion_reply(request, course_slug, discussion_slug):
+    """Instructor posts a reply to a discussion (POST only)."""
+    course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
+
+    if request.method == 'POST' and not discussion.is_locked:
+        content = request.POST.get('content', '').strip()
+        if content:
+            DiscussionReply.objects.create(
+                discussion=discussion,
+                author=request.user,
+                content=content,
+            )
+            messages.success(request, 'Reply posted.')
+        else:
+            messages.error(request, 'Reply cannot be empty.')
+
+    return redirect('instructor:discussion_detail',
+                    course_slug=course.slug, discussion_slug=discussion.slug)
+
+
+@login_required(login_url='auth')
+@instructor_required
+def discussion_toggle_pin(request, course_slug, discussion_slug):
+    """Toggle pinned status (POST only)."""
+    course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
+
+    if request.method == 'POST':
+        discussion.is_pinned = not discussion.is_pinned
+        discussion.save(update_fields=['is_pinned'])
+        state = 'pinned' if discussion.is_pinned else 'unpinned'
+        messages.success(request, f'Discussion {state}.')
+
+    return redirect('instructor:discussions', course_slug=course.slug)
+
+
+@login_required(login_url='auth')
+@instructor_required
+def discussion_toggle_lock(request, course_slug, discussion_slug):
+    """Toggle locked status (POST only)."""
+    course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
+
+    if request.method == 'POST':
+        discussion.is_locked = not discussion.is_locked
+        discussion.save(update_fields=['is_locked'])
+        state = 'locked' if discussion.is_locked else 'unlocked'
+        messages.success(request, f'Discussion {state}.')
+
+    return redirect('instructor:discussions', course_slug=course.slug)
+
+
+@login_required(login_url='auth')
+@instructor_required
+def discussion_delete(request, course_slug, discussion_slug):
+    """Delete a discussion and all replies (POST only)."""
+    course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
+
+    if request.method == 'POST':
+        discussion.delete()
+        messages.success(request, 'Discussion deleted.')
+
+    return redirect('instructor:discussions', course_slug=course.slug)
+
+
+@login_required(login_url='auth')
+@instructor_required
+def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
+    """Mark / unmark a reply as the solution (POST only)."""
+    course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
+    reply      = get_object_or_404(DiscussionReply, id=reply_id, discussion=discussion)
+
+    if request.method == 'POST':
+        reply.is_solution = not reply.is_solution
+        reply.save(update_fields=['is_solution'])
+        state = 'marked as solution' if reply.is_solution else 'unmarked'
+        messages.success(request, f'Reply {state}.')
+
+    return redirect('instructor:discussion_detail',
+                    course_slug=course.slug, discussion_slug=discussion.slug)
+
+
+@login_required(login_url='auth')
+@instructor_required
+def reply_delete(request, course_slug, discussion_slug, reply_id):
+    """Delete a specific reply (POST only)."""
+    course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
+    discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
+    reply      = get_object_or_404(DiscussionReply, id=reply_id, discussion=discussion)
+
+    if request.method == 'POST':
+        reply.delete()
+        messages.success(request, 'Reply deleted.')
+
+    return redirect('instructor:discussion_detail',
+                    course_slug=course.slug, discussion_slug=discussion.slug)

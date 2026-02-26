@@ -22,8 +22,8 @@ urlpatterns = [
     # Lesson Management
     path('courses/<slug:course_slug>/lessons/', views.lesson_list, name='lesson_list'),
     path('courses/<slug:course_slug>/lessons/create/', views.lesson_create, name='lesson_create'),
-    path('courses/<slug:course_slug>/lessons/<int:lesson_id>/edit/', views.lesson_edit, name='lesson_edit'),
-    path('courses/<slug:course_slug>/lessons/<int:lesson_id>/delete/', views.lesson_delete, name='lesson_delete'),
+    path('courses/<slug:course_slug>/lessons/<slug:lesson_slug>/edit/', views.lesson_edit, name='lesson_edit'),
+    path('courses/<slug:course_slug>/lessons/<slug:lesson_slug>/delete/', views.lesson_delete, name='lesson_delete'),
     
     # Quiz Management
     path('courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/', views.quiz_list, name='quiz_list'),
@@ -83,5 +83,117 @@ urlpatterns = [
     path('profile/', views.instructor_profile, name='profile'),
     path('settings/', views.instructor_settings, name='settings'),
     path('help-support/', views.help_support, name='help_support'),
+
+    # ------------------------------------------------------------------
+    # ANNOUNCEMENTS  (list / edit / delete — create already exists)
+    # ------------------------------------------------------------------
+    path(
+        'courses/<slug:course_slug>/announcements/',
+        views.announcement_list,
+        name='announcement_list',
+    ),
+    path(
+        'courses/<slug:course_slug>/announcements/<slug:announcement_slug>/edit/',
+        views.announcement_edit,
+        name='announcement_edit',
+    ),
+    path(
+        'courses/<slug:course_slug>/announcements/<slug:announcement_slug>/delete/',
+        views.announcement_delete,
+        name='announcement_delete',
+    ),
+
+    # ------------------------------------------------------------------
+    # QUIZ RESULTS  (attempt list + single attempt breakdown)
+    # ------------------------------------------------------------------
+    path(
+        'courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/<slug:quiz_slug>/results/',
+        views.quiz_results,
+        name='quiz_results',
+    ),
+    path(
+        'courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/<slug:quiz_slug>/results/<int:attempt_id>/',
+        views.quiz_attempt_detail,
+        name='quiz_attempt_detail',
+    ),
+
+    # ------------------------------------------------------------------
+    # MESSAGES  (inbox / sent / thread / compose / reply / mark-all-read)
+    # ------------------------------------------------------------------
+    path(
+        'messages/',
+        views.messages_inbox,
+        name='messages_inbox',
+    ),
+    path(
+        'messages/sent/',
+        views.messages_sent,
+        name='messages_sent',
+    ),
+    path(
+        'messages/compose/',
+        views.message_compose,
+        name='message_compose',
+    ),
+    path(
+        'messages/<int:message_id>/',
+        views.message_thread,
+        name='message_thread',
+    ),
+    path(
+        'messages/<int:message_id>/reply/',
+        views.message_reply,
+        name='message_reply',
+    ),
+    path(
+        'messages/mark-all-read/',
+        views.messages_mark_all_read,
+        name='messages_mark_all_read',
+    ),
+
+    # ------------------------------------------------------------------
+    # DISCUSSIONS  (list / detail / reply / pin / lock / delete + reply actions)
+    # ------------------------------------------------------------------
+    path(
+        'courses/<slug:course_slug>/discussions/',
+        views.discussions,
+        name='discussions',
+    ),
+    path(
+        'courses/<slug:course_slug>/discussions/<slug:discussion_slug>/',
+        views.discussion_detail,
+        name='discussion_detail',
+    ),
+    path(
+        'courses/<slug:course_slug>/discussions/<slug:discussion_slug>/reply/',
+        views.discussion_reply,
+        name='discussion_reply',
+    ),
+    path(
+        'courses/<slug:course_slug>/discussions/<slug:discussion_slug>/pin/',
+        views.discussion_toggle_pin,
+        name='discussion_toggle_pin',
+    ),
+    path(
+        'courses/<slug:course_slug>/discussions/<slug:discussion_slug>/lock/',
+        views.discussion_toggle_lock,
+        name='discussion_toggle_lock',
+    ),
+    path(
+        'courses/<slug:course_slug>/discussions/<slug:discussion_slug>/delete/',
+        views.discussion_delete,
+        name='discussion_delete',
+    ),
+    path(
+        'courses/<slug:course_slug>/discussions/<slug:discussion_slug>/replies/<int:reply_id>/solution/',
+        views.reply_toggle_solution,
+        name='reply_toggle_solution',
+    ),
+    path(
+        'courses/<slug:course_slug>/discussions/<slug:discussion_slug>/replies/<int:reply_id>/delete/',
+        views.reply_delete,
+        name='reply_delete',
+    ),
+
 
 ]

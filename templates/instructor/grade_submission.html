@@ -58,8 +58,8 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Submission Text</label>
                     <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        {% if submission.content %}
-                        <p class="text-gray-900 whitespace-pre-wrap">{{ submission.content }}</p>
+                        {% if submission.submission_text %}
+                        <p class="text-gray-900 whitespace-pre-wrap">{{ submission.submission_text }}</p>
                         {% else %}
                         <p class="text-gray-500 italic">No text content submitted</p>
                         {% endif %}
@@ -67,7 +67,7 @@
                 </div>
 
                 <!-- Attached File -->
-                {% if submission.file %}
+                {% if submission.attachment %}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Attached File</label>
                     <div class="flex items-center space-x-3 bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -76,14 +76,14 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-medium text-gray-900 truncate">
-                                {{ submission.file.name|slice:"10:" }}
+                                {{ submission.attachment.name|slice:"10:" }}
                             </p>
                             <p class="text-sm text-gray-500">
                                 Uploaded {{ submission.submitted_at|date:"M d, Y H:i" }}
                             </p>
                         </div>
                         <div class="flex-shrink-0">
-                            <a href="{{ submission.file.url }}" 
+                            <a href="{{ submission.attachment.url }}" 
                                download
                                class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
                                 <i class="fas fa-download mr-2"></i>Download

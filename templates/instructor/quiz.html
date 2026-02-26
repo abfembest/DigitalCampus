@@ -31,10 +31,16 @@
             <h1 class="text-3xl font-bold text-gray-900 font-display">{{ quiz.title }}</h1>
             <p class="text-gray-600 mt-2">Manage quiz questions</p>
         </div>
-        <a href="{% url 'instructor:question_create' course.slug lesson.slug quiz.slug %}" 
-           class="px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
-            <i class="fas fa-plus-circle mr-2"></i> Add Question
-        </a>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'instructor:quiz_results' course.slug lesson.slug quiz.slug %}"
+               class="px-4 py-3 bg-yellow-50 text-yellow-700 font-medium rounded-lg hover:bg-yellow-100 border border-yellow-200 transition-all">
+                <i class="fas fa-chart-bar mr-2"></i> View Results
+            </a>
+            <a href="{% url 'instructor:question_create' course.slug lesson.slug quiz.slug %}" 
+               class="px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
+                <i class="fas fa-plus-circle mr-2"></i> Add Question
+            </a>
+        </div>
     </div>
 </div>
 

@@ -60,16 +60,6 @@ class CourseForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'https://youtube.com/watch?v=...'
             }),
-            'price': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'step': '0.01',
-                'placeholder': '0.00'
-            }),
-            'discount_price': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'step': '0.01',
-                'placeholder': '0.00'
-            }),
             'max_students': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'Leave blank for unlimited'
@@ -639,3 +629,79 @@ class SupportTicketForm(forms.Form):
         label='Attachment (Optional)',
         help_text='Upload screenshot or document (Max 5MB)'
     )
+
+from django import forms
+from django.contrib.auth.models import User
+from eduweb.models import Message, DiscussionReply
+
+
+# ==================== MESSAGE FORM ====================
+class MessageForm(forms.ModelForm):
+    """Form for composing a new message to a student or colleague."""
+
+    class Meta:
+        model  = Message
+        fields = ['recipient', 'subject', 'body']
+        widgets = {
+            'recipient': forms.Select(attrs={
+                'class': (
+                    'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                    'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 '
+                    'transition-colors'
+                ),
+            }),
+            'subject': forms.TextInput(attrs={
+                'class': (
+                    'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                    'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 '
+                    'transition-colors'
+                ),
+                'placeholder': 'Message subject',
+            }),
+            'body': forms.Textarea(attrs={
+                'class': (
+                    'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                    'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 '
+                    'transition-colors resize-none'
+                ),
+                'rows': 8,
+                'placeholder': 'Write your message...',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only allow messaging students enrolled in at least one of the
+        # instructor's courses, or any active user. Adjust the queryset
+        # as needed for your use case.
+        self.fields['recipient'].queryset = User.objects.filter(
+            is_active=True
+        ).exclude(
+            id=self.instance.sender_id if self.instance.pk else None
+        ).order_by('first_name', 'last_name')
+        self.fields['recipient'].label_from_instance = (
+            lambda u: f"{u.get_full_name()} ({u.email})" if u.get_full_name() else u.email
+        )
+
+
+# ==================== DISCUSSION REPLY FORM ====================
+class DiscussionReplyForm(forms.ModelForm):
+    """Form for posting a reply to a discussion thread."""
+
+    class Meta:
+        model  = DiscussionReply
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': (
+                    'w-full px-4 py-3 border border-gray-300 rounded-lg '
+                    'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 '
+                    'transition-colors text-sm resize-none'
+                ),
+                'rows': 4,
+                'placeholder': (
+                    'Share your thoughts, clarify a concept, '
+                    'or guide the discussion…'
+                ),
+            }),
+        }

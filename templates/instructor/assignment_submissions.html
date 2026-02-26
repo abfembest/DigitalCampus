@@ -176,8 +176,8 @@
                            class="text-primary-600 hover:text-primary-900 mr-3">
                             <i class="fas fa-edit mr-1"></i> Grade
                         </a>
-                        {% if submission.file %}
-                        <a href="{{ submission.file.url }}" 
+                        {% if submission.attachment %}
+                        <a href="{{ submission.attachment.url }}" 
                            target="_blank"
                            class="text-gray-600 hover:text-gray-900">
                             <i class="fas fa-download mr-1"></i> File
@@ -201,7 +201,7 @@
             <div class="ml-4">
                 <p class="text-sm text-gray-600">Pending Review</p>
                 <p class="text-2xl font-bold text-gray-900">
-                    {{ submissions|length }}
+                    {{ pending_count }}
                 </p>
             </div>
         </div>
@@ -215,7 +215,7 @@
             <div class="ml-4">
                 <p class="text-sm text-gray-600">Graded</p>
                 <p class="text-2xl font-bold text-gray-900">
-                    {% with graded=submissions|length %}0{% endwith %}
+                    {{ graded_count }}
                 </p>
             </div>
         </div>
@@ -229,7 +229,7 @@
             <div class="ml-4">
                 <p class="text-sm text-gray-600">Late Submissions</p>
                 <p class="text-2xl font-bold text-gray-900">
-                    {% with late_count=0 %}{{ late_count }}{% endwith %}
+                    {{ late_count }}
                 </p>
             </div>
         </div>

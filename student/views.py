@@ -140,7 +140,7 @@ def dashboard(request):
             .filter(
                 Q(user=user) | Q(email=user.email)
             )
-            .select_related('course', 'course__faculty', 'intake')
+            .select_related('program', 'program__department__faculty', 'intake')
             .order_by('-created_at')[:5]
         )
         
@@ -458,8 +458,8 @@ def course_detail(request, course_slug):
 @student_required
 def enroll_course(request, course_slug):
     """
-    Enroll in a course
-    Handles free courses immediately, redirects paid courses to payment
+    Enroll in a course.
+    All LMS courses are free — enrollment is immediate.
     """
     if request.method != 'POST':
         return redirect('students:course_catalog')
@@ -484,36 +484,25 @@ def enroll_course(request, course_slug):
         )
         return redirect('students:course_detail', course_slug=course_slug)
     
-    # Create enrollment for free courses
-    if course.is_free:
-        try:
-            enrollment = Enrollment.objects.create(
-                student=request.user,
-                course=course,
-                status='active',
-                enrolled_at=timezone.now()
-            )
-            
-            messages.success(
-                request,
-                f'Successfully enrolled in {course.title}!'
-            )
-            return redirect('students:course_detail', course_slug=course_slug)
-            
-        except Exception as e:
-            messages.error(
-                request,
-                'An error occurred during enrollment. Please try again.'
-            )
-            return redirect('students:course_detail', course_slug=course_slug)
-    else:
-        # TODO: Handle paid course enrollment
-        messages.info(
-            request,
-            'This is a paid course. Payment processing will be implemented.'
+    # All courses are free — enroll directly
+    try:
+        Enrollment.objects.create(
+            student=request.user,
+            course=course,
+            status='active',
+            enrolled_at=timezone.now()
         )
-        return redirect('students:course_detail', course_slug=course_slug)
-
+        messages.success(
+            request,
+            f'Successfully enrolled in {course.title}!'
+        )
+    except Exception as e:
+        messages.error(
+            request,
+            'An error occurred during enrollment. Please try again.'
+        )
+    
+    return redirect('students:course_detail', course_slug=course_slug)
 
 @login_required
 @student_required
@@ -533,28 +522,29 @@ def lesson_view(request, course_slug, lesson_slug):
         is_active=True
     )
     
-    # Verify enrollment
-    enrollment = get_object_or_404(
-        Enrollment,
+    # Verify enrollment — preview lessons are accessible without enrollment
+    enrollment = Enrollment.objects.filter(
         student=request.user,
         course=lesson.course,
         status__in=['active', 'completed']
-    )
-    
-    # Get or create progress
-    progress, created = LessonProgress.objects.get_or_create(
-        enrollment=enrollment,
-        lesson=lesson,
-        defaults={
-            'last_accessed': timezone.now()
-        }
-    )
-    
-    # Update last accessed if not just created
-    if not created:
-        progress.last_accessed = timezone.now()
-        progress.save(update_fields=['last_accessed'])
-    
+    ).first()
+
+    if not enrollment and not lesson.is_preview:
+        messages.error(request, 'You must be enrolled to access this lesson.')
+        return redirect('students:course_detail', course_slug=course_slug)
+
+    # Track progress only for enrolled students
+    progress = None
+    if enrollment:
+        progress, created = LessonProgress.objects.get_or_create(
+            enrollment=enrollment,
+            lesson=lesson,
+            defaults={'last_accessed': timezone.now()}
+        )
+        if not created:
+            progress.last_accessed = timezone.now()
+            progress.save(update_fields=['last_accessed'])
+
     # Get all lessons in course for navigation
     all_lessons = list(
         Lesson.objects.filter(
@@ -563,42 +553,42 @@ def lesson_view(request, course_slug, lesson_slug):
         ).select_related('section')
         .order_by('section__display_order', 'display_order')
     )
-    
-    # Get completed lesson IDs for this enrollment
-    completed_lesson_ids = set(
-        LessonProgress.objects.filter(
-            enrollment=enrollment,
-            is_completed=True
-        ).values_list('lesson_id', flat=True)
-    )
-    
+
+    # Get completed lesson IDs — only meaningful if enrolled
+    completed_lesson_ids = set()
+    if enrollment:
+        completed_lesson_ids = set(
+            LessonProgress.objects.filter(
+                enrollment=enrollment,
+                is_completed=True
+            ).values_list('lesson_id', flat=True)
+        )
+
     # Add completion status to all lessons
     for l in all_lessons:
         l.is_completed = l.id in completed_lesson_ids
-    
-    # Find current lesson index
+
+    # Find current lesson index for prev/next navigation
     try:
         current_index = next(
-            i for i, l in enumerate(all_lessons) 
+            i for i, l in enumerate(all_lessons)
             if l.id == lesson.id
         )
     except StopIteration:
         current_index = None
-    
-    # Get previous and next lessons
+
     prev_lesson = None
     next_lesson = None
-    
     if current_index is not None:
         if current_index > 0:
             prev_lesson = all_lessons[current_index - 1]
         if current_index < len(all_lessons) - 1:
             next_lesson = all_lessons[current_index + 1]
-    
-    # Calculate completed lessons count
-    completed_lessons_count = len(completed_lesson_ids)
-    enrollment.completed_lessons = completed_lessons_count
-    
+
+    # Attach completed count to enrollment object if enrolled
+    if enrollment:
+        enrollment.completed_lessons = len(completed_lesson_ids)
+
     context = {
         'page_title': lesson.title,
         'lesson': lesson,
@@ -607,7 +597,7 @@ def lesson_view(request, course_slug, lesson_slug):
         'prev_lesson': prev_lesson,
         'next_lesson': next_lesson,
     }
-    
+
     return render(request, 'students/lesson.html', context)
 
 @login_required
@@ -633,13 +623,16 @@ def mark_lesson_complete(request, course_slug, lesson_slug):
         is_active=True
     )
     
-    # Verify enrollment
-    enrollment = get_object_or_404(
-        Enrollment,
+    # Verify enrollment — allow preview lessons for non-enrolled students
+    enrollment = Enrollment.objects.filter(
         student=request.user,
         course=lesson.course,
         status__in=['active', 'completed']
-    )
+    ).first()
+
+    if not enrollment and not lesson.is_preview:
+        messages.error(request, 'You must be enrolled to access this lesson.')
+        return redirect('students:course_detail', course_slug=course_slug)
     
     try:
         # Get or create progress
@@ -1319,6 +1312,11 @@ def quiz_result(request, attempt_id):
         'course_slug': attempt.quiz.lesson.course.slug,
         'lesson_slug': attempt.quiz.lesson.slug,
         'quiz_slug': attempt.quiz.slug,
+        'attempt_count': QuizAttempt.objects.filter(
+            quiz=attempt.quiz,
+            student=request.user,
+            is_completed=True
+        ).count(),
     }
 
     return render(request, 'students/quiz_result.html', context)
@@ -1555,12 +1553,14 @@ def study_group_detail(request, group_id):
     else:
         form = StudyGroupMessageForm()
     
+    member_count = members.count()
     context = {
         'page_title': group.name,
         'group': group,
         'is_member': is_member,
         'members': members,
-        'member_count': members.count(),
+        'member_count': member_count,
+        'available_slots': group.max_members - member_count,
         'message_form': form if is_member else None,
     }
     
@@ -1808,6 +1808,13 @@ def progress(request):
                 (completed / total * 100) if total > 0 else 0
             )
             section.total_lessons = total
+
+        enrollment.assignment_count = Assignment.objects.filter(
+            lesson__course=enrollment.course
+        ).count()
+        enrollment.quiz_count = Quiz.objects.filter(
+            lesson__course=enrollment.course
+        ).count()
     
     # Calculate learning activity for last 28 days
     from datetime import datetime, timedelta
@@ -1863,6 +1870,8 @@ def progress(request):
         'page_title': 'My Progress',
         'enrollments': enrollments,
         'activity_data': activity_data,
+        'completed_count': sum(1 for e in enrollments if e.status == 'completed'),
+        'active_count': sum(1 for e in enrollments if e.status == 'active'),
     }
     
     return render(request, 'students/progress.html', context)

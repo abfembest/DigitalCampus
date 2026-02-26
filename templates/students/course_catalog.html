@@ -257,32 +257,25 @@ that match your learning goals.
                     </div>
                 </div>
 
-                <!-- Price & Action -->
-                <div class="flex items-center justify-between 
-                            gap-3">
-                    <div class="min-w-0">
-                        {% if course.is_free %}
-                        <span class="text-xl sm:text-2xl 
-                                     font-bold text-green-600">
-                            Free
-                        </span>
-                        {% else %}
-                        <div class="flex items-baseline gap-2">
-                            <span class="text-xl sm:text-2xl 
-                                         font-bold text-gray-900">
-                                ${{ course.price|floatformat:0 }}
-                            </span>
-                            {% if course.discount_price %}
-                            <span class="text-sm text-gray-500 
-                                         line-through">
-                                ${{ course.discount_price|floatformat:0 }}
-                            </span>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-
+                <!-- Action -->
+                <div class="flex items-center justify-end gap-3">
                     <a href="{% url 'students:course_detail' course.slug %}" 
+                    class="px-3 sm:px-4 py-2 text-white 
+                            rounded-lg transition-colors 
+                            text-xs sm:text-sm font-medium 
+                            whitespace-nowrap
+                            bg-primary-600 hover:bg-primary-700
+                            focus:outline-none focus:ring-2 
+                            focus:ring-primary-500 focus:ring-offset-2">
+                        {% if course.id in enrolled_ids %}
+                            Continue
+                        {% else %}
+                            View Course
+                        {% endif %}
+                    </a>
+                </div>
+
+                    {% comment %} <a href="{% url 'students:course_detail' course.slug %}" 
                        class="px-3 sm:px-4 py-2 text-white 
                               rounded-lg transition-colors 
                               text-xs sm:text-sm font-medium 
@@ -301,9 +294,8 @@ that match your learning goals.
                         {% else %}
                             View Course
                         {% endif %}
-                    </a>
+                    </a> {% endcomment %}
                 </div>
-            </div>
         </article>
         {% endfor %}
     </div>

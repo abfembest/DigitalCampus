@@ -146,7 +146,7 @@
                     <!-- Header -->
                     <div class="text-center mb-4 pb-3 border-b-4 border-primary-950">
                         <img 
-                            src="{% static 'Miulogo.png' %}" 
+                            src="{% static 'images/miulogo.png' %}" 
                             alt="MIU Logo" 
                             class="h-24 mx-auto mb-1"
                         >
@@ -212,9 +212,9 @@
                             On behalf of the Admissions Committee, I am delighted 
                             to inform you that you have been accepted to 
                             Melchisedec International University for the 
-                            <strong>{{ application.course.name }}</strong> program 
+                            <strong>{{ application.program.name }}</strong> program 
                             leading to a 
-                            <strong>{{ application.course.get_degree_level_display }}</strong>.
+                            <strong>{{ application.program.get_degree_level_display }}</strong>.
                         </p>
                         
                         <p class="body-text">
@@ -226,9 +226,9 @@
                         
                         <p class="font-semibold">Program Details:</p>
                         <ul class="list-disc list-inside ml-3 space-y-0.5 text-xs leading-snug">
-                            <li><strong>Program:</strong> {{ application.course.name }}</li>
-                            <li><strong>Faculty:</strong> {{ application.course.faculty.name }}</li>
-                            <li><strong>Degree Level:</strong> {{ application.course.get_degree_level_display }}</li>
+                            <li><strong>Program:</strong> {{ application.program.name }}</li>
+                            <li><strong>Faculty:</strong> {{ application.program.department.faculty.name }}</li>
+                            <li><strong>Degree Level:</strong> {{ application.program.get_degree_level_display }}</li>
                             <li><strong>Study Mode:</strong> {{ application.get_study_mode_display }}</li>
                             <li><strong>Start Date:</strong> {{ application.intake.name }}</li>
                             {% if application.scholarship %}

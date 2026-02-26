@@ -545,7 +545,7 @@
                                     <i data-lucide="user" class="w-4 h-4 text-primary-950"></i>
                                     <p class="text-sm font-medium text-gray-500">Applicant Name</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.user.get_full_name }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.get_full_name }}</p>
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
@@ -559,7 +559,35 @@
                                     <i data-lucide="book-open" class="w-4 h-4 text-primary-950"></i>
                                     <p class="text-sm font-medium text-gray-500">Program Applied</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.course.name }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.program.name }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="layers" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Study Mode</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.get_study_mode_display }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="phone" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Phone Number</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.phone }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="flag" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Nationality</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.nationality }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="cake" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Date of Birth</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.date_of_birth|date:"F d, Y" }}</p>
                             </div>
                         </div>
 
@@ -569,7 +597,7 @@
                                     <i data-lucide="graduation-cap" class="w-4 h-4 text-primary-950"></i>
                                     <p class="text-sm font-medium text-gray-500">Degree Level</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.course.get_degree_level_display }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.program.get_degree_level_display }}</p>
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
@@ -581,9 +609,37 @@
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
                                     <i data-lucide="clock" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Submission Date</p>
+                                    <p class="text-sm font-medium text-gray-500">Application Date</p>
                                 </div>
                                 <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.created_at|date:"F d, Y" }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="award" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Highest Qualification</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.highest_qualification }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="building" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Previous Institution</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.institution_name }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="bar-chart" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">GPA / Grade</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.gpa_or_grade }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="map-pin" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Address</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.address_line1 }}{% if application.address_line2 %}, {{ application.address_line2 }}{% endif %}, {{ application.city }}, {{ application.country }}</p>
                             </div>
                         </div>
                     </div>
@@ -1138,84 +1194,63 @@
         const sections = document.querySelectorAll('.upload-section');
         const uploads = [];
         
-        // Validate all sections
         for (const section of sections) {
             const fileType = section.querySelector('.doc-type').value;
             const fileInput = section.querySelector('.doc-file');
-            
             if (!fileType || !fileInput.files[0]) {
                 alert('Please select document type and file for all sections');
                 return;
             }
-            
-            uploads.push({
-                fileType: fileType,
-                file: fileInput.files[0]
-            });
+            uploads.push({ fileType, file: fileInput.files[0] });
         }
 
-        // Show progress
-        const progressDiv = document.getElementById('uploadProgress');
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
-        const progressCount = document.getElementById('progressCount');
-        
-        progressDiv.classList.remove('hidden');
-        progressCount.textContent = `0 / ${uploads.length}`;
-        
-        let completed = 0;
         const autoSubmit = document.getElementById('globalAutoSubmit').checked;
+        
+        // Close modal immediately — upload runs silently in background
+        closeUploadModal();
 
-        // Upload each document
-        for (let i = 0; i < uploads.length; i++) {
-            const upload = uploads[i];
-            const isLastUpload = i === uploads.length - 1;
-            
-            progressText.textContent = `Uploading ${upload.file.name}...`;
-            
-            try {
+        // Show a non-blocking toast
+        const toast = document.createElement('div');
+        toast.id = 'upload-toast';
+        toast.className = 'fixed bottom-6 right-6 z-50 bg-white border border-gray-200 shadow-xl rounded-xl px-6 py-4 flex items-center gap-3 text-sm font-medium text-gray-800';
+        toast.innerHTML = `<svg class="animate-spin w-5 h-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Uploading ${uploads.length} document${uploads.length > 1 ? 's' : ''}...`;
+        document.body.appendChild(toast);
+
+        try {
+            // Upload all files in parallel
+            const results = await Promise.all(uploads.map((upload, i) => {
                 const formData = new FormData();
                 formData.append('file_type', upload.fileType);
                 formData.append('file', upload.file);
-                
-                // Only auto-submit on the last upload if checked
-                if (isLastUpload && autoSubmit) {
+                // Only the last upload triggers auto-submit
+                if (i === uploads.length - 1 && autoSubmit) {
                     formData.append('auto_submit', 'true');
                 }
-
-                const response = await fetch('{% url "eduweb:upload_application_file" application.application_id %}', {
+                return fetch('{% url "eduweb:upload_application_file" application.application_id %}', {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: formData
-                });
+                }).then(r => r.json());
+            }));
 
-                const result = await response.json();
-                
-                if (!result.success) {
-                    throw new Error(result.error || 'Upload failed');
-                }
-                
-                completed++;
-                progressBar.style.width = `${(completed / uploads.length) * 100}%`;
-                progressCount.textContent = `${completed} / ${uploads.length}`;
-                
-            } catch (error) {
-                alert(`Error uploading ${upload.file.name}: ${error.message}`);
-                progressDiv.classList.add('hidden');
-                return;
+            const failed = results.filter(r => !r.success);
+            if (failed.length > 0) {
+                toast.innerHTML = `<span class="text-red-600">⚠️ ${failed.length} upload(s) failed. Please try again.</span>`;
+            } else {
+                toast.innerHTML = `<span class="text-green-600">✅ All documents uploaded successfully!</span>`;
             }
+        } catch (err) {
+            toast.innerHTML = `<span class="text-red-600">⚠️ Upload error: ${err.message}</span>`;
         }
 
-        // Success
-        progressText.textContent = 'All documents uploaded successfully!';
-        progressBar.classList.add('bg-green-500');
-        
+        // Auto-dismiss toast and reload
         setTimeout(() => {
+            toast.remove();
             window.location.reload();
-        }, 1500);
+        }, 2500);
     }
 
     function openUploadModal() {

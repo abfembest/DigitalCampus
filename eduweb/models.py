@@ -125,6 +125,7 @@ class Announcement(models.Model):
                 counter += 1
         super().save(*args, **kwargs)
     
+    @property
     def is_expired(self):
         """Check if announcement has expired"""
         if self.expiry_date:
@@ -184,6 +185,7 @@ class Assignment(models.Model):
             self.slug = slugify(self.title)
         super().save(*args, **kwargs)
     
+    @property
     def is_overdue(self):
         """Check if assignment is overdue"""
         return timezone.now() > self.due_date

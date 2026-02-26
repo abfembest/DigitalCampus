@@ -2,10 +2,14 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
-/* @source "../../templates"; */
-@source "../../templates/";
-@source "../../";
-
+/* =====================================================
+   SOURCE SCANNING — Tailwind v4 scans these paths
+   for all class names used in your templates.
+   Use absolute-like relative paths from this file.
+   Both patterns below ensure full template coverage.
+   ===================================================== */
+@source "../templates/**/*.html";
+@source "../**/templates/**/*.html";
 
 /* Custom theme configuration for Tailwind v4 */
 @theme {
@@ -44,7 +48,7 @@
   --color-gold-800: #92400e;
   --color-gold-900: #78350f;
 
-  /* Custom Fonts - no quotes, and avoid 'font-display' name (conflicts with CSS font-display property) */
+  /* Custom Fonts */
   --font-sans: Inter, system-ui, -apple-system, sans-serif;
   --font-heading: Poppins, system-ui, -apple-system, sans-serif;
 
@@ -74,6 +78,11 @@
 @keyframes scale-in {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Custom utility classes */
@@ -110,6 +119,181 @@
   .animate-scale-in {
     animation: var(--animate-scale-in);
   }
+
+  /* ── Faculty/Program page utilities (replaces <style> blocks) ── */
+
+  /* Hero backgrounds */
+  .hero-mesh {
+    background:
+      radial-gradient(ellipse 80% 60% at 70% 40%, rgba(132,3,132,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 20% 80%, rgba(168,85,247,0.12) 0%, transparent 55%),
+      linear-gradient(135deg, #0f0a1e 0%, #1a0a2e 40%, #0f0820 100%);
+  }
+
+  .prog-hero {
+    background:
+      radial-gradient(ellipse 70% 60% at 80% 30%, rgba(132,3,132,0.22) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 50% at 10% 90%, rgba(168,85,247,0.15) 0%, transparent 50%),
+      linear-gradient(145deg, #0d0720 0%, #1a0730 50%, #0d0525 100%);
+  }
+
+  /* Cards */
+  .dept-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .dept-card:hover {
+    background: rgba(132,3,132,0.08);
+    border-color: rgba(132,3,132,0.4);
+    transform: translateY(-2px);
+  }
+
+  .glass-card {
+    background: rgba(255,255,255,0.97);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  .info-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: background 0.2s;
+  }
+
+  .info-card:hover { background: rgba(255,255,255,0.07); }
+
+  /* Program rows */
+  .program-row {
+    border-left: 3px solid transparent;
+    transition: all 0.25s ease;
+  }
+
+  .program-row:hover {
+    border-left-color: #840384;
+    background: rgba(132,3,132,0.05);
+  }
+
+  .course-row {
+    transition: all 0.22s ease;
+    border-left: 3px solid transparent;
+  }
+
+  .course-row:hover {
+    border-left-color: #840384;
+    background: rgba(132,3,132,0.04);
+  }
+
+  /* Stat glow */
+  .stat-glow {
+    text-shadow: 0 0 30px rgba(132,3,132,0.5);
+  }
+
+  /* Badges */
+  .pill-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .badge-level {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Search input focus */
+  .search-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(132,3,132,0.5);
+  }
+
+  /* Tab buttons */
+  .tab-btn.active {
+    background: #840384;
+    color: white;
+    box-shadow: 0 4px 12px rgba(132,3,132,0.3);
+  }
+
+  .yr-tab.active {
+    background: #840384;
+    color: white;
+    box-shadow: 0 4px 12px rgba(132,3,132,0.3);
+    border-color: transparent;
+  }
+
+  .yr-tab:not(.active):hover {
+    border-color: #840384;
+    color: #840384;
+  }
+
+  /* Outcome items */
+  .outcome-item {
+    padding-left: 1.5rem;
+    position: relative;
+  }
+
+  .outcome-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 8px;
+    height: 8px;
+    background: #840384;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Accordion */
+  .accordion-body {
+    display: none;
+  }
+
+  .accordion-body.open {
+    display: block;
+  }
+
+  .rotate-icon {
+    transition: transform 0.3s ease;
+  }
+
+  .rotate-icon.open {
+    transform: rotate(180deg);
+  }
+
+  /* Fade-up animations */
+  .fade-up  { animation: fadeUp 0.55s ease both; }
+  .fade-up-1 { animation-delay: 0.05s; }
+  .fade-up-2 { animation-delay: 0.12s; }
+  .fade-up-3 { animation-delay: 0.2s; }
+  .fade-up-4 { animation-delay: 0.28s; }
+
+  .fu  { animation: fadeUp 0.5s ease both; }
+  .fu1 { animation-delay: 0.05s; }
+  .fu2 { animation-delay: 0.12s; }
+  .fu3 { animation-delay: 0.2s; }
+
+  /* Nav anchor active state */
+  .nav-anchor.active {
+    color: #840384;
+    font-weight: 700;
+  }
+
+  .nav-anchor.active::after {
+    content: '';
+    display: block;
+    height: 2px;
+    background: #840384;
+    border-radius: 99px;
+    margin-top: 2px;
+  }
+
+  /* Semester groups */
+  .semester-group { display: none; }
+  .semester-group.show { display: block; }
 }
 
 /* Reduced motion preferences */

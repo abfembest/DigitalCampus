@@ -599,7 +599,7 @@ check assignments, and stay updated with announcements.
                         </div>
                         
                         <!-- View All Link -->
-                        {% if admission_history.count > 3 %}
+                        {% if admission_history|length > 3 %}
                         <div class="mt-4 text-center">
                             <a href="{% url 'eduweb:application_status' %}"
                                class="text-sm text-primary-600 

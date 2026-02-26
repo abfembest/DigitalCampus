@@ -93,7 +93,8 @@
                             {% endif %}
                         </div>
                         
-                        <!-- Mark Complete Button -->
+                        <!-- Mark Complete Button — only for enrolled students -->
+                        {% if enrollment %}
                         <button id="markCompleteBtn" 
                                 data-course-slug="{{ lesson.course.slug }}"
                                 data-lesson-slug="{{ lesson.slug }}"
@@ -101,6 +102,13 @@
                             <i class="fas {% if progress.is_completed %}fa-check-circle{% else %}fa-circle{% endif %} mr-2"></i>
                             <span>{% if progress.is_completed %}Completed{% else %}Mark as Complete{% endif %}</span>
                         </button>
+                        {% else %}
+                        <a href="{% url 'students:enroll_course' lesson.course.slug %}"
+                        class="w-full md:w-auto px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-all font-medium shadow-md hover:shadow-lg inline-flex items-center justify-center">
+                            <i class="fas fa-user-plus mr-2"></i>
+                            Enroll to Track Progress
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -120,21 +128,44 @@
                 <!-- Text Content -->
                 {% if lesson.lesson_type == 'text' and lesson.content %}
                 <div class="p-6 border-b border-gray-200">
+                    {% if enrollment %}
                     <div class="prose max-w-none">
                         {{ lesson.content|safe }}
                     </div>
+                    {% else %}
+                    <div class="prose max-w-none text-gray-700 mb-4">
+                        {{ lesson.content|truncatewords:60|safe }}
+                    </div>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
+                        <i class="fas fa-lock text-yellow-500 text-xl flex-shrink-0"></i>
+                        <div>
+                            <p class="font-semibold text-gray-900 text-sm">Full content available after enrollment</p>
+                            <a href="{% url 'students:enroll_course' lesson.course.slug %}" 
+                            class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                                Enroll now to continue reading →
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
 
-                <!-- File Download -->
+                <!-- File Download — enrolled only -->
                 {% if lesson.file %}
                 <div class="p-6">
+                    {% if enrollment %}
                     <a href="{{ lesson.file.url }}" 
-                       download
-                       class="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium">
+                    download
+                    class="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all font-medium">
                         <i class="fas fa-download mr-2"></i>
                         Download Course Material
                     </a>
+                    {% else %}
+                    <div class="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed font-medium">
+                        <i class="fas fa-lock mr-2"></i>
+                        Enroll to Download Materials
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -171,7 +202,8 @@
 
         <!-- Sidebar -->
         <div class="space-y-6">
-            <!-- Course Progress -->
+            {% if enrollment %}
+            <!-- Course Progress — enrolled only -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <h3 class="font-semibold text-gray-900 mb-4 flex items-center">
                     <i class="fas fa-chart-line mr-2"></i>
@@ -184,7 +216,7 @@
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-3">
                         <div class="bg-primary-600 h-3 rounded-full transition-all" 
-                             style="width: {{ enrollment.progress_percentage }}%"></div>
+                            style="width: {{ enrollment.progress_percentage }}%"></div>
                     </div>
                 </div>
                 <p class="text-sm text-gray-600">
@@ -192,6 +224,19 @@
                     {{ enrollment.completed_lessons }} of {{ lesson.course.lessons.count }} lessons completed
                 </p>
             </div>
+            {% else %}
+            <!-- Enroll CTA — preview users -->
+            <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
+                <i class="fas fa-lock text-yellow-500 text-3xl mb-3"></i>
+                <h3 class="font-semibold text-gray-900 mb-2">You're previewing this lesson</h3>
+                <p class="text-sm text-gray-600 mb-4">Enroll to track your progress, access all lessons, and earn a certificate.</p>
+                <a href="{% url 'students:course_detail' lesson.course.slug %}"
+                class="block w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold text-sm transition-colors">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    Enroll in This Course
+                </a>
+            </div>
+            {% endif %}
 
             <!-- Course Navigation -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -211,18 +256,31 @@
                             </p>
                         </div>
                         {% for course_lesson in section.lessons.all %}
+                        {% if enrollment or course_lesson.is_preview %}
                         <a href="{% url 'students:lesson_view' lesson.course.slug course_lesson.slug %}" 
-                           class="block p-3 hover:bg-gray-50 transition-all {% if course_lesson.slug == lesson.slug %}bg-blue-50 border-l-4 border-primary-600{% endif %}">
+                        class="block p-3 hover:bg-gray-50 transition-all {% if course_lesson.slug == lesson.slug %}bg-blue-50 border-l-4 border-primary-600{% endif %}">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center flex-1 min-w-0">
                                     <i class="fas {% if course_lesson.lesson_type == 'video' %}fa-play-circle text-blue-500{% elif course_lesson.lesson_type == 'text' %}fa-file-alt text-gray-500{% else %}fa-file text-gray-500{% endif %} mr-2 text-sm flex-shrink-0"></i>
                                     <span class="text-sm text-gray-700 truncate">{{ course_lesson.title }}</span>
                                 </div>
-                                {% if course_lesson.is_completed %}
+                                {% if enrollment and course_lesson.is_completed %}
                                 <i class="fas fa-check-circle text-green-500 text-sm flex-shrink-0 ml-2"></i>
+                                {% elif course_lesson.is_preview and not enrollment %}
+                                <span class="text-xs text-blue-500 font-medium ml-2">Preview</span>
                                 {% endif %}
                             </div>
                         </a>
+                        {% else %}
+                        <div class="block p-3 opacity-50 cursor-not-allowed">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center flex-1 min-w-0">
+                                    <i class="fas fa-lock mr-2 text-sm flex-shrink-0 text-gray-400"></i>
+                                    <span class="text-sm text-gray-500 truncate">{{ course_lesson.title }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endfor %}
                     </div>
                     {% endfor %}
@@ -237,20 +295,22 @@
                 </h3>
                 <div class="space-y-2">
                     <a href="{% url 'students:course_detail' lesson.course.slug %}" 
-                       class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
+                    class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
                         <i class="fas fa-book mr-2"></i>
                         Course Overview
                     </a>
+                    {% if enrollment %}
                     <a href="{% url 'students:assignments' %}" 
-                       class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
+                    class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
                         <i class="fas fa-tasks mr-2"></i>
                         View Assignments
                     </a>
                     <a href="{% url 'students:quiz_list' %}" 
-                       class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
+                    class="block text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded hover:bg-primary-50">
                         <i class="fas fa-clipboard-list mr-2"></i>
                         Take Quizzes
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

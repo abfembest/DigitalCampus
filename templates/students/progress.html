@@ -35,7 +35,7 @@
                 <div class="text-right">
                     <p class="text-green-100 text-xs md:text-sm">Completed</p>
                     <p class="text-3xl md:text-4xl font-bold">
-                        {% for enrollment in enrollments %}{% if enrollment.status == 'completed' %}1{% endif %}{% endfor %}
+                        {{ completed_count }}
                     </p>
                 </div>
             </div>
@@ -47,7 +47,7 @@
                 <div class="text-right">
                     <p class="text-orange-100 text-xs md:text-sm">In Progress</p>
                     <p class="text-3xl md:text-4xl font-bold">
-                        {% for enrollment in enrollments %}{% if enrollment.status == 'active' %}1{% endif %}{% endfor %}
+                        {{ active_count }}
                     </p>
                 </div>
             </div>
@@ -176,14 +176,14 @@
                         <i class="fas fa-file-alt text-orange-600 text-lg md:text-xl mb-2"></i>
                         <p class="text-xs text-gray-600">Assignments</p>
                         <p class="text-base md:text-lg font-bold text-gray-900">
-                            {{ enrollment.course.assignments.count|default:0 }}
+                            {{ enrollment.assignment_count|default:0 }}
                         </p>
                     </div>
                     <div class="text-center p-3 bg-gray-50 rounded-lg">
                         <i class="fas fa-question-circle text-purple-600 text-lg md:text-xl mb-2"></i>
                         <p class="text-xs text-gray-600">Quizzes</p>
                         <p class="text-base md:text-lg font-bold text-gray-900">
-                            {{ enrollment.course.quizzes.count|default:0 }}
+                            {{ enrollment.quiz_count|default:0 }}
                         </p>
                     </div>
                     <div class="text-center p-3 bg-gray-50 rounded-lg">

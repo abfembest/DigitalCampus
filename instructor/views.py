@@ -28,7 +28,6 @@ from eduweb.decorators import instructor_required
 # ==================== DASHBOARD ====================
 @login_required(login_url='auth')
 @instructor_required
-@instructor_required
 def dashboard(request):
     """Instructor dashboard with comprehensive statistics"""
     courses = LMSCourse.objects.filter(
@@ -311,6 +310,8 @@ def section_delete(request, course_slug, section_id):
 
 
 # ==================== LESSON MANAGEMENT ====================
+@login_required(login_url='auth')
+@instructor_required
 def lesson_list(request, course_slug):
     """List lessons using course slug"""
     course = get_object_or_404(
@@ -804,10 +805,17 @@ def assignment_submissions(request, course_slug, assignment_slug):
         'student'
     ).order_by('-submitted_at')
     
+    pending_count = submissions.filter(status='submitted').count()
+    graded_count = submissions.filter(status='graded').count()
+    late_count = submissions.filter(is_late=True).count()
+
     return render(request, 'instructor/assignment_submissions.html', {
         'course': course,
         'assignment': assignment,
         'submissions': submissions,
+        'pending_count': pending_count,
+        'graded_count': graded_count,
+        'late_count': late_count,
     })
 
 

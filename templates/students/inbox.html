@@ -1,0 +1,166 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">My Inbox</h1>
+            <p class="text-gray-500 mt-1 text-sm">Messages from instructors and support staff</p>
+        </div>
+        <a href="{% url 'students:compose_message' %}"
+           class="inline-flex items-center px-5 py-2.5 bg-primary-600 text-white rounded-lg
+                  hover:bg-primary-700 transition-all font-semibold text-sm
+                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <i class="fas fa-pen mr-2"></i>Compose
+        </a>
+    </div>
+
+    <!-- Tabs + panels -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
+        <!-- Tab bar -->
+        <div class="border-b border-gray-200 px-6">
+            <nav class="flex gap-6">
+                <button onclick="switchTab('received')" id="btn-received"
+                        class="py-4 text-sm font-semibold border-b-2 border-primary-600
+                               text-primary-600 whitespace-nowrap transition-colors">
+                    <i class="fas fa-inbox mr-1.5"></i>Received
+                    {% if unread_count > 0 %}
+                    <span class="ml-1.5 px-2 py-0.5 bg-red-500 text-white rounded-full text-xs font-bold">
+                        {{ unread_count }}
+                    </span>
+                    {% endif %}
+                </button>
+                <button onclick="switchTab('sent')" id="btn-sent"
+                        class="py-4 text-sm font-medium border-b-2 border-transparent
+                               text-gray-500 hover:text-gray-700 whitespace-nowrap transition-colors">
+                    <i class="fas fa-paper-plane mr-1.5"></i>Sent
+                </button>
+            </nav>
+        </div>
+
+        <!-- Received panel -->
+        <div id="panel-received">
+            {% if received %}
+            <ul class="divide-y divide-gray-100">
+                {% for msg in received %}
+                <li>
+                    <a href="{% url 'students:message_thread' msg.id %}"
+                       class="flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
+                        <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center
+                                    justify-center flex-shrink-0">
+                            <i class="fas fa-user text-primary-600 text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm font-semibold text-gray-900 truncate">
+                                    {{ msg.sender.get_full_name|default:msg.sender.username }}
+                                </span>
+                                <time class="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                                    {{ msg.created_at|timesince }} ago
+                                </time>
+                            </div>
+                            <p class="text-sm font-medium text-gray-800 truncate mt-0.5">
+                                {{ msg.subject }}
+                            </p>
+                            <p class="text-xs text-gray-500 truncate mt-0.5">
+                                {{ msg.body|truncatewords:12 }}
+                            </p>
+                        </div>
+                        {% if not msg.is_read %}
+                        <span class="w-2.5 h-2.5 bg-primary-500 rounded-full flex-shrink-0 mt-2"
+                              title="Unread"></span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="py-20 text-center">
+                <i class="fas fa-inbox text-5xl text-gray-200 mb-4"></i>
+                <p class="text-gray-500 font-medium">No messages yet</p>
+                <p class="text-sm text-gray-400 mt-1">Messages from your instructors will appear here.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sent panel (hidden by default) -->
+        <div id="panel-sent" class="hidden">
+            {% if sent %}
+            <ul class="divide-y divide-gray-100">
+                {% for msg in sent %}
+                <li>
+                    <a href="{% url 'students:message_thread' msg.id %}"
+                       class="flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
+                        <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center
+                                    justify-center flex-shrink-0">
+                            <i class="fas fa-user text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm font-semibold text-gray-900 truncate">
+                                    To: {{ msg.recipient.get_full_name|default:msg.recipient.username }}
+                                </span>
+                                <time class="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                                    {{ msg.created_at|timesince }} ago
+                                </time>
+                            </div>
+                            <p class="text-sm font-medium text-gray-800 truncate mt-0.5">
+                                {{ msg.subject }}
+                            </p>
+                            <p class="text-xs text-gray-500 truncate mt-0.5">
+                                {{ msg.body|truncatewords:12 }}
+                            </p>
+                        </div>
+                        {% if msg.is_read %}
+                        <i class="fas fa-check-double text-green-500 text-xs flex-shrink-0 mt-2"
+                           title="Read"></i>
+                        {% else %}
+                        <i class="fas fa-check text-gray-300 text-xs flex-shrink-0 mt-2"
+                           title="Delivered"></i>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="py-20 text-center">
+                <i class="fas fa-paper-plane text-5xl text-gray-200 mb-4"></i>
+                <p class="text-gray-500 font-medium">No sent messages</p>
+                <p class="text-sm text-gray-400 mt-1">Messages you compose will appear here.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="mt-5 flex gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+        <i class="fas fa-info-circle text-blue-400 mt-0.5 flex-shrink-0"></i>
+        <span>
+            You can message <strong>instructors and support staff</strong>.
+            For questions visible to everyone, post in
+            <a href="{% url 'students:community' %}" class="underline font-medium">Community Discussions</a>.
+        </span>
+    </div>
+</div>
+
+<script>
+function switchTab(name) {
+    ['received', 'sent'].forEach(function(t) {
+        document.getElementById('panel-' + t).classList.add('hidden');
+        var btn = document.getElementById('btn-' + t);
+        btn.classList.remove('border-primary-600','text-primary-600','font-semibold');
+        btn.classList.add('border-transparent','text-gray-500','font-medium');
+    });
+    document.getElementById('panel-' + name).classList.remove('hidden');
+    var active = document.getElementById('btn-' + name);
+    active.classList.add('border-primary-600','text-primary-600','font-semibold');
+    active.classList.remove('border-transparent','text-gray-500','font-medium');
+}
+</script>
+{% endblock %}

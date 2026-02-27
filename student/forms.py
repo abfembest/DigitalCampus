@@ -233,14 +233,8 @@ class MessageComposeForm(forms.ModelForm):
     recipient = forms.ModelChoiceField(
         queryset=User.objects.filter(
             profile__role__in=['instructor', 'admin']
-        ),
-        widget=forms.Select(attrs={
-            'class': (
-                'w-full px-4 py-3 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-transparent'
-            )
-        })
+        ).select_related('profile').order_by('profile__role', 'first_name'),
+        widget=forms.HiddenInput(),
     )
     
     class Meta:

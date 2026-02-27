@@ -211,11 +211,12 @@
     <!-- Group Activity/Messages Section (if member) -->
     {% if is_member %}
     <div class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 class="text-xl font-bold text-gray-900 mb-4">
-            Group Activity
+        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <i class="fas fa-comments text-primary-500"></i>
+            Group Chat
         </h2>
 
-        {% if messages %}
+        {% if group_messages %}
         <div class="mb-4 space-y-2">
             {% for message in messages %}
             <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}" role="alert">
@@ -225,26 +226,68 @@
         </div>
         {% endif %}
 
-        <!-- Post Message Form -->
-        <form method="post" class="mb-6">
-            {% csrf_token %}
-            {{ message_form.as_p }}
-            
-            <div class="flex justify-end mt-4">
-                <button type="submit" 
-                        class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                    <i class="fas fa-paper-plane mr-2"></i>
-                    Post Message
-                </button>
+        <!-- Message Feed -->
+        <div class="mb-6 space-y-3 max-h-96 overflow-y-auto pr-1" id="message-feed">
+            {% if group_messages %}
+                {% for msg in group_messages %}
+                <div class="flex items-start gap-3
+                            {% if msg.author == request.user %}flex-row-reverse{% endif %}">
+                    <!-- Avatar -->
+                    <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center
+                                {% if msg.author == request.user %}bg-primary-100{% else %}bg-gray-100{% endif %}">
+                        <i class="fas fa-user text-sm
+                                  {% if msg.author == request.user %}text-primary-600{% else %}text-gray-500{% endif %}"></i>
+                    </div>
+                    <!-- Bubble -->
+                    <div class="max-w-[75%]">
+                        <div class="{% if msg.author == request.user %}bg-primary-600 text-white{% else %}bg-gray-100 text-gray-800{% endif %}
+                                    rounded-2xl px-4 py-2.5 text-sm leading-relaxed">
+                            {{ msg.content }}
+                        </div>
+                        <div class="flex items-center gap-2 mt-1
+                                    {% if msg.author == request.user %}justify-end{% endif %}">
+                            <span class="text-xs text-gray-400">
+                                {{ msg.author.get_full_name|default:msg.author.username }}
+                            </span>
+                            <span class="text-xs text-gray-300">·</span>
+                            <time class="text-xs text-gray-400">
+                                {{ msg.created_at|timesince }} ago
+                            </time>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="py-10 text-center">
+                <i class="fas fa-comments text-4xl text-gray-200 mb-3"></i>
+                <p class="text-gray-500 font-medium">No messages yet</p>
+                <p class="text-sm text-gray-400 mt-1">Be the first to say something!</p>
             </div>
-        </form>
-
-        <!-- Activity Feed Placeholder -->
-        <div class="bg-gray-50 rounded-lg p-8 text-center">
-            <i class="fas fa-comments text-gray-400 text-4xl mb-2"></i>
-            <p class="text-gray-600">Group activity feed coming soon</p>
+            {% endif %}
         </div>
+
+        <!-- Post Message Form -->
+        <form method="post" class="flex items-end gap-3 border-t border-gray-100 pt-4">
+            {% csrf_token %}
+            <div class="flex-1">
+                {{ message_form.message }}
+            </div>
+            <button type="submit"
+                    class="px-5 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700
+                           transition-all font-semibold text-sm flex-shrink-0
+                           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <i class="fas fa-paper-plane mr-1"></i>Send
+            </button>
+        </form>
     </div>
     {% endif %}
+
+<script>
+// Auto-scroll message feed to bottom on load
+document.addEventListener('DOMContentLoaded', function() {
+    var feed = document.getElementById('message-feed');
+    if (feed) feed.scrollTop = feed.scrollHeight;
+});
+</script>
 </div>
 {% endblock %}

@@ -34,3 +34,22 @@ def currency_symbol(currency_code):
         'NGN': '₦',
     }
     return symbols.get(currency_code.upper(), currency_code + ' ')
+
+from eduweb.models import Message, Notification
+
+def student_counts(request):
+    if not request.user.is_authenticated:
+        return {}
+    if not hasattr(request.user, 'profile') or request.user.profile.role != 'student':
+        return {}
+    return {
+        'unread_messages_count': Message.objects.filter(
+            recipient=request.user,
+            is_read=False,
+            parent__isnull=True
+        ).count(),
+        'unread_notifications_count': Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).count(),
+    }

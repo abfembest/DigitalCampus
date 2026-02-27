@@ -15,7 +15,8 @@ from eduweb.models import (
     Certificate, Announcement, Quiz, QuizAttempt, 
     QuizAnswer, QuizQuestion, QuizResponse, StudyGroup, StudyGroupMember, 
     Discussion, DiscussionReply, Badge, 
-    StudentBadge, LessonSection
+    StudentBadge, LessonSection,
+    Message, Notification, Review, StudyGroupMessage
 )
 
 from .forms import AssignmentSubmissionForm, SettingsForm, ProfileUpdateForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm, StudentSupportTicketForm
@@ -436,11 +437,19 @@ def course_detail(request, course_slug):
             
             enrollment.next_lesson = first_incomplete_lesson
         
+        existing_review = None
+        if enrollment:
+            existing_review = Review.objects.filter(
+                course=course,
+                student=request.user
+            ).first()
+
         context = {
             'page_title': course.title,
             'course': course,
             'enrollment': enrollment,
             'sections': sections,
+            'existing_review': existing_review,
         }
         
         return render(request, 'students/course_detail.html', context)
@@ -700,7 +709,6 @@ def assignments(request):
             .select_related(
                 'lesson__course',
                 'lesson__course__category',
-                'lesson__section'
             )
             .prefetch_related(
                 Prefetch(
@@ -750,11 +758,10 @@ def assignments(request):
                 else None
             )
             
-            # Check if overdue (only for non-submitted)
             if not assignment.submission or assignment.submission.status == 'draft':
-                assignment.is_overdue = timezone.now() > assignment.due_date
+                assignment._is_overdue_override = timezone.now() > assignment.due_date
             else:
-                assignment.is_overdue = False
+                assignment._is_overdue_override = False
                 
     except Exception as e:
         messages.error(
@@ -1541,17 +1548,25 @@ def study_group_detail(request, group_id):
     # Handle message form (only for members)
     if request.method == 'POST' and is_member:
         form = StudyGroupMessageForm(request.POST)
-        
         if form.is_valid():
-            # Here you would save the message to a GroupMessage model
-            # For now, just show success
-            messages.success(request, 'Message posted successfully!')
-            return redirect(
-                'students:study_group_detail',
-                group_id=group_id
+            StudyGroupMessage.objects.create(
+                study_group=group,
+                author=request.user,
+                content=form.cleaned_data['message']
             )
+            messages.success(request, 'Message posted!')
+            return redirect('students:study_group_detail', group_id=group_id)
+        messages.error(request, 'Please enter a valid message.')
     else:
         form = StudyGroupMessageForm()
+
+    # Fetch group messages (latest 50)
+    group_messages = (
+        StudyGroupMessage.objects
+        .filter(study_group=group)
+        .select_related('author')
+        .order_by('created_at')[:50]
+    )
     
     member_count = members.count()
     context = {
@@ -1562,6 +1577,7 @@ def study_group_detail(request, group_id):
         'member_count': member_count,
         'available_slots': group.max_members - member_count,
         'message_form': form if is_member else None,
+        'group_messages': group_messages if is_member else [],
     }
     
     return render(request, 'students/study_group_detail.html', context)
@@ -2230,16 +2246,15 @@ def _get_outstanding_for_student(user):
     {'student_fee_id': <pk>, 'student_id': <user.pk>}.
     """
     profile = getattr(user, 'profile', None)
-    if not profile or not profile.faculty or not profile.department:
+    if not profile or not profile.program:
         return [], []
 
     from eduweb.models import AllRequiredPayments, ApplicationPayment
     required_qs = AllRequiredPayments.objects.filter(
-        faculty=profile.faculty,
-        department=profile.department,
+        program=profile.program,
         who_to_pay='student',
         is_active=True,
-    ).select_related('faculty', 'department')
+    ).select_related('program')
 
     # Collect pk-s that the student has already paid
     paid_ids = set(
@@ -2270,6 +2285,7 @@ def _get_outstanding_for_student(user):
 # ==================== MY PAYMENTS (outstanding table) ====================
 
 @login_required
+@student_required
 def my_payments(request):
     """
     Student-facing outstanding fees dashboard.
@@ -2291,3 +2307,246 @@ def my_payments(request):
         'total_outstanding': total_outstanding,
     }
     return render(request, 'students/my_payments.html', context)
+
+# ===========================================================================
+# INBOX / MESSAGING
+# ===========================================================================
+
+@login_required
+@student_required
+def inbox(request):
+    """
+    Student inbox.  Shows received & sent messages (root messages only).
+    Marks all unread received messages as read when the page is opened.
+    """
+    user = request.user
+
+    received = (
+        Message.objects
+        .filter(recipient=user, parent__isnull=True)
+        .select_related('sender')
+        .order_by('-created_at')
+    )
+
+    sent = (
+        Message.objects
+        .filter(sender=user, parent__isnull=True)
+        .select_related('recipient')
+        .order_by('-created_at')
+    )
+
+    # Grab the unread count BEFORE we mark them read (for flash badge)
+    unread_count = received.filter(is_read=False).count()
+
+    # Mark all unread as read
+    Message.objects.filter(
+        recipient=user,
+        is_read=False,
+    ).update(is_read=True, read_at=timezone.now())
+
+    context = {
+        'page_title': 'My Inbox',
+        'received': received,
+        'sent': sent,
+        'unread_count': unread_count,
+    }
+    return render(request, 'students/inbox.html', context)
+
+
+@login_required
+@student_required
+def compose_message(request):
+    """
+    Compose and send a new message to an instructor or admin.
+    Accepts ?to=<user_id> query-param to pre-fill the recipient.
+    """
+    from .forms import MessageComposeForm
+
+    if request.method == 'POST':
+        form = MessageComposeForm(request.POST)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.sender = request.user
+            msg.save()
+            messages.success(request, 'Message sent successfully!')
+            return redirect('students:inbox')
+        messages.error(request, 'Please fix the errors below.')
+    else:
+        initial = {}
+        to_id = request.GET.get('to')
+        if to_id:
+            try:
+                from django.contrib.auth.models import User as AuthUser
+                initial['recipient'] = AuthUser.objects.get(pk=to_id)
+            except Exception:
+                pass
+        form = MessageComposeForm(initial=initial)
+
+    return render(request, 'students/compose_message.html', {
+        'page_title': 'Compose Message',
+        'form': form,
+    })
+
+
+@login_required
+@student_required
+def message_thread(request, message_id):
+    """
+    View a full message thread and reply to it.
+    Only the sender or recipient can access.
+    """
+    msg = get_object_or_404(
+        Message.objects.select_related('sender', 'recipient'),
+        pk=message_id,
+    )
+
+    # Security: only sender or recipient may view
+    if msg.sender != request.user and msg.recipient != request.user:
+        messages.error(request, 'You do not have permission to view this message.')
+        return redirect('students:inbox')
+
+    # Mark as read if current user is the recipient
+    if msg.recipient == request.user and not msg.is_read:
+        msg.mark_as_read()
+
+    thread_replies = (
+        Message.objects
+        .filter(parent=msg)
+        .select_related('sender', 'recipient')
+        .order_by('created_at')
+    )
+
+    if request.method == 'POST':
+        body = request.POST.get('body', '').strip()
+        if len(body) >= 5:
+            reply_to = msg.sender if msg.recipient == request.user else msg.recipient
+            Message.objects.create(
+                sender=request.user,
+                recipient=reply_to,
+                subject=f'Re: {msg.subject}',
+                body=body,
+                parent=msg,
+            )
+            messages.success(request, 'Reply sent!')
+            return redirect('students:message_thread', message_id=message_id)
+        messages.error(request, 'Reply must be at least 5 characters.')
+
+    return render(request, 'students/message_thread.html', {
+        'page_title': msg.subject,
+        'message': msg,
+        'thread_replies': thread_replies,
+    })
+
+
+# ===========================================================================
+# NOTIFICATIONS
+# ===========================================================================
+
+@login_required
+@student_required
+def notifications_view(request):
+    notifs = (
+        Notification.objects
+        .filter(user=request.user)
+        .order_by('-created_at')
+    )
+    unread_count = notifs.filter(is_read=False).count()
+    page_obj = Paginator(notifs, 20).get_page(request.GET.get('page', 1))
+
+    return render(request, 'students/notifications.html', {
+        'page_title': 'Notifications',
+        'notifications': page_obj,
+        'unread_count': unread_count,
+    })
+
+
+@login_required
+@student_required
+def mark_notification_read(request, notification_id):
+    notif = get_object_or_404(
+        Notification,
+        pk=notification_id,
+        user=request.user,
+    )
+    notif.mark_as_read()
+    return JsonResponse({'success': True})
+
+
+# ===========================================================================
+# COURSE REVIEW
+# ===========================================================================
+
+@login_required
+@student_required
+def submit_review(request, course_slug):
+    """
+    Submit or update a star rating + text review for a course.
+    Student must be enrolled. POST-only; redirects back to course detail.
+    """
+    if request.method != 'POST':
+        return redirect('students:course_detail', course_slug=course_slug)
+
+    course = get_object_or_404(LMSCourse, slug=course_slug, is_published=True)
+
+    # Must be enrolled
+    get_object_or_404(Enrollment, student=request.user, course=course)
+
+    try:
+        rating = int(request.POST.get('rating', 0))
+        if not 1 <= rating <= 5:
+            raise ValueError
+    except (TypeError, ValueError):
+        messages.error(request, 'Please select a rating between 1 and 5.')
+        return redirect('students:course_detail', course_slug=course_slug)
+
+    review_text = request.POST.get('review_text', '').strip()
+
+    _, created = Review.objects.update_or_create(
+        course=course,
+        student=request.user,
+        defaults={'rating': rating, 'review_text': review_text},
+    )
+
+    if created:
+        messages.success(request, 'Thank you! Your review has been submitted.')
+    else:
+        messages.success(request, 'Your review has been updated.')
+
+    return redirect('students:course_detail', course_slug=course_slug)
+
+
+# ===========================================================================
+# CREATE STUDY GROUP
+# ===========================================================================
+
+@login_required
+@student_required
+def create_study_group(request):
+    """
+    Create a new study group. The creator is automatically joined as admin.
+    """
+    from .forms import StudyGroupCreateForm
+
+    if request.method == 'POST':
+        form = StudyGroupCreateForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.created_by = request.user
+            group.save()
+
+            StudyGroupMember.objects.create(
+                study_group=group,
+                user=request.user,
+                role='admin',
+            )
+
+            messages.success(request, f'Study group "{group.name}" created!')
+            return redirect('students:study_group_detail', group_id=group.id)
+        messages.error(request, 'Please fix the errors below.')
+    else:
+        form = StudyGroupCreateForm(user=request.user)
+
+    return render(request, 'students/create_study_group.html', {
+        'page_title': 'Create Study Group',
+        'form': form,
+    })

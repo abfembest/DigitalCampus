@@ -91,6 +91,54 @@ urlpatterns = [
         views.approve_department, 
         name='approve_department'
     ),
+
+    # ==================== DEPARTMENTS ====================
+    path('departments/', views.departments_list, name='departments_list'),
+    path('departments/create/', views.department_create, name='department_create'),
+    path('departments/<int:pk>/edit/', views.department_edit, name='department_edit'),
+    path('departments/<int:pk>/delete/', views.department_delete, name='department_delete'),
+
+    # ==================== PROGRAMS ====================
+    path('programs/', views.programs_list, name='programs_list'),
+    path('programs/create/', views.program_create, name='program_create'),
+    path('programs/<int:pk>/', views.program_detail, name='program_detail'),
+    path('programs/<int:pk>/edit/', views.program_edit, name='program_edit'),
+    path('programs/<int:pk>/delete/', views.program_delete, name='program_delete'),
+
+    # ==================== ACADEMIC SESSIONS ====================
+    path('academic-sessions/', views.academic_sessions_list, name='academic_sessions_list'),
+    path('academic-sessions/create/', views.academic_session_create, name='academic_session_create'),
+    path('academic-sessions/<int:pk>/edit/', views.academic_session_edit, name='academic_session_edit'),
+    path('academic-sessions/<int:pk>/set-current/', views.academic_session_set_current, name='academic_session_set_current'),
+    path('academic-sessions/<int:pk>/delete/', views.academic_session_delete, name='academic_session_delete'),
+
+    # ==================== COURSE INTAKES ====================
+    path('intakes/', views.intakes_list, name='intakes_list'),
+    path('intakes/create/', views.intake_create, name='intake_create'),
+    path('intakes/<int:pk>/edit/', views.intake_edit, name='intake_edit'),
+    path('intakes/<int:pk>/delete/', views.intake_delete, name='intake_delete'),
+
+    # ==================== COURSE CATEGORIES (add missing list page) ====================
+    path('categories/', views.course_categories_list, name='course_categories_list'),
+
+    # ==================== SUPPORT TICKETS ====================
+    path('tickets/', views.tickets_list, name='tickets_list'),
+    path('tickets/<int:pk>/', views.ticket_detail, name='ticket_detail'),
+    path('tickets/<int:pk>/reply/', views.ticket_reply, name='ticket_reply'),
+    path('tickets/<int:pk>/change-status/', views.ticket_change_status, name='ticket_change_status'),
+    path('tickets/<int:pk>/assign/', views.ticket_assign, name='ticket_assign'),
+
+    # ==================== CONTACT MESSAGES ====================
+    path('contact-messages/', views.contact_messages_list, name='contact_messages_list'),
+    path('contact-messages/<int:pk>/', views.contact_message_detail, name='contact_message_detail'),
+    path('contact-messages/<int:pk>/mark-read/', views.contact_message_mark_read, name='contact_message_mark_read'),
+    path('contact-messages/<int:pk>/respond/', views.contact_message_respond, name='contact_message_respond'),
+
+    # ==================== ANNOUNCEMENTS ====================
+    path('announcements/', views.announcements_list, name='announcements_list'),
+    path('announcements/create/', views.announcement_create, name='announcement_create'),
+    path('announcements/<int:pk>/edit/', views.announcement_edit, name='announcement_edit'),
+    path('announcements/<int:pk>/delete/', views.announcement_delete, name='announcement_delete'),
 ]
 
 # Serve media files during development

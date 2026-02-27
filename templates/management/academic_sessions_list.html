@@ -1,0 +1,152 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Academic Sessions - MIU Admin Portal{% endblock %}
+{% block meta_description %}Manage academic sessions and semesters{% endblock %}
+
+{% block content %}
+<div class="max-w-full">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800 font-display">Academic Sessions</h1>
+      <p class="text-gray-500 mt-1">Manage academic years and semester schedules</p>
+    </div>
+    <a href="{% url 'management:academic_session_create' %}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-sm">
+      <i class="fas fa-plus" aria-hidden="true"></i>New Session
+    </a>
+  </div>
+
+  <!-- Current Session Banner -->
+  {% if current_session %}
+  <div class="bg-gradient-to-r from-primary-600 to-secondary-500 text-white rounded-xl p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <i class="fas fa-star text-yellow-300" aria-hidden="true"></i>
+        <span class="font-semibold">Current Session: {{ current_session.name }}</span>
+      </div>
+      <p class="text-sm text-white/80">
+        Sem 1: {{ current_session.first_semester_start|date:"M d" }} – {{ current_session.first_semester_end|date:"M d, Y" }} &nbsp;|&nbsp;
+        Sem 2: {{ current_session.second_semester_start|date:"M d" }} – {{ current_session.second_semester_end|date:"M d, Y" }}
+      </p>
+    </div>
+    <span class="px-3 py-1.5 bg-white/20 rounded-full text-sm font-medium">
+      {{ current_session.get_status_display }}
+    </span>
+  </div>
+  {% endif %}
+
+  <!-- Sessions Table -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-800">All Sessions <span class="text-sm font-normal text-gray-400 ml-1">({{ sessions|length }} total)</span></h2>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
+          <tr>
+            <th class="py-3 px-5 text-left font-semibold">Session</th>
+            <th class="py-3 px-5 text-left font-semibold">Semester 1</th>
+            <th class="py-3 px-5 text-left font-semibold">Semester 2</th>
+            <th class="py-3 px-5 text-left font-semibold">Registration</th>
+            <th class="py-3 px-5 text-left font-semibold">Status</th>
+            <th class="py-3 px-5 text-left font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for session in sessions %}
+          <tr class="hover:bg-gray-50 transition-colors {% if session.is_current %}bg-primary-50/50{% endif %}">
+            <td class="py-4 px-5">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-gray-800">{{ session.name }}</span>
+                {% if session.is_current %}
+                <span class="px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full text-xs font-medium">Current</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="py-4 px-5 text-gray-600">
+              {{ session.first_semester_start|date:"M d" }} – {{ session.first_semester_end|date:"M d, Y" }}
+            </td>
+            <td class="py-4 px-5 text-gray-600">
+              {{ session.second_semester_start|date:"M d" }} – {{ session.second_semester_end|date:"M d, Y" }}
+            </td>
+            <td class="py-4 px-5 text-gray-500 text-xs">
+              {% if session.registration_start %}
+              {{ session.registration_start|date:"M d" }} – {{ session.registration_end|date:"M d, Y" }}
+              {% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+            <td class="py-4 px-5">
+              {% if session.status == 'active' %}
+              <span class="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Active</span>
+              {% elif session.status == 'upcoming' %}
+              <span class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Upcoming</span>
+              {% else %}
+              <span class="px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">Closed</span>
+              {% endif %}
+            </td>
+            <td class="py-4 px-5">
+              <div class="flex items-center gap-1">
+                {% if not session.is_current %}
+                <form method="post" action="{% url 'management:academic_session_set_current' session.pk %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="px-2.5 py-1.5 text-xs bg-primary-50 text-primary-700 border border-primary-200 rounded hover:bg-primary-100 transition-colors font-medium"
+                          title="Set as current">
+                    Set Current
+                  </button>
+                </form>
+                {% endif %}
+                <a href="{% url 'management:academic_session_edit' session.pk %}"
+                   class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                  <i class="fas fa-edit text-sm" aria-hidden="true"></i>
+                </a>
+                <button type="button"
+                        onclick="confirmDelete('{% url 'management:academic_session_delete' session.pk %}', '{{ session.name }}')"
+                        class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+                  <i class="fas fa-trash-alt text-sm" aria-hidden="true"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="py-16 text-center text-gray-400">
+              <i class="fas fa-calendar-alt text-5xl mb-3 block" aria-hidden="true"></i>
+              <p class="font-medium text-gray-600">No sessions yet</p>
+              <a href="{% url 'management:academic_session_create' %}" class="text-primary-600 text-sm hover:underline mt-1 inline-block">Create the first session</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<form id="deleteForm" method="post" action="" style="display:none;">{% csrf_token %}</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(url, name) {
+  Swal.fire({
+    title: 'Delete Session?',
+    html: `Delete academic session <strong>${name}</strong>?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Delete',
+  }).then(r => {
+    if (r.isConfirmed) {
+      document.getElementById('deleteForm').action = url;
+      document.getElementById('deleteForm').submit();
+    }
+  });
+}
+</script>
+{% endblock %}

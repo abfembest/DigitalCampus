@@ -53,3 +53,23 @@ def student_counts(request):
             is_read=False
         ).count(),
     }
+
+# ADD these imports at the top of context.py (after existing imports)
+from eduweb.models import SupportTicket, ContactMessage
+
+def admin_counts(request):
+    """Inject admin badge counts into every template."""
+    if not request.user.is_authenticated:
+        return {}
+    if not hasattr(request.user, 'profile'):
+        return {}
+    if request.user.profile.role not in ('admin',) and not request.user.is_staff:
+        return {}
+    return {
+        'open_tickets_count': SupportTicket.objects.filter(
+            status__in=['open', 'in_progress']
+        ).count(),
+        'unread_contact_count': ContactMessage.objects.filter(
+            is_read=False
+        ).count(),
+    }

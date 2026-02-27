@@ -256,7 +256,10 @@
                 <nav class="flex-1 overflow-y-auto py-4 px-3" role="navigation" aria-label="Main navigation">
 
                     {% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}
-                    <!-- ADMIN/MANAGEMENT MENU -->
+                    <!-- ================================================ -->
+                    <!-- ADMIN / MANAGEMENT MENU                          -->
+                    <!-- ================================================ -->
+
                     <!-- Dashboard -->
                     <a href="{% url 'management:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
@@ -275,7 +278,7 @@
                         </div>
                     </a>
 
-                    <!-- Applications Management -->
+                    <!-- Applications -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'applications' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
@@ -284,61 +287,73 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="applicationsMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="applicationsMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:applications_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'applications_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Applications
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i>All Applications
+                            </a>
+                            <a href="{% url 'management:intakes_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'intakes' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-door-open mr-2" aria-hidden="true"></i>Course Intakes
                             </a>
                         </div>
                     </div>
 
-                    <!-- Faculties Management -->
+                    <!-- Academic Structure -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'faculties' in request.path or 'faculty' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'faculties' in request.path or 'departments' in request.path or 'programs' in request.path or 'academic-sessions' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-university w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Faculties</span>
+                                <span class="ml-3">Academics</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="facultiesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="academicMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:faculties_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'faculties_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Faculties
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'faculties' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-building mr-2" aria-hidden="true"></i>Faculties
                             </a>
-                            <a href="{% url 'management:faculty_create' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'faculty_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Faculty
+                            <a href="{% url 'management:departments_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'departments' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-sitemap mr-2" aria-hidden="true"></i>Departments
+                            </a>
+                            <a href="{% url 'management:programs_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'programs' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i>Programs
+                            </a>
+                            <a href="{% url 'management:academic_sessions_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'academic-sessions' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-calendar-alt mr-2" aria-hidden="true"></i>Academic Sessions
                             </a>
                         </div>
                     </div>
 
-                    <!-- Courses Management -->
+                    <!-- LMS / Courses -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path or 'course' in request.path or 'categories' in request.path or 'category' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path or 'categories' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
-                                <i class="fas fa-graduation-cap w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Courses</span>
+                                <i class="fas fa-chalkboard-teacher w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">LMS Courses</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:courses' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses' or request.resolver_match.url_name == 'courses_list' or request.resolver_match.url_name == 'course_categories_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-th-list mr-2" aria-hidden="true"></i> Manage Courses
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses' %}bg-white/20{% endif %}">
+                                <i class="fas fa-th-list mr-2" aria-hidden="true"></i>All Courses
                             </a>
                             <a href="{% url 'management:course_create' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Add Program
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add Course
                             </a>
-                            <a href="{% url 'management:course_category_create' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_category_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus-circle mr-2" aria-hidden="true"></i> Add Category
+                            <a href="{% url 'management:course_categories_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'categories' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-folder-open mr-2" aria-hidden="true"></i>Categories
                             </a>
                         </div>
                     </div>
 
-                    <!-- Blog Management -->
+                    <!-- Blog -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'blog' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
@@ -347,26 +362,72 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="blogMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="blogMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:blog_posts_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_posts_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Posts
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i>All Posts
                             </a>
                             <a href="{% url 'management:blog_post_create' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_post_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Post
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i>Create Post
                             </a>
                             <a href="{% url 'management:blog_categories_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_categories_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-tags mr-2" aria-hidden="true"></i> Categories
+                                <i class="fas fa-tags mr-2" aria-hidden="true"></i>Categories
                             </a>
                         </div>
                     </div>
 
+                    <!-- Support -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'tickets' in request.path or 'contact-messages' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-headset w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Support</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="supportMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'management:tickets_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'tickets' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-ticket-alt mr-2" aria-hidden="true"></i>Support Tickets
+                                {% if open_tickets_count %}
+                                <span class="ml-auto badge-count bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ open_tickets_count }}</span>
+                                {% endif %}
+                            </a>
+                            <a href="{% url 'management:contact_messages_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'contact-messages' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-inbox mr-2" aria-hidden="true"></i>Contact Messages
+                                {% if unread_contact_count %}
+                                <span class="ml-auto badge-count bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ unread_contact_count }}</span>
+                                {% endif %}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Announcements (direct link — no submenu needed) -->
+                    <a href="{% url 'management:announcements_list' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'announcements' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-bullhorn w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Announcements</span>
+                        </div>
+                    </a>
+
+                    <!-- Broadcast Center -->
+                    <a href="{% url 'management:broadcast_center' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'broadcast' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-satellite-dish w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Broadcast Center</span>
+                        </div>
+                    </a>
+
                     <!-- Divider -->
                     <div class="border-t border-white/10 my-4"></div>
+                    <div class="py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">System</div>
 
-                    <!-- System Configuration (NEW) -->
+                    <!-- System Configuration -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'config' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
@@ -375,27 +436,27 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="configMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="configMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:system_config_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'system_config_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Settings
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i>All Settings
                             </a>
                             <a href="{% url 'management:branding_config' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'branding_config' %}bg-white/20{% endif %}">
-                                <i class="fas fa-paint-brush mr-2" aria-hidden="true"></i> Branding
+                                <i class="fas fa-paint-brush mr-2" aria-hidden="true"></i>Branding
                             </a>
                             <a href="{% url 'management:email_config' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'email_config' %}bg-white/20{% endif %}">
-                                <i class="fas fa-envelope mr-2" aria-hidden="true"></i> Email Setup
+                                <i class="fas fa-envelope mr-2" aria-hidden="true"></i>Email Setup
                             </a>
                             <a href="{% url 'management:notification_config' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'notification_config' %}bg-white/20{% endif %}">
-                                <i class="fas fa-bell mr-2" aria-hidden="true"></i> Notifications
+                                <i class="fas fa-bell mr-2" aria-hidden="true"></i>Notifications
                             </a>
                         </div>
                     </div>
 
-                    <!-- Security & Audit (NEW) -->
+                    <!-- Security & Audit -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'audit' in request.path or 'security' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
@@ -404,27 +465,16 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="securityMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="securityMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:security_dashboard' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'security_dashboard' %}bg-white/20{% endif %}">
-                                <i class="fas fa-lock mr-2" aria-hidden="true"></i> Security Dashboard
+                                <i class="fas fa-lock mr-2" aria-hidden="true"></i>Security Dashboard
                             </a>
                             <a href="{% url 'management:audit_logs_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'audit_logs_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-history mr-2" aria-hidden="true"></i> Audit Logs
+                                <i class="fas fa-history mr-2" aria-hidden="true"></i>Audit Logs
                             </a>
                         </div>
-                    </div>
-
-                    <!-- Broadcast Center -->
-                    <div class="mb-1">
-                        <a href="{% url 'management:broadcast_center' %}"
-                           class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'broadcast' in request.path %}bg-white/20{% endif %}">
-                            <div class="flex items-center">
-                                <i class="fas fa-bullhorn w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Broadcast Center</span>
-                            </div>
-                        </a>
                     </div>
 
                     {% elif request.user.profile.role == 'student' %}

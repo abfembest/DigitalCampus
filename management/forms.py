@@ -1009,3 +1009,112 @@ class BroadcastMessageForm(forms.ModelForm):
                 raise forms.ValidationError(message)
 
         return cleaned_data
+
+from django import forms
+from eduweb.models import (
+    Department, Program, AcademicSession, CourseIntake,
+    Announcement, LMSCourse, CourseCategory
+)
+
+
+class DepartmentForm(forms.ModelForm):
+    class Meta:
+        model = Department
+        fields = ['faculty', 'name', 'code', 'description', 'display_order', 'is_active']
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code', '').strip().upper()
+        return code
+
+
+class ProgramForm(forms.ModelForm):
+    class Meta:
+        model = Program
+        fields = [
+            'department', 'name', 'code', 'degree_level',
+            'duration_years', 'credits_required', 'max_students',
+            'tagline', 'overview', 'description',
+            'application_fee', 'tuition_fee', 'avg_starting_salary',
+            'job_placement_rate',
+            'is_active', 'is_featured', 'display_order',
+            'hero_image', 'meta_description', 'meta_keywords',
+        ]
+
+    def clean_code(self):
+        return self.cleaned_data.get('code', '').strip().upper()
+
+
+class AcademicSessionForm(forms.ModelForm):
+    class Meta:
+        model = AcademicSession
+        fields = [
+            'name', 'status', 'is_current',
+            'first_semester_start', 'first_semester_end',
+            'second_semester_start', 'second_semester_end',
+            'registration_start', 'registration_end',
+        ]
+        widgets = {
+            'first_semester_start': forms.DateInput(attrs={'type': 'date'}),
+            'first_semester_end': forms.DateInput(attrs={'type': 'date'}),
+            'second_semester_start': forms.DateInput(attrs={'type': 'date'}),
+            'second_semester_end': forms.DateInput(attrs={'type': 'date'}),
+            'registration_start': forms.DateInput(attrs={'type': 'date'}),
+            'registration_end': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        sem1_start = cleaned.get('first_semester_start')
+        sem1_end = cleaned.get('first_semester_end')
+        sem2_start = cleaned.get('second_semester_start')
+        sem2_end = cleaned.get('second_semester_end')
+
+        if sem1_start and sem1_end and sem1_start >= sem1_end:
+            raise forms.ValidationError('Semester 1 start must be before end date.')
+        if sem2_start and sem2_end and sem2_start >= sem2_end:
+            raise forms.ValidationError('Semester 2 start must be before end date.')
+        if sem1_end and sem2_start and sem2_start <= sem1_end:
+            raise forms.ValidationError('Semester 2 must start after Semester 1 ends.')
+        return cleaned
+
+
+class CourseIntakeForm(forms.ModelForm):
+    class Meta:
+        model = CourseIntake
+        fields = ['program', 'intake_period', 'year', 'start_date', 'application_deadline', 'available_slots', 'is_active']
+        widgets = {
+            'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'application_deadline': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get('start_date')
+        deadline = cleaned.get('application_deadline')
+        if start and deadline and deadline >= start:
+            raise forms.ValidationError('Application deadline must be before the start date.')
+        return cleaned
+
+
+class AnnouncementForm(forms.ModelForm):
+    class Meta:
+        model = Announcement
+        fields = [
+            'title', 'content',
+            'announcement_type', 'priority',
+            'course', 'category',
+            'is_active', 'publish_date', 'expiry_date',
+        ]
+        widgets = {
+            'publish_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'expiry_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'content': forms.Textarea(attrs={'rows': 6}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only show active courses & categories
+        self.fields['course'].queryset = LMSCourse.objects.filter(is_published=True).order_by('title')
+        self.fields['category'].queryset = CourseCategory.objects.filter(is_active=True).order_by('name')
+        self.fields['course'].required = False
+        self.fields['category'].required = False

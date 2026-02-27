@@ -2147,3 +2147,646 @@ def send_department_approval_email(application):
     except Exception as e:
         print(f"Error sending approval email: {str(e)}")
         return False
+
+# ============================================================
+# ADD THESE IMPORTS TO THE TOP OF views.py (if not already present)
+# ============================================================
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
+from django.utils import timezone
+from django.http import JsonResponse
+from django.core.mail import send_mail
+from django.conf import settings
+
+# ── Import your models ──────────────────────────────────────────────────────
+from eduweb.models import (
+    Department, Program, AcademicSession, CourseIntake,
+    CourseCategory, SupportTicket, TicketReply,
+    ContactMessage, Announcement, Faculty
+)
+
+
+# ── Helper: restrict to admin/staff ─────────────────────────────────────────
+def is_admin(user):
+    return user.is_staff or user.is_superuser or (
+        hasattr(user, 'profile') and user.profile.role == 'admin'
+    )
+
+
+# ===========================================================================
+# DEPARTMENTS
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def departments_list(request):
+    qs = Department.objects.select_related('faculty').prefetch_related('programs')
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search))
+
+    faculty_id = request.GET.get('faculty', '')
+    if faculty_id:
+        qs = qs.filter(faculty_id=faculty_id)
+
+    status = request.GET.get('status', '')
+    if status == 'active':
+        qs = qs.filter(is_active=True)
+    elif status == 'inactive':
+        qs = qs.filter(is_active=False)
+
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'departments': page_obj,
+        'faculties': Faculty.objects.all(),
+        'total_departments': Department.objects.count(),
+        'active_departments': Department.objects.filter(is_active=True).count(),
+        'total_faculties': Faculty.objects.count(),
+        'total_programs': Program.objects.count(),
+    }
+    return render(request, 'management/departments_list.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def department_create(request):
+    from .forms import DepartmentForm
+    if request.method == 'POST':
+        form = DepartmentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Department created successfully.')
+            return redirect('management:departments_list')
+    else:
+        form = DepartmentForm()
+    return render(request, 'management/department_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def department_edit(request, pk):
+    from .forms import DepartmentForm
+    dept = get_object_or_404(Department, pk=pk)
+    if request.method == 'POST':
+        form = DepartmentForm(request.POST, instance=dept)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Department updated.')
+            return redirect('management:departments_list')
+    else:
+        form = DepartmentForm(instance=dept)
+    return render(request, 'management/department_form.html', {'form': form, 'department': dept})
+
+
+@login_required
+@user_passes_test(is_admin)
+def department_delete(request, pk):
+    dept = get_object_or_404(Department, pk=pk)
+    if request.method == 'POST':
+        dept.delete()
+        messages.success(request, f'Department "{dept.name}" deleted.')
+    return redirect('management:departments_list')
+
+
+# ===========================================================================
+# PROGRAMS
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def programs_list(request):
+    qs = Program.objects.select_related('department__faculty').order_by('name')
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search))
+
+    faculty_id = request.GET.get('faculty', '')
+    if faculty_id:
+        qs = qs.filter(department__faculty_id=faculty_id)
+
+    degree_level = request.GET.get('degree_level', '')
+    if degree_level:
+        qs = qs.filter(degree_level=degree_level)
+
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'programs': page_obj,
+        'faculties': Faculty.objects.all(),
+        'stats': [
+            {'label': 'Total Programs', 'value': Program.objects.count(), 'color': 'text-primary-600'},
+            {'label': 'Active', 'value': Program.objects.filter(is_active=True).count(), 'color': 'text-green-600'},
+            {'label': 'Featured', 'value': Program.objects.filter(is_featured=True).count(), 'color': 'text-yellow-600'},
+            {'label': 'Departments', 'value': Department.objects.count(), 'color': 'text-blue-600'},
+        ],
+    }
+    return render(request, 'management/programs_list.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def program_create(request):
+    from .forms import ProgramForm
+    if request.method == 'POST':
+        form = ProgramForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Program created.')
+            return redirect('management:programs_list')
+    else:
+        form = ProgramForm()
+    return render(request, 'management/program_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def program_edit(request, pk):
+    from .forms import ProgramForm
+    program = get_object_or_404(Program, pk=pk)
+    if request.method == 'POST':
+        form = ProgramForm(request.POST, request.FILES, instance=program)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Program updated.')
+            return redirect('management:programs_list')
+    else:
+        form = ProgramForm(instance=program)
+    return render(request, 'management/program_form.html', {'form': form, 'program': program})
+
+
+@login_required
+@user_passes_test(is_admin)
+def program_detail(request, pk):
+    program = get_object_or_404(Program.objects.select_related('department__faculty'), pk=pk)
+    intakes = program.intakes.all()
+    applications = program.applications.all()[:10]
+    context = {'program': program, 'intakes': intakes, 'applications': applications}
+    return render(request, 'management/program_detail.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def program_delete(request, pk):
+    program = get_object_or_404(Program, pk=pk)
+    if request.method == 'POST':
+        program.delete()
+        messages.success(request, f'Program "{program.name}" deleted.')
+    return redirect('management:programs_list')
+
+
+# ===========================================================================
+# ACADEMIC SESSIONS
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def academic_sessions_list(request):
+    sessions = AcademicSession.objects.all()
+    current_session = AcademicSession.get_current()
+    return render(request, 'management/academic_sessions_list.html', {
+        'sessions': sessions,
+        'current_session': current_session,
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def academic_session_create(request):
+    from .forms import AcademicSessionForm
+    if request.method == 'POST':
+        form = AcademicSessionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Academic session created.')
+            return redirect('management:academic_sessions_list')
+    else:
+        form = AcademicSessionForm()
+    return render(request, 'management/academic_session_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def academic_session_edit(request, pk):
+    from .forms import AcademicSessionForm
+    session = get_object_or_404(AcademicSession, pk=pk)
+    if request.method == 'POST':
+        form = AcademicSessionForm(request.POST, instance=session)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Session updated.')
+            return redirect('management:academic_sessions_list')
+    else:
+        form = AcademicSessionForm(instance=session)
+    return render(request, 'management/academic_session_form.html', {'form': form, 'session': session})
+
+
+@login_required
+@user_passes_test(is_admin)
+def academic_session_set_current(request, pk):
+    if request.method == 'POST':
+        session = get_object_or_404(AcademicSession, pk=pk)
+        # Unset all others
+        AcademicSession.objects.exclude(pk=pk).update(is_current=False)
+        session.is_current = True
+        session.status = 'active'
+        session.save()
+        messages.success(request, f'{session.name} is now the current session.')
+    return redirect('management:academic_sessions_list')
+
+
+@login_required
+@user_passes_test(is_admin)
+def academic_session_delete(request, pk):
+    session = get_object_or_404(AcademicSession, pk=pk)
+    if request.method == 'POST':
+        if session.is_current:
+            messages.error(request, 'Cannot delete the current active session.')
+            return redirect('management:academic_sessions_list')
+        session.delete()
+        messages.success(request, f'Session "{session.name}" deleted.')
+    return redirect('management:academic_sessions_list')
+
+
+# ===========================================================================
+# COURSE INTAKES
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def intakes_list(request):
+    qs = CourseIntake.objects.select_related('program__department__faculty').prefetch_related('applications')
+
+    program_id = request.GET.get('program', '')
+    if program_id:
+        qs = qs.filter(program_id=program_id)
+
+    year = request.GET.get('year', '')
+    if year:
+        qs = qs.filter(year=year)
+
+    period = request.GET.get('period', '')
+    if period:
+        qs = qs.filter(intake_period=period)
+
+    status = request.GET.get('status', '')
+    if status == 'active':
+        qs = qs.filter(is_active=True)
+    elif status == 'inactive':
+        qs = qs.filter(is_active=False)
+
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    years = CourseIntake.objects.values_list('year', flat=True).distinct().order_by('-year')
+
+    context = {
+        'intakes': page_obj,
+        'programs': Program.objects.filter(is_active=True).order_by('name'),
+        'years': years,
+        'today': timezone.now().date(),
+    }
+    return render(request, 'management/intakes_list.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def intake_create(request):
+    from .forms import CourseIntakeForm
+    if request.method == 'POST':
+        form = CourseIntakeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Intake created.')
+            return redirect('management:intakes_list')
+    else:
+        form = CourseIntakeForm()
+    return render(request, 'management/intake_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def intake_edit(request, pk):
+    from .forms import CourseIntakeForm
+    intake = get_object_or_404(CourseIntake, pk=pk)
+    if request.method == 'POST':
+        form = CourseIntakeForm(request.POST, instance=intake)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Intake updated.')
+            return redirect('management:intakes_list')
+    else:
+        form = CourseIntakeForm(instance=intake)
+    return render(request, 'management/intake_form.html', {'form': form, 'intake': intake})
+
+
+@login_required
+@user_passes_test(is_admin)
+def intake_delete(request, pk):
+    intake = get_object_or_404(CourseIntake, pk=pk)
+    if request.method == 'POST':
+        intake.delete()
+        messages.success(request, 'Intake deleted.')
+    return redirect('management:intakes_list')
+
+
+# ===========================================================================
+# COURSE CATEGORIES LIST (the missing page)
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def course_categories_list(request):
+    categories = CourseCategory.objects.prefetch_related(
+        'lms_courses', 'subcategories'
+    ).select_related('parent').order_by('display_order', 'name')
+    return render(request, 'management/course_categories_list.html', {'categories': categories})
+
+
+# ===========================================================================
+# SUPPORT TICKETS
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def tickets_list(request):
+    from eduweb.models import SupportTicket
+    qs = SupportTicket.objects.select_related('user', 'assigned_to').order_by('-created_at')
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(ticket_id__icontains=search) |
+            Q(subject__icontains=search) |
+            Q(user__username__icontains=search) |
+            Q(user__email__icontains=search)
+        )
+
+    status = request.GET.get('status', '')
+    if status:
+        qs = qs.filter(status=status)
+
+    priority = request.GET.get('priority', '')
+    if priority:
+        qs = qs.filter(priority=priority)
+
+    stats = {
+        'total': SupportTicket.objects.count(),
+        'open': SupportTicket.objects.filter(status='open').count(),
+        'in_progress': SupportTicket.objects.filter(status='in_progress').count(),
+        'resolved': SupportTicket.objects.filter(status='resolved').count(),
+        'urgent': SupportTicket.objects.filter(priority='urgent', status__in=['open', 'in_progress']).count(),
+    }
+
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'management/tickets_list.html', {'tickets': page_obj, 'stats': stats})
+
+
+@login_required
+@user_passes_test(is_admin)
+def ticket_detail(request, pk):
+    from .models import SupportTicket, TicketReply
+    from django.contrib.auth.models import User
+    ticket = get_object_or_404(SupportTicket.objects.select_related('user', 'assigned_to'), pk=pk)
+    replies = ticket.replies.select_related('author').order_by('created_at')
+    staff_users = User.objects.filter(
+        Q(is_staff=True) | Q(profile__role__in=['admin', 'support'])
+    ).distinct()
+    return render(request, 'management/ticket_detail.html', {
+        'ticket': ticket,
+        'replies': replies,
+        'staff_users': staff_users,
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def ticket_reply(request, pk):
+    from .models import SupportTicket, TicketReply
+    ticket = get_object_or_404(SupportTicket, pk=pk)
+    if request.method == 'POST':
+        message = request.POST.get('message', '').strip()
+        is_internal = request.POST.get('is_internal_note') == 'on'
+        if message:
+            TicketReply.objects.create(
+                ticket=ticket,
+                author=request.user,
+                message=message,
+                is_internal_note=is_internal,
+            )
+            # Auto-set to in_progress if open
+            if ticket.status == 'open':
+                ticket.status = 'in_progress'
+                ticket.save(update_fields=['status'])
+            messages.success(request, 'Reply posted.')
+    return redirect('management:ticket_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(is_admin)
+def ticket_change_status(request, pk):
+    if request.method == 'POST':
+        from .models import SupportTicket
+        ticket = get_object_or_404(SupportTicket, pk=pk)
+        new_status = request.POST.get('status')
+        if new_status in dict(SupportTicket.STATUS_CHOICES):
+            ticket.status = new_status
+            ticket.save(update_fields=['status', 'resolved_at', 'updated_at'])
+            messages.success(request, f'Status changed to {ticket.get_status_display()}.')
+    return redirect('management:ticket_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(is_admin)
+def ticket_assign(request, pk):
+    if request.method == 'POST':
+        from .models import SupportTicket
+        from django.contrib.auth.models import User
+        ticket = get_object_or_404(SupportTicket, pk=pk)
+        assigned_to_id = request.POST.get('assigned_to')
+        if assigned_to_id:
+            ticket.assigned_to = get_object_or_404(User, pk=assigned_to_id)
+        else:
+            ticket.assigned_to = None
+        ticket.save(update_fields=['assigned_to'])
+        messages.success(request, 'Ticket assigned.')
+    return redirect('management:ticket_detail', pk=pk)
+
+
+# ===========================================================================
+# CONTACT MESSAGES
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def contact_messages_list(request):
+    from .models import ContactMessage
+    qs = ContactMessage.objects.select_related('user', 'responded_by').order_by('-created_at')
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(message__icontains=search)
+        )
+
+    subject = request.GET.get('subject', '')
+    if subject:
+        qs = qs.filter(subject=subject)
+
+    read_status = request.GET.get('read_status', '')
+    if read_status == 'unread':
+        qs = qs.filter(is_read=False)
+    elif read_status == 'read':
+        qs = qs.filter(is_read=True)
+
+    responded = request.GET.get('responded', '')
+    if responded == 'yes':
+        qs = qs.filter(responded=True)
+    elif responded == 'no':
+        qs = qs.filter(responded=False)
+
+    unread_count = ContactMessage.objects.filter(is_read=False).count()
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'management/contact_messages_list.html', {
+        'messages_list': page_obj,
+        'unread_count': unread_count,
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def contact_message_detail(request, pk):
+    from .models import ContactMessage
+    msg = get_object_or_404(ContactMessage, pk=pk)
+    # Auto-mark as read on open
+    if not msg.is_read:
+        msg.is_read = True
+        msg.save(update_fields=['is_read'])
+    return render(request, 'management/contact_message_detail.html', {'contact_message': msg})
+
+
+@login_required
+@user_passes_test(is_admin)
+def contact_message_mark_read(request, pk):
+    if request.method == 'POST':
+        from .models import ContactMessage
+        msg = get_object_or_404(ContactMessage, pk=pk)
+        msg.is_read = True
+        msg.save(update_fields=['is_read'])
+        messages.success(request, 'Marked as read.')
+    return redirect('management:contact_message_detail', pk=pk)
+
+
+@login_required
+@user_passes_test(is_admin)
+def contact_message_respond(request, pk):
+    if request.method == 'POST':
+        from .models import ContactMessage
+        msg = get_object_or_404(ContactMessage, pk=pk)
+        response_text = request.POST.get('response', '').strip()
+        if response_text:
+            try:
+                send_mail(
+                    subject=f'Re: {msg.get_subject_display()} — MIU',
+                    message=response_text,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[msg.email],
+                    fail_silently=False,
+                )
+            except Exception:
+                pass  # Log in production
+            msg.responded = True
+            msg.responded_at = timezone.now()
+            msg.responded_by = request.user
+            msg.is_read = True
+            msg.save(update_fields=['responded', 'responded_at', 'responded_by', 'is_read'])
+            messages.success(request, f'Response sent to {msg.email}.')
+        else:
+            messages.error(request, 'Response cannot be empty.')
+    return redirect('management:contact_message_detail', pk=pk)
+
+
+# ===========================================================================
+# ANNOUNCEMENTS
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def announcements_list(request):
+    qs = Announcement.objects.select_related('course', 'category', 'created_by').order_by('-priority', '-publish_date')
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(Q(title__icontains=search) | Q(content__icontains=search))
+
+    ann_type = request.GET.get('type', '')
+    if ann_type:
+        qs = qs.filter(announcement_type=ann_type)
+
+    priority = request.GET.get('priority', '')
+    if priority:
+        qs = qs.filter(priority=priority)
+
+    paginator = Paginator(qs, 15)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'management/announcements_list.html', {'announcements': page_obj})
+
+
+@login_required
+@user_passes_test(is_admin)
+def announcement_create(request):
+    from .forms import AnnouncementForm
+    if request.method == 'POST':
+        form = AnnouncementForm(request.POST)
+        if form.is_valid():
+            ann = form.save(commit=False)
+            ann.created_by = request.user
+            ann.save()
+            messages.success(request, 'Announcement created.')
+            return redirect('management:announcements_list')
+    else:
+        form = AnnouncementForm()
+    return render(request, 'management/announcement_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def announcement_edit(request, pk):
+    from .forms import AnnouncementForm
+    announcement = get_object_or_404(Announcement, pk=pk)
+    if request.method == 'POST':
+        form = AnnouncementForm(request.POST, instance=announcement)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Announcement updated.')
+            return redirect('management:announcements_list')
+    else:
+        form = AnnouncementForm(instance=announcement)
+    return render(request, 'management/announcement_form.html', {
+        'form': form,
+        'announcement': announcement,
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def announcement_delete(request, pk):
+    announcement = get_object_or_404(Announcement, pk=pk)
+    if request.method == 'POST':
+        announcement.delete()
+        messages.success(request, 'Announcement deleted.')
+    return redirect('management:announcements_list')

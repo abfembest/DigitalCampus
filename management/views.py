@@ -2554,7 +2554,7 @@ def tickets_list(request):
 @login_required
 @user_passes_test(is_admin)
 def ticket_detail(request, pk):
-    from .models import SupportTicket, TicketReply
+    from eduweb.models import SupportTicket, TicketReply
     from django.contrib.auth.models import User
     ticket = get_object_or_404(SupportTicket.objects.select_related('user', 'assigned_to'), pk=pk)
     replies = ticket.replies.select_related('author').order_by('created_at')
@@ -2571,7 +2571,7 @@ def ticket_detail(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def ticket_reply(request, pk):
-    from .models import SupportTicket, TicketReply
+    from eduweb.models import SupportTicket, TicketReply
     ticket = get_object_or_404(SupportTicket, pk=pk)
     if request.method == 'POST':
         message = request.POST.get('message', '').strip()
@@ -2595,7 +2595,7 @@ def ticket_reply(request, pk):
 @user_passes_test(is_admin)
 def ticket_change_status(request, pk):
     if request.method == 'POST':
-        from .models import SupportTicket
+        from eduweb.models import SupportTicket
         ticket = get_object_or_404(SupportTicket, pk=pk)
         new_status = request.POST.get('status')
         if new_status in dict(SupportTicket.STATUS_CHOICES):
@@ -2609,7 +2609,7 @@ def ticket_change_status(request, pk):
 @user_passes_test(is_admin)
 def ticket_assign(request, pk):
     if request.method == 'POST':
-        from .models import SupportTicket
+        from eduweb.models import SupportTicket
         from django.contrib.auth.models import User
         ticket = get_object_or_404(SupportTicket, pk=pk)
         assigned_to_id = request.POST.get('assigned_to')
@@ -2629,7 +2629,7 @@ def ticket_assign(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def contact_messages_list(request):
-    from .models import ContactMessage
+    from eduweb.models import ContactMessage
     qs = ContactMessage.objects.select_related('user', 'responded_by').order_by('-created_at')
 
     search = request.GET.get('search', '').strip()
@@ -2669,7 +2669,7 @@ def contact_messages_list(request):
 @login_required
 @user_passes_test(is_admin)
 def contact_message_detail(request, pk):
-    from .models import ContactMessage
+    from eduweb.models import ContactMessage
     msg = get_object_or_404(ContactMessage, pk=pk)
     # Auto-mark as read on open
     if not msg.is_read:
@@ -2682,7 +2682,7 @@ def contact_message_detail(request, pk):
 @user_passes_test(is_admin)
 def contact_message_mark_read(request, pk):
     if request.method == 'POST':
-        from .models import ContactMessage
+        from eduweb.models import ContactMessage
         msg = get_object_or_404(ContactMessage, pk=pk)
         msg.is_read = True
         msg.save(update_fields=['is_read'])
@@ -2694,7 +2694,7 @@ def contact_message_mark_read(request, pk):
 @user_passes_test(is_admin)
 def contact_message_respond(request, pk):
     if request.method == 'POST':
-        from .models import ContactMessage
+        from eduweb.models import ContactMessage
         msg = get_object_or_404(ContactMessage, pk=pk)
         response_text = request.POST.get('response', '').strip()
         if response_text:

@@ -21,6 +21,64 @@ import json
 
 
 # ==============================================================================
+# CUSTOM DATALIST WIDGETS
+# ==============================================================================
+
+class DatalistWidget(forms.TextInput):
+    """Custom widget that renders a datalist for model selections"""
+    def __init__(self, datalist_id=None, attrs=None):
+        super().__init__(attrs)
+        self.datalist_id = datalist_id or 'datalist-' + str(id(self))
+    
+    def render(self, name, value, attrs=None, renderer=None):
+        # Get the html_id
+        if attrs is None:
+            attrs = {}
+        attrs['list'] = self.datalist_id
+        attrs['class'] = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+        
+        html = super().render(name, value, attrs, renderer)
+        return html
+
+
+class ModelDatalistWidget(forms.Widget):
+    """Widget that renders input with datalist for model foreign keys"""
+    def __init__(self, queryset, label_func=None, attrs=None):
+        super().__init__(attrs)
+        self.queryset = queryset
+        self.label_func = label_func or (lambda obj: str(obj))
+        self.datalist_id = 'datalist-' + str(id(self))
+    
+    def render(self, name, value, attrs=None, renderer=None):
+        if attrs is None:
+            attrs = {}
+        attrs['class'] = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+        
+        # Get the selected label
+        selected_label = ''
+        if value:
+            try:
+                obj = self.queryset.get(pk=value)
+                selected_label = self.label_func(obj)
+            except:
+                selected_label = str(value)
+        
+        # Build the HTML
+        html = f'<input type="text" name="{name}" value="{selected_label}" list="{self.datalist_id}" '
+        for key, attr_value in attrs.items():
+            html += f'{key}="{attr_value}" '
+        html += '/>\n'
+        
+        # Add datalist
+        html += f'<datalist id="{self.datalist_id}">\n'
+        for obj in self.queryset:
+            html += f'  <option value="{obj.pk}">{self.label_func(obj)}</option>\n'
+        html += '</datalist>\n'
+        
+        return html
+
+
+# ==============================================================================
 # FACULTY FORM
 # ==============================================================================
 
@@ -1009,3 +1067,358 @@ class BroadcastMessageForm(forms.ModelForm):
                 raise forms.ValidationError(message)
 
         return cleaned_data
+
+from django import forms
+from eduweb.models import (
+    Department, Program, AcademicSession, CourseIntake,
+    Announcement, LMSCourse, CourseCategory
+)
+
+
+class DepartmentForm(forms.ModelForm):
+    class Meta:
+        model = Department
+        fields = ['faculty', 'name', 'code', 'description', 'display_order', 'is_active']
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code', '').strip().upper()
+        return code
+
+
+class ProgramForm(forms.ModelForm):
+    class Meta:
+        model = Program
+        fields = [
+            'department', 'name', 'code', 'degree_level',
+            'duration_years', 'credits_required', 'max_students',
+            'tagline', 'overview', 'description',
+            'application_fee', 'tuition_fee', 'avg_starting_salary',
+            'job_placement_rate',
+            'is_active', 'is_featured', 'display_order',
+            'hero_image', 'meta_description', 'meta_keywords',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'placeholder': 'e.g., BSc Electrical Engineering'
+            }),
+            'code': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm uppercase',
+                'placeholder': 'e.g., BSC-EEE'
+            }),
+            'degree_level': forms.Select(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm'
+            }),
+            'duration_years': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'step': '0.5',
+                'min': '0.5',
+                'placeholder': '4.0'
+            }),
+            'credits_required': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'min': '0'
+            }),
+            'max_students': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'min': '1',
+                'placeholder': 'Unlimited'
+            }),
+            'tagline': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'placeholder': 'Short marketing tagline…'
+            }),
+            'overview': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none',
+                'rows': '3'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none',
+                'rows': '5'
+            }),
+            'application_fee': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'tuition_fee': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'avg_starting_salary': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'placeholder': 'e.g., $45,000 - $60,000'
+            }),
+            'job_placement_rate': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'min': '0',
+                'max': '100'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 rounded text-primary-600 border-gray-300 focus:ring-primary-500'
+            }),
+            'is_featured': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 rounded text-primary-600 border-gray-300 focus:ring-primary-500'
+            }),
+            'display_order': forms.NumberInput(attrs={
+                'class': 'w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'min': '0'
+            }),
+            'hero_image': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'image/*'
+            }),
+            'meta_description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none',
+                'rows': '2',
+                'maxlength': '160',
+                'placeholder': 'Brief description for search engines'
+            }),
+            'meta_keywords': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'placeholder': 'e.g., engineering, computer science, degree'
+            }),
+        }
+
+    def clean_code(self):
+        return self.cleaned_data.get('code', '').strip().upper()
+
+
+class AcademicSessionForm(forms.ModelForm):
+    class Meta:
+        model = AcademicSession
+        fields = [
+            'name', 'status', 'is_current',
+            'first_semester_start', 'first_semester_end',
+            'second_semester_start', 'second_semester_end',
+            'registration_start', 'registration_end',
+        ]
+        widgets = {
+            'first_semester_start': forms.DateInput(attrs={'type': 'date'}),
+            'first_semester_end': forms.DateInput(attrs={'type': 'date'}),
+            'second_semester_start': forms.DateInput(attrs={'type': 'date'}),
+            'second_semester_end': forms.DateInput(attrs={'type': 'date'}),
+            'registration_start': forms.DateInput(attrs={'type': 'date'}),
+            'registration_end': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        sem1_start = cleaned.get('first_semester_start')
+        sem1_end = cleaned.get('first_semester_end')
+        sem2_start = cleaned.get('second_semester_start')
+        sem2_end = cleaned.get('second_semester_end')
+
+        if sem1_start and sem1_end and sem1_start >= sem1_end:
+            raise forms.ValidationError('Semester 1 start must be before end date.')
+        if sem2_start and sem2_end and sem2_start >= sem2_end:
+            raise forms.ValidationError('Semester 2 start must be before end date.')
+        if sem1_end and sem2_start and sem2_start <= sem1_end:
+            raise forms.ValidationError('Semester 2 must start after Semester 1 ends.')
+        return cleaned
+
+
+class CourseIntakeForm(forms.ModelForm):
+    class Meta:
+        model = CourseIntake
+        fields = ['program', 'intake_period', 'year', 'start_date', 'application_deadline', 'available_slots', 'is_active']
+        widgets = {
+            'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'application_deadline': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get('start_date')
+        deadline = cleaned.get('application_deadline')
+        if start and deadline and deadline >= start:
+            raise forms.ValidationError('Application deadline must be before the start date.')
+        return cleaned
+
+
+class AnnouncementForm(forms.ModelForm):
+    class Meta:
+        model = Announcement
+        fields = [
+            'title', 'content',
+            'announcement_type', 'priority',
+            'course', 'category',
+            'is_active', 'publish_date', 'expiry_date',
+        ]
+        widgets = {
+            'publish_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'expiry_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'content': forms.Textarea(attrs={'rows': 6}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only show active courses & categories
+        self.fields['course'].queryset = LMSCourse.objects.filter(is_published=True).order_by('title')
+        self.fields['category'].queryset = CourseCategory.objects.filter(is_active=True).order_by('name')
+        self.fields['course'].required = False
+        self.fields['category'].required = False
+
+
+class LMSCourseForm(forms.ModelForm):
+    """Form for creating/editing LMS courses"""
+    
+    # JSON textarea helpers
+    learning_objectives_text = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            'rows': 4,
+            'placeholder': 'One objective per line:\nUnderstand core concepts\nApply practical skills\nEvaluate real-world scenarios'
+        }),
+        label='Learning Objectives',
+        help_text='One objective per line'
+    )
+    
+    prerequisites_text = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            'rows': 3,
+            'placeholder': 'One prerequisite per line:\nBasic programming knowledge\nHTML/CSS fundamentals'
+        }),
+        label='Prerequisites',
+        help_text='One prerequisite per line'
+    )
+    
+    class Meta:
+        model = LMSCourse
+        fields = [
+            'title', 'code', 'category', 'short_description', 'description',
+            'difficulty_level', 'duration_hours', 'language', 'instructor',
+            'instructor_name', 'instructor_bio', 'thumbnail', 'promo_video_url',
+            'max_students', 'enrollment_start_date', 'enrollment_end_date',
+            'is_published', 'is_featured', 'has_certificate', 'certificate_template',
+            'meta_description', 'meta_keywords'
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Course title'
+            }),
+            'code': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'UNIQ course code'
+            }),
+            'category': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'short_description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'rows': 2,
+                'placeholder': 'Brief course summary (max 500 chars)'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'rows': 5,
+                'placeholder': 'Detailed course description'
+            }),
+            'difficulty_level': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'duration_hours': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Estimated hours',
+                'step': '0.5',
+                'min': '0'
+            }),
+            'language': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'English'
+            }),
+            'instructor': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'instructor_name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Instructor name (if not selected above)'
+            }),
+            'instructor_bio': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'rows': 3,
+                'placeholder': 'Brief biography'
+            }),
+            'thumbnail': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            }),
+            'promo_video_url': forms.URLInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'YouTube or Vimeo URL'
+            }),
+            'max_students': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Leave empty for unlimited'
+            }),
+            'enrollment_start_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            }),
+            'enrollment_end_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            }),
+            'is_published': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
+            }),
+            'is_featured': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
+            }),
+            'has_certificate': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
+            }),
+            'certificate_template': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Certificate template filename'
+            }),
+            'meta_description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'rows': 2,
+                'placeholder': 'SEO meta description (160 chars)'
+            }),
+            'meta_keywords': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Comma-separated keywords'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['category'].empty_label = '— Select Category —'
+        self.fields['instructor'].empty_label = '— Select Instructor —'
+        self.fields['instructor'].queryset = User.objects.filter(is_staff=True).order_by('last_name', 'first_name')
+        self.fields['instructor'].required = False
+        
+        # Pre-populate JSON fields when editing
+        if self.instance.pk:
+            objectives = self.instance.learning_objectives
+            if objectives and isinstance(objectives, list):
+                self.fields['learning_objectives_text'].initial = '\n'.join(objectives)
+            
+            prerequisites = self.instance.prerequisites
+            if prerequisites and isinstance(prerequisites, list):
+                self.fields['prerequisites_text'].initial = '\n'.join(prerequisites)
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Convert learning objectives textarea to JSON list
+        objectives_raw = self.cleaned_data.get('learning_objectives_text', '')
+        instance.learning_objectives = [
+            line.strip() for line in objectives_raw.split('\n') if line.strip()
+        ]
+        
+        # Convert prerequisites textarea to JSON list
+        prerequisites_raw = self.cleaned_data.get('prerequisites_text', '')
+        instance.prerequisites = [
+            line.strip() for line in prerequisites_raw.split('\n') if line.strip()
+        ]
+        
+        if commit:
+            instance.save()
+        return instance

@@ -10,6 +10,25 @@
 
     <title>{% block title %}Dashboard - MIU Portal{% endblock %}</title>
 
+    <!-- CRITICAL: runs sync before any CSS/JS — sets sidebar state with zero flash -->
+    <script>try{if(localStorage.getItem('sidebarCollapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed');}}catch(e){}</script>
+    <style>
+        /* Default sidebar dimensions — before Tailwind loads */
+        #sidebar { width: 18rem; transition: width 0.3s cubic-bezier(0.4,0,0.2,1); }
+        #mainContent { margin-left: 18rem; transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1); }
+        /* Collapsed state applied instantly by the script above */
+        html[data-sidebar="collapsed"] #sidebar { width: 5.5rem; }
+        html[data-sidebar="collapsed"] #mainContent { margin-left: 5.5rem; }
+        /* Mobile override */
+        @media (max-width: 767px) {
+            #sidebar { width: 75vw !important; max-width: 16rem; }
+            #mainContent { margin-left: 0 !important; }
+        }
+        /* Font guarantee */
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .font-heading, h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', system-ui, -apple-system, sans-serif; }
+    </style>
+
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,9 +36,8 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS -->
-    {% comment %} <link rel="stylesheet" href="{% static 'css/styles.css' %}"> {% endcomment %}
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS - Local build (compiled from src/styles.css) -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -43,152 +61,276 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
 
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                        display: ['Poppins', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#4a6bff',
-                            600: '#3a56d4',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        secondary: {
-                            500: '#6c63ff',
-                            600: '#5a52d5',
-                        },
-                        accent: {
-                            500: '#ff6584',
-                            600: '#e5577a',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
     <style>
-        /* ==================== SIDEBAR COLLAPSED STYLES ==================== */
-        .sidebar-collapsed {
-            width: 5rem !important;
+        /* ==================== MANAGEMENT DASHBOARD COLOR OVERRIDE ==================== */
+        /* Remap colors to use blue/purple/pink palette for management dashboard */
+        :root {
+            --color-primary-50: #eff6ff;
+            --color-primary-100: #dbeafe;
+            --color-primary-200: #bfdbfe;
+            --color-primary-300: #93c5fd;
+            --color-primary-400: #60a5fa;
+            --color-primary-500: #4a6bff;
+            --color-primary-600: #3a56d4;
+            --color-primary-700: #1d4ed8;
+            --color-primary-800: #1e40af;
+            --color-primary-900: #1e3a8a;
+            --color-primary-950: #4a6bff;
+
+            --color-secondary-50: #f5f3ff;
+            --color-secondary-100: #ede9fe;
+            --color-secondary-200: #ddd6fe;
+            --color-secondary-300: #c4b5fd;
+            --color-secondary-400: #a78bfa;
+            --color-secondary-500: #6c63ff;
+            --color-secondary-600: #5a52d5;
+            --color-secondary-700: #4c1d95;
+            --color-secondary-800: #3d0064;
+            --color-secondary-900: #2d0a4e;
+
+            --color-accent-50: #fff7f8;
+            --color-accent-100: #ffe4e9;
+            --color-accent-200: #ffc7d3;
+            --color-accent-300: #ffadbb;
+            --color-accent-400: #ff8fa3;
+            --color-accent-500: #ff6584;
+            --color-accent-600: #e5577a;
+            --color-accent-700: #cc4d70;
+            --color-accent-800: #b34366;
+            --color-accent-900: #9a395c;
         }
 
-            /* HIDE ALL TEXT CONTENT WHEN COLLAPSED */
-            .sidebar-collapsed .sidebar-header span,
-            .sidebar-collapsed nav span:not(.badge-count),
-            .sidebar-collapsed .py-2.px-4.text-xs.uppercase,
-            .sidebar-collapsed .bg-white\/5,
-            .sidebar-collapsed .menu-arrow {
-                display: none !important;
-            }
-
-            /* HIDE SUBMENUS WHEN COLLAPSED */
-            .sidebar-collapsed [id$="Menu"] {
-                display: none !important;
-            }
-
-            /* CENTER HEADER WHEN COLLAPSED */
-            .sidebar-collapsed .sidebar-header {
-                justify-content: center !important;
-                padding-left: 0.5rem !important;
-                padding-right: 0.5rem !important;
-            }
-
-                .sidebar-collapsed .sidebar-header a {
-                    margin: 0 auto;
-                }
-
-                    .sidebar-collapsed .sidebar-header a i {
-                        margin-right: 0 !important;
-                    }
-
-            /* CENTER ALL NAV ITEMS WHEN COLLAPSED */
-            .sidebar-collapsed nav a,
-            .sidebar-collapsed nav button,
-            .sidebar-collapsed .menu-toggle {
-                justify-content: center !important;
-                padding-left: 1rem !important;
-                padding-right: 1rem !important;
-            }
-
-                .sidebar-collapsed nav a > div,
-                .sidebar-collapsed nav button > div,
-                .sidebar-collapsed .menu-toggle > div {
-                    justify-content: center !important;
-                }
-
-            /* CENTER ICONS AND REMOVE MARGINS */
-            .sidebar-collapsed nav i {
-                margin: 0 !important;
-                width: 1.5rem;
-                height: 1.5rem;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            /* BADGE COUNT POSITIONING */
-            .sidebar-collapsed .badge-count {
-                position: absolute !important;
-                top: 0.25rem !important;
-                right: 0.25rem !important;
-                min-width: 1.25rem !important;
-                height: 1.25rem !important;
-                font-size: 0.625rem !important;
-                padding: 0.125rem !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            }
-
-            /* HIDE MOBILE CLOSE BUTTON WHEN COLLAPSED */
-            .sidebar-collapsed #closeSidebar {
-                display: none !important;
-            }
-
-            /* USER INFO AT BOTTOM WHEN COLLAPSED */
-            .sidebar-collapsed .user-info-bottom {
-                padding: 0.75rem 0.5rem !important;
-            }
-
-                .sidebar-collapsed .user-info-bottom > div {
-                    justify-content: center !important;
-                }
-
-                .sidebar-collapsed .user-info-bottom .flex-1 {
-                    display: none !important;
-                }
-
-                .sidebar-collapsed .user-info-bottom .user-avatar {
-                    margin: 0 auto;
-                }
-
-        /* SMOOTH TRANSITIONS */
+        /* ==================== SIDEBAR BASE STYLES ==================== */
         #sidebar {
-            transition: width 0.3s ease, transform 0.3s ease;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-x: hidden;
             overflow-y: auto;
+            width: 18rem; /* Increased from 16rem to 18rem (288px) */
         }
 
         #mainContent {
-            transition: margin-left 0.3s ease;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ==================== SCROLLBAR STYLING - SLIM & SUBTLE ==================== */
+        #sidebar::-webkit-scrollbar {
+            width: 2px; /* Ultra-slim scrollbar */
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Firefox scrollbar */
+        #sidebar {
+            scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+            scrollbar-width: thin;
+        }
+
+        /* ==================== SIDEBAR COLLAPSED STYLES ==================== */
+        .sidebar-collapsed {
+            width: 5.5rem !important;
+        }
+
+        /* sidebar-hover-expanded: applied by JS on mouseenter (removes sidebar-collapsed first)
+           So this class operates on a fully normal sidebar — just needs width + overlay shadow */
+        .sidebar-hover-expanded {
+            width: 18rem !important;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+            z-index: 50;
+        }
+
+        /* SHOW MENUS WHEN SIDEBAR IS HOVER-EXPANDED */
+        .sidebar-hover-expanded [id$="Menu"]:not(.hidden) {
+            display: block !important;
+            pointer-events: auto !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* RESTORE NORMAL LAYOUT FOR MENU ITEMS ON HOVER-EXPAND */
+        .sidebar-hover-expanded [id$="Menu"]:not(.hidden) a,
+        .sidebar-hover-expanded [id$="Menu"]:not(.hidden) button {
+            pointer-events: auto !important;
+            display: block !important;
+            width: 100%;
+            text-align: left;
+            visibility: visible !important;
+            opacity: 1 !important;
+            justify-content: flex-start !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+
+        /* Restore normal header layout on hover-expand */
+        .sidebar-hover-expanded .sidebar-header {
+            justify-content: space-between !important;
+            padding-left: 1.25rem !important;
+            padding-right: 1.25rem !important;
+        }
+
+        /* Restore nav items to spread layout */
+        .sidebar-hover-expanded nav a,
+        .sidebar-hover-expanded nav button,
+        .sidebar-hover-expanded .menu-toggle {
+            justify-content: space-between !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+
+        .sidebar-hover-expanded nav i {
+            margin: 0 0.75rem 0 0 !important;
+            width: auto !important;
+            display: inline !important;
+        }
+
+        .sidebar-hover-expanded .badge-count {
+            position: static !important;
+            margin-left: auto !important;
+        }
+
+        /* HIDE CONTENT WHEN COLLAPSED */
+        .sidebar-collapsed .sidebar-header span,
+        .sidebar-collapsed nav span:not(.badge-count),
+        .sidebar-collapsed .sidebar-section-label,
+        .sidebar-collapsed .menu-arrow {
+            display: none !important;
+        }
+
+        /* HIDE SUBMENUS WHEN COLLAPSED */
+        .sidebar-collapsed [id$="Menu"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* CENTER HEADER WHEN COLLAPSED */
+        .sidebar-collapsed .sidebar-header {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+        .sidebar-collapsed .sidebar-header a {
+            margin: 0 auto;
+        }
+
+        .sidebar-collapsed .sidebar-header a i {
+            margin-right: 0 !important;
+        }
+
+        /* CENTER ALL NAV ITEMS WHEN COLLAPSED */
+        .sidebar-collapsed nav a,
+        .sidebar-collapsed nav button,
+        .sidebar-collapsed .menu-toggle {
+            justify-content: center !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+        }
+
+        .sidebar-collapsed nav a > div,
+        .sidebar-collapsed nav button > div,
+        .sidebar-collapsed .menu-toggle > div {
+            justify-content: center !important;
+        }
+
+        /* CENTER ICONS AND REMOVE MARGINS */
+        .sidebar-collapsed nav i {
+            margin: 0 !important;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* BADGE COUNT POSITIONING */
+        .sidebar-collapsed .badge-count {
+            position: absolute !important;
+            top: 0.25rem !important;
+            right: 0.25rem !important;
+            min-width: 1.25rem !important;
+            height: 1.25rem !important;
+            font-size: 0.625rem !important;
+            padding: 0.125rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        /* HIDE MOBILE CLOSE BUTTON WHEN COLLAPSED */
+        .sidebar-collapsed #closeSidebar {
+            display: none !important;
+        }
+
+        /* USER INFO AT BOTTOM WHEN COLLAPSED */
+        .sidebar-collapsed .user-info-bottom {
+            padding: 0.75rem 0.5rem !important;
+        }
+
+        .sidebar-collapsed .user-info-bottom > div {
+            justify-content: center !important;
+        }
+
+        .sidebar-collapsed .user-info-bottom .flex-1 {
+            display: none !important;
+        }
+
+        .sidebar-collapsed .user-info-bottom .user-avatar {
+            margin: 0 auto;
         }
 
         /* ENSURE PROPER STRUCTURE */
         nav a, nav button {
             position: relative;
+        }
+
+        /* ==================== RESPONSIVE DESIGN ==================== */
+        /* Tablet and up */
+        @media (min-width: 768px) {
+            #mainContent {
+                margin-left: 18rem;
+            }
+        }
+
+        /* Mobile - Full width sidebar overlay */
+        @media (max-width: 767px) {
+            #sidebar {
+                width: 75vw !important;
+                max-width: 16rem;
+                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .sidebar-collapsed {
+                width: 75vw !important;
+            }
+
+            #mainContent {
+                margin-left: 0 !important;
+            }
+
+            /* Hide collapse button on mobile - use close button instead */
+            #collapseSidebar {
+                display: none;
+            }
+        }
+
+        /* Landscape mobile */
+        @media (max-width: 896px) and (orientation: landscape) {
+            #sidebar {
+                height: 100vh;
+                overflow-y: auto;
+            }
         }
 
         /* ==================== DROPDOWN STYLES ==================== */
@@ -212,26 +354,35 @@
             background-color: rgba(255, 255, 255, 0.2);
         }
 
-        /* ==================== SCROLLBAR STYLING ==================== */
+        /* ==================== SMOOTH SCROLLBARS - SLIM & SUBTLE ==================== */
+        /* WebKit browsers (Chrome, Safari, Edge) */
         #sidebar::-webkit-scrollbar {
-            width: 4px;
+            width: 2px; /* Ultra-slim scrollbar */
         }
 
         #sidebar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
+            background: transparent; /* Invisible track */
         }
 
         #sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.15); /* Very subtle */
+            border-radius: 10px;
+            transition: background 0.3s ease;
         }
 
-            #sidebar::-webkit-scrollbar-thumb:hover {
-                background: rgba(255, 255, 255, 0.5);
-            }
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25); /* Slightly more visible on hover */
+        }
+
+        /* Firefox */
+        #sidebar {
+            scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+            scrollbar-width: thin;
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
+
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased">
     <!-- Mobile Sidebar Overlay -->
@@ -239,11 +390,11 @@
 
     <div class="flex min-h-screen">
         <!-- Sidebar Navigation - Fixed positioning -->
-        <aside id="sidebar" class="w-64 bg-gradient-to-b from-primary-500 to-secondary-500 text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+        <aside id="sidebar" class="bg-gradient-to-b from-primary-500 to-secondary-500 text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0">
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div class="sidebar-header p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% else %}#{% endif %}" class="text-xl font-bold flex items-center font-display hover:opacity-80 transition-opacity">
+                    <a href="{% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% elif request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% else %}{% url 'management:dashboard' %}{% endif %}" class="text-xl font-bold flex items-center font-heading hover:opacity-80 transition-opacity">
                         <i class="fas fa-graduation-cap mr-3" aria-hidden="true"></i>
                         <span class="whitespace-nowrap">MIU Portal</span>
                     </a>
@@ -256,7 +407,10 @@
                 <nav class="flex-1 overflow-y-auto py-4 px-3" role="navigation" aria-label="Main navigation">
 
                     {% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}
-                    <!-- ADMIN/MANAGEMENT MENU -->
+                    <!-- ================================================ -->
+                    <!-- ADMIN / MANAGEMENT MENU                          -->
+                    <!-- ================================================ -->
+
                     <!-- Dashboard -->
                     <a href="{% url 'management:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
@@ -275,7 +429,7 @@
                         </div>
                     </a>
 
-                    <!-- Applications Management -->
+                    <!-- Applications -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'applications' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
@@ -284,61 +438,77 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="applicationsMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="applicationsMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:applications_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'applications_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Applications
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i>All Applications
+                            </a>
+                            <a href="{% url 'management:intakes_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'intakes' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-door-open mr-2" aria-hidden="true"></i>Course Intakes
                             </a>
                         </div>
                     </div>
 
-                    <!-- Faculties Management -->
+                    <!-- Academic Structure -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'faculties' in request.path or 'faculty' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'faculties' in request.path or 'departments' in request.path or 'programs' in request.path or 'academic-sessions' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-university w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Faculties</span>
+                                <span class="ml-3">Academics</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="facultiesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="academicMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:faculties_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'faculties_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Faculties
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'faculties' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-building mr-2" aria-hidden="true"></i>Faculties
                             </a>
-                            <a href="{% url 'management:faculty_create' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'faculty_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Faculty
+                            <a href="{% url 'management:departments_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'departments' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-sitemap mr-2" aria-hidden="true"></i>Departments
+                            </a>
+                            <a href="{% url 'management:programs_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'programs' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i>Programs
+                            </a>
+                            <a href="{% url 'management:academic_sessions_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'academic-sessions' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-calendar-alt mr-2" aria-hidden="true"></i>Academic Sessions
                             </a>
                         </div>
                     </div>
 
-                    <!-- Courses Management -->
+                    <!-- LMS / Courses -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path or 'course' in request.path or 'categories' in request.path or 'category' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path or 'categories' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
-                                <i class="fas fa-graduation-cap w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Courses</span>
+                                <i class="fas fa-chalkboard-teacher w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">LMS Courses</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:courses' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses' or request.resolver_match.url_name == 'courses_list' or request.resolver_match.url_name == 'course_categories_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-th-list mr-2" aria-hidden="true"></i> Manage Courses
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses' %}bg-white/20{% endif %}">
+                                <i class="fas fa-th-list mr-2" aria-hidden="true"></i>All Courses
                             </a>
-                            <a href="{% url 'management:course_create' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Add Program
+                            <a href="{% url 'management:lms_courses_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'lms_course' in request.resolver_match.url_name %}bg-white/20{% endif %}">
+                                <i class="fas fa-book mr-2" aria-hidden="true"></i>LMS Courses
                             </a>
-                            <a href="{% url 'management:course_category_create' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_category_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus-circle mr-2" aria-hidden="true"></i> Add Category
+                            <a href="{% url 'management:lms_course_create' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'lms_course_create' %}bg-white/20{% endif %}">
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add LMS Course
+                            </a>
+                            <a href="{% url 'management:course_categories_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'categories' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-folder-open mr-2" aria-hidden="true"></i>Categories
                             </a>
                         </div>
                     </div>
 
-                    <!-- Blog Management -->
+                    <!-- Blog -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'blog' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
@@ -347,26 +517,72 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="blogMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="blogMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:blog_posts_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_posts_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Posts
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i>All Posts
                             </a>
                             <a href="{% url 'management:blog_post_create' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_post_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i> Create Post
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i>Create Post
                             </a>
                             <a href="{% url 'management:blog_categories_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_categories_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-tags mr-2" aria-hidden="true"></i> Categories
+                                <i class="fas fa-tags mr-2" aria-hidden="true"></i>Categories
                             </a>
                         </div>
                     </div>
 
+                    <!-- Support -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'tickets' in request.path or 'contact-messages' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-headset w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Support</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="supportMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'management:tickets_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'tickets' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-ticket-alt mr-2" aria-hidden="true"></i>Support Tickets
+                                {% if open_tickets_count %}
+                                <span class="ml-auto badge-count bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ open_tickets_count }}</span>
+                                {% endif %}
+                            </a>
+                            <a href="{% url 'management:contact_messages_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'contact-messages' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-inbox mr-2" aria-hidden="true"></i>Contact Messages
+                                {% if unread_contact_count %}
+                                <span class="ml-auto badge-count bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ unread_contact_count }}</span>
+                                {% endif %}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Announcements (direct link — no submenu needed) -->
+                    <a href="{% url 'management:announcements_list' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'announcements' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-bullhorn w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Announcements</span>
+                        </div>
+                    </a>
+
+                    <!-- Broadcast Center -->
+                    <a href="{% url 'management:broadcast_center' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'broadcast' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-satellite-dish w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Broadcast Center</span>
+                        </div>
+                    </a>
+
                     <!-- Divider -->
                     <div class="border-t border-white/10 my-4"></div>
+                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">System</div>
 
-                    <!-- System Configuration (NEW) -->
+                    <!-- System Configuration -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'config' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
@@ -375,27 +591,27 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="configMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="configMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:system_config_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'system_config_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Settings
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i>All Settings
                             </a>
                             <a href="{% url 'management:branding_config' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'branding_config' %}bg-white/20{% endif %}">
-                                <i class="fas fa-paint-brush mr-2" aria-hidden="true"></i> Branding
+                                <i class="fas fa-paint-brush mr-2" aria-hidden="true"></i>Branding
                             </a>
                             <a href="{% url 'management:email_config' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'email_config' %}bg-white/20{% endif %}">
-                                <i class="fas fa-envelope mr-2" aria-hidden="true"></i> Email Setup
+                                <i class="fas fa-envelope mr-2" aria-hidden="true"></i>Email Setup
                             </a>
                             <a href="{% url 'management:notification_config' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'notification_config' %}bg-white/20{% endif %}">
-                                <i class="fas fa-bell mr-2" aria-hidden="true"></i> Notifications
+                                <i class="fas fa-bell mr-2" aria-hidden="true"></i>Notifications
                             </a>
                         </div>
                     </div>
 
-                    <!-- Security & Audit (NEW) -->
+                    <!-- Security & Audit -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'audit' in request.path or 'security' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
@@ -404,104 +620,96 @@
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="securityMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="securityMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:security_dashboard' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'security_dashboard' %}bg-white/20{% endif %}">
-                                <i class="fas fa-lock mr-2" aria-hidden="true"></i> Security Dashboard
+                                <i class="fas fa-lock mr-2" aria-hidden="true"></i>Security Dashboard
                             </a>
                             <a href="{% url 'management:audit_logs_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'audit_logs_list' %}bg-white/20{% endif %}">
-                                <i class="fas fa-history mr-2" aria-hidden="true"></i> Audit Logs
+                                <i class="fas fa-history mr-2" aria-hidden="true"></i>Audit Logs
                             </a>
                         </div>
                     </div>
 
-                    <!-- Broadcast Center -->
-                    <div class="mb-1">
-                        <a href="{% url 'management:broadcast_center' %}"
-                           class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'broadcast' in request.path %}bg-white/20{% endif %}">
-                            <div class="flex items-center">
-                                <i class="fas fa-bullhorn w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Broadcast Center</span>
-                            </div>
-                        </a>
-                    </div>
-
                     {% elif request.user.profile.role == 'student' %}
                     <!-- STUDENT/LEARNER MENU -->
+
                     <!-- Dashboard -->
                     <a href="{% url 'students:dashboard' %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
-                        <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Dashboard</span>
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Dashboard</span>
+                        </div>
                     </a>
 
                     <!-- My Courses -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path or 'course' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-book w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">My Courses</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:my_courses' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> Enrolled Courses
                             </a>
                             <a href="{% url 'students:course_catalog' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
                                 <i class="fas fa-search mr-2" aria-hidden="true"></i> Browse Catalog
                             </a>
                         </div>
                     </div>
 
-                    <!-- Assignments & Quizzes -->
+                    <!-- Tasks -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'assignment' in request.path or 'quiz' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'assignments' in request.path or 'quizzes' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-tasks w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Tasks</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="tasksMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="tasksMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:assignments' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'assignment' in request.path %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'assignments' %}bg-white/20{% endif %}">
                                 <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Assignments
                             </a>
                             <a href="{% url 'students:quiz_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'quiz' in request.path %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'quiz_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2" aria-hidden="true"></i> Quizzes
                             </a>
                         </div>
                     </div>
 
-                    <!-- Progress & Grades -->
+                    <!-- Performance -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'grades' in request.path or 'progress' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if request.resolver_match.url_name in 'grades,progress,achievements,certificates' %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Performance</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="performanceMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="performanceMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:grades' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'grades' %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'grades' %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i> Grades
                             </a>
                             <a href="{% url 'students:progress' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
                                 <i class="fas fa-chart-bar mr-2" aria-hidden="true"></i> Progress
                             </a>
                             <a href="{% url 'students:achievements' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'achievements' %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'achievements' %}bg-white/20{% endif %}">
                                 <i class="fas fa-trophy mr-2" aria-hidden="true"></i> Achievements
                             </a>
                             <a href="{% url 'students:certificates' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
                                 <i class="fas fa-certificate mr-2" aria-hidden="true"></i> Certificates
                             </a>
                         </div>
@@ -509,31 +717,86 @@
 
                     <!-- Community -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'community' in request.path or 'study-groups' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-comments w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Community</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
-                        <div id="communityMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        <div id="communityMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:community' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'community' in request.path %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'community' %}bg-white/20{% endif %}">
                                 <i class="fas fa-comment-dots mr-2" aria-hidden="true"></i> Discussions
                             </a>
                             <a href="{% url 'students:study_groups' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'study-groups' in request.path or 'study_groups' in request.path %}bg-white/20{% endif %}">
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'study-groups' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-users mr-2" aria-hidden="true"></i> Study Groups
                             </a>
                         </div>
                     </div>
 
-                    <!-- Profile -->
-                    <a href="{% url 'students:profile' %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'profile' in request.path %}bg-white/20{% endif %}">
-                        <i class="fas fa-user w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Profile</span>
+                    <!-- Inbox -->
+                    <a href="{% url 'students:inbox' %}"
+                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'inbox' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-inbox w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Inbox</span>
+                        </div>
+                        {% if unread_messages_count > 0 %}
+                        <span class="badge-count bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                            {{ unread_messages_count }}
+                        </span>
+                        {% endif %}
                     </a>
+
+                    <!-- Notifications -->
+                    <a href="{% url 'students:notifications_view' %}"
+                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'notifications' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-bell w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Notifications</span>
+                        </div>
+                        {% if unread_notifications_count > 0 %}
+                        <span class="badge-count bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                            {{ unread_notifications_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+
+                    <!-- Payments -->
+                    <a href="{% url 'students:my_payments' %}"
+                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payments' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-credit-card w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Payments</span>
+                        </div>
+                    </a>
+
+                    <!-- Account -->
+                    {% comment %} <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'profile' in request.path or 'settings' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-user-circle w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Account</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="accountMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'students:profile' %}"
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
+                                <i class="fas fa-user mr-2" aria-hidden="true"></i> My Profile
+                            </a>
+                            <a href="{% url 'students:settings' %}"
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
+                                <i class="fas fa-cog mr-2" aria-hidden="true"></i> Settings
+                            </a>
+                            <a href="{% url 'students:help_support' %}"
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
+                                <i class="fas fa-life-ring mr-2" aria-hidden="true"></i> Help & Support
+                            </a>
+                        </div>
+                    </div> {% endcomment %}
 
                     {% elif request.user.profile.role == 'instructor' %}
                     <!-- INSTRUCTOR MENU -->
@@ -594,10 +857,22 @@
                                 <span>Students</span>
                             </a>
 
-                            <a href="{% url 'instructor:announcement_create' course.slug %}"
-                               class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-bullhorn w-5 mr-3" aria-hidden="true"></i>
-                                <span>Announcements</span>
+                            <a href="{% url 'instructor:announcement_list' course.slug %}"
+                               class="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
+                                      {% if 'announcements' in request.path %}bg-white/20{% endif %}">
+                                <div class="flex items-center">
+                                    <i class="fas fa-bullhorn w-5 mr-3" aria-hidden="true"></i>
+                                    <span>Announcements</span>
+                                </div>
+                            </a>
+
+                            <a href="{% url 'instructor:discussions' course.slug %}"
+                               class="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
+                                      {% if 'discussions' in request.path %}bg-white/20{% endif %}">
+                                <div class="flex items-center">
+                                    <i class="fas fa-comments w-5 mr-3" aria-hidden="true"></i>
+                                    <span>Discussions</span>
+                                </div>
                             </a>
                         </div>
                     </div>
@@ -684,6 +959,16 @@
                         </div>
                     </a>
 
+                    <!-- Messages -->
+                    <a href="{% url 'instructor:messages_inbox' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
+                              {% if 'messages' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-envelope w-5 mr-3" aria-hidden="true"></i>
+                            <span>Messages</span>
+                        </div>
+                    </a>
+
                     {% elif request.user.profile.role == 'content_manager' %}
                     <!-- CONTENT MANAGER MENU (for future implementation) -->
                     <a href="{% url 'content:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
@@ -754,26 +1039,34 @@
                     </a>
                     {% endif %}
 
-                    <!-- Common sections for all roles -->
+                    <!-- ── COMMON FOOTER LINKS (all roles) ── -->
                     <div class="border-t border-white/10 my-4"></div>
 
-                    <!-- Settings (all users) -->
-                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}#{% else %}#{% endif %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
-                        <i class="fas fa-cog w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Settings</span>
+                    <!-- Settings — Centralized with role-based URL routing -->
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% else %}#{% endif %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-cog w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Settings</span>
+                        </div>
                     </a>
 
-                    <!-- Help & Support (all users) -->
+                    <!-- Help & Support — Centralized with role-based URL routing -->
                     <a href="{% if request.user.profile.role == 'student' %}{% url 'students:help_support' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:help_support' %}{% else %}#{% endif %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
-                        <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Help & Support</span>
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Help & Support</span>
+                        </div>
                     </a>
 
-                    <a href="{% url 'eduweb:logout' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <i class="fas fa-sign-out-alt w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Logout</span>
+                    <!-- Logout — Same for all roles -->
+                    <a href="{% url 'eduweb:logout' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-sign-out-alt w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Logout</span>
+                        </div>
                     </a>
                 </nav>
 
@@ -793,7 +1086,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div id="mainContent" class="flex-1 flex flex-col min-h-screen md:ml-64">
+        <div id="mainContent" class="flex-1 flex flex-col min-h-screen">
             <!-- Top Header Bar -->
             <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
                 <div class="flex items-center justify-between p-4">
@@ -812,7 +1105,7 @@
                         <!-- Breadcrumbs -->
                         <nav aria-label="Breadcrumb" class="hidden sm:block">
                             <ol class="flex items-center space-x-2 text-sm text-gray-600">
-                                <li><a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser %}{% url 'management:dashboard' %}{% else %}#{% endif %}" class="hover:text-primary-600">Home</a></li>
+                                <li><a href="{% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% elif request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% else %}{% url 'management:dashboard' %}{% endif %}" class="hover:text-primary-600">Home</a></li>
                                 <li><i class="fas fa-chevron-right text-xs" aria-hidden="true"></i></li>
                                 <li class="text-gray-900 font-medium">{% block breadcrumb %}Dashboard{% endblock %}</li>
                             </ol>
@@ -876,12 +1169,30 @@
                             </button>
 
                             <div id="profileMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200">
-                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:profile' %}{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                {% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}
+                                {# admin — no separate profile/settings pages yet #}
+                                <span class="block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm">
+                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> {{ request.user.get_full_name|default:request.user.username }}
+                                </span>
+                                {% elif request.user.profile.role == 'instructor' %}
+                                <a href="{% url 'instructor:profile' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
                                 </a>
-                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}#{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% url 'instructor:settings' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
                                 </a>
+                                {% elif request.user.profile.role == 'student' %}
+                                <a href="{% url 'students:profile' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
+                                </a>
+                                <a href="{% url 'students:settings' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                    <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
+                                </a>
+                                {% else %}
+                                <span class="block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm">
+                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> {{ request.user.get_full_name|default:request.user.username }}
+                                </span>
+                                {% endif %}
                                 <a href="{% url 'eduweb:logout' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all">
                                     <i class="fas fa-sign-out-alt mr-3 w-5" aria-hidden="true"></i> Logout
                                 </a>
@@ -963,133 +1274,137 @@
         </div>
     </div>
 
-    <!-- Base JavaScript - FIXED VERSION -->
+    <!-- Base JavaScript -->
     <script>
-        // Get all elements
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
-        const toggleBtn = document.getElementById('toggleSidebar');
-        const closeBtn = document.getElementById('closeSidebar');
-        const collapseBtn = document.getElementById('collapseSidebar');
-        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        (function () {
+            const sidebar     = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const toggleBtn   = document.getElementById('toggleSidebar');
+            const closeBtn    = document.getElementById('closeSidebar');
+            const collapseBtn = document.getElementById('collapseSidebar');
+            const overlay     = document.getElementById('sidebarOverlay');
 
-        // Mobile sidebar toggle
-        toggleBtn?.addEventListener('click', () => {
-            sidebar.classList.toggle('-translate-x-full');
-            sidebarOverlay.classList.toggle('show');
-        });
+            function isMobile() { return window.innerWidth < 768; }
 
-        // Mobile sidebar close button
-        closeBtn?.addEventListener('click', () => {
-            sidebar.classList.add('-translate-x-full');
-            sidebarOverlay.classList.remove('show');
-        });
-
-        // Close sidebar when clicking overlay
-        sidebarOverlay?.addEventListener('click', () => {
-            sidebar.classList.add('-translate-x-full');
-            sidebarOverlay.classList.remove('show');
-        });
-
-        // Desktop sidebar collapse/expand
-        collapseBtn?.addEventListener('click', () => {
-            sidebar.classList.toggle('sidebar-collapsed');
-
-            // Adjust main content margin
-            if (sidebar.classList.contains('sidebar-collapsed')) {
-                mainContent.classList.remove('md:ml-64');
-                mainContent.classList.add('md:ml-20');
-            } else {
-                mainContent.classList.remove('md:ml-20');
-                mainContent.classList.add('md:ml-64');
+            function setMargin(collapsed) {
+                if (!mainContent) return;
+                mainContent.style.marginLeft = isMobile() ? '0' : (collapsed ? '5.5rem' : '18rem');
             }
-        });
 
-        // Submenu toggles
-        document.querySelectorAll('.menu-toggle').forEach(toggle => {
-            toggle.addEventListener('click', function (e) {
-                e.preventDefault();
-                const arrow = this.querySelector('.menu-arrow');
-                const menuId = this.nextElementSibling?.id;
-                const menu = document.getElementById(menuId);
-
-                if (menu) {
-                    menu.classList.toggle('hidden');
-                    arrow?.classList.toggle('rotate-180');
+            function applyCollapsed(collapsed, save) {
+                if (!sidebar) return;
+                sidebar.classList.remove('sidebar-hover-expanded');
+                sidebar.classList.toggle('sidebar-collapsed', collapsed);
+                // Keep data-sidebar in sync — this is what the preload CSS reads
+                if (collapsed) {
+                    document.documentElement.setAttribute('data-sidebar', 'collapsed');
+                } else {
+                    document.documentElement.removeAttribute('data-sidebar');
                 }
+                setMargin(collapsed);
+                if (save) { try { localStorage.setItem('sidebarCollapsed', String(collapsed)); } catch(e) {} }
+            }
+
+            // Restore persisted state on load
+            (function init() {
+                let collapsed = false;
+                try { collapsed = localStorage.getItem('sidebarCollapsed') === 'true'; } catch(e) {}
+                if (!isMobile()) applyCollapsed(collapsed, false);
+                else setMargin(false);
+            })();
+
+            // Collapse toggle
+            collapseBtn?.addEventListener('click', () => {
+                applyCollapsed(!sidebar.classList.contains('sidebar-collapsed'), true);
             });
-        });
 
-        // Dropdown functionality - FIXED to prevent glitching
-        function setupDropdown(buttonId, menuId) {
-            const button = document.getElementById(buttonId);
-            const menu = document.getElementById(menuId);
+            // Mobile open / close
+            toggleBtn?.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+                overlay?.classList.toggle('show');
+            });
+            closeBtn?.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                overlay?.classList.remove('show');
+            });
+            overlay?.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.remove('show');
+            });
 
-            if (!button || !menu) return;
+            // Resize
+            window.addEventListener('resize', () => {
+                setMargin(!isMobile() && sidebar.classList.contains('sidebar-collapsed'));
+            });
 
-            // Toggle dropdown on button click
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
+            // JS-only hover expand — swap sidebar-collapsed ↔ sidebar-hover-expanded
+            // so the two classes never coexist (eliminates all CSS specificity conflicts)
+            let navigating = false;
+            let hoverTimer = null;
+            document.addEventListener('click', (e) => { if (e.target.closest('a[href]')) navigating = true; });
 
-                // Close all other dropdowns
-                document.querySelectorAll('.dropdown-menu').forEach(dropdown => {
-                    if (dropdown !== menu && dropdown.classList.contains('show')) {
-                        dropdown.classList.remove('show');
+            sidebar?.addEventListener('mouseenter', () => {
+                if (!sidebar.classList.contains('sidebar-collapsed') || navigating) return;
+                hoverTimer = setTimeout(() => {
+                    if (!navigating && sidebar.classList.contains('sidebar-collapsed')) {
+                        sidebar.classList.remove('sidebar-collapsed');
+                        sidebar.classList.add('sidebar-hover-expanded');
+                        // main content stays at collapsed margin — sidebar floats over it
                     }
-                });
-
-                // Toggle current dropdown
-                menu.classList.toggle('show');
+                }, 80);
             });
-
-            // Prevent dropdown from closing when clicking inside it
-            menu.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        }
-
-        // Setup all dropdowns
-        setupDropdown('profileDropdown', 'profileMenu');
-        setupDropdown('notificationDropdown', 'notificationMenu');
-
-        // Close all dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            const dropdowns = document.querySelectorAll('.dropdown-menu');
-            dropdowns.forEach(dropdown => {
-                if (dropdown.classList.contains('show')) {
-                    dropdown.classList.remove('show');
+            sidebar?.addEventListener('mouseleave', () => {
+                clearTimeout(hoverTimer);
+                if (sidebar.classList.contains('sidebar-hover-expanded')) {
+                    sidebar.classList.remove('sidebar-hover-expanded');
+                    sidebar.classList.add('sidebar-collapsed');
                 }
             });
-        });
 
-        // Chatbot functionality
-        const chatbotToggle = document.getElementById('chatbotToggle');
-        const chatbotWindow = document.getElementById('chatbotWindow');
-        const chatbotClose = document.getElementById('chatbotClose');
+            // Submenu toggles
+            document.querySelectorAll('.menu-toggle').forEach(toggle => {
+                toggle.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const menu  = this.nextElementSibling;
+                    const arrow = this.querySelector('.menu-arrow');
+                    if (menu)  menu.classList.toggle('hidden');
+                    arrow?.classList.toggle('rotate-180');
+                });
+            });
 
-        chatbotToggle?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            chatbotWindow.classList.toggle('hidden');
-        });
-
-        chatbotClose?.addEventListener('click', () => {
-            chatbotWindow.classList.add('hidden');
-        });
-
-        // Close chatbot when clicking outside
-        document.addEventListener('click', (e) => {
-            if (chatbotWindow &&
-                !chatbotWindow.contains(e.target) &&
-                !chatbotToggle.contains(e.target) &&
-                !chatbotWindow.classList.contains('hidden')) {
-                chatbotWindow.classList.add('hidden');
+            // Header dropdowns
+            function setupDropdown(btnId, menuId) {
+                const btn  = document.getElementById(btnId);
+                const menu = document.getElementById(menuId);
+                if (!btn || !menu) return;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.dropdown-menu.show').forEach(d => { if (d !== menu) d.classList.remove('show'); });
+                    menu.classList.toggle('show');
+                });
+                menu.addEventListener('click', (e) => e.stopPropagation());
             }
-        });
+            setupDropdown('profileDropdown',      'profileMenu');
+            setupDropdown('notificationDropdown', 'notificationMenu');
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.dropdown-menu.show').forEach(d => d.classList.remove('show'));
+            });
 
-        // Prevent chatbot from closing when clicking inside
-        chatbotWindow?.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+            // Chatbot
+            const chatbotToggle = document.getElementById('chatbotToggle');
+            const chatbotWindow = document.getElementById('chatbotWindow');
+            const chatbotClose  = document.getElementById('chatbotClose');
+            chatbotToggle?.addEventListener('click', (e) => { e.stopPropagation(); chatbotWindow?.classList.toggle('hidden'); });
+            chatbotClose?.addEventListener('click',  ()  => chatbotWindow?.classList.add('hidden'));
+            document.addEventListener('click', (e) => {
+                if (chatbotWindow && !chatbotWindow.classList.contains('hidden') &&
+                    !chatbotWindow.contains(e.target) && !chatbotToggle?.contains(e.target)) {
+                    chatbotWindow.classList.add('hidden');
+                }
+            });
+            chatbotWindow?.addEventListener('click', (e) => e.stopPropagation());
+        })();
     </script>
 
     <!-- Django Messages with SweetAlert2 -->

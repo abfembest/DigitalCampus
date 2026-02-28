@@ -233,14 +233,14 @@
 
                         <!-- Actions -->
                         <div class="flex flex-wrap items-center gap-2">
-                            <a href="{% url 'instructor:lesson_edit' course.slug lesson.id %}" 
+                            <a href="{% url 'instructor:lesson_edit' course.slug lesson.slug %}" 
                                class="inline-flex items-center px-3 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
                                title="Edit Lesson">
                                 <i class="fas fa-edit mr-2"></i> Edit
                             </a>
                             
                             {% if lesson.lesson_type == 'quiz' %}
-                            <a href="{% url 'instructor:quiz_list' course.slug lesson.id %}" 
+                            <a href="{% url 'instructor:quiz_list' course.slug lesson.slug %}" 
                                class="inline-flex items-center px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
                                title="Manage Quizzes">
                                 <i class="fas fa-question-circle mr-2"></i> Quizzes
@@ -248,14 +248,14 @@
                             {% endif %}
                             
                             {% if lesson.lesson_type == 'assignment' %}
-                            <a href="{% url 'instructor:assignment_list' course.slug lesson.id %}" 
+                            <a href="{% url 'instructor:assignment_list' course.slug lesson.slug %}" 
                                class="inline-flex items-center px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
                                title="Manage Assignments">
                                 <i class="fas fa-tasks mr-2"></i> Assignments
                             </a>
                             {% endif %}
                             
-                            <a href="#" onclick="confirmDelete('lesson', {{ lesson.id }}, '{{ lesson.title|escapejs }}'); return false;" 
+                            <a href="#" onclick="confirmDelete('lesson', '{{ lesson.slug }}', '{{ lesson.title|escapejs }}'); return false;" 
                                class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
                                title="Delete Lesson">
                                 <i class="fas fa-trash mr-2"></i> Delete
@@ -361,11 +361,26 @@
                         </div>
 
                         <div class="flex flex-wrap items-center gap-2">
-                            <a href="{% url 'instructor:lesson_edit' course.slug lesson.id %}" 
+                            <a href="{% url 'instructor:lesson_edit' course.slug lesson.slug %}" 
                                class="inline-flex items-center px-3 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium">
                                 <i class="fas fa-edit mr-2"></i> Edit
                             </a>
-                            <a href="#" onclick="confirmDelete('lesson', {{ lesson.id }}, '{{ lesson.title|escapejs }}'); return false;" 
+                            
+                            {% if lesson.lesson_type == 'quiz' %}
+                            <a href="{% url 'instructor:quiz_list' course.slug lesson.slug %}" 
+                               class="inline-flex items-center px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
+                                <i class="fas fa-question-circle mr-2"></i> Quizzes
+                            </a>
+                            {% endif %}
+                            
+                            {% if lesson.lesson_type == 'assignment' %}
+                            <a href="{% url 'instructor:assignment_list' course.slug lesson.slug %}" 
+                               class="inline-flex items-center px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium">
+                                <i class="fas fa-tasks mr-2"></i> Assignments
+                            </a>
+                            {% endif %}
+                            
+                            <a href="#" onclick="confirmDelete('lesson', '{{ lesson.slug }}', '{{ lesson.title|escapejs }}'); return false;" 
                                class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
                                 <i class="fas fa-trash mr-2"></i> Delete
                             </a>
@@ -468,8 +483,7 @@ function confirmDelete(type, id, title) {
     const typeText = type === 'section' ? 'Section' : 'Lesson';
     const deleteUrl = type === 'section' 
         ? "{% url 'instructor:section_delete' course.slug 0 %}".replace('/0/', `/${id}/`)
-        : "{% url 'instructor:lesson_delete' course.slug 0 %}".replace('/0/', `/${id}/`);
-    
+        : "{% url 'instructor:lesson_delete' course.slug 'placeholder' %}".replace('placeholder', `${id}`);    
     Swal.fire({
         title: `Delete ${typeText}?`,
         html: `Are you sure you want to delete <strong>"${title}"</strong>?<br><span class="text-sm text-gray-600">This action cannot be undone.</span>`,

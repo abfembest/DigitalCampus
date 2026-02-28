@@ -1509,7 +1509,7 @@ class CourseCategory(models.Model):
 # ==================== DISCUSSIONS ====================
 class Discussion(models.Model):
     """Course discussion forum topics"""
-    course = models.ForeignKey('LMSCourse', on_delete=models.CASCADE, related_name='discussions')
+    course = models.ForeignKey('LMSCourse', on_delete=models.CASCADE, null=True, blank=True, related_name='discussions')
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200)
     content = models.TextField()
@@ -2711,6 +2711,33 @@ class StudyGroupMember(models.Model):
     
     def __str__(self):
         return f"{self.user.username} in {self.study_group.name}"
+
+class StudyGroupMessage(models.Model):
+    """Messages posted in a study group chat"""
+    study_group = models.ForeignKey(
+        StudyGroup,
+        on_delete=models.CASCADE,
+        related_name='group_messages'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='study_group_messages'
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Study Group Message'
+        verbose_name_plural = 'Study Group Messages'
+        indexes = [
+            models.Index(fields=['study_group', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.author.username} in {self.study_group.name}: {self.content[:50]}"
     
 # ==================== BROADCAST CENTER ====================
 class BroadcastMessage(models.Model):

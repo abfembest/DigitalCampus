@@ -1572,7 +1572,7 @@ def faculty_detail(request, slug):
         'departments': departments,
     }
 
-    return render(request, 'faculties/faculty_detail.html', context)
+    return render(request, 'faculty_detail.html', context)
 
 @check_for_auth
 def program_detail(request, slug):
@@ -1615,7 +1615,7 @@ def program_detail(request, slug):
         'faculty':        program.department.faculty,
     }
 
-    return render(request, 'programs/program_detail.html', context)
+    return render(request, 'program_detail.html', context)
 
 @login_required(login_url='eduweb:auth_page')
 def submit_application(request, application_id):

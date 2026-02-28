@@ -1,0 +1,548 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta_tags %}
+<meta name="description" content="{{ program.meta_description|default:program.overview|truncatechars:160 }}">
+<meta name="keywords" content="{{ program.meta_keywords|default:program.name }}">
+{% endblock %}
+
+{% block og_tags %}
+<meta property="og:title" content="{{ program.name }} | MIU">
+<meta property="og:description" content="{{ program.overview|truncatechars:200 }}">
+<meta property="og:type" content="website">
+{% endblock %}
+
+{% block content %}
+
+<!-- ════════════════════════════════════════════
+     SECTION 1 — HERO (dark prog-hero gradient)
+════════════════════════════════════════════ -->
+<section class="prog-hero relative overflow-hidden" aria-label="Program Overview">
+
+  <div class="absolute inset-0 opacity-20 pointer-events-none"
+       style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%221%22 cy=%221%22 r=%221%22 fill=%22white%22 opacity=%220.3%22/></svg>');"></div>
+  <div class="absolute top-10 right-10 w-[500px] h-[500px] bg-purple-800 rounded-full opacity-10 blur-3xl pointer-events-none"></div>
+  <div class="absolute bottom-0 left-0 w-72 h-72 bg-fuchsia-900 rounded-full opacity-10 blur-3xl pointer-events-none"></div>
+
+  <div class="max-w-screen-2xl mx-auto px-6 lg:px-16 pt-24 lg:pt-32 pb-20">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-white/50 mb-10 fu fu1">
+      <a href="{% url 'eduweb:index' %}" class="hover:text-white/80 transition-colors">Home</a>
+      <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+      <a href="{% url 'eduweb:faculty_detail' faculty.slug %}" class="hover:text-white/80 transition-colors">{{ faculty.name }}</a>
+      <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+      <a href="#" class="hover:text-white/80 transition-colors">{{ department.name }}</a>
+      <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+      <span class="text-white/80 truncate max-w-[200px]">{{ program.name }}</span>
+    </nav>
+
+    <div class="flex flex-col lg:flex-row gap-12 xl:gap-16 items-start">
+
+      <!-- Left -->
+      <div class="flex-1 fu fu2">
+        <div class="flex flex-wrap items-center gap-2 mb-5">
+          <span class="pill-badge bg-white/10 text-white/70 border border-white/20 px-3 py-1.5 rounded-full">{{ faculty.code }}</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-white/30"></i>
+          <span class="pill-badge bg-white/10 text-white/70 border border-white/20 px-3 py-1.5 rounded-full">{{ department.name }}</span>
+        </div>
+
+        <span class="pill-badge inline-block bg-purple-500/30 text-purple-200 border border-purple-400/30 px-3.5 py-1.5 rounded-full mb-5">
+          {{ program.get_degree_level_display }}
+        </span>
+
+        <h1 class="font-['Poppins'] text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-[1.08] mb-5">
+          {{ program.name }}
+        </h1>
+
+        {% if program.tagline %}
+        <p class="text-white/60 text-lg font-['Inter'] max-w-2xl leading-relaxed mb-8">
+          {{ program.tagline }}
+        </p>
+        {% endif %}
+
+        {% if program.available_study_modes %}
+        <div class="flex flex-wrap gap-2 mb-8">
+          {% for mode in program.available_study_modes %}
+          <span class="inline-flex items-center gap-1.5 bg-white/10 border border-white/15 text-white/70 px-3.5 py-1.5 rounded-full text-xs font-medium font-['Inter']">
+            <i data-lucide="clock" class="w-3 h-3"></i> {{ mode|title }}
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="flex flex-wrap gap-3">
+          <a href="{% url 'eduweb:apply' %}"
+             class="inline-flex items-center gap-2 bg-[#840384] hover:bg-purple-600 text-white px-7 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-purple-900/30 focus:outline-none focus:ring-2 focus:ring-purple-400">
+            <i data-lucide="send" class="w-4 h-4"></i> Apply Now
+          </a>
+          <a href="#curriculum"
+             class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-7 py-3.5 rounded-xl font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-white/30">
+            <i data-lucide="book-open" class="w-4 h-4"></i> View Curriculum
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: Key stats card -->
+      <div class="lg:w-80 xl:w-96 flex-shrink-0 fu fu3">
+        <div class="info-card rounded-3xl p-7 space-y-4">
+          <h2 class="font-['Poppins'] text-xs font-bold text-white/60 uppercase tracking-widest flex items-center gap-2">
+            <i data-lucide="info" class="w-4 h-4"></i> Program At a Glance
+          </h2>
+          <div class="space-y-3.5">
+            {% if program.duration_years %}
+            <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
+              <div class="flex items-center gap-3 text-white/60 text-sm font-['Inter']">
+                <i data-lucide="calendar" class="w-4 h-4"></i> Duration
+              </div>
+              <span class="font-['Poppins'] text-white font-bold">{{ program.duration_years }} Year{% if program.duration_years > 1 %}s{% endif %}</span>
+            </div>
+            {% endif %}
+            {% if program.credits_required %}
+            <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
+              <div class="flex items-center gap-3 text-white/60 text-sm font-['Inter']">
+                <i data-lucide="award" class="w-4 h-4"></i> Credits
+              </div>
+              <span class="font-['Poppins'] text-white font-bold">{{ program.credits_required }}</span>
+            </div>
+            {% endif %}
+            {% if program.tuition_fee %}
+            <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
+              <div class="flex items-center gap-3 text-white/60 text-sm font-['Inter']">
+                <i data-lucide="dollar-sign" class="w-4 h-4"></i> Tuition / yr
+              </div>
+              <span class="font-['Poppins'] text-white font-bold">${{ program.tuition_fee|floatformat:"0" }}</span>
+            </div>
+            {% endif %}
+            {% if program.application_fee %}
+            <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
+              <div class="flex items-center gap-3 text-white/60 text-sm font-['Inter']">
+                <i data-lucide="receipt" class="w-4 h-4"></i> App. Fee
+              </div>
+              <span class="font-['Poppins'] text-white font-bold">${{ program.application_fee|floatformat:"0" }}</span>
+            </div>
+            {% endif %}
+            {% if program.job_placement_rate %}
+            <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
+              <div class="flex items-center gap-3 text-white/60 text-sm font-['Inter']">
+                <i data-lucide="trending-up" class="w-4 h-4"></i> Placement
+              </div>
+              <span class="font-['Poppins'] text-white font-bold">{{ program.job_placement_rate }}%</span>
+            </div>
+            {% endif %}
+            {% if program.avg_starting_salary %}
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 text-white/60 text-sm font-['Inter']">
+                <i data-lucide="banknote" class="w-4 h-4"></i> Avg. Salary
+              </div>
+              <span class="font-['Poppins'] text-white font-bold text-sm">{{ program.avg_starting_salary }}</span>
+            </div>
+            {% endif %}
+          </div>
+          <a href="{% url 'eduweb:apply' %}"
+             class="block text-center bg-[#840384] hover:bg-purple-600 text-white py-3.5 rounded-2xl font-bold text-sm transition-all shadow-md mt-2 focus:outline-none focus:ring-2 focus:ring-purple-400">
+            Start Application →
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     STICKY SECTION NAV — bg white
+════════════════════════════════════════════ -->
+<nav class="sticky top-20 lg:top-24 z-30 bg-white border-b border-gray-200 shadow-sm" aria-label="Page sections">
+  <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
+    <div class="flex gap-1 overflow-x-auto">
+      {% if program.overview or program.description %}
+      <a href="#overview" class="nav-anchor whitespace-nowrap py-4 px-4 text-sm font-medium text-gray-500 font-['Inter'] transition-colors hover:text-[#840384]">Overview</a>
+      {% endif %}
+      {% if program.entry_requirements %}
+      <a href="#requirements" class="nav-anchor whitespace-nowrap py-4 px-4 text-sm font-medium text-gray-500 font-['Inter'] transition-colors hover:text-[#840384]">Requirements</a>
+      {% endif %}
+      {% if program.learning_outcomes %}
+      <a href="#outcomes" class="nav-anchor whitespace-nowrap py-4 px-4 text-sm font-medium text-gray-500 font-['Inter'] transition-colors hover:text-[#840384]">Outcomes</a>
+      {% endif %}
+      {% if courses %}
+      <a href="#curriculum" class="nav-anchor whitespace-nowrap py-4 px-4 text-sm font-medium text-gray-500 font-['Inter'] transition-colors hover:text-[#840384]">Curriculum</a>
+      {% endif %}
+      {% if program.career_paths %}
+      <a href="#careers" class="nav-anchor whitespace-nowrap py-4 px-4 text-sm font-medium text-gray-500 font-['Inter'] transition-colors hover:text-[#840384]">Careers</a>
+      {% endif %}
+      {% if active_intakes %}
+      <a href="#intakes" class="nav-anchor whitespace-nowrap py-4 px-4 text-sm font-medium text-gray-500 font-['Inter'] transition-colors hover:text-[#840384]">Intakes</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════
+     SECTION 2 — OVERVIEW + REQUIREMENTS (bg white)
+     Side by side on large screens
+════════════════════════════════════════════ -->
+{% if program.overview or program.description or program.entry_requirements %}
+<section id="overview" class="py-20 lg:py-28 bg-white scroll-mt-36 lg:scroll-mt-40" aria-label="Program Overview and Entry Requirements">
+  <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
+    <div class="flex flex-col lg:flex-row gap-12 xl:gap-20 items-start">
+
+      <!-- Left: About / Description -->
+      {% if program.overview or program.description %}
+      <div class="flex-1 min-w-0">
+        <p class="text-[#840384] font-semibold text-sm tracking-widest uppercase mb-3 font-['Inter']">About This Program</p>
+        <h2 class="font-['Poppins'] text-3xl lg:text-4xl font-black text-gray-900 mb-6">Program Description</h2>
+
+        {% if program.description %}
+        <div class="text-gray-600 font-['Inter'] leading-relaxed space-y-4 text-base lg:text-lg">
+          {{ program.description|linebreaksbr }}
+        </div>
+        {% elif program.overview %}
+        <p class="text-gray-600 font-['Inter'] leading-relaxed text-base lg:text-lg">{{ program.overview }}</p>
+        {% endif %}
+
+        <div class="mt-8 space-y-4">
+          {% if program.specialization_tracks %}
+          <div class="rounded-2xl p-6 bg-gray-50 border border-gray-100">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                <i data-lucide="git-branch" class="w-4 h-4 text-[#840384]"></i>
+              </div>
+              <h3 class="font-['Poppins'] font-bold text-gray-900">Specializations</h3>
+            </div>
+            <div class="space-y-2.5">
+              {% for track in program.specialization_tracks %}
+              <div class="flex items-center gap-2.5 text-sm text-gray-700 font-['Inter']">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-[#840384] flex-shrink-0"></i>
+                {{ track }}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if program.core_courses %}
+          <div class="rounded-2xl p-6 bg-gray-50 border border-gray-100">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                <i data-lucide="book-marked" class="w-4 h-4 text-[#840384]"></i>
+              </div>
+              <h3 class="font-['Poppins'] font-bold text-gray-900">Core Courses</h3>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-2">
+              {% for course in program.core_courses %}
+              <div class="flex items-center gap-2 text-sm text-gray-700 font-['Inter']">
+                <span class="w-1.5 h-1.5 bg-[#840384] rounded-full flex-shrink-0"></span>
+                {{ course }}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Right: Entry Requirements -->
+      {% if program.entry_requirements %}
+      <div id="requirements" class="lg:w-96 xl:w-[420px] flex-shrink-0 scroll-mt-36 lg:scroll-mt-40">
+        <p class="text-[#840384] font-semibold text-sm tracking-widest uppercase mb-3 font-['Inter']">Admissions</p>
+        <h2 class="font-['Poppins'] text-3xl lg:text-4xl font-black text-gray-900 mb-6">Entry Requirements</h2>
+        <div class="rounded-3xl p-7 bg-gray-50 border border-gray-100 space-y-4">
+          {% for req in program.entry_requirements %}
+          <div class="flex items-start gap-4">
+            <div class="w-7 h-7 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+              <i data-lucide="check" class="w-3.5 h-3.5 text-[#840384]"></i>
+            </div>
+            <p class="text-gray-700 font-['Inter'] leading-relaxed text-sm">{{ req }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="mt-6 flex gap-3 flex-wrap">
+          <a href="{% url 'eduweb:admission_requirement' %}"
+             class="inline-flex items-center gap-2 text-[#840384] border border-[#840384] hover:bg-[#840384] hover:text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-purple-400">
+            <i data-lucide="external-link" class="w-4 h-4"></i> Full Requirements
+          </a>
+          <a href="{% url 'eduweb:apply' %}"
+             class="inline-flex items-center gap-2 bg-[#840384] hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-400">
+            <i data-lucide="send" class="w-4 h-4"></i> Apply Now
+          </a>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ════════════════════════════════════════════
+     SECTION 3 — LEARNING OUTCOMES (bg gray-50)
+════════════════════════════════════════════ -->
+{% if program.learning_outcomes %}
+<section id="outcomes" class="py-20 lg:py-28 bg-gray-50 scroll-mt-36 lg:scroll-mt-40" aria-label="Learning Outcomes">
+  <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
+    <div class="text-center mb-14">
+      <p class="text-[#840384] font-semibold text-sm tracking-widest uppercase mb-2 font-['Inter']">What You'll Achieve</p>
+      <h2 class="font-['Poppins'] text-4xl lg:text-5xl font-black text-gray-900">Learning Outcomes</h2>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {% for outcome in program.learning_outcomes %}
+      <div class="rounded-3xl p-7 bg-white border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all group">
+        <div class="w-10 h-10 bg-gradient-to-br from-purple-100 to-fuchsia-100 rounded-2xl flex items-center justify-center mb-5 group-hover:from-[#840384] group-hover:to-purple-600 transition-all">
+          <span class="font-['Poppins'] font-black text-[#840384] text-sm group-hover:text-white transition-colors">{{ forloop.counter }}</span>
+        </div>
+        <p class="text-gray-700 font-['Inter'] leading-relaxed text-sm">{{ outcome }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ════════════════════════════════════════════
+     SECTION 4 — CURRICULUM (bg white)
+════════════════════════════════════════════ -->
+{% if courses %}
+<section id="curriculum" class="py-20 lg:py-28 bg-white scroll-mt-36 lg:scroll-mt-40" aria-label="Curriculum">
+  <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
+
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+      <div>
+        <p class="text-[#840384] font-semibold text-sm tracking-widest uppercase mb-2 font-['Inter']">Academic Structure</p>
+        <h2 class="font-['Poppins'] text-4xl lg:text-5xl font-black text-gray-900">Curriculum</h2>
+      </div>
+      <span class="text-gray-400 text-sm font-['Inter']">{{ courses|length }} course{% if courses|length != 1 %}s{% endif %} total</span>
+    </div>
+
+    {% regroup courses by year_of_study as courses_by_year %}
+    <div class="flex gap-2 flex-wrap mb-8" role="tablist" aria-label="Select year">
+      {% for year_group in courses_by_year %}
+      <button
+        onclick="showYear({{ year_group.grouper }}, this)"
+        role="tab"
+        class="yr-tab {% if forloop.first %}active{% else %}border border-gray-200 text-gray-600{% endif %} px-5 py-2.5 rounded-xl font-semibold text-sm font-['Inter'] transition-all"
+        aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+      >Year {{ year_group.grouper }}</button>
+      {% endfor %}
+    </div>
+
+    {% for year_group in courses_by_year %}
+    <div id="year-{{ year_group.grouper }}" class="semester-group {% if forloop.first %}show{% endif %} space-y-6">
+      {% regroup year_group.list by semester as by_semester %}
+      {% for sem_group in by_semester %}
+      <div class="rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+        <div class="px-7 py-5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+              <i data-lucide="calendar-days" class="w-4 h-4 text-[#840384]"></i>
+            </div>
+            <h3 class="font-['Poppins'] font-bold text-gray-900">
+              {% if sem_group.grouper == 'first' %}First Semester{% elif sem_group.grouper == 'second' %}Second Semester{% else %}Annual{% endif %}
+            </h3>
+          </div>
+          <span class="text-sm text-gray-400 font-['Inter']">{{ sem_group.list|length }} course{% if sem_group.list|length != 1 %}s{% endif %}</span>
+        </div>
+        <div class="divide-y divide-gray-50 bg-white">
+          {% for course in sem_group.list %}
+          <div class="course-row flex items-center justify-between gap-4 px-7 py-4 group">
+            <div class="flex items-center gap-4 min-w-0">
+              <span class="font-mono text-xs font-bold text-[#840384] bg-purple-50 px-2.5 py-1.5 rounded-lg flex-shrink-0 hidden sm:block">{{ course.code }}</span>
+              <div class="min-w-0">
+                <div class="font-['Inter'] font-semibold text-gray-800 text-sm truncate">{{ course.name }}</div>
+                <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span class="font-['Inter'] {% if course.course_type == 'core' %}text-purple-700 bg-purple-50{% elif course.course_type == 'elective' %}text-green-700 bg-green-50{% else %}text-gray-500 bg-gray-100{% endif %} px-2 py-0.5 rounded-md font-bold uppercase" style="font-size:0.6rem;letter-spacing:0.07em;">{{ course.get_course_type_display }}</span>
+                  {% if course.lecturer %}
+                  <span class="text-xs text-gray-400 font-['Inter'] hidden md:inline">{{ course.lecturer.get_full_name|default:course.lecturer.username }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 flex-shrink-0">
+              <div class="text-right hidden sm:block">
+                <div class="text-xs text-gray-400 font-['Inter']">Credits</div>
+                <div class="font-['Poppins'] font-bold text-gray-800 text-sm">{{ course.credit_units }}</div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+  </div>
+</section>
+{% endif %}
+
+<!-- ════════════════════════════════════════════
+     SECTION 5 — CAREER PATHS (bg gray-50)
+════════════════════════════════════════════ -->
+{% if program.career_paths %}
+<section id="careers" class="py-20 lg:py-28 bg-gray-50 scroll-mt-36 lg:scroll-mt-40" aria-label="Career Paths">
+  <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
+    <div class="text-center mb-14">
+      <p class="text-[#840384] font-semibold text-sm tracking-widest uppercase mb-2 font-['Inter']">After Graduation</p>
+      <h2 class="font-['Poppins'] text-4xl lg:text-5xl font-black text-gray-900">Career Opportunities</h2>
+      {% if program.avg_starting_salary %}
+      <p class="text-gray-500 font-['Inter'] mt-3 text-lg">Average starting salary: <span class="font-bold text-[#840384]">{{ program.avg_starting_salary }}</span></p>
+      {% endif %}
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      {% for path in program.career_paths %}
+      <div class="rounded-2xl p-5 bg-white border border-gray-100 flex items-center gap-3 hover:border-purple-200 hover:shadow-md transition-all group">
+        <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-[#840384] transition-colors">
+          <i data-lucide="briefcase" class="w-4 h-4 text-[#840384] group-hover:text-white transition-colors"></i>
+        </div>
+        <span class="text-gray-700 font-['Inter'] font-medium text-sm">{{ path }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ════════════════════════════════════════════
+     SECTION 6 — INTAKES + CTA (bg white)
+     Intakes grid on the left, CTA card on the right
+════════════════════════════════════════════ -->
+<section id="intakes" class="py-20 lg:py-28 bg-white scroll-mt-36 lg:scroll-mt-40" aria-label="Intake Sessions and Apply">
+  <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
+
+    <div class="flex flex-col xl:flex-row gap-12 xl:gap-16 items-start">
+
+      <!-- Left: Intake Cards (takes all space if no CTA, or majority) -->
+      {% if active_intakes %}
+      <div class="flex-1 min-w-0">
+        <div class="mb-8">
+          <p class="text-[#840384] font-semibold text-sm tracking-widest uppercase mb-2 font-['Inter']">Enrollment Windows</p>
+          <h2 class="font-['Poppins'] text-3xl lg:text-4xl font-black text-gray-900">Upcoming Intakes</h2>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3 gap-5">
+          {% for intake in active_intakes %}
+          <div class="rounded-3xl p-6 bg-gray-50 border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all">
+            <div class="flex items-center justify-between mb-5">
+              <span class="pill-badge bg-purple-50 text-[#840384] border border-purple-200 px-3 py-1.5 rounded-full">
+                {{ intake.intake_period|title }} {{ intake.year }}
+              </span>
+              <span class="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full font-bold font-['Inter']">Open</span>
+            </div>
+            <div class="space-y-3.5">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-500 font-['Inter'] flex items-center gap-2">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5 text-[#840384]"></i> Start Date
+                </span>
+                <span class="font-semibold font-['Inter'] text-gray-800">{{ intake.start_date|date:"d M Y" }}</span>
+              </div>
+              <div class="flex items-center justify-between text-sm border-t border-gray-100 pt-3.5">
+                <span class="text-gray-500 font-['Inter'] flex items-center gap-2">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 text-red-500"></i> Application Deadline
+                </span>
+                <span class="font-semibold font-['Inter'] text-red-600">{{ intake.application_deadline|date:"d M Y" }}</span>
+              </div>
+              <div class="flex items-center justify-between text-sm border-t border-gray-100 pt-3.5">
+                <span class="text-gray-500 font-['Inter'] flex items-center gap-2">
+                  <i data-lucide="users" class="w-3.5 h-3.5 text-[#840384]"></i> Available Slots
+                </span>
+                <span class="font-semibold font-['Inter'] text-gray-800">{{ intake.available_slots }}</span>
+              </div>
+            </div>
+            <a href="{% url 'eduweb:apply' %}"
+               class="mt-5 block text-center bg-[#840384] hover:bg-purple-700 text-white py-3 rounded-2xl font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-purple-400">
+              Apply for This Intake
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Right: CTA card — stacks below on mobile, beside on xl+ -->
+      <div class="xl:w-80 2xl:w-96 flex-shrink-0 w-full">
+        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#840384] via-purple-700 to-fuchsia-700 p-8 lg:p-10">
+          <div class="absolute top-0 right-0 w-56 h-56 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          <div class="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
+          <div class="absolute inset-0 pointer-events-none opacity-[0.04]"
+               style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%221%22 cy=%221%22 r=%221%22 fill=%22white%22/></svg>');"></div>
+          <div class="relative">
+            <div class="inline-flex items-center gap-2 bg-white/15 border border-white/20 text-white/70 px-3 py-1 rounded-full text-xs font-semibold tracking-widest uppercase mb-5 font-['Inter']">
+              <i data-lucide="rocket" class="w-3 h-3 text-yellow-300"></i>
+              Next Steps
+            </div>
+            <h2 class="font-['Poppins'] text-2xl font-black text-white leading-tight mb-3">
+              Ready to Enrol in <span class="text-yellow-300">{{ program.name }}</span>?
+            </h2>
+            <p class="text-purple-200 font-['Inter'] text-sm leading-relaxed mb-7">
+              Take the first step. Apply today and our admissions team will guide you through every stage of the process.
+            </p>
+            <div class="flex flex-col gap-3">
+              <a href="{% url 'eduweb:apply' %}"
+                 class="inline-flex items-center justify-center gap-2 bg-white text-[#840384] hover:bg-yellow-300 hover:text-gray-900 px-6 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xl focus:outline-none focus:ring-2 focus:ring-yellow-300">
+                <i data-lucide="send" class="w-4 h-4"></i> Apply Now
+              </a>
+              <a href="{% url 'eduweb:faculty_detail' faculty.slug %}"
+                 class="inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 px-6 py-3.5 rounded-xl font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-white/30">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Faculty
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bonus: quick info below CTA -->
+        <div class="mt-5 grid grid-cols-3 gap-3">
+          <div class="rounded-2xl p-4 bg-gray-50 border border-gray-100 text-center">
+            <i data-lucide="users" class="w-5 h-5 text-[#840384] mx-auto mb-2"></i>
+            <p class="text-gray-500 text-xs font-['Inter']">Admissions Team</p>
+          </div>
+          <div class="rounded-2xl p-4 bg-gray-50 border border-gray-100 text-center">
+            <i data-lucide="headphones" class="w-5 h-5 text-[#840384] mx-auto mb-2"></i>
+            <p class="text-gray-500 text-xs font-['Inter']">24/7 Support</p>
+          </div>
+          <div class="rounded-2xl p-4 bg-gray-50 border border-gray-100 text-center">
+            <i data-lucide="shield-check" class="w-5 h-5 text-[#840384] mx-auto mb-2"></i>
+            <p class="text-gray-500 text-xs font-['Inter']">Secure Process</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showYear(year, btn) {
+  document.querySelectorAll('.semester-group').forEach(g => g.classList.remove('show'));
+  document.querySelectorAll('.yr-tab').forEach(b => {
+    b.classList.remove('active');
+    b.classList.add('border', 'border-gray-200', 'text-gray-600');
+    b.setAttribute('aria-selected', 'false');
+  });
+  const target = document.getElementById('year-' + year);
+  if (target) target.classList.add('show');
+  btn.classList.add('active');
+  btn.classList.remove('border', 'border-gray-200', 'text-gray-600');
+  btn.setAttribute('aria-selected', 'true');
+}
+
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-anchor');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.nav-anchor[href="#${e.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+
+sections.forEach(s => observer.observe(s));
+
+lucide.createIcons();
+</script>
+{% endblock %}

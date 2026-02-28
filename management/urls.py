@@ -146,6 +146,57 @@ urlpatterns = [
     path('announcements/create/', views.announcement_create, name='announcement_create'),
     path('announcements/<int:pk>/edit/', views.announcement_edit, name='announcement_edit'),
     path('announcements/<int:pk>/delete/', views.announcement_delete, name='announcement_delete'),
+
+    # ==================== ENROLLMENTS ====================
+    path('enrollments/', views.enrollments_list, name='enrollments_list'),
+    path('enrollments/create/', views.enrollment_create, name='enrollment_create'),
+    path('enrollments/<int:pk>/edit/', views.enrollment_edit, name='enrollment_edit'),
+    path('enrollments/<int:pk>/delete/', views.enrollment_delete, name='enrollment_delete'),
+
+    # ==================== STAFF PAYROLL ====================
+    path('payroll/', views.staff_payroll_list, name='staff_payroll_list'),
+    path('payroll/create/', views.staff_payroll_create, name='staff_payroll_create'),
+    path('payroll/<int:pk>/edit/', views.staff_payroll_edit, name='staff_payroll_edit'),
+    path('payroll/<int:pk>/delete/', views.staff_payroll_delete, name='staff_payroll_delete'),
+
+    # ==================== REVIEWS ====================
+    path('reviews/', views.reviews_list, name='reviews_list'),
+    path('reviews/create/', views.review_create, name='review_create'),
+    path('reviews/<int:pk>/edit/', views.review_edit, name='review_edit'),
+    path('reviews/<int:pk>/delete/', views.review_delete, name='review_delete'),
+
+    # ==================== CERTIFICATES ====================
+    path('certificates/', views.certificates_list, name='certificates_list'),
+    path('certificates/create/', views.certificate_create, name='certificate_create'),
+    path('certificates/<int:pk>/edit/', views.certificate_edit, name='certificate_edit'),
+    path('certificates/<int:pk>/delete/', views.certificate_delete, name='certificate_delete'),
+
+    # ==================== BADGES ====================
+    path('badges/', views.badges_list, name='badges_list'),
+    path('badges/create/', views.badge_create, name='badge_create'),
+    path('badges/<int:pk>/edit/', views.badge_edit, name='badge_edit'),
+    path('badges/<int:pk>/delete/', views.badge_delete, name='badge_delete'),
+
+    # ==================== STUDENT BADGES ====================
+    path('student-badges/', views.student_badges_list, name='student_badges_list'),
+    path('student-badges/assign/', views.student_badge_assign, name='student_badge_assign'),
+    path('student-badges/<int:pk>/delete/', views.student_badge_delete, name='student_badge_delete'),
+
+    # ==================== PAYMENT GATEWAYS ====================
+    path('payment-gateways/', views.payment_gateways_list, name='payment_gateways_list'),
+    path('payment-gateways/create/', views.payment_gateway_create, name='payment_gateway_create'),
+    path('payment-gateways/<int:pk>/edit/', views.payment_gateway_edit, name='payment_gateway_edit'),
+    path('payment-gateways/<int:pk>/delete/', views.payment_gateway_delete, name='payment_gateway_delete'),
+
+    # ==================== TRANSACTIONS ====================
+    path('transactions/', views.transactions_list, name='transactions_list'),
+    path('transactions/<int:pk>/', views.transaction_detail, name='transaction_detail'),
+
+    # ==================== REQUIRED PAYMENTS ====================
+    path('required-payments/', views.required_payments_list, name='required_payments_list'),
+    path('required-payments/create/', views.required_payment_create, name='required_payment_create'),
+    path('required-payments/<int:pk>/edit/', views.required_payment_edit, name='required_payment_edit'),
+    path('required-payments/<int:pk>/delete/', views.required_payment_delete, name='required_payment_delete'),
 ]
 
 # Serve media files during development

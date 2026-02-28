@@ -1,0 +1,98 @@
+{% extends 'management/base.html' %}
+
+{% block title %}Enrollments - Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-full">
+  <div class="flex justify-between items-center mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800">Enrollments</h1>
+      <p class="text-gray-500 mt-1">Manage student course enrollments</p>
+    </div>
+    <a href="{% url 'management:enrollment_create' %}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">
+      <i class="fas fa-plus"></i>New Enrollment
+    </a>
+  </div>
+
+  <!-- Search & Filter -->
+  <div class="bg-white rounded-xl shadow p-5 mb-6">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <input type="search" name="search" value="{{ request.GET.search }}"
+             placeholder="Search student or course…"
+             class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm">
+      <select name="status" class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm">
+        <option value="">All Status</option>
+        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+        <option value="dropped" {% if request.GET.status == 'dropped' %}selected{% endif %}>Dropped</option>
+      </select>
+      <button type="submit" class="px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium">
+        <i class="fas fa-search mr-1"></i>Filter
+      </button>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl shadow overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">Student</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">Course</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">Grade</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">Date</th>
+          <th class="px-6 py-3 text-right font-semibold text-gray-700">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% for enrollment in enrollments %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-3">{{ enrollment.student.user.get_full_name }}</td>
+          <td class="px-6 py-3">{{ enrollment.course.name }}</td>
+          <td class="px-6 py-3">
+            <span class="px-2.5 py-0.5 text-xs font-medium rounded-full
+              {% if enrollment.status == 'active' %}bg-green-100 text-green-700
+              {% elif enrollment.status == 'completed' %}bg-blue-100 text-blue-700
+              {% else %}bg-red-100 text-red-700{% endif %}">
+              {{ enrollment.get_status_display }}
+            </span>
+          </td>
+          <td class="px-6 py-3">{{ enrollment.grade|default:"-" }}</td>
+          <td class="px-6 py-3 text-gray-500">{{ enrollment.enrollment_date|date:"M d, Y" }}</td>
+          <td class="px-6 py-3 text-right">
+            <a href="{% url 'management:enrollment_edit' enrollment.pk %}"
+               class="text-primary-600 hover:text-primary-700 font-medium text-xs mr-2">Edit</a>
+            <form method="post" action="{% url 'management:enrollment_delete' enrollment.pk %}" class="inline"
+                  onsubmit="return confirm('Delete this enrollment?');">
+              {% csrf_token %}
+              <button class="text-red-600 hover:text-red-700 font-medium text-xs">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="px-6 py-8 text-center text-gray-500">No enrollments found</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if enrollments.has_other_pages %}
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-center gap-2">
+      {% if enrollments.has_previous %}
+        <a href="?page=1" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">First</a>
+        <a href="?page={{ enrollments.previous_page_number }}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">Prev</a>
+      {% endif %}
+      <span class="px-3 py-1 text-sm">Page {{ enrollments.number }} of {{ enrollments.paginator.num_pages }}</span>
+      {% if enrollments.has_next %}
+        <a href="?page={{ enrollments.next_page_number }}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">Next</a>
+        <a href="?page={{ enrollments.paginator.num_pages }}" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100">Last</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

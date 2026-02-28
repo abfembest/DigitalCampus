@@ -910,6 +910,9 @@ def users_list(request):
         'instructors': UserProfile.objects.filter(role='instructor').count(),
     }
     
+    # Order QuerySet before pagination to avoid inconsistent results
+    users = users.order_by('-date_joined')
+    
     # Pagination
     paginator = Paginator(users, 20)
     page_number = request.GET.get('page')
@@ -2337,6 +2340,9 @@ def departments_list(request):
         qs = qs.filter(is_active=True)
     elif status == 'inactive':
         qs = qs.filter(is_active=False)
+    
+    # Order before pagination
+    qs = qs.order_by('name')
 
     paginator = Paginator(qs, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
@@ -2591,6 +2597,9 @@ def intakes_list(request):
         qs = qs.filter(is_active=True)
     elif status == 'inactive':
         qs = qs.filter(is_active=False)
+    
+    # Order before pagination
+    qs = qs.order_by('-year', 'intake_period')
 
     paginator = Paginator(qs, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
@@ -2943,3 +2952,696 @@ def announcement_delete(request, pk):
         announcement.delete()
         messages.success(request, 'Announcement deleted.')
     return redirect('management:announcements_list')
+
+
+# ===========================================================================
+# ENROLLMENTS MANAGEMENT
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def enrollments_list(request):
+    """List all student enrollments"""
+    from eduweb.models import Enrollment
+    from .forms import EnrollmentForm
+    
+    qs = Enrollment.objects.select_related(
+        'student', 'course'
+    ).order_by('-enrolled_at')
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(student__user__username__icontains=search) |
+            Q(course__name__icontains=search)
+        )
+    
+    status = request.GET.get('status', '')
+    if status and hasattr(Enrollment, 'STATUS_CHOICES'):
+        qs = qs.filter(status=status)
+    
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'management/enrollments_list.html', {
+        'enrollments': page_obj
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def enrollment_create(request):
+    """Create new enrollment"""
+    from .forms import EnrollmentForm
+    
+    if request.method == 'POST':
+        form = EnrollmentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Enrollment created.')
+            return redirect('management:enrollments_list')
+    else:
+        form = EnrollmentForm()
+    
+    return render(request, 'management/enrollment_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def enrollment_edit(request, pk):
+    """Edit enrollment"""
+    from eduweb.models import Enrollment
+    from .forms import EnrollmentForm
+    
+    enrollment = get_object_or_404(Enrollment, pk=pk)
+    if request.method == 'POST':
+        form = EnrollmentForm(request.POST, instance=enrollment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Enrollment updated.')
+            return redirect('management:enrollments_list')
+    else:
+        form = EnrollmentForm(instance=enrollment)
+    
+    return render(request, 'management/enrollment_form.html', {
+        'form': form,
+        'enrollment': enrollment
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def enrollment_delete(request, pk):
+    """Delete enrollment"""
+    from eduweb.models import Enrollment
+    
+    enrollment = get_object_or_404(Enrollment, pk=pk)
+    if request.method == 'POST':
+        enrollment.delete()
+        messages.success(request, 'Enrollment deleted.')
+    return redirect('management:enrollments_list')
+
+
+# ===========================================================================
+# STAFF PAYROLL MANAGEMENT
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def staff_payroll_list(request):
+    """List all payroll records"""
+    from eduweb.models import StaffPayroll
+    
+    qs = StaffPayroll.objects.select_related('staff').order_by('-payment_date')
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(staff__username__icontains=search) |
+            Q(pay_period__icontains=search)
+        )
+    
+    status = request.GET.get('status', '')
+    if status:
+        qs = qs.filter(status=status)
+    
+    paginator = Paginator(qs, 15)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'management/payroll_list.html', {
+        'payroll_records': page_obj
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def staff_payroll_create(request):
+    """Create payroll record"""
+    from .forms import StaffPayrollForm
+    
+    if request.method == 'POST':
+        form = StaffPayrollForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Payroll created.')
+            return redirect('management:staff_payroll_list')
+    else:
+        form = StaffPayrollForm()
+    
+    return render(request, 'management/payroll_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def staff_payroll_edit(request, pk):
+    """Edit payroll record"""
+    from eduweb.models import StaffPayroll
+    from .forms import StaffPayrollForm
+    
+    payroll = get_object_or_404(StaffPayroll, pk=pk)
+    if request.method == 'POST':
+        form = StaffPayrollForm(request.POST, instance=payroll)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Payroll updated.')
+            return redirect('management:staff_payroll_list')
+    else:
+        form = StaffPayrollForm(instance=payroll)
+    
+    return render(request, 'management/payroll_form.html', {
+        'form': form,
+        'payroll': payroll
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def staff_payroll_delete(request, pk):
+    """Delete payroll record"""
+    from eduweb.models import StaffPayroll
+    
+    payroll = get_object_or_404(StaffPayroll, pk=pk)
+    if request.method == 'POST':
+        payroll.delete()
+        messages.success(request, 'Payroll deleted.')
+    return redirect('management:staff_payroll_list')
+
+
+# ===========================================================================
+# REVIEWS MANAGEMENT
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def reviews_list(request):
+    """List all course reviews"""
+    from eduweb.models import Review
+    
+    qs = Review.objects.select_related(
+        'student', 'course'
+    ).order_by('-created_at')
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(course__title__icontains=search) |
+            Q(review_text__icontains=search)
+        )
+    
+    rating = request.GET.get('rating', '')
+    if rating:
+        try:
+            qs = qs.filter(rating=int(rating))
+        except ValueError:
+            pass
+    
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'management/reviews_list.html', {
+        'reviews': page_obj
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def review_create(request):
+    """Create review"""
+    from .forms import ReviewForm
+    
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Review created.')
+            return redirect('management:reviews_list')
+    else:
+        form = ReviewForm()
+    
+    return render(request, 'management/review_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def review_edit(request, pk):
+    """Edit review"""
+    from eduweb.models import Review
+    from .forms import ReviewForm
+    
+    review = get_object_or_404(Review, pk=pk)
+    if request.method == 'POST':
+        form = ReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Review updated.')
+            return redirect('management:reviews_list')
+    else:
+        form = ReviewForm(instance=review)
+    
+    return render(request, 'management/review_form.html', {
+        'form': form,
+        'review': review
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def review_delete(request, pk):
+    """Delete review"""
+    from eduweb.models import Review
+    
+    review = get_object_or_404(Review, pk=pk)
+    if request.method == 'POST':
+        review.delete()
+        messages.success(request, 'Review deleted.')
+    return redirect('management:reviews_list')
+
+
+# ===========================================================================
+# CERTIFICATES MANAGEMENT
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def certificates_list(request):
+    """List all certificates"""
+    from eduweb.models import Certificate
+    
+    qs = Certificate.objects.select_related(
+        'student', 'course'
+    ).order_by('-issued_date')
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(student__user__username__icontains=search) |
+            Q(course__title__icontains=search)
+        )
+    
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'management/certificates_list.html', {
+        'certificates': page_obj
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def certificate_create(request):
+    """Create certificate"""
+    from .forms import CertificateForm
+    
+    if request.method == 'POST':
+        form = CertificateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Certificate created.')
+            return redirect('management:certificates_list')
+    else:
+        form = CertificateForm()
+    
+    return render(request, 'management/certificate_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def certificate_edit(request, pk):
+    """Edit certificate"""
+    from eduweb.models import Certificate
+    from .forms import CertificateForm
+    
+    certificate = get_object_or_404(Certificate, pk=pk)
+    if request.method == 'POST':
+        form = CertificateForm(request.POST, instance=certificate)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Certificate updated.')
+            return redirect('management:certificates_list')
+    else:
+        form = CertificateForm(instance=certificate)
+    
+    return render(request, 'management/certificate_form.html', {
+        'form': form,
+        'certificate': certificate
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def certificate_delete(request, pk):
+    """Delete certificate"""
+    from eduweb.models import Certificate
+    
+    certificate = get_object_or_404(Certificate, pk=pk)
+    if request.method == 'POST':
+        certificate.delete()
+        messages.success(request, 'Certificate deleted.')
+    return redirect('management:certificates_list')
+
+
+# ===========================================================================
+# BADGES MANAGEMENT
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def badges_list(request):
+    """List all badges"""
+    from eduweb.models import Badge
+    
+    qs = Badge.objects.order_by('name')
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(name__icontains=search)
+    
+    paginator = Paginator(qs, 15)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'management/badges_list.html', {
+        'badges': page_obj
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def badge_create(request):
+    """Create badge"""
+    from .forms import BadgeForm
+    
+    if request.method == 'POST':
+        form = BadgeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Badge created.')
+            return redirect('management:badges_list')
+    else:
+        form = BadgeForm()
+    
+    return render(request, 'management/badge_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def badge_edit(request, pk):
+    """Edit badge"""
+    from eduweb.models import Badge
+    from .forms import BadgeForm
+    
+    badge = get_object_or_404(Badge, pk=pk)
+    if request.method == 'POST':
+        form = BadgeForm(request.POST, instance=badge)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Badge updated.')
+            return redirect('management:badges_list')
+    else:
+        form = BadgeForm(instance=badge)
+    
+    return render(request, 'management/badge_form.html', {
+        'form': form,
+        'badge': badge
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def badge_delete(request, pk):
+    """Delete badge"""
+    from eduweb.models import Badge
+    
+    badge = get_object_or_404(Badge, pk=pk)
+    if request.method == 'POST':
+        badge.delete()
+        messages.success(request, 'Badge deleted.')
+    return redirect('management:badges_list')
+
+
+# ===========================================================================
+# STUDENT BADGES (ASSIGNMENT)
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def student_badges_list(request):
+    """List badge assignments"""
+    from eduweb.models import StudentBadge
+    
+    qs = StudentBadge.objects.select_related(
+        'student', 'badge', 'awarded_by'
+    ).order_by('-awarded_at')
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(student__username__icontains=search) |
+            Q(badge__name__icontains=search)
+        )
+    
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'management/student_badges_list.html', {
+        'student_badges': page_obj
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def student_badge_assign(request):
+    """Assign badge to student"""
+    from .forms import StudentBadgeForm
+    
+    if request.method == 'POST':
+        form = StudentBadgeForm(request.POST)
+        if form.is_valid():
+            badge = form.save(commit=False)
+            badge.awarded_by = request.user
+            badge.save()
+            messages.success(request, 'Badge assigned.')
+            return redirect('management:student_badges_list')
+    else:
+        form = StudentBadgeForm()
+    
+    return render(request, 'management/student_badge_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def student_badge_delete(request, pk):
+    """Revoke badge from student"""
+    from eduweb.models import StudentBadge
+    
+    student_badge = get_object_or_404(StudentBadge, pk=pk)
+    if request.method == 'POST':
+        student_badge.delete()
+        messages.success(request, 'Badge revoked.')
+    return redirect('management:student_badges_list')
+
+
+# ===========================================================================
+# PAYMENT GATEWAYS MANAGEMENT
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def payment_gateways_list(request):
+    """List payment gateways"""
+    from eduweb.models import PaymentGateway
+    
+    gateways = PaymentGateway.objects.order_by('name')
+    
+    return render(request, 'management/payment_gateways_list.html', {
+        'gateways': gateways
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def payment_gateway_create(request):
+    """Create payment gateway"""
+    from .forms import PaymentGatewayForm
+    
+    if request.method == 'POST':
+        form = PaymentGatewayForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Gateway added.')
+            return redirect('management:payment_gateways_list')
+    else:
+        form = PaymentGatewayForm()
+    
+    return render(request, 'management/payment_gateway_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def payment_gateway_edit(request, pk):
+    """Edit payment gateway"""
+    from eduweb.models import PaymentGateway
+    from .forms import PaymentGatewayForm
+    
+    gateway = get_object_or_404(PaymentGateway, pk=pk)
+    if request.method == 'POST':
+        form = PaymentGatewayForm(request.POST, instance=gateway)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Gateway updated.')
+            return redirect('management:payment_gateways_list')
+    else:
+        form = PaymentGatewayForm(instance=gateway)
+    
+    return render(request, 'management/payment_gateway_form.html', {
+        'form': form,
+        'gateway': gateway
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def payment_gateway_delete(request, pk):
+    """Delete payment gateway"""
+    from eduweb.models import PaymentGateway
+    
+    gateway = get_object_or_404(PaymentGateway, pk=pk)
+    if request.method == 'POST':
+        gateway.delete()
+        messages.success(request, 'Gateway deleted.')
+    return redirect('management:payment_gateways_list')
+
+
+# ===========================================================================
+# TRANSACTIONS MANAGEMENT
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def transactions_list(request):
+    """List all transactions"""
+    from eduweb.models import Transaction
+    
+    qs = Transaction.objects.select_related(
+        'user', 'gateway'
+    ).order_by('-created_at')
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(user__username__icontains=search) |
+            Q(transaction_id__icontains=search)
+        )
+    
+    status = request.GET.get('status', '')
+    if status:
+        qs = qs.filter(status=status)
+    
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'management/transactions_list.html', {
+        'transactions': page_obj
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def transaction_detail(request, pk):
+    """View transaction details"""
+    from eduweb.models import Transaction
+    
+    transaction = get_object_or_404(
+        Transaction.objects.select_related('user', 'gateway'),
+        pk=pk
+    )
+    
+    return render(request, 'management/transaction_detail.html', {
+        'transaction': transaction
+    })
+
+
+# ===========================================================================
+# REQUIRED PAYMENTS MANAGEMENT
+# ===========================================================================
+
+@login_required
+@user_passes_test(is_admin)
+def required_payments_list(request):
+    """List required payments"""
+    from eduweb.models import AllRequiredPayments
+    
+    qs = AllRequiredPayments.objects.select_related(
+        'program', 'course', 'academic_session'
+    ).order_by('-due_date')
+    
+    search = request.GET.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(purpose__icontains=search) |
+            Q(program__name__icontains=search)
+        )
+    
+    status = request.GET.get('status', '')
+    if status:
+        qs = qs.filter(status=status)
+    
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'management/required_payments_list.html', {
+        'payments': page_obj
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def required_payment_create(request):
+    """Create required payment"""
+    from .forms import AllRequiredPaymentsForm
+    
+    if request.method == 'POST':
+        form = AllRequiredPaymentsForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Payment created.')
+            return redirect('management:required_payments_list')
+    else:
+        form = AllRequiredPaymentsForm()
+    
+    return render(request, 'management/required_payment_form.html', {'form': form})
+
+
+@login_required
+@user_passes_test(is_admin)
+def required_payment_edit(request, pk):
+    """Edit required payment"""
+    from eduweb.models import AllRequiredPayments
+    from .forms import AllRequiredPaymentsForm
+    
+    payment = get_object_or_404(AllRequiredPayments, pk=pk)
+    if request.method == 'POST':
+        form = AllRequiredPaymentsForm(request.POST, instance=payment)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Payment updated.')
+            return redirect('management:required_payments_list')
+    else:
+        form = AllRequiredPaymentsForm(instance=payment)
+    
+    return render(request, 'management/required_payment_form.html', {
+        'form': form,
+        'payment': payment
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def required_payment_delete(request, pk):
+    """Delete required payment"""
+    from eduweb.models import AllRequiredPayments
+    
+    payment = get_object_or_404(AllRequiredPayments, pk=pk)
+    if request.method == 'POST':
+        payment.delete()
+        messages.success(request, 'Payment deleted.')
+    return redirect('management:required_payments_list')

@@ -1,0 +1,59 @@
+{% extends 'management/base.html' %}
+{% block title %}Transactions - Admin{% endblock %}
+{% block content %}
+<div class="max-w-full">
+  <h1 class="text-3xl font-bold text-gray-800 mb-8">Transactions</h1>
+
+  <div class="bg-white rounded-xl shadow p-5 mb-6">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <input type="search" name="search" value="{{ request.GET.search }}"
+             placeholder="Search user or transaction ID…"
+             class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-sm">
+      <select name="status" class="px-4 py-2.5 border border-gray-300 rounded-lg text-sm">
+        <option value="">All Status</option>
+        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+        <option value="failed" {% if request.GET.status == 'failed' %}selected{% endif %}>Failed</option>
+      </select>
+      <button type="submit" class="px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium">Filter</button>
+    </form>
+  </div>
+
+  <div class="bg-white rounded-xl shadow overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">User</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">Gateway</th>
+          <th class="px-6 py-3 text-right font-semibold text-gray-700">Amount</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
+          <th class="px-6 py-3 text-left font-semibold text-gray-700">Date</th>
+          <th class="px-6 py-3 text-right font-semibold text-gray-700">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {% for txn in transactions %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-3">{{ txn.user.get_full_name }}</td>
+          <td class="px-6 py-3 text-sm text-gray-600">{{ txn.gateway.name }}</td>
+          <td class="px-6 py-3 text-right font-medium">{{ txn.currency }} {{ txn.amount|floatformat:2 }}</td>
+          <td class="px-6 py-3">
+            <span class="px-2 py-1 text-xs font-medium rounded-full {% if txn.status == 'completed' %}bg-green-100 text-green-700{% elif txn.status == 'failed' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+              {{ txn.get_status_display }}
+            </span>
+          </td>
+          <td class="px-6 py-3 text-gray-500">{{ txn.processed_date|date:"M d, Y H:i" }}</td>
+          <td class="px-6 py-3 text-right">
+            <a href="{% url 'management:transaction_detail' txn.pk %}" class="text-primary-600 hover:text-primary-700 text-xs font-medium">View</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="px-6 py-8 text-center text-gray-500">No transactions found</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

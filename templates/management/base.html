@@ -578,6 +578,68 @@
                         </div>
                     </a>
 
+                    <!-- Student Management -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'enrollments' in request.path or 'student-badges' in request.path or 'certificates' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-users w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Student Data</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="studentDataMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'management:enrollments_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'enrollments' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-sign-in-alt mr-2" aria-hidden="true"></i>Enrollments
+                            </a>
+                            <a href="{% url 'management:certificates_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'certificates' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-certificate mr-2" aria-hidden="true"></i>Certificates
+                            </a>
+                            <a href="{% url 'management:badges_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'badges' in request.path and 'student-badges' not in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-medal mr-2" aria-hidden="true"></i>Badges
+                            </a>
+                            <a href="{% url 'management:student_badges_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'student-badges' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-award mr-2" aria-hidden="true"></i>Assign Badges
+                            </a>
+                            <a href="{% url 'management:reviews_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'reviews' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-star mr-2" aria-hidden="true"></i>Reviews
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Finance Management -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payroll' in request.path or 'transactions' in request.path or 'payment-gateways' in request.path or 'required-payments' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-dollar-sign w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Finance</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                        </button>
+                        <div id="financeMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'management:staff_payroll_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'payroll' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-wallet mr-2" aria-hidden="true"></i>Staff Payroll
+                            </a>
+                            <a href="{% url 'management:required_payments_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'required-payments' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-receipt mr-2" aria-hidden="true"></i>Required Payments
+                            </a>
+                            <a href="{% url 'management:transactions_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'transactions' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-exchange-alt mr-2" aria-hidden="true"></i>Transactions
+                            </a>
+                            <a href="{% url 'management:payment_gateways_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'payment-gateways' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-credit-card mr-2" aria-hidden="true"></i>Payment Gateways
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Divider -->
                     <div class="border-t border-white/10 my-4"></div>
                     <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">System</div>
@@ -1339,25 +1401,34 @@
 
             // JS-only hover expand — swap sidebar-collapsed ↔ sidebar-hover-expanded
             // so the two classes never coexist (eliminates all CSS specificity conflicts)
-            let navigating = false;
             let hoverTimer = null;
-            document.addEventListener('click', (e) => { if (e.target.closest('a[href]')) navigating = true; });
-
+            
             sidebar?.addEventListener('mouseenter', () => {
-                if (!sidebar.classList.contains('sidebar-collapsed') || navigating) return;
+                if (!sidebar.classList.contains('sidebar-collapsed')) return;
+                
+                clearTimeout(hoverTimer);
                 hoverTimer = setTimeout(() => {
-                    if (!navigating && sidebar.classList.contains('sidebar-collapsed')) {
+                    if (sidebar.classList.contains('sidebar-collapsed')) {
                         sidebar.classList.remove('sidebar-collapsed');
                         sidebar.classList.add('sidebar-hover-expanded');
                         // main content stays at collapsed margin — sidebar floats over it
                     }
                 }, 80);
             });
+            
             sidebar?.addEventListener('mouseleave', () => {
                 clearTimeout(hoverTimer);
                 if (sidebar.classList.contains('sidebar-hover-expanded')) {
                     sidebar.classList.remove('sidebar-hover-expanded');
                     sidebar.classList.add('sidebar-collapsed');
+                }
+            });
+            
+            // Prevent mouseleave when clicking links in sidebar
+            sidebar?.addEventListener('click', (e) => {
+                if (e.target.closest('a[href]')) {
+                    // Keep hover-expanded state while navigation is in progress
+                    clearTimeout(hoverTimer);
                 }
             });
 

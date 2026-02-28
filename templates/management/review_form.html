@@ -1,0 +1,33 @@
+{% extends 'management/base.html' %}
+{% block title %}{% if review %}Edit{% else %}New{% endif %} Review - Admin{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <form method="post" class="bg-white rounded-xl shadow border border-gray-200 p-6 space-y-5">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Course *</label>
+      {{ form.course }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Reviewer *</label>
+      {{ form.reviewer }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Title *</label>
+      {{ form.title }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Review *</label>
+      {{ form.content }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Rating (1-5) *</label>
+      {{ form.rating }}
+    </div>
+    <div class="flex gap-3 pt-4">
+      <button type="submit" class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Save</button>
+      <a href="{% url 'management:reviews_list' %}" class="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

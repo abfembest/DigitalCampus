@@ -16,6 +16,16 @@ from eduweb.models import (
     UserProfile,
     SystemConfiguration,
     CourseCategory,
+    StaffPayroll,
+    Review,
+    Certificate,
+    Badge,
+    StudentBadge,
+    PaymentGateway,
+    Transaction,
+    Invoice,
+    AllRequiredPayments,
+    Announcement,
 )
 import json
 
@@ -1422,3 +1432,462 @@ class LMSCourseForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+# ==============================================================================
+# ENROLLMENT FORM
+# ==============================================================================
+
+class EnrollmentForm(forms.ModelForm):
+    """Form for managing student course enrollments"""
+    
+    class Meta:
+        model = Enrollment
+        fields = [
+            'student', 'course', 'status',
+            'progress_percentage', 'current_grade',
+            'completed_at'
+        ]
+        widgets = {
+            'student': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'course': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'status': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'progress_percentage': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0',
+                'max': '100'
+            }),
+            'current_grade': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'completed_at': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['student'].empty_label = '— Select Student —'
+        self.fields['course'].empty_label = '— Select Course —'
+        self.fields['current_grade'].required = False
+        self.fields['completed_at'].required = False
+
+
+# ==============================================================================
+# STAFF PAYROLL FORM
+# ==============================================================================
+
+class StaffPayrollForm(forms.ModelForm):
+    """Form for managing staff payroll"""
+    
+    class Meta:
+        model = StaffPayroll
+        fields = [
+            'staff', 'month', 'year', 'base_salary', 'allowances',
+            'bonuses', 'tax_deduction', 'other_deductions',
+            'payment_method', 'payment_date', 'bank_name', 'account_number'
+        ]
+        widgets = {
+            'staff': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'month': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'year': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'min': '2020'
+            }),
+            'base_salary': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'allowances': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'bonuses': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'tax_deduction': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'other_deductions': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'payment_method': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'payment_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            }),
+            'bank_name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Bank name'
+            }),
+            'account_number': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Account number'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['staff'].empty_label = '— Select Staff —'
+        self.fields['payment_date'].required = False
+        self.fields['bank_name'].required = False
+        self.fields['account_number'].required = False
+
+
+# ==============================================================================
+# REVIEW FORM
+# ==============================================================================
+
+class ReviewForm(forms.ModelForm):
+    """Form for managing course/program reviews"""
+    
+    class Meta:
+        model = Review
+        fields = [
+            'course', 'student', 'rating', 'review_text', 'is_approved'
+        ]
+        widgets = {
+            'course': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'student': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'rating': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'min': '1',
+                'max': '5',
+                'step': '1'
+            }),
+            'review_text': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'rows': 4,
+                'placeholder': 'Write your detailed review...'
+            }),
+            'is_approved': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['course'].empty_label = '— Select Course —'
+        self.fields['student'].empty_label = '— Select Student —'
+        self.fields['review_text'].required = False
+
+
+# ==============================================================================
+# CERTIFICATE FORM
+# ==============================================================================
+
+class CertificateForm(forms.ModelForm):
+    """Form for managing course certificates"""
+    
+    class Meta:
+        model = Certificate
+        fields = [
+            'student', 'course', 'completion_date', 'grade',
+            'certificate_file', 'is_verified'
+        ]
+        widgets = {
+            'student': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'course': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'completion_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            }),
+            'grade': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'e.g., A, B+, 85',
+                'maxlength': '5'
+            }),
+            'certificate_file': forms.FileInput(attrs={
+                'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100'
+            }),
+            'is_verified': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['student'].empty_label = '— Select Student —'
+        self.fields['course'].empty_label = '— Select Course —'
+        self.fields['grade'].required = False
+        self.fields['certificate_file'].required = False
+
+
+# ==============================================================================
+# BADGE FORM
+# ==============================================================================
+
+class BadgeForm(forms.ModelForm):
+    """Form for managing achievement badges"""
+    
+    class Meta:
+        model = Badge
+        fields = [
+            'name', 'description', 'icon', 'color',
+            'criteria', 'points', 'is_active'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'e.g., Coding Master'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'rows': 3,
+                'placeholder': 'What does this badge represent?'
+            }),
+            'icon': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Icon name (e.g., award, star, trophy)'
+            }),
+            'color': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Color (e.g., gold, silver, bronze)',
+                'type': 'color'
+            }),
+            'criteria': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'rows': 2,
+                'placeholder': 'Requirements to earn this badge'
+            }),
+            'points': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'min': '0'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded'
+            }),
+        }
+
+
+# ==============================================================================
+# STUDENT BADGE ASSIGNMENT FORM
+# ==============================================================================
+
+class StudentBadgeForm(forms.ModelForm):
+    """Form for assigning badges to students"""
+    
+    class Meta:
+        model = StudentBadge
+        fields = [
+            'student', 'badge', 'awarded_by', 'reason'
+        ]
+        widgets = {
+            'student': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'badge': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'awarded_by': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'reason': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'rows': 2,
+                'placeholder': 'Why is this badge being awarded?'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['student'].empty_label = '— Select Student —'
+        self.fields['badge'].empty_label = '— Select Badge —'
+        self.fields['awarded_by'].empty_label = '— Select Admin —'
+        self.fields['awarded_by'].queryset = User.objects.filter(
+            is_staff=True
+        ).order_by('last_name', 'first_name')
+        self.fields['reason'].required = False
+
+
+# ==============================================================================
+# PAYMENT GATEWAY FORM
+# ==============================================================================
+
+class PaymentGatewayForm(forms.ModelForm):
+    """Form for managing payment gateways"""
+    
+    class Meta:
+        model = PaymentGateway
+        fields = [
+            'name', 'gateway_type', 'api_key', 'api_secret',
+            'webhook_secret', 'is_active', 'is_test_mode'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'e.g., Stripe Live'
+            }),
+            'gateway_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'api_key': forms.PasswordInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'API Key (password field)'
+            }),
+            'api_secret': forms.PasswordInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'API Secret (password field)'
+            }),
+            'webhook_secret': forms.PasswordInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'Webhook Secret (password field)'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded'
+            }),
+            'is_test_mode': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['api_key'].required = False
+        self.fields['api_secret'].required = False
+        self.fields['webhook_secret'].required = False
+
+
+# ==============================================================================
+# TRANSACTION FORM (for admin manual entry/edit)
+# ==============================================================================
+
+class TransactionForm(forms.ModelForm):
+    """Form for managing transactions"""
+    
+    class Meta:
+        model = Transaction
+        fields = [
+            'user', 'transaction_type', 'gateway', 'amount',
+            'currency', 'status', 'course', 'completed_at'
+        ]
+        widgets = {
+            'user': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'transaction_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'gateway': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'currency': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'USD'
+            }),
+            'status': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'course': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'completed_at': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['user'].empty_label = '— Select User —'
+        self.fields['transaction_type'].empty_label = '— Select Type —'
+        self.fields['gateway'].empty_label = '— Select Gateway —'
+        self.fields['status'].empty_label = '— Select Status —'
+        self.fields['course'].empty_label = '— Select Course (Optional) —'
+        self.fields['completed_at'].required = False
+        self.fields['course'].required = False
+        self.fields['gateway'].required = False
+
+
+# ==============================================================================
+# ALL REQUIRED PAYMENTS FORM
+# ==============================================================================
+
+class AllRequiredPaymentsForm(forms.ModelForm):
+    """Form for managing required payments"""
+    
+    class Meta:
+        model = AllRequiredPayments
+        fields = [
+            'program', 'course', 'academic_session', 'semester',
+            'purpose', 'who_to_pay', 'amount', 'due_date', 'is_active'
+        ]
+        widgets = {
+            'program': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'course': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'academic_session': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'semester': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'purpose': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': 'e.g., Tuition, Library Fees, Registration'
+            }),
+            'who_to_pay': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'due_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['program'].empty_label = '— Select Program —'
+        self.fields['course'].empty_label = '— Select Course (Optional) —'
+        self.fields['academic_session'].empty_label = '— Select Session (Optional) —'
+        self.fields['course'].required = False
+        self.fields['academic_session'].required = False
+

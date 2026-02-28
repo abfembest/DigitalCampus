@@ -41,7 +41,7 @@
         <tr class="hover:bg-gray-50">
           <td class="px-6 py-3">{{ payment.program.name }}</td>
           <td class="px-6 py-3">{{ payment.purpose }}</td>
-          <td class="px-6 py-3 text-right font-medium">{{ payment.currency }} {{ payment.amount|floatformat:2 }}</td>
+          <td class="px-6 py-3 text-right font-medium">{{ payment.amount|floatformat:2 }}</td>
           <td class="px-6 py-3 text-gray-600">{{ payment.due_date|date:"M d, Y" }}</td>
           <td class="px-6 py-3">
             <span class="px-2 py-1 text-xs font-medium rounded-full {% if payment.is_active %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-700{% endif %}">

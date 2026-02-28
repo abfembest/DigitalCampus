@@ -2972,8 +2972,10 @@ def enrollments_list(request):
     search = request.GET.get('search', '').strip()
     if search:
         qs = qs.filter(
-            Q(student__user__username__icontains=search) |
-            Q(course__name__icontains=search)
+            Q(student__username__icontains=search) |
+            Q(student__first_name__icontains=search) |
+            Q(student__last_name__icontains=search) |
+            Q(course__title__icontains=search)
         )
     
     status = request.GET.get('status', '')
@@ -3003,7 +3005,13 @@ def enrollment_create(request):
     else:
         form = EnrollmentForm()
     
-    return render(request, 'management/enrollment_form.html', {'form': form})
+    from django.contrib.auth.models import User
+    from eduweb.models import LMSCourse
+    return render(request, 'management/enrollment_form.html', {
+        'form': form,
+        'students': User.objects.filter(is_active=True).order_by('last_name', 'first_name'),
+        'courses': LMSCourse.objects.filter(is_published=True).order_by('title'),
+    })
 
 
 @login_required
@@ -3023,9 +3031,13 @@ def enrollment_edit(request, pk):
     else:
         form = EnrollmentForm(instance=enrollment)
     
+    from django.contrib.auth.models import User
+    from eduweb.models import LMSCourse
     return render(request, 'management/enrollment_form.html', {
         'form': form,
-        'enrollment': enrollment
+        'enrollment': enrollment,
+        'students': User.objects.filter(is_active=True).order_by('last_name', 'first_name'),
+        'courses': LMSCourse.objects.filter(is_published=True).order_by('title'),
     })
 
 
@@ -3226,74 +3238,85 @@ def review_delete(request, pk):
 def certificates_list(request):
     """List all certificates"""
     from eduweb.models import Certificate
-    
+
     qs = Certificate.objects.select_related(
-        'student', 'course'
+        'student', 'course'          # student IS the User; no .user sub-relation
     ).order_by('-issued_date')
-    
+
     search = request.GET.get('search', '').strip()
     if search:
         qs = qs.filter(
-            Q(student__user__username__icontains=search) |
+            Q(student__username__icontains=search) |
+            Q(student__first_name__icontains=search) |
+            Q(student__last_name__icontains=search) |
             Q(course__title__icontains=search)
         )
-    
+
     paginator = Paginator(qs, 20)
-    page_obj = paginator.get_page(request.GET.get('page'))
-    
+    page_obj  = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'management/certificates_list.html', {
-        'certificates': page_obj
+        'certificates': page_obj,
     })
 
 
+# ── certificate_create ─────────────────────────────────────
 @login_required
 @user_passes_test(is_admin)
 def certificate_create(request):
-    """Create certificate"""
+    """Issue a new certificate"""
+    from eduweb.models import Certificate, LMSCourse
     from .forms import CertificateForm
-    
+    from django.contrib.auth.models import User
+
     if request.method == 'POST':
-        form = CertificateForm(request.POST)
+        form = CertificateForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Certificate created.')
+            messages.success(request, 'Certificate issued.')
             return redirect('management:certificates_list')
     else:
         form = CertificateForm()
-    
-    return render(request, 'management/certificate_form.html', {'form': form})
+
+    return render(request, 'management/certificate_form.html', {
+        'form':     form,
+        'students': User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+        'courses':  LMSCourse.objects.filter(is_published=True).order_by('title'),
+    })
 
 
+# ── certificate_edit ───────────────────────────────────────
 @login_required
 @user_passes_test(is_admin)
-def certificate_edit(request, pk):
-    """Edit certificate"""
-    from eduweb.models import Certificate
+def certificate_edit(request, certificate_id):
+    """Edit an existing certificate"""
+    from eduweb.models import Certificate, LMSCourse
     from .forms import CertificateForm
-    
-    certificate = get_object_or_404(Certificate, pk=pk)
+    from django.contrib.auth.models import User
+    certificate = get_object_or_404(Certificate, certificate_id=certificate_id)
     if request.method == 'POST':
-        form = CertificateForm(request.POST, instance=certificate)
+        form = CertificateForm(request.POST, request.FILES, instance=certificate)
         if form.is_valid():
             form.save()
             messages.success(request, 'Certificate updated.')
             return redirect('management:certificates_list')
     else:
         form = CertificateForm(instance=certificate)
-    
     return render(request, 'management/certificate_form.html', {
-        'form': form,
-        'certificate': certificate
+        'form':        form,
+        'certificate': certificate,
+        'students':    User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+        'courses':     LMSCourse.objects.filter(is_published=True).order_by('title'),
     })
 
 
+# ── certificate_delete ─────────────────────────────────────
 @login_required
 @user_passes_test(is_admin)
-def certificate_delete(request, pk):
-    """Delete certificate"""
+def certificate_delete(request, certificate_id):
+    """Delete a certificate (POST only)"""
     from eduweb.models import Certificate
-    
-    certificate = get_object_or_404(Certificate, pk=pk)
+    certificate = get_object_or_404(Certificate, certificate_id=certificate_id)
     if request.method == 'POST':
         certificate.delete()
         messages.success(request, 'Certificate deleted.')

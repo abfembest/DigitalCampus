@@ -1452,8 +1452,9 @@ class EnrollmentForm(forms.ModelForm):
             'student': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'course': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            'course': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'list': 'course-list',
             }),
             'status': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
@@ -1571,8 +1572,9 @@ class ReviewForm(forms.ModelForm):
             'course', 'student', 'rating', 'review_text', 'is_approved'
         ]
         widgets = {
-            'course': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            'course': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'list': 'course-list',
             }),
             'student': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
@@ -1605,44 +1607,51 @@ class ReviewForm(forms.ModelForm):
 # ==============================================================================
 
 class CertificateForm(forms.ModelForm):
-    """Form for managing course certificates"""
-    
+    """Certificate issue / edit form"""
+
     class Meta:
-        model = Certificate
+        model  = Certificate
         fields = [
-            'student', 'course', 'completion_date', 'grade',
-            'certificate_file', 'is_verified'
+            'student', 'course', 'completion_date',
+            'grade', 'certificate_file', 'is_verified',
         ]
         widgets = {
-            'student': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'course': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'completion_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-            }),
+            # student & course are rendered as datalists in the template;
+            # these hidden-compatible widgets just need to accept a PK.
+            'student': forms.HiddenInput(),
+            'course':  forms.HiddenInput(),
+            'completion_date': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'type': 'date',
+                    'class': (
+                        'w-full px-4 py-3 border border-gray-300 rounded-lg'
+                        ' focus:ring-2 focus:ring-primary-500 focus:outline-none'
+                    ),
+                }
+            ),
             'grade': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'e.g., A, B+, 85',
-                'maxlength': '5'
+                'class': (
+                    'w-full px-4 py-3 border border-gray-300 rounded-lg'
+                    ' focus:ring-2 focus:ring-primary-500 focus:outline-none'
+                ),
+                'placeholder': 'e.g. A, B+, 85',
+                'maxlength': '5',
             }),
             'certificate_file': forms.FileInput(attrs={
-                'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100'
+                'class': (
+                    'block w-full text-sm text-gray-500'
+                    ' file:mr-4 file:py-2 file:px-4'
+                    ' file:rounded-lg file:border-0'
+                    ' file:text-sm file:font-semibold'
+                    ' file:bg-primary-50 file:text-primary-700'
+                    ' hover:file:bg-primary-100'
+                ),
             }),
             'is_verified': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 rounded'
+                'class': 'w-5 h-5 text-primary-600 rounded cursor-pointer',
             }),
         }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['student'].empty_label = '— Select Student —'
-        self.fields['course'].empty_label = '— Select Course —'
-        self.fields['grade'].required = False
-        self.fields['certificate_file'].required = False
 
 
 # ==============================================================================
@@ -1815,8 +1824,9 @@ class TransactionForm(forms.ModelForm):
             'status': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'course': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            'course': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'list': 'course-list',
             }),
             'completed_at': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
@@ -1853,8 +1863,9 @@ class AllRequiredPaymentsForm(forms.ModelForm):
             'program': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'course': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            'course': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'list': 'course-list',
             }),
             'academic_session': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'

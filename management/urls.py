@@ -168,8 +168,8 @@ urlpatterns = [
     # ==================== CERTIFICATES ====================
     path('certificates/', views.certificates_list, name='certificates_list'),
     path('certificates/create/', views.certificate_create, name='certificate_create'),
-    path('certificates/<int:pk>/edit/', views.certificate_edit, name='certificate_edit'),
-    path('certificates/<int:pk>/delete/', views.certificate_delete, name='certificate_delete'),
+    path('certificates/<str:certificate_id>/edit/', views.certificate_edit, name='certificate_edit'),
+    path('certificates/<str:certificate_id>/delete/', views.certificate_delete, name='certificate_delete'),
 
     # ==================== BADGES ====================
     path('badges/', views.badges_list, name='badges_list'),

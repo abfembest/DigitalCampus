@@ -42,7 +42,7 @@
               {{ txn.get_status_display }}
             </span>
           </td>
-          <td class="px-6 py-3 text-gray-500">{{ txn.processed_date|date:"M d, Y H:i" }}</td>
+          <td class="px-6 py-3 text-gray-500">{{ txn.completed_at|date:"M d, Y H:i"|default:"—" }}</td>
           <td class="px-6 py-3 text-right">
             <a href="{% url 'management:transaction_detail' txn.pk %}" class="text-primary-600 hover:text-primary-700 text-xs font-medium">View</a>
           </td>

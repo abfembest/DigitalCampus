@@ -1,31 +1,214 @@
 {% extends 'management/base.html' %}
 {% block title %}{% if certificate %}Edit{% else %}Issue{% endif %} Certificate - Admin{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto">
-  <form method="post" class="bg-white rounded-xl shadow border border-gray-200 p-6 space-y-5">
+<div class="max-w-full mx-auto">
+
+  {# ── Page heading ── #}
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">
+      {% if certificate %}Edit Certificate{% else %}Issue Certificate{% endif %}
+    </h1>
+    {% if certificate %}
+      <p class="text-sm text-gray-500 mt-1 font-mono">{{ certificate.certificate_id }}</p>
+    {% endif %}
+  </div>
+
+  <form method="post" enctype="multipart/form-data"
+        class="bg-white rounded-xl shadow border border-gray-200 p-6 space-y-5"
+        novalidate>
     {% csrf_token %}
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1.5">Student *</label>
-      {{ form.student }}
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1.5">Course *</label>
-      {{ form.course }}
-    </div>
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">Issued Date *</label>
-        {{ form.issued_date }}
+
+    {# ── Non-field errors ── #}
+    {% if form.non_field_errors %}
+      <div role="alert" class="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        {{ form.non_field_errors }}
       </div>
+    {% endif %}
+
+    {# ── Student ── datalist so user sees real names #}
+    <div>
+      <label for="id_student_search"
+             class="block text-sm font-medium text-gray-700 mb-1.5">
+        Student <span class="text-red-500" aria-hidden="true">*</span>
+      </label>
+
+      {# Visible text search input with datalist #}
+      <input id="id_student_search"
+       type="text"
+       list="student-list"
+       placeholder="Type name or username…"
+       autocomplete="off"
+       value=""
+             class="w-full px-4 py-3 border
+                    {% if form.student.errors %}border-red-400{% else %}border-gray-300{% endif %}
+                    rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+      <datalist id="student-list">
+        {% for user in students %}
+          <option value="{{ user.pk }}"
+                  label="{{ user.get_full_name|default:user.username }} ({{ user.username }})">
+            {{ user.get_full_name|default:user.username }} — {{ user.username }}
+          </option>
+        {% endfor %}
+      </datalist>
+
+      {# Hidden field that actually submits the PK — kept in sync by JS below #}
+      <input type="hidden" name="student" id="id_student"
+       value="{{ form.instance.student_id|default:'' }}"
+       data-name="{{ form.instance.student.get_full_name|default:form.instance.student.username }}">
+
+      {% if form.student.errors %}
+        <p class="mt-1 text-sm text-red-600" role="alert">{{ form.student.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    {# ── Course ── datalist #}
+    <div>
+      <label for="id_course_search"
+             class="block text-sm font-medium text-gray-700 mb-1.5">
+        Course <span class="text-red-500" aria-hidden="true">*</span>
+      </label>
+
+      <input id="id_course_search"
+       type="text"
+       list="course-list"
+       placeholder="Type course title…"
+       autocomplete="off"
+       value=""
+             class="w-full px-4 py-3 border
+                    {% if form.course.errors %}border-red-400{% else %}border-gray-300{% endif %}
+                    rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+      <datalist id="course-list">
+        {% for course in courses %}
+          <option value="{{ course.pk }}">{{ course.title }} ({{ course.code }})</option>
+        {% endfor %}
+      </datalist>
+
+      <input type="hidden" name="course" id="id_course"
+       value="{{ form.instance.course_id|default:'' }}"
+       data-name="{{ form.instance.course.title }}">
+
+      {% if form.course.errors %}
+        <p class="mt-1 text-sm text-red-600" role="alert">{{ form.course.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    {# ── Completion Date & Grade ── #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">Expiry Date</label>
-        {{ form.expiry_date }}
+        <label for="{{ form.completion_date.id_for_label }}"
+               class="block text-sm font-medium text-gray-700 mb-1.5">
+          Completion Date <span class="text-red-500" aria-hidden="true">*</span>
+        </label>
+        {{ form.completion_date }}
+        {% if form.completion_date.errors %}
+          <p class="mt-1 text-sm text-red-600" role="alert">
+            {{ form.completion_date.errors.0 }}
+          </p>
+        {% endif %}
       </div>
+
+      <div>
+        <label for="{{ form.grade.id_for_label }}"
+               class="block text-sm font-medium text-gray-700 mb-1.5">
+          Grade
+        </label>
+        {{ form.grade }}
+        <p class="mt-1 text-xs text-gray-400">e.g. A, B+, 85</p>
+        {% if form.grade.errors %}
+          <p class="mt-1 text-sm text-red-600" role="alert">{{ form.grade.errors.0 }}</p>
+        {% endif %}
+      </div>
+
     </div>
-    <div class="flex gap-3 pt-4">
-      <button type="submit" class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Save</button>
-      <a href="{% url 'management:certificates_list' %}" class="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</a>
+
+    {# ── Certificate File ── #}
+    <div>
+      <label for="{{ form.certificate_file.id_for_label }}"
+             class="block text-sm font-medium text-gray-700 mb-1.5">
+        Certificate File
+      </label>
+      {{ form.certificate_file }}
+      {% if certificate.certificate_file %}
+        <p class="mt-1 text-xs text-gray-500">
+          Current:
+          <a href="{{ certificate.certificate_file.url }}"
+             target="_blank"
+             class="text-primary-600 hover:underline">
+            {{ certificate.certificate_file.name|slice:"20:" }}…
+          </a>
+        </p>
+      {% endif %}
+      {% if form.certificate_file.errors %}
+        <p class="mt-1 text-sm text-red-600" role="alert">
+          {{ form.certificate_file.errors.0 }}
+        </p>
+      {% endif %}
     </div>
+
+    {# ── Is Verified ── #}
+    <div class="flex items-center gap-3">
+      {{ form.is_verified }}
+      <label for="{{ form.is_verified.id_for_label }}"
+             class="text-sm font-medium text-gray-700 cursor-pointer">
+        Mark as Verified
+      </label>
+    </div>
+
+    {# ── Actions ── #}
+    <div class="flex flex-col sm:flex-row gap-3 pt-2 border-t border-gray-100">
+      <button type="submit"
+              class="px-6 py-2.5 bg-primary-600 text-white rounded-lg
+                     hover:bg-primary-700 font-medium transition-colors">
+        {% if certificate %}Update Certificate{% else %}Issue Certificate{% endif %}
+      </button>
+      <a href="{% url 'management:certificates_list' %}"
+         class="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50
+                text-center font-medium transition-colors text-gray-700">
+        Cancel
+      </a>
+    </div>
+
   </form>
 </div>
+
+<!-- REPLACE the entire script tag with this -->
+<script>
+(function () {
+  function linkDatalist(searchId, hiddenId, listId) {
+    const search = document.getElementById(searchId);
+    const hidden = document.getElementById(hiddenId);
+    const list   = document.getElementById(listId);
+    if (!search || !hidden || !list) return;
+
+    // Edit mode: read the human name from data-name, NOT the raw PK value
+    const name = hidden.getAttribute('data-name');
+    if (name && name.trim()) {
+      search.value = name.trim();
+    }
+
+    search.addEventListener('input', function () {
+      const typed = this.value.trim();
+      if (!typed) { hidden.value = ''; return; }
+
+      const opts = Array.from(list.options);
+
+      // Browser puts the option VALUE (PK) into the input when user picks from dropdown
+      const byPk = opts.find(o => o.value === typed);
+      if (byPk) { hidden.value = byPk.value; return; }
+
+      // User is still typing — match against visible label text
+      const lower = typed.toLowerCase();
+      const byLabel = opts.find(
+        o => (o.getAttribute('label') || o.textContent).toLowerCase().includes(lower)
+      );
+      hidden.value = byLabel ? byLabel.value : '';
+    });
+  }
+
+  linkDatalist('id_student_search', 'id_student', 'student-list');
+  linkDatalist('id_course_search',  'id_course',  'course-list');
+})();
+</script>
 {% endblock %}

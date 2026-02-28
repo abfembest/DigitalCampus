@@ -17,7 +17,6 @@
       <thead class="bg-gray-50 border-b">
         <tr>
           <th class="px-6 py-3 text-left font-semibold text-gray-700">Course</th>
-          <th class="px-6 py-3 text-left font-semibold text-gray-700">Course</th>
           <th class="px-6 py-3 text-left font-semibold text-gray-700">Reviewer</th>
           <th class="px-6 py-3 text-center font-semibold text-gray-700">Rating</th>
           <th class="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
@@ -28,7 +27,6 @@
         {% for review in reviews %}
         <tr class="hover:bg-gray-50">
           <td class="px-6 py-3 font-medium">{{ review.course.title|truncatewords:5 }}</td>
-          <td class="px-6 py-3">{{ review.course.title|default:"-" }}</td>
           <td class="px-6 py-3">{{ review.student.get_full_name }}</td>
           <td class="px-6 py-3 text-center">{% for i in "12345" %}{% if forloop.counter <= review.rating %}<i class="fas fa-star text-yellow-400"></i>{% else %}<i class="fas fa-star text-gray-300"></i>{% endif %}{% endfor %}</td>
           <td class="px-6 py-3"><span class="px-2 py-1 text-xs font-medium rounded-full {% if review.is_approved %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-700{% endif %}">{% if review.is_approved %}Approved{% else %}Pending{% endif %}</span></td>

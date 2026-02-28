@@ -539,6 +539,9 @@
                             <div class="flex items-center">
                                 <i class="fas fa-headset w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Support</span>
+                                {% with total=open_tickets_count|add:unread_contact_count %}
+                                {% if total %}<span class="ml-2 badge-count bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ total }}</span>{% endif %}
+                                {% endwith %}
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>

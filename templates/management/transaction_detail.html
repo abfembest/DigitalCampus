@@ -44,7 +44,7 @@
         </div>
         <div>
           <label class="text-sm font-medium text-gray-500">Processed Date</label>
-          <p class="text-gray-800">{{ transaction.processed_date|date:"M d, Y H:i" }}</p>
+          <p class="text-gray-800">{{ transaction.completed_at|date:"M d, Y H:i"|default:"Pending" }}</p>
         </div>
       </div>
     </div>

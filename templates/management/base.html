@@ -17,9 +17,8 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS -->
-    {% comment %} <link rel="stylesheet" href="{% static 'css/styles.css' %}"> {% endcomment %}
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS - Local build (compiled from src/styles.css) -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -43,152 +42,304 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
 
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                        display: ['Poppins', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#4a6bff',
-                            600: '#3a56d4',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        secondary: {
-                            500: '#6c63ff',
-                            600: '#5a52d5',
-                        },
-                        accent: {
-                            500: '#ff6584',
-                            600: '#e5577a',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
     <style>
-        /* ==================== SIDEBAR COLLAPSED STYLES ==================== */
-        .sidebar-collapsed {
-            width: 5rem !important;
+        /* ==================== MANAGEMENT DASHBOARD COLOR OVERRIDE ==================== */
+        /* Remap colors to use blue/purple/pink palette for management dashboard */
+        :root {
+            --color-primary-50: #eff6ff;
+            --color-primary-100: #dbeafe;
+            --color-primary-200: #bfdbfe;
+            --color-primary-300: #93c5fd;
+            --color-primary-400: #60a5fa;
+            --color-primary-500: #4a6bff;
+            --color-primary-600: #3a56d4;
+            --color-primary-700: #1d4ed8;
+            --color-primary-800: #1e40af;
+            --color-primary-900: #1e3a8a;
+            --color-primary-950: #4a6bff;
+
+            --color-secondary-50: #f5f3ff;
+            --color-secondary-100: #ede9fe;
+            --color-secondary-200: #ddd6fe;
+            --color-secondary-300: #c4b5fd;
+            --color-secondary-400: #a78bfa;
+            --color-secondary-500: #6c63ff;
+            --color-secondary-600: #5a52d5;
+            --color-secondary-700: #4c1d95;
+            --color-secondary-800: #3d0064;
+            --color-secondary-900: #2d0a4e;
+
+            --color-accent-50: #fff7f8;
+            --color-accent-100: #ffe4e9;
+            --color-accent-200: #ffc7d3;
+            --color-accent-300: #ffadbb;
+            --color-accent-400: #ff8fa3;
+            --color-accent-500: #ff6584;
+            --color-accent-600: #e5577a;
+            --color-accent-700: #cc4d70;
+            --color-accent-800: #b34366;
+            --color-accent-900: #9a395c;
         }
 
-            /* HIDE ALL TEXT CONTENT WHEN COLLAPSED */
-            .sidebar-collapsed .sidebar-header span,
-            .sidebar-collapsed nav span:not(.badge-count),
-            .sidebar-collapsed .py-2.px-4.text-xs.uppercase,
-            .sidebar-collapsed .bg-white\/5,
-            .sidebar-collapsed .menu-arrow {
-                display: none !important;
-            }
-
-            /* HIDE SUBMENUS WHEN COLLAPSED */
-            .sidebar-collapsed [id$="Menu"] {
-                display: none !important;
-            }
-
-            /* CENTER HEADER WHEN COLLAPSED */
-            .sidebar-collapsed .sidebar-header {
-                justify-content: center !important;
-                padding-left: 0.5rem !important;
-                padding-right: 0.5rem !important;
-            }
-
-                .sidebar-collapsed .sidebar-header a {
-                    margin: 0 auto;
-                }
-
-                    .sidebar-collapsed .sidebar-header a i {
-                        margin-right: 0 !important;
-                    }
-
-            /* CENTER ALL NAV ITEMS WHEN COLLAPSED */
-            .sidebar-collapsed nav a,
-            .sidebar-collapsed nav button,
-            .sidebar-collapsed .menu-toggle {
-                justify-content: center !important;
-                padding-left: 1rem !important;
-                padding-right: 1rem !important;
-            }
-
-                .sidebar-collapsed nav a > div,
-                .sidebar-collapsed nav button > div,
-                .sidebar-collapsed .menu-toggle > div {
-                    justify-content: center !important;
-                }
-
-            /* CENTER ICONS AND REMOVE MARGINS */
-            .sidebar-collapsed nav i {
-                margin: 0 !important;
-                width: 1.5rem;
-                height: 1.5rem;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            /* BADGE COUNT POSITIONING */
-            .sidebar-collapsed .badge-count {
-                position: absolute !important;
-                top: 0.25rem !important;
-                right: 0.25rem !important;
-                min-width: 1.25rem !important;
-                height: 1.25rem !important;
-                font-size: 0.625rem !important;
-                padding: 0.125rem !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            }
-
-            /* HIDE MOBILE CLOSE BUTTON WHEN COLLAPSED */
-            .sidebar-collapsed #closeSidebar {
-                display: none !important;
-            }
-
-            /* USER INFO AT BOTTOM WHEN COLLAPSED */
-            .sidebar-collapsed .user-info-bottom {
-                padding: 0.75rem 0.5rem !important;
-            }
-
-                .sidebar-collapsed .user-info-bottom > div {
-                    justify-content: center !important;
-                }
-
-                .sidebar-collapsed .user-info-bottom .flex-1 {
-                    display: none !important;
-                }
-
-                .sidebar-collapsed .user-info-bottom .user-avatar {
-                    margin: 0 auto;
-                }
-
-        /* SMOOTH TRANSITIONS */
+        /* ==================== SIDEBAR BASE STYLES ==================== */
         #sidebar {
-            transition: width 0.3s ease, transform 0.3s ease;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-x: hidden;
             overflow-y: auto;
+            width: 18rem; /* Increased from 16rem to 18rem (288px) */
         }
 
         #mainContent {
-            transition: margin-left 0.3s ease;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ==================== SCROLLBAR STYLING - SLIM & SUBTLE ==================== */
+        #sidebar::-webkit-scrollbar {
+            width: 2px; /* Ultra-slim scrollbar */
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Firefox scrollbar */
+        #sidebar {
+            scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+            scrollbar-width: thin;
+        }
+
+        /* ==================== SIDEBAR COLLAPSED STYLES ==================== */
+        .sidebar-collapsed {
+            width: 5.5rem !important; /* Slightly increased from 5rem */
+        }
+
+        /* HOVER TO EXPAND WHEN COLLAPSED */
+        .sidebar-collapsed:hover {
+            width: 18rem !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            z-index: 50;
+        }
+
+        /* Show all content on hover and RESTORE NORMAL LAYOUT */
+        .sidebar-collapsed:hover .sidebar-header span,
+        .sidebar-collapsed:hover nav span:not(.badge-count),
+        .sidebar-collapsed:hover .sidebar-section-label,
+        .sidebar-collapsed:hover .menu-arrow {
+            display: inline !important;
+        }
+
+        /* Only show menus on hover if they're NOT hidden (i.e., actively toggled) */
+        .sidebar-collapsed:hover [id$="Menu"]:not(.hidden) {
+            display: block !important;
+            pointer-events: auto !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 100;
+        }
+
+        /* Ensure dropdown submenu items are clickable on hover */
+        .sidebar-collapsed:hover [id$="Menu"]:not(.hidden) a,
+        .sidebar-collapsed:hover [id$="Menu"]:not(.hidden) button {
+            pointer-events: auto !important;
+            display: block !important;
+            width: 100%;
+            text-align: left;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        /* ========== RESTORE NORMAL LAYOUT ON HOVER ========== */
+        /* Reset header centering */
+        .sidebar-collapsed:hover .sidebar-header {
+            justify-content: space-between !important;
+            padding-left: 1.25rem !important;
+            padding-right: 1.25rem !important;
+        }
+
+        .sidebar-collapsed:hover .sidebar-header a {
+            margin: 0 !important;
+        }
+
+        .sidebar-collapsed:hover .sidebar-header a i {
+            margin-right: 0.75rem !important;
+        }
+
+        /* Reset nav items to normal layout */
+        .sidebar-collapsed:hover nav a,
+        .sidebar-collapsed:hover nav button,
+        .sidebar-collapsed:hover .menu-toggle {
+            justify-content: space-between !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+
+        .sidebar-collapsed:hover nav a > div,
+        .sidebar-collapsed:hover nav button > div,
+        .sidebar-collapsed:hover .menu-toggle > div {
+            justify-content: flex-start !important;
+        }
+
+        /* Reset icon styling on hover */
+        .sidebar-collapsed:hover nav i {
+            margin: 0 0.75rem 0 0 !important;
+            width: auto !important;
+            height: auto !important;
+            display: inline !important;
+        }
+
+        /* Restore normal badge position on hover */
+        .sidebar-collapsed:hover .badge-count {
+            position: static !important;
+            margin-left: auto !important;
+            display: inline-flex !important;
+        }
+
+        /* HIDE CONTENT WHEN COLLAPSED */
+        .sidebar-collapsed .sidebar-header span,
+        .sidebar-collapsed nav span:not(.badge-count),
+        .sidebar-collapsed .sidebar-section-label,
+        .sidebar-collapsed .menu-arrow {
+            display: none !important;
+        }
+
+        /* HIDE SUBMENUS WHEN COLLAPSED */
+        .sidebar-collapsed [id$="Menu"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* CENTER HEADER WHEN COLLAPSED */
+        .sidebar-collapsed .sidebar-header {
+            justify-content: center !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+        .sidebar-collapsed .sidebar-header a {
+            margin: 0 auto;
+        }
+
+        .sidebar-collapsed .sidebar-header a i {
+            margin-right: 0 !important;
+        }
+
+        /* CENTER ALL NAV ITEMS WHEN COLLAPSED */
+        .sidebar-collapsed nav a,
+        .sidebar-collapsed nav button,
+        .sidebar-collapsed .menu-toggle {
+            justify-content: center !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+        }
+
+        .sidebar-collapsed nav a > div,
+        .sidebar-collapsed nav button > div,
+        .sidebar-collapsed .menu-toggle > div {
+            justify-content: center !important;
+        }
+
+        /* CENTER ICONS AND REMOVE MARGINS */
+        .sidebar-collapsed nav i {
+            margin: 0 !important;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* BADGE COUNT POSITIONING */
+        .sidebar-collapsed .badge-count {
+            position: absolute !important;
+            top: 0.25rem !important;
+            right: 0.25rem !important;
+            min-width: 1.25rem !important;
+            height: 1.25rem !important;
+            font-size: 0.625rem !important;
+            padding: 0.125rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        /* HIDE MOBILE CLOSE BUTTON WHEN COLLAPSED */
+        .sidebar-collapsed #closeSidebar {
+            display: none !important;
+        }
+
+        /* USER INFO AT BOTTOM WHEN COLLAPSED */
+        .sidebar-collapsed .user-info-bottom {
+            padding: 0.75rem 0.5rem !important;
+        }
+
+        .sidebar-collapsed .user-info-bottom > div {
+            justify-content: center !important;
+        }
+
+        .sidebar-collapsed .user-info-bottom .flex-1 {
+            display: none !important;
+        }
+
+        .sidebar-collapsed .user-info-bottom .user-avatar {
+            margin: 0 auto;
         }
 
         /* ENSURE PROPER STRUCTURE */
         nav a, nav button {
             position: relative;
+        }
+
+        /* ==================== RESPONSIVE DESIGN ==================== */
+        /* Tablet and up */
+        @media (min-width: 768px) {
+            #mainContent {
+                margin-left: 18rem;
+            }
+        }
+
+        /* Mobile - Full width sidebar overlay */
+        @media (max-width: 767px) {
+            #sidebar {
+                width: 75vw !important;
+                max-width: 16rem;
+                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+            }
+
+            .sidebar-collapsed {
+                width: 75vw !important;
+            }
+
+            .sidebar-collapsed:hover {
+                width: 75vw !important;
+            }
+
+            #mainContent {
+                margin-left: 0 !important;
+            }
+
+            /* Hide collapse button on mobile - use close button instead */
+            #collapseSidebar {
+                display: none;
+            }
+        }
+
+        /* Landscape mobile */
+        @media (max-width: 896px) and (orientation: landscape) {
+            #sidebar {
+                height: 100vh;
+                overflow-y: auto;
+            }
         }
 
         /* ==================== DROPDOWN STYLES ==================== */
@@ -212,23 +363,31 @@
             background-color: rgba(255, 255, 255, 0.2);
         }
 
-        /* ==================== SCROLLBAR STYLING ==================== */
+        /* ==================== SMOOTH SCROLLBARS - SLIM & SUBTLE ==================== */
+        /* WebKit browsers (Chrome, Safari, Edge) */
         #sidebar::-webkit-scrollbar {
-            width: 4px;
+            width: 2px; /* Ultra-slim scrollbar */
         }
 
         #sidebar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
+            background: transparent; /* Invisible track */
         }
 
         #sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.15); /* Very subtle */
+            border-radius: 10px;
+            transition: background 0.3s ease;
         }
 
-            #sidebar::-webkit-scrollbar-thumb:hover {
-                background: rgba(255, 255, 255, 0.5);
-            }
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25); /* Slightly more visible on hover */
+        }
+
+        /* Firefox */
+        #sidebar {
+            scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+            scrollbar-width: thin;
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -239,7 +398,7 @@
 
     <div class="flex min-h-screen">
         <!-- Sidebar Navigation - Fixed positioning -->
-        <aside id="sidebar" class="w-64 bg-gradient-to-b from-primary-500 to-secondary-500 text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+        <aside id="sidebar" class="bg-gradient-to-b from-primary-500 to-secondary-500 text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0" style="width: 18rem;">
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div class="sidebar-header p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
@@ -342,9 +501,13 @@
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses' %}bg-white/20{% endif %}">
                                 <i class="fas fa-th-list mr-2" aria-hidden="true"></i>All Courses
                             </a>
-                            <a href="{% url 'management:course_create' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_create' %}bg-white/20{% endif %}">
-                                <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add Course
+                            <a href="{% url 'management:lms_courses_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'lms_course' in request.resolver_match.url_name %}bg-white/20{% endif %}">
+                                <i class="fas fa-book mr-2" aria-hidden="true"></i>LMS Courses
+                            </a>
+                            <a href="{% url 'management:lms_course_create' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'lms_course_create' %}bg-white/20{% endif %}">
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add LMS Course
                             </a>
                             <a href="{% url 'management:course_categories_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'categories' in request.path %}bg-white/20{% endif %}">
@@ -425,7 +588,7 @@
 
                     <!-- Divider -->
                     <div class="border-t border-white/10 my-4"></div>
-                    <div class="py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">System</div>
+                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">System</div>
 
                     <!-- System Configuration -->
                     <div class="mb-1">
@@ -1121,17 +1284,36 @@
             sidebarOverlay.classList.remove('show');
         });
 
-        // Desktop sidebar collapse/expand
+        // Desktop sidebar collapse/expand with responsive widths
         collapseBtn?.addEventListener('click', () => {
             sidebar.classList.toggle('sidebar-collapsed');
 
-            // Adjust main content margin
+            // Adjust main content margin based on collapse state
             if (sidebar.classList.contains('sidebar-collapsed')) {
-                mainContent.classList.remove('md:ml-64');
-                mainContent.classList.add('md:ml-20');
+                mainContent.style.marginLeft = '5.5rem'; // Collapsed width
             } else {
-                mainContent.classList.remove('md:ml-20');
-                mainContent.classList.add('md:ml-64');
+                mainContent.style.marginLeft = '18rem'; // Full width (increased from 16rem)
+            }
+        });
+
+        // Set initial margin on page load
+        window.addEventListener('load', () => {
+            if (sidebar && mainContent) {
+                const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                mainContent.style.marginLeft = isCollapsed ? '5.5rem' : '18rem';
+            }
+        });
+
+        // Handle responsive behavior on window resize
+        window.addEventListener('resize', () => {
+            if (sidebar && mainContent) {
+                // On mobile, sidebar uses transform instead of margin
+                if (window.innerWidth < 768) {
+                    mainContent.style.marginLeft = '0';
+                } else {
+                    const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                    mainContent.style.marginLeft = isCollapsed ? '5.5rem' : '18rem';
+                }
             }
         });
 

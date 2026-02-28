@@ -33,6 +33,13 @@ urlpatterns = [
     path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
     path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
 
+    # ==================== LMS COURSES ====================
+    path('lms-courses/', views.lms_courses_list, name='lms_courses_list'),
+    path('lms-courses/create/', views.lms_course_create, name='lms_course_create'),
+    path('lms-courses/<int:pk>/', views.lms_course_detail, name='lms_course_detail'),
+    path('lms-courses/<int:pk>/edit/', views.lms_course_edit, name='lms_course_edit'),
+    path('lms-courses/<int:pk>/delete/', views.lms_course_delete, name='lms_course_delete'),
+
     # Blog Management
     path('blog/posts/', views.blog_posts_list, name='blog_posts_list'),
     path('blog/posts/create/', views.blog_post_create, name='blog_post_create'),

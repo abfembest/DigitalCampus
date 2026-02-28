@@ -22,7 +22,9 @@ from eduweb.models import (
     BlogPost, 
     BlogCategory,
     BroadcastMessage,
-    LMSCourse
+    LMSCourse,
+    CourseCategory,
+    AuditLog
 )
 
 # Form imports
@@ -31,7 +33,8 @@ from management.forms import (
     CourseForm, 
     BlogPostForm, 
     BlogCategoryForm,
-    BroadcastMessageForm
+    BroadcastMessageForm,
+    LMSCourseForm
 )
 
 
@@ -165,10 +168,10 @@ def application_detail(request, application_id):
         application_id=application_id
     )
     
-    # Mark as under review when admin opens it (only if status is 'submitted')
+    # Mark as under review when admin opens it (only if status is 'documents_uploaded')
     if application.status == 'documents_uploaded':
-        CourseApplication.objects.filter(pk=pk).update(status='under_review')
         application.status = 'under_review'
+        application.save(update_fields=['status'])
     
     # Get pending count for sidebar
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded']).count()
@@ -530,8 +533,11 @@ def courses(request):
     """
     from django.db.models import Count
     
-    # Get all courses with related data
-    courses = Course.objects.select_related('faculty').order_by('display_order', 'name')
+    # Get all programs with related data
+    programs = Program.objects.select_related(
+        'department',
+        'department__faculty'
+    ).order_by('display_order', 'name')
     
     # Get all categories with course counts
     categories = CourseCategory.objects.annotate(
@@ -539,7 +545,7 @@ def courses(request):
     ).order_by('display_order', 'name')
     
     context = {
-        'courses': courses,
+        'courses': programs,  # Keep variable name as 'courses' for template compatibility
         'categories': categories,
     }
     
@@ -1503,14 +1509,6 @@ def course_category_delete(request, pk):
     course_count = category.lmscourse_set.count()
     
     if request.method == 'POST':
-        if course_count > 0:
-            messages.error(
-                request, 
-                f'Cannot delete category "{category.name}" because it has {course_count} course(s). '
-                'Please reassign or delete those courses first.'
-            )
-            return redirect('management:course_categories_list')
-        
         category_name = category.name
         
         # Create audit log before deletion
@@ -1530,6 +1528,147 @@ def course_category_delete(request, pk):
         'category': category,
         'course_count': course_count
     })
+
+
+# ==================== LMS COURSE VIEWS ====================
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def lms_courses_list(request):
+    """List all LMS courses with filtering"""
+    courses = LMSCourse.objects.select_related('category', 'instructor').order_by('-created_at')
+    
+    # Filtering
+    category_id = request.GET.get('category')
+    if category_id:
+        courses = courses.filter(category_id=category_id)
+    
+    difficulty = request.GET.get('difficulty')
+    if difficulty:
+        courses = courses.filter(difficulty_level=difficulty)
+    
+    published_filter = request.GET.get('published')
+    if published_filter == 'published':
+        courses = courses.filter(is_published=True)
+    elif published_filter == 'draft':
+        courses = courses.filter(is_published=False)
+    
+    categories = CourseCategory.objects.filter(is_active=True).order_by('name')
+    stats = {
+        'total': LMSCourse.objects.count(),
+        'published': LMSCourse.objects.filter(is_published=True).count(),
+        'draft': LMSCourse.objects.filter(is_published=False).count(),
+        'featured': LMSCourse.objects.filter(is_featured=True).count(),
+    }
+    
+    context = {
+        'courses': courses,
+        'categories': categories,
+        'stats': stats,
+    }
+    return render(request, 'management/lms_course/list.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def lms_course_create(request):
+    """Create new LMS course"""
+    if request.method == 'POST':
+        form = LMSCourseForm(request.POST, request.FILES)
+        if form.is_valid():
+            course = form.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='LMSCourse',
+                object_id=course.id,
+                description=f'Created LMS course: {course.title}'
+            )
+            
+            messages.success(request, f'LMS course "{course.title}" created successfully.')
+            return redirect('management:lms_courses_list')
+    else:
+        form = LMSCourseForm()
+    
+    context = {'form': form}
+    return render(request, 'management/lms_course/create.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def lms_course_edit(request, pk):
+    """Edit LMS course"""
+    course = get_object_or_404(LMSCourse, pk=pk)
+    
+    if request.method == 'POST':
+        form = LMSCourseForm(request.POST, request.FILES, instance=course)
+        if form.is_valid():
+            course = form.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='LMSCourse',
+                object_id=course.id,
+                description=f'Updated LMS course: {course.title}'
+            )
+            
+            messages.success(request, f'LMS course "{course.title}" updated successfully.')
+            return redirect('management:lms_courses_list')
+    else:
+        form = LMSCourseForm(instance=course)
+    
+    context = {
+        'form': form,
+        'course': course,
+    }
+    return render(request, 'management/lms_course/edit.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def lms_course_detail(request, pk):
+    """View LMS course details"""
+    course = get_object_or_404(LMSCourse, pk=pk)
+    enrollments = course.enrollments.count()
+    
+    context = {
+        'course': course,
+        'enrollments': enrollments,
+    }
+    return render(request, 'management/lms_course/detail.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def lms_course_delete(request, pk):
+    """Delete LMS course"""
+    course = get_object_or_404(LMSCourse, pk=pk)
+    enrollment_count = course.enrollments.count()
+    
+    if request.method == 'POST':
+        course_title = course.title
+        
+        # Create audit log before deletion
+        AuditLog.objects.create(
+            user=request.user,
+            action='delete',
+            model_name='LMSCourse',
+            object_id=course.id,
+            description=f'Deleted LMS course: {course_title}'
+        )
+        
+        course.delete()
+        messages.success(request, f'LMS course "{course_title}" deleted successfully.')
+        return redirect('management:lms_courses_list')
+    
+    context = {
+        'course': course,
+        'enrollment_count': enrollment_count,
+    }
+    return render(request, 'management/lms_course/delete.html', context)
 
 
 # ==================== AUDIT LOG VIEWS ====================
@@ -2249,9 +2388,12 @@ def department_edit(request, pk):
 def department_delete(request, pk):
     dept = get_object_or_404(Department, pk=pk)
     if request.method == 'POST':
+        dept_name = dept.name
         dept.delete()
-        messages.success(request, f'Department "{dept.name}" deleted.')
-    return redirect('management:departments_list')
+        messages.success(request, f'Department "{dept_name}" deleted successfully.')
+        return redirect('management:departments_list')
+    
+    return render(request, 'management/department_delete.html', {'department': dept})
 
 
 # ===========================================================================
@@ -2337,9 +2479,12 @@ def program_detail(request, pk):
 def program_delete(request, pk):
     program = get_object_or_404(Program, pk=pk)
     if request.method == 'POST':
+        program_name = program.name
         program.delete()
-        messages.success(request, f'Program "{program.name}" deleted.')
-    return redirect('management:programs_list')
+        messages.success(request, f'Program "{program_name}" deleted successfully.')
+        return redirect('management:programs_list')
+    
+    return render(request, 'management/program_delete.html', {'program': program})
 
 
 # ===========================================================================
@@ -2406,13 +2551,18 @@ def academic_session_set_current(request, pk):
 @user_passes_test(is_admin)
 def academic_session_delete(request, pk):
     session = get_object_or_404(AcademicSession, pk=pk)
+    
+    if session.is_current:
+        messages.error(request, 'Cannot delete the current active session. Please set another session as current first.')
+        return redirect('management:academic_sessions_list')
+    
     if request.method == 'POST':
-        if session.is_current:
-            messages.error(request, 'Cannot delete the current active session.')
-            return redirect('management:academic_sessions_list')
+        session_name = session.name
         session.delete()
-        messages.success(request, f'Session "{session.name}" deleted.')
-    return redirect('management:academic_sessions_list')
+        messages.success(request, f'Session "{session_name}" deleted successfully.')
+        return redirect('management:academic_sessions_list')
+    
+    return render(request, 'management/academic_session_delete.html', {'session': session})
 
 
 # ===========================================================================
@@ -2492,9 +2642,12 @@ def intake_edit(request, pk):
 def intake_delete(request, pk):
     intake = get_object_or_404(CourseIntake, pk=pk)
     if request.method == 'POST':
+        intake_name = f"{intake.program.name} ({intake.academic_session.name})"
         intake.delete()
-        messages.success(request, 'Intake deleted.')
-    return redirect('management:intakes_list')
+        messages.success(request, f'Intake for {intake_name} deleted successfully.')
+        return redirect('management:intakes_list')
+    
+    return render(request, 'management/intake_delete.html', {'intake': intake})
 
 
 # ===========================================================================

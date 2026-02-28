@@ -14,7 +14,8 @@
 
 /* Custom theme configuration for Tailwind v4 */
 @theme {
-  /* Custom Colors */
+  /* ============== PUBLIC SITE COLORS (Purple/Orange) ============== */
+  /* PRIMARY: Purple */
   --color-primary-50: #faf5ff;
   --color-primary-100: #f3e8ff;
   --color-primary-200: #e9d5ff;
@@ -27,6 +28,7 @@
   --color-primary-900: #581c87;
   --color-primary-950: #840384;
 
+  /* ACCENT: Orange */
   --color-accent-50: #fff7ed;
   --color-accent-100: #ffedd5;
   --color-accent-200: #fed7aa;
@@ -38,6 +40,7 @@
   --color-accent-800: #9a3412;
   --color-accent-900: #7c2d12;
 
+  /* GOLD: Orange-Gold */
   --color-gold-50: #fffbeb;
   --color-gold-100: #fef3c7;
   --color-gold-200: #fde68a;
@@ -48,6 +51,43 @@
   --color-gold-700: #b45309;
   --color-gold-800: #92400e;
   --color-gold-900: #78350f;
+
+  /* ============== MANAGEMENT DASHBOARD COLORS (Blue/Purple/Pink) ============== */
+  /* PRIMARY-BLUE: Used by management dashboard */
+  --color-primary-blue-50: #eff6ff;
+  --color-primary-blue-100: #dbeafe;
+  --color-primary-blue-200: #bfdbfe;
+  --color-primary-blue-300: #93c5fd;
+  --color-primary-blue-400: #60a5fa;
+  --color-primary-blue-500: #4a6bff;
+  --color-primary-blue-600: #3a56d4;
+  --color-primary-blue-700: #1d4ed8;
+  --color-primary-blue-800: #1e40af;
+  --color-primary-blue-900: #1e3a8a;
+
+  /* SECONDARY-PURPLE: Management secondary color */
+  --color-secondary-50: #f5f3ff;
+  --color-secondary-100: #ede9fe;
+  --color-secondary-200: #ddd6fe;
+  --color-secondary-300: #c4b5fd;
+  --color-secondary-400: #a78bfa;
+  --color-secondary-500: #6c63ff;
+  --color-secondary-600: #5a52d5;
+  --color-secondary-700: #4c1d95;
+  --color-secondary-800: #3d0064;
+  --color-secondary-900: #2d0a4e;
+
+  /* ACCENT-PINK: Management accent color */
+  --color-accent-pink-50: #fff7f8;
+  --color-accent-pink-100: #ffe4e9;
+  --color-accent-pink-200: #ffc7d3;
+  --color-accent-pink-300: #ffadbb;
+  --color-accent-pink-400: #ff8fa3;
+  --color-accent-pink-500: #ff6584;
+  --color-accent-pink-600: #e5577a;
+  --color-accent-pink-700: #cc4d70;
+  --color-accent-pink-800: #b34366;
+  --color-accent-pink-900: #9a395c;
 
   /* Custom Fonts */
   --font-sans: Inter, system-ui, -apple-system, sans-serif;

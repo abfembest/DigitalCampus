@@ -10,6 +10,25 @@
 
     <title>{% block title %}Dashboard - MIU Portal{% endblock %}</title>
 
+    <!-- CRITICAL: runs sync before any CSS/JS — sets sidebar state with zero flash -->
+    <script>try{if(localStorage.getItem('sidebarCollapsed')==='true'){document.documentElement.setAttribute('data-sidebar','collapsed');}}catch(e){}</script>
+    <style>
+        /* Default sidebar dimensions — before Tailwind loads */
+        #sidebar { width: 18rem; transition: width 0.3s cubic-bezier(0.4,0,0.2,1); }
+        #mainContent { margin-left: 18rem; transition: margin-left 0.3s cubic-bezier(0.4,0,0.2,1); }
+        /* Collapsed state applied instantly by the script above */
+        html[data-sidebar="collapsed"] #sidebar { width: 5.5rem; }
+        html[data-sidebar="collapsed"] #mainContent { margin-left: 5.5rem; }
+        /* Mobile override */
+        @media (max-width: 767px) {
+            #sidebar { width: 75vw !important; max-width: 16rem; }
+            #mainContent { margin-left: 0 !important; }
+        }
+        /* Font guarantee */
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .font-heading, h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', system-ui, -apple-system, sans-serif; }
+    </style>
+
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -119,88 +138,64 @@
 
         /* ==================== SIDEBAR COLLAPSED STYLES ==================== */
         .sidebar-collapsed {
-            width: 5.5rem !important; /* Slightly increased from 5rem */
+            width: 5.5rem !important;
         }
 
-        /* HOVER TO EXPAND WHEN COLLAPSED */
-        .sidebar-collapsed:hover {
+        /* sidebar-hover-expanded: applied by JS on mouseenter (removes sidebar-collapsed first)
+           So this class operates on a fully normal sidebar — just needs width + overlay shadow */
+        .sidebar-hover-expanded {
             width: 18rem !important;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
             z-index: 50;
         }
 
-        /* Show all content on hover and RESTORE NORMAL LAYOUT */
-        .sidebar-collapsed:hover .sidebar-header span,
-        .sidebar-collapsed:hover nav span:not(.badge-count),
-        .sidebar-collapsed:hover .sidebar-section-label,
-        .sidebar-collapsed:hover .menu-arrow {
-            display: inline !important;
-        }
-
-        /* Only show menus on hover if they're NOT hidden (i.e., actively toggled) */
-        .sidebar-collapsed:hover [id$="Menu"]:not(.hidden) {
+        /* SHOW MENUS WHEN SIDEBAR IS HOVER-EXPANDED */
+        .sidebar-hover-expanded [id$="Menu"]:not(.hidden) {
             display: block !important;
             pointer-events: auto !important;
             opacity: 1 !important;
             visibility: visible !important;
-            z-index: 100;
         }
 
-        /* Ensure dropdown submenu items are clickable on hover */
-        .sidebar-collapsed:hover [id$="Menu"]:not(.hidden) a,
-        .sidebar-collapsed:hover [id$="Menu"]:not(.hidden) button {
+        /* RESTORE NORMAL LAYOUT FOR MENU ITEMS ON HOVER-EXPAND */
+        .sidebar-hover-expanded [id$="Menu"]:not(.hidden) a,
+        .sidebar-hover-expanded [id$="Menu"]:not(.hidden) button {
             pointer-events: auto !important;
             display: block !important;
             width: 100%;
             text-align: left;
             visibility: visible !important;
             opacity: 1 !important;
+            justify-content: flex-start !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
         }
 
-        /* ========== RESTORE NORMAL LAYOUT ON HOVER ========== */
-        /* Reset header centering */
-        .sidebar-collapsed:hover .sidebar-header {
+        /* Restore normal header layout on hover-expand */
+        .sidebar-hover-expanded .sidebar-header {
             justify-content: space-between !important;
             padding-left: 1.25rem !important;
             padding-right: 1.25rem !important;
         }
 
-        .sidebar-collapsed:hover .sidebar-header a {
-            margin: 0 !important;
-        }
-
-        .sidebar-collapsed:hover .sidebar-header a i {
-            margin-right: 0.75rem !important;
-        }
-
-        /* Reset nav items to normal layout */
-        .sidebar-collapsed:hover nav a,
-        .sidebar-collapsed:hover nav button,
-        .sidebar-collapsed:hover .menu-toggle {
+        /* Restore nav items to spread layout */
+        .sidebar-hover-expanded nav a,
+        .sidebar-hover-expanded nav button,
+        .sidebar-hover-expanded .menu-toggle {
             justify-content: space-between !important;
             padding-left: 1rem !important;
             padding-right: 1rem !important;
         }
 
-        .sidebar-collapsed:hover nav a > div,
-        .sidebar-collapsed:hover nav button > div,
-        .sidebar-collapsed:hover .menu-toggle > div {
-            justify-content: flex-start !important;
-        }
-
-        /* Reset icon styling on hover */
-        .sidebar-collapsed:hover nav i {
+        .sidebar-hover-expanded nav i {
             margin: 0 0.75rem 0 0 !important;
             width: auto !important;
-            height: auto !important;
             display: inline !important;
         }
 
-        /* Restore normal badge position on hover */
-        .sidebar-collapsed:hover .badge-count {
+        .sidebar-hover-expanded .badge-count {
             position: static !important;
             margin-left: auto !important;
-            display: inline-flex !important;
         }
 
         /* HIDE CONTENT WHEN COLLAPSED */
@@ -320,10 +315,6 @@
                 width: 75vw !important;
             }
 
-            .sidebar-collapsed:hover {
-                width: 75vw !important;
-            }
-
             #mainContent {
                 margin-left: 0 !important;
             }
@@ -391,6 +382,7 @@
     </style>
 
     {% block extra_css %}{% endblock %}
+
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans antialiased">
     <!-- Mobile Sidebar Overlay -->
@@ -398,11 +390,11 @@
 
     <div class="flex min-h-screen">
         <!-- Sidebar Navigation - Fixed positioning -->
-        <aside id="sidebar" class="bg-gradient-to-b from-primary-500 to-secondary-500 text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0" style="width: 18rem;">
+        <aside id="sidebar" class="bg-gradient-to-b from-primary-500 to-secondary-500 text-white flex-shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0">
             <div class="flex flex-col h-full">
                 <!-- Header -->
                 <div class="sidebar-header p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
-                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% else %}#{% endif %}" class="text-xl font-bold flex items-center font-display hover:opacity-80 transition-opacity">
+                    <a href="{% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% elif request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% else %}{% url 'management:dashboard' %}{% endif %}" class="text-xl font-bold flex items-center font-heading hover:opacity-80 transition-opacity">
                         <i class="fas fa-graduation-cap mr-3" aria-hidden="true"></i>
                         <span class="whitespace-nowrap">MIU Portal</span>
                     </a>
@@ -1047,26 +1039,34 @@
                     </a>
                     {% endif %}
 
-                    <!-- Common sections for all roles -->
+                    <!-- ── COMMON FOOTER LINKS (all roles) ── -->
                     <div class="border-t border-white/10 my-4"></div>
 
-                    <!-- Settings (all users) -->
-                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}#{% else %}#{% endif %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
-                        <i class="fas fa-cog w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Settings</span>
+                    <!-- Settings — Centralized with role-based URL routing -->
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% else %}#{% endif %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-cog w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Settings</span>
+                        </div>
                     </a>
 
-                    <!-- Help & Support (all users) -->
+                    <!-- Help & Support — Centralized with role-based URL routing -->
                     <a href="{% if request.user.profile.role == 'student' %}{% url 'students:help_support' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:help_support' %}{% else %}#{% endif %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
-                        <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Help & Support</span>
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Help & Support</span>
+                        </div>
                     </a>
 
-                    <a href="{% url 'eduweb:logout' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
-                        <i class="fas fa-sign-out-alt w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Logout</span>
+                    <!-- Logout — Same for all roles -->
+                    <a href="{% url 'eduweb:logout' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                        <div class="flex items-center">
+                            <i class="fas fa-sign-out-alt w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Logout</span>
+                        </div>
                     </a>
                 </nav>
 
@@ -1086,7 +1086,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div id="mainContent" class="flex-1 flex flex-col min-h-screen md:ml-64">
+        <div id="mainContent" class="flex-1 flex flex-col min-h-screen">
             <!-- Top Header Bar -->
             <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
                 <div class="flex items-center justify-between p-4">
@@ -1105,7 +1105,7 @@
                         <!-- Breadcrumbs -->
                         <nav aria-label="Breadcrumb" class="hidden sm:block">
                             <ol class="flex items-center space-x-2 text-sm text-gray-600">
-                                <li><a href="{% if request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser %}{% url 'management:dashboard' %}{% else %}#{% endif %}" class="hover:text-primary-600">Home</a></li>
+                                <li><a href="{% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% elif request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% else %}{% url 'management:dashboard' %}{% endif %}" class="hover:text-primary-600">Home</a></li>
                                 <li><i class="fas fa-chevron-right text-xs" aria-hidden="true"></i></li>
                                 <li class="text-gray-900 font-medium">{% block breadcrumb %}Dashboard{% endblock %}</li>
                             </ol>
@@ -1169,12 +1169,30 @@
                             </button>
 
                             <div id="profileMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200">
-                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:profile' %}{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                {% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}
+                                {# admin — no separate profile/settings pages yet #}
+                                <span class="block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm">
+                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> {{ request.user.get_full_name|default:request.user.username }}
+                                </span>
+                                {% elif request.user.profile.role == 'instructor' %}
+                                <a href="{% url 'instructor:profile' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
                                 </a>
-                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}#{% else %}#{% endif %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% url 'instructor:settings' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
                                 </a>
+                                {% elif request.user.profile.role == 'student' %}
+                                <a href="{% url 'students:profile' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
+                                </a>
+                                <a href="{% url 'students:settings' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                    <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
+                                </a>
+                                {% else %}
+                                <span class="block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm">
+                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> {{ request.user.get_full_name|default:request.user.username }}
+                                </span>
+                                {% endif %}
                                 <a href="{% url 'eduweb:logout' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all">
                                     <i class="fas fa-sign-out-alt mr-3 w-5" aria-hidden="true"></i> Logout
                                 </a>
@@ -1256,152 +1274,137 @@
         </div>
     </div>
 
-    <!-- Base JavaScript - FIXED VERSION -->
+    <!-- Base JavaScript -->
     <script>
-        // Get all elements
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
-        const toggleBtn = document.getElementById('toggleSidebar');
-        const closeBtn = document.getElementById('closeSidebar');
-        const collapseBtn = document.getElementById('collapseSidebar');
-        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        (function () {
+            const sidebar     = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const toggleBtn   = document.getElementById('toggleSidebar');
+            const closeBtn    = document.getElementById('closeSidebar');
+            const collapseBtn = document.getElementById('collapseSidebar');
+            const overlay     = document.getElementById('sidebarOverlay');
 
-        // Mobile sidebar toggle
-        toggleBtn?.addEventListener('click', () => {
-            sidebar.classList.toggle('-translate-x-full');
-            sidebarOverlay.classList.toggle('show');
-        });
+            function isMobile() { return window.innerWidth < 768; }
 
-        // Mobile sidebar close button
-        closeBtn?.addEventListener('click', () => {
-            sidebar.classList.add('-translate-x-full');
-            sidebarOverlay.classList.remove('show');
-        });
-
-        // Close sidebar when clicking overlay
-        sidebarOverlay?.addEventListener('click', () => {
-            sidebar.classList.add('-translate-x-full');
-            sidebarOverlay.classList.remove('show');
-        });
-
-        // Desktop sidebar collapse/expand with responsive widths
-        collapseBtn?.addEventListener('click', () => {
-            sidebar.classList.toggle('sidebar-collapsed');
-
-            // Adjust main content margin based on collapse state
-            if (sidebar.classList.contains('sidebar-collapsed')) {
-                mainContent.style.marginLeft = '5.5rem'; // Collapsed width
-            } else {
-                mainContent.style.marginLeft = '18rem'; // Full width (increased from 16rem)
+            function setMargin(collapsed) {
+                if (!mainContent) return;
+                mainContent.style.marginLeft = isMobile() ? '0' : (collapsed ? '5.5rem' : '18rem');
             }
-        });
 
-        // Set initial margin on page load
-        window.addEventListener('load', () => {
-            if (sidebar && mainContent) {
-                const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-                mainContent.style.marginLeft = isCollapsed ? '5.5rem' : '18rem';
-            }
-        });
-
-        // Handle responsive behavior on window resize
-        window.addEventListener('resize', () => {
-            if (sidebar && mainContent) {
-                // On mobile, sidebar uses transform instead of margin
-                if (window.innerWidth < 768) {
-                    mainContent.style.marginLeft = '0';
+            function applyCollapsed(collapsed, save) {
+                if (!sidebar) return;
+                sidebar.classList.remove('sidebar-hover-expanded');
+                sidebar.classList.toggle('sidebar-collapsed', collapsed);
+                // Keep data-sidebar in sync — this is what the preload CSS reads
+                if (collapsed) {
+                    document.documentElement.setAttribute('data-sidebar', 'collapsed');
                 } else {
-                    const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-                    mainContent.style.marginLeft = isCollapsed ? '5.5rem' : '18rem';
+                    document.documentElement.removeAttribute('data-sidebar');
                 }
+                setMargin(collapsed);
+                if (save) { try { localStorage.setItem('sidebarCollapsed', String(collapsed)); } catch(e) {} }
             }
-        });
 
-        // Submenu toggles
-        document.querySelectorAll('.menu-toggle').forEach(toggle => {
-            toggle.addEventListener('click', function (e) {
-                e.preventDefault();
-                const arrow = this.querySelector('.menu-arrow');
-                const menuId = this.nextElementSibling?.id;
-                const menu = document.getElementById(menuId);
+            // Restore persisted state on load
+            (function init() {
+                let collapsed = false;
+                try { collapsed = localStorage.getItem('sidebarCollapsed') === 'true'; } catch(e) {}
+                if (!isMobile()) applyCollapsed(collapsed, false);
+                else setMargin(false);
+            })();
 
-                if (menu) {
-                    menu.classList.toggle('hidden');
-                    arrow?.classList.toggle('rotate-180');
-                }
+            // Collapse toggle
+            collapseBtn?.addEventListener('click', () => {
+                applyCollapsed(!sidebar.classList.contains('sidebar-collapsed'), true);
             });
-        });
 
-        // Dropdown functionality - FIXED to prevent glitching
-        function setupDropdown(buttonId, menuId) {
-            const button = document.getElementById(buttonId);
-            const menu = document.getElementById(menuId);
+            // Mobile open / close
+            toggleBtn?.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+                overlay?.classList.toggle('show');
+            });
+            closeBtn?.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                overlay?.classList.remove('show');
+            });
+            overlay?.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.remove('show');
+            });
 
-            if (!button || !menu) return;
+            // Resize
+            window.addEventListener('resize', () => {
+                setMargin(!isMobile() && sidebar.classList.contains('sidebar-collapsed'));
+            });
 
-            // Toggle dropdown on button click
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
+            // JS-only hover expand — swap sidebar-collapsed ↔ sidebar-hover-expanded
+            // so the two classes never coexist (eliminates all CSS specificity conflicts)
+            let navigating = false;
+            let hoverTimer = null;
+            document.addEventListener('click', (e) => { if (e.target.closest('a[href]')) navigating = true; });
 
-                // Close all other dropdowns
-                document.querySelectorAll('.dropdown-menu').forEach(dropdown => {
-                    if (dropdown !== menu && dropdown.classList.contains('show')) {
-                        dropdown.classList.remove('show');
+            sidebar?.addEventListener('mouseenter', () => {
+                if (!sidebar.classList.contains('sidebar-collapsed') || navigating) return;
+                hoverTimer = setTimeout(() => {
+                    if (!navigating && sidebar.classList.contains('sidebar-collapsed')) {
+                        sidebar.classList.remove('sidebar-collapsed');
+                        sidebar.classList.add('sidebar-hover-expanded');
+                        // main content stays at collapsed margin — sidebar floats over it
                     }
-                });
-
-                // Toggle current dropdown
-                menu.classList.toggle('show');
+                }, 80);
             });
-
-            // Prevent dropdown from closing when clicking inside it
-            menu.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        }
-
-        // Setup all dropdowns
-        setupDropdown('profileDropdown', 'profileMenu');
-        setupDropdown('notificationDropdown', 'notificationMenu');
-
-        // Close all dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            const dropdowns = document.querySelectorAll('.dropdown-menu');
-            dropdowns.forEach(dropdown => {
-                if (dropdown.classList.contains('show')) {
-                    dropdown.classList.remove('show');
+            sidebar?.addEventListener('mouseleave', () => {
+                clearTimeout(hoverTimer);
+                if (sidebar.classList.contains('sidebar-hover-expanded')) {
+                    sidebar.classList.remove('sidebar-hover-expanded');
+                    sidebar.classList.add('sidebar-collapsed');
                 }
             });
-        });
 
-        // Chatbot functionality
-        const chatbotToggle = document.getElementById('chatbotToggle');
-        const chatbotWindow = document.getElementById('chatbotWindow');
-        const chatbotClose = document.getElementById('chatbotClose');
+            // Submenu toggles
+            document.querySelectorAll('.menu-toggle').forEach(toggle => {
+                toggle.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const menu  = this.nextElementSibling;
+                    const arrow = this.querySelector('.menu-arrow');
+                    if (menu)  menu.classList.toggle('hidden');
+                    arrow?.classList.toggle('rotate-180');
+                });
+            });
 
-        chatbotToggle?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            chatbotWindow.classList.toggle('hidden');
-        });
-
-        chatbotClose?.addEventListener('click', () => {
-            chatbotWindow.classList.add('hidden');
-        });
-
-        // Close chatbot when clicking outside
-        document.addEventListener('click', (e) => {
-            if (chatbotWindow &&
-                !chatbotWindow.contains(e.target) &&
-                !chatbotToggle.contains(e.target) &&
-                !chatbotWindow.classList.contains('hidden')) {
-                chatbotWindow.classList.add('hidden');
+            // Header dropdowns
+            function setupDropdown(btnId, menuId) {
+                const btn  = document.getElementById(btnId);
+                const menu = document.getElementById(menuId);
+                if (!btn || !menu) return;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.dropdown-menu.show').forEach(d => { if (d !== menu) d.classList.remove('show'); });
+                    menu.classList.toggle('show');
+                });
+                menu.addEventListener('click', (e) => e.stopPropagation());
             }
-        });
+            setupDropdown('profileDropdown',      'profileMenu');
+            setupDropdown('notificationDropdown', 'notificationMenu');
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.dropdown-menu.show').forEach(d => d.classList.remove('show'));
+            });
 
-        // Prevent chatbot from closing when clicking inside
-        chatbotWindow?.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+            // Chatbot
+            const chatbotToggle = document.getElementById('chatbotToggle');
+            const chatbotWindow = document.getElementById('chatbotWindow');
+            const chatbotClose  = document.getElementById('chatbotClose');
+            chatbotToggle?.addEventListener('click', (e) => { e.stopPropagation(); chatbotWindow?.classList.toggle('hidden'); });
+            chatbotClose?.addEventListener('click',  ()  => chatbotWindow?.classList.add('hidden'));
+            document.addEventListener('click', (e) => {
+                if (chatbotWindow && !chatbotWindow.classList.contains('hidden') &&
+                    !chatbotWindow.contains(e.target) && !chatbotToggle?.contains(e.target)) {
+                    chatbotWindow.classList.add('hidden');
+                }
+            });
+            chatbotWindow?.addEventListener('click', (e) => e.stopPropagation());
+        })();
     </script>
 
     <!-- Django Messages with SweetAlert2 -->

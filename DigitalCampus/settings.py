@@ -37,7 +37,7 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="127.0.0.1, localhost, www.miuedu.com, miuedu.com,https://www.miuedu.com",
+    default="127.0.0.1, localhost, www.miuedu.com, miuedu.com, https://www.miuedu.com",
     cast=lambda v: [h.strip() for h in v.split(",")]
 )
 
@@ -76,7 +76,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 ROOT_URLCONF = "DigitalCampus.urls"
 

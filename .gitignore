@@ -2,7 +2,6 @@
 # VISUAL STUDIO
 # ---------------------------
 .vs/
-node_modules/
 
 # ---------------------------
 # PYTHON
@@ -18,20 +17,19 @@ __pycache__/
 .env
 *.env
 venv/
-config/settings/local.py
+
 
 # ---------------------------
 # DJANGO PROJECT
 # ---------------------------
 
-media/
-staticfiles/
-BK/
+
 # ---------------------------
 # BACKUPS
 # ---------------------------
 *.sql
 *.dump
+2_db.sqlite3
 
 # ---------------------------
 # OS FILES

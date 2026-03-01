@@ -17,14 +17,23 @@
 <!-- ════════════════════════════════════════════
      SECTION 1 — HERO (dark mesh gradient)
 ════════════════════════════════════════════ -->
-<section class="hero-mesh relative overflow-hidden" aria-label="Faculty Overview">
+<section class="relative overflow-hidden
+                bg-gradient-to-br from-[#6b026b] via-purple-800 to-fuchsia-800"
+         aria-label="Faculty Overview">
 
-  <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-700 rounded-full opacity-10 blur-3xl pointer-events-none"></div>
-  <div class="absolute bottom-0 left-10 w-80 h-80 bg-fuchsia-700 rounded-full opacity-8 blur-3xl pointer-events-none"></div>
+  <!-- Decorative orbs — warm tones matching the gradient -->
+  <div class="absolute top-0 right-0 w-[500px] h-[500px]
+              bg-fuchsia-600 rounded-full opacity-10 blur-3xl pointer-events-none"></div>
+  <div class="absolute bottom-0 left-10 w-80 h-80
+              bg-purple-600 rounded-full opacity-10 blur-3xl pointer-events-none"></div>
+  <!-- Dot texture (same as CTA) -->
+  <div class="absolute inset-0 pointer-events-none opacity-[0.04]"
+       style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%221%22 cy=%221%22 r=%221%22 fill=%22white%22/></svg>');"></div>
 
   <div class="max-w-screen-2xl mx-auto px-6 lg:px-16 pt-24 lg:pt-32 pb-20">
 
-    <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-white/50 mb-10 fade-up fade-up-1">
+    <nav aria-label="Breadcrumb"
+         class="flex items-center gap-2 text-sm text-white/50 mb-10 fade-up fade-up-1">
       <a href="{% url 'eduweb:index' %}" class="hover:text-white/80 transition-colors">Home</a>
       <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
       <a href="{% url 'eduweb:index' %}#faculties" class="hover:text-white/80 transition-colors">Faculties</a>
@@ -36,28 +45,38 @@
 
       <!-- Title -->
       <div class="flex-1 fade-up fade-up-2">
-        <span class="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase mb-6">
-          <i data-lucide="{{ faculty.icon }}" class="w-3.5 h-3.5 text-purple-300"></i>
+        <span class="inline-flex items-center gap-2 bg-white/10 border border-white/20
+                     text-white/80 px-4 py-1.5 rounded-full text-xs font-semibold
+                     tracking-widest uppercase mb-6">
+          <i data-lucide="{{ faculty.icon }}" class="w-3.5 h-3.5 text-yellow-300"></i>
           {{ faculty.code }}
         </span>
 
-        <h1 class="font-['Poppins'] text-4xl lg:text-6xl xl:text-7xl font-black text-white leading-[1.05] mb-5">
+        <h1 class="font-['Poppins'] text-4xl lg:text-6xl xl:text-7xl font-black
+                   text-white leading-[1.05] mb-5">
           {{ faculty.name }}
         </h1>
 
         {% if faculty.tagline %}
-        <p class="text-white/60 text-lg lg:text-xl font-['Inter'] max-w-2xl leading-relaxed mb-8">
+        <p class="text-white/60 text-lg lg:text-xl font-['Inter'] max-w-2xl
+                  leading-relaxed mb-8">
           {{ faculty.tagline }}
         </p>
         {% endif %}
 
         <div class="flex flex-wrap gap-3">
           <a href="{% url 'eduweb:apply' %}"
-             class="inline-flex items-center gap-2 bg-[#840384] hover:bg-purple-600 text-white px-7 py-3.5 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-purple-900/30 focus:outline-none focus:ring-2 focus:ring-purple-400">
+             class="inline-flex items-center gap-2 bg-white text-[#840384]
+                    hover:bg-yellow-300 hover:text-gray-900 px-7 py-3.5 rounded-xl
+                    font-bold text-sm transition-all shadow-xl
+                    focus:outline-none focus:ring-2 focus:ring-yellow-300">
             <i data-lucide="send" class="w-4 h-4"></i> Apply Now
           </a>
           <a href="#departments"
-             class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-7 py-3.5 rounded-xl font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-white/40">
+             class="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25
+                    border border-white/30 text-white px-7 py-3.5 rounded-xl
+                    font-semibold text-sm transition-all
+                    focus:outline-none focus:ring-2 focus:ring-white/40">
             <i data-lucide="layout-grid" class="w-4 h-4"></i> Browse Departments
           </a>
         </div>
@@ -66,55 +85,79 @@
       <!-- Stats -->
       <div class="grid grid-cols-2 gap-4 lg:w-80 flex-shrink-0 fade-up fade-up-3">
         {% if faculty.student_count %}
-        <div class="dept-card rounded-2xl p-5 text-center">
-          <div class="stat-glow font-['Poppins'] text-3xl font-black text-purple-300">{{ faculty.student_count|floatformat:"0" }}+</div>
-          <div class="text-white/50 text-xs mt-1 font-medium font-['Inter']">Students Enrolled</div>
+        <div class="bg-white/10 border border-white/15 rounded-2xl p-5 text-center">
+          <div class="font-['Poppins'] text-3xl font-black text-yellow-300">
+            {{ faculty.student_count|floatformat:"0" }}+
+          </div>
+          <div class="text-white/50 text-xs mt-1 font-medium font-['Inter']">
+            Students Enrolled
+          </div>
         </div>
         {% endif %}
         {% if faculty.placement_rate %}
-        <div class="dept-card rounded-2xl p-5 text-center">
-          <div class="stat-glow font-['Poppins'] text-3xl font-black text-purple-300">{{ faculty.placement_rate }}%</div>
-          <div class="text-white/50 text-xs mt-1 font-medium font-['Inter']">Placement Rate</div>
+        <div class="bg-white/10 border border-white/15 rounded-2xl p-5 text-center">
+          <div class="font-['Poppins'] text-3xl font-black text-yellow-300">
+            {{ faculty.placement_rate }}%
+          </div>
+          <div class="text-white/50 text-xs mt-1 font-medium font-['Inter']">
+            Placement Rate
+          </div>
         </div>
         {% endif %}
         {% if departments.count %}
-        <div class="dept-card rounded-2xl p-5 text-center">
-          <div class="stat-glow font-['Poppins'] text-3xl font-black text-purple-300">{{ departments|length }}</div>
-          <div class="text-white/50 text-xs mt-1 font-medium font-['Inter']">Departments</div>
+        <div class="bg-white/10 border border-white/15 rounded-2xl p-5 text-center">
+          <div class="font-['Poppins'] text-3xl font-black text-yellow-300">
+            {{ departments|length }}
+          </div>
+          <div class="text-white/50 text-xs mt-1 font-medium font-['Inter']">
+            Departments
+          </div>
         </div>
         {% endif %}
         {% if faculty.partner_count %}
-        <div class="dept-card rounded-2xl p-5 text-center">
-          <div class="stat-glow font-['Poppins'] text-3xl font-black text-purple-300">{{ faculty.partner_count }}+</div>
-          <div class="text-white/50 text-xs mt-1 font-medium font-['Inter']">Industry Partners</div>
+        <div class="bg-white/10 border border-white/15 rounded-2xl p-5 text-center">
+          <div class="font-['Poppins'] text-3xl font-black text-yellow-300">
+            {{ faculty.partner_count }}+
+          </div>
+          <div class="text-white/50 text-xs mt-1 font-medium font-['Inter']">
+            Industry Partners
+          </div>
         </div>
         {% endif %}
       </div>
     </div>
 
-    <!-- Mission & Vision — compact dark cards inside hero -->
+    <!-- Mission & Vision -->
     {% if faculty.mission or faculty.vision %}
     <div class="mt-12 grid sm:grid-cols-2 gap-5 fade-up fade-up-4">
       {% if faculty.mission %}
-      <div class="dept-card rounded-2xl p-6">
+      <div class="bg-white/10 border border-white/15 rounded-2xl p-6">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center">
-            <i data-lucide="target" class="w-4 h-4 text-purple-300"></i>
+          <div class="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
+            <i data-lucide="target" class="w-4 h-4 text-yellow-300"></i>
           </div>
-          <h3 class="font-['Poppins'] font-bold text-white/90 text-xs uppercase tracking-widest">Mission</h3>
+          <h3 class="font-['Poppins'] font-bold text-white/90 text-xs uppercase tracking-widest">
+            Mission
+          </h3>
         </div>
-        <p class="text-white/55 font-['Inter'] text-sm leading-relaxed">{{ faculty.mission }}</p>
+        <p class="text-white/55 font-['Inter'] text-sm leading-relaxed">
+          {{ faculty.mission }}
+        </p>
       </div>
       {% endif %}
       {% if faculty.vision %}
-      <div class="dept-card rounded-2xl p-6">
+      <div class="bg-white/10 border border-white/15 rounded-2xl p-6">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center">
-            <i data-lucide="eye" class="w-4 h-4 text-purple-300"></i>
+          <div class="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center">
+            <i data-lucide="eye" class="w-4 h-4 text-yellow-300"></i>
           </div>
-          <h3 class="font-['Poppins'] font-bold text-white/90 text-xs uppercase tracking-widest">Vision</h3>
+          <h3 class="font-['Poppins'] font-bold text-white/90 text-xs uppercase tracking-widest">
+            Vision
+          </h3>
         </div>
-        <p class="text-white/55 font-['Inter'] text-sm leading-relaxed">{{ faculty.vision }}</p>
+        <p class="text-white/55 font-['Inter'] text-sm leading-relaxed">
+          {{ faculty.vision }}
+        </p>
       </div>
       {% endif %}
     </div>
@@ -155,7 +198,7 @@
 <!-- ════════════════════════════════════════════
      SECTION 2 — DEPARTMENTS + PROGRAMS (bg gray-50)
 ════════════════════════════════════════════ -->
-<section id="departments" class="py-20 lg:py-28 bg-gray-50" aria-label="Departments and Programs">
+<section id="departments" class="py-20 lg:py-28 bg-white" aria-label="Departments and Programs">
   <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
 
     <div class="flex items-end justify-between mb-12">
@@ -280,7 +323,7 @@
      Accreditation shown ONCE only, as a banner at the bottom.
 ════════════════════════════════════════════ -->
 {% if faculty.special_features or faculty.accreditation %}
-<section class="py-20 lg:py-28 bg-white" aria-label="Why Choose Us and Accreditation">
+<section class="py-20 lg:py-28 bg-purple-50/40" aria-label="Why Choose Us and Accreditation">
   <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
 
     <div class="text-center mb-14">
@@ -294,7 +337,7 @@
     {% if faculty.special_features %}
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 {% if faculty.accreditation %}mb-14{% endif %}">
       {% for feature in faculty.special_features %}
-      <div class="rounded-3xl p-8 bg-gray-50 border border-gray-100 hover:bg-purple-50 hover:border-purple-200 transition-all group">
+      <div class="rounded-3xl p-8 bg-white border border-purple-100 hover:bg-purple-50 hover:border-purple-200 transition-all group">
         <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-5 shadow-sm group-hover:bg-[#840384] group-hover:shadow-md transition-all">
           <i data-lucide="star" class="w-5 h-5 text-[#840384] group-hover:text-white transition-colors"></i>
         </div>
@@ -332,7 +375,7 @@
 <!-- ════════════════════════════════════════════
      SECTION 4 — CTA (bg deep dark purple)
 ════════════════════════════════════════════ -->
-<section class="py-20 lg:py-24" aria-label="Call to Action">
+<section class="py-20 lg:py-24 bg-white" aria-label="Call to Action">
   <div class="max-w-screen-2xl mx-auto px-6 lg:px-16">
     <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#840384] via-purple-700 to-fuchsia-700 px-10 py-14 md:px-16 md:py-16">
       <div class="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>

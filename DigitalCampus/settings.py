@@ -31,6 +31,8 @@ ALLOWED_HOSTS = [
     "www.miuedu.com",
     "127.0.0.1",
     "localhost",
+    "https://www.miuedu.com",
+    "mail.miuedu.com",
 ]
 
 # --------------------------------------------------

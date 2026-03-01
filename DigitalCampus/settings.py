@@ -23,7 +23,7 @@ config = Config(RepositoryEnv(env_path))
 # FIX: SECRET_KEY must use its own key, NOT STRIPE_SECRET_KEY
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-this-in-production")
 
-DEBUG = config("DEBUG", default=False, cast=bool)
+DEBUG = config("DEBUG", default=True, cast=bool)
 
 # FIX: Hardcoded ALLOWED_HOSTS — no https://, no spaces issues, no .env parsing problems
 ALLOWED_HOSTS = [

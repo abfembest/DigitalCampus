@@ -1558,50 +1558,6 @@ class StaffPayrollForm(forms.ModelForm):
         self.fields['bank_name'].required = False
         self.fields['account_number'].required = False
 
-
-# ==============================================================================
-# REVIEW FORM
-# ==============================================================================
-
-class ReviewForm(forms.ModelForm):
-    """Form for managing course/program reviews"""
-    
-    class Meta:
-        model = Review
-        fields = [
-            'course', 'student', 'rating', 'review_text', 'is_approved'
-        ]
-        widgets = {
-            'course': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'list': 'course-list',
-            }),
-            'student': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'rating': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'min': '1',
-                'max': '5',
-                'step': '1'
-            }),
-            'review_text': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'rows': 4,
-                'placeholder': 'Write your detailed review...'
-            }),
-            'is_approved': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 rounded'
-            }),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['course'].empty_label = '— Select Course —'
-        self.fields['student'].empty_label = '— Select Student —'
-        self.fields['review_text'].required = False
-
-
 # ==============================================================================
 # CERTIFICATE FORM
 # ==============================================================================
@@ -1702,43 +1658,79 @@ class BadgeForm(forms.ModelForm):
 
 
 # ==============================================================================
-# STUDENT BADGE ASSIGNMENT FORM
+# REVIEW FORM  —  replace the existing ReviewForm class in forms.py
+# ==============================================================================
+
+class ReviewForm(forms.ModelForm):
+    """Form for managing course reviews. Course and Student use datalist in the
+    template; these hidden fields carry the resolved PKs to the view."""
+
+    class Meta:
+        model = Review
+        fields = [
+            'course', 'student', 'rating', 'review_text', 'is_approved'
+        ]
+        widgets = {
+            # course & student PKs are injected by JavaScript from datalist inputs
+            'course': forms.HiddenInput(),
+            'student': forms.HiddenInput(),
+            'rating': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none',
+                'min': '1',
+                'max': '5',
+                'step': '1',
+            }),
+            'review_text': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none',
+                'rows': 4,
+                'placeholder': 'Write your detailed review...',
+            }),
+            'is_approved': forms.CheckboxInput(attrs={
+                'class': 'w-5 h-5 text-primary-600 rounded',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['review_text'].required = False
+        # Only students (UserProfile.role == 'student') are valid reviewers
+        self.fields['student'].queryset = User.objects.filter(
+            profile__role='student'
+        ).order_by('last_name', 'first_name', 'username')
+
+
+# ==============================================================================
+# STUDENT BADGE ASSIGNMENT FORM  —  replace the existing StudentBadgeForm class
 # ==============================================================================
 
 class StudentBadgeForm(forms.ModelForm):
-    """Form for assigning badges to students"""
-    
+    """Form for assigning badges to students. Student and Badge use datalist in
+    the template; hidden fields carry the resolved PKs."""
+
     class Meta:
         model = StudentBadge
-        fields = [
-            'student', 'badge', 'awarded_by', 'reason'
-        ]
+        fields = ['student', 'badge', 'reason']
         widgets = {
-            'student': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'badge': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'awarded_by': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
+            # student & badge PKs are injected by JavaScript from datalist inputs
+            'student': forms.HiddenInput(),
+            'badge': forms.HiddenInput(),
             'reason': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none',
                 'rows': 2,
-                'placeholder': 'Why is this badge being awarded?'
+                'placeholder': 'Why is this badge being awarded?',
             }),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['student'].empty_label = '— Select Student —'
-        self.fields['badge'].empty_label = '— Select Badge —'
-        self.fields['awarded_by'].empty_label = '— Select Admin —'
-        self.fields['awarded_by'].queryset = User.objects.filter(
-            is_staff=True
-        ).order_by('last_name', 'first_name')
         self.fields['reason'].required = False
+        # Restrict student choices to users whose profile role is 'student'
+        self.fields['student'].queryset = User.objects.filter(
+            profile__role='student'
+        ).order_by('last_name', 'first_name', 'username')
+        self.fields['badge'].queryset = Badge.objects.filter(
+            is_active=True
+        ).order_by('name')
 
 
 # ==============================================================================

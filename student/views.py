@@ -26,7 +26,7 @@ from django.conf import settings
 
 
 def student_required(view_func):
-    """Decorator to ensure only students can access"""
+    """Decorator to ensure only students with approved portal access can access"""
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -54,6 +54,18 @@ def student_required(view_func):
                 if request.user.is_staff 
                 else 'eduweb:index'
             )
+
+        # Block access if application hasn't been approved yet
+        from eduweb.models import CourseApplication
+        application = CourseApplication.objects.filter(user=request.user).first()
+        if not application or not application.can_access_student_portal():
+            messages.warning(
+                request,
+                'Your application is still being processed. You cannot access the student portal yet.'
+            )
+            if application:
+                return redirect('eduweb:application_status')
+            return redirect('eduweb:apply')
         
         return view_func(request, *args, **kwargs)
     return _wrapped_view

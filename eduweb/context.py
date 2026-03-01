@@ -3,6 +3,7 @@ from .models import Faculty, Program
 
 def navigation_data(request):
     """Inject navigation data into every template via base.html."""
+    from .models import CourseApplication
 
     faculties = Faculty.objects.filter(
         is_active=True
@@ -11,10 +12,18 @@ def navigation_data(request):
     ).order_by('display_order', 'name')
 
     courses = Program.objects.filter(is_active=True).select_related('department__faculty')[:11]
-    
+
+    has_pending_application = False
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        if request.user.profile.role == 'student':
+            has_pending_application = CourseApplication.objects.filter(
+                user=request.user
+            ).exists()
+
     return {
         'all_faculties': faculties,
         'all_courses': courses,
+        'has_pending_application': has_pending_application,
     }
 
 from django import template

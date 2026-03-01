@@ -247,6 +247,7 @@
     --color-accent-700: #c2410c;
     --color-accent-800: #9a3412;
     --color-accent-900: #7c2d12;
+<<<<<<< HEAD
     --color-gold-50: #fffbeb;
     --color-gold-100: #fef3c7;
     --color-gold-200: #fde68a;
@@ -267,6 +268,11 @@
     --color-primary-blue-700: #1d4ed8;
     --color-primary-blue-800: #1e40af;
     --color-primary-blue-900: #1e3a8a;
+=======
+    --color-gold-300: #fcd34d;
+    --color-gold-400: #fbbf24;
+    --color-gold-500: #f59e0b;
+>>>>>>> 489206654650d2568491f6cc590c8457b1fb82ec
     --color-secondary-50: #f5f3ff;
     --color-secondary-100: #ede9fe;
     --color-secondary-200: #ddd6fe;
@@ -490,9 +496,12 @@
   .inset-y-0 {
     inset-block: calc(var(--spacing) * 0);
   }
+<<<<<<< HEAD
   .\!start {
     inset-inline-start: var(--spacing) !important;
   }
+=======
+>>>>>>> 489206654650d2568491f6cc590c8457b1fb82ec
   .start {
     inset-inline-start: var(--spacing);
   }
@@ -763,9 +772,12 @@
   .mt-auto {
     margin-top: auto;
   }
+<<<<<<< HEAD
   .-mr-\[50vw\] {
     margin-right: calc(50vw * -1);
   }
+=======
+>>>>>>> 489206654650d2568491f6cc590c8457b1fb82ec
   .mr-1 {
     margin-right: calc(var(--spacing) * 1);
   }
@@ -1345,10 +1357,13 @@
   }
   .-translate-y-1\/2 {
     --tw-translate-y: calc(calc(1 / 2 * 100%) * -1);
+<<<<<<< HEAD
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
   .translate-y-1 {
     --tw-translate-y: calc(var(--spacing) * 1);
+=======
+>>>>>>> 489206654650d2568491f6cc590c8457b1fb82ec
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
   .translate-y-1\/2 {
@@ -3403,9 +3418,12 @@
   .pl-4 {
     padding-left: calc(var(--spacing) * 4);
   }
+<<<<<<< HEAD
   .pl-5 {
     padding-left: calc(var(--spacing) * 5);
   }
+=======
+>>>>>>> 489206654650d2568491f6cc590c8457b1fb82ec
   .pl-8 {
     padding-left: calc(var(--spacing) * 8);
   }
@@ -7255,11 +7273,14 @@
   .lg\:w-2\/3 {
     @media (width >= 64rem) {
       width: calc(2 / 3 * 100%);
+<<<<<<< HEAD
     }
   }
   .lg\:w-3\/4 {
     @media (width >= 64rem) {
       width: calc(3 / 4 * 100%);
+=======
+>>>>>>> 489206654650d2568491f6cc590c8457b1fb82ec
     }
   }
   .lg\:w-12 {

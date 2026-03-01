@@ -37,3 +37,7 @@ venv/
 .DS_Store
 Thumbs.db
 db.sqlite3
+
+node_modules/
+staticfiles/
+media/

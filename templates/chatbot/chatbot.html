@@ -1,6 +1,4 @@
-{% load static %}
-
-
+﻿{% load static %}
 <!-- Chatbot Container -->
 <div id="studentLifeChatbot" class="fixed bottom-6 right-6 z-50" role="complementary" aria-label="Student Life Chatbot">
     <!-- Toggle Button -->
@@ -65,37 +63,6 @@
             </form>
         </div>
 
-        <!-- Quick Actions (hidden initially, shown after session starts) -->
-        <div id="quickActions" class="p-4 bg-gradient-to-br from-gray-50 to-blue-50 border-b border-gray-200 shrink-0 hidden">
-            <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Quick Actions</p>
-            <div class="grid grid-cols-2 gap-2">
-                <button class="quick-topic p-3 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        data-action="programs"
-                        aria-label="Learn about programs">
-                    <span class="block text-2xl mb-1 group-hover:scale-110 transition-transform" aria-hidden="true">🎓</span>
-                    <span class="text-xs font-medium text-gray-700">Programs</span>
-                </button>
-                <button class="quick-topic p-3 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        data-action="admissions"
-                        aria-label="Learn about admissions">
-                    <span class="block text-2xl mb-1 group-hover:scale-110 transition-transform" aria-hidden="true">📋</span>
-                    <span class="text-xs font-medium text-gray-700">Admissions</span>
-                </button>
-                <button class="quick-topic p-3 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        data-action="campus"
-                        aria-label="Learn about campus life">
-                    <span class="block text-2xl mb-1 group-hover:scale-110 transition-transform" aria-hidden="true">🏫</span>
-                    <span class="text-xs font-medium text-gray-700">Campus Life</span>
-                </button>
-                <button class="quick-topic p-3 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        data-action="support"
-                        aria-label="Get academic support">
-                    <span class="block text-2xl mb-1 group-hover:scale-110 transition-transform" aria-hidden="true">💡</span>
-                    <span class="text-xs font-medium text-gray-700">Support</span>
-                </button>
-            </div>
-        </div>
-
         <!-- Messages Container (hidden initially) -->
         <div id="chatMessages"
              class="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-white to-gray-50 scroll-smooth overscroll-contain hidden"
@@ -118,6 +85,32 @@
                         <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions (hidden initially, shown after session starts) -->
+        <div id="quickActions" class="p-2 bg-gray-50 border-t border-gray-200 shrink-0 hidden">
+            <div class="flex flex-wrap gap-1.5">
+                <button class="quick-topic px-3 py-1.5 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-700 hover:border-primary-500 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                        data-action="programs"
+                        aria-label="Ask about programs">
+                    Programs
+                </button>
+                <button class="quick-topic px-3 py-1.5 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-700 hover:border-primary-500 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                        data-action="admissions"
+                        aria-label="Ask about admissions">
+                    Admissions
+                </button>
+                <button class="quick-topic px-3 py-1.5 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-700 hover:border-primary-500 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                        data-action="campus"
+                        aria-label="Ask about campus life">
+                    Campus Life
+                </button>
+                <button class="quick-topic px-3 py-1.5 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-700 hover:border-primary-500 hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                        data-action="support"
+                        aria-label="Ask about support">
+                    Support
+                </button>
             </div>
         </div>
 
@@ -356,7 +349,7 @@
         async function closeSession() {
             if (!sessionId) return;
             try {
-                await fetch(CLOSE_URL,{
+                await fetch(CLOSE_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -494,7 +487,7 @@
         // Quick topic buttons
         quickTopicButtons.forEach(button => {
             button.addEventListener('click', function () {
-                const topic = this.querySelector('.text-xs').textContent;
+                const topic = this.textContent;   // now just the text, e.g. "Programs"
                 const message = `Tell me about ${topic}`;
                 if (sessionId) {
                     addMessage(message, 'user');

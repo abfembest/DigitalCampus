@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "payment",
 
     "django.contrib.humanize",
+    'chatbot',
 ]
 
 MIDDLEWARE = [
@@ -222,3 +223,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
+
+# settings.py
+CHAT_SESSION_TIMEOUT_MINUTES = 15

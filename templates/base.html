@@ -14,7 +14,7 @@
     <!-- Dynamic Meta Tags - Allow child templates to override -->
     {% block meta_tags %}
     <meta name="description" content="Melchisedec International University - Empowering global education with flexible online programs, world-class faculty, and innovative learning experiences.">
-    <meta name="keywords" content="online university, distance learning, international education, online degrees, MIU, modern university, accredited online programs">
+    <meta name="keywords" content="online university, distance learning, international education, online degrees, MIU, Melchisedec university, accredited online programs">
     {% endblock %}
 
     <meta name="author" content="Melchisedec International University">
@@ -40,7 +40,10 @@
     <title>{% block title %}MIU – Melchisedec International University{% endblock %}</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{% static 'favicon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon.png' %}">
+    <link rel="icon" type="image/png" sizes="48x48" href="{% static 'favicon.png' %}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{% static 'favicon.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'apple-touch-icon.png' %}">
     <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
 
     <!-- Canonical URL -->
@@ -114,8 +117,9 @@
                    aria-label="Melchisedec International University Home">
                     <div class="relative">
                         <img src="{% static 'images/miulogo.png' %}" alt="MIU Logo"
-                             class="h-20 lg:h-32 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                             width="auto" height="56">
+                             class="h-28 lg:h-32 w-40 object-contain transition-transform duration-300 group-hover:scale-105"
+                             width="auto" height="100">
+
                     </div>
                 </a>
 
@@ -413,7 +417,7 @@
                         <!-- About Section with Logo Image -->
                         <div class="space-y-6">
                             <div class="inline-flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-lg">
-                                <img src="{% static 'images/miulogo.png' %}" alt="MIU Logo" class="h-10 w-auto object-contain">
+                                <img src="{% static 'images/miulogo.png' %}" alt="MIU Logo" class="h-16 w-auto object-contain">
                             </div>
                             <p class="text-purple-200 font-['Inter'] leading-relaxed">
                                 Empowering global education since 1995 with innovative learning experiences and world-class

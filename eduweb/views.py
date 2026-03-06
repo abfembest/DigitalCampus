@@ -9,7 +9,7 @@ import payment
 
 import payment
 from .forms import ContactForm, CourseApplicationForm
-from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor
+from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor, ListOfCountry
 from eduweb.models import Faculty, Course, Program, Department, BlogPost, BlogCategory
 from django.http import JsonResponse, HttpResponse, Http404
 from django.utils import timezone
@@ -639,6 +639,7 @@ def apply(request):
         'form': form,
         'courses': programs,
         'courses_json': courses_json,
+        'countries': ListOfCountry.objects.all().order_by('country'),
     })
 
 @check_for_auth

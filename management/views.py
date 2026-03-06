@@ -391,7 +391,7 @@ def send_decision_email(application):
         
         if decision == 'approved':
             html_content += f"""
-                        <p>We are excited to welcome you to Modern International University!</p>
+                        <p>We are excited to welcome you to Melchisedec International University!</p>
                         <h4>Next Steps:</h4>
                         <ol>
                             <li>Review your admission offer letter (attached)</li>

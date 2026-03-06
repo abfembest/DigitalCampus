@@ -1,5 +1,6 @@
-﻿from django import forms
-from .models import ContactMessage, CourseApplication, Course, CourseIntake, ApplicationDocument
+﻿from typing import Required
+from django import forms
+from .models import ContactMessage, CourseApplication, Course, CourseIntake, ListOfCountry, ApplicationDocument
 from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
@@ -166,36 +167,91 @@ class ContactForm(forms.ModelForm):
             }),
         }
 
-
 class CourseApplicationForm(forms.ModelForm):
-    """Form for course application"""
-    
+    # Choices for country and nationality (simplified list – you can expand)
+    COUNTRIES = [
+        ('', 'Select Country'),
+        ('AF', 'Afghanistan'),
+        ('AL', 'Albania'),
+        ('DZ', 'Algeria'),
+        ('US', 'United States'),
+        ('GB', 'United Kingdom'),
+        ('NG', 'Nigeria'),
+        # ... add all countries as needed
+    ]
+
+    NATIONALITIES = [
+        ('', 'Select Nationality'),
+        ('afghan', 'Afghan'),
+        ('albanian', 'Albanian'),
+        ('algerian', 'Algerian'),
+        ('american', 'American'),
+        ('british', 'British'),
+        ('nigerian', 'Nigerian'),
+        # ... add all nationalities
+    ]
+
+    HEAR_CHOICES = [
+        ('', 'Select an option'),
+        ('linkedin', 'LinkedIn'),
+        ('facebook', 'Facebook'),
+        ('tiktok', 'TikTok'),
+        ('instagram', 'Instagram'),
+        ('youtube', 'YouTube'),
+        ('twitter', 'Twitter'),
+        ('email_campaign', 'Email campaign'),
+        ('miu_website', 'MIU website'),
+        ('search_engine', 'Search Engine (Google, Bing, Yahoo)'),
+        ('referral', 'Referral (friend, family)'),
+        ('other', 'Other'),
+    ]
+
+    # Override fields to use ChoiceField
+    # Override country field to use dynamic choices
+    country = forms.ChoiceField(choices=[],  # will be set in __init__
+                                required=True,
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg ...'}))
+    nationality = forms.ChoiceField(choices=NATIONALITIES, required=True)
+    how_did_you_hear = forms.ChoiceField(choices=HEAR_CHOICES, required=True)
+
+    # New fields
+    how_did_you_hear_other = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'Please specify...'
+        })
+    )
+    emergency_contact_email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'emergency@example.com'
+        })
+    )
+    emergency_contact_address = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'Emergency contact address'
+        })
+    )
+
     class Meta:
         model = CourseApplication
         fields = [
-            # Course & Intake
             'program', 'intake', 'study_mode',
-            
-            # Personal Information
             'first_name', 'last_name', 'email', 'phone',
             'date_of_birth', 'gender', 'nationality',
-            
-            # Address (Note: the model uses separate address fields, not single 'address')
             'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
-            
-            # Academic Background
-            'highest_qualification', 'institution_name', 'graduation_year', 'gpa_or_grade',          
-            'language_skill','language_score',
-            # Additional Information
+            'highest_qualification', 'institution_name', 'graduation_year', 'gpa_or_grade',
+            'language_skill', 'language_score',
             'work_experience_years', 'personal_statement', 'how_did_you_hear',
-
-             # Privacy & Consent
-             'accept_privacy_policy','accept_terms_conditions','marketing_consent','scholarship',
-
-            
-            # Emergency Contact
+            'how_did_you_hear_other',          # new
+            'accept_privacy_policy', 'accept_terms_conditions', 'marketing_consent', 'scholarship',
             'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
-
+            'emergency_contact_email',          # new
+            'emergency_contact_address',        # new
         ]
         
         widgets = {
@@ -303,7 +359,8 @@ class CourseApplicationForm(forms.ModelForm):
             'personal_statement': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'rows': 6,
-                'placeholder': 'Tell us about yourself, your goals, and why you want to join this program...'
+                'placeholder': 'Tell us about yourself, your goals, and why you want to join this program...',
+                 'required': False,
             }),
             'how_did_you_hear': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
@@ -339,7 +396,26 @@ class CourseApplicationForm(forms.ModelForm):
                 'class': 'h-5 w-5 text-purple-600 rounded focus:ring-purple-400 cursor-pointer',
             }),
 
-        }
+
+                'how_did_you_hear_other': forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'Please specify...'
+        }),
+        'emergency_contact_email': forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'emergency@example.com'
+        }),
+        'emergency_contact_address': forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'Emergency contact address'
+        }),
+
+        'country': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+        }),
+       'nationality': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+         }),
+    }
+        
     
     def clean_phone(self):
         """Validate phone number format"""
@@ -362,6 +438,15 @@ class CourseApplicationForm(forms.ModelForm):
         """Validate email format"""
         email = self.cleaned_data.get('email')
         return email.lower()
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Populate country choices from ListOfCountry
+        countries = ListOfCountry.objects.all().order_by('country')
+        self.fields['country'].choices = [('', 'Select Country')] + [
+            (c.country_code, c.country) for c in countries
+        ]
 
 
 class AcademicHistoryForm(forms.Form):

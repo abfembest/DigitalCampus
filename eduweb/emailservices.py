@@ -58,7 +58,7 @@ def send_verification_email(request, user):
                         </p>
                         <p>
                             Thank you for creating an account with 
-                            Modern International University. Please verify 
+                            Melchisedec International University. Please verify 
                             your email address to complete your registration.
                         </p>
                         <div style="text-align: center; margin: 30px 0;">
@@ -99,7 +99,7 @@ def send_verification_email(request, user):
         """
         
         text_content = f"""
-Welcome to Modern International University!
+Welcome to Melchisedec International University!
 
 Dear {user.get_full_name() or user.username},
 
@@ -285,7 +285,7 @@ def send_application_confirmation_email(application):
                             </strong>,
                         </p>
                         <p>
-                            Thank you for applying to Modern International 
+                            Thank you for applying to Melchisedec International 
                             University. We have received your application.
                         </p>
                         <div style="background-color: #E6F0FF; 
@@ -946,7 +946,7 @@ def send_user_confirmation_email(contact_message):
         text_content = f"""
 Dear {contact_message.name},
 
-Thank you for contacting Modern International University (MIU). 
+Thank you for contacting Melchisedec International University (MIU). 
 We have received your message and will respond within 1-2 business days.
 
 Your Message Details:
@@ -978,7 +978,7 @@ The MIU Admissions Team
                             Dear <strong>{contact_message.name}</strong>,
                         </p>
                         <p style="font-size: 16px; margin-bottom: 20px;">
-                            Thank you for reaching out to Modern International 
+                            Thank you for reaching out to Melchisedec International 
                             University. We have received your message and our 
                             team will review it carefully.
                         </p>

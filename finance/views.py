@@ -147,7 +147,7 @@ def finance_dashboard(request):
             payment__status='success',
             payment__created_at__range=[start_date, end_date],
         )
-        .values('course__name')
+        .values('program__name')
         .annotate(revenue=Sum('payment__amount'), applications=Count('id'))
         .order_by('-revenue')[:5]
     )
@@ -163,7 +163,7 @@ def finance_dashboard(request):
     subscription_revenue = sum(sub.plan.price for sub in active_subs)
 
     recent_transactions = (
-        payments.select_related('application__user', 'application__course')
+        payments.select_related('application__user', 'application__program')
         .filter(application__isnull=False)
         .order_by('-created_at')[:10]
     )

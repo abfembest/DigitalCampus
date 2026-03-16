@@ -31,6 +31,8 @@ ALLOWED_HOSTS = [
     "www.miuedu.com",
     "127.0.0.1",
     "localhost",
+    "https://www.miuedu.com",
+    "mail.miuedu.com",
 ]
 
 # --------------------------------------------------
@@ -44,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "DigitalCampus",
 
     # Project apps
     "eduweb",
@@ -53,8 +56,10 @@ INSTALLED_APPS = [
     "instructor",
     "finance",
     "payment",
+    "melbac",
 
     "django.contrib.humanize",
+    'chatbot',
 ]
 
 MIDDLEWARE = [
@@ -219,3 +224,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
+
+# settings.py
+CHAT_SESSION_TIMEOUT_MINUTES = 15

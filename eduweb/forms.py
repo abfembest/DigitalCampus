@@ -1,5 +1,6 @@
-﻿from django import forms
-from .models import ContactMessage, CourseApplication, Course, CourseIntake, ApplicationDocument
+﻿from typing import Required
+from django import forms
+from .models import ContactMessage, CourseApplication, Course, CourseIntake, ListOfCountry, ApplicationDocument
 from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
@@ -166,180 +167,157 @@ class ContactForm(forms.ModelForm):
             }),
         }
 
-
 class CourseApplicationForm(forms.ModelForm):
-    """Form for course application"""
-    
+    # Choices for country and nationality (simplified list – you can expand)
+    COUNTRIES = [
+        ('', 'Select Country'),
+        ('AF', 'Afghanistan'),
+        ('AL', 'Albania'),
+        ('DZ', 'Algeria'),
+        ('US', 'United States'),
+        ('GB', 'United Kingdom'),
+        ('NG', 'Nigeria'),
+        # ... add all countries as needed
+    ]
+
+    NATIONALITIES = [
+        ('', 'Select Nationality'),
+        ('afghan', 'Afghan'),
+        ('albanian', 'Albanian'),
+        ('algerian', 'Algerian'),
+        ('american', 'American'),
+        ('british', 'British'),
+        ('nigerian', 'Nigerian'),
+        # ... add all nationalities
+    ]
+
+    HEAR_CHOICES = [
+        ('', 'Select an option'),
+        ('linkedin', 'LinkedIn'),
+        ('facebook', 'Facebook'),
+        ('tiktok', 'TikTok'),
+        ('instagram', 'Instagram'),
+        ('youtube', 'YouTube'),
+        ('twitter', 'Twitter'),
+        ('email_campaign', 'Email campaign'),
+        ('miu_website', 'MIU website'),
+        ('search_engine', 'Search Engine (Google, Bing, Yahoo)'),
+        ('referral', 'Referral (friend, family)'),
+        ('other', 'Other'),
+    ]
+
+    # Override fields to use ChoiceField
+    # Override country field to use dynamic choices
+    country = forms.ChoiceField(choices=[],  # will be set in __init__
+                                required=True,
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg ...'}))
+    nationality = forms.ChoiceField(choices=NATIONALITIES,  # will be set in __init__
+                                required=True,
+        widget=forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg ...'}))
+   # nationality = forms.ChoiceField(choices=NATIONALITIES, required=True)
+    how_did_you_hear = forms.ChoiceField(choices=HEAR_CHOICES, required=True, widget=forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg ...'
+        })
+                                         
+     )
+
+    # New fields
+    how_did_you_hear_other = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'Please specify...'
+        })
+    )
+    emergency_contact_email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'emergency@example.com'
+        })
+    )
+    emergency_contact_address = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg',
+            'placeholder': 'Emergency contact address'
+        })
+    )
+
     class Meta:
         model = CourseApplication
         fields = [
-            # Course & Intake
             'program', 'intake', 'study_mode',
-            
-            # Personal Information
             'first_name', 'last_name', 'email', 'phone',
             'date_of_birth', 'gender', 'nationality',
-            
-            # Address (Note: the model uses separate address fields, not single 'address')
             'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
-            
-            # Academic Background
-            'highest_qualification', 'institution_name', 'graduation_year', 'gpa_or_grade',          
-            'language_skill','language_score',
-            # Additional Information
+            'highest_qualification', 'institution_name', 'graduation_year', 'gpa_or_grade',
+            'language_skill', 'language_score',
             'work_experience_years', 'personal_statement', 'how_did_you_hear',
-
-             # Privacy & Consent
-             'accept_privacy_policy','accept_terms_conditions','marketing_consent','scholarship',
-
-            
-            # Emergency Contact
+            'how_did_you_hear_other',          # new
+            'accept_privacy_policy', 'accept_terms_conditions', 'marketing_consent', 'scholarship',
             'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship',
-
+            'emergency_contact_email',          # new
+            'emergency_contact_address',        # new
         ]
-        
+     
+
         widgets = {
             # Course & Intake
-            'program': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }),
-            'intake': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }),
-            'study_mode': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }),
-            
-            # Personal Information
-            'first_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'Enter your first name'
-            }),
-            'last_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'Enter your last name'
-            }),
-            'email': forms.EmailInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'your.email@example.com', 'readonly':'readonly'
-            }),
-            'phone': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': '+234 XXX XXX XXXX'
-            }),
-            'date_of_birth': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all'
-            }),
-            'gender': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }),
-            'nationality': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., Nigerian'
-            }),
-            
-            # Address
-            'address_line1': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-1.5 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'Street address'
-            }),
+            'program': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'}),
+            'intake': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'}),
+            'study_mode': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'}),
 
-            'address_line2': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'Apartment, suite, etc. (optional)'
-            }),
-            'city': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'City'
-            }),
-            'state': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'State/Province'
-            }),
-            'postal_code': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'Postal/ZIP code'
-            }),
-            'country': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'Country'
-            }),
-            
-            # Academic Background
-            'highest_qualification': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., High School Diploma, Bachelor\'s Degree'
-            }),
-            'institution_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'Name of institution'
-            }),
-            'graduation_year': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., 2020',
-                'min': 1950,
-                'max': 2030
-            }),
-            'gpa_or_grade': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., 3.5/4.0 or First Class'
-            }),
-               'language_skill': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }),
-             'language_score': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., 6.5 or 80',
-                'min':0
-            }),
+            # Personal Information
+            'first_name': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'Enter your first name'}),
+            'last_name': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'Enter your last name'}),
+            'email': forms.EmailInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'your.email@example.com', 'readonly': 'readonly'}),
+            'phone': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': '+234 XXX XXX XXXX'}),
+            'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all'}),
+            'gender': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'}),
+
+            # Address
+            'address_line1': forms.TextInput(attrs={'class': 'w-full px-4 py-1.5 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'Street address'}),
+            'address_line2': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'Apartment, suite, etc. (optional)'}),
+            'city': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'City'}),
+            'state': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'State/Province'}),
+            'postal_code': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'Postal/ZIP code'}),
+
+            # Country & Nationality – now with Select2 classes
+            'country': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white select2-country'}),
+            'nationality': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white select2-nationality'}),
+
+            # Academic Background (single fields – not used directly due to dynamic entries)
+            'highest_qualification': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'e.g., High School Diploma, Bachelor\'s Degree'}),
+            'institution_name': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'Name of institution'}),
+            'graduation_year': forms.NumberInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'e.g., 2020', 'min': 1950, 'max': 2030}),
+            'gpa_or_grade': forms.NumberInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'e.g., 3.5/4.0 or First Class'}),
+
+            'language_skill': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'}),
+            'language_score': forms.NumberInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'e.g., 6.5 or 80', 'min': 0}),
 
             # Additional Information
-            'work_experience_years': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': '0',
-                'min': 0
-            }),
-            'personal_statement': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'rows': 6,
-                'placeholder': 'Tell us about yourself, your goals, and why you want to join this program...'
-            }),
-            'how_did_you_hear': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., Social Media, Friend, Website'
-            }),
-            
+            'work_experience_years': forms.NumberInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': '0', 'min': 0}),
+            'personal_statement': forms.Textarea(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'rows': 6, 'placeholder': 'Tell us about yourself, your goals, and why you want to join this program...', 'required': False}),
+
+            # How did you hear – now a Select widget
+            'how_did_you_hear': forms.Select(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'}),
+
             # Emergency Contact
-            'emergency_contact_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'Full name'
-            }),
-            'emergency_contact_phone': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': '+234 XXX XXX XXXX'
-            }),
-            'emergency_contact_relationship': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., Parent, Spouse, Sibling'
-            }),
+            'emergency_contact_name': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'Full name'}),
+            'emergency_contact_phone': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': '+234 XXX XXX XXXX'}),
+            'emergency_contact_relationship': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all', 'placeholder': 'e.g., Parent, Spouse, Sibling'}),
 
-                        #privacy and terms
-            'accept_terms_conditions': forms.CheckboxInput(attrs={
-                'class': 'h-5 w-5 text-primary-600 rounded focus:ring-primary-400 cursor-pointer',
-                'required': True,
-            }),
+            # New fields
+            'how_did_you_hear_other': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg', 'placeholder': 'Please specify...'}),
+            'emergency_contact_email': forms.EmailInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg', 'placeholder': 'emergency@example.com'}),
+            'emergency_contact_address': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg', 'placeholder': 'Emergency contact address'}),
 
-            'accept_privacy_policy': forms.CheckboxInput(attrs={
-                'class': 'h-5 w-5 text-primary-600 rounded focus:ring-primary-400 cursor-pointer',
-                'required': True,
-            }),
-
-            'scholarship': forms.CheckboxInput(attrs={
-                'class': 'h-5 w-5 text-purple-600 rounded focus:ring-purple-400 cursor-pointer',
-            }),
-
+            # Privacy & Terms
+            'accept_terms_conditions': forms.CheckboxInput(attrs={'class': 'h-5 w-5 text-primary-600 rounded focus:ring-primary-400 cursor-pointer', 'required': True}),
+            'accept_privacy_policy': forms.CheckboxInput(attrs={'class': 'h-5 w-5 text-primary-600 rounded focus:ring-primary-400 cursor-pointer', 'required': True}),
+            'scholarship': forms.CheckboxInput(attrs={'class': 'h-5 w-5 text-purple-600 rounded focus:ring-purple-400 cursor-pointer'}),
         }
+       
     
     def clean_phone(self):
         """Validate phone number format"""
@@ -362,6 +340,15 @@ class CourseApplicationForm(forms.ModelForm):
         """Validate email format"""
         email = self.cleaned_data.get('email')
         return email.lower()
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Populate country choices from ListOfCountry
+        countries = ListOfCountry.objects.all().order_by('country')
+        self.fields['country'].choices = [('', 'Select Country')] + [
+            (c.country_code, c.country) for c in countries
+        ]
 
 
 class AcademicHistoryForm(forms.Form):
@@ -405,14 +392,18 @@ class AcademicHistoryForm(forms.Form):
         })
     )
     
-    gpa = forms.CharField(
-        max_length=50,
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
-            'placeholder': 'e.g., 3.8 GPA or First Class'
-        })
-    )
+    gpa = forms.DecimalField(
+    max_digits=3,
+    decimal_places=2,
+    required=True,
+    widget=forms.NumberInput(attrs={
+        'class': 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500',
+        'placeholder': 'e.g., 3.8',
+        'min': 0,
+        'step': 0.01
+    })
+)
+    
 
 class ApplicationDocumentUploadForm(forms.ModelForm):
     """Form for uploading application documents"""

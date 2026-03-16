@@ -12,7 +12,7 @@ from .models import (
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
     Review, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
     StaffPayroll, StudyGroup, StudyGroupMember,
-    SystemConfiguration, UserProfile, Vendor, BroadcastMessage
+    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry
 )
 
 
@@ -1554,6 +1554,12 @@ class StaffPayrollAdmin(admin.ModelAdmin):
         if obj and obj.payment_status == 'paid':
             return False
         return super().has_delete_permission(request, obj)
+
+
+@admin.register(ListOfCountry)
+class ListOfCountryAdmin(admin.ModelAdmin):
+    list_display = ('country', 'country_code', 'country_phonecode')
+    search_fields = ('country', 'country_code', 'country_phonecode')
 
 
 # Site customization

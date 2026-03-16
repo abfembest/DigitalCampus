@@ -1,3 +1,4 @@
+from tkinter import TRUE
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
@@ -1252,6 +1253,9 @@ class CourseApplication(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     in_processing = models.BooleanField(default=False)
+    how_did_you_hear_other = models.CharField(max_length=255, blank=True)
+    emergency_contact_email = models.EmailField(blank=True, null=True)
+    emergency_contact_address = models.CharField(max_length=255, blank=True)
 
     # Admission Acceptance Tracking
     admission_accepted = models.BooleanField(
@@ -3186,3 +3190,17 @@ class StaffPayroll(models.Model):
                 self.save()
                 return True
         return False
+
+class ListOfCountry(models.Model):
+    country = models.CharField(max_length=150, unique=True)
+    country_code = models.CharField(max_length=10, unique=True)
+    country_phonecode = models.CharField(max_length=10)
+    nationality = models.CharField(max_length=160, blank=True)
+
+    class Meta:
+        verbose_name = "Country"
+        verbose_name_plural = "List of Countries"
+        ordering = ["country"]
+
+    def __str__(self):
+        return f"{self.country} ({self.country_phonecode})"

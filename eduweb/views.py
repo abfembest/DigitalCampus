@@ -462,9 +462,15 @@ def index(request):
 
 @check_for_auth
 def about(request):
-    from .models import Faculty
+    from .models import Faculty, InstitutionMember
     faculties = Faculty.objects.filter(is_active=True).prefetch_related('departments').order_by('display_order', 'name')
-    return render(request, 'about.html', {'faculties': faculties})
+    admin_board_members = InstitutionMember.objects.filter(
+        member_type='admin_board', is_active=True
+    ).order_by('display_order')[:6]
+    return render(request, 'about.html', {
+        'faculties': faculties,
+        'admin_board_members': admin_board_members,
+    })
 
 def all_programs(request):
     from .models import Faculty, Department, Program

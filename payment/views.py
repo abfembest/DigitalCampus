@@ -36,7 +36,7 @@ def payment_management(request):
     filter_form = PaymentFilterForm(request.GET or None)
 
     payments = ApplicationPayment.objects.select_related(
-        'application__course',
+        'application__program',
         'application__user',
     ).order_by('-created_at')
 
@@ -101,7 +101,7 @@ def payment_detail(request, payment_reference):
     payment = get_object_or_404(
         ApplicationPayment.objects.select_related(
             'application__user',
-            'application__course',
+            'application__program'
         ),
         payment_reference=payment_reference,
     )
@@ -196,7 +196,7 @@ def transaction_reports(request):
 
     payments = ApplicationPayment.objects.select_related(
         'application__user',
-        'application__course',
+        'application__program'
     ).order_by('-created_at')
 
     total_count = payments.count()
@@ -272,7 +272,7 @@ def generate_invoice_pdf(request, payment_reference):
     payment = get_object_or_404(
         ApplicationPayment.objects.select_related(
             'application__user',
-            'application__course',
+            'application__program'
         ),
         payment_reference=payment_reference,
         status='success',

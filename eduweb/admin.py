@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 from .models import (
+    SiteConfig, InstitutionMember, AcademicSession,
     Announcement, Assignment, AssignmentSubmission, AuditLog,
     Badge, StudentBadge, BlogCategory, BlogPost,
     Certificate, ContactMessage,
@@ -11,9 +12,160 @@ from .models import (
     LMSCourse, Message, Notification,
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
     Review, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
-    StaffPayroll, StudyGroup, StudyGroupMember,
+    StaffPayroll, StudyGroup, StudyGroupMember, StudyGroupMessage,
     SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry
 )
+
+
+# ==================== SITE CONFIGURATION ====================
+@admin.register(SiteConfig)
+class SiteConfigAdmin(admin.ModelAdmin):
+    """
+    Singleton admin — only one SiteConfig row should ever exist.
+    Creating this row is THE fix for all template VariableDoesNotExist errors.
+    """
+    fieldsets = (
+        ('School Identity', {
+            'fields': (
+                'school_name', 'school_short_name', 'tagline',
+                'logo', 'logo_dark', 'favicon', 'og_image',
+            )
+        }),
+        ('Contact Details', {
+            'fields': (
+                'email',
+                'phone_primary', 'phone_secondary',
+                'phone_ng_primary', 'phone_ng_secondary',
+                'whatsapp',
+            )
+        }),
+        ('Addresses', {
+            'fields': ('address_usa', 'address_nigeria'),
+        }),
+        ('Office Hours', {
+            'fields': ('office_hours_weekday', 'office_hours_saturday'),
+        }),
+        ('Social Media', {
+            'fields': ('facebook', 'instagram', 'youtube', 'twitter', 'tiktok', 'linkedin'),
+            'classes': ('collapse',),
+        }),
+        ('Hero Section — Index Page', {
+            'fields': (
+                'hero_badge_text', 'hero_tagline',
+                'hero_heading', 'hero_subheading',
+            ),
+        }),
+        ('Hero Stat Cards — Index Page', {
+            'description': 'Values shown on the 4 stat cards in the index hero.',
+            'fields': (
+                'stat_students', 'stat_countries_label',
+                'stat_employment_label', 'stat_programs_label',
+            ),
+        }),
+        ('Index About Section', {
+            'fields': ('index_about_para_1', 'index_about_para_2'),
+        }),
+        ('Index Map and Promo Video', {
+            'fields': ('promo_video_url', 'campus_map_embed_url', 'campus_map_address'),
+            'classes': ('collapse',),
+        }),
+        ('About Page — Mission / Vision / Values', {
+            'fields': (
+                'about_intro_1', 'about_intro_2',
+                'mission_text', 'vision_text', 'core_values_text',
+            ),
+        }),
+        ('About Page — Animated Counters', {
+            'description': 'Integer values used by the animated counter on the About page.',
+            'fields': (
+                'stat_years_count', 'stat_countries_count',
+                'stat_employment_rate', 'stat_programs_count',
+            ),
+        }),
+        ('About Page — International Stats', {
+            'fields': (
+                'about_years_founded', 'about_partner_institutions',
+                'about_exchange_programs', 'about_languages_spoken',
+            ),
+        }),
+        ('Accreditation', {
+            'fields': (
+                'accreditation_1', 'accreditation_2',
+                'accreditation_3', 'accreditation_4',
+            ),
+        }),
+        ('Footer', {
+            'fields': ('footer_tagline', 'copyright_year'),
+        }),
+        ('SEO', {
+            'fields': ('meta_description', 'meta_keywords'),
+            'classes': ('collapse',),
+        }),
+        ('Legacy Hero Stats', {
+            'description': 'Older stat fields kept for backward compatibility.',
+            'fields': ('stat_years', 'stat_faculties', 'stat_campuses', 'stat_tuition'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        """Singleton: prevent creating a second row."""
+        return not SiteConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deleting the only config row."""
+        return False
+
+
+# ==================== INSTITUTION MEMBERS ====================
+@admin.register(InstitutionMember)
+class InstitutionMemberAdmin(admin.ModelAdmin):
+    list_display = ('name', 'role', 'member_type', 'display_order', 'is_active')
+    list_filter = ('member_type', 'is_active')
+    search_fields = ('name', 'role', 'bio')
+    list_editable = ('display_order', 'is_active')
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('member_type', 'name', 'role', 'photo'),
+        }),
+        ('Bio', {
+            'fields': ('bio',),
+        }),
+        ('Display', {
+            'fields': ('display_order', 'is_active'),
+        }),
+    )
+
+
+# ==================== ACADEMIC SESSIONS ====================
+@admin.register(AcademicSession)
+class AcademicSessionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'status', 'is_current', 'first_semester_start', 'first_semester_end', 'second_semester_start', 'second_semester_end')
+    list_filter = ('status', 'is_current')
+    search_fields = ('name',)
+    list_editable = ('is_current', 'status')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Session Identity', {
+            'fields': ('name', 'status', 'is_current'),
+        }),
+        ('Semester 1', {
+            'fields': ('first_semester_start', 'first_semester_end'),
+        }),
+        ('Semester 2', {
+            'fields': ('second_semester_start', 'second_semester_end'),
+        }),
+        ('Registration Window', {
+            'fields': ('registration_start', 'registration_end'),
+            'classes': ('collapse',),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
 
 
 # ==================== ANNOUNCEMENTS ====================
@@ -1562,7 +1714,37 @@ class ListOfCountryAdmin(admin.ModelAdmin):
     search_fields = ('country', 'country_code', 'country_phonecode')
 
 
-# Site customization
-admin.site.site_header = "LMS Administration"
+# ==================== STUDY GROUP MESSAGES ====================
+@admin.register(StudyGroupMessage)
+class StudyGroupMessageAdmin(admin.ModelAdmin):
+    list_display = ('study_group', 'author', 'get_content_preview', 'created_at')
+    list_filter = ('study_group', 'created_at')
+    search_fields = ('author__username', 'study_group__name', 'content')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Message', {
+            'fields': ('study_group', 'author', 'content'),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def get_content_preview(self, obj):
+        return obj.content[:60] + '...' if len(obj.content) > 60 else obj.content
+    get_content_preview.short_description = 'Message Preview'
+
+
+# ==================== ADMIN SITE BRANDING ====================
+def _get_site_header():
+    site = SiteConfig.objects.first()
+    if site and site.school_name:
+        return f"{site.school_name} — Admin"
+    return "LMS Administration"
+
+
+admin.site.site_header = _get_site_header()
 admin.site.site_title = "LMS Admin Portal"
 admin.site.index_title = "Welcome to LMS Administration"

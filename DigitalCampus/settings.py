@@ -89,6 +89,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "eduweb.views.application_status_context",
                 "eduweb.context.navigation_data",
+                'eduweb.context.site_config_context',
                 "eduweb.context.student_counts",
                 'eduweb.context.admin_counts',
             ],

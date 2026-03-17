@@ -5,11 +5,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="keywords" content="Melchisedec International University, MIU, United States university, accredited university USA, secular and theological education, Christian university, theology degree programs, online university programs, higher education institution, faith-based education, ministry training, leadership and business degrees, international university">
-    <meta property="og:title" content="Melchisedec International University – Secular & Theological Education in the USA">
-    <meta property="og:description" content="A United States-based university offering accredited secular and theological programs designed to prepare leaders for professional careers and ministry impact.">
-    <meta name="twitter:title" content="Melchisedec International University (MIU)">
-    <meta name="twitter:description" content="Accredited secular and theological degree programs in the United States designed for global academic and ministry excellence.">
+    <meta name="keywords" content="{{ site_config.meta_keywords|default:'Melchisedec International University, MIU, United States university, accredited university USA' }}">
+    <meta property="og:title" content="{{ site_config.school_name|default:'Melchisedec International University' }} – Secular & Theological Education in the USA">
+    <meta property="og:description" content="{{ site_config.meta_description|default:'A United States-based university offering accredited secular and theological programs designed to prepare leaders for professional careers and ministry impact.' }}">
+    <meta name="twitter:title" content="{{ site_config.school_name|default:'Melchisedec International University' }} ({{ site_config.school_short_name|default:'MIU' }})">
+    <meta name="twitter:description" content="{{ site_config.meta_description|default:'Accredited secular and theological degree programs in the United States designed for global academic and ministry excellence.' }}">
 
     <!-- Dynamic Meta Tags - Allow child templates to override -->
     {% block meta_tags %}
@@ -40,11 +40,19 @@
     <title>{% block title %}MIU – Melchisedec International University{% endblock %}</title>
 
     <!-- Favicon -->
+    {% if site_config and site_config.favicon %}
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ site_config.favicon.url }}">
+    <link rel="icon" type="image/png" sizes="48x48" href="{{ site_config.favicon.url }}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{{ site_config.favicon.url }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ site_config.favicon.url }}">
+    <link rel="apple-touch-icon" href="{{ site_config.favicon.url }}">
+    {% else %}
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon.png' %}">
     <link rel="icon" type="image/png" sizes="48x48" href="{% static 'favicon.png' %}">
     <link rel="icon" type="image/png" sizes="96x96" href="{% static 'favicon.png' %}">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'apple-touch-icon.png' %}">
     <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
+    {% endif %}
 
     <!-- Canonical URL -->
     {% block canonical %}
@@ -116,10 +124,15 @@
                    class="flex items-center space-x-3 group focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2 rounded-lg"
                    aria-label="Melchisedec International University Home">
                     <div class="relative">
+                        {% if site_config and site_config.logo %}
+                        <img src="{{ site_config.logo.url }}" alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
+                             class="h-28 lg:h-32 w-40 object-contain transition-transform duration-300 group-hover:scale-105"
+                             width="auto" height="100">
+                        {% else %}
                         <img src="{% static 'images/miulogo.png' %}" alt="MIU Logo"
                              class="h-28 lg:h-32 w-40 object-contain transition-transform duration-300 group-hover:scale-105"
                              width="auto" height="100">
-
+                        {% endif %}
                     </div>
                 </a>
 
@@ -417,16 +430,21 @@
                         <!-- About Section with Logo Image -->
                         <div class="space-y-6">
                             <div class="inline-flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-lg">
+                                {% if site_config and site_config.logo %}
+                                <img src="{{ site_config.logo.url }}" alt="{{ site_config.school_short_name|default:'MIU' }} Logo" class="h-16 w-auto object-contain">
+                                {% else %}
                                 <img src="{% static 'images/miulogo.png' %}" alt="MIU Logo" class="h-16 w-auto object-contain">
+                                {% endif %}
                             </div>
                             <p class="text-purple-200 font-['Inter'] leading-relaxed">
-                                Empowering global education since 1995 with innovative learning experiences and world-class
-                                faculty.
+                                {{ site_config.footer_tagline|default:"Empowering global education with innovative learning experiences and world-class faculty." }}
                             </p>
+                            {% if site_config and site_config.address_usa %}
                             <div class="flex items-start gap-3 text-purple-200">
                                 <i data-lucide="map-pin" class="w-5 h-5 mt-0.5 flex-shrink-0"></i>
-                                <span class="text-sm font-['Inter']">123 University Avenue, Knowledge City, KC 10101</span>
+                                <span class="text-sm font-['Inter']">{{ site_config.address_usa }}</span>
                             </div>
+                            {% endif %}
                         </div>
 
                         <!-- Quick Links -->
@@ -521,26 +539,37 @@
                                 Connect With Us
                             </h4>
                             <div class="flex gap-3 mb-6">
-                                <a href="#"
+                                {% if site_config and site_config.facebook %}
+                                <a href="{{ site_config.facebook }}"
                                    class="h-10 w-10 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                                   aria-label="Facebook">
+                                   aria-label="Facebook" target="_blank" rel="noopener">
                                     <i data-lucide="facebook" class="w-5 h-5"></i>
                                 </a>
-                                <a href="#"
+                                {% endif %}
+                                {% if site_config and site_config.twitter %}
+                                <a href="{{ site_config.twitter }}"
                                    class="h-10 w-10 bg-sky-500 hover:bg-sky-600 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                                   aria-label="Twitter">
+                                   aria-label="Twitter" target="_blank" rel="noopener">
                                     <i data-lucide="twitter" class="w-5 h-5"></i>
                                 </a>
-                                <a href="#"
+                                {% endif %}
+                                {% if site_config and site_config.linkedin %}
+                                <a href="{{ site_config.linkedin }}"
                                    class="h-10 w-10 bg-blue-700 hover:bg-blue-800 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                                   aria-label="LinkedIn">
+                                   aria-label="LinkedIn" target="_blank" rel="noopener">
                                     <i data-lucide="linkedin" class="w-5 h-5"></i>
                                 </a>
-                                <a href="#"
+                                {% endif %}
+                                {% if site_config and site_config.youtube %}
+                                <a href="{{ site_config.youtube }}"
                                    class="h-10 w-10 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                                   aria-label="YouTube">
+                                   aria-label="YouTube" target="_blank" rel="noopener">
                                     <i data-lucide="youtube" class="w-5 h-5"></i>
                                 </a>
+                                {% endif %}
+                                {% if not site_config or not site_config.facebook and not site_config.twitter and not site_config.linkedin and not site_config.youtube %}
+                                <span class="text-purple-400 text-sm">Social links coming soon.</span>
+                                {% endif %}
                             </div>
                             <p class="text-purple-200 text-sm font-['Inter'] leading-relaxed">
                                 Follow us for campus updates, events, and inspiring student stories from around the world.
@@ -553,20 +582,24 @@
                     <div class="border-t border-purple-700 pt-8">
                         <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
                             <p class="text-purple-300 text-sm font-['Inter']">
-                                &copy; 2025 Melchisedec International University (MIU). All rights reserved.
+                                &copy; {{ site_config.copyright_year|default:"2025" }} {{ site_config.school_name|default:"Melchisedec International University" }} ({{ site_config.school_short_name|default:"MIU" }}). All rights reserved.
                             </p>
                             <div class="flex flex-wrap items-center justify-center gap-2 text-purple-300 text-sm font-['Inter']">
-                                <a href="tel:+15551234567"
+                                {% if site_config and site_config.phone_primary %}
+                                <a href="tel:{{ site_config.phone_primary }}"
                                    class="flex items-center gap-1 hover:text-gold-400 transition-colors duration-200 focus:outline-none focus:text-gold-400">
                                     <i data-lucide="phone" class="w-4 h-4"></i>
-                                    <span>+1 (555) 123-4567</span>
+                                    <span>{{ site_config.phone_primary }}</span>
                                 </a>
                                 <span class="hidden sm:inline mx-2">|</span>
-                                <a href="mailto:info@miu.edu"
+                                {% endif %}
+                                {% if site_config and site_config.email %}
+                                <a href="mailto:{{ site_config.email }}"
                                    class="flex items-center gap-1 hover:text-gold-400 transition-colors duration-200 focus:outline-none focus:text-gold-400">
                                     <i data-lucide="mail" class="w-4 h-4"></i>
-                                    <span>info@miu.edu</span>
+                                    <span>{{ site_config.email }}</span>
                                 </a>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

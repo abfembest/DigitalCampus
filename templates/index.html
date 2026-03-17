@@ -100,20 +100,20 @@
                     <div class="inline-flex items-center gap-2 px-4 sm:px-6 py-2 mb-4 sm:mb-6 bg-white/10 backdrop-blur-md rounded-full border border-white/20 animate-fade-in">
                         <i data-lucide="award" class="w-4 h-4 sm:w-5 sm:h-5 text-gold-400 flex-shrink-0"></i>
                         <span class="text-xs sm:text-sm lg:text-base font-semibold text-white tracking-wide">
-                            Melchisedec International University
+                            {% if site_config %}{{ site_config.hero_badge_text|default:site_config.school_name|default:"Melchisedec International University" }}{% else %}Melchisedec International University{% endif %}
                         </span>
                     </div>
                     
                     <!-- Tagline -->
                     <p class="text-sm sm:text-base lg:text-xl font-medium mb-3 sm:mb-4 text-gold-300 tracking-wider uppercase animate-fade-in" style="animation-delay: 0.15s;">
-                        The Best Learning Institution
+                        {{ site_config.hero_tagline|default:"The Best Learning Institution" }}
                     </p>
                     
                     <!-- Main Heading -->
                     <h1 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-4 sm:mb-6 leading-[1.1] text-white animate-slide-up font-display" style="animation-delay: 0.3s;">
-                        Welcome to MIU
+                        {{ site_config.hero_heading|default:"Welcome to MIU" }}
                         <span class="block mt-1 sm:mt-2 bg-gradient-to-r from-gold-300 via-gold-400 to-gold-300 bg-clip-text text-transparent">
-                            University
+                            {{ site_config.school_short_name|default:"University" }}
                         </span>
                     </h1>
                     
@@ -121,7 +121,7 @@
                     <div class="flex items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-12 animate-slide-up" style="animation-delay: 0.45s;">
                         <div class="hidden sm:block w-12 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent flex-shrink-0"></div>
                         <p class="text-base sm:text-xl lg:text-2xl text-white/95 font-light leading-relaxed max-w-3xl">
-                            Global Institution of Excellence in Learning and Academics
+                            {{ site_config.hero_subheading|default:"Global Institution of Excellence in Learning and Academics" }}
                         </p>
                         <div class="hidden sm:block w-12 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent flex-shrink-0"></div>
                     </div>
@@ -192,28 +192,28 @@
                 <div class="flex items-center justify-center mb-3 sm:mb-4">
                     <i data-lucide="users" class="w-8 h-8 sm:w-10 sm:h-10 text-primary-950 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 </div>
-                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">25,000+</div>
+                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">{{ site_config.stat_students|default:"25,000+" }}</div>
                 <div class="text-gray-600 text-xs sm:text-sm md:text-base text-center">Students Worldwide</div>
             </article>
             <article class="p-5 sm:p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-3 sm:mb-4">
                     <i data-lucide="globe" class="w-8 h-8 sm:w-10 sm:h-10 text-primary-950 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 </div>
-                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">120+</div>
+                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">{{ site_config.stat_countries_label|default:"120+" }}</div>
                 <div class="text-gray-600 text-xs sm:text-sm md:text-base text-center">Countries Represented</div>
             </article>
             <article class="p-5 sm:p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-3 sm:mb-4">
                     <i data-lucide="trending-up" class="w-8 h-8 sm:w-10 sm:h-10 text-primary-950 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 </div>
-                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">95%</div>
+                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">{{ site_config.stat_employment_label|default:"95%" }}</div>
                 <div class="text-gray-600 text-xs sm:text-sm md:text-base text-center">Graduate Employment</div>
             </article>
             <article class="p-5 sm:p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-3 sm:mb-4">
                     <i data-lucide="book-open" class="w-8 h-8 sm:w-10 sm:h-10 text-primary-950 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 </div>
-                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">50+</div>
+                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">{{ site_config.stat_programs_label|default:"50+" }}</div>
                 <div class="text-gray-600 text-xs sm:text-sm md:text-base text-center">Academic Programs</div>
             </article>
         </div>
@@ -226,21 +226,27 @@
         <div class="grid lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
             <div>
                 <h2 id="about-heading" class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 text-primary-950 font-display">
-                    About MIU
+                    About {{ site_config.school_short_name|default:"MIU" }}
                 </h2>
                 <p class="text-gray-700 mb-4 sm:mb-6 text-base lg:text-lg leading-relaxed">
-                    Melchisedec International University is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence. Founded in 1995, we've been at the forefront of digital education transformation.
+                    {{ site_config.index_about_para_1|default:site_config.about_intro_1|default:"Melchisedec International University is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence. Founded in 1995, we've been at the forefront of digital education transformation." }}
                 </p>
+                {% if site_config and site_config.index_about_para_2 or site_config.about_intro_2 or site_config.mission_text %}
                 <p class="text-gray-600 mb-6 sm:mb-8 text-base lg:text-lg leading-relaxed">
-                    Our mission is to provide accessible, world-class education that empowers students to achieve their personal and professional goals, regardless of geographic location.
+                    {{ site_config.index_about_para_2|default:site_config.mission_text|default:"Our mission is to provide accessible, world-class education that empowers students to achieve their personal and professional goals, regardless of geographic location." }}
                 </p>
+                {% endif %}
                 <a href="{% url 'eduweb:about' %}" class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                     Learn More About Us
                     <i data-lucide="arrow-right" class="w-5 h-5" aria-hidden="true"></i>
                 </a>
             </div>
             <div class="rounded-2xl overflow-hidden shadow-2xl h-56 sm:h-72 lg:h-96 mt-2 lg:mt-0">
+                {% if site_config and site_config.promo_video_url %}
+                <iframe class="w-full h-full" src="{{ site_config.promo_video_url }}" title="{{ site_config.school_name|default:'MIU' }} — Official Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+                {% else %}
                 <iframe class="w-full h-full" src="https://www.youtube.com/embed/wzcQ5_XU58I?start=4" title="MIU Global Learning Community — Official Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -717,6 +723,7 @@ function admTab(btn, panelId) {
                     <h3 class="text-xl lg:text-2xl font-bold text-primary-950 font-display">Contact Information</h3>
                 </div>
 
+                {% if site_config and site_config.address_usa %}
                 <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -724,15 +731,13 @@ function admTab(btn, panelId) {
                         </div>
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Main Campus</h4>
-                            <p class="text-gray-600 leading-relaxed">
-                                123 University Avenue<br>
-                                Knowledge City, KC 10101<br>
-                                United States
-                            </p>
+                            <p class="text-gray-600 leading-relaxed">{{ site_config.address_usa|linebreaksbr }}</p>
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
+                {% if site_config and site_config.email %}
                 <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -741,14 +746,14 @@ function admTab(btn, panelId) {
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Email Us</h4>
                             <div class="space-y-1 text-gray-600">
-                                <p><a href="mailto:admissionsiu.edu" class="hover:text-primary-600 transition-colors">admissions@miu.edu</a></p>
-                                <p><a href="mailto:info@miu.edu" class="hover:text-primary-600 transition-colors">info@miu.edu</a></p>
-                                <p><a href="mailto:international@miu.edu" class="hover:text-primary-600 transition-colors">international@miu.edu</a></p>
+                                <p><a href="mailto:{{ site_config.email }}" class="hover:text-primary-600 transition-colors">{{ site_config.email }}</a></p>
                             </div>
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
+                {% if site_config and site_config.phone_primary %}
                 <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -757,14 +762,16 @@ function admTab(btn, panelId) {
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Call Us</h4>
                             <div class="space-y-1 text-gray-600">
-                                <p><a href="tel:+15551234567" class="hover:text-primary-600 transition-colors">+1 (555) 123-4567</a> (Admissions)</p>
-                                <p><a href="tel:+15551234568" class="hover:text-primary-600 transition-colors">+1 (555) 123-4568</a> (General)</p>
-                                <p><a href="tel:+15551234569" class="hover:text-primary-600 transition-colors">+1 (555) 123-4569</a> (International)</p>
+                                <p><a href="tel:{{ site_config.phone_primary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_primary }}</a>{% if site_config.phone_secondary %} / <a href="tel:{{ site_config.phone_secondary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_secondary }}</a>{% endif %}</p>
+                                {% if site_config.phone_ng_primary %}<p><a href="tel:{{ site_config.phone_ng_primary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_ng_primary }}</a> (Nigeria)</p>{% endif %}
+                                {% if site_config.whatsapp %}<p>WhatsApp: <a href="https://wa.me/{{ site_config.whatsapp }}" class="hover:text-primary-600 transition-colors" target="_blank" rel="noopener">{{ site_config.whatsapp }}</a></p>{% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
+                {% if site_config and site_config.office_hours_weekday %}
                 <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -773,13 +780,14 @@ function admTab(btn, panelId) {
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Office Hours</h4>
                             <div class="space-y-1 text-gray-600">
-                                <p>Monday - Friday: 8:00 AM - 6:00 PM</p>
-                                <p>Saturday: 9:00 AM - 1:00 PM</p>
+                                <p>Monday - Friday: {{ site_config.office_hours_weekday }}</p>
+                                {% if site_config.office_hours_saturday %}<p>Saturday: {{ site_config.office_hours_saturday }}</p>{% endif %}
                                 <p>Sunday: Closed</p>
                             </div>
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -869,7 +877,11 @@ function admTab(btn, panelId) {
 
         <div class="relative rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl">
             <div class="relative w-full h-72 sm:h-96 sm:h-[500px] lg:h-[600px]">
+                {% if site_config and site_config.campus_map_embed_url %}
+                <iframe src="{{ site_config.campus_map_embed_url }}" class="absolute inset-0 w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="{{ site_config.school_name|default:'MIU' }} Main Campus Location Map" aria-label="Google Map showing campus location"></iframe>
+                {% else %}
                 <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.177858804427!2d-73.98784468459426!3d40.70555167933205!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a315cdf4c9b%3A0x8b934de5cae6f7a!2sFinancial%20District%2C%20New%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s!4v1648561234567!5m2!1sen!2s" class="absolute inset-0 w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="MIU Main Campus Location Map" aria-label="Google Map showing MIU Main Campus location"></iframe>
+                {% endif %}
 
                 <div class="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto sm:max-w-sm bg-primary-950/95 backdrop-blur-md text-white p-5 sm:p-6 rounded-xl shadow-2xl">
                     <div class="flex items-start gap-3 mb-4">
@@ -877,11 +889,15 @@ function admTab(btn, panelId) {
                             <i data-lucide="map-pin" class="w-5 h-5 text-primary-950"></i>
                         </div>
                         <div>
-                            <h4 class="font-bold text-lg mb-1">MIU Main Campus</h4>
-                            <p class="text-sm text-gray-200">123 University Avenue<br>Knowledge City, KC 10101</p>
+                            <h4 class="font-bold text-lg mb-1">{{ site_config.school_short_name|default:"MIU" }} Main Campus</h4>
+                            <p class="text-sm text-gray-200">{{ site_config.campus_map_address|default:site_config.address_usa|linebreaksbr|default:"123 University Avenue<br>Knowledge City, KC 10101" }}</p>
                         </div>
                     </div>
+                    {% if site_config and site_config.campus_map_address %}
+                    <a href="https://maps.google.com/?q={{ site_config.campus_map_address|urlencode }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-white font-semibold hover:text-gray-200 transition-colors text-sm group">
+                    {% else %}
                     <a href="https://maps.google.com/?q=123+University+Avenue+Knowledge+City" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-white font-semibold hover:text-gray-200 transition-colors text-sm group">
+                    {% endif %}
                         <i data-lucide="navigation" class="w-4 h-4"></i>
                         Get Directions
                         <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>

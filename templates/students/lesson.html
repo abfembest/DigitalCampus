@@ -43,28 +43,9 @@
                             Your browser does not support the video tag.
                         </video>
                     {% elif lesson.video_url %}
-                        {# External video URL - YouTube, Vimeo, or direct URL #}
-                        {% if 'youtube.com' in lesson.video_url or 'youtu.be' in lesson.video_url %}
-                            {# YouTube Video #}
-                            <iframe class="w-full h-full" 
-                                    src="{{ lesson.video_url }}" 
-                                    frameborder="0" 
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                    allowfullscreen></iframe>
-                        {% elif 'vimeo.com' in lesson.video_url %}
-                            {# Vimeo Video #}
-                            <iframe class="w-full h-full" 
-                                    src="{{ lesson.video_url }}" 
-                                    frameborder="0" 
-                                    allow="autoplay; fullscreen; picture-in-picture" 
-                                    allowfullscreen></iframe>
-                        {% else %}
-                            {# Generic video URL #}
-                            <video class="w-full h-full" controls>
-                                <source src="{{ lesson.video_url }}" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>
-                        {% endif %}
+                    <div class="w-full h-full [&>iframe]:w-full [&>iframe]:h-full">
+                        {{ lesson.video_url|safe }}
+                    </div>
                     {% else %}
                         {# No video available #}
                         <div class="w-full h-full flex items-center justify-center">

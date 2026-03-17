@@ -60,12 +60,12 @@
           <span class="mb-contact-info-label">Phone</span>
           <div class="mb-contact-info-item">
             <i data-lucide="phone" class="mb-contact-info-icon" aria-hidden="true"></i>
-            <span class="mb-contact-info-text">
-              <a href="tel:+18624057143">+1 862 405 7143</a><br>
-              <a href="tel:+19082052535">+1 908 205 2535</a><br>
-              <a href="tel:+2349038133047">+234 903 8133 047</a><br>
-              <a href="tel:+2348153465278">+234 815 3465 278</a>
-            </span>
+            <div class="mb-contact-info-text">
+              <a href="tel:+18624057143"   class="mb-contact-link">+1 862 405 7143</a>
+              <a href="tel:+19082052535"   class="mb-contact-link">+1 908 205 2535</a>
+              <a href="tel:+2349038133047" class="mb-contact-link">+234 903 8133 047</a>
+              <a href="tel:+2348153465278" class="mb-contact-link">+234 815 3465 278</a>
+            </div>
           </div>
         </div>
 
@@ -75,22 +75,49 @@
           <div class="mb-contact-info-item">
             <i data-lucide="mail" class="mb-contact-info-icon" aria-hidden="true"></i>
             <span class="mb-contact-info-text">
-              <a href="mailto:inquiry@melbac.org">inquiry@melbac.org</a>
+              <a href="mailto:inquiry@melbac.org" class="mb-contact-link">inquiry@melbac.org</a>
             </span>
           </div>
         </div>
 
-        <!-- Office hours note -->
-        <div class="mb-card mb-reveal d4" style="padding:18px 20px;">
-          <div class="mb-icon-wrap" style="width:36px;height:36px;margin-bottom:10px;">
+        <!-- Socials -->
+        <div class="mb-contact-info-block mb-reveal d3">
+          <span class="mb-contact-info-label">Follow Us</span>
+          <div class="mb-contact-socials">
+            <a href="https://www.facebook.com/melchisedecacademy"     target="_blank" rel="noopener noreferrer" class="mb-contact-social-btn" aria-label="Facebook">
+              <i data-lucide="facebook" class="w-4 h-4" aria-hidden="true"></i>
+              <span>Facebook</span>
+            </a>
+            <a href="https://www.instagram.com/melchisedec_academy/"  target="_blank" rel="noopener noreferrer" class="mb-contact-social-btn" aria-label="Instagram">
+              <i data-lucide="instagram" class="w-4 h-4" aria-hidden="true"></i>
+              <span>Instagram</span>
+            </a>
+            <a href="https://www.youtube.com/channel/UCmIBajrcfeWnuqHoYCl-raw" target="_blank" rel="noopener noreferrer" class="mb-contact-social-btn" aria-label="YouTube">
+              <i data-lucide="youtube" class="w-4 h-4" aria-hidden="true"></i>
+              <span>YouTube</span>
+            </a>
+            <a href="https://twitter.com/melbacedu"                   target="_blank" rel="noopener noreferrer" class="mb-contact-social-btn" aria-label="Twitter/X">
+              <i data-lucide="twitter" class="w-4 h-4" aria-hidden="true"></i>
+              <span>Twitter / X</span>
+            </a>
+            <a href="http://tiktok.com/@melchisedec1989"              target="_blank" rel="noopener noreferrer" class="mb-contact-social-btn" aria-label="TikTok">
+              <i data-lucide="music-2" class="w-4 h-4" aria-hidden="true"></i>
+              <span>TikTok</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Office hours -->
+        <div class="mb-card mb-contact-hours-card mb-reveal d4">
+          <div class="mb-icon-wrap mb-contact-hours-icon">
             <i data-lucide="clock" class="w-4 h-4 text-gospel-600" aria-hidden="true"></i>
           </div>
-          <p class="mb-contact-info-label" style="margin-bottom:6px;">Office Hours</p>
-          <p style="font-family:var(--mb-font-body);font-size:0.95rem;color:var(--mb-text-body);line-height:1.65;">
+          <p class="mb-contact-info-label">Office Hours</p>
+          <p class="mb-contact-hours-text">
             Monday – Friday: 9:00 AM – 5:00 PM<br>
-            Saturday: 10:00 AM – 2:00 PM<br>
-            <span style="color:var(--mb-text-muted);font-size:0.875rem;">Walk-ins welcome during office hours.</span>
+            Saturday: 10:00 AM – 2:00 PM
           </p>
+          <p class="mb-contact-hours-note">Walk-ins welcome during office hours.</p>
         </div>
       </div>
 
@@ -101,10 +128,10 @@
         <div class="mb-divider"></div>
 
         {% if messages %}
-        <div role="alert" style="margin-top:16px;margin-bottom:16px;">
+        <div class="mb-contact-alerts" role="alert">
           {% for message in messages %}
-          <div class="mb-card" style="padding:14px 18px;border-color:{% if message.tags == 'success' %}#4caf50{% else %}#f44336{% endif %};background:{% if message.tags == 'success' %}#f1f8f1{% else %}#fff5f5{% endif %};">
-            <p style="font-family:var(--mb-font-ui);font-size:0.875rem;color:{% if message.tags == 'success' %}#2e7d32{% else %}#c62828{% endif %};">{{ message }}</p>
+          <div class="mb-contact-alert mb-contact-alert-{{ message.tags }}">
+            <p class="mb-contact-alert-text">{{ message }}</p>
           </div>
           {% endfor %}
         </div>
@@ -135,17 +162,31 @@
                    value="{{ request.POST.phone|default:'' }}">
           </div>
 
+          <!-- Subject — datalist replaces select -->
           <div class="mb-field">
-            <label class="mb-label" for="contact-subject">Subject <span class="mb-label-req" aria-hidden="true">*</span></label>
-            <select class="mb-select" id="contact-subject" name="subject" required>
-              <option value="">— Select a topic —</option>
-              <option value="admissions"  {% if request.POST.subject == 'admissions'  %}selected{% endif %}>Admissions Inquiry</option>
-              <option value="programs"    {% if request.POST.subject == 'programs'    %}selected{% endif %}>Program Information</option>
-              <option value="campus"      {% if request.POST.subject == 'campus'      %}selected{% endif %}>Campus Visit</option>
-              <option value="financial"   {% if request.POST.subject == 'financial'   %}selected{% endif %}>Financial Aid</option>
-              <option value="support"     {% if request.POST.subject == 'support'     %}selected{% endif %}>Technical Support</option>
-              <option value="other"       {% if request.POST.subject == 'other'       %}selected{% endif %}>Other</option>
-            </select>
+            <label class="mb-label" for="contact-subject">
+              Subject <span class="mb-label-req" aria-hidden="true">*</span>
+            </label>
+            <div class="mb-datalist-wrap">
+              <input class="mb-input mb-datalist-input"
+                     type="text"
+                     id="contact-subject"
+                     name="subject"
+                     list="subject-options"
+                     placeholder="Select or type a topic…"
+                     required
+                     autocomplete="off"
+                     value="{{ request.POST.subject|default:'' }}">
+              <i data-lucide="chevron-down" class="mb-datalist-icon" aria-hidden="true"></i>
+            </div>
+            <datalist id="subject-options">
+              <option value="Admissions Inquiry"></option>
+              <option value="Program Information"></option>
+              <option value="Campus Visit"></option>
+              <option value="Financial Aid"></option>
+              <option value="Technical Support"></option>
+              <option value="Other"></option>
+            </datalist>
           </div>
 
           <div class="mb-field">

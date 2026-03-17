@@ -124,13 +124,6 @@
       </a>
     </div>
 
-    <!-- Scroll hint -->
-    <div style="height:48px;" aria-hidden="true"></div>
-    <div class="flex flex-col items-center gap-1.5 mb-rise mb-d5" aria-hidden="true">
-      <span style="font-family:var(--mb-font-ui);font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Scroll</span>
-      <div class="mb-scroll-hint" style="width:1px;height:40px;background:linear-gradient(to bottom,rgba(255,255,255,0.6),transparent);"></div>
-    </div>
-
   </div><!-- /hero content -->
 
   <!-- Dot navigation -->
@@ -386,7 +379,7 @@
     </div>
 
     <p class="mb-reveal" style="text-align:center;margin-top:32px;">
-      <a href="{% url 'melbac:contact' %}"
+      <a href="{% url 'melbac:admissions' %}"
          style="font-family:var(--mb-font-ui);font-size:0.875rem;color:var(--mb-text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:6px;"
          class="hover:text-gospel-600 transition-colors group">
         <i data-lucide="info" class="w-4 h-4" aria-hidden="true"></i>
@@ -633,7 +626,7 @@
 
     <div class="mb-reveal d4"
          style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
-      <a href="{% url 'melbac:contact' %}" class="mb-btn mb-btn-gold"    style="font-size:0.9rem;"><i data-lucide="send"      class="w-4 h-4" aria-hidden="true"></i><span>Apply For Admission</span></a>
+      <a href="{% url 'melbac:admissions' %}" class="mb-btn mb-btn-gold"    style="font-size:0.9rem;"><i data-lucide="send"      class="w-4 h-4" aria-hidden="true"></i><span>Apply For Admission</span></a>
       <a href="{% url 'melbac:about' %}"   class="mb-btn mb-btn-white-outline" style="font-size:0.9rem;"><i data-lucide="book-open" class="w-4 h-4" aria-hidden="true"></i><span>Our Story</span></a>
     </div>
 

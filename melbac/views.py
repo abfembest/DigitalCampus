@@ -1,11 +1,10 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from eduweb.models import Faculty, Department, Program, BlogPost
 
 
 # ──────────────────────────────────────────────
 # Helper: MELBAC faculty slugs (subset of all faculties)
-# Adjust these slugs to match what is actually seeded in your Faculty table.
 MELBAC_FACULTY_SLUGS = [
     'faculty-of-christian-education',
     'faculty-of-church-management-administration',
@@ -15,63 +14,53 @@ MELBAC_FACULTY_SLUGS = [
 
 
 def index(request):
-    """
-    MELBAC public homepage.
-    Pulls the three MELBAC faculties with their programs for the
-    academic overview section, and the 6 most recent blog posts.
-    """
+    """MELBAC public homepage."""
     faculties = (
         Faculty.objects
         .filter(slug__in=MELBAC_FACULTY_SLUGS, is_active=True)
         .prefetch_related('departments__programs')
         .order_by('display_order')
     )
-
     recent_posts = (
         BlogPost.objects
         .filter(status='published')
         .select_related('author')
         .order_by('-publish_date')[:6]
     )
-
     context = {
-        'faculties': faculties,
-        'recent_posts': recent_posts,
+        'faculties':     faculties,
+        'recent_posts':  recent_posts,
     }
     return render(request, 'melbac/index.html', context)
 
 
 def about(request):
-    """MELBAC About page — history, mission, boards."""
-    context = {}
-    return render(request, 'melbac/about.html', context)
+    """MELBAC About page."""
+    return render(request, 'melbac/about.html', {})
 
 
 def academics(request):
-    """
-    Academics overview: all MELBAC faculties → departments → programs.
-    Also renders the Academic Calendar.
-    """
+    """Academics overview — faculties, departments, programs, calendar."""
     faculties = (
         Faculty.objects
         .filter(slug__in=MELBAC_FACULTY_SLUGS, is_active=True)
-        .prefetch_related(
-            'departments',
-            'departments__programs',
-        )
+        .prefetch_related('departments', 'departments__programs')
         .order_by('display_order')
     )
+    return render(request, 'melbac/academics.html', {'faculties': faculties})
 
-    context = {
-        'faculties': faculties,
-    }
-    return render(request, 'melbac/academics.html', context)
+
+def admissions(request):
+    """
+    Admissions page — all degree levels, requirements, programs.
+    No DB query needed; content is static/template-driven.
+    """
+    return render(request, 'melbac/admissions.html', {})
 
 
 def activities(request):
     """Student Activities page."""
-    context = {}
-    return render(request, 'melbac/activities.html', context)
+    return render(request, 'melbac/activities.html', {})
 
 
 def contact(request):
@@ -97,8 +86,7 @@ def contact(request):
         else:
             messages.error(request, 'Please fill in all required fields.')
 
-    context = {}
-    return render(request, 'melbac/contact.html', context)
+    return render(request, 'melbac/contact.html', {})
 
 
 def blog_list(request):
@@ -109,5 +97,49 @@ def blog_list(request):
         .select_related('author')
         .order_by('-publish_date')
     )
-    context = {'posts': posts}
-    return render(request, 'melbac/blog.html', context)
+    return render(request, 'melbac/blog.html', {'posts': posts})
+
+
+def blog_detail(request, slug):
+    """
+    Blog post detail page.
+    Fetches the post by slug, plus prev/next navigation posts
+    and 5 recent posts for the sidebar.
+    """
+    post = get_object_or_404(
+        BlogPost.objects.select_related('author'),
+        slug=slug,
+        status='published',
+    )
+
+    # Previous post (older — lower publish_date)
+    prev_post = (
+        BlogPost.objects
+        .filter(status='published', publish_date__lt=post.publish_date)
+        .order_by('-publish_date')
+        .first()
+    )
+
+    # Next post (newer — higher publish_date)
+    next_post = (
+        BlogPost.objects
+        .filter(status='published', publish_date__gt=post.publish_date)
+        .order_by('publish_date')
+        .first()
+    )
+
+    # Recent posts for sidebar (exclude current)
+    recent_posts = (
+        BlogPost.objects
+        .filter(status='published')
+        .exclude(slug=slug)
+        .order_by('-publish_date')[:5]
+    )
+
+    context = {
+        'post':         post,
+        'prev_post':    prev_post,
+        'next_post':    next_post,
+        'recent_posts': recent_posts,
+    }
+    return render(request, 'melbac/blog_detail.html', context)

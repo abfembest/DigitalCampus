@@ -243,7 +243,7 @@
             </div>
             <div class="rounded-2xl overflow-hidden shadow-2xl h-56 sm:h-72 lg:h-96 mt-2 lg:mt-0">
                 {% if site_config and site_config.promo_video_url %}
-                <iframe class="w-full h-full" src="{{ site_config.promo_video_url }}" title="{{ site_config.school_name|default:'MIU' }} — Official Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+                <div class="w-full h-full [&>iframe]:w-full [&>iframe]:h-full">{{ site_config.promo_video_url|safe }}</div>
                 {% else %}
                 <iframe class="w-full h-full" src="https://www.youtube.com/embed/wzcQ5_XU58I?start=4" title="MIU Global Learning Community — Official Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
                 {% endif %}
@@ -878,7 +878,7 @@ function admTab(btn, panelId) {
         <div class="relative rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl">
             <div class="relative w-full h-72 sm:h-96 sm:h-[500px] lg:h-[600px]">
                 {% if site_config and site_config.campus_map_embed_url %}
-                <iframe src="{{ site_config.campus_map_embed_url }}" class="absolute inset-0 w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="{{ site_config.school_name|default:'MIU' }} Main Campus Location Map" aria-label="Google Map showing campus location"></iframe>
+                <div class="absolute inset-0 w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0">{{ site_config.campus_map_embed_url|safe }}</div>
                 {% else %}
                 <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.177858804427!2d-73.98784468459426!3d40.70555167933205!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a315cdf4c9b%3A0x8b934de5cae6f7a!2sFinancial%20District%2C%20New%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s!4v1648561234567!5m2!1sen!2s" class="absolute inset-0 w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="MIU Main Campus Location Map" aria-label="Google Map showing MIU Main Campus location"></iframe>
                 {% endif %}

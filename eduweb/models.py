@@ -123,10 +123,10 @@ class SiteConfig(models.Model):
     meta_keywords    = models.TextField(blank=True)
 
     # For index.html about section iframe
-    promo_video_url = models.URLField(blank=True, help_text="YouTube embed URL for the about-section iframe on index page")
+    promo_video_url = models.TextField(blank=True, help_text="Paste the full <iframe> embed code from YouTube, Vimeo, etc.")
 
     # For index.html campus map section
-    campus_map_embed_url = models.URLField(blank=True, help_text="Google Maps embed URL")
+    campus_map_embed_url = models.TextField(blank=True, help_text="Paste the full <iframe> embed code from Google Maps")
     campus_map_address = models.CharField(max_length=300, blank=True, help_text="Address shown on the map overlay card")
 
     # For about.html stats — currently data-target values are hardcoded integers

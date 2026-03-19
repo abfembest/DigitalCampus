@@ -7,9 +7,11 @@ All processors listed here must also be registered in settings.py:
         ...
         'OPTIONS': {
             'context_processors': [
-                ...
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'eduweb.context.site_config_context',
                 'eduweb.context.navigation_data',
-                'eduweb.context.site_config_context',   # ← ADD THIS
                 'eduweb.context.student_counts',
                 'eduweb.context.admin_counts',
             ],
@@ -17,6 +19,7 @@ All processors listed here must also be registered in settings.py:
     }]
 """
 
+import logging
 from django.template import Library
 from .models import (
     Faculty, Program, CourseApplication,
@@ -24,15 +27,14 @@ from .models import (
     SiteConfig,
 )
 
+logger = logging.getLogger(__name__)
 register = Library()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. SITE CONFIG  ← NEW / THE KEY FIX
+# 1. SITE CONFIG
 #    Injects `site_config` into EVERY template automatically.
-#    This is what base.html, index.html, about.html, etc. all read from.
-#    Views no longer need to pass 'site' or 'site_config' manually —
-#    although it's safe if they still do (template just uses the same name).
+#    Views no longer need to pass 'site' or 'site_config' manually.
 # ─────────────────────────────────────────────────────────────────────────────
 def site_config_context(request):
     """
@@ -40,16 +42,20 @@ def site_config_context(request):
     Returns a safe fallback object if no SiteConfig row exists yet,
     so templates never crash on {{ site_config.field|default:"..." }}.
     """
-    site = SiteConfig.get()
+    try:
+        site = SiteConfig.get()
+    except Exception:
+        site = None
+
     if site is None:
-        # Return a dummy object so attribute lookups return empty string
-        # instead of raising VariableDoesNotExist
         class _EmptySiteConfig:
+            """Dummy fallback so attribute lookups return '' instead of crashing."""
             def __getattr__(self, name):
                 return ''
             def __bool__(self):
                 return False
         site = _EmptySiteConfig()
+
     return {'site_config': site}
 
 
@@ -57,30 +63,58 @@ def site_config_context(request):
 # 2. NAVIGATION DATA
 #    Injects faculties + programs for the nav dropdowns in base.html,
 #    plus the `has_pending_application` flag for the CTA button logic.
+#
+#    KEY FIXES:
+#    ① Faculty  — NO .only() at all. The Faculty model's related Department
+#      __str__ accesses `faculty.code`, which was deferred by .only(), causing
+#      silent query failures and {{ faculty.name }} rendering literally.
+#      Faculty nav has very few rows so fetching full instances is fine.
+#
+#    ② Program  — NO .only() at all. The Program model has NO `icon` field,
+#      so .only('name','slug','icon',...) made Django return an empty queryset,
+#      producing "No programs available" in the nav dropdown.
+#      NOTE for base.html: since Program has no `icon` field, the
+#      <i data-lucide="{{ course.icon }}"> lines will render blank icons.
+#      Either add an `icon` field to Program in models.py, or replace those
+#      lines in base.html with a static fallback icon e.g. data-lucide="book".
 # ─────────────────────────────────────────────────────────────────────────────
 def navigation_data(request):
     """Inject navigation data into every template via base.html."""
 
-    faculties = Faculty.objects.filter(
-        is_active=True
-    ).only(
-        'name', 'slug', 'icon', 'color_primary', 'display_order'
-    ).order_by('display_order', 'name')
+    # Full model instances — no .only() so all attribute access is safe
+    try:
+        faculties = list(
+            Faculty.objects
+            .filter(is_active=True)
+            .order_by('display_order', 'name')
+        )
+    except Exception:
+        logger.exception('navigation_data: failed to fetch faculties')
+        faculties = []
 
-    # Show first 11 active programs in the nav Programs dropdown
-    courses = (
-        Program.objects
-        .filter(is_active=True)
-        .select_related('department__faculty')
-        .order_by('display_order', 'name')[:11]
-    )
+    # Full model instances — Program has no `icon` field so .only() must never
+    # list it. select_related pulls department + faculty in one query.
+    try:
+        courses = list(
+            Program.objects
+            .filter(is_active=True)
+            .select_related('department__faculty')
+            .order_by('display_order', 'name')[:11]
+        )
+    except Exception:
+        logger.exception('navigation_data: failed to fetch programs')
+        courses = []
 
+    # Pending application check — only for authenticated students
     has_pending_application = False
-    if request.user.is_authenticated and hasattr(request.user, 'profile'):
-        if request.user.profile.role == 'student':
-            has_pending_application = CourseApplication.objects.filter(
-                user=request.user
-            ).exists()
+    try:
+        if request.user.is_authenticated and hasattr(request.user, 'profile'):
+            if request.user.profile.role == 'student':
+                has_pending_application = CourseApplication.objects.filter(
+                    user=request.user
+                ).exists()
+    except Exception:
+        logger.exception('navigation_data: failed to check pending application')
 
     return {
         'all_faculties': faculties,
@@ -94,6 +128,7 @@ def navigation_data(request):
 #    Unread messages + notifications for the student nav bar badges.
 # ─────────────────────────────────────────────────────────────────────────────
 def student_counts(request):
+    """Inject unread message and notification counts for student nav badges."""
     if not request.user.is_authenticated:
         return {}
     if not hasattr(request.user, 'profile'):
@@ -101,17 +136,24 @@ def student_counts(request):
     if request.user.profile.role != 'student':
         return {}
 
-    return {
-        'unread_messages_count': Message.objects.filter(
-            recipient=request.user,
-            is_read=False,
-            parent__isnull=True,
-        ).count(),
-        'unread_notifications_count': Notification.objects.filter(
-            user=request.user,
-            is_read=False,
-        ).count(),
-    }
+    try:
+        return {
+            'unread_messages_count': Message.objects.filter(
+                recipient=request.user,
+                is_read=False,
+                parent__isnull=True,
+            ).count(),
+            'unread_notifications_count': Notification.objects.filter(
+                user=request.user,
+                is_read=False,
+            ).count(),
+        }
+    except Exception:
+        logger.exception('student_counts: failed to fetch counts')
+        return {
+            'unread_messages_count': 0,
+            'unread_notifications_count': 0,
+        }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -127,14 +169,21 @@ def admin_counts(request):
     if request.user.profile.role not in ('admin',) and not request.user.is_staff:
         return {}
 
-    return {
-        'open_tickets_count': SupportTicket.objects.filter(
-            status__in=['open', 'in_progress']
-        ).count(),
-        'unread_contact_count': ContactMessage.objects.filter(
-            is_read=False
-        ).count(),
-    }
+    try:
+        return {
+            'open_tickets_count': SupportTicket.objects.filter(
+                status__in=['open', 'in_progress']
+            ).count(),
+            'unread_contact_count': ContactMessage.objects.filter(
+                is_read=False
+            ).count(),
+        }
+    except Exception:
+        logger.exception('admin_counts: failed to fetch counts')
+        return {
+            'open_tickets_count': 0,
+            'unread_contact_count': 0,
+        }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -143,7 +192,7 @@ def admin_counts(request):
 # ─────────────────────────────────────────────────────────────────────────────
 @register.filter
 def currency_symbol(currency_code):
-    """Return currency symbol for a currency code string."""
+    """Return the currency symbol for a given currency code string."""
     symbols = {
         'USD': '$',
         'GBP': '£',
@@ -155,4 +204,4 @@ def currency_symbol(currency_code):
     }
     if not currency_code:
         return ''
-    return symbols.get(str(currency_code).upper(), currency_code + ' ')
+    return symbols.get(str(currency_code).upper(), str(currency_code) + ' ')

@@ -191,8 +191,7 @@
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item">
                                     <i data-lucide="{{ faculty.icon }}" class="w-5 h-5 text-primary-950"></i>
                                     <span
-                                        class="text-sm font-medium font-['Inter'] group-hover/item:text-primary-950 text-gray-700">{{
-                                        faculty.name }}</span>
+                                        class="text-sm font-medium font-['Inter'] group-hover/item:text-primary-950 text-gray-700">{{ faculty.name }}</span>
                                 </a>
                                 {% empty %}
                                 <p class="text-sm font-['Inter'] text-gray-500 px-4 py-2">No faculties available</p>
@@ -217,10 +216,9 @@
                                 <a href="{% url 'eduweb:program_detail' course.slug %}"
                                     class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600"
                                     role="menuitem">
-                                    <i data-lucide="{{ course.icon }}" class="w-5 h-5 text-accent-600"></i>
+                                    <i data-lucide="{{ course.icon|default:"book-open" }}" class="w-5 h-5 text-accent-600"></i>
                                     <span
-                                        class="text-sm font-medium font-['Inter'] group-hover/item:text-accent-700 text-gray-700">{{
-                                        course.name }}</span>
+                                        class="text-sm font-medium font-['Inter'] group-hover/item:text-accent-700 text-gray-700">{{ course.name }}</span>
                                 </a>
                                 {% empty %}
                                 <p class="text-sm font-['Inter'] text-gray-500 px-4 py-2">No programs available</p>

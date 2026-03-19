@@ -3804,10 +3804,10 @@ def site_config_about(request):
 @user_passes_test(is_admin)
 def site_milestones_list(request):
     from eduweb.models import SiteHistoryMilestone
-    from .forms import SiteHistoryMilestoneForm
     milestones = SiteHistoryMilestone.objects.all().order_by('display_order', 'year')
     return render(request, 'management/site_config/milestones_list.html', {
         'milestones': milestones,
+        'active_count': milestones.filter(is_active=True).count(),
     })
 
 
@@ -3880,6 +3880,7 @@ def testimonials_list(request):
     testimonials = Testimonial.objects.all().order_by('order')
     return render(request, 'management/site_config/testimonials_list.html', {
         'testimonials': testimonials,
+        'active_count': testimonials.filter(is_active=True).count(),
     })
 
 
@@ -3949,6 +3950,10 @@ def institution_members_list(request):
     members = InstitutionMember.objects.all().order_by('member_type', 'display_order')
     return render(request, 'management/site_config/members_list.html', {
         'members': members,
+        'admin_board_count':      members.filter(member_type='admin_board', is_active=True).count(),
+        'academic_board_count':   members.filter(member_type='academic_board', is_active=True).count(),
+        'advisorate_board_count': members.filter(member_type='advisorate_board', is_active=True).count(),
+        'staff_count':            members.filter(member_type='staff', is_active=True).count(),
     })
 
 

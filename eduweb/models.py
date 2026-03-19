@@ -3344,3 +3344,105 @@ class ListOfCountry(models.Model):
 
     def __str__(self):
         return f"{self.country} ({self.country_phonecode})"
+
+
+
+
+import uuid
+from django.db import models
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+class FeePayment(models.Model):
+    """Payment for student required fees"""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ]
+
+    PAYMENT_METHOD_CHOICES = [
+        ('card', 'Credit/Debit Card'),
+        ('paypal', 'PayPal'),
+        ('bank_transfer', 'Bank Transfer'),
+    ]
+
+    # 🔥 KEY DIFFERENCE
+    fee = models.ForeignKey(
+        'AllRequiredPayments',
+        on_delete=models.CASCADE,
+        related_name='payments'
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+        related_name='student_fee_payments'
+    )
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='GBP')
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
+    payment_method = models.CharField(
+        max_length=30,
+        choices=PAYMENT_METHOD_CHOICES,
+        blank=True
+    )
+
+    payment_reference = models.CharField(
+        max_length=100,
+        unique=True,
+        blank=True
+    )
+
+    gateway_payment_id = models.CharField(max_length=255, blank=True)
+
+    card_last4 = models.CharField(max_length=4, blank=True)
+    card_brand = models.CharField(max_length=50, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    payment_metadata = models.JSONField(default=dict, blank=True)
+
+    failure_reason = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Fee Payment'
+        verbose_name_plural = 'Student Fee Payments'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['payment_reference']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.fee.purpose} - {self.status}"
+
+    def save(self, *args, **kwargs):
+        # Generate payment reference
+        if not self.payment_reference:
+            self.payment_reference = f"FEE-{uuid.uuid4().hex[:12].upper()}"
+
+        # Default amount from fee
+        if not self.amount:
+            self.amount = self.fee.amount
+
+        # Set paid timestamp
+        if self.status == 'success' and not self.paid_at:
+            self.paid_at = timezone.now()
+
+        super().save(*args, **kwargs)
+
+        # 🔥 OPTIONAL: mark fee as paid (if you later track per-student payment state)

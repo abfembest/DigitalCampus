@@ -2562,3 +2562,4 @@ def create_study_group(request):
         'page_title': 'Create Study Group',
         'form': form,
     })
+

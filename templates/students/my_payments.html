@@ -281,7 +281,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
 
                         <!-- Action -->
                         <td class="px-6 py-4">
-                            <a href="{% url 'eduweb:payments' %}?student_fee_id={{ item.payment.pk }}"
+                            <a href="{% url 'eduweb:stddebt_by_id' %}?student_fee_id={{ item.payment.pk }}"
                                class="inline-flex items-center gap-1.5 px-4 py-2
                                       bg-primary-600 hover:bg-primary-700
                                       text-white text-xs font-semibold
@@ -473,6 +473,27 @@ View and pay all outstanding university fees assigned to your faculty and depart
     </section>
     {% endif %}
 
+    <!-- Payment Receipt Modal -->
+    <div id="receiptModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-xl w-full max-w-lg p-6 shadow-lg">
+            <h2 class="text-xl font-bold mb-4">Payment Receipt</h2>
+
+            <div id="receiptContent">
+                <!-- JS will populate this dynamically -->
+                <p>Loading receipt...</p>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="printReceiptBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Print
+                </button>
+                <button id="cancelReceiptBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div><!-- /container -->
 
 {% block extra_js %}
@@ -485,15 +506,68 @@ View and pay all outstanding university fees assigned to your faculty and depart
     });
 
     function togglePaid() {
-        const section  = document.getElementById('paidSection');
-        const chevron  = document.getElementById('paidChevron');
-        const btn      = chevron.closest('button');
+        const section = document.getElementById('paidSection');
+        const chevron = document.getElementById('paidChevron');
+        const btn = chevron.closest('button');
         const isHidden = section.classList.contains('hidden');
 
         section.classList.toggle('hidden', !isHidden);
         chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
         btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
     }
+
+
+
+    //Receipt popup
+   document.addEventListener('DOMContentLoaded', function () {
+    // Check if URL has ?payment_id=xxx
+    const urlParams = new URLSearchParams(window.location.search);
+        const paymentId = urlParams.get('payment_id');
+
+        if (paymentId) {
+        // Show receipt modal
+        const modal = document.getElementById('receiptModal');
+        const content = document.getElementById('receiptContent');
+
+        // Fetch payment data from the backend (returns JSON)
+        fetch(`/student/payment_data/${paymentId}/`)  // We'll create this view
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+            content.innerHTML = `<p class="text-red-500">Error loading receipt: ${data.error}</p>`;
+                } else {
+                    // Inject receipt HTML directly
+                    const payment = data.payment;
+        const fee = data.fee;
+        content.innerHTML = `
+        <div class="space-y-2">
+            <p><strong>Fee:</strong> ${fee.name}</p>
+            <p><strong>Amount:</strong> &#8358;${parseFloat(payment.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${payment.currency}</p>
+            <p><strong>Paid At:</strong> ${new Date(payment.paid_at).toLocaleString()}</p>
+            <p><strong>Payment ID:</strong> ${payment.gateway_payment_id}</p>
+        </div>
+        `;
+                }
+
+        modal.classList.remove('hidden');
+            })
+            .catch(err => {
+            content.innerHTML = `<p class="text-red-500">Error loading receipt.</p>`;
+        modal.classList.remove('hidden');
+            });
+
+        // Print button
+        document.getElementById('printReceiptBtn').onclick = () => {
+            window.print();
+        };
+
+        // Cancel button
+        document.getElementById('cancelReceiptBtn').onclick = () => {
+            modal.classList.add('hidden');
+        window.history.replaceState({ }, document.title, "/student/payments/"); // remove ?payment_id
+        };
+    }
+});
 </script>
 {% endblock %}
 {% endblock %}

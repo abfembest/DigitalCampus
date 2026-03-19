@@ -9,8 +9,7 @@ import payment
 
 import payment
 from .forms import ContactForm, CourseApplicationForm
-from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor, ListOfCountry
-from eduweb.models import Faculty, Course, Program, Department, BlogPost, BlogCategory
+from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor, ListOfCountry,AllRequiredPayments,Faculty, Course, FeePayment,Program, Department, BlogPost, BlogCategory
 from django.http import JsonResponse, HttpResponse, Http404
 from django.utils import timezone
 from .decorators import check_for_auth, smart_redirect_applicant
@@ -882,10 +881,7 @@ def admission_letter(request, application_id):
         'applications/admission_letter.html', 
         context
     )
-@login_required
-def payments(request):
-    """payments page"""
-    return render(request, 'payments.html')
+
 
 
 
@@ -906,13 +902,97 @@ logger = logging.getLogger(__name__)
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
+@login_required
+def payments(request):
+    """payments page"""
+    return render(request, 'payments.html')
+
+
+
+########## THIS IS USED TO DISPLAY PAYMENT DETAILS OF ALLOUTSTANDING PAYMENTS########
+
+@login_required
+def stddebt_by_id(request):
+    """payments page"""
+    return render(request, 'students/allpayments/paymentdetails.html')
+
+
+
+
 @require_GET
 @login_required
-def get_payment_summary(request, application_id):
-    """
-    Returns payment summary for an application.
-    ALWAYS returns JSON.
-    """
+def get_payment_summary(request, application_id=None, student_fee_id=None):
+    try:
+        data = {}
+
+        # ===============================
+        # CASE 1: STUDENT FEE
+        # ===============================
+        if student_fee_id:
+            fee = get_object_or_404(
+                AllRequiredPayments.objects.select_related(
+                    "program",
+                    "program__department__faculty"
+                ),
+                id=student_fee_id,
+                is_active=True
+            )
+
+            # You may have a student linked elsewhere — adapt if needed
+            full_name = getattr(request.user, "get_full_name", lambda: "Student")()
+
+            data = {
+                "full_name": full_name,
+                "amount": float(fee.amount),
+                "currency": "USD",
+                "purpose": fee.purpose,   # 🔥 KEY CHANGE
+                "description": fee.purpose,  # replaces "Application Processing Fee"
+                "student_fee_id": fee.id,
+                "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
+            }
+
+        # ===============================
+        # CASE 2: APPLICATION
+        # ===============================
+        elif application_id:
+            application = CourseApplication.objects.select_related(
+                "program", "program__department__faculty"
+            ).get(application_id__iexact=application_id)
+
+            full_name = f"{application.first_name} {application.last_name}"
+
+            data = {
+                "full_name": full_name,
+                "application_id": application.application_id,
+                "amount": float(application.application_fee),
+                "currency": "USD",
+                "description": "Application Processing Fee",
+                "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
+            }
+
+        else:
+            return JsonResponse({
+                "success": False,
+                "error": "No valid identifier provided."
+            })
+
+        return JsonResponse({
+            "success": True,
+            "data": data
+        })
+
+    except CourseApplication.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Application not found."})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+
+"""def get_payment_summary(request, application_id):
+    
+    #Returns payment summary for an application.
+    #ALWAYS returns JSON.
+   
 
     try:
         application_id = application_id.strip()
@@ -952,11 +1032,158 @@ def get_payment_summary(request, application_id):
         return JsonResponse(
             {"success": False, "error": "Unable to load payment summary"},
             status=500
-        )
+        )"""
+
 
 
 @require_POST
 @login_required
+def create_payment_intent(request):
+    try:
+        payload = request.body.decode("utf-8")
+        if not payload:
+            return JsonResponse({"success": False, "error": "Empty request body"}, status=400)
+
+        data = json.loads(payload)
+        application_id = data.get("application_id")
+        student_fee_id = data.get("student_fee_id")
+
+        if not application_id and not student_fee_id:
+            return JsonResponse({"success": False, "error": "Provide application_id or student_fee_id"}, status=400)
+
+        with transaction.atomic():
+
+            # =========================================================
+            # 🔵 STUDENT FEE PAYMENT
+            # =========================================================
+            if student_fee_id:
+                fee = get_object_or_404(AllRequiredPayments, id=student_fee_id, is_active=True)
+                amount_decimal = fee.amount
+                amount_pence = int(amount_decimal * Decimal("100"))
+
+                # Check for existing payment for this user
+                existing_payment = FeePayment.objects.filter(
+                    fee=fee,
+                    user=request.user
+                ).select_for_update().first()
+
+                if existing_payment:
+                    if existing_payment.status == "success":
+                        return JsonResponse({"success": False, "error": "Payment already made"}, status=400)
+                    elif existing_payment.status == "pending":
+                        # return existing PaymentIntent client_secret
+                        intent = stripe.PaymentIntent.retrieve(existing_payment.gateway_payment_id)
+                        return JsonResponse({"success": True, "clientSecret": intent.client_secret})
+
+                # No payment exists, create new PaymentIntent
+                intent = stripe.PaymentIntent.create(
+                    amount=amount_pence,
+                    currency="gbp",
+                    metadata={
+                        "type": "student_fee",
+                        "student_fee_id": str(fee.id),
+                        "purpose": fee.purpose,
+                        "user_id": request.user.id,
+                    },
+                    automatic_payment_methods={"enabled": True},
+                )
+
+                # Save new FeePayment
+                FeePayment.objects.create(
+                    fee=fee,
+                    user=request.user,
+                    gateway_payment_id=intent.id,
+                    amount=amount_decimal,
+                    currency="GBP",
+                    status="pending",
+                    payment_metadata={
+                        "type": "student_fee",
+                        "student_fee_id": str(fee.id),
+                        "purpose": fee.purpose
+                    }
+                )
+
+                return JsonResponse({"success": True, "clientSecret": intent.client_secret})
+
+            # =========================================================
+            # 🟢 APPLICATION PAYMENT
+            # =========================================================
+            if application_id:
+                application = get_object_or_404(CourseApplication, application_id__iexact=application_id, user=request.user)
+                if application.is_paid:
+                    return JsonResponse({"success": False, "error": "Application already paid"}, status=400)
+
+                amount_decimal = application.program.application_fee
+                amount_pence = int(amount_decimal * Decimal("100"))
+
+                # Check for existing payment
+                existing_payment = ApplicationPayment.objects.filter(application=application).select_for_update().first()
+
+                if existing_payment:
+                    if existing_payment.status == "success":
+                        return JsonResponse({"success": False, "error": "Payment already made"}, status=400)
+                    elif existing_payment.status == "pending":
+                        intent = stripe.PaymentIntent.retrieve(existing_payment.gateway_payment_id)
+                        return JsonResponse({"success": True, "clientSecret": intent.client_secret})
+
+                # No payment exists, create new PaymentIntent
+                intent = stripe.PaymentIntent.create(
+                    amount=amount_pence,
+                    currency="gbp",
+                    metadata={
+                        "application_id": application.application_id,
+                        "user_id": request.user.id,
+                    },
+                    automatic_payment_methods={"enabled": True},
+                )
+
+                # Save new ApplicationPayment
+                ApplicationPayment.objects.create(
+                    application=application,
+                    gateway_payment_id=intent.id,
+                    amount=amount_decimal,
+                    currency="GBP",
+                    status="pending",
+                )
+
+                return JsonResponse({"success": True, "clientSecret": intent.client_secret})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+    except stripe.error.StripeError as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception("create_payment_intent failed")
+        return JsonResponse({"success": False, "error": "Unable to create payment"}, status=500)
+
+############################# NEW FEE RECEIPT #############
+
+@login_required
+def payment_data(request, payment_id):
+    try:
+        payment = FeePayment.objects.get(id=payment_id, user=request.user)
+        fee = payment.fee
+    except FeePayment.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Payment not found"})
+
+    return JsonResponse({
+        "success": True,
+        "payment": {
+            "id": payment.id,
+            "amount": float(payment.amount),
+            "currency": payment.currency,
+            "paid_at": payment.paid_at.isoformat(),
+            "gateway_payment_id": payment.gateway_payment_id,
+        },
+        "fee": {
+            "id": fee.id,
+            "name": fee.fee,
+        }
+    })
+
+"""
 def create_payment_intent(request):
 
     try:
@@ -1031,7 +1258,7 @@ def create_payment_intent(request):
     except Exception as e:
         logger.exception("create_payment_intent crash")
         return JsonResponse({"success": False, "error": "Unable to create payment"}, status=500)
-
+    """
 
 
 
@@ -1040,8 +1267,167 @@ def create_payment_intent(request):
 def confirm_payment(request):
     """
     Confirms a payment after Stripe confirmation.
+    Supports BOTH application and student fee payments.
     ALWAYS returns JSON.
     """
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
+
+    payment_intent_id = data.get("payment_intent_id")
+    if not payment_intent_id:
+        return JsonResponse({"success": False, "error": "Missing payment_intent_id"}, status=400)
+
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+    except stripe.error.StripeError as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+    if intent.status != "succeeded":
+        return JsonResponse({"success": False, "error": "Payment not successful"}, status=400)
+
+    metadata = intent.metadata or {}
+    payment_type = metadata.get("type")
+
+    # =========================================================
+    # 🔵 STUDENT FEE PAYMENT
+    # =========================================================
+    if payment_type == "student_fee":
+        student_fee_id = metadata.get("student_fee_id")
+        if not student_fee_id:
+            return JsonResponse({"success": False, "error": "student_fee_id missing in payment intent"}, status=400)
+
+        try:
+            fee = AllRequiredPayments.objects.get(id=student_fee_id)
+        except AllRequiredPayments.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Fee not found"}, status=404)
+
+        with transaction.atomic():
+            payment, created = FeePayment.objects.select_for_update().get_or_create(
+                gateway_payment_id=intent.id,
+                defaults={
+                    "fee": fee,
+                    "user": request.user,
+                    "amount": Decimal(intent.amount) / Decimal(100),
+                    "currency": intent.currency.upper(),
+                    "status": "success",
+                    "paid_at": timezone.now(),
+                    "payment_metadata": metadata
+                }
+            )
+            
+            if not created and payment.status != "success":
+                payment.status = "success"
+                payment.paid_at = timezone.now()
+                payment.save(update_fields=["status", "paid_at"])
+
+        # ✅ Redirect to student fee detail page
+        redirect_url = "/student/payments/"
+        return JsonResponse({
+            "success": True,
+            "payment_id": payment.id,
+            "redirect_url": redirect_url,
+            "fee": fee.id,
+             "show_receipt": True,  
+        })
+
+    # =========================================================
+    # 🟢 APPLICATION PAYMENT
+    # =========================================================
+    application_id = metadata.get("application_id")
+    if not application_id:
+        return JsonResponse({"success": False, "error": "Application ID missing in payment intent"}, status=400)
+
+    try:
+        application = CourseApplication.objects.get(application_id=application_id, user=request.user)
+    except CourseApplication.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Application not found or access denied"}, status=404)
+
+    # Check if payment already exists
+    payment = ApplicationPayment.objects.filter(gateway_payment_id=intent.id).first()
+    if payment:
+        if not payment.paid_at:
+            payment.paid_at = timezone.now()
+            payment.save(update_fields=['paid_at'])
+        if application.status in ['draft', 'pending_payment']:
+            application.status = 'payment_complete'
+            application.payment_status = 'success'
+            application.save(update_fields=['status', 'payment_status'])
+
+        redirect_url = reverse("eduweb:application_status")
+        return JsonResponse({
+            "success": True,
+            "payment_id": payment.id,
+            "redirect_url": redirect_url
+        })
+
+    # Create payment record atomically
+    with transaction.atomic():
+        payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
+            gateway_payment_id=intent.id,
+            defaults={
+                "application": application,
+                "amount": Decimal(intent.amount) / Decimal(100),
+                "currency": intent.currency.upper(),
+                "status": "success",
+                "paid_at": timezone.now(),
+                "payment_metadata": metadata
+            }
+        )
+
+        if not created and payment.status != "success":
+            payment.status = "success"
+            payment.paid_at = timezone.now()
+            payment.save(update_fields=["status", "paid_at"])
+
+        # Update application status
+        application.status = 'payment_complete'
+        application.payment_status = 'success'
+        application.save(update_fields=['status', 'payment_status'])
+
+    redirect_url = reverse("eduweb:application_status")
+    return JsonResponse({
+        "success": True,
+        "payment_id": payment.id,
+        "redirect_url": redirect_url
+    })
+
+
+###FEE PAYMENT RECEIPTS
+
+@login_required
+def payment_data(request, payment_id):
+    """Return JSON data for a specific payment"""
+    try:
+        payment = FeePayment.objects.get(id=payment_id, user=request.user)
+        fee = payment.fee
+    except FeePayment.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Payment not found"})
+
+    return JsonResponse({
+        "success": True,
+        "payment": {
+            "id": payment.id,
+            "amount": float(payment.amount),
+            "currency": payment.currency,
+            "paid_at": payment.paid_at.isoformat(),
+            "gateway_payment_id": payment.gateway_payment_id,
+        },
+        "fee": {
+            "id": fee.id,
+            "name": str(fee),   # ✅ FIX HERE
+        }
+    })
+    
+
+
+"""
+def confirm_payment(request):
+  
+    Confirms a payment after Stripe confirmation.
+    ALWAYS returns JSON.
+   
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -1116,10 +1502,109 @@ def confirm_payment(request):
 
     redirect_url = reverse("eduweb:application_status")
     return JsonResponse({"success": True, "payment_id": payment.id, "redirect_url": redirect_url})
+"""
 
 
 
 @csrf_exempt
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload,
+            sig_header,
+            settings.STRIPE_WEBHOOK_SECRET
+        )
+    except Exception as e:
+        print("Webhook verification failed:", str(e))
+        return HttpResponse(status=400)
+
+    if event["type"] == "payment_intent.succeeded":
+        intent = event["data"]["object"]
+        metadata = intent.get("metadata", {})
+        payment_type = metadata.get("type")
+
+        # =====================================================
+        # 🔵 STUDENT FEE
+        # =====================================================
+        if payment_type == "student_fee":
+            student_fee_id = metadata.get("student_fee_id")
+
+            if not student_fee_id:
+                return HttpResponse(status=200)
+
+            try:
+                fee = AllRequiredPayments.objects.get(id=student_fee_id)
+            except AllRequiredPayments.DoesNotExist:
+                return HttpResponse(status=200)
+
+            with transaction.atomic():
+                payment, created = FeePayment.objects.select_for_update().get_or_create(
+                    gateway_payment_id=intent.id,
+                    defaults={
+                        "fee": fee,
+                        "user_id": metadata.get("user_id"),
+                        "amount": Decimal(intent.amount) / Decimal(100),
+                        "currency": intent.currency.upper(),
+                        "status": "success",
+                        "paid_at": timezone.now(),
+                        "payment_metadata": metadata
+                    }
+                )
+
+                if not created and payment.status == "success":
+                    return HttpResponse(status=200)
+
+                payment.status = "success"
+                payment.paid_at = timezone.now()
+                payment.save()
+
+        # =====================================================
+        # 🟢 APPLICATION
+        # =====================================================
+        elif payment_type == "application":
+            application_id = metadata.get("application_id")
+
+            if not application_id:
+                return HttpResponse(status=200)
+
+            try:
+                application = CourseApplication.objects.get(
+                    application_id=application_id
+                )
+            except CourseApplication.DoesNotExist:
+                return HttpResponse(status=200)
+
+            with transaction.atomic():
+                payment, created = ApplicationPayment.objects.select_for_update().get_or_create(
+                    gateway_payment_id=intent.id,
+                    defaults={
+                        "application": application,
+                        "amount": Decimal(intent.amount) / Decimal(100),
+                        "currency": intent.currency.upper(),
+                        "status": "success",
+                        "paid_at": timezone.now(),
+                        "payment_metadata": metadata
+                    }
+                )
+
+                if not created and payment.status == "success":
+                    return HttpResponse(status=200)
+
+                payment.status = "success"
+                payment.paid_at = timezone.now()
+                payment.save()
+
+                application.status = "payment_complete"
+                application.payment_status = "success"
+                application.save(update_fields=["status", "payment_status"])
+
+    return HttpResponse(status=200)
+
+""""
 def stripe_webhook(request):
 
     payload = request.body
@@ -1173,6 +1658,7 @@ def stripe_webhook(request):
             application.payment_status = "success"
             application.save(update_fields=["status", "payment_status"])
     return HttpResponse(status=200)
+"""
 
 # eduweb/views.py — add this view
 @login_required
@@ -1194,6 +1680,7 @@ def get_student_fee_summary(request, fee_pk):
             'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
         }
     })
+
 
 ###################### APPLICATION SUBMISSION ##############################################
 

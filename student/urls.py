@@ -76,6 +76,7 @@ urlpatterns = [
 
     # ── Payments ─────────────────────────────────────────────────────────────
     path('payments/', views.my_payments, name='my_payments'),
+    
 
     # ── Inbox / Messaging (NEW) ───────────────────────────────────────────────
     path('inbox/', views.inbox, name='inbox'),

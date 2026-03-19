@@ -29,7 +29,9 @@ urlpatterns = [
     path('finance/', include('finance.urls')),
     path('payment/', include('payment.urls')),
     path('chatbot/', include('chatbot.urls')),
+
     path('melbac/', include('melbac.urls')),
+
 ]
 
 # Serve media files during development

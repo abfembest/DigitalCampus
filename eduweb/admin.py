@@ -13,7 +13,7 @@ from .models import (
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
     Review, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
     StaffPayroll, StudyGroup, StudyGroupMember, StudyGroupMessage,
-    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry
+    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry, FeePayment
 )
 
 
@@ -167,6 +167,87 @@ class AcademicSessionAdmin(admin.ModelAdmin):
         }),
     )
 
+
+
+
+@admin.register(FeePayment)
+class FeePaymentAdmin(admin.ModelAdmin):
+    list_display = (
+        "payment_reference",
+        "user",
+        "fee",
+        "amount",
+        "currency",
+        "status",
+        "created_at",
+        "paid_at",
+    )
+
+    list_filter = (
+        "status",
+        "currency",
+        "created_at",
+        "paid_at",
+    )
+
+    search_fields = (
+        "payment_reference",
+        "user__username",
+        "user__email",
+        "fee__purpose",
+        "gateway_payment_id",
+    )
+
+    readonly_fields = (
+        "payment_reference",
+        "gateway_payment_id",
+        "created_at",
+        "updated_at",
+        "paid_at",
+    )
+
+    ordering = ("-created_at",)
+
+    list_select_related = ("user", "fee")
+
+    date_hierarchy = "created_at"
+
+    fieldsets = (
+        ("Payment Info", {
+            "fields": (
+                "payment_reference",
+                "status",
+                "amount",
+                "currency",
+                "payment_method",
+            )
+        }),
+        ("User & Fee", {
+            "fields": (
+                "user",
+                "fee",
+            )
+        }),
+        ("Gateway Details", {
+            "fields": (
+                "gateway_payment_id",
+                "card_last4",
+                "card_brand",
+                "payment_metadata",
+            )
+        }),
+        ("Timestamps", {
+            "fields": (
+                "created_at",
+                "paid_at",
+                "updated_at",
+            )
+        }),
+        ("Failure Info", {
+            "fields": ("failure_reason",),
+            "classes": ("collapse",),
+        }),
+    )
 
 # ==================== ANNOUNCEMENTS ====================
 @admin.register(Announcement)

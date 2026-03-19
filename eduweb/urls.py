@@ -55,10 +55,16 @@ urlpatterns = [
     # --------------------
     path("payments/", views.payments, name="payments"),
 
+
+    ################# STUDENT OUTSTANDING PAYMENT BY ID #########
+    path('stddebt_by_id/', views.stddebt_by_id, name='stddebt_by_id'),
+    path('student/payment_data/<int:payment_id>/', views.payment_data, name='payment_data'),
+
     # --------------------
     # Payment API (AJAX)
     # --------------------
     path("api/payment/summary/<str:application_id>/", views.get_payment_summary, name="get_payment_summary"),
+    path('api/student-fee/summary/<int:student_fee_id>/', views.get_payment_summary),
     path("create-intent/", views.create_payment_intent, name="create_payment_intent"),
     path("application/confirmation", views.confirm_payment, name="confirm_payment"),
 
@@ -89,7 +95,7 @@ urlpatterns = [
     path('test/mark-payment-success/<str:application_id>/', views.mark_payment_successful, name='mark_payment_successful'),
 
     # eduweb/urls.py — add this line alongside the other API paths
-path("api/student-fee/summary/<int:fee_pk>/", views.get_student_fee_summary, name="get_student_fee_summary"),
+    path("api/student-fee/summary/<int:fee_pk>/", views.get_student_fee_summary, name="get_student_fee_summary"),
 
 
 

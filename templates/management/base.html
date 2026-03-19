@@ -410,7 +410,6 @@
                     <!-- ================================================ -->
                     <!-- ADMIN / MANAGEMENT MENU                          -->
                     <!-- ================================================ -->
-
                     <!-- Dashboard -->
                     <a href="{% url 'management:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
@@ -736,10 +735,9 @@
 
                     {% elif request.user.profile.role == 'student' %}
                     <!-- STUDENT/LEARNER MENU -->
-
                     <!-- Dashboard -->
                     <a href="{% url 'students:dashboard' %}"
-                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
+                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3">Dashboard</span>
@@ -757,11 +755,11 @@
                         </button>
                         <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:my_courses' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> Enrolled Courses
                             </a>
                             <a href="{% url 'students:course_catalog' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
                                 <i class="fas fa-search mr-2" aria-hidden="true"></i> Browse Catalog
                             </a>
                         </div>
@@ -778,11 +776,11 @@
                         </button>
                         <div id="tasksMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:assignments' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'assignments' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'assignments' %}bg-white/20{% endif %}">
                                 <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Assignments
                             </a>
                             <a href="{% url 'students:quiz_list' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'quiz_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'quiz_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2" aria-hidden="true"></i> Quizzes
                             </a>
                         </div>
@@ -799,19 +797,19 @@
                         </button>
                         <div id="performanceMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:grades' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'grades' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'grades' %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i> Grades
                             </a>
                             <a href="{% url 'students:progress' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
                                 <i class="fas fa-chart-bar mr-2" aria-hidden="true"></i> Progress
                             </a>
                             <a href="{% url 'students:achievements' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'achievements' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'achievements' %}bg-white/20{% endif %}">
                                 <i class="fas fa-trophy mr-2" aria-hidden="true"></i> Achievements
                             </a>
                             <a href="{% url 'students:certificates' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
                                 <i class="fas fa-certificate mr-2" aria-hidden="true"></i> Certificates
                             </a>
                         </div>
@@ -828,11 +826,11 @@
                         </button>
                         <div id="communityMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:community' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'community' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'community' %}bg-white/20{% endif %}">
                                 <i class="fas fa-comment-dots mr-2" aria-hidden="true"></i> Discussions
                             </a>
                             <a href="{% url 'students:study_groups' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'study-groups' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'study-groups' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-users mr-2" aria-hidden="true"></i> Study Groups
                             </a>
                         </div>
@@ -840,7 +838,7 @@
 
                     <!-- Inbox -->
                     <a href="{% url 'students:inbox' %}"
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'inbox' in request.path %}bg-white/20{% endif %}">
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'inbox' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-inbox w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3">Inbox</span>
@@ -854,7 +852,7 @@
 
                     <!-- Notifications -->
                     <a href="{% url 'students:notifications_view' %}"
-                    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'notifications' in request.path %}bg-white/20{% endif %}">
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'notifications' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-bell w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3">Notifications</span>
@@ -868,7 +866,7 @@
 
                     <!-- Payments -->
                     <a href="{% url 'students:my_payments' %}"
-                    class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payments' in request.path %}bg-white/20{% endif %}">
+                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payments' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-credit-card w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3">Payments</span>
@@ -886,15 +884,15 @@
                         </button>
                         <div id="accountMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:profile' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
                                 <i class="fas fa-user mr-2" aria-hidden="true"></i> My Profile
                             </a>
                             <a href="{% url 'students:settings' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
                                 <i class="fas fa-cog mr-2" aria-hidden="true"></i> Settings
                             </a>
                             <a href="{% url 'students:help_support' %}"
-                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
                                 <i class="fas fa-life-ring mr-2" aria-hidden="true"></i> Help & Support
                             </a>
                         </div>
@@ -1333,7 +1331,7 @@
     </div>
 
     <!-- Chatbot -->
-    <div class="fixed bottom-6 right-6 z-50">
+    <!--<div class="fixed bottom-6 right-6 z-50">
         <button id="chatbotToggle" class="w-14 h-14 rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 hover:shadow-xl transition-all flex items-center justify-center" aria-label="Open chat assistant">
             <i class="fas fa-robot text-2xl" aria-hidden="true"></i>
         </button>
@@ -1374,17 +1372,16 @@
                 </div>
             </div>
         </div>
-    </div>
-
+    </div>-->
     <!-- Base JavaScript -->
     <script>
         (function () {
-            const sidebar     = document.getElementById('sidebar');
+            const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
-            const toggleBtn   = document.getElementById('toggleSidebar');
-            const closeBtn    = document.getElementById('closeSidebar');
+            const toggleBtn = document.getElementById('toggleSidebar');
+            const closeBtn = document.getElementById('closeSidebar');
             const collapseBtn = document.getElementById('collapseSidebar');
-            const overlay     = document.getElementById('sidebarOverlay');
+            const overlay = document.getElementById('sidebarOverlay');
 
             function isMobile() { return window.innerWidth < 768; }
 
@@ -1404,13 +1401,13 @@
                     document.documentElement.removeAttribute('data-sidebar');
                 }
                 setMargin(collapsed);
-                if (save) { try { localStorage.setItem('sidebarCollapsed', String(collapsed)); } catch(e) {} }
+                if (save) { try { localStorage.setItem('sidebarCollapsed', String(collapsed)); } catch (e) { } }
             }
 
             // Restore persisted state on load
             (function init() {
                 let collapsed = false;
-                try { collapsed = localStorage.getItem('sidebarCollapsed') === 'true'; } catch(e) {}
+                try { collapsed = localStorage.getItem('sidebarCollapsed') === 'true'; } catch (e) { }
                 if (!isMobile()) applyCollapsed(collapsed, false);
                 else setMargin(false);
             })();
@@ -1442,10 +1439,10 @@
             // JS-only hover expand — swap sidebar-collapsed ↔ sidebar-hover-expanded
             // so the two classes never coexist (eliminates all CSS specificity conflicts)
             let hoverTimer = null;
-            
+
             sidebar?.addEventListener('mouseenter', () => {
                 if (!sidebar.classList.contains('sidebar-collapsed')) return;
-                
+
                 clearTimeout(hoverTimer);
                 hoverTimer = setTimeout(() => {
                     if (sidebar.classList.contains('sidebar-collapsed')) {
@@ -1455,7 +1452,7 @@
                     }
                 }, 80);
             });
-            
+
             sidebar?.addEventListener('mouseleave', () => {
                 clearTimeout(hoverTimer);
                 if (sidebar.classList.contains('sidebar-hover-expanded')) {
@@ -1463,7 +1460,7 @@
                     sidebar.classList.add('sidebar-collapsed');
                 }
             });
-            
+
             // Prevent mouseleave when clicking links in sidebar
             sidebar?.addEventListener('click', (e) => {
                 if (e.target.closest('a[href]')) {
@@ -1477,16 +1474,16 @@
                 toggle.addEventListener('click', function (e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    const menu  = this.nextElementSibling;
+                    const menu = this.nextElementSibling;
                     const arrow = this.querySelector('.menu-arrow');
-                    if (menu)  menu.classList.toggle('hidden');
+                    if (menu) menu.classList.toggle('hidden');
                     arrow?.classList.toggle('rotate-180');
                 });
             });
 
             // Header dropdowns
             function setupDropdown(btnId, menuId) {
-                const btn  = document.getElementById(btnId);
+                const btn = document.getElementById(btnId);
                 const menu = document.getElementById(menuId);
                 if (!btn || !menu) return;
                 btn.addEventListener('click', (e) => {
@@ -1496,25 +1493,25 @@
                 });
                 menu.addEventListener('click', (e) => e.stopPropagation());
             }
-            setupDropdown('profileDropdown',      'profileMenu');
+            setupDropdown('profileDropdown', 'profileMenu');
             setupDropdown('notificationDropdown', 'notificationMenu');
             document.addEventListener('click', () => {
                 document.querySelectorAll('.dropdown-menu.show').forEach(d => d.classList.remove('show'));
             });
 
             // Chatbot
-            const chatbotToggle = document.getElementById('chatbotToggle');
+           /* const chatbotToggle = document.getElementById('chatbotToggle');
             const chatbotWindow = document.getElementById('chatbotWindow');
-            const chatbotClose  = document.getElementById('chatbotClose');
+            const chatbotClose = document.getElementById('chatbotClose');
             chatbotToggle?.addEventListener('click', (e) => { e.stopPropagation(); chatbotWindow?.classList.toggle('hidden'); });
-            chatbotClose?.addEventListener('click',  ()  => chatbotWindow?.classList.add('hidden'));
+            chatbotClose?.addEventListener('click', () => chatbotWindow?.classList.add('hidden'));
             document.addEventListener('click', (e) => {
                 if (chatbotWindow && !chatbotWindow.classList.contains('hidden') &&
                     !chatbotWindow.contains(e.target) && !chatbotToggle?.contains(e.target)) {
                     chatbotWindow.classList.add('hidden');
                 }
             });
-            chatbotWindow?.addEventListener('click', (e) => e.stopPropagation());
+            chatbotWindow?.addEventListener('click', (e) => e.stopPropagation());*/
         })();
     </script>
 
@@ -1574,7 +1571,7 @@
         }
     </style>
     {% endif %}
-
+    {% include 'chatbot/chatbot.html' %}
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -154,6 +154,15 @@
     }
 </style>
 
+<!-- Pass user authentication data to JavaScript -->
+<script>
+    window.userData = {
+        isAuthenticated: {{ user.is_authenticated|yesno:"true,false" }},
+        firstName: "{{ user.first_name|escapejs }}",
+        email: "{{ user.email|escapejs }}"
+    };
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // ========== ELEMENTS ==========
@@ -411,7 +420,14 @@
                 if (storedSession) {
                     verifySession(storedSession);
                 } else {
-                    showPrechatForm();
+                    // No stored session – if user is authenticated, start one automatically
+                    if (window.userData && window.userData.isAuthenticated) {
+                        // Use the authenticated user's first name and email
+                        startSession(window.userData.firstName, window.userData.email);
+                    } else {
+                        // Otherwise show the pre‑chat form
+                        showPrechatForm();
+                    }
                 }
 
                 // Focus input after a short delay if chat interface is visible

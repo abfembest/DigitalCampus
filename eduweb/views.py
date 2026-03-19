@@ -421,10 +421,30 @@ def auth_page(request):
     
     return render(request, 'auth/auth.html', context)
 
+from django.contrib.auth import logout
+from django.contrib.sessions.models import Session
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.utils import timezone
+
+
 def user_logout(request):
-    """Logout user"""
+    """Logout user and destroy all active sessions"""
+
+    user = request.user
+
+    if user.is_authenticated:
+        # Delete all sessions for this user
+        sessions = Session.objects.filter(expire_date__gte=timezone.now())
+
+        for session in sessions:
+            data = session.get_decoded()
+            if data.get('_auth_user_id') == str(user.id):
+                session.delete()
+
     logout(request)
-    messages.success(request, 'You have been logged out successfully.')
+
+    messages.success(request, 'You have been logged out from all devices.')
     return redirect('eduweb:auth_page')
 
 

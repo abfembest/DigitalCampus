@@ -449,14 +449,18 @@ def resend_verification(request):
 
 @check_for_auth
 def index(request):
-    from .models import Program, Faculty
+    from .models import Program, Faculty, Testimonial
     featured_programs = Program.objects.filter(
         is_active=True, is_featured=True
     ).select_related('department__faculty').order_by('display_order', 'name')[:6]
-    faculties = Faculty.objects.filter(is_active=True).order_by('display_order', 'name')[:6]
+    faculties = Faculty.objects.filter(
+        is_active=True
+    ).prefetch_related('departments').order_by('display_order', 'name')[:6]
+    testimonials = Testimonial.objects.filter(is_active=True).order_by('order')
     return render(request, 'index.html', {
         'featured_programs': featured_programs,
         'faculties': faculties,
+        'testimonials': testimonials,
     })
 
 @check_for_auth

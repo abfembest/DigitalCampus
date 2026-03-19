@@ -2,7 +2,7 @@
 
 {% load static %}
 
-{% block title %}About MIU - Melchisedec International University | Our Story & Mission{% endblock %}
+{% block title %}About {{ site_config.school_short_name|default:"MIU" }} - {{ site_config.school_name|default:"Melchisedec International University" }} | Our Story & Mission{% endblock %}
 {% block content %}
 <!-- ================= HERO SECTION ================= -->
 <section class="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800" id="main-content">
@@ -19,7 +19,12 @@
             </div>
 
             <h1 class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-tight font-['Poppins'] text-white">
-                About Melchisedec International <span class="text-accent-400">University</span>
+                {% with name=site_config.school_name|default:"Melchisedec International University" %}
+                {% with words=name.split %}
+                About
+                {% for word in words %}{% if not forloop.last %}{{ word }} {% endif %}{% endfor %}<span class="text-accent-400">{{ words|last }}</span>
+                {% endwith %}
+                {% endwith %}
             </h1>
 
             <p class="text-xl lg:text-2xl mb-10 text-gray-200 leading-relaxed max-w-3xl font-['Inter']">
@@ -49,7 +54,7 @@
                     <i data-lucide="award" class="w-10 h-10 lg:w-12 lg:h-12 text-primary-600"></i>
                 </div>
                 <div class="text-center">
-                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins'] animated-number" data-target="{{ site_config.stat_years_count|default:30 }}">0</div>
+                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins'] animated-number" data-target="30">0</div>
                     <div class="text-gray-600 font-medium text-sm sm:text-base font-['Inter']">Years of Excellence</div>
                 </div>
             </article>
@@ -59,7 +64,7 @@
                     <i data-lucide="globe" class="w-10 h-10 lg:w-12 lg:h-12 text-primary-600"></i>
                 </div>
                 <div class="text-center">
-                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins'] animated-number" data-target="{{ site_config.stat_countries_count|default:120 }}">0</div>
+                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins'] animated-number" data-target="120">0</div>
                     <div class="text-gray-600 font-medium text-sm sm:text-base font-['Inter']">Countries Represented</div>
                 </div>
             </article>
@@ -70,7 +75,7 @@
                 </div>
                 <div class="text-center">
                     <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins']">
-                        <span class="animated-number" data-target="{{ site_config.stat_employment_rate|default:95 }}">0</span>%
+                        <span class="animated-number" data-target="95">0</span>%
                     </div>
                     <div class="text-gray-600 font-medium text-sm sm:text-base font-['Inter']">Graduate Employment</div>
                 </div>
@@ -82,7 +87,7 @@
                 </div>
                 <div class="text-center">
                     <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins']">
-                        <span class="animated-number" data-target="{{ site_config.stat_programs_count|default:50 }}">0</span>+
+                        <span class="animated-number" data-target="50">0</span>+
                     </div>
                     <div class="text-gray-600 font-medium text-sm sm:text-base font-['Inter']">Academic Programs</div>
                 </div>
@@ -101,7 +106,7 @@
             </div>
             <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Who We Are</h2>
             <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                Melchisedec International University is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence.
+                {{ site_config.school_name|default:"Melchisedec International University" }} is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence.
             </p>
         </div>
 
@@ -128,13 +133,13 @@
 
             <div class="order-1 lg:order-2">
                 <div class="relative rounded-2xl overflow-hidden shadow-2xl aspect-video bg-gray-100">
-                    {% if site_config and site_config.promo_video_url %}
+                    {% if site_config.promo_video_url %}
                     <div class="absolute inset-0 w-full h-full [&>iframe]:w-full [&>iframe]:h-full">{{ site_config.promo_video_url|safe }}</div>
                     {% else %}
                     <iframe
                         class="absolute inset-0 w-full h-full"
                         src="https://www.youtube.com/embed/wzcQ5_XU58I?start=4"
-                        title="MIU Global Learning Community"
+                        title="{{ site_config.school_short_name|default:'MIU' }} Global Learning Community"
                         frameborder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         referrerpolicy="strict-origin-when-cross-origin"
@@ -166,7 +171,7 @@
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Mission</h3>
                 <p class="text-gray-700 leading-relaxed font-['Inter']">
-                    {{ site_config.mission_text|default:"To provide accessible, innovative, and transformative education that empowers individuals from all backgrounds to achieve their full potential and make meaningful contributions to society." }}
+                    To provide accessible, innovative, and transformative education that empowers individuals from all backgrounds to achieve their full potential and make meaningful contributions to society.
                 </p>
             </article>
 
@@ -176,7 +181,7 @@
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Vision</h3>
                 <p class="text-gray-700 leading-relaxed font-['Inter']">
-                    {{ site_config.vision_text|default:"To be a globally recognized leader in higher education, known for innovation, inclusivity, and preparing future-ready graduates who drive positive change worldwide." }}
+                    To be a globally recognized leader in higher education, known for innovation, inclusivity, and preparing future-ready graduates who drive positive change worldwide.
                 </p>
             </article>
 
@@ -186,14 +191,6 @@
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Values</h3>
                 <ul class="space-y-3">
-                    {% if site_config and site_config.core_values_text %}
-                        {% for value in site_config.core_values_text %}
-                        <li class="flex items-start gap-3">
-                            <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
-                            <span class="text-gray-700 font-['Inter']">{{ value }}</span>
-                        </li>
-                        {% endfor %}
-                    {% else %}
                     <li class="flex items-start gap-3">
                         <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
                         <span class="text-gray-700 font-['Inter']">Excellence in Education</span>
@@ -210,7 +207,6 @@
                         <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
                         <span class="text-gray-700 font-['Inter']">Global Citizenship</span>
                     </li>
-                    {% endif %}
                 </ul>
             </article>
         </div>
@@ -227,7 +223,7 @@
             </div>
             <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Our History</h2>
             <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                From our founding in 1995 to becoming a global education leader, discover MIU's journey of innovation and growth.
+                From our founding to becoming a global education leader, discover {{ site_config.school_short_name|default:"MIU" }}'s journey of innovation and growth.
             </p>
         </div>
 
@@ -261,7 +257,7 @@
                     <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-600 rounded-full group-hover:scale-125 transition-transform"></div>
                     <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-xl">
                         <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">2020 - Innovation Hub</h3>
-                        <p class="text-gray-700 leading-relaxed font-['Inter']">Opening of the MIU Innovation Center, fostering research and entrepreneurship.</p>
+                        <p class="text-gray-700 leading-relaxed font-['Inter']">Opening of the {{ site_config.school_short_name|default:"MIU" }} Innovation Center, fostering research and entrepreneurship.</p>
                     </div>
                 </article>
 
@@ -375,7 +371,7 @@
                             <i data-lucide="globe" class="w-6 h-6 text-white"></i>
                         </div>
                         <div>
-                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">{{ site_config.stat_countries_label|default:"120+" }}</div>
+                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">120+</div>
                             <div class="text-sm text-gray-600 font-['Inter']">Countries</div>
                         </div>
                     </div>
@@ -384,7 +380,7 @@
                             <i data-lucide="building" class="w-6 h-6 text-white"></i>
                         </div>
                         <div>
-                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">{{ site_config.about_partner_institutions|default:"200+" }}</div>
+                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">200+</div>
                             <div class="text-sm text-gray-600 font-['Inter']">Partner Institutions</div>
                         </div>
                     </div>
@@ -393,7 +389,7 @@
                             <i data-lucide="plane" class="w-6 h-6 text-white"></i>
                         </div>
                         <div>
-                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">{{ site_config.about_exchange_programs|default:"40+" }}</div>
+                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">40+</div>
                             <div class="text-sm text-gray-600 font-['Inter']">Exchange Programs</div>
                         </div>
                     </div>
@@ -402,7 +398,7 @@
                             <i data-lucide="languages" class="w-6 h-6 text-white"></i>
                         </div>
                         <div>
-                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">{{ site_config.about_languages_spoken|default:"15+" }}</div>
+                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">15+</div>
                             <div class="text-sm text-gray-600 font-['Inter']">Languages Spoken</div>
                         </div>
                     </div>
@@ -439,22 +435,14 @@
                 </div>
                 <div class="p-6 text-center">
                     <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">{{ member.name }}</h3>
-                    <p class="text-primary-600 font-semibold mb-3 font-['Inter']">{{ member.title }}</p>
+                    <p class="text-primary-600 font-semibold mb-3 font-['Inter']">{{ member.role }}</p>
                     {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
                 </div>
             </article>
             {% empty %}
-            {# Fallback to static cards if no board members in DB yet #}
-            <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
-                <div class="h-64 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center relative overflow-hidden">
-                    <div class="absolute inset-0 bg-black/10"></div>
-                    <i data-lucide="user-circle" class="w-24 h-24 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
-                </div>
-                <div class="p-6 text-center">
-                    <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">Leadership Team</h3>
-                    <p class="text-primary-600 font-semibold mb-3 font-['Inter']">Coming Soon</p>
-                    <p class="text-gray-600 text-sm leading-relaxed font-['Inter']">Our leadership profiles will be available shortly.</p>
-                </div>
+            <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden col-span-full text-center p-8">
+                <i data-lucide="users" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                <p class="text-gray-400 font-['Inter']">Leadership profiles coming soon.</p>
             </article>
             {% endfor %}
         </div>
@@ -488,7 +476,7 @@
                     <i data-lucide="shield-check" class="w-8 h-8 text-blue-600"></i>
                 </div>
                 <h3 class="font-bold text-lg lg:text-xl mb-2 text-primary-950 font-['Poppins']">Regional Accreditation</h3>
-                <p class="text-gray-600 text-sm font-['Inter']">{{ site_config.accreditation_1|default:"Accredited by the Higher Learning Commission (HLC)" }}</p>
+                <p class="text-gray-600 text-sm font-['Inter']">Accredited by the Higher Learning Commission (HLC)</p>
             </article>
 
             <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 p-6 text-center border border-gray-100">
@@ -496,7 +484,7 @@
                     <i data-lucide="star" class="w-8 h-8 text-green-600"></i>
                 </div>
                 <h3 class="font-bold text-lg lg:text-xl mb-2 text-primary-950 font-['Poppins']">Global Rankings</h3>
-                <p class="text-gray-600 text-sm font-['Inter']">{{ site_config.accreditation_2|default:"Top 200 in World University Rankings (Times Higher Education)" }}</p>
+                <p class="text-gray-600 text-sm font-['Inter']">Top 200 in World University Rankings (Times Higher Education)</p>
             </article>
 
             <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 p-6 text-center border border-gray-100">
@@ -585,12 +573,50 @@
             </article>
         </div>
 
+        {% if site_config.virtual_tour_url %}
         <div class="text-center">
-            <a href="#" class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all font-['Inter']">
+            <button onclick="document.getElementById('tourModal').classList.remove('hidden')"
+                    class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all font-['Inter']">
                 <i data-lucide="video" class="w-5 h-5"></i>
                 Take Virtual Campus Tour
-            </a>
+            </button>
         </div>
+
+        <!-- Virtual Tour Modal -->
+        <div id="tourModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Virtual Campus Tour">
+            <div class="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden shadow-2xl">
+                <!-- Close button -->
+                <button onclick="closeTourModal()"
+                        class="absolute top-3 right-3 z-10 w-10 h-10 bg-white/10 hover:bg-white/25 rounded-full flex items-center justify-center text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                        aria-label="Close virtual tour">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+                <!-- Video embed -->
+                <div class="aspect-video w-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0">
+                    {{ site_config.virtual_tour_url|safe }}
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function closeTourModal() {
+            document.getElementById('tourModal').classList.add('hidden');
+            // Stop video by replacing the embed (removes autoplay src)
+            const container = document.querySelector('#tourModal .aspect-video');
+            const html = container.innerHTML;
+            container.innerHTML = '';
+            setTimeout(() => { container.innerHTML = html; }, 100);
+        }
+        // Close on backdrop click
+        document.getElementById('tourModal').addEventListener('click', function(e) {
+            if (e.target === this) closeTourModal();
+        });
+        // Close on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeTourModal();
+        });
+        </script>
+        {% endif %}
     </div>
 </section>
 
@@ -691,10 +717,10 @@
 <section class="py-20 lg:py-28 bg-gray-50">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 font-['Poppins'] text-primary-950">
-            Ready to Start Your Journey with MIU?
+            Ready to Start Your Journey with {{ site_config.school_short_name|default:"MIU" }}?
         </h2>
         <p class="text-xl lg:text-2xl mb-10 text-gray-600 max-w-3xl mx-auto leading-relaxed font-['Inter']">
-            Join our global community of learners and innovators. Your future starts here.
+            {{ site_config.footer_tagline|default:"Join our global community of learners and innovators. Your future starts here." }}
         </p>
         <div class="flex flex-col sm:flex-row justify-center gap-4 lg:gap-6">
             <a href="{% url 'eduweb:apply' %}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 lg:px-10 lg:py-5 rounded-xl font-bold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all font-['Inter']">

@@ -1,172 +1,180 @@
+from django import forms
 from django.contrib import admin
 from django.utils import timezone
+from django.utils.html import format_html
 from .models import (
-    SiteConfig, InstitutionMember, AcademicSession,
     Announcement, Assignment, AssignmentSubmission, AuditLog,
     Badge, StudentBadge, BlogCategory, BlogPost,
     Certificate, ContactMessage,
     Course, CourseIntake, CourseApplication, ApplicationDocument, ApplicationPayment,
     CourseCategory, Discussion, DiscussionReply,
     Department, Program, AllRequiredPayments,
-    Enrollment, Faculty, Invoice, Lesson, LessonSection, LessonProgress,
+    AcademicSession,
+    Enrollment, Faculty, InstitutionMember, Invoice, Lesson, LessonSection, LessonProgress,
     LMSCourse, Message, Notification,
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
-    Review, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
+    Review, SiteConfig, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
     StaffPayroll, StudyGroup, StudyGroupMember, StudyGroupMessage,
-    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry, FeePayment
+    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry, Testimonial, FeePayment
 )
 
 
 # ==================== SITE CONFIGURATION ====================
+
+class EmbedCodeWidget(forms.Textarea):
+    """Safe widget for raw HTML/iframe fields."""
+    def __init__(self, safe_help_text='', *args, **kwargs):
+        kwargs.setdefault('attrs', {})
+        kwargs['attrs'].update({
+            'rows': 6,
+            'style': 'font-family: monospace; font-size: 12px; width: 100%;',
+        })
+        self.safe_help_text = safe_help_text
+        super().__init__(*args, **kwargs)
+
+    def format_value(self, value):
+        return value or ''
+
+
+class SiteConfigForm(forms.ModelForm):
+    promo_video_url = forms.CharField(
+        required=False,
+        label='Promo video embed code',
+        help_text='Paste the full iframe embed code from YouTube or Vimeo.',
+        widget=EmbedCodeWidget(),
+    )
+    campus_map_embed_url = forms.CharField(
+        required=False,
+        label='Campus map embed code',
+        help_text='Paste the full iframe embed code from Google Maps.',
+        widget=EmbedCodeWidget(),
+    )
+    virtual_tour_url = forms.CharField(
+        required=False,
+        label='Virtual tour embed code',
+        help_text='Paste the full iframe embed code for the virtual campus tour.',
+        widget=EmbedCodeWidget(),
+    )
+
+    class Meta:
+        model  = SiteConfig
+        fields = '__all__'
+
+
 @admin.register(SiteConfig)
 class SiteConfigAdmin(admin.ModelAdmin):
-    """
-    Singleton admin — only one SiteConfig row should ever exist.
-    Creating this row is THE fix for all template VariableDoesNotExist errors.
-    """
+    form = SiteConfigForm
+    list_display = ('school_name', 'school_short_name', 'email', 'phone_primary')
+
     fieldsets = (
-        ('School Identity', {
+        ('🏫 Identity', {
             'fields': (
                 'school_name', 'school_short_name', 'tagline',
                 'logo', 'logo_dark', 'favicon', 'og_image',
+                'theme_color',
             )
         }),
-        ('Contact Details', {
+        ('📞 Contact — Footer Bar', {
+            'description': 'These appear in the footer and base nav bar.',
             'fields': (
-                'email',
-                'phone_primary', 'phone_secondary',
-                'phone_ng_primary', 'phone_ng_secondary',
-                'whatsapp',
+                'email', 'phone_primary', 'phone_secondary',
+                'phone_ng_primary', 'phone_ng_secondary', 'whatsapp',
             )
         }),
-        ('Addresses', {
+        ('📧 Contact Page — Emails', {
+            'description': 'Labelled department emails shown on the Contact page.',
+            'fields': (
+                'email_admissions', 'email_info', 'email_international',
+            )
+        }),
+        ('📱 Contact Page — Phone Lines', {
+            'description': 'Labelled phone lines shown on the Contact page.',
+            'fields': (
+                'phone_admissions', 'phone_general', 'phone_international',
+            )
+        }),
+        ('🕐 Office Hours', {
+            'description': 'Shown on the Contact page office hours card.',
+            'fields': (
+                'office_hours_weekday', 'office_hours_saturday', 'office_hours_sunday',
+            )
+        }),
+        ('📍 Addresses', {
             'fields': ('address_usa', 'address_nigeria'),
         }),
-        ('Office Hours', {
-            'fields': ('office_hours_weekday', 'office_hours_saturday'),
-        }),
-        ('Social Media', {
+        ('📱 Social Media', {
             'fields': ('facebook', 'instagram', 'youtube', 'twitter', 'tiktok', 'linkedin'),
+        }),
+        ('🎬 Embed Codes', {
+            'description': (
+                'Paste raw iframe embed codes here. '
+                'They are stored as plain text and will NOT render inside this form.'
+            ),
+            'fields': (
+                'promo_video_url',
+                'campus_map_embed_url', 'campus_map_address',
+                'virtual_tour_url',
+            ),
+        }),
+        ('🖼 Hero Slides', {
+            'description': (
+                'Upload up to 3 hero background slides. '
+                'Each slide can be an image OR a video — if both are set, video takes priority. '
+                'Leave all blank to use the default static images.'
+            ),
+            'fields': (
+                'hero_slide_1_image', 'hero_slide_1_video',
+                'hero_slide_1_alt', 'hero_slide_1_duration',
+                'hero_slide_2_image', 'hero_slide_2_video',
+                'hero_slide_2_alt', 'hero_slide_2_duration',
+                'hero_slide_3_image', 'hero_slide_3_video',
+                'hero_slide_3_alt', 'hero_slide_3_duration',
+            ),
             'classes': ('collapse',),
         }),
-        ('Hero Section — Index Page', {
-            'fields': (
-                'hero_badge_text', 'hero_tagline',
-                'hero_heading', 'hero_subheading',
-            ),
-        }),
-        ('Hero Stat Cards — Index Page', {
-            'description': 'Values shown on the 4 stat cards in the index hero.',
-            'fields': (
-                'stat_students', 'stat_countries_label',
-                'stat_employment_label', 'stat_programs_label',
-            ),
-        }),
-        ('Index About Section', {
-            'fields': ('index_about_para_1', 'index_about_para_2'),
-        }),
-        ('Index Map and Promo Video', {
-            'fields': ('promo_video_url', 'campus_map_embed_url', 'campus_map_address'),
-            'classes': ('collapse',),
-        }),
-        ('About Page — Mission / Vision / Values', {
-            'fields': (
-                'about_intro_1', 'about_intro_2',
-                'mission_text', 'vision_text', 'core_values_text',
-            ),
-        }),
-        ('About Page — Animated Counters', {
-            'description': 'Integer values used by the animated counter on the About page.',
-            'fields': (
-                'stat_years_count', 'stat_countries_count',
-                'stat_employment_rate', 'stat_programs_count',
-            ),
-        }),
-        ('About Page — International Stats', {
-            'fields': (
-                'about_years_founded', 'about_partner_institutions',
-                'about_exchange_programs', 'about_languages_spoken',
-            ),
-        }),
-        ('Accreditation', {
-            'fields': (
-                'accreditation_1', 'accreditation_2',
-                'accreditation_3', 'accreditation_4',
-            ),
-        }),
-        ('Footer', {
+        ('🦶 Footer & Copyright', {
             'fields': ('footer_tagline', 'copyright_year'),
         }),
-        ('SEO', {
+        ('🔍 SEO', {
             'fields': ('meta_description', 'meta_keywords'),
-            'classes': ('collapse',),
-        }),
-        ('Legacy Hero Stats', {
-            'description': 'Older stat fields kept for backward compatibility.',
-            'fields': ('stat_years', 'stat_faculties', 'stat_campuses', 'stat_tuition'),
-            'classes': ('collapse',),
         }),
     )
 
     def has_add_permission(self, request):
-        """Singleton: prevent creating a second row."""
         return not SiteConfig.objects.exists()
 
     def has_delete_permission(self, request, obj=None):
-        """Prevent deleting the only config row."""
         return False
 
+    def changelist_view(self, request, extra_context=None):
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        app = SiteConfig._meta.app_label
+        obj = SiteConfig.objects.first()
+        if obj:
+            return HttpResponseRedirect(
+                reverse(f'admin:{app}_siteconfig_change', args=[obj.pk])
+            )
+        return HttpResponseRedirect(
+            reverse(f'admin:{app}_siteconfig_add')
+        )
 
-# ==================== INSTITUTION MEMBERS ====================
-@admin.register(InstitutionMember)
-class InstitutionMemberAdmin(admin.ModelAdmin):
-    list_display = ('name', 'role', 'member_type', 'display_order', 'is_active')
-    list_filter = ('member_type', 'is_active')
-    search_fields = ('name', 'role', 'bio')
-    list_editable = ('display_order', 'is_active')
+# ==================== TESTIMONIALS ====================
+@admin.register(Testimonial)
+class TestimonialAdmin(admin.ModelAdmin):
+    list_display  = ('author_name', 'author_role', 'is_active', 'order')
+    list_filter   = ('is_active',)
+    search_fields = ('author_name', 'author_role', 'quote')
+    list_editable = ('is_active', 'order')
 
     fieldsets = (
-        ('Identity', {
-            'fields': ('member_type', 'name', 'role', 'photo'),
-        }),
-        ('Bio', {
-            'fields': ('bio',),
+        ('Testimonial', {
+            'fields': ('quote', 'author_name', 'author_role', 'avatar')
         }),
         ('Display', {
-            'fields': ('display_order', 'is_active'),
+            'fields': ('is_active', 'order')
         }),
     )
-
-
-# ==================== ACADEMIC SESSIONS ====================
-@admin.register(AcademicSession)
-class AcademicSessionAdmin(admin.ModelAdmin):
-    list_display = ('name', 'status', 'is_current', 'first_semester_start', 'first_semester_end', 'second_semester_start', 'second_semester_end')
-    list_filter = ('status', 'is_current')
-    search_fields = ('name',)
-    list_editable = ('is_current', 'status')
-    readonly_fields = ('created_at', 'updated_at')
-
-    fieldsets = (
-        ('Session Identity', {
-            'fields': ('name', 'status', 'is_current'),
-        }),
-        ('Semester 1', {
-            'fields': ('first_semester_start', 'first_semester_end'),
-        }),
-        ('Semester 2', {
-            'fields': ('second_semester_start', 'second_semester_end'),
-        }),
-        ('Registration Window', {
-            'fields': ('registration_start', 'registration_end'),
-            'classes': ('collapse',),
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',),
-        }),
-    )
-
 
 
 
@@ -258,7 +266,7 @@ class AnnouncementAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title',)}
     readonly_fields = ('created_at', 'updated_at')
     date_hierarchy = 'publish_date'
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('title', 'slug', 'content', 'announcement_type', 'priority')
@@ -285,7 +293,7 @@ class AssignmentAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')
     list_editable = ('is_active', 'display_order')
     date_hierarchy = 'due_date'
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('lesson', 'title', 'slug', 'description', 'instructions')
@@ -315,7 +323,7 @@ class AssignmentSubmissionAdmin(admin.ModelAdmin):
     list_filter = ('status', 'is_late', 'submitted_at')
     search_fields = ('student__username', 'assignment__title')
     readonly_fields = ('submitted_at', 'graded_at', 'created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Submission', {
             'fields': ('assignment', 'student', 'submission_text', 'attachment')
@@ -339,12 +347,33 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_display = ('user', 'action', 'model_name', 'object_id', 'ip_address', 'timestamp')
     list_filter = ('action', 'model_name', 'timestamp')
     search_fields = ('user__username', 'model_name', 'description')
-    readonly_fields = ('user', 'action', 'model_name', 'object_id', 'description', 'ip_address', 'user_agent', 'extra_data', 'timestamp')
+    readonly_fields = (
+        'user', 'action', 'model_name', 'object_id',
+        'description', 'ip_address', 'user_agent', 'extra_data', 'timestamp'
+    )
     date_hierarchy = 'timestamp'
-    
+
+    fieldsets = (
+        ('Event', {
+            'fields': ('user', 'action', 'model_name', 'object_id', 'description')
+        }),
+        ('Request Info', {
+            'fields': ('ip_address', 'user_agent'),
+            'classes': ('collapse',)
+        }),
+        ('Extra Data', {
+            'fields': ('extra_data',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamp', {
+            'fields': ('timestamp',),
+            'classes': ('collapse',)
+        }),
+    )
+
     def has_add_permission(self, request):
         return False
-    
+
     def has_change_permission(self, request, obj=None):
         return False
 
@@ -357,7 +386,7 @@ class BadgeAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created_at',)
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'description', 'icon', 'color')
@@ -381,7 +410,7 @@ class StudentBadgeAdmin(admin.ModelAdmin):
     list_filter = ('badge', 'awarded_at')
     search_fields = ('student__username', 'badge__name')
     readonly_fields = ('awarded_at',)
-    
+
     fieldsets = (
         ('Badge Award', {
             'fields': ('student', 'badge', 'awarded_by', 'reason')
@@ -400,7 +429,7 @@ class BlogCategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description')
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ('display_order', 'is_active')
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'description')
@@ -409,7 +438,7 @@ class BlogCategoryAdmin(admin.ModelAdmin):
             'fields': ('icon', 'color', 'display_order', 'is_active')
         }),
     )
-    
+
     def get_post_count(self, obj):
         return obj.get_post_count()
     get_post_count.short_description = 'Published Posts'
@@ -418,11 +447,11 @@ class BlogCategoryAdmin(admin.ModelAdmin):
 @admin.register(BlogPost)
 class BlogPostAdmin(admin.ModelAdmin):
     list_display = (
-        'title', 'author_name', 'category', 'status', 
+        'title', 'author_name', 'category', 'status',
         'is_featured', 'views_count', 'publish_date', 'created_at'
     )
     list_filter = (
-        'status', 'is_featured', 'category', 
+        'status', 'is_featured', 'category',
         'publish_date', 'created_at'
     )
     search_fields = ('title', 'subtitle', 'content', 'author_name')
@@ -430,7 +459,7 @@ class BlogPostAdmin(admin.ModelAdmin):
     list_editable = ('status', 'is_featured')
     readonly_fields = ('created_at', 'updated_at', 'views_count')
     date_hierarchy = 'publish_date'
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('title', 'slug', 'subtitle', 'category')
@@ -439,7 +468,7 @@ class BlogPostAdmin(admin.ModelAdmin):
             'fields': ('excerpt', 'content')
         }),
         ('Author Information', {
-            'fields': ('author', 'author_name', 'author_title')
+            'fields': ('author', 'author_name', 'author_title', 'author_photo', 'author_bio')
         }),
         ('Media', {
             'fields': ('featured_image', 'featured_image_alt'),
@@ -465,19 +494,19 @@ class BlogPostAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-    
+
     actions = ['publish_posts', 'unpublish_posts', 'feature_posts']
-    
+
     def publish_posts(self, request, queryset):
         updated = queryset.update(status='published', publish_date=timezone.now())
         self.message_user(request, f'{updated} post(s) published.')
     publish_posts.short_description = "Publish selected posts"
-    
+
     def unpublish_posts(self, request, queryset):
         updated = queryset.update(status='draft')
         self.message_user(request, f'{updated} post(s) unpublished.')
     unpublish_posts.short_description = "Unpublish selected posts"
-    
+
     def feature_posts(self, request, queryset):
         updated = queryset.update(is_featured=True)
         self.message_user(request, f'{updated} post(s) featured.')
@@ -487,11 +516,11 @@ class BlogPostAdmin(admin.ModelAdmin):
 # ==================== CERTIFICATES ====================
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
-    list_display = ('certificate_id', 'student', 'course', 'issued_date', 'completion_date', 'is_verified')
+    list_display = ('certificate_id', 'student', 'course', 'issued_date', 'completion_date', 'grade', 'is_verified')
     list_filter = ('is_verified', 'issued_date')
     search_fields = ('certificate_id', 'student__username', 'course__title')
-    readonly_fields = ('certificate_id', 'verification_code', 'created_at')
-    
+    readonly_fields = ('certificate_id', 'verification_code', 'issued_date', 'created_at')
+
     fieldsets = (
         ('Certificate Information', {
             'fields': ('student', 'course', 'certificate_id', 'verification_code')
@@ -503,7 +532,8 @@ class CertificateAdmin(admin.ModelAdmin):
             'fields': ('certificate_file',)
         }),
         ('Timestamp', {
-            'fields': ('created_at',)
+            'fields': ('created_at',),
+            'classes': ('collapse',)
         }),
     )
 
@@ -517,10 +547,10 @@ class ContactMessageAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'responded_at')
     list_editable = ('is_read', 'responded')
     date_hierarchy = 'created_at'
-    
+
     fieldsets = (
         ('Contact Information', {
-            'fields': ('name', 'email', 'subject')
+            'fields': ('user', 'name', 'email', 'subject')
         }),
         ('Message', {
             'fields': ('message',)
@@ -531,7 +561,7 @@ class ContactMessageAdmin(admin.ModelAdmin):
     )
 
 
-# ==================== COURSE APPLICATION SYSTEM ====================
+# ==================== ACADEMIC STRUCTURE ====================
 @admin.register(Faculty)
 class FacultyAdmin(admin.ModelAdmin):
     list_display = ('name', 'code', 'student_count', 'is_active', 'display_order', 'created_at')
@@ -540,7 +570,7 @@ class FacultyAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ('is_active', 'display_order')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'code', 'is_active', 'display_order')
@@ -550,6 +580,10 @@ class FacultyAdmin(admin.ModelAdmin):
         }),
         ('Content', {
             'fields': ('description', 'mission', 'vision')
+        }),
+        ('Dean Information', {
+            'fields': ('dean_name', 'dean_role', 'dean_faculty_label', 'dean_photo'),
+            'classes': ('collapse',)
         }),
         ('Media', {
             'fields': ('hero_image', 'about_image'),
@@ -564,6 +598,127 @@ class FacultyAdmin(admin.ModelAdmin):
         }),
         ('SEO', {
             'fields': ('meta_description', 'meta_keywords'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(InstitutionMember)
+class InstitutionMemberAdmin(admin.ModelAdmin):
+    list_display = ('name', 'role', 'member_type', 'display_order', 'is_active')
+    list_filter = ('member_type', 'is_active')
+    search_fields = ('name', 'role', 'bio')
+    list_editable = ('display_order', 'is_active')
+
+    fieldsets = (
+        ('Member Information', {
+            'fields': ('member_type', 'name', 'role', 'photo', 'bio')
+        }),
+        ('Display', {
+            'fields': ('display_order', 'is_active')
+        }),
+    )
+
+
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'faculty', 'is_active', 'display_order', 'created_at')
+    list_filter = ('faculty', 'is_active', 'created_at')
+    search_fields = ('name', 'code', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('is_active', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'code', 'faculty', 'is_active', 'display_order')
+        }),
+        ('Content', {
+            'fields': ('description',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Program)
+class ProgramAdmin(admin.ModelAdmin):
+    list_display = (
+        'name', 'code', 'department', 'degree_level', 'duration_years',
+        'application_fee', 'tuition_fee', 'is_active', 'is_featured', 'display_order'
+    )
+    list_filter = ('department__faculty', 'department', 'degree_level', 'is_active', 'is_featured')
+    search_fields = ('name', 'code', 'description', 'tagline')
+    prepopulated_fields = {'slug': ('name',)}
+    list_editable = ('is_active', 'is_featured', 'display_order')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'code', 'department', 'degree_level', 'is_active', 'is_featured', 'display_order')
+        }),
+        ('Program Details', {
+            'fields': ('duration_years', 'credits_required', 'max_students', 'available_study_modes')
+        }),
+        ('Marketing Content', {
+            'fields': ('tagline', 'overview', 'description')
+        }),
+        ('Financial Information', {
+            'fields': ('application_fee', 'tuition_fee')
+        }),
+        ('Curriculum', {
+            'fields': ('entry_requirements', 'core_courses', 'specialization_tracks'),
+            'classes': ('collapse',)
+        }),
+        ('Outcomes & Career', {
+            'fields': ('learning_outcomes', 'career_paths', 'avg_starting_salary', 'job_placement_rate'),
+            'classes': ('collapse',)
+        }),
+        ('Media', {
+            'fields': ('hero_image',),
+            'classes': ('collapse',)
+        }),
+        ('SEO', {
+            'fields': ('meta_description', 'meta_keywords'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(AcademicSession)
+class AcademicSessionAdmin(admin.ModelAdmin):
+    list_display = (
+        'name', 'status', 'is_current',
+        'first_semester_start', 'first_semester_end',
+        'second_semester_start', 'second_semester_end',
+    )
+    list_filter = ('status', 'is_current')
+    search_fields = ('name',)
+    list_editable = ('status', 'is_current')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('name', 'status', 'is_current')
+        }),
+        ('First Semester', {
+            'fields': ('first_semester_start', 'first_semester_end')
+        }),
+        ('Second Semester', {
+            'fields': ('second_semester_start', 'second_semester_end')
+        }),
+        ('Registration Window', {
+            'fields': ('registration_start', 'registration_end'),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
@@ -622,17 +777,54 @@ class CourseAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(AllRequiredPayments)
+class AllRequiredPaymentsAdmin(admin.ModelAdmin):
+    list_display = (
+        'purpose', 'program', 'course',
+        'amount', 'who_to_pay', 'semester', 'academic_session', 'is_active', 'due_date'
+    )
+    list_filter = (
+        'program__department__faculty',
+        'program__department',
+        'program',
+        'who_to_pay',
+        'semester',
+        'academic_session',
+        'is_active',
+    )
+    search_fields = ('purpose', 'program__name', 'program__department__name')
+    list_editable = ('is_active',)
+    readonly_fields = ('created_at',)
+
+    fieldsets = (
+        ('Scope', {
+            'fields': ('program', 'course')
+        }),
+        ('Payment Details', {
+            'fields': ('purpose', 'amount', 'who_to_pay', 'semester', 'academic_session', 'due_date')
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== COURSE APPLICATIONS ====================
 @admin.register(CourseIntake)
 class CourseIntakeAdmin(admin.ModelAdmin):
     list_display = (
-        'program', 'intake_period', 'year', 'start_date', 
+        'program', 'intake_period', 'year', 'start_date',
         'application_deadline', 'available_slots', 'is_active'
     )
     list_filter = ('intake_period', 'year', 'is_active', 'program__department__faculty')
     search_fields = ('program__name', 'program__code')
     list_editable = ('is_active',)
     date_hierarchy = 'start_date'
-    
+
     fieldsets = (
         ('Course & Period', {
             'fields': ('program', 'intake_period', 'year')
@@ -651,7 +843,7 @@ class ApplicationDocumentInline(admin.TabularInline):
     extra = 0
     readonly_fields = ('file', 'file_type', 'original_filename', 'file_size', 'uploaded_at')
     can_delete = False
-    
+
     def has_add_permission(self, request, obj=None):
         return False
 
@@ -660,12 +852,13 @@ class ApplicationPaymentInline(admin.StackedInline):
     model = ApplicationPayment
     extra = 0
     readonly_fields = (
-        'payment_reference', 'amount', 'currency', 'status', 
-        'payment_method', 'gateway_payment_id', 'card_last4', 
-        'card_brand', 'created_at', 'paid_at', 'updated_at'
+        'payment_reference', 'amount', 'currency', 'status',
+        'payment_method', 'gateway_payment_id', 'card_last4',
+        'card_brand', 'payment_metadata', 'failure_reason',
+        'created_at', 'paid_at', 'updated_at'
     )
     can_delete = False
-    
+
     fieldsets = (
         ('Payment Information', {
             'fields': ('payment_reference', 'amount', 'currency', 'status', 'payment_method')
@@ -674,16 +867,16 @@ class ApplicationPaymentInline(admin.StackedInline):
             'fields': ('gateway_payment_id', 'card_last4', 'card_brand'),
             'classes': ('collapse',)
         }),
-        ('Timestamps', {
-            'fields': ('created_at', 'paid_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
         ('Additional Info', {
             'fields': ('payment_metadata', 'failure_reason'),
             'classes': ('collapse',)
         }),
+        ('Timestamps', {
+            'fields': ('created_at', 'paid_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
     )
-    
+
     def has_add_permission(self, request, obj=None):
         return False
 
@@ -691,16 +884,16 @@ class ApplicationPaymentInline(admin.StackedInline):
 @admin.register(CourseApplication)
 class CourseApplicationAdmin(admin.ModelAdmin):
     list_display = (
-        'application_id', 
-        'get_full_name', 
-        'email', 
+        'application_id',
+        'get_full_name',
+        'email',
         'program',
         'intake',
         'status',
         'admission_accepted',
         'admission_number',
         'department_approved',
-        'submitted_at', 
+        'submitted_at',
         'created_at',
         'payment_status',
         'in_processing'
@@ -735,10 +928,10 @@ class CourseApplicationAdmin(admin.ModelAdmin):
     )
     date_hierarchy = 'created_at'
     inlines = [ApplicationDocumentInline, ApplicationPaymentInline]
-    
+
     fieldsets = (
         ('Application Info', {
-            'fields': ('application_id', 'status', 'reviewer', 'review_notes')
+            'fields': ('application_id', 'user', 'status', 'reviewer', 'review_notes', 'in_processing')
         }),
         ('Admission Acceptance Tracking', {
             'fields': (
@@ -771,34 +964,41 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         ('Academic Background', {
             'fields': (
                 'highest_qualification', 'institution_name',
-                'graduation_year', 'gpa_or_grade'
+                'graduation_year', 'gpa_or_grade',
+                'language_skill', 'language_score',
             )
         }),
         ('Additional Information', {
             'fields': (
                 'work_experience_years', 'personal_statement',
-                'how_did_you_hear'
+                'how_did_you_hear', 'how_did_you_hear_other',
+                'scholarship',
             ),
+            'classes': ('collapse',)
+        }),
+        ('Privacy & Consent', {
+            'fields': ('accept_privacy_policy', 'accept_terms_conditions', 'marketing_consent'),
             'classes': ('collapse',)
         }),
         ('Emergency Contact', {
             'fields': (
                 'emergency_contact_name', 'emergency_contact_phone',
-                'emergency_contact_relationship'
+                'emergency_contact_relationship',
+                'emergency_contact_email', 'emergency_contact_address',
             ),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
             'fields': (
-                'submitted_at', 
-                'reviewed_at', 
-                'created_at', 
+                'submitted_at',
+                'reviewed_at',
+                'created_at',
                 'updated_at'
             ),
             'classes': ('collapse',)
         }),
     )
-    
+
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}"
     get_full_name.short_description = 'Full Name'
@@ -829,10 +1029,10 @@ class ApplicationDocumentAdmin(admin.ModelAdmin):
         'file_size',
         'uploaded_at'
     )
-    
+
     def has_add_permission(self, request):
         return False
-    
+
     def has_change_permission(self, request, obj=None):
         return False
 
@@ -851,15 +1051,34 @@ class ApplicationPaymentAdmin(admin.ModelAdmin):
     readonly_fields = (
         'payment_reference', 'application', 'amount', 'currency',
         'gateway_payment_id', 'card_last4', 'card_brand',
+        'payment_metadata', 'failure_reason',
         'created_at', 'paid_at', 'updated_at'
     )
     date_hierarchy = 'created_at'
-    
+
+    fieldsets = (
+        ('Payment Information', {
+            'fields': ('payment_reference', 'application', 'amount', 'currency', 'status', 'payment_method')
+        }),
+        ('Gateway Details', {
+            'fields': ('gateway_payment_id', 'card_last4', 'card_brand'),
+            'classes': ('collapse',)
+        }),
+        ('Additional Info', {
+            'fields': ('payment_metadata', 'failure_reason'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'paid_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
     def has_add_permission(self, request):
         return False
-    
+
     actions = ['mark_as_success', 'mark_as_failed']
-    
+
     def mark_as_success(self, request, queryset):
         updated = queryset.filter(status='processing').update(
             status='success',
@@ -867,7 +1086,7 @@ class ApplicationPaymentAdmin(admin.ModelAdmin):
         )
         self.message_user(request, f'{updated} payment(s) marked as successful.')
     mark_as_success.short_description = "Mark selected as Successful"
-    
+
     def mark_as_failed(self, request, queryset):
         updated = queryset.filter(status='processing').update(status='failed')
         self.message_user(request, f'{updated} payment(s) marked as failed.')
@@ -883,7 +1102,7 @@ class CourseCategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ('display_order', 'is_active')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'description', 'parent')
@@ -906,7 +1125,7 @@ class DiscussionAdmin(admin.ModelAdmin):
     search_fields = ('title', 'content', 'author__username')
     readonly_fields = ('views_count', 'created_at', 'updated_at')
     list_editable = ('is_pinned', 'is_locked')
-    
+
     fieldsets = (
         ('Discussion Information', {
             'fields': ('course', 'title', 'slug', 'content', 'author')
@@ -927,7 +1146,7 @@ class DiscussionReplyAdmin(admin.ModelAdmin):
     list_filter = ('is_solution', 'created_at')
     search_fields = ('discussion__title', 'author__username', 'content')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Reply Information', {
             'fields': ('discussion', 'author', 'content', 'parent', 'is_solution')
@@ -942,11 +1161,11 @@ class DiscussionReplyAdmin(admin.ModelAdmin):
 # ==================== ENROLLMENTS ====================
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
-    list_display = ('student', 'course', 'status', 'progress_percentage', 'enrolled_at', 'completed_at')
+    list_display = ('student', 'course', 'status', 'progress_percentage', 'completed_lessons', 'enrolled_at', 'completed_at')
     list_filter = ('status', 'course', 'enrolled_at', 'completed_at')
     search_fields = ('student__username', 'course__title')
     readonly_fields = ('enrolled_at', 'completed_at', 'last_accessed')
-    
+
     fieldsets = (
         ('Enrollment Information', {
             'fields': ('student', 'course', 'enrolled_by', 'status')
@@ -969,7 +1188,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
     search_fields = ('ticket_id', 'user__username', 'subject', 'description')
     readonly_fields = ('ticket_id', 'created_at', 'updated_at', 'resolved_at')
     date_hierarchy = 'created_at'
-    
+
     fieldsets = (
         ('Ticket Information', {
             'fields': ('ticket_id', 'user', 'category', 'subject', 'description')
@@ -990,7 +1209,7 @@ class TicketReplyAdmin(admin.ModelAdmin):
     list_filter = ('is_internal_note', 'created_at')
     search_fields = ('ticket__ticket_id', 'author__username', 'message')
     readonly_fields = ('created_at',)
-    
+
     fieldsets = (
         ('Reply Information', {
             'fields': ('ticket', 'author', 'message', 'is_internal_note')
@@ -1004,11 +1223,11 @@ class TicketReplyAdmin(admin.ModelAdmin):
 # ==================== INVOICES ====================
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ('invoice_number', 'student', 'course', 'total_amount', 'status', 'issue_date', 'due_date')
-    list_filter = ('status', 'issue_date', 'due_date')
+    list_display = ('invoice_number', 'student', 'course', 'total_amount', 'status', 'issue_date', 'due_date', 'paid_date')
+    list_filter = ('status', 'issue_date', 'due_date', 'currency')
     search_fields = ('invoice_number', 'student__username', 'course__title')
     readonly_fields = ('invoice_number', 'issue_date', 'created_at', 'updated_at', 'tax_amount', 'total_amount')
-    
+
     fieldsets = (
         ('Invoice Information', {
             'fields': ('invoice_number', 'student', 'course', 'status')
@@ -1036,7 +1255,7 @@ class LessonProgressAdmin(admin.ModelAdmin):
     list_filter = ('is_completed', 'lesson__course', 'last_accessed')
     search_fields = ('enrollment__student__username', 'lesson__title')
     readonly_fields = ('started_at', 'completed_at', 'last_accessed')
-    
+
     fieldsets = (
         ('Progress Information', {
             'fields': ('enrollment', 'lesson', 'is_completed', 'completion_percentage', 'time_spent_minutes')
@@ -1055,11 +1274,12 @@ class LessonProgressAdmin(admin.ModelAdmin):
 @admin.register(LMSCourse)
 class LMSCourseAdmin(admin.ModelAdmin):
     list_display = (
-        'title', 'code', 'category', 'instructor_name', 'difficulty_level', 'is_published', 'is_featured', 'total_enrollments'
+        'title', 'code', 'category', 'instructor_name', 'difficulty_level',
+        'is_published', 'is_featured', 'total_enrollments', 'average_rating'
     )
     list_filter = (
         'category', 'difficulty_level', 'is_published',
-        'is_featured', 'created_at'
+        'is_featured', 'language', 'created_at'
     )
     search_fields = ('title', 'code', 'description', 'instructor_name')
     prepopulated_fields = {'slug': ('title',)}
@@ -1068,7 +1288,7 @@ class LMSCourseAdmin(admin.ModelAdmin):
         'total_enrollments', 'average_rating', 'total_reviews',
         'created_at', 'updated_at', 'published_at'
     )
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('title', 'slug', 'code', 'category')
@@ -1117,7 +1337,7 @@ class LessonAdmin(admin.ModelAdmin):
     search_fields = ('title', 'description', 'course__title')
     list_editable = ('is_active', 'display_order')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('course', 'section', 'title', 'slug', 'lesson_type')
@@ -1126,7 +1346,7 @@ class LessonAdmin(admin.ModelAdmin):
             'fields': ('description', 'content')
         }),
         ('Video Content', {
-            'fields': ('video_url', 'video_duration_minutes')
+            'fields': ('video_url', 'video_file', 'video_duration_minutes')
         }),
         ('File Content', {
             'fields': ('file',)
@@ -1148,7 +1368,7 @@ class LessonSectionAdmin(admin.ModelAdmin):
     search_fields = ('title', 'description', 'course__title')
     list_editable = ('display_order', 'is_active')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Section Information', {
             'fields': ('course', 'title', 'slug', 'description')
@@ -1170,7 +1390,7 @@ class MessageAdmin(admin.ModelAdmin):
     list_filter = ('is_read', 'created_at')
     search_fields = ('sender__username', 'recipient__username', 'subject', 'body')
     readonly_fields = ('created_at', 'read_at')
-    
+
     fieldsets = (
         ('Message Information', {
             'fields': ('sender', 'recipient', 'subject', 'body', 'parent')
@@ -1191,7 +1411,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ('notification_type', 'is_read', 'created_at')
     search_fields = ('user__username', 'title', 'message')
     readonly_fields = ('created_at', 'read_at')
-    
+
     fieldsets = (
         ('Notification Information', {
             'fields': ('user', 'notification_type', 'title', 'message', 'link')
@@ -1213,7 +1433,7 @@ class PaymentGatewayAdmin(admin.ModelAdmin):
     search_fields = ('name', 'gateway_type')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'gateway_type')
@@ -1233,11 +1453,11 @@ class PaymentGatewayAdmin(admin.ModelAdmin):
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('transaction_id', 'user', 'transaction_type', 'amount', 'status', 'created_at')
-    list_filter = ('transaction_type', 'status', 'created_at')
+    list_display = ('transaction_id', 'user', 'transaction_type', 'amount', 'currency', 'status', 'created_at')
+    list_filter = ('transaction_type', 'status', 'currency', 'created_at')
     search_fields = ('transaction_id', 'user__username', 'gateway_transaction_id')
     readonly_fields = ('transaction_id', 'created_at', 'completed_at')
-    
+
     fieldsets = (
         ('Transaction Information', {
             'fields': ('transaction_id', 'user', 'transaction_type', 'status')
@@ -1249,7 +1469,7 @@ class TransactionAdmin(admin.ModelAdmin):
             'fields': ('gateway', 'gateway_transaction_id')
         }),
         ('Related Objects', {
-            'fields': ('program',)
+            'fields': ('course',)
         }),
         ('Metadata', {
             'fields': ('metadata',),
@@ -1265,12 +1485,12 @@ class TransactionAdmin(admin.ModelAdmin):
 # ==================== QUIZZES ====================
 @admin.register(Quiz)
 class QuizAdmin(admin.ModelAdmin):
-    list_display = ('title', 'lesson', 'passing_score', 'max_attempts', 'is_active', 'display_order')
+    list_display = ('title', 'lesson', 'passing_score', 'max_attempts', 'time_limit_minutes', 'is_active', 'display_order')
     list_filter = ('lesson__course', 'is_active')
     search_fields = ('title', 'description', 'lesson__title')
     list_editable = ('is_active', 'display_order')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('lesson', 'title', 'slug', 'description', 'instructions')
@@ -1297,7 +1517,7 @@ class QuizQuestionAdmin(admin.ModelAdmin):
     list_filter = ('question_type', 'is_active', 'quiz__lesson__course')
     search_fields = ('question_text', 'quiz__title')
     list_editable = ('display_order', 'is_active')
-    
+
     fieldsets = (
         ('Question Information', {
             'fields': ('quiz', 'question_type', 'question_text', 'explanation', 'points')
@@ -1306,7 +1526,7 @@ class QuizQuestionAdmin(admin.ModelAdmin):
             'fields': ('display_order', 'is_active')
         }),
     )
-    
+
     def get_question_preview(self, obj):
         return obj.question_text[:50] + "..." if len(obj.question_text) > 50 else obj.question_text
     get_question_preview.short_description = 'Question'
@@ -1317,13 +1537,13 @@ class QuizAnswerAdmin(admin.ModelAdmin):
     list_display = ('question', 'get_answer_preview', 'is_correct', 'display_order')
     list_filter = ('is_correct', 'question__quiz__lesson__course')
     search_fields = ('answer_text', 'question__question_text')
-    
+
     fieldsets = (
         ('Answer Information', {
             'fields': ('question', 'answer_text', 'is_correct', 'display_order')
         }),
     )
-    
+
     def get_answer_preview(self, obj):
         return obj.answer_text[:50] + "..." if len(obj.answer_text) > 50 else obj.answer_text
     get_answer_preview.short_description = 'Answer'
@@ -1331,11 +1551,11 @@ class QuizAnswerAdmin(admin.ModelAdmin):
 
 @admin.register(QuizAttempt)
 class QuizAttemptAdmin(admin.ModelAdmin):
-    list_display = ('student', 'quiz', 'score', 'percentage', 'passed', 'is_completed', 'started_at')
+    list_display = ('student', 'quiz', 'score', 'max_score', 'percentage', 'passed', 'is_completed', 'started_at')
     list_filter = ('is_completed', 'passed', 'quiz__lesson__course')
     search_fields = ('student__username', 'quiz__title')
     readonly_fields = ('started_at', 'completed_at')
-    
+
     fieldsets = (
         ('Attempt Information', {
             'fields': ('quiz', 'student')
@@ -1358,7 +1578,7 @@ class QuizResponseAdmin(admin.ModelAdmin):
     list_display = ('attempt', 'question', 'is_correct', 'points_earned')
     list_filter = ('is_correct', 'attempt__quiz__lesson__course')
     search_fields = ('attempt__student__username', 'question__question_text')
-    
+
     fieldsets = (
         ('Response Information', {
             'fields': ('attempt', 'question', 'selected_answer', 'text_response')
@@ -1377,7 +1597,7 @@ class ReviewAdmin(admin.ModelAdmin):
     search_fields = ('course__title', 'student__username', 'review_text')
     readonly_fields = ('created_at', 'updated_at')
     list_editable = ('is_approved',)
-    
+
     fieldsets = (
         ('Review Information', {
             'fields': ('course', 'student', 'rating', 'review_text')
@@ -1395,13 +1615,13 @@ class ReviewAdmin(admin.ModelAdmin):
 # ==================== SUBSCRIPTION PLANS ====================
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'billing_cycle', 'is_active', 'is_popular', 'display_order')
-    list_filter = ('billing_cycle', 'is_active', 'is_popular')
+    list_display = ('name', 'price', 'currency', 'billing_cycle', 'max_courses', 'is_active', 'is_popular', 'display_order')
+    list_filter = ('billing_cycle', 'is_active', 'is_popular', 'currency')
     search_fields = ('name', 'description')
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ('is_active', 'is_popular', 'display_order')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'description', 'features')
@@ -1427,8 +1647,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ('user', 'plan', 'status', 'start_date', 'end_date', 'auto_renew')
     list_filter = ('status', 'auto_renew', 'plan')
     search_fields = ('user__username', 'plan__name', 'gateway_subscription_id')
-    readonly_fields = ('created_at', 'updated_at', 'cancelled_at')
-    
+    readonly_fields = ('start_date', 'created_at', 'updated_at', 'cancelled_at')
+
     fieldsets = (
         ('Subscription Information', {
             'fields': ('user', 'plan', 'status')
@@ -1453,7 +1673,7 @@ class SystemConfigurationAdmin(admin.ModelAdmin):
     list_filter = ('setting_type', 'is_public')
     search_fields = ('key', 'value', 'description')
     readonly_fields = ('updated_at',)
-    
+
     fieldsets = (
         ('Configuration', {
             'fields': ('key', 'value', 'setting_type', 'description')
@@ -1471,14 +1691,14 @@ class SystemConfigurationAdmin(admin.ModelAdmin):
 # ==================== USER PROFILE ====================
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'role', 'email_verified', 'phone', 'country', 'created_at')
-    list_filter = ('role', 'email_verified', 'created_at')
+    list_display = ('user', 'role', 'faculty', 'department', 'program', 'email_verified', 'phone', 'country', 'created_at')
+    list_filter = ('role', 'faculty', 'department', 'email_verified', 'created_at')
     search_fields = ('user__username', 'user__email', 'phone', 'country')
     readonly_fields = ('verification_token', 'created_at', 'updated_at')
-    
+
     fieldsets = (
-        ('User', {
-            'fields': ('user', 'role')
+        ('User & Role', {
+            'fields': ('user', 'role', 'faculty', 'department', 'program')
         }),
         ('Personal Information', {
             'fields': ('bio', 'avatar', 'phone', 'date_of_birth')
@@ -1513,7 +1733,7 @@ class VendorAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     list_editable = ('is_active',)
     readonly_fields = ('created_at',)
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'email', 'country')
@@ -1527,6 +1747,8 @@ class VendorAdmin(admin.ModelAdmin):
         }),
     )
 
+
+# ==================== BROADCAST CENTER ====================
 @admin.register(BroadcastMessage)
 class BroadcastMessageAdmin(admin.ModelAdmin):
     list_display = (
@@ -1559,7 +1781,7 @@ class BroadcastMessageAdmin(admin.ModelAdmin):
         'error_message'
     )
     date_hierarchy = 'created_at'
-    
+
     fieldsets = (
         ('Message Content', {
             'fields': ('subject', 'slug', 'message')
@@ -1580,114 +1802,17 @@ class BroadcastMessageAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-    
+
     def get_readonly_fields(self, request, obj=None):
-        """Make fields readonly after message is sent"""
         readonly = list(self.readonly_fields)
         if obj and obj.status == 'sent':
             readonly.extend(['subject', 'message', 'filter_type', 'filter_values'])
         return readonly
-    
+
     def has_delete_permission(self, request, obj=None):
-        """Prevent deletion of sent messages"""
         if obj and obj.status == 'sent':
             return False
         return super().has_delete_permission(request, obj)
-
-
-# ==================== DEPARTMENT ====================
-@admin.register(Department)
-class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'faculty', 'is_active', 'display_order', 'created_at')
-    list_filter = ('faculty', 'is_active', 'created_at')
-    search_fields = ('name', 'code', 'description')
-    prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('is_active', 'display_order')
-    readonly_fields = ('created_at', 'updated_at')
-
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'slug', 'code', 'faculty', 'is_active', 'display_order')
-        }),
-        ('Content', {
-            'fields': ('description',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
-
-# ==================== PROGRAM ====================
-@admin.register(Program)
-class ProgramAdmin(admin.ModelAdmin):
-    list_display = (
-        'name', 'code', 'department', 'degree_level', 'duration_years',
-        'application_fee', 'tuition_fee', 'is_active', 'is_featured', 'display_order'
-    )
-    list_filter = ('department__faculty', 'department', 'degree_level', 'is_active', 'is_featured')
-    search_fields = ('name', 'code', 'description')
-    prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('is_active', 'is_featured', 'display_order')
-    readonly_fields = ('created_at', 'updated_at')
-
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('name', 'slug', 'code', 'department', 'degree_level', 'is_active', 'is_featured', 'display_order')
-        }),
-        ('Program Details', {
-            'fields': ('duration_years', 'credits_required', 'max_students')
-        }),
-        ('Financial Information', {
-            'fields': ('application_fee', 'tuition_fee')
-        }),
-        ('Content', {
-            'fields': ('description', 'entry_requirements'),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
-
-# ==================== ALL REQUIRED PAYMENTS ====================
-@admin.register(AllRequiredPayments)
-class AllRequiredPaymentsAdmin(admin.ModelAdmin):
-    list_display = (
-        'purpose', 'program', 'course',
-        'amount', 'who_to_pay', 'semester', 'academic_session', 'is_active', 'due_date'
-    )
-    list_filter = (
-        'program__department__faculty',
-        'program__department',
-        'program',
-        'who_to_pay',
-        'semester',
-        'academic_session',
-        'is_active',
-    )
-    search_fields = ('purpose', 'program__name', 'program__department__name')
-    list_editable = ('is_active',)
-    readonly_fields = ('created_at',)
-
-    fieldsets = (
-        ('Scope', {
-            'fields': ('program', 'course')
-        }),
-        ('Payment Details', {
-            'fields': ('purpose', 'amount', 'who_to_pay', 'semester', 'academic_session', 'due_date')
-        }),
-        ('Status', {
-            'fields': ('is_active',)
-        }),
-        ('Timestamp', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        }),
-    )
 
 
 # ==================== STUDY GROUPS ====================
@@ -1733,12 +1858,35 @@ class StudyGroupMemberAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(StudyGroupMessage)
+class StudyGroupMessageAdmin(admin.ModelAdmin):
+    list_display = ('study_group', 'author', 'get_content_preview', 'created_at')
+    list_filter = ('study_group', 'created_at')
+    search_fields = ('study_group__name', 'author__username', 'content')
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        ('Message', {
+            'fields': ('study_group', 'author', 'content')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_content_preview(self, obj):
+        return obj.content[:60] + '...' if len(obj.content) > 60 else obj.content
+    get_content_preview.short_description = 'Content'
+
+
 # ==================== STAFF PAYROLL ====================
 @admin.register(StaffPayroll)
 class StaffPayrollAdmin(admin.ModelAdmin):
     list_display = (
         'payroll_reference', 'staff', 'month', 'year',
-        'base_salary', 'gross_salary', 'net_salary',
+        'base_salary', 'allowances', 'bonuses', 'gross_salary',
+        'tax_deduction', 'other_deductions', 'net_salary',
         'payment_status', 'payment_method', 'payment_date'
     )
     list_filter = ('payment_status', 'payment_method', 'month', 'year')
@@ -1783,49 +1931,26 @@ class StaffPayrollAdmin(admin.ModelAdmin):
     )
 
     def has_delete_permission(self, request, obj=None):
-        """Prevent deletion of paid payrolls"""
         if obj and obj.payment_status == 'paid':
             return False
         return super().has_delete_permission(request, obj)
 
 
+# ==================== LIST OF COUNTRIES ====================
 @admin.register(ListOfCountry)
 class ListOfCountryAdmin(admin.ModelAdmin):
-    list_display = ('country', 'country_code', 'country_phonecode')
-    search_fields = ('country', 'country_code', 'country_phonecode')
-
-
-# ==================== STUDY GROUP MESSAGES ====================
-@admin.register(StudyGroupMessage)
-class StudyGroupMessageAdmin(admin.ModelAdmin):
-    list_display = ('study_group', 'author', 'get_content_preview', 'created_at')
-    list_filter = ('study_group', 'created_at')
-    search_fields = ('author__username', 'study_group__name', 'content')
-    readonly_fields = ('created_at', 'updated_at')
+    list_display = ('country', 'country_code', 'country_phonecode', 'nationality')
+    search_fields = ('country', 'country_code', 'country_phonecode', 'nationality')
+    list_filter = ()
 
     fieldsets = (
-        ('Message', {
-            'fields': ('study_group', 'author', 'content'),
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',),
+        ('Country Information', {
+            'fields': ('country', 'country_code', 'country_phonecode', 'nationality')
         }),
     )
 
-    def get_content_preview(self, obj):
-        return obj.content[:60] + '...' if len(obj.content) > 60 else obj.content
-    get_content_preview.short_description = 'Message Preview'
-
 
 # ==================== ADMIN SITE BRANDING ====================
-def _get_site_header():
-    site = SiteConfig.objects.first()
-    if site and site.school_name:
-        return f"{site.school_name} — Admin"
-    return "LMS Administration"
-
-
-admin.site.site_header = _get_site_header()
+admin.site.site_header = "LMS Administration"
 admin.site.site_title = "LMS Admin Portal"
 admin.site.index_title = "Welcome to LMS Administration"

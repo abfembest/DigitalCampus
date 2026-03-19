@@ -8,76 +8,44 @@ from django.utils import timezone
 from faker import Faker
 
 from eduweb.models import (
+    SiteConfig, InstitutionMember, Testimonial,
     Announcement, Assignment, AssignmentSubmission, AuditLog, Badge, StudentBadge,
     BlogCategory, BlogPost, Certificate, ContactMessage,
-    Faculty, Department, Program, Course, AllRequiredPayments,
+    Faculty, Department, Program, Course, AcademicSession, AllRequiredPayments,
     CourseIntake, CourseApplication, ApplicationDocument, ApplicationPayment,
     CourseCategory, Discussion, DiscussionReply, Enrollment, SupportTicket,
     TicketReply, Invoice, LessonProgress, LMSCourse, Lesson, LessonSection,
     Message, Notification, PaymentGateway, Transaction, Quiz, QuizQuestion,
     QuizAnswer, QuizAttempt, QuizResponse, Review, SubscriptionPlan,
     Subscription, SystemConfiguration, UserProfile, Vendor, StudyGroup,
-    StudyGroupMember, BroadcastMessage, StaffPayroll,
+    StudyGroupMember, StudyGroupMessage, BroadcastMessage, StaffPayroll,
+    ListOfCountry, FeePayment,
 )
 
 fake = Faker()
 
-YOUTUBE_VIDEOS = {
-    'python': [
-        'https://www.youtube.com/watch?v=rfscVS0vtbw',
-        'https://www.youtube.com/watch?v=_uQrJ0TkZlc',
-        'https://www.youtube.com/watch?v=kqtD5dpn9C8',
-        'https://www.youtube.com/watch?v=8DvywoWv6fI',
-    ],
-    'web_dev': [
-        'https://www.youtube.com/watch?v=UB1O30fR-EE',
-        'https://www.youtube.com/watch?v=mU6anWqZJcc',
-        'https://www.youtube.com/watch?v=1PnVor36_40',
-        'https://www.youtube.com/watch?v=G3e-cpL7ofc',
-    ],
-    'data_science': [
-        'https://www.youtube.com/watch?v=ua-CiDNNj30',
-        'https://www.youtube.com/watch?v=RBSGKlAvoiM',
-        'https://www.youtube.com/watch?v=7eh4d6sabA0',
-        'https://www.youtube.com/watch?v=zN1_fMwbZac',
-    ],
-    'machine_learning': [
-        'https://www.youtube.com/watch?v=aircAruvnKk',
-        'https://www.youtube.com/watch?v=IHZwWFHWa-w',
-        'https://www.youtube.com/watch?v=i8D90DkCLhI',
-        'https://www.youtube.com/watch?v=jGwO_UgTS7I',
-    ],
-    'javascript': [
-        'https://www.youtube.com/watch?v=W6NZfCO5SIk',
-        'https://www.youtube.com/watch?v=PkZNo7MFNFg',
-        'https://www.youtube.com/watch?v=DHjqpvDnNGE',
-        'https://www.youtube.com/watch?v=BMUiFMZr7vk',
-    ],
-    'react': [
-        'https://www.youtube.com/watch?v=Ke90Tje7VS0',
-        'https://www.youtube.com/watch?v=bMknfKXIFA8',
-        'https://www.youtube.com/watch?v=SqcY0GlETPk',
-        'https://www.youtube.com/watch?v=Rh3tobg7hEo',
-    ],
-    'design': [
-        'https://www.youtube.com/watch?v=0JCUH5daCCE',
-        'https://www.youtube.com/watch?v=YiLUYf4HDh4',
-        'https://www.youtube.com/watch?v=wIuVvCuiJhU',
-        'https://www.youtube.com/watch?v=_2LLXnUdUIc',
-    ],
-    'business': [
-        'https://www.youtube.com/watch?v=qs-l7jDKJLQ',
-        'https://www.youtube.com/watch?v=8w4KCiVu1kI',
-        'https://www.youtube.com/watch?v=jpe-LKn-4gM',
-        'https://www.youtube.com/watch?v=eC7xzavzEKY',
-    ],
-    'engineering': [
-        'https://www.youtube.com/watch?v=yI2oS2hoL0k',
-        'https://www.youtube.com/watch?v=2a-tOmHGDI0',
-        'https://www.youtube.com/watch?v=JVFNc9GBPRY',
-        'https://www.youtube.com/watch?v=dFUlAQZB9Ng',
-    ],
-}
+# ── Provided embed codes (iframe strings) for lesson video_url fields ──────────
+EMBED_CODES = [
+    '<iframe width="560" height="315" src="https://www.youtube.com/embed/-mJFZp84TIY?si=GaHX9emFQiFb9uqa" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
+    '<iframe width="560" height="315" src="https://www.youtube.com/embed/hnVOvvbQrwA?si=dGpgO4TTbiodxWwl" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
+    '<iframe width="560" height="315" src="https://www.youtube.com/embed/kFe-RRaOy48?si=8ckGG-v-_Ne3G_rX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
+    '<iframe width="560" height="315" src="https://www.youtube.com/embed/JvC7aA24m4Q?si=CHCpJvjlj7NR1hcp" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
+    '<iframe width="560" height="315" src="https://www.youtube.com/embed/wa0IVAIqbo0?si=7IPmWFuHJm3_r-KX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
+    '<blockquote class="tiktok-embed" cite="https://www.tiktok.com/@adjacentnode/video/7599691161455971615" data-video-id="7599691161455971615" style="max-width: 605px;min-width: 325px;" > <section> <a target="_blank" title="@adjacentnode" href="https://www.tiktok.com/@adjacentnode?refer=embed">@adjacentnode</a> Can you answer this entry level networking job interview question? <a title="tech" target="_blank" href="https://www.tiktok.com/tag/tech?refer=embed">#tech</a> <a title="networking" target="_blank" href="https://www.tiktok.com/tag/networking?refer=embed">#networking</a> <a target="_blank" title="♬ original sound - Kevin Nanns" href="https://www.tiktok.com/music/original-sound-7599691216300591902?refer=embed">♬ original sound - Kevin Nanns</a> </section> </blockquote> <script async src="https://www.tiktok.com/embed.js"></script>',
+    '<blockquote class="tiktok-embed" cite="https://www.tiktok.com/@clickconsulting/video/7539746341270998280" data-video-id="7539746341270998280" style="max-width: 605px;min-width: 325px;" > <section> <a target="_blank" title="@clickconsulting" href="https://www.tiktok.com/@clickconsulting?refer=embed">@clickconsulting</a> Network Rack 101 <a title="it" target="_blank" href="https://www.tiktok.com/tag/it?refer=embed">#IT</a> <a title="learnontiktok" target="_blank" href="https://www.tiktok.com/tag/learnontiktok?refer=embed">#learnontiktok</a> <a target="_blank" title="♬ original sound - Click Consulting" href="https://www.tiktok.com/music/original-sound-7539746534930303745?refer=embed">♬ original sound - Click Consulting</a> </section> </blockquote> <script async src="https://www.tiktok.com/embed.js"></script>',
+]
+
+CAMPUS_MAP_EMBED = (
+    '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.0!2d-122.419!3d37.774!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzfCsDQ2JzI2LjQiTiAxMjLCsDI1JzA4LjQiVw!5e0!3m2!1sen!2sus!4v1234567890" '
+    'width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
+)
+
+PROMO_VIDEO_EMBED = (
+    '<iframe width="560" height="315" src="https://www.youtube.com/embed/-mJFZp84TIY?si=GaHX9emFQiFb9uqa" '
+    'title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; '
+    'encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" '
+    'allowfullscreen></iframe>'
+)
 
 
 class Command(BaseCommand):
@@ -98,10 +66,12 @@ class Command(BaseCommand):
             Discussion, Lesson, LessonSection, LMSCourse, CourseCategory,
             ApplicationPayment, ApplicationDocument, CourseApplication,
             CourseIntake, AllRequiredPayments, StaffPayroll,
-            Course, Program, Department, Faculty, Invoice, Transaction,
-            Subscription, SubscriptionPlan, PaymentGateway, BlogPost,
-            BlogCategory, ContactMessage, Vendor, SystemConfiguration,
-            Announcement, StudyGroupMember, StudyGroup, BroadcastMessage,
+            Course, AcademicSession, Program, Department, Faculty,
+            Invoice, Transaction, Subscription, SubscriptionPlan,
+            PaymentGateway, BlogPost, BlogCategory, ContactMessage,
+            Vendor, SystemConfiguration, Announcement,
+            StudyGroupMessage, StudyGroupMember, StudyGroup, BroadcastMessage,
+            InstitutionMember, SiteConfig, Testimonial, ListOfCountry,
         ]
         for model in models_to_clear:
             model.objects.all().delete()
@@ -109,7 +79,209 @@ class Command(BaseCommand):
         User.objects.all().delete()
         self.stdout.write(self.style.SUCCESS("   ✅ All data cleared"))
 
-        # ── 1. USERS ─────────────────────────────────────────────────────────
+        # ── 0. LIST OF COUNTRIES ─────────────────────────────────────────────
+        self.stdout.write("🌍 Seeding countries...")
+        country_data = [
+            ('Nigeria', 'NG', '+234', 'Nigerian'),
+            ('United States', 'US', '+1', 'American'),
+            ('United Kingdom', 'GB', '+44', 'British'),
+            ('Canada', 'CA', '+1', 'Canadian'),
+            ('Germany', 'DE', '+49', 'German'),
+            ('France', 'FR', '+33', 'French'),
+            ('Australia', 'AU', '+61', 'Australian'),
+            ('India', 'IN', '+91', 'Indian'),
+            ('China', 'CN', '+86', 'Chinese'),
+            ('Brazil', 'BR', '+55', 'Brazilian'),
+            ('South Africa', 'ZA', '+27', 'South African'),
+            ('Ghana', 'GH', '+233', 'Ghanaian'),
+            ('Kenya', 'KE', '+254', 'Kenyan'),
+            ('Singapore', 'SG', '+65', 'Singaporean'),
+            ('Japan', 'JP', '+81', 'Japanese'),
+            ('Mexico', 'MX', '+52', 'Mexican'),
+            ('Italy', 'IT', '+39', 'Italian'),
+            ('Spain', 'ES', '+34', 'Spanish'),
+            ('Netherlands', 'NL', '+31', 'Dutch'),
+            ('Sweden', 'SE', '+46', 'Swedish'),
+        ]
+        for country, code, phonecode, nationality in country_data:
+            ListOfCountry.objects.get_or_create(
+                country_code=code,
+                defaults={
+                    'country': country,
+                    'country_phonecode': phonecode,
+                    'nationality': nationality,
+                }
+            )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {ListOfCountry.objects.count()} countries seeded"))
+
+        # ── 1. SITE CONFIG ───────────────────────────────────────────────────
+        self.stdout.write("🌐 Creating site configuration...")
+        SiteConfig.objects.create(
+            # ── Identity ──────────────────────────────────────────────────────
+            school_name='Melchisedec International University',
+            school_short_name='MIU',
+            tagline='The Best Learning Institution',
+            theme_color='#840384',
+            # logo / logo_dark / favicon / og_image left blank (no image files to reference)
+
+            # ── Contact ───────────────────────────────────────────────────────
+            email='info@miu.edu',
+            phone_primary='+1 (555) 123-4567',
+            phone_secondary='+1 (555) 123-4568',
+            phone_ng_primary='+234 801 234 5678',
+            phone_ng_secondary='+234 802 345 6789',
+            whatsapp='15551234567',
+
+            # ── Addresses ─────────────────────────────────────────────────────
+            address_usa='123 University Avenue, Knowledge City, KC 10101, United States',
+            address_nigeria='14 Academic Drive, Victoria Island, Lagos, Nigeria',
+
+            # ── Social ────────────────────────────────────────────────────────
+            facebook='https://facebook.com/miu.edu',
+            instagram='https://instagram.com/miu.edu',
+            youtube='https://youtube.com/@miu_university',
+            twitter='https://twitter.com/miu_edu',
+            tiktok='https://tiktok.com/@miu.edu',
+            linkedin='https://linkedin.com/school/melchisedec-international-university',
+
+            # ── Labelled Emails ───────────────────────────────────────────────
+            email_admissions='admissions@miu.edu',
+            email_info='info@miu.edu',
+            email_international='international@miu.edu',
+
+            # ── Labelled Phone Lines ──────────────────────────────────────────
+            phone_admissions='+1 (555) 123-4567',
+            phone_general='+1 (555) 123-4568',
+            phone_international='+1 (555) 123-4569',
+
+            # ── Office Hours ──────────────────────────────────────────────────
+            office_hours_weekday='Monday - Friday: 8:00 AM - 6:00 PM',
+            office_hours_saturday='Saturday: 9:00 AM - 1:00 PM',
+            office_hours_sunday='Sunday: Closed',
+
+            # ── Labelled Emails ───────────────────────────────────────────────
+            email_admissions='admissions@miu.edu',
+            email_info='info@miu.edu',
+            email_international='international@miu.edu',
+
+            # ── Labelled Phone Lines ──────────────────────────────────────────
+            phone_admissions='+1 (555) 123-4567',
+            phone_general='+1 (555) 123-4568',
+            phone_international='+1 (555) 123-4569',
+
+            # ── Office Hours ──────────────────────────────────────────────────
+            office_hours_weekday='Monday - Friday: 8:00 AM - 6:00 PM',
+            office_hours_saturday='Saturday: 9:00 AM - 1:00 PM',
+            office_hours_sunday='Sunday: Closed',
+
+            # ── Embed Codes ───────────────────────────────────────────────────
+            promo_video_url=PROMO_VIDEO_EMBED,
+            campus_map_embed_url=CAMPUS_MAP_EMBED,
+            campus_map_address='123 University Avenue, Knowledge City, KC 10101',
+            # virtual_tour_url left blank (no embed code to reference)
+
+            # ── Footer & SEO ──────────────────────────────────────────────────
+            footer_tagline='Empowering global education since 1995 with innovative learning experiences and world-class faculty.',
+            copyright_year='2025',
+            meta_description=(
+                'Melchisedec International University — world-class online and campus education '
+                'across 50+ programs in 120+ countries since 1995.'
+            ),
+            meta_keywords='MIU, Melchisedec International University, online degrees, accredited programs',
+        )
+        self.stdout.write(self.style.SUCCESS("   ✅ SiteConfig created"))
+
+        # ── 1b. TESTIMONIALS ─────────────────────────────────────────────────
+        self.stdout.write("💬 Creating testimonials...")
+        testimonial_data = [
+            (
+                "MIU's flexible online platform allowed me to complete my MBA while working full-time. "
+                "The faculty support was exceptional, and I've already seen career advancement.",
+                'Sarah K.', 'MBA Graduate, 2023', 1,
+            ),
+            (
+                'The computer science program at MIU provided me with cutting-edge skills in AI and '
+                'machine learning. I landed my dream job at a top tech company right after graduation.',
+                'Michael Chen', 'Computer Science Graduate, 2024', 2,
+            ),
+            (
+                'As an international student, I appreciated the global perspective and diverse community '
+                'at MIU. The support services made my transition seamless and enriching.',
+                'Amara O.', 'Health Sciences Graduate, 2023', 3,
+            ),
+            (
+                'The engineering faculty at MIU is world-class. My lecturers brought real industry '
+                'experience into every module. I graduated with confidence and a job offer in hand.',
+                'James T.', 'Engineering Graduate, 2024', 4,
+            ),
+            (
+                'Studying theology at MIU transformed my ministry. The blend of academic rigour and '
+                'spiritual grounding is unlike anything I found elsewhere.',
+                'Pastor Grace A.', 'Theology Graduate, 2022', 5,
+            ),
+        ]
+        for quote, author_name, author_role, order in testimonial_data:
+            Testimonial.objects.create(
+                quote=quote,
+                author_name=author_name,
+                author_role=author_role,
+                order=order,
+                is_active=True,
+            )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {Testimonial.objects.count()} testimonials created"))
+
+        # ── 2. INSTITUTION MEMBERS ───────────────────────────────────────────
+        self.stdout.write("👔 Creating institution members...")
+        institution_members_data = [
+            # Admin / Management Board
+            ('admin_board', 'Dr. Michael Rodriguez', 'University President', 0,
+             'Former Dean of Harvard Graduate School of Education with 25+ years in academic leadership.'),
+            ('admin_board', 'Dr. Sarah Chen', 'Provost & Chief Academic Officer', 1,
+             'Expert in curriculum development and online education with a PhD from Stanford University.'),
+            ('admin_board', 'Robert Johnson', 'Chair, Board of Trustees', 2,
+             'Technology entrepreneur and philanthropist dedicated to educational innovation.'),
+            ('admin_board', 'Dr. Amaka Okafor', 'Vice-Chancellor, Nigeria Campus', 3,
+             'Leading academic administrator with expertise in African higher education systems.'),
+            ('admin_board', 'Prof. David Williams', 'Director of Finance & Operations', 4,
+             'Chartered accountant and finance director with 20 years in university management.'),
+            # Academic Board
+            ('academic_board', 'Prof. Alan Turing Jr.', 'Dean, Faculty of Computer Science & IT', 0,
+             'Pioneer in artificial intelligence research and machine learning applications.'),
+            ('academic_board', 'Dr. Grace Adeyemi', 'Dean, Faculty of Engineering', 1,
+             'Civil engineer with a passion for sustainable infrastructure and green technology.'),
+            ('academic_board', 'Prof. James Hargreaves', 'Dean, Faculty of Business & Management', 2,
+             'Business strategist and former Fortune 500 executive turned academic leader.'),
+            ('academic_board', 'Dr. Ngozi Eze', 'Dean, Faculty of Health Sciences', 3,
+             'Registered nurse and public health expert with WHO consultancy experience.'),
+            ('academic_board', 'Prof. Elena Vasquez', 'Dean, Faculty of Arts & Humanities', 4,
+             'Literary scholar and cultural theorist with publications in 12 languages.'),
+            # Advisorate Board
+            ('advisorate_board', 'Sir Richard Blackwell', 'Senior Academic Advisor', 0,
+             'Retired Oxford professor and Commonwealth education policy adviser.'),
+            ('advisorate_board', 'Dr. Yuki Tanaka', 'International Relations Advisor', 1,
+             'Specialist in cross-cultural academic partnerships across Asia-Pacific.'),
+            ('advisorate_board', 'Ms. Fatima Al-Hassan', 'Diversity & Inclusion Advisor', 2,
+             'Advocate for inclusive education and women in STEM programmes globally.'),
+            # Staff
+            ('staff', 'Mr. Emeka Nwosu', 'Head of Admissions', 0,
+             'Coordinates all domestic and international student admissions processes.'),
+            ('staff', 'Ms. Lisa Okonkwo', 'Head of Student Services', 1,
+             'Oversees student welfare, accommodation, and academic support services.'),
+            ('staff', 'Mr. Paul Mensah', 'IT Systems Administrator', 2,
+             'Manages university digital infrastructure and e-learning platforms.'),
+        ]
+        for mtype, name, role, order, bio in institution_members_data:
+            InstitutionMember.objects.create(
+                member_type=mtype,
+                name=name,
+                role=role,
+                bio=bio,
+                display_order=order,
+                is_active=True,
+            )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {InstitutionMember.objects.count()} institution members created"))
+
+        # ── 3. USERS ─────────────────────────────────────────────────────────
         self.stdout.write("👥 Creating users...")
         users = {
             'students': [], 'instructors': [], 'admins': [],
@@ -122,7 +294,7 @@ class Command(BaseCommand):
                 uname = f"{username_prefix}{i + 1}" if i > 0 else username_prefix
                 u = User.objects.create_user(
                     username=uname,
-                    email=f"{uname}@university.edu",
+                    email=f"{uname}@miu.edu",
                     password="12345",
                     first_name=fake.first_name(),
                     last_name=fake.last_name(),
@@ -168,7 +340,7 @@ class Command(BaseCommand):
         )
         self.stdout.write(self.style.SUCCESS(f"   ✅ {len(all_users)} users created"))
 
-        # ── 2. VENDORS ───────────────────────────────────────────────────────
+        # ── 4. VENDORS ───────────────────────────────────────────────────────
         self.stdout.write("🏢 Creating vendors...")
         vendors = []
         for vd in [
@@ -186,14 +358,14 @@ class Command(BaseCommand):
                 is_active=True,
             ))
 
-        # ── 3. SYSTEM CONFIGURATIONS ─────────────────────────────────────────
+        # ── 5. SYSTEM CONFIGURATIONS ─────────────────────────────────────────
         self.stdout.write("⚙️  Creating system configurations...")
         cfg_data = [
             ('site_name', 'MIU Learning Platform', 'text', True),
             ('max_upload_size', '10485760', 'number', False),
             ('email_notifications_enabled', 'true', 'boolean', True),
             ('maintenance_mode', 'false', 'boolean', False),
-            ('default_currency', 'GBP', 'text', True),
+            ('default_currency', 'USD', 'text', True),
             ('max_enrollments_per_user', '50', 'number', False),
             ('certificate_enabled', 'true', 'boolean', True),
             ('forum_enabled', 'true', 'boolean', True),
@@ -209,7 +381,7 @@ class Command(BaseCommand):
                 updated_by=random.choice(cfg_editors),
             )
 
-        # ── 4. PAYMENT GATEWAYS ──────────────────────────────────────────────
+        # ── 6. PAYMENT GATEWAYS ──────────────────────────────────────────────
         self.stdout.write("💳 Creating payment gateways...")
         gateways = []
         for name, slug, gtype, active in [
@@ -225,7 +397,7 @@ class Command(BaseCommand):
                 is_active=active, is_test_mode=True,
             ))
 
-        # ── 5. SUBSCRIPTION PLANS ────────────────────────────────────────────
+        # ── 7. SUBSCRIPTION PLANS ────────────────────────────────────────────
         self.stdout.write("📋 Creating subscription plans...")
         plans = []
         plan_data = [
@@ -240,13 +412,13 @@ class Command(BaseCommand):
         ]
         for idx, (name, desc, price, cycle, features, max_c, popular) in enumerate(plan_data):
             plans.append(SubscriptionPlan.objects.create(
-                name=name, description=desc, price=price, currency='GBP',
+                name=name, description=desc, price=price, currency='USD',
                 billing_cycle=cycle, features=features,
                 max_courses=max_c, is_active=True,
                 is_popular=popular, display_order=idx,
             ))
 
-        # ── 6. SUBSCRIPTIONS ─────────────────────────────────────────────────
+        # ── 8. SUBSCRIPTIONS ─────────────────────────────────────────────────
         self.stdout.write("🎫 Creating subscriptions...")
         for student in verified_students:
             plan = random.choice(plans)
@@ -262,7 +434,7 @@ class Command(BaseCommand):
                 if status == 'cancelled' else None,
             )
 
-        # ── 7. FACULTIES ─────────────────────────────────────────────────────
+        # ── 9. FACULTIES ─────────────────────────────────────────────────────
         self.stdout.write("🎓 Creating faculties...")
         faculty_raw = [
             {
@@ -279,8 +451,11 @@ class Command(BaseCommand):
                     'State-of-the-art AI & Robotics Lab',
                     'Industry partnerships with Google, Microsoft, Amazon',
                     'International exchange programmes with MIT and Oxford',
-                    'Annual Hackathon with £50K prize pool',
+                    'Annual Hackathon with $50K prize pool',
                 ],
+                'dean_name': 'Prof. Alan Turing Jr.',
+                'dean_role': 'Dean',
+                'dean_faculty_label': 'Faculty of Computer Science & IT',
             },
             {
                 'name': 'Faculty of Engineering', 'code': 'ENG',
@@ -298,6 +473,9 @@ class Command(BaseCommand):
                     'Year in industry placement scheme',
                     'Research collaborations with national infrastructure bodies',
                 ],
+                'dean_name': 'Dr. Grace Adeyemi',
+                'dean_role': 'Dean',
+                'dean_faculty_label': 'Faculty of Engineering',
             },
             {
                 'name': 'Faculty of Business & Management', 'code': 'BUS',
@@ -314,6 +492,9 @@ class Command(BaseCommand):
                     'Annual Business Plan Competition',
                     'Global study trips to New York, Singapore, and Dubai',
                 ],
+                'dean_name': 'Prof. James Hargreaves',
+                'dean_role': 'Dean',
+                'dean_faculty_label': 'Faculty of Business & Management',
             },
             {
                 'name': 'Faculty of Health Sciences', 'code': 'HLTH',
@@ -331,6 +512,9 @@ class Command(BaseCommand):
                     'Interprofessional education programme',
                     'Research links with WHO and Public Health England',
                 ],
+                'dean_name': 'Dr. Ngozi Eze',
+                'dean_role': 'Dean',
+                'dean_faculty_label': 'Faculty of Health Sciences',
             },
             {
                 'name': 'Faculty of Arts & Humanities', 'code': 'ART',
@@ -347,6 +531,9 @@ class Command(BaseCommand):
                     'Annual Arts Festival', 'Partnerships with national museums',
                     'Study abroad links with Sorbonne and Florence Academy',
                 ],
+                'dean_name': 'Prof. Elena Vasquez',
+                'dean_role': 'Dean',
+                'dean_faculty_label': 'Faculty of Arts & Humanities',
             },
         ]
         faculties = []
@@ -360,6 +547,9 @@ class Command(BaseCommand):
                 description=fd['description'],
                 mission=fd['mission'],
                 vision=fd['vision'],
+                dean_name=fd['dean_name'],
+                dean_role=fd['dean_role'],
+                dean_faculty_label=fd['dean_faculty_label'],
                 accreditation=fd['accreditation'],
                 student_count=fd['student_count'],
                 placement_rate=fd['placement_rate'],
@@ -372,7 +562,7 @@ class Command(BaseCommand):
             )
             faculties.append(f)
 
-        # ── 8. DEPARTMENTS ───────────────────────────────────────────────────
+        # ── 10. DEPARTMENTS ──────────────────────────────────────────────────
         self.stdout.write("🏛️  Creating departments...")
         dept_raw = [
             (faculties[0], 'Department of Software Engineering', 'SE',
@@ -419,7 +609,7 @@ class Command(BaseCommand):
             p.department = random.choice(fac_depts) if fac_depts else departments[0]
             p.save()
 
-        # ── 9. PROGRAMS ──────────────────────────────────────────────────────
+        # ── 11. PROGRAMS ─────────────────────────────────────────────────────
         self.stdout.write("📖 Creating programs...")
         prog_raw = [
             (departments[0], 'BSc Software Engineering', 'BSC-SE', 'undergraduate',
@@ -449,19 +639,50 @@ class Command(BaseCommand):
         ]
         programs = []
         for (dept, name, code, degree, dur, cred, app_fee, tuit, max_stu, feat, order) in prog_raw:
+            base_name = name.split()[-1]
             p = Program.objects.create(
                 department=dept, name=name, code=code,
                 degree_level=degree, duration_years=dur,
                 credits_required=cred, application_fee=app_fee,
                 tuition_fee=tuit, max_students=max_stu,
                 is_featured=feat, is_active=True, display_order=order,
+                tagline=f"Shape your future with {name}",
+                overview=fake.text(max_nb_chars=200),
                 description=fake.text(max_nb_chars=400),
+                available_study_modes=['full_time', 'online', 'blended'],
                 entry_requirements=[
                     "Minimum 5 GCSEs at grade C/4 or above including English and Maths",
                     "A-Levels: AAB or equivalent BTEC",
                     "English proficiency: IELTS 6.0 or equivalent",
-                    f"Strong passion for {name.split()[-1]}",
+                    f"Strong passion for {base_name}",
                 ],
+                core_courses=[
+                    f"{code}-101 Foundations of {base_name}",
+                    f"{code}-201 Intermediate {base_name}",
+                    f"{code}-301 Advanced {base_name}",
+                    f"{code}-401 {base_name} Research Methods",
+                ],
+                specialization_tracks=[
+                    f"{base_name} & Innovation",
+                    f"Applied {base_name}",
+                    f"Digital {base_name}",
+                ],
+                learning_outcomes=[
+                    f"Demonstrate comprehensive knowledge of {base_name}",
+                    "Apply theoretical knowledge to real-world problems",
+                    "Communicate complex ideas effectively in professional contexts",
+                    "Lead and collaborate in multidisciplinary teams",
+                ],
+                career_paths=[
+                    f"Senior {base_name} Specialist",
+                    f"{base_name} Consultant",
+                    f"Research Analyst – {base_name}",
+                    f"Project Manager ({base_name})",
+                ],
+                avg_starting_salary="$45,000 - $70,000",
+                job_placement_rate=random.randint(80, 97),
+                meta_description=f"Study {name} at MIU — accredited, flexible, globally recognised.",
+                meta_keywords=f"{name}, {code}, MIU, university degree, {dept.faculty.name}",
             )
             programs.append(p)
 
@@ -474,10 +695,37 @@ class Command(BaseCommand):
                     p.program = random.choice(dept_progs)
                     p.save()
 
-        # ── 10. ACADEMIC COURSES (units within programs) ──────────────────────────
-        self.stdout.write("📚 Creating academic courses...")
+        # ── 12. ACADEMIC SESSIONS ────────────────────────────────────────────
+        self.stdout.write("📅 Creating academic sessions...")
+        sessions = []
+        session_data = [
+            ('2023/2024', date(2023, 9, 4), date(2024, 1, 19),
+             date(2024, 1, 29), date(2024, 5, 31),
+             date(2023, 8, 28), date(2023, 9, 1), 'closed', False),
+            ('2024/2025', date(2024, 9, 2), date(2025, 1, 17),
+             date(2025, 1, 27), date(2025, 5, 30),
+             date(2024, 8, 26), date(2024, 8, 30), 'active', True),
+            ('2025/2026', date(2025, 9, 1), date(2026, 1, 16),
+             date(2026, 1, 26), date(2026, 5, 29),
+             date(2025, 8, 25), date(2025, 8, 29), 'upcoming', False),
+        ]
+        for (name, fs, fe, ss, se, rs, re, status, is_curr) in session_data:
+            s = AcademicSession.objects.create(
+                name=name,
+                first_semester_start=fs,
+                first_semester_end=fe,
+                second_semester_start=ss,
+                second_semester_end=se,
+                registration_start=rs,
+                registration_end=re,
+                status=status,
+                is_current=is_curr,
+            )
+            sessions.append(s)
+        current_session = sessions[1]  # 2024/2025
 
-        # Map: (program, course_type, code, name, year, semester, credit_units, icon, col1, col2)
+        # ── 13. ACADEMIC COURSES (units within programs) ──────────────────────
+        self.stdout.write("📚 Creating academic courses...")
         ac_raw = [
             # BSc Software Engineering — programs[0]
             (programs[0], 'core', 'SE101', 'Introduction to Programming', 1, 'first', 3, 'terminal', 'blue', 'indigo'),
@@ -485,34 +733,27 @@ class Command(BaseCommand):
             (programs[0], 'core', 'SE201', 'Software Design & Architecture', 2, 'first', 4, 'layout', 'blue', 'cyan'),
             (programs[0], 'elective', 'SE301', 'Cloud Computing & DevOps', 3, 'first', 3, 'cloud', 'sky', 'blue'),
             (programs[0], 'core', 'SE302', 'Capstone Software Project', 3, 'second', 6, 'rocket', 'indigo', 'violet'),
-
             # BSc Artificial Intelligence — programs[2]
             (programs[2], 'core', 'AI101', 'Foundations of Artificial Intelligence', 1, 'first', 3, 'brain-circuit', 'violet', 'purple'),
             (programs[2], 'core', 'AI201', 'Machine Learning Fundamentals', 2, 'first', 4, 'cpu', 'purple', 'fuchsia'),
             (programs[2], 'elective', 'AI301', 'Deep Learning & Neural Networks', 3, 'first', 3, 'network', 'violet', 'indigo'),
-
             # BEng Civil Engineering — programs[5]
             (programs[5], 'core', 'CVE101', 'Structural Analysis I', 1, 'first', 3, 'building', 'orange', 'amber'),
             (programs[5], 'core', 'CVE201', 'Geotechnical Engineering', 2, 'second', 3, 'mountain', 'orange', 'yellow'),
             (programs[5], 'elective', 'CVE301', 'Environmental Engineering', 3, 'first', 3, 'leaf', 'green', 'emerald'),
-
             # BSc Finance & Accounting — programs[7]
             (programs[7], 'core', 'FNA101', 'Financial Accounting Principles', 1, 'first', 3, 'book-open', 'green', 'emerald'),
             (programs[7], 'core', 'FNA201', 'Corporate Finance', 2, 'first', 4, 'trending-up', 'emerald', 'teal'),
             (programs[7], 'elective', 'FNA301', 'Investment Analysis', 3, 'second', 3, 'bar-chart-2', 'green', 'lime'),
-
             # MBA Finance — programs[8]
             (programs[8], 'core', 'MBA101', 'Managerial Economics', 1, 'first', 4, 'briefcase', 'teal', 'cyan'),
             (programs[8], 'core', 'MBA201', 'Strategic Financial Management', 1, 'second', 4, 'pie-chart', 'emerald', 'teal'),
-
             # BSc Nursing — programs[9]
             (programs[9], 'core', 'NRS101', 'Anatomy & Physiology', 1, 'first', 4, 'heart-pulse', 'red', 'rose'),
             (programs[9], 'core', 'NRS201', 'Clinical Nursing Practice', 2, 'first', 5, 'stethoscope', 'rose', 'pink'),
-
             # BA English & Creative Writing — programs[10]
             (programs[10], 'core', 'ECW101', 'Introduction to Literary Theory', 1, 'first', 3, 'book', 'purple', 'violet'),
             (programs[10], 'elective', 'ECW201', 'Fiction Writing Workshop', 2, 'second', 3, 'pen-line', 'violet', 'purple'),
-
             # BA Digital Media & Design — programs[11]
             (programs[11], 'core', 'DMD101', 'Principles of Graphic Design', 1, 'first', 3, 'image', 'pink', 'rose'),
             (programs[11], 'core', 'DMD201', 'UX & Interaction Design', 2, 'first', 3, 'mouse-pointer', 'pink', 'fuchsia'),
@@ -521,12 +762,12 @@ class Command(BaseCommand):
         for (prog, ctype, code, name, year, semester, credits, icon, col1, col2) in ac_raw:
             c = Course.objects.create(
                 program=prog,
-                name=name,
-                code=code,
+                name=name, code=code,
                 course_type=ctype,
                 credit_units=credits,
                 year_of_study=year,
                 semester=semester,
+                academic_session=current_session,
                 description=fake.text(max_nb_chars=300),
                 learning_outcomes=[
                     f"Understand core principles of {name}",
@@ -543,7 +784,7 @@ class Command(BaseCommand):
             )
             academic_courses.append(c)
 
-        # ── 11. COURSE INTAKES ───────────────────────────────────────────────────
+        # ── 14. COURSE INTAKES ───────────────────────────────────────────────
         self.stdout.write("📅 Creating course intakes...")
         intakes = []
         period_months = {'january': 1, 'may': 5, 'september': 9}
@@ -561,7 +802,7 @@ class Command(BaseCommand):
                         is_active=True,
                     ))
 
-        # ── 12. ALL REQUIRED PAYMENTS ────────────────────────────────────────────
+        # ── 15. ALL REQUIRED PAYMENTS ────────────────────────────────────────
         self.stdout.write("💷 Creating required payments...")
         payment_purposes = [
             ('School Fees',               'student',   Decimal('9250.00')),
@@ -578,7 +819,7 @@ class Command(BaseCommand):
                 AllRequiredPayments.objects.create(
                     program=program,
                     course=random.choice(prog_courses) if prog_courses and random.random() > 0.5 else None,
-                    academic_session=None,   # no AcademicSession seeded yet; set to None
+                    academic_session=current_session,
                     semester=random.choice(['first', 'second', 'annual']),
                     purpose=purpose,
                     who_to_pay=who,
@@ -587,7 +828,35 @@ class Command(BaseCommand):
                     is_active=True,
                 )
 
-        # ── 13. COURSE APPLICATIONS ──────────────────────────────────────────────
+        # ── 15b. FEE PAYMENTS ────────────────────────────────────────────────
+        self.stdout.write("💳 Creating fee payments...")
+        all_required = list(AllRequiredPayments.objects.filter(is_active=True, who_to_pay='student'))
+        if all_required and verified_students:
+            for student in verified_students:
+                for fee in random.sample(all_required, k=min(3, len(all_required))):
+                    pstatus = random.choice(['success', 'success', 'pending', 'failed', 'processing'])
+                    FeePayment.objects.create(
+                        fee=fee,
+                        user=student,
+                        amount=fee.amount,
+                        currency='GBP',
+                        status=pstatus,
+                        payment_method=random.choice(['card', 'paypal', 'bank_transfer']),
+                        gateway_payment_id=f"pi_{uuid.uuid4().hex[:24]}",
+                        card_last4=str(random.randint(1000, 9999)),
+                        card_brand=random.choice(['Visa', 'Mastercard', 'Amex']),
+                        paid_at=timezone.now() - timedelta(days=random.randint(1, 60))
+                        if pstatus == 'success' else None,
+                        payment_metadata={
+                            'stripe_charge_id': f"ch_{uuid.uuid4().hex[:24]}",
+                            'ip_address': fake.ipv4(),
+                            'device': random.choice(['desktop', 'mobile', 'tablet']),
+                        },
+                        failure_reason='Insufficient funds' if pstatus == 'failed' else '',
+                    )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {FeePayment.objects.count()} fee payments created"))
+
+        # ── 16. COURSE APPLICATIONS ──────────────────────────────────────────
         self.stdout.write("📝 Creating course applications...")
         applications = []
         for student in verified_students:
@@ -610,7 +879,7 @@ class Command(BaseCommand):
             study_mode_options = program.available_study_modes or ['full_time']
             app = CourseApplication.objects.create(
                 user=student,
-                program=program,                          # ← was: course=course
+                program=program,
                 intake=intake,
                 study_mode=random.choice(study_mode_options),
                 first_name=student.first_name, last_name=student.last_name,
@@ -637,6 +906,7 @@ class Command(BaseCommand):
                 how_did_you_hear=random.choice(
                     ['Social Media', 'Friend', 'Website', 'Advertisement', 'Open Day']
                 ),
+                how_did_you_hear_other='',
                 scholarship=random.choice([True, False]),
                 accept_privacy_policy=True,
                 accept_terms_conditions=True,
@@ -646,12 +916,15 @@ class Command(BaseCommand):
                 emergency_contact_relationship=random.choice(
                     ['Parent', 'Sibling', 'Spouse', 'Guardian']
                 ),
+                emergency_contact_email=fake.email(),
+                emergency_contact_address=fake.address()[:255],
                 status=status,
                 reviewer=random.choice(verified_admins) if random.random() > 0.5 else None,
                 review_notes=fake.text(max_nb_chars=200) if random.random() > 0.5 else '',
                 submitted_at=timezone.now() - timedelta(days=random.randint(1, 90))
                 if status != 'draft' else None,
                 payment_status=random.choice(['pending', 'completed', 'failed']),
+                in_processing=status in ['under_review', 'payment_complete'],
                 admission_accepted=admitted,
                 admission_accepted_at=timezone.now() - timedelta(days=random.randint(1, 30))
                 if admitted else None,
@@ -660,12 +933,16 @@ class Command(BaseCommand):
                 department_approved_at=timezone.now() - timedelta(days=random.randint(1, 15))
                 if dept_approved else None,
                 department_approved_by=random.choice(verified_admins) if dept_approved else None,
-                in_processing=status in ['under_review', 'payment_complete'],
             )
             applications.append(app)
 
-        # ── 14. APPLICATION DOCUMENTS ────────────────────────────────────────
-        self.stdout.write("📎 Creating application documents...")
+        # ── 17. APPLICATION DOCUMENTS ────────────────────────────────────────
+        # Note: FileField requires actual files on disk in production.
+        # In seeding we leave the file field blank (it is optional/blank=True behaviour
+        # for ApplicationDocument.file is NOT blank=True in the model, so we set
+        # original_filename and file_size but leave file blank — the field has
+        # no blank=True but migrations allow null on existing rows via default '').
+        self.stdout.write("📎 Creating application documents (metadata only)...")
         for app in applications:
             for doc_type in random.sample(
                 ['transcript', 'certificate', 'cv', 'passport', 'id_document', 'recommendation'],
@@ -673,20 +950,22 @@ class Command(BaseCommand):
             ):
                 ApplicationDocument.objects.create(
                     application=app, file_type=doc_type,
+                    file='documents/placeholder.pdf',   # placeholder path (no physical file needed for seeding)
                     original_filename=f"{doc_type}_{uuid.uuid4().hex[:6]}.pdf",
                     file_size=random.randint(100_000, 5_000_000),
                 )
 
-        # ── 15. APPLICATION PAYMENTS ─────────────────────────────────────────
+        # ── 18. APPLICATION PAYMENTS ─────────────────────────────────────────
         self.stdout.write("💰 Creating application payments...")
         for app in [a for a in applications
                     if a.status in ['payment_complete', 'under_review', 'approved']]:
             ApplicationPayment.objects.create(
                 application=app,
                 amount=app.program.application_fee,
-                currency='GBP',
+                currency='USD',
                 status='success',
                 payment_method=random.choice(['card', 'paypal', 'bank_transfer']),
+                payment_reference=f"REF-{uuid.uuid4().hex[:16].upper()}",
                 gateway_payment_id=f"pi_{uuid.uuid4().hex[:24]}",
                 card_last4=str(random.randint(1000, 9999)),
                 card_brand=random.choice(['Visa', 'Mastercard', 'Amex']),
@@ -699,7 +978,7 @@ class Command(BaseCommand):
                 failure_reason='',
             )
 
-        # ── 16. COURSE CATEGORIES (LMS) ──────────────────────────────────────
+        # ── 19. COURSE CATEGORIES (LMS) ──────────────────────────────────────
         self.stdout.write("🗂️  Creating LMS course categories...")
         cat_raw = [
             ('Programming & Development', 'code', 'blue'),
@@ -728,43 +1007,43 @@ class Command(BaseCommand):
                 display_order=99, is_active=True,
             )
 
-        # ── 17. LMS COURSES ──────────────────────────────────────────────────
+        # ── 20. LMS COURSES ──────────────────────────────────────────────────
         self.stdout.write("🎥 Creating LMS courses...")
         lms_templates = [
-            ('Complete Python Programming Masterclass', categories[0], 'python',
-             'beginner', Decimal('89.99'), 45.5,
+            ('Complete Python Programming Masterclass', categories[0],
+             'beginner', 45.5,
              'Master Python from basics to advanced. OOP, data structures, file handling.'),
-            ('Modern Web Development Bootcamp', categories[2], 'web_dev',
-             'intermediate', Decimal('99.99'), 52.0,
+            ('Modern Web Development Bootcamp', categories[2],
+             'intermediate', 52.0,
              'HTML, CSS, JavaScript, and modern frameworks for professional websites.'),
-            ('Data Science & Machine Learning A-Z', categories[1], 'data_science',
-             'intermediate', Decimal('119.99'), 68.5,
+            ('Data Science & Machine Learning A-Z', categories[1],
+             'intermediate', 68.5,
              'Comprehensive data science with statistics, Python, ML, and real projects.'),
-            ('Deep Learning & Neural Networks', categories[4], 'machine_learning',
-             'advanced', Decimal('149.99'), 72.0,
+            ('Deep Learning & Neural Networks', categories[4],
+             'advanced', 72.0,
              'Advanced deep learning covering CNNs, RNNs, GANs and modern architectures.'),
-            ('JavaScript: Zero to Hero', categories[0], 'javascript',
-             'beginner', Decimal('79.99'), 38.0,
+            ('JavaScript: Zero to Hero', categories[0],
+             'beginner', 38.0,
              'Complete JavaScript for beginners. Fundamentals to interactive web apps.'),
-            ('React – The Complete Guide', categories[2], 'react',
-             'intermediate', Decimal('94.99'), 48.5,
+            ('React – The Complete Guide', categories[2],
+             'intermediate', 48.5,
              'Comprehensive React with hooks, context, Redux, and advanced patterns.'),
-            ('UI/UX Design Fundamentals', categories[8], 'design',
-             'beginner', Decimal('69.99'), 32.0,
+            ('UI/UX Design Fundamentals', categories[8],
+             'beginner', 32.0,
              'User interface and user experience design principles and tools.'),
-            ('Business Strategy & Entrepreneurship', categories[9], 'business',
-             'intermediate', Decimal('84.99'), 41.0,
+            ('Business Strategy & Entrepreneurship', categories[9],
+             'intermediate', 41.0,
              'Business strategy, market analysis, and entrepreneurship fundamentals.'),
-            ('Advanced Python for Data Science', categories[1], 'python',
-             'advanced', Decimal('129.99'), 55.5,
+            ('Advanced Python for Data Science', categories[1],
+             'advanced', 55.5,
              'Advanced Python techniques: pandas, numpy, scikit-learn.'),
-            ('Full Stack Web Development', categories[2], 'web_dev',
-             'advanced', Decimal('139.99'), 78.0,
+            ('Full Stack Web Development', categories[2],
+             'advanced', 78.0,
              'Full-stack development: frontend, backend, databases, and deployment.'),
         ]
         lms_courses = []
         instructor_course_map = {}
-        for idx, (title, cat, vtype, diff, price, dur, desc) in enumerate(lms_templates):
+        for idx, (title, cat, diff, dur, desc) in enumerate(lms_templates):
             instructor = users['instructors'][idx % len(users['instructors'])]
             lc = LMSCourse.objects.create(
                 title=title,
@@ -786,9 +1065,7 @@ class Command(BaseCommand):
                 instructor=instructor,
                 instructor_name=instructor.get_full_name(),
                 instructor_bio=fake.text(max_nb_chars=300),
-                is_free=False,
-                price=price,
-                discount_price=price - Decimal('15.00') if random.random() > 0.5 else None,
+                promo_video_url='https://www.youtube.com/watch?v=-mJFZp84TIY',
                 max_students=random.choice([50, 100, 200, None]),
                 enrollment_start_date=date(2025, 1, 1),
                 enrollment_end_date=date(2025, 12, 31),
@@ -802,18 +1079,15 @@ class Command(BaseCommand):
             lms_courses.append(lc)
             instructor_course_map.setdefault(instructor, []).append(lc)
 
-        # ── 18. LESSON SECTIONS & LESSONS ────────────────────────────────────
+        # ── 21. LESSON SECTIONS & LESSONS ────────────────────────────────────
         self.stdout.write("📹 Creating lesson sections and lessons...")
         section_titles = [
             'Getting Started', 'Core Concepts', 'Intermediate Topics',
             'Advanced Techniques', 'Real-World Projects', 'Assessment & Review',
         ]
         lesson_type_pool = ['video', 'video', 'video', 'text', 'quiz', 'assignment']
+        all_lessons = []
         for lc in lms_courses:
-            vid_key = next(
-                (k for k in YOUTUBE_VIDEOS if k in lc.title.lower()), 'python'
-            )
-            videos = YOUTUBE_VIDEOS.get(vid_key, YOUTUBE_VIDEOS['python'])
             for s_idx, s_title in enumerate(
                 random.sample(section_titles, k=random.randint(3, 5))
             ):
@@ -824,142 +1098,131 @@ class Command(BaseCommand):
                 )
                 for l_idx in range(random.randint(3, 7)):
                     ltype = random.choice(lesson_type_pool)
-                    Lesson.objects.create(
+                    # Use the provided embed codes for video lessons
+                    video_embed = random.choice(EMBED_CODES) if ltype == 'video' else ''
+                    lesson = Lesson.objects.create(
                         course=lc, section=section,
                         title=f"{s_title} – Part {l_idx + 1}: {fake.catch_phrase()}",
                         lesson_type=ltype,
                         description=fake.text(max_nb_chars=300),
                         content=fake.text(max_nb_chars=1000),
-                        video_url=random.choice(videos) if ltype == 'video' else '',
+                        video_url=video_embed,
                         video_duration_minutes=random.randint(8, 45) if ltype == 'video' else 0,
                         is_preview=(l_idx == 0),
                         is_active=True,
                         display_order=l_idx,
                     )
+                    all_lessons.append(lesson)
 
-        # ── 19. ENROLLMENTS ──────────────────────────────────────────────────
+        # ── 22. ENROLLMENTS ──────────────────────────────────────────────────
         self.stdout.write("🎓 Creating enrollments...")
         enrollments = []
         for student in verified_students:
             for lc in random.sample(lms_courses, k=random.randint(2, 7)):
                 status = random.choice(['active', 'active', 'completed', 'dropped'])
                 progress = Decimal(str(round(random.uniform(0, 100), 2)))
-                completed_at = (
-                    timezone.now() - timedelta(days=random.randint(1, 60))
-                    if status == 'completed' else None
-                )
                 enr = Enrollment.objects.create(
                     student=student, course=lc,
-                    enrolled_by=random.choice(users['admins']) if random.random() > 0.5 else None,
-                    status=status,
+                    enrolled_by=random.choice(users['admins']),
                     progress_percentage=progress,
                     completed_lessons=random.randint(0, 20),
-                    current_grade=Decimal(str(round(random.uniform(50, 100), 2)))
-                    if random.random() > 0.4 else None,
-                    completed_at=completed_at,
-                    last_accessed=timezone.now() - timedelta(hours=random.randint(1, 200)),
+                    current_grade=Decimal(str(round(random.uniform(40, 100), 2)))
+                    if progress > 30 else None,
+                    status=status,
+                    completed_at=timezone.now() - timedelta(days=random.randint(1, 60))
+                    if status == 'completed' else None,
+                    last_accessed=timezone.now() - timedelta(hours=random.randint(1, 720)),
                 )
                 enrollments.append(enr)
 
-        # ── 20. LESSON PROGRESS ──────────────────────────────────────────────
-        self.stdout.write("📊 Creating lesson progress...")
-        for enr in random.sample(enrollments, k=min(len(enrollments), 120)):
-            lessons = list(enr.course.lessons.filter(is_active=True))
-            n_done = int(len(lessons) * float(enr.progress_percentage) / 100)
-            for lesson in lessons[:n_done]:
-                LessonProgress.objects.create(
+        # ── 23. LESSON PROGRESS ──────────────────────────────────────────────
+        self.stdout.write("📈 Creating lesson progress records...")
+        for enr in enrollments[:40]:
+            course_lessons = list(enr.course.lessons.filter(is_active=True))
+            for lesson in random.sample(course_lessons, k=min(5, len(course_lessons))):
+                is_done = random.random() > 0.4
+                LessonProgress.objects.get_or_create(
                     enrollment=enr, lesson=lesson,
-                    is_completed=True,
-                    completion_percentage=Decimal('100.00'),
-                    time_spent_minutes=random.randint(10, 90),
-                    video_progress_seconds=lesson.video_duration_minutes * 60
-                    if lesson.lesson_type == 'video' else 0,
-                    started_at=enr.enrolled_at + timedelta(hours=random.randint(1, 48)),
-                    completed_at=timezone.now() - timedelta(days=random.randint(1, 30)),
-                )
-            remaining = lessons[n_done:]
-            if remaining:
-                lesson = remaining[0]
-                LessonProgress.objects.create(
-                    enrollment=enr, lesson=lesson,
-                    is_completed=False,
-                    completion_percentage=Decimal(str(round(random.uniform(10, 80), 2))),
-                    time_spent_minutes=random.randint(5, 40),
-                    video_progress_seconds=random.randint(60, 900),
-                    started_at=timezone.now() - timedelta(hours=random.randint(1, 24)),
-                    completed_at=None,
+                    defaults=dict(
+                        is_completed=is_done,
+                        completion_percentage=Decimal('100.00') if is_done
+                        else Decimal(str(round(random.uniform(10, 90), 2))),
+                        time_spent_minutes=random.randint(5, 60),
+                        video_progress_seconds=random.randint(0, 2700),
+                        started_at=timezone.now() - timedelta(days=random.randint(1, 30)),
+                        completed_at=timezone.now() - timedelta(days=random.randint(0, 10))
+                        if is_done else None,
+                    )
                 )
 
-        # ── 21. ASSIGNMENTS ──────────────────────────────────────────────────
+        # ── 24. ASSIGNMENTS ──────────────────────────────────────────────────
         self.stdout.write("📝 Creating assignments...")
         assignments = []
-        for instructor, courses in instructor_course_map.items():
-            for lc in courses:
-                for lesson in random.sample(
-                    list(lc.lessons.all()), k=min(3, lc.lessons.count())
-                ):
-                    asgn = Assignment.objects.create(
-                        lesson=lesson,
-                        title=f"Assignment: {fake.catch_phrase()}",
-                        description=fake.text(max_nb_chars=500),
-                        instructions=fake.text(max_nb_chars=300),
-                        max_score=Decimal('100.00'),
-                        passing_score=Decimal('70.00'),
-                        due_date=timezone.now() + timedelta(days=random.randint(7, 45)),
-                        allow_late_submission=random.choice([True, False]),
-                        late_penalty_percent=random.choice([0, 10, 20, 30]),
-                        is_active=True,
-                        display_order=len(assignments),
-                    )
-                    assignments.append(asgn)
+        for lesson in random.sample(all_lessons, k=min(40, len(all_lessons))):
+            if lesson.lesson_type in ['video', 'text']:
+                a = Assignment.objects.create(
+                    lesson=lesson,
+                    title=f"Assignment: {fake.catch_phrase()}",
+                    description=fake.text(max_nb_chars=400),
+                    instructions=fake.text(max_nb_chars=300),
+                    max_score=Decimal('100.00'),
+                    passing_score=Decimal(str(random.choice([50, 60, 70]))),
+                    due_date=timezone.now() + timedelta(days=random.randint(7, 60)),
+                    allow_late_submission=random.choice([True, False]),
+                    late_penalty_percent=random.choice([0, 10, 20]),
+                    is_active=True,
+                    display_order=len(assignments),
+                )
+                assignments.append(a)
 
-        # ── 22. ASSIGNMENT SUBMISSIONS ────────────────────────────────────────
+        # ── 25. ASSIGNMENT SUBMISSIONS ───────────────────────────────────────
         self.stdout.write("📤 Creating assignment submissions...")
-        for asgn in assignments:
+        for assignment in random.sample(assignments, k=min(30, len(assignments))):
             enrolled = list(
-                Enrollment.objects.filter(course=asgn.lesson.course, status='active')
+                Enrollment.objects.filter(course=assignment.lesson.course, status='active')
             )
-            for enr in random.sample(enrolled, k=min(random.randint(2, 8), len(enrolled))):
-                status = random.choice(['draft', 'submitted', 'submitted', 'graded', 'graded'])
-                is_graded = status == 'graded'
-                sub_at = timezone.now() - timedelta(days=random.randint(1, 20))
-                AssignmentSubmission.objects.create(
-                    assignment=asgn,
-                    student=enr.student,
-                    submission_text=fake.text(max_nb_chars=600),
-                    score=Decimal(str(round(random.uniform(55, 100), 2))) if is_graded else None,
-                    feedback=fake.text(max_nb_chars=300) if is_graded else '',
-                    graded_by=asgn.lesson.course.instructor if is_graded else None,
-                    graded_at=sub_at + timedelta(days=random.randint(1, 7)) if is_graded else None,
-                    status=status,
-                    is_late=random.random() > 0.8,
-                    submitted_at=sub_at if status != 'draft' else None,
+            for enr in random.sample(enrolled, k=min(5, len(enrolled))):
+                status_choices = ['submitted', 'graded', 'returned', 'draft']
+                sub_status = random.choice(status_choices)
+                grader = random.choice(users['instructors'])
+                AssignmentSubmission.objects.get_or_create(
+                    assignment=assignment, student=enr.student,
+                    defaults=dict(
+                        submission_text=fake.text(max_nb_chars=600),
+                        score=Decimal(str(round(random.uniform(40, 100), 2)))
+                        if sub_status == 'graded' else None,
+                        feedback=fake.text(max_nb_chars=200) if sub_status == 'graded' else '',
+                        graded_by=grader if sub_status == 'graded' else None,
+                        graded_at=timezone.now() - timedelta(days=random.randint(1, 14))
+                        if sub_status == 'graded' else None,
+                        status=sub_status,
+                        is_late=random.random() > 0.8,
+                        submitted_at=timezone.now() - timedelta(days=random.randint(1, 30))
+                        if sub_status != 'draft' else None,
+                    )
                 )
 
-        # ── 23. QUIZZES ──────────────────────────────────────────────────────
-        self.stdout.write("❓ Creating quizzes...")
+        # ── 26. QUIZZES ──────────────────────────────────────────────────────
+        self.stdout.write("🎯 Creating quizzes...")
         quizzes = []
-        for instructor, courses in instructor_course_map.items():
-            for lc in courses:
-                for lesson in random.sample(
-                    list(lc.lessons.all()), k=min(2, lc.lessons.count())
-                ):
-                    quiz = Quiz.objects.create(
-                        lesson=lesson,
-                        title=f"Quiz: {fake.catch_phrase()}",
-                        description=fake.text(max_nb_chars=200),
-                        instructions='Read all questions carefully before answering.',
-                        time_limit_minutes=random.choice([15, 30, 45, 60]),
-                        passing_score=Decimal('70.00'),
-                        max_attempts=random.choice([2, 3, 5]),
-                        shuffle_questions=random.choice([True, False]),
-                        show_correct_answers=random.choice([True, False]),
-                        is_active=True,
-                        display_order=len(quizzes),
-                    )
-                    quizzes.append(quiz)
+        for lesson in random.sample(all_lessons, k=min(35, len(all_lessons))):
+            if lesson.lesson_type in ['video', 'text', 'quiz']:
+                quiz = Quiz.objects.create(
+                    lesson=lesson,
+                    title=f"Quiz: {fake.catch_phrase()}",
+                    description=fake.text(max_nb_chars=200),
+                    instructions=fake.text(max_nb_chars=150),
+                    time_limit_minutes=random.choice([15, 20, 30, 45, None]),
+                    passing_score=Decimal(str(random.choice([60, 70, 75]))),
+                    max_attempts=random.randint(2, 5),
+                    shuffle_questions=random.choice([True, False]),
+                    show_correct_answers=random.choice([True, False]),
+                    is_active=True,
+                    display_order=len(quizzes),
+                )
+                quizzes.append(quiz)
 
-        # ── 24. QUIZ QUESTIONS & ANSWERS ──────────────────────────────────────
+        # ── 27. QUIZ QUESTIONS & ANSWERS ─────────────────────────────────────
         self.stdout.write("❔ Creating quiz questions and answers...")
         for quiz in quizzes:
             for i in range(random.randint(5, 12)):
@@ -986,14 +1249,14 @@ class Command(BaseCommand):
                     correct = random.choice([True, False])
                     QuizAnswer.objects.create(
                         question=q, answer_text='True',
-                        is_correct=correct, display_order=0
+                        is_correct=correct, display_order=0,
                     )
                     QuizAnswer.objects.create(
                         question=q, answer_text='False',
-                        is_correct=not correct, display_order=1
+                        is_correct=not correct, display_order=1,
                     )
 
-        # ── 25. QUIZ ATTEMPTS & RESPONSES ─────────────────────────────────────
+        # ── 28. QUIZ ATTEMPTS & RESPONSES ────────────────────────────────────
         self.stdout.write("🎯 Creating quiz attempts and responses...")
         for quiz in random.sample(quizzes, k=min(len(quizzes), 40)):
             enrolled = list(
@@ -1014,41 +1277,47 @@ class Command(BaseCommand):
                         answers = list(q.answers.all())
                         if answers:
                             sel = random.choice(answers)
-                            QuizResponse.objects.create(
+                            QuizResponse.objects.get_or_create(
                                 attempt=attempt, question=q,
-                                selected_answer=sel,
-                                text_response='',
-                                is_correct=sel.is_correct,
-                                points_earned=q.points if sel.is_correct else Decimal('0.00'),
+                                defaults=dict(
+                                    selected_answer=sel,
+                                    text_response='',
+                                    is_correct=sel.is_correct,
+                                    points_earned=q.points if sel.is_correct else Decimal('0.00'),
+                                )
                             )
 
-        # ── 26. REVIEWS ──────────────────────────────────────────────────────
+        # ── 29. REVIEWS ──────────────────────────────────────────────────────
         self.stdout.write("⭐ Creating reviews...")
         for lc in lms_courses:
             enrolled = list(Enrollment.objects.filter(course=lc))
             for enr in random.sample(enrolled, k=min(random.randint(3, 10), len(enrolled))):
-                Review.objects.create(
+                Review.objects.get_or_create(
                     course=lc, student=enr.student,
-                    rating=random.randint(3, 5),
-                    review_text=fake.text(max_nb_chars=400),
-                    is_approved=random.random() > 0.1,
+                    defaults=dict(
+                        rating=random.randint(3, 5),
+                        review_text=fake.text(max_nb_chars=400),
+                        is_approved=random.random() > 0.1,
+                    )
                 )
 
-        # ── 27. CERTIFICATES ─────────────────────────────────────────────────
+        # ── 30. CERTIFICATES ─────────────────────────────────────────────────
         self.stdout.write("🏆 Creating certificates...")
         completed = [
             e for e in enrollments if e.status == 'completed' and e.course.has_certificate
         ]
         for enr in completed:
-            Certificate.objects.create(
+            Certificate.objects.get_or_create(
                 student=enr.student, course=enr.course,
-                completion_date=(enr.completed_at or timezone.now()).date(),
-                grade=random.choice(['A', 'A*', 'B', 'Merit', 'Distinction']),
-                verification_code=uuid.uuid4(),
-                is_verified=True,
+                defaults=dict(
+                    completion_date=(enr.completed_at or timezone.now()).date(),
+                    grade=random.choice(['A', 'A*', 'B', 'Merit', 'Distinction']),
+                    verification_code=uuid.uuid4(),
+                    is_verified=True,
+                )
             )
 
-        # ── 28. TRANSACTIONS ─────────────────────────────────────────────────
+        # ── 31. TRANSACTIONS ─────────────────────────────────────────────────
         self.stdout.write("💳 Creating transactions...")
         for student in verified_students:
             for _ in range(random.randint(2, 6)):
@@ -1058,7 +1327,7 @@ class Command(BaseCommand):
                 txn_type = random.choice(['enrollment', 'subscription', 'refund'])
                 Transaction.objects.create(
                     user=student, transaction_type=txn_type,
-                    amount=amt, currency='GBP',
+                    amount=amt, currency='USD',
                     gateway=gw,
                     gateway_transaction_id=f"{gw.slug}_{uuid.uuid4().hex[:20]}",
                     status=status,
@@ -1073,7 +1342,7 @@ class Command(BaseCommand):
                     if status == 'completed' else None,
                 )
 
-        # ── 29. INVOICES ─────────────────────────────────────────────────────
+        # ── 32. INVOICES ─────────────────────────────────────────────────────
         self.stdout.write("🧾 Creating invoices...")
         completed_txns = list(Transaction.objects.filter(status='completed'))
         for txn in random.sample(completed_txns, k=min(40, len(completed_txns))):
@@ -1084,7 +1353,7 @@ class Command(BaseCommand):
                 subtotal=subtotal,
                 tax_rate=Decimal('5.00'),
                 discount_amount=Decimal('0.00'),
-                currency='GBP',
+                currency='USD',
                 status='paid',
                 due_date=(txn.completed_at + timedelta(days=30)).date()
                 if txn.completed_at else timezone.now().date() + timedelta(days=30),
@@ -1092,7 +1361,7 @@ class Command(BaseCommand):
                 notes=f"Invoice for transaction {txn.transaction_id}. Thank you for your payment.",
             )
 
-        # ── 30. BADGES ───────────────────────────────────────────────────────
+        # ── 33. BADGES ───────────────────────────────────────────────────────
         self.stdout.write("🏅 Creating badges...")
         badge_raw = [
             ('First Course Completed', 'award', 'bronze', 10,
@@ -1121,17 +1390,19 @@ class Command(BaseCommand):
                 is_active=True,
             ))
 
-        # ── 31. STUDENT BADGES ────────────────────────────────────────────────
+        # ── 34. STUDENT BADGES ────────────────────────────────────────────────
         self.stdout.write("🎖️  Awarding badges...")
         for student in verified_students:
             for badge in random.sample(badges, k=random.randint(1, 5)):
-                StudentBadge.objects.create(
+                StudentBadge.objects.get_or_create(
                     student=student, badge=badge,
-                    awarded_by=random.choice(users['admins'] + users['instructors']),
-                    reason=fake.sentence(),
+                    defaults=dict(
+                        awarded_by=random.choice(users['admins'] + users['instructors']),
+                        reason=fake.sentence(),
+                    )
                 )
 
-        # ── 32. BLOG CATEGORIES ───────────────────────────────────────────────
+        # ── 35. BLOG CATEGORIES ───────────────────────────────────────────────
         self.stdout.write("📰 Creating blog categories...")
         blog_cat_raw = [
             ('Technology Trends', 'trending-up', 'blue'),
@@ -1149,7 +1420,7 @@ class Command(BaseCommand):
                 display_order=idx, is_active=True,
             ))
 
-        # ── 33. BLOG POSTS ────────────────────────────────────────────────────
+        # ── 36. BLOG POSTS ────────────────────────────────────────────────────
         self.stdout.write("✍️  Creating blog posts...")
         authors = users['instructors'] + users['content_managers'] + users['admins']
         for author in authors:
@@ -1165,16 +1436,18 @@ class Command(BaseCommand):
                     author=author,
                     author_name=author.get_full_name(),
                     author_title=fake.job(),
+                    author_bio=fake.text(max_nb_chars=200),
                     featured_image_alt=fake.sentence(nb_words=5),
                     read_time=random.randint(3, 15),
                     views_count=random.randint(10, 5000),
                     status=status,
                     is_featured=random.random() > 0.8,
                     publish_date=timezone.now() - timedelta(days=random.randint(1, 180)),
+                    meta_description=fake.text(max_nb_chars=155),
                     meta_keywords=', '.join([fake.word() for _ in range(4)]),
                 )
 
-        # ── 34. DISCUSSIONS & REPLIES ─────────────────────────────────────────
+        # ── 37. DISCUSSIONS & REPLIES ─────────────────────────────────────────
         self.stdout.write("💬 Creating discussions...")
         discussions = []
         for lc in lms_courses:
@@ -1211,8 +1484,8 @@ class Command(BaseCommand):
                                 is_solution=False,
                             )
 
-        # ── 35. STUDY GROUPS ──────────────────────────────────────────────────
-        self.stdout.write("👥 Creating study groups...")
+        # ── 38. STUDY GROUPS & MESSAGES ──────────────────────────────────────
+        self.stdout.write("👥 Creating study groups and messages...")
         study_groups = []
         for lc in random.sample(lms_courses, k=min(6, len(lms_courses))):
             for _ in range(random.randint(1, 2)):
@@ -1233,18 +1506,32 @@ class Command(BaseCommand):
                 enrolled_ids = list(
                     Enrollment.objects.filter(course=lc).values_list('student', flat=True)
                 )
+                member_users = [creator]
                 for sid in random.sample(
                     enrolled_ids, k=min(sg.max_members - 1, len(enrolled_ids))
                 ):
                     if sid != creator.id:
-                        StudyGroupMember.objects.create(
-                            study_group=sg,
-                            user=User.objects.get(id=sid),
-                            role=random.choice(['member', 'member', 'moderator']),
-                            is_active=True,
-                        )
+                        try:
+                            member_user = User.objects.get(id=sid)
+                            StudyGroupMember.objects.create(
+                                study_group=sg,
+                                user=member_user,
+                                role=random.choice(['member', 'member', 'moderator']),
+                                is_active=True,
+                            )
+                            member_users.append(member_user)
+                        except User.DoesNotExist:
+                            pass
 
-        # ── 36. MESSAGES ──────────────────────────────────────────────────────
+                # StudyGroupMessages — seed chat messages
+                for _ in range(random.randint(3, 10)):
+                    StudyGroupMessage.objects.create(
+                        study_group=sg,
+                        author=random.choice(member_users),
+                        content=fake.text(max_nb_chars=300),
+                    )
+
+        # ── 39. MESSAGES ──────────────────────────────────────────────────────
         self.stdout.write("✉️  Creating messages...")
         for user in verified_all:
             others = [u for u in all_users if u != user]
@@ -1268,7 +1555,7 @@ class Command(BaseCommand):
                         is_read=random.choice([True, False]),
                     )
 
-        # ── 37. SUPPORT TICKETS ───────────────────────────────────────────────
+        # ── 40. SUPPORT TICKETS ───────────────────────────────────────────────
         self.stdout.write("🎫 Creating support tickets...")
         tickets = []
         ticket_creators = (
@@ -1300,7 +1587,7 @@ class Command(BaseCommand):
                         is_internal_note=random.random() > 0.75,
                     )
 
-        # ── 38. NOTIFICATIONS ─────────────────────────────────────────────────
+        # ── 41. NOTIFICATIONS ─────────────────────────────────────────────────
         self.stdout.write("🔔 Creating notifications...")
         ntypes = ['enrollment', 'assignment', 'grade', 'announcement',
                   'message', 'certificate', 'system']
@@ -1318,7 +1605,7 @@ class Command(BaseCommand):
                     if is_read else None,
                 )
 
-        # ── 39. ANNOUNCEMENTS ─────────────────────────────────────────────────
+        # ── 42. ANNOUNCEMENTS ─────────────────────────────────────────────────
         self.stdout.write("📢 Creating announcements...")
         for creator in users['admins'] + users['instructors']:
             ann_type = random.choice(['system', 'course', 'category'])
@@ -1336,7 +1623,7 @@ class Command(BaseCommand):
                 if random.random() > 0.4 else None,
             )
 
-        # ── 40. CONTACT MESSAGES ──────────────────────────────────────────────
+        # ── 43. CONTACT MESSAGES ──────────────────────────────────────────────
         self.stdout.write("📧 Creating contact messages...")
         for _ in range(30):
             responder = random.choice(users['support']) if random.random() > 0.35 else None
@@ -1355,7 +1642,7 @@ class Command(BaseCommand):
                 created_at=timezone.now() - timedelta(days=random.randint(1, 120)),
             )
 
-        # ── 41. AUDIT LOGS ────────────────────────────────────────────────────
+        # ── 44. AUDIT LOGS ────────────────────────────────────────────────────
         self.stdout.write("📋 Creating audit logs...")
         actions = ['create', 'update', 'delete', 'login', 'logout',
                    'access', 'export', 'permission_change']
@@ -1379,7 +1666,7 @@ class Command(BaseCommand):
                     },
                 )
 
-        # ── 42. BROADCAST MESSAGES ────────────────────────────────────────────
+        # ── 45. BROADCAST MESSAGES ────────────────────────────────────────────
         self.stdout.write("📡 Creating broadcast messages...")
         broadcast_creators = verified_admins + verified_content
         for subject, ftype, fvals, status in [
@@ -1418,7 +1705,7 @@ class Command(BaseCommand):
                 error_message='' if status != 'failed' else 'SMTP connection timeout',
             )
 
-        # ── 43. STAFF PAYROLL ─────────────────────────────────────────────────
+        # ── 46. STAFF PAYROLL ─────────────────────────────────────────────────
         self.stdout.write("💰 Creating staff payroll records (full 12-month history)...")
         finance_admin = users['finance'][0]
         approver = users['admins'][0]
@@ -1472,16 +1759,27 @@ class Command(BaseCommand):
         ))
         self.stdout.write(self.style.SUCCESS("=" * 70))
         rows = [
+            ("SiteConfig", SiteConfig.objects.count()),
+            ("Testimonials",        Testimonial.objects.count()),
+            ("Institution Members", InstitutionMember.objects.count()),
+            ("Countries", ListOfCountry.objects.count()),
             ("Users", User.objects.count()),
+            ("Vendors", Vendor.objects.count()),
+            ("System Configurations", SystemConfiguration.objects.count()),
+            ("Payment Gateways", PaymentGateway.objects.count()),
+            ("Subscription Plans", SubscriptionPlan.objects.count()),
+            ("Subscriptions", Subscription.objects.count()),
             ("Faculties", Faculty.objects.count()),
             ("Departments", Department.objects.count()),
             ("Programs", Program.objects.count()),
+            ("Academic Sessions", AcademicSession.objects.count()),
             ("Academic Courses", Course.objects.count()),
-            ("Required Payments", AllRequiredPayments.objects.count()),
             ("Course Intakes", CourseIntake.objects.count()),
+            ("Required Payments", AllRequiredPayments.objects.count()),
             ("Applications", CourseApplication.objects.count()),
             ("Application Documents", ApplicationDocument.objects.count()),
             ("Application Payments", ApplicationPayment.objects.count()),
+            ("LMS Course Categories", CourseCategory.objects.count()),
             ("LMS Courses", LMSCourse.objects.count()),
             ("Lesson Sections", LessonSection.objects.count()),
             ("Lessons", Lesson.objects.count()),
@@ -1498,23 +1796,24 @@ class Command(BaseCommand):
             ("Invoices", Invoice.objects.count()),
             ("Badges", Badge.objects.count()),
             ("Student Badges", StudentBadge.objects.count()),
+            ("Blog Categories", BlogCategory.objects.count()),
             ("Blog Posts", BlogPost.objects.count()),
             ("Discussions", Discussion.objects.count()),
+            ("Discussion Replies", DiscussionReply.objects.count()),
             ("Study Groups", StudyGroup.objects.count()),
+            ("Study Group Members", StudyGroupMember.objects.count()),
+            ("Study Group Messages", StudyGroupMessage.objects.count()),
             ("Messages", Message.objects.count()),
             ("Support Tickets", SupportTicket.objects.count()),
+            ("Ticket Replies", TicketReply.objects.count()),
             ("Notifications", Notification.objects.count()),
             ("Announcements", Announcement.objects.count()),
             ("Contact Messages", ContactMessage.objects.count()),
             ("Audit Logs", AuditLog.objects.count()),
             ("Broadcast Messages", BroadcastMessage.objects.count()),
             ("Staff Payrolls", StaffPayroll.objects.count()),
-            ("Payment Gateways", PaymentGateway.objects.count()),
-            ("Subscription Plans", SubscriptionPlan.objects.count()),
-            ("Subscriptions", Subscription.objects.count()),
-            ("Vendors", Vendor.objects.count()),
-            ("System Configs", SystemConfiguration.objects.count()),
+            ("Fee Payments", FeePayment.objects.count()),
         ]
         for label, count in rows:
-            self.stdout.write(f"   {label:<32} {count}")
+            self.stdout.write(f"   {label:<36} {count}")
         self.stdout.write(self.style.SUCCESS("=" * 70 + "\n"))

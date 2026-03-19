@@ -1,4 +1,3 @@
-from tkinter import TRUE
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
@@ -66,102 +65,253 @@ def blog_image_upload_path(instance, filename):
     return f'blog/{instance.slug}/{safe_filename}'
 
 class SiteConfig(models.Model):
-    """Public-facing school identity and contact config"""
+    """
+    Singleton model — drives the nav header, footer, and all embed codes
+    (promo video, campus map, virtual tour) across all pages.
 
-    # ── Identity ──────────────────────────────────────────
-    school_name       = models.CharField(max_length=200)
-    school_short_name = models.CharField(max_length=50, blank=True)
-    tagline           = models.CharField(max_length=300, blank=True)
-    logo              = models.ImageField(upload_to='site/logos/',    blank=True, null=True)
-    logo_dark         = models.ImageField(upload_to='site/logos/',    blank=True, null=True)
-    favicon           = models.ImageField(upload_to='site/favicons/', blank=True, null=True)
-    og_image          = models.ImageField(upload_to='site/og/',       blank=True, null=True)
+    In views:      site_config = SiteConfig.get()
+    In templates:  {{ site_config.field_name }}
+    """
 
-    # ── Contact ───────────────────────────────────────────
-    email              = models.EmailField(blank=True)
-    phone_primary      = models.CharField(max_length=30, blank=True)
+    # =========================================================================
+    # IDENTITY  —  nav logo, footer copyright, og/twitter meta tags
+    # =========================================================================
+    school_name = models.CharField(
+        max_length=200,
+        default='Melchisedec International University',
+        help_text="Full legal name shown in nav, footer, og tags"
+    )
+    school_short_name = models.CharField(
+        max_length=50, blank=True, default='MIU',
+        help_text="Abbreviation used in footer copyright, og tags e.g. 'MIU'"
+    )
+    tagline = models.CharField(
+        max_length=300, blank=True,
+        help_text="Short tagline used in footer and og description fallback"
+    )
+    logo = models.ImageField(
+        upload_to='site/logos/', blank=True, null=True,
+        help_text="Nav bar and footer logo"
+    )
+    logo_dark = models.ImageField(
+        upload_to='site/logos/', blank=True, null=True,
+        help_text="Dark-background variant of the logo"
+    )
+    favicon = models.ImageField(
+        upload_to='site/favicons/', blank=True, null=True,
+        help_text="Browser tab favicon"
+    )
+    og_image = models.ImageField(
+        upload_to='site/og/', blank=True, null=True,
+        help_text="Default Open Graph / Twitter share image (1200×630 px recommended)"
+    )
+    theme_color = models.CharField(
+        max_length=20, blank=True, default='#840384',
+        help_text="Browser theme-color meta tag hex value e.g. '#840384'"
+    )
+
+    # =========================================================================
+    # CONTACT  —  footer bottom bar (phone, email)
+    # =========================================================================
+    email = models.EmailField(
+        blank=True,
+        help_text="Primary contact email — footer bottom bar"
+    )
+    phone_primary = models.CharField(
+        max_length=30, blank=True,
+        help_text="Primary phone — footer bottom bar"
+    )
     phone_secondary    = models.CharField(max_length=30, blank=True)
-    phone_ng_primary   = models.CharField(max_length=30, blank=True)
-    phone_ng_secondary = models.CharField(max_length=30, blank=True)
-    whatsapp           = models.CharField(max_length=30, blank=True)
+    phone_ng_primary   = models.CharField(max_length=30, blank=True,
+                                          help_text="Primary Nigeria phone number")
+    phone_ng_secondary = models.CharField(max_length=30, blank=True,
+                                          help_text="Secondary Nigeria phone number")
+    whatsapp = models.CharField(
+        max_length=30, blank=True,
+        help_text="WhatsApp number — digits only e.g. 15551234567"
+    )
 
-    # ── Addresses ─────────────────────────────────────────
-    address_usa     = models.TextField(blank=True)
-    address_nigeria = models.TextField(blank=True)
+    # =========================================================================
+    # CONTACT PAGE — department-specific emails
+    # =========================================================================
+    email_admissions = models.EmailField(
+        blank=True,
+        help_text="Admissions department email — contact page"
+    )
+    email_info = models.EmailField(
+        blank=True,
+        help_text="General info email — contact page"
+    )
+    email_international = models.EmailField(
+        blank=True,
+        help_text="International enquiries email — contact page"
+    )
 
-    # ── Office Hours ──────────────────────────────────────
-    office_hours_weekday  = models.CharField(max_length=100, blank=True)
-    office_hours_saturday = models.CharField(max_length=100, blank=True)
+    # =========================================================================
+    # CONTACT PAGE — labelled phone lines
+    # =========================================================================
+    phone_admissions = models.CharField(
+        max_length=30, blank=True,
+        help_text="Admissions phone line — contact page e.g. '+1 (555) 123-4567'"
+    )
+    phone_general = models.CharField(
+        max_length=30, blank=True,
+        help_text="General enquiries phone line — contact page"
+    )
+    phone_international = models.CharField(
+        max_length=30, blank=True,
+        help_text="International office phone line — contact page"
+    )
 
-    # ── Social Media ──────────────────────────────────────
+    # =========================================================================
+    # OFFICE HOURS  —  contact page office hours block
+    # =========================================================================
+    office_hours_weekday = models.CharField(
+        max_length=100, blank=True,
+        default='Monday - Friday: 8:00 AM - 6:00 PM',
+        help_text="Weekday office hours e.g. 'Monday - Friday: 8:00 AM - 6:00 PM'"
+    )
+    office_hours_saturday = models.CharField(
+        max_length=100, blank=True,
+        default='Saturday: 9:00 AM - 1:00 PM',
+        help_text="Saturday office hours e.g. 'Saturday: 9:00 AM - 1:00 PM'"
+    )
+    office_hours_sunday = models.CharField(
+        max_length=100, blank=True,
+        default='Sunday: Closed',
+        help_text="Sunday office hours e.g. 'Sunday: Closed'"
+    )
+
+    # =========================================================================
+    # ADDRESSES  —  footer address block
+    # =========================================================================
+    address_usa = models.TextField(
+        blank=True,
+        help_text="US campus address — footer"
+    )
+    address_nigeria = models.TextField(
+        blank=True,
+        help_text="Nigeria campus address — footer"
+    )
+
+    # =========================================================================
+    # SOCIAL MEDIA  —  footer social icons + nav mega-menu Connect section
+    # =========================================================================
     facebook  = models.URLField(blank=True)
     instagram = models.URLField(blank=True)
     youtube   = models.URLField(blank=True)
     twitter   = models.URLField(blank=True)
     tiktok    = models.URLField(blank=True)
-    linkedin    = models.URLField(blank=True)
+    linkedin  = models.URLField(blank=True)
 
-    # ── Hero Stats (index page) ───────────────────────────
-    stat_years     = models.CharField(max_length=20, blank=True)
-    stat_faculties = models.CharField(max_length=20, blank=True)
-    stat_campuses  = models.CharField(max_length=20, blank=True)
-    stat_tuition   = models.CharField(max_length=20, blank=True, default='0')
+    # =========================================================================
+    # FOOTER COPY  —  footer tagline paragraph + copyright line
+    # =========================================================================
+    footer_tagline = models.TextField(
+        blank=True,
+        default='Empowering global education since 1995 with innovative learning experiences and world-class faculty.',
+        help_text="Short paragraph shown under the logo in the footer"
+    )
+    copyright_year = models.CharField(
+        max_length=10, blank=True, default='2025',
+        help_text="Year in the footer copyright line e.g. '2025'"
+    )
 
-    # ── About Page Content ────────────────────────────────
-    about_intro_1    = models.TextField(blank=True)
-    about_intro_2    = models.TextField(blank=True)
-    mission_text     = models.TextField(blank=True)
-    vision_text      = models.TextField(blank=True)
-    core_values_text = models.JSONField(blank=True, null=True)
+    # =========================================================================
+    # SEO  —  base.html meta/og/twitter tags inherited by all pages
+    # =========================================================================
+    meta_description = models.TextField(
+        blank=True,
+        help_text="Default SEO meta description — also og:description and twitter:description"
+    )
+    meta_keywords = models.TextField(
+        blank=True,
+        help_text="Default SEO meta keywords (comma separated)"
+    )
 
-    # ── Accreditation ─────────────────────────────────────
-    accreditation_1 = models.CharField(max_length=200, blank=True)
-    accreditation_2 = models.CharField(max_length=200, blank=True)
+    # =========================================================================
+    # EMBED CODES
+    # These are kept here because they are shared across multiple pages:
+    #   promo_video_url    → index.html about section + about.html Who We Are
+    #   campus_map_embed_url → index.html campus map section
+    #   virtual_tour_url   → about.html Campus & Facilities section
+    # =========================================================================
+    promo_video_url = models.TextField(
+        blank=True,
+        help_text="Full iframe embed code from YouTube/Vimeo for the promo video"
+    )
+    campus_map_embed_url = models.TextField(
+        blank=True,
+        help_text="Full iframe embed code from Google Maps for the campus map section"
+    )
+    campus_map_address = models.CharField(
+        max_length=300, blank=True,
+        help_text="Address shown on the map overlay card and used for the Get Directions link"
+    )
+    virtual_tour_url = models.TextField(
+        blank=True,
+        help_text="Full iframe embed code for the virtual campus tour on the about page"
+    )
 
-    # ── SEO ───────────────────────────────────────────────
-    meta_description = models.TextField(blank=True)
-    meta_keywords    = models.TextField(blank=True)
+    # =========================================================================
+    # HERO SLIDES  —  index.html rotating hero background (up to 3 slides)
+    # Each slide is either an image OR a video — not both.
+    # If image is set, it is used. If video_url is set instead, video plays.
+    # duration = how many seconds the slide stays before advancing.
+    # =========================================================================
+    hero_slide_1_image    = models.ImageField(
+        upload_to='site/hero/', blank=True, null=True,
+        help_text="Slide 1 background image"
+    )
+    hero_slide_1_video    = models.FileField(
+        upload_to='site/hero/', blank=True, null=True,
+        help_text="Slide 1 background video (.mp4). Used instead of image if set."
+    )
+    hero_slide_1_alt      = models.CharField(
+        max_length=200, blank=True,
+        default='Students collaborating on campus',
+        help_text="Accessibility label for slide 1"
+    )
+    hero_slide_1_duration = models.PositiveSmallIntegerField(
+        default=6,
+        help_text="Seconds slide 1 stays visible before advancing"
+    )
 
-    # For index.html about section iframe
-    promo_video_url = models.TextField(blank=True, help_text="Paste the full <iframe> embed code from YouTube, Vimeo, etc.")
+    hero_slide_2_image    = models.ImageField(
+        upload_to='site/hero/', blank=True, null=True,
+        help_text="Slide 2 background image"
+    )
+    hero_slide_2_video    = models.FileField(
+        upload_to='site/hero/', blank=True, null=True,
+        help_text="Slide 2 background video (.mp4). Used instead of image if set."
+    )
+    hero_slide_2_alt      = models.CharField(
+        max_length=200, blank=True,
+        default='Graduates celebrating commencement',
+        help_text="Accessibility label for slide 2"
+    )
+    hero_slide_2_duration = models.PositiveSmallIntegerField(
+        default=6,
+        help_text="Seconds slide 2 stays visible before advancing"
+    )
 
-    # For index.html campus map section
-    campus_map_embed_url = models.TextField(blank=True, help_text="Paste the full <iframe> embed code from Google Maps")
-    campus_map_address = models.CharField(max_length=300, blank=True, help_text="Address shown on the map overlay card")
-
-    # For about.html stats — currently data-target values are hardcoded integers
-    stat_years_count     = models.IntegerField(default=30,  blank=True, help_text="Years of excellence (about page animated counter)")
-    stat_countries_count = models.IntegerField(default=120, blank=True, help_text="Countries represented (about page)")
-    stat_employment_rate = models.IntegerField(default=95,  blank=True, help_text="Graduate employment % (about page)")
-    stat_programs_count  = models.IntegerField(default=50,  blank=True, help_text="Number of programs (about page)")
-
-    # ── Index Page Hero ───────────────────────────────────────────
-    hero_badge_text      = models.CharField(max_length=200, blank=True, default='Melchisedec International University', help_text="Badge text above hero heading")
-    hero_tagline         = models.CharField(max_length=300, blank=True, default='The Best Learning Institution', help_text="Subtitle line below badge in hero")
-    hero_heading         = models.CharField(max_length=200, blank=True, default='Welcome to MIU', help_text="Main hero h1 text (first line)")
-    hero_subheading      = models.CharField(max_length=300, blank=True, default='Global Institution of Excellence in Learning and Academics', help_text="Subtitle paragraph below hero heading")
-
-    # ── Index Page — About snippet ────────────────────────────────
-    index_about_para_1   = models.TextField(blank=True, help_text="First paragraph in index about section")
-    index_about_para_2   = models.TextField(blank=True, help_text="Second paragraph in index about section")
-
-    # ── Index Page — Hero Stats (the 4 stat cards) ───────────────
-    stat_students        = models.CharField(max_length=30, blank=True, default='25,000+', help_text="Students stat card value e.g. '25,000+'")
-    stat_countries_label = models.CharField(max_length=30, blank=True, default='120+', help_text="Countries stat card value e.g. '120+'")
-    stat_employment_label= models.CharField(max_length=30, blank=True, default='95%', help_text="Employment stat card e.g. '95%'")
-    stat_programs_label  = models.CharField(max_length=30, blank=True, default='50+', help_text="Programs stat card e.g. '50+'")
-
-    # ── Contact & Footer ─────────────────────────────────────────
-    footer_tagline       = models.TextField(blank=True, default='Empowering global education since 1995 with innovative learning experiences and world-class faculty.', help_text="Short paragraph under logo in footer")
-    copyright_year       = models.CharField(max_length=10, blank=True, default='2025', help_text="Year shown in footer copyright line")
-
-    # ── About Page extra fields ───────────────────────────────────
-    about_years_founded  = models.CharField(max_length=10, blank=True, default='1995', help_text="Founding year used on about page text")
-    about_partner_institutions = models.CharField(max_length=20, blank=True, default='200+', help_text="Partner institutions count on about page")
-    about_exchange_programs    = models.CharField(max_length=20, blank=True, default='40+',  help_text="Exchange programs count on about page")
-    about_languages_spoken     = models.CharField(max_length=20, blank=True, default='15+',  help_text="Languages spoken count on about page")
-    accreditation_3      = models.CharField(max_length=200, blank=True, help_text="Third accreditation line (about page)")
-    accreditation_4      = models.CharField(max_length=200, blank=True, help_text="Fourth accreditation line (about page)")
+    hero_slide_3_image    = models.ImageField(
+        upload_to='site/hero/', blank=True, null=True,
+        help_text="Slide 3 background image"
+    )
+    hero_slide_3_video    = models.FileField(
+        upload_to='site/hero/', blank=True, null=True,
+        help_text="Slide 3 background video (.mp4). Used instead of image if set."
+    )
+    hero_slide_3_alt      = models.CharField(
+        max_length=200, blank=True,
+        default='Students using technology in class',
+        help_text="Accessibility label for slide 3"
+    )
+    hero_slide_3_duration = models.PositiveSmallIntegerField(
+        default=6,
+        help_text="Seconds slide 3 stays visible before advancing"
+    )
 
     class Meta:
         verbose_name        = 'Site Configuration'
@@ -174,6 +324,28 @@ class SiteConfig(models.Model):
     def get(cls):
         """Fetch the single site config. Use this in all views."""
         return cls.objects.first()
+
+# ==================== TESTIMONIALS ====================
+class Testimonial(models.Model):
+    quote       = models.TextField()
+    author_name = models.CharField(max_length=100)
+    author_role = models.CharField(max_length=150, help_text="e.g. 'MBA Graduate, 2023'")
+    avatar      = models.ImageField(
+        upload_to='testimonials/avatars/',
+        blank=True,
+        null=True,
+        help_text="Author photo. If left blank, initials will be shown instead."
+    )
+    is_active   = models.BooleanField(default=True)
+    order       = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Testimonial'
+        verbose_name_plural = 'Testimonials'
+
+    def __str__(self):
+        return f"{self.author_name} – {self.author_role}"
 
 # ==================== ANNOUNCEMENTS ====================
 class Announcement(models.Model):
@@ -1348,7 +1520,7 @@ class CourseApplication(models.Model):
     gender = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')])
     nationality = models.CharField(max_length=100)
 
-    payment_status = models.TextField(default="pending")
+    payment_status = models.CharField(max_length=20, default='pending')
     
     # Address
     address_line1 = models.CharField(max_length=200)
@@ -1609,7 +1781,7 @@ class ApplicationPayment(models.Model):
             self.payment_reference = f"PAY-{uuid.uuid4().hex[:12].upper()}"
         
         if not self.amount:
-            self.amount = self.application.course.program.application_fee
+            self.amount = self.application.program.application_fee
         
         if self.status == 'success' and not self.paid_at:
             self.paid_at = timezone.now()
@@ -3427,9 +3599,6 @@ class FeePayment(models.Model):
             models.Index(fields=['status']),
         ]
 
-    def __str__(self):
-        return f"{self.user} - {self.fee.purpose} - {self.status}"
-
     def save(self, *args, **kwargs):
         # Generate payment reference
         if not self.payment_reference:
@@ -3445,4 +3614,14 @@ class FeePayment(models.Model):
 
         super().save(*args, **kwargs)
 
-        # 🔥 OPTIONAL: mark fee as paid (if you later track per-student payment state)
+    class Meta:
+        verbose_name = 'Fee Payment'
+        verbose_name_plural = 'Student Fee Payments'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['payment_reference']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {getattr(self.fee, 'purpose', 'N/A')} - {self.status}"

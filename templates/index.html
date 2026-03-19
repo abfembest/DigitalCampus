@@ -2,23 +2,24 @@
 
 {% load static %}
 
-{% block title %}MIU – Melchisedec International University | Empowering Global Education{% endblock %}
+{% block title %}{{ site_config.school_short_name|default:"MIU" }} – {{ site_config.school_name|default:"Melchisedec International University" }} | Empowering Global Education{% endblock %}
 
 {% block meta_tags %}
-<meta name="description" content="Melchisedec International University (MIU) offers world-class accredited programs in secular and theological disciplines. Flexible online learning with 25,000+ students across 120+ countries.">
-<meta name="keywords" content="MIU, Melchisedec International University, online university, accredited programs, theological education, secular programs, global education">
+<meta name="description" content="{{ site_config.meta_description|default:'Melchisedec International University (MIU) offers world-class accredited programs in secular and theological disciplines.' }}">
+<meta name="keywords" content="{{ site_config.meta_keywords|default:'MIU, Melchisedec International University, online university, accredited programs' }}">
 <meta name="robots" content="index, follow">
-<meta name="author" content="Melchisedec International University">
+<meta name="author" content="{{ site_config.school_name|default:'Melchisedec International University' }}">
 {% endblock %}
 
 {% block og_tags %}
-<meta property="og:title" content="MIU – Melchisedec International University | Empowering Global Education">
-<meta property="og:description" content="World-class accredited programs for students across the globe. Join 25,000+ students from 120+ countries. Secular and theological programs available.">
+<meta property="og:title" content="{{ site_config.school_short_name|default:'MIU' }} – {{ site_config.school_name|default:'Melchisedec International University' }} | Empowering Global Education">
+<meta property="og:description" content="{{ site_config.meta_description|default:'World-class accredited programs for students across the globe.' }}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ request.build_absolute_uri }}">
+{% if site_config.og_image %}<meta property="og:image" content="{{ site_config.og_image.url }}">{% endif %}
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="MIU – Melchisedec International University">
-<meta name="twitter:description" content="World-class accredited education for students across the globe.">
+<meta name="twitter:title" content="{{ site_config.school_short_name|default:'MIU' }} – {{ site_config.school_name|default:'Melchisedec International University' }}">
+<meta name="twitter:description" content="{{ site_config.meta_description|default:'World-class accredited education for students across the globe.' }}">
 {% endblock %}
 
 {% block content %}
@@ -29,66 +30,108 @@
         
         <!-- Background Media Container -->
         <div class="absolute inset-0">
-            <!-- Background 1: IMAGE - Students Studying -->
-            <div class="hero-bg active absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-100" data-type="image" data-duration="6">
-                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" 
-                     style="background-image: url('{% static 'images/hero.webp'%}')"
-                     role="img" 
-                     aria-label="Students collaborating in Melchisedec library"
-                     aria-hidden="true"></div>
-                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
-            </div>
 
-            {% comment %} <!-- Background 1: VIDEO (Primary) - Campus Life -->
-            <div class="hero-bg active absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-100" data-type="video" data-duration="15">
-                <video 
-                    class="absolute inset-0 w-full h-full object-cover"
-                    muted 
-                    playsinline
-                    preload="auto"
-                    poster="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80&auto=format&fit=crop"
-                    aria-hidden="true"
-                    data-video-index="0">
-                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+            {% comment %}
+            Each slide checks: if a video file is set → video slide.
+            Else if an image is set → image slide.
+            Else → falls back to the original static file so the hero
+            never goes blank before any media is uploaded.
+            First active slide gets class 'active opacity-100',
+            remaining slides get 'opacity-0'.
+            {% endcomment %}
+
+            {# ── SLIDE 1 ── #}
+            {% if site_config.hero_slide_1_video %}
+            <div class="hero-bg active absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-100"
+                 data-type="video"
+                 data-duration="{{ site_config.hero_slide_1_duration|default:15 }}">
+                <video class="absolute inset-0 w-full h-full object-cover"
+                       muted playsinline preload="auto" aria-hidden="true" data-video-index="0">
+                    <source src="{{ site_config.hero_slide_1_video.url }}" type="video/mp4">
                 </video>
                 <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
-            </div> {% endcomment %}
-            
-            
-            {% comment %} <!-- Background 3: VIDEO - Group Discussion -->
-            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0" data-type="video" data-duration="12">
-                <video 
-                    class="absolute inset-0 w-full h-full object-cover"
-                    muted 
-                    playsinline
-                    preload="metadata"
-                    poster="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1920&q=80&auto=format&fit=crop"
-                    aria-hidden="true"
-                    data-video-index="1">
-                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" type="video/mp4">
-                </video>
-                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
-            </div> {% endcomment %}
-            
-            <!-- Background 4: IMAGE - Graduation Success -->
-            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0" data-type="image" data-duration="6">
-                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" 
-                     style="background-image: url('{% static 'images/hero2.webp'%}')"
-                     role="img" 
-                     aria-label="Graduates celebrating commencement"
+            </div>
+            {% else %}
+            <div class="hero-bg active absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-100"
+                 data-type="image"
+                 data-duration="{{ site_config.hero_slide_1_duration|default:6 }}">
+                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                     style="background-image: url('{% if site_config.hero_slide_1_image %}{{ site_config.hero_slide_1_image.url }}{% else %}{% static 'images/hero.webp' %}{% endif %}')"
+                     role="img"
+                     aria-label="{{ site_config.hero_slide_1_alt|default:'Students collaborating on campus' }}"
                      aria-hidden="true"></div>
                 <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
             </div>
-            
-            <!-- Background 5: IMAGE - Technology Learning -->
-            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0" data-type="image" data-duration="6">
-                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat" 
+            {% endif %}
+
+            {# ── SLIDE 2 ── #}
+            {% if site_config.hero_slide_2_video or site_config.hero_slide_2_image %}
+            {% if site_config.hero_slide_2_video %}
+            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0"
+                 data-type="video"
+                 data-duration="{{ site_config.hero_slide_2_duration|default:15 }}">
+                <video class="absolute inset-0 w-full h-full object-cover"
+                       muted playsinline preload="metadata" aria-hidden="true" data-video-index="1">
+                    <source src="{{ site_config.hero_slide_2_video.url }}" type="video/mp4">
+                </video>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
+            </div>
+            {% else %}
+            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0"
+                 data-type="image"
+                 data-duration="{{ site_config.hero_slide_2_duration|default:6 }}">
+                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                     style="background-image: url('{% if site_config.hero_slide_2_image %}{{ site_config.hero_slide_2_image.url }}{% else %}{% static 'images/hero2.webp' %}{% endif %}')"
+                     role="img"
+                     aria-label="{{ site_config.hero_slide_2_alt|default:'Graduates celebrating commencement' }}"
+                     aria-hidden="true"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0"
+                 data-type="image" data-duration="6">
+                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                     style="background-image: url('{% static 'images/hero2.webp' %}')"
+                     role="img" aria-label="Graduates celebrating commencement" aria-hidden="true"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
+            </div>
+            {% endif %}
+
+            {# ── SLIDE 3 ── #}
+            {% if site_config.hero_slide_3_video or site_config.hero_slide_3_image %}
+            {% if site_config.hero_slide_3_video %}
+            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0"
+                 data-type="video"
+                 data-duration="{{ site_config.hero_slide_3_duration|default:15 }}">
+                <video class="absolute inset-0 w-full h-full object-cover"
+                       muted playsinline preload="metadata" aria-hidden="true" data-video-index="2">
+                    <source src="{{ site_config.hero_slide_3_video.url }}" type="video/mp4">
+                </video>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
+            </div>
+            {% else %}
+            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0"
+                 data-type="image"
+                 data-duration="{{ site_config.hero_slide_3_duration|default:6 }}">
+                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                     style="background-image: url('{% if site_config.hero_slide_3_image %}{{ site_config.hero_slide_3_image.url }}{% else %}{% static 'images/hero3.webp' %}{% endif %}')"
+                     role="img"
+                     aria-label="{{ site_config.hero_slide_3_alt|default:'Students using technology in class' }}"
+                     aria-hidden="true"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="hero-bg absolute inset-0 transition-opacity duration-1000 ease-in-out opacity-0"
+                 data-type="image" data-duration="6">
+                <div class="absolute inset-0 bg-cover bg-center bg-no-repeat"
                      style="background-image: url('{% static 'images/hero3.webp' %}')"
-                     role="img" 
-                     aria-label="Students using technology in Melchisedec classroom"
-                     aria-hidden="true"></div>
+                     role="img" aria-label="Students using technology in class" aria-hidden="true"></div>
                 <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
             </div>
+            {% endif %}
+
         </div>
         
         <!-- Hero Content Overlay -->
@@ -100,20 +143,20 @@
                     <div class="inline-flex items-center gap-2 px-4 sm:px-6 py-2 mb-4 sm:mb-6 bg-white/10 backdrop-blur-md rounded-full border border-white/20 animate-fade-in">
                         <i data-lucide="award" class="w-4 h-4 sm:w-5 sm:h-5 text-gold-400 flex-shrink-0"></i>
                         <span class="text-xs sm:text-sm lg:text-base font-semibold text-white tracking-wide">
-                            {% if site_config %}{{ site_config.hero_badge_text|default:site_config.school_name|default:"Melchisedec International University" }}{% else %}Melchisedec International University{% endif %}
+                            {{ site_config.school_name|default:"Melchisedec International University" }}
                         </span>
                     </div>
                     
                     <!-- Tagline -->
                     <p class="text-sm sm:text-base lg:text-xl font-medium mb-3 sm:mb-4 text-gold-300 tracking-wider uppercase animate-fade-in" style="animation-delay: 0.15s;">
-                        {{ site_config.hero_tagline|default:"The Best Learning Institution" }}
+                        {{ site_config.tagline|default:"The Best Learning Institution" }}
                     </p>
                     
                     <!-- Main Heading -->
                     <h1 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-4 sm:mb-6 leading-[1.1] text-white animate-slide-up font-display" style="animation-delay: 0.3s;">
-                        {{ site_config.hero_heading|default:"Welcome to MIU" }}
+                        Welcome to {{ site_config.school_short_name|default:"MIU" }}
                         <span class="block mt-1 sm:mt-2 bg-gradient-to-r from-gold-300 via-gold-400 to-gold-300 bg-clip-text text-transparent">
-                            {{ site_config.school_short_name|default:"University" }}
+                            University
                         </span>
                     </h1>
                     
@@ -121,7 +164,7 @@
                     <div class="flex items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-12 animate-slide-up" style="animation-delay: 0.45s;">
                         <div class="hidden sm:block w-12 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent flex-shrink-0"></div>
                         <p class="text-base sm:text-xl lg:text-2xl text-white/95 font-light leading-relaxed max-w-3xl">
-                            {{ site_config.hero_subheading|default:"Global Institution of Excellence in Learning and Academics" }}
+                            Global Institution of Excellence in Learning and Academics
                         </p>
                         <div class="hidden sm:block w-12 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent flex-shrink-0"></div>
                     </div>
@@ -163,23 +206,24 @@
             </div>
         </div>
         
-        <!-- Progress Indicators -->
+        <!-- Progress Indicators — one dot per active slide -->
         <div class="absolute bottom-16 sm:bottom-24 left-1/2 -translate-x-1/2 z-20 flex gap-3" role="navigation" aria-label="Hero carousel navigation">
-            <button class="hero-indicator active w-12 h-1.5 bg-white rounded-full transition-all duration-300 hover:h-2 focus:outline-none focus:ring-2 focus:ring-white/50" 
-                    aria-label="Go to slide 1" 
-                    data-index="0"></button>
-            <button class="hero-indicator w-12 h-1.5 bg-white/40 rounded-full transition-all duration-300 hover:h-2 hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-white/50" 
-                    aria-label="Go to slide 2" 
-                    data-index="1"></button>
-            <button class="hero-indicator w-12 h-1.5 bg-white/40 rounded-full transition-all duration-300 hover:h-2 hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-white/50" 
-                    aria-label="Go to slide 3" 
-                    data-index="2"></button>
-            {% comment %} <button class="hero-indicator w-12 h-1.5 bg-white/40 rounded-full transition-all duration-300 hover:h-2 hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-white/50" 
-                    aria-label="Go to slide 4" 
-                    data-index="3"></button>
-            <button class="hero-indicator w-12 h-1.5 bg-white/40 rounded-full transition-all duration-300 hover:h-2 hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-white/50" 
-                    aria-label="Go to slide 5" 
-                    data-index="4"></button> {% endcomment %}
+            <button class="hero-indicator active w-12 h-1.5 bg-white rounded-full transition-all duration-300 hover:h-2 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    aria-label="Go to slide 1" data-index="0"></button>
+            {% if site_config.hero_slide_2_image or site_config.hero_slide_2_video %}
+            <button class="hero-indicator w-12 h-1.5 bg-white/40 rounded-full transition-all duration-300 hover:h-2 hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    aria-label="Go to slide 2" data-index="1"></button>
+            {% else %}
+            <button class="hero-indicator w-12 h-1.5 bg-white/40 rounded-full transition-all duration-300 hover:h-2 hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    aria-label="Go to slide 2" data-index="1"></button>
+            {% endif %}
+            {% if site_config.hero_slide_3_image or site_config.hero_slide_3_video %}
+            <button class="hero-indicator w-12 h-1.5 bg-white/40 rounded-full transition-all duration-300 hover:h-2 hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    aria-label="Go to slide 3" data-index="2"></button>
+            {% else %}
+            <button class="hero-indicator w-12 h-1.5 bg-white/40 rounded-full transition-all duration-300 hover:h-2 hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                    aria-label="Go to slide 3" data-index="2"></button>
+            {% endif %}
         </div>
     </div>
 </section>
@@ -192,28 +236,28 @@
                 <div class="flex items-center justify-center mb-3 sm:mb-4">
                     <i data-lucide="users" class="w-8 h-8 sm:w-10 sm:h-10 text-primary-950 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 </div>
-                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">{{ site_config.stat_students|default:"25,000+" }}</div>
+                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">25,000+</div>
                 <div class="text-gray-600 text-xs sm:text-sm md:text-base text-center">Students Worldwide</div>
             </article>
             <article class="p-5 sm:p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-3 sm:mb-4">
                     <i data-lucide="globe" class="w-8 h-8 sm:w-10 sm:h-10 text-primary-950 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 </div>
-                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">{{ site_config.stat_countries_label|default:"120+" }}</div>
+                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">120+</div>
                 <div class="text-gray-600 text-xs sm:text-sm md:text-base text-center">Countries Represented</div>
             </article>
             <article class="p-5 sm:p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-3 sm:mb-4">
                     <i data-lucide="trending-up" class="w-8 h-8 sm:w-10 sm:h-10 text-primary-950 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 </div>
-                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">{{ site_config.stat_employment_label|default:"95%" }}</div>
+                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">95%</div>
                 <div class="text-gray-600 text-xs sm:text-sm md:text-base text-center">Graduate Employment</div>
             </article>
             <article class="p-5 sm:p-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105 group">
                 <div class="flex items-center justify-center mb-3 sm:mb-4">
                     <i data-lucide="book-open" class="w-8 h-8 sm:w-10 sm:h-10 text-primary-950 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
                 </div>
-                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">{{ site_config.stat_programs_label|default:"50+" }}</div>
+                <div class="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-950 mb-1 sm:mb-2 text-center font-display">50+</div>
                 <div class="text-gray-600 text-xs sm:text-sm md:text-base text-center">Academic Programs</div>
             </article>
         </div>
@@ -229,23 +273,21 @@
                     About {{ site_config.school_short_name|default:"MIU" }}
                 </h2>
                 <p class="text-gray-700 mb-4 sm:mb-6 text-base lg:text-lg leading-relaxed">
-                    {{ site_config.index_about_para_1|default:site_config.about_intro_1|default:"Melchisedec International University is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence. Founded in 1995, we've been at the forefront of digital education transformation." }}
+                    {{ site_config.school_name|default:"Melchisedec International University" }} is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence. Founded in 1995, we've been at the forefront of digital education transformation.
                 </p>
-                {% if site_config and site_config.index_about_para_2 or site_config.about_intro_2 or site_config.mission_text %}
                 <p class="text-gray-600 mb-6 sm:mb-8 text-base lg:text-lg leading-relaxed">
-                    {{ site_config.index_about_para_2|default:site_config.mission_text|default:"Our mission is to provide accessible, world-class education that empowers students to achieve their personal and professional goals, regardless of geographic location." }}
+                    Our mission is to provide accessible, world-class education that empowers students to achieve their personal and professional goals, regardless of geographic location.
                 </p>
-                {% endif %}
                 <a href="{% url 'eduweb:about' %}" class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                     Learn More About Us
                     <i data-lucide="arrow-right" class="w-5 h-5" aria-hidden="true"></i>
                 </a>
             </div>
             <div class="rounded-2xl overflow-hidden shadow-2xl h-56 sm:h-72 lg:h-96 mt-2 lg:mt-0">
-                {% if site_config and site_config.promo_video_url %}
+                {% if site_config.promo_video_url %}
                 <div class="w-full h-full [&>iframe]:w-full [&>iframe]:h-full">{{ site_config.promo_video_url|safe }}</div>
                 {% else %}
-                <iframe class="w-full h-full" src="https://www.youtube.com/embed/wzcQ5_XU58I?start=4" title="MIU Global Learning Community — Official Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+                <iframe class="w-full h-full" src="https://www.youtube.com/embed/wzcQ5_XU58I?start=4" title="{{ site_config.school_short_name|default:'MIU' }} Global Learning Community — Official Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
                 {% endif %}
             </div>
         </div>
@@ -260,7 +302,7 @@
                 Popular Programs
             </h2>
             <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed">
-                Choose from our extensive range of accredited programs designed for the Melchisedec workforce
+                Choose from our extensive range of accredited programs designed for the {{ site_config.school_short_name|default:"MIU" }} workforce
             </p>
         </div>
 
@@ -609,23 +651,34 @@ function admTab(btn, panelId) {
             <i data-lucide="quote" class="w-10 h-10 sm:w-16 sm:h-16 text-primary-950 mb-4 sm:mb-6" aria-hidden="true"></i>
             <blockquote>
                 <p id="testimonialQuote" class="italic text-gray-700 text-base sm:text-lg md:text-xl mb-6 sm:mb-8 leading-relaxed">
-                    MIU's flexible online platform allowed me to complete my MBA while working full-time. The faculty support was exceptional, and I've already seen career advancement.
+                    {% with testimonials|first as first_t %}{{ first_t.quote|default:"MIU's flexible online platform allowed me to complete my MBA while working full-time. The faculty support was exceptional, and I've already seen career advancement." }}{% endwith %}
                 </p>
             </blockquote>
             <div class="flex items-center">
-                <div id="testimonialAvatar" class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-primary-950 to-primary-700 rounded-full flex items-center justify-center text-white font-bold text-base sm:text-xl mr-3 sm:mr-4 flex-shrink-0" aria-hidden="true">
-                    SK
+                <div id="testimonialAvatar" class="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-primary-950 to-primary-700 rounded-full flex items-center justify-center text-white font-bold text-base sm:text-xl mr-3 sm:mr-4 flex-shrink-0 overflow-hidden" aria-hidden="true">
+                    {% with testimonials|first as first_t %}
+                        {% if first_t.avatar %}<img src="{{ first_t.avatar.url }}" alt="{{ first_t.author_name }}" class="w-full h-full object-cover">
+                        {% else %}{{ first_t.author_name|slice:":2"|upper|default:"SK" }}{% endif %}
+                    {% endwith %}
                 </div>
                 <div>
-                    <p id="testimonialAuthor" class="font-bold text-base sm:text-lg text-gray-900">Sarah K.</p>
-                    <p id="testimonialRole" class="text-gray-600 text-sm sm:text-base">MBA Graduate, 2023</p>
+                    <p id="testimonialAuthor" class="font-bold text-base sm:text-lg text-gray-900">{% with testimonials|first as first_t %}{{ first_t.author_name|default:"Sarah K." }}{% endwith %}</p>
+                    <p id="testimonialRole" class="text-gray-600 text-sm sm:text-base">{% with testimonials|first as first_t %}{{ first_t.author_role|default:"MBA Graduate, 2023" }}{% endwith %}</p>
                 </div>
             </div>
 
             <div class="flex justify-center mt-6 sm:mt-8 space-x-2" role="tablist" aria-label="Testimonials navigation">
-                <button class="testimonial-indicator w-3 h-3 rounded-full bg-primary-950 transition-all active focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="0" aria-label="Show testimonial 1" role="tab" aria-selected="true"></button>
-                <button class="testimonial-indicator w-3 h-3 rounded-full bg-purple-300 hover:bg-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="1" aria-label="Show testimonial 2" role="tab" aria-selected="false"></button>
-                <button class="testimonial-indicator w-3 h-3 rounded-full bg-purple-300 hover:bg-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="2" aria-label="Show testimonial 3" role="tab" aria-selected="false"></button>
+                {% for t in testimonials %}
+                <button class="testimonial-indicator w-3 h-3 rounded-full {% if forloop.first %}bg-primary-950 active{% else %}bg-purple-300 hover:bg-primary-950{% endif %} transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
+                        data-index="{{ forloop.counter0 }}"
+                        aria-label="Show testimonial {{ forloop.counter }}"
+                        role="tab"
+                        aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"></button>
+                {% empty %}
+                <button class="testimonial-indicator w-3 h-3 rounded-full bg-primary-950 active transition-all focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="0" role="tab" aria-selected="true"></button>
+                <button class="testimonial-indicator w-3 h-3 rounded-full bg-purple-300 hover:bg-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="1" role="tab" aria-selected="false"></button>
+                <button class="testimonial-indicator w-3 h-3 rounded-full bg-purple-300 hover:bg-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950" data-index="2" role="tab" aria-selected="false"></button>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -640,7 +693,7 @@ function admTab(btn, panelId) {
                 <span>Get In Touch</span>
             </div>
             <h2 id="contact-heading" class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary-950 mb-3 sm:mb-4 font-display">
-                Contact MIU
+                Contact {{ site_config.school_short_name|default:"MIU" }}
             </h2>
             <p class="text-gray-600 max-w-2xl mx-auto text-base lg:text-lg leading-relaxed">
                 We're here to help you start your educational journey. Reach out for admissions, programs, or campus information.
@@ -723,7 +776,7 @@ function admTab(btn, panelId) {
                     <h3 class="text-xl lg:text-2xl font-bold text-primary-950 font-display">Contact Information</h3>
                 </div>
 
-                {% if site_config and site_config.address_usa %}
+                {% if site_config.address_usa %}
                 <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -737,7 +790,7 @@ function admTab(btn, panelId) {
                 </div>
                 {% endif %}
 
-                {% if site_config and site_config.email %}
+                {% if site_config.email_admissions or site_config.email_info or site_config.email_international or site_config.email %}
                 <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -745,15 +798,26 @@ function admTab(btn, panelId) {
                         </div>
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Email Us</h4>
-                            <div class="space-y-1 text-gray-600">
+                            <div class="space-y-1.5 text-sm text-gray-600">
+                                {% if site_config.email_admissions %}
+                                <p><span class="text-gray-400">Admissions —</span> <a href="mailto:{{ site_config.email_admissions }}" class="hover:text-primary-600 transition-colors">{{ site_config.email_admissions }}</a></p>
+                                {% endif %}
+                                {% if site_config.email_info %}
+                                <p><span class="text-gray-400">General —</span> <a href="mailto:{{ site_config.email_info }}" class="hover:text-primary-600 transition-colors">{{ site_config.email_info }}</a></p>
+                                {% endif %}
+                                {% if site_config.email_international %}
+                                <p><span class="text-gray-400">International —</span> <a href="mailto:{{ site_config.email_international }}" class="hover:text-primary-600 transition-colors">{{ site_config.email_international }}</a></p>
+                                {% endif %}
+                                {% if not site_config.email_admissions and not site_config.email_info and not site_config.email_international and site_config.email %}
                                 <p><a href="mailto:{{ site_config.email }}" class="hover:text-primary-600 transition-colors">{{ site_config.email }}</a></p>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
                 {% endif %}
 
-                {% if site_config and site_config.phone_primary %}
+                {% if site_config.phone_admissions or site_config.phone_general or site_config.phone_international or site_config.phone_primary %}
                 <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -761,17 +825,29 @@ function admTab(btn, panelId) {
                         </div>
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Call Us</h4>
-                            <div class="space-y-1 text-gray-600">
-                                <p><a href="tel:{{ site_config.phone_primary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_primary }}</a>{% if site_config.phone_secondary %} / <a href="tel:{{ site_config.phone_secondary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_secondary }}</a>{% endif %}</p>
-                                {% if site_config.phone_ng_primary %}<p><a href="tel:{{ site_config.phone_ng_primary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_ng_primary }}</a> (Nigeria)</p>{% endif %}
-                                {% if site_config.whatsapp %}<p>WhatsApp: <a href="https://wa.me/{{ site_config.whatsapp }}" class="hover:text-primary-600 transition-colors" target="_blank" rel="noopener">{{ site_config.whatsapp }}</a></p>{% endif %}
+                            <div class="space-y-1.5 text-sm text-gray-600">
+                                {% if site_config.phone_admissions %}
+                                <p><span class="text-gray-400">Admissions —</span> <a href="tel:{{ site_config.phone_admissions }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_admissions }}</a></p>
+                                {% endif %}
+                                {% if site_config.phone_general %}
+                                <p><span class="text-gray-400">General —</span> <a href="tel:{{ site_config.phone_general }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_general }}</a></p>
+                                {% endif %}
+                                {% if site_config.phone_international %}
+                                <p><span class="text-gray-400">International —</span> <a href="tel:{{ site_config.phone_international }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_international }}</a></p>
+                                {% endif %}
+                                {% if not site_config.phone_admissions and not site_config.phone_general and not site_config.phone_international %}
+                                    {% if site_config.phone_primary %}<p><a href="tel:{{ site_config.phone_primary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_primary }}</a></p>{% endif %}
+                                    {% if site_config.phone_secondary %}<p><a href="tel:{{ site_config.phone_secondary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_secondary }}</a></p>{% endif %}
+                                    {% if site_config.phone_ng_primary %}<p><a href="tel:{{ site_config.phone_ng_primary }}" class="hover:text-primary-600 transition-colors">{{ site_config.phone_ng_primary }}</a> <span class="text-gray-400">(Nigeria)</span></p>{% endif %}
+                                {% endif %}
+                                {% if site_config.whatsapp %}<p>WhatsApp: <a href="https://wa.me/{{ site_config.whatsapp }}" target="_blank" rel="noopener" class="hover:text-primary-600 transition-colors">{{ site_config.whatsapp }}</a></p>{% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
                 {% endif %}
 
-                {% if site_config and site_config.office_hours_weekday %}
+                {% if site_config.office_hours_weekday or site_config.office_hours_saturday or site_config.office_hours_sunday %}
                 <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all group border border-gray-100">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-primary-100 to-purple-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -779,10 +855,10 @@ function admTab(btn, panelId) {
                         </div>
                         <div>
                             <h4 class="font-bold text-lg text-primary-950 mb-2">Office Hours</h4>
-                            <div class="space-y-1 text-gray-600">
-                                <p>Monday - Friday: {{ site_config.office_hours_weekday }}</p>
-                                {% if site_config.office_hours_saturday %}<p>Saturday: {{ site_config.office_hours_saturday }}</p>{% endif %}
-                                <p>Sunday: Closed</p>
+                            <div class="space-y-1 text-sm text-gray-600">
+                                {% if site_config.office_hours_weekday %}<p>{{ site_config.office_hours_weekday }}</p>{% endif %}
+                                {% if site_config.office_hours_saturday %}<p>{{ site_config.office_hours_saturday }}</p>{% endif %}
+                                {% if site_config.office_hours_sunday %}<p>{{ site_config.office_hours_sunday }}</p>{% endif %}
                             </div>
                         </div>
                     </div>
@@ -877,10 +953,10 @@ function admTab(btn, panelId) {
 
         <div class="relative rounded-2xl lg:rounded-3xl overflow-hidden shadow-2xl">
             <div class="relative w-full h-72 sm:h-96 sm:h-[500px] lg:h-[600px]">
-                {% if site_config and site_config.campus_map_embed_url %}
+                {% if site_config.campus_map_embed_url %}
                 <div class="absolute inset-0 w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0">{{ site_config.campus_map_embed_url|safe }}</div>
                 {% else %}
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.177858804427!2d-73.98784468459426!3d40.70555167933205!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a315cdf4c9b%3A0x8b934de5cae6f7a!2sFinancial%20District%2C%20New%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s!4v1648561234567!5m2!1sen!2s" class="absolute inset-0 w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="MIU Main Campus Location Map" aria-label="Google Map showing MIU Main Campus location"></iframe>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.177858804427!2d-73.98784468459426!3d40.70555167933205!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25a315cdf4c9b%3A0x8b934de5cae6f7a!2sFinancial%20District%2C%20New%20York%2C%20NY%2C%20USA!5e0!3m2!1sen!2s!4v1648561234567!5m2!1sen!2s" class="absolute inset-0 w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="{{ site_config.school_short_name|default:'MIU' }} Main Campus Location Map" aria-label="Google Map showing {{ site_config.school_short_name|default:'MIU' }} Main Campus location"></iframe>
                 {% endif %}
 
                 <div class="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto sm:max-w-sm bg-primary-950/95 backdrop-blur-md text-white p-5 sm:p-6 rounded-xl shadow-2xl">
@@ -890,14 +966,10 @@ function admTab(btn, panelId) {
                         </div>
                         <div>
                             <h4 class="font-bold text-lg mb-1">{{ site_config.school_short_name|default:"MIU" }} Main Campus</h4>
-                            <p class="text-sm text-gray-200">{{ site_config.campus_map_address|default:site_config.address_usa|linebreaksbr|default:"123 University Avenue<br>Knowledge City, KC 10101" }}</p>
+                            <p class="text-sm text-gray-200">{{ site_config.campus_map_address|default:site_config.address_usa|linebreaksbr }}</p>
                         </div>
                     </div>
-                    {% if site_config and site_config.campus_map_address %}
-                    <a href="https://maps.google.com/?q={{ site_config.campus_map_address|urlencode }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-white font-semibold hover:text-gray-200 transition-colors text-sm group">
-                    {% else %}
-                    <a href="https://maps.google.com/?q=123+University+Avenue+Knowledge+City" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-white font-semibold hover:text-gray-200 transition-colors text-sm group">
-                    {% endif %}
+                    <a href="https://maps.google.com/?q={{ site_config.campus_map_address|default:site_config.address_usa|urlencode }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-white font-semibold hover:text-gray-200 transition-colors text-sm group">
                         <i data-lucide="navigation" class="w-4 h-4"></i>
                         Get Directions
                         <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
@@ -1327,27 +1399,30 @@ a[href="{% url 'eduweb:admission_requirement' %}"]:hover .relative.z-10 span {
         }
     })();
 
-    // Keep existing testimonials code below...
-    // Testimonials
+    // Testimonials — DB-driven
     const testimonials = [
+        {% for t in testimonials %}
         {
-            quote: "MIU's flexible online platform allowed me to complete my MBA while working full-time. The faculty support was exceptional, and I've already seen career advancement.",
-            author: "Sarah K.",
-            role: "MBA Graduate, 2023",
-            avatar: "SK"
+            quote: "{{ t.quote|escapejs }}",
+            author: "{{ t.author_name|escapejs }}",
+            role: "{{ t.author_role|escapejs }}",
+            avatarImg: {% if t.avatar %}"{{ t.avatar.url }}"{% else %}null{% endif %},
+            avatar: "{{ t.author_name|slice:':2'|upper|escapejs }}"
+        }{% if not forloop.last %},{% endif %}
+        {% empty %}
+        {
+            quote: "MIU\u2019s flexible online platform allowed me to complete my MBA while working full-time. The faculty support was exceptional, and I\u2019ve already seen career advancement.",
+            author: "Sarah K.", role: "MBA Graduate, 2023", avatarImg: null, avatar: "SK"
         },
         {
             quote: "The computer science program at MIU provided me with cutting-edge skills in AI and machine learning. I landed my dream job at a top tech company right after graduation.",
-            author: "Michael Chen",
-            role: "Computer Science Graduate, 2024",
-            avatar: "MC"
+            author: "Michael Chen", role: "Computer Science Graduate, 2024", avatarImg: null, avatar: "MC"
         },
         {
             quote: "As an international student, I appreciated the global perspective and diverse community at MIU. The support services made my transition seamless and enriching.",
-            author: "Amara O.",
-            role: "Health Sciences Graduate, 2023",
-            avatar: "AO"
+            author: "Amara O.", role: "Health Sciences Graduate, 2023", avatarImg: null, avatar: "AO"
         }
+        {% endfor %}
     ];
 
     let currentTestimonial = 0;
@@ -1358,7 +1433,12 @@ a[href="{% url 'eduweb:admission_requirement' %}"]:hover .relative.z-10 span {
         document.getElementById('testimonialQuote').textContent = testimonial.quote;
         document.getElementById('testimonialAuthor').textContent = testimonial.author;
         document.getElementById('testimonialRole').textContent = testimonial.role;
-        document.getElementById('testimonialAvatar').textContent = testimonial.avatar;
+        const avatarEl = document.getElementById('testimonialAvatar');
+        if (testimonial.avatarImg) {
+            avatarEl.innerHTML = `<img src="${testimonial.avatarImg}" alt="${testimonial.author}" class="w-full h-full object-cover rounded-full">`;
+        } else {
+            avatarEl.textContent = testimonial.avatar;
+        }
 
         document.querySelectorAll('.testimonial-indicator').forEach((indicator, i) => {
             if (i === index) {

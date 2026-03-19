@@ -10,13 +10,14 @@ from datetime import timedelta
 from decimal import Decimal
 
 from eduweb.models import (
-    LMSCourse, Enrollment, Lesson, LessonProgress, 
+    LMSCourse, Enrollment, Lesson, LessonProgress,
     CourseCategory, Assignment, AssignmentSubmission,
-    Certificate, Announcement, Quiz, QuizAttempt, 
-    QuizAnswer, QuizQuestion, QuizResponse, StudyGroup, StudyGroupMember, 
-    Discussion, DiscussionReply, Badge, 
+    Certificate, Announcement, Quiz, QuizAttempt,
+    QuizAnswer, QuizQuestion, QuizResponse, StudyGroup, StudyGroupMember,
+    Discussion, DiscussionReply, Badge,
     StudentBadge, LessonSection,
-    Message, Notification, Review, StudyGroupMessage
+    Message, Notification, Review, StudyGroupMessage,
+    FeePayment,
 )
 
 from .forms import AssignmentSubmissionForm, SettingsForm, ProfileUpdateForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm, StudentSupportTicketForm
@@ -2245,45 +2246,41 @@ Submission Time: {timezone.now()}
 
 def _get_outstanding_for_student(user):
     """
-    Returns a list of dicts representing outstanding AllRequiredPayments
-    for this student (matched by faculty + department, who_to_pay='student',
-    and no corresponding 'success' ApplicationPayment exists).
+    Returns (outstanding, paid) for a student's required fees.
 
-    NOTE: ApplicationPayment is currently tied to CourseApplication via a
-    OneToOneField. We use payment_metadata to flag student-fee payments
-    made outside the CourseApplication flow so we don't break existing logic.
+    Queries AllRequiredPayments for the student's program (who_to_pay='student',
+    is_active=True), then checks FeePayment — the dedicated fee payment table —
+    to determine which have already been successfully paid by this user.
 
-    Outstanding = AllRequiredPayments entry where no ApplicationPayment with
-    status='success' has payment_metadata containing
-    {'student_fee_id': <pk>, 'student_id': <user.pk>}.
+    outstanding → list of dicts: {'payment': AllRequiredPayments, 'is_overdue': bool}
+    paid        → list of AllRequiredPayments instances already settled
     """
     profile = getattr(user, 'profile', None)
     if not profile or not profile.program:
         return [], []
 
-    from eduweb.models import AllRequiredPayments, ApplicationPayment
+    from eduweb.models import AllRequiredPayments
     required_qs = AllRequiredPayments.objects.filter(
         program=profile.program,
         who_to_pay='student',
         is_active=True,
     ).select_related('program')
 
-    # Collect pk-s that the student has already paid
-    paid_ids = set(
-        ApplicationPayment.objects.filter(
+    # Use FeePayment directly — fee FK points to AllRequiredPayments,
+    # user FK points to the student. Clean, no metadata hacks needed.
+    paid_fee_ids = set(
+        FeePayment.objects.filter(
+            user=user,
             status='success',
-            payment_metadata__student_fee_id__in=list(
-                required_qs.values_list('pk', flat=True)
-            ),
-            payment_metadata__student_id=user.pk,
-        ).values_list('payment_metadata__student_fee_id', flat=True)
+            fee__in=required_qs,
+        ).values_list('fee_id', flat=True)
     )
 
     today = timezone.now().date()
     outstanding, paid = [], []
 
     for rp in required_qs:
-        if rp.pk in paid_ids:
+        if rp.pk in paid_fee_ids:
             paid.append(rp)
         else:
             outstanding.append({
@@ -2292,7 +2289,6 @@ def _get_outstanding_for_student(user):
             })
 
     return outstanding, paid
-
 
 # ==================== MY PAYMENTS (outstanding table) ====================
 

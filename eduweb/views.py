@@ -466,13 +466,27 @@ def index(request):
 @check_for_auth
 def about(request):
     from .models import Faculty, InstitutionMember
-    faculties = Faculty.objects.filter(is_active=True).prefetch_related('departments').order_by('display_order', 'name')
+    faculties = Faculty.objects.filter(
+        is_active=True
+    ).order_by('display_order', 'name')
     admin_board_members = InstitutionMember.objects.filter(
         member_type='admin_board', is_active=True
-    ).order_by('display_order')[:6]
+    ).order_by('display_order')
+    academic_board_members = InstitutionMember.objects.filter(
+        member_type='academic_board', is_active=True
+    ).order_by('display_order')
+    advisorate_board_members = InstitutionMember.objects.filter(
+        member_type='advisorate_board', is_active=True
+    ).order_by('display_order')
+    staff_members = InstitutionMember.objects.filter(
+        member_type='staff', is_active=True
+    ).order_by('display_order')
     return render(request, 'about.html', {
         'faculties': faculties,
         'admin_board_members': admin_board_members,
+        'academic_board_members': academic_board_members,
+        'advisorate_board_members': advisorate_board_members,
+        'staff_members': staff_members,
     })
 
 def all_programs(request):

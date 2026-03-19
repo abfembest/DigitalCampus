@@ -3517,17 +3517,6 @@ class ListOfCountry(models.Model):
     def __str__(self):
         return f"{self.country} ({self.country_phonecode})"
 
-
-
-
-import uuid
-from django.db import models
-from django.utils import timezone
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-
 class FeePayment(models.Model):
     """Payment for student required fees"""
 
@@ -3592,7 +3581,7 @@ class FeePayment(models.Model):
 
     class Meta:
         verbose_name = 'Fee Payment'
-        verbose_name_plural = 'Student Fee Payments'
+        verbose_name_plural = 'Fee Payments'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['payment_reference']),
@@ -3613,15 +3602,6 @@ class FeePayment(models.Model):
             self.paid_at = timezone.now()
 
         super().save(*args, **kwargs)
-
-    class Meta:
-        verbose_name = 'Fee Payment'
-        verbose_name_plural = 'Student Fee Payments'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['payment_reference']),
-            models.Index(fields=['status']),
-        ]
 
     def __str__(self):
         return f"{self.user} - {getattr(self.fee, 'purpose', 'N/A')} - {self.status}"

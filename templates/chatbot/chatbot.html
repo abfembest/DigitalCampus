@@ -16,7 +16,7 @@
 
     <!-- Chatbot Window -->
     <div id="chatbotWindow"
-         class="fixed sm:absolute bottom-0 sm:bottom-20 left-0 sm:left-auto right-0 w-full sm:w-96 h-[100vh] sm:h-[36rem] md:h-[40rem] bg-white sm:rounded-2xl shadow-2xl border-0 sm:border border-gray-200 opacity-0 scale-95 pointer-events-none transition-all duration-300 flex flex-col"
+         class="fixed sm:absolute bottom-0 sm:bottom-20 left-0 sm:left-auto right-0 w-full sm:w-96 h-screen sm:h-[36rem] md:h-[40rem] bg-white sm:rounded-2xl shadow-2xl border-0 sm:border border-gray-200 opacity-0 scale-95 pointer-events-none invisible transition-all duration-300 flex flex-col"
          role="dialog"
          aria-labelledby="chatbotTitle"
          aria-modal="true">
@@ -400,7 +400,7 @@
         chatbotToggle.addEventListener('click', () => {
             if (chatbotWindow.classList.contains('pointer-events-none')) {
                 // Open
-                chatbotWindow.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                chatbotWindow.classList.remove('opacity-0', 'scale-95', 'pointer-events-none', 'invisible');
                 chatbotWindow.classList.add('opacity-100', 'scale-100');
                 chatbotToggle.setAttribute('aria-expanded', 'true');
                 notificationBadge.classList.remove('opacity-100', 'scale-100');
@@ -423,7 +423,7 @@
             } else {
                 // Close (minimize)
                 chatbotWindow.classList.remove('opacity-100', 'scale-100');
-                chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none', 'invisible');
                 chatbotToggle.setAttribute('aria-expanded', 'false');
             }
         });
@@ -432,14 +432,14 @@
         chatbotClose.addEventListener('click', async () => {
             await closeSession();
             chatbotWindow.classList.remove('opacity-100', 'scale-100');
-            chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none', 'invisible');
             chatbotToggle.setAttribute('aria-expanded', 'false');
         });
 
         // Minimize button – just closes window, session stays active
         chatbotMinimize.addEventListener('click', () => {
             chatbotWindow.classList.remove('opacity-100', 'scale-100');
-            chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none', 'invisible');
             chatbotToggle.setAttribute('aria-expanded', 'false');
         });
 
@@ -500,7 +500,7 @@
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && !chatbotWindow.classList.contains('pointer-events-none')) {
                 chatbotWindow.classList.remove('opacity-100', 'scale-100');
-                chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                chatbotWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none', 'invisible');
                 chatbotToggle.setAttribute('aria-expanded', 'false');
             }
         });

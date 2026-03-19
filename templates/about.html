@@ -422,37 +422,132 @@
             </p>
         </div>
 
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {% for member in admin_board_members %}
-            <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden{% if forloop.last and forloop.counter == 3 %} md:col-span-2 lg:col-span-1{% endif %}">
-                <div class="h-64 bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center relative overflow-hidden">
-                    <div class="absolute inset-0 bg-black/10"></div>
-                    {% if member.photo %}
-                    <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
-                    {% else %}
-                    <i data-lucide="user-circle" class="w-24 h-24 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
-                    {% endif %}
-                </div>
-                <div class="p-6 text-center">
-                    <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">{{ member.name }}</h3>
-                    <p class="text-primary-600 font-semibold mb-3 font-['Inter']">{{ member.role }}</p>
-                    {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
-                </div>
-            </article>
-            {% empty %}
-            <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden col-span-full text-center p-8">
-                <i data-lucide="users" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
-                <p class="text-gray-400 font-['Inter']">Leadership profiles coming soon.</p>
-            </article>
-            {% endfor %}
-        </div>
+        {% comment %}— reusable card macro via include would be ideal but inline is fine here —{% endcomment %}
 
-        <div class="text-center">
-            <a href="#" class="inline-flex items-center gap-2 border-2 border-primary-600 text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-primary-600 hover:text-white transition-all shadow-lg hover:shadow-xl font-['Inter']">
-                <i data-lucide="users" class="w-5 h-5"></i>
-                View Full Leadership Team
-            </a>
+        {# ── ADMINISTRATIVE / MANAGEMENT BOARD ── #}
+        {% if admin_board_members %}
+        <div class="mb-14">
+            <h3 class="text-xl sm:text-2xl font-bold text-primary-950 font-['Poppins'] mb-6 flex items-center gap-3">
+                <span class="w-8 h-1 bg-primary-600 rounded-full inline-block"></span>
+                Administrative &amp; Management Board
+            </h3>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for member in admin_board_members %}
+                <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
+                    <div class="h-56 bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        {% if member.photo %}
+                        <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
+                        {% else %}
+                        <i data-lucide="user-circle" class="w-20 h-20 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
+                        {% endif %}
+                    </div>
+                    <div class="p-6 text-center">
+                        <h4 class="font-bold text-lg lg:text-xl mb-1 text-primary-950 font-['Poppins']">{{ member.name }}</h4>
+                        <p class="text-primary-600 font-semibold text-sm mb-3 font-['Inter']">{{ member.role }}</p>
+                        {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
         </div>
+        {% endif %}
+
+        {# ── ACADEMIC BOARD ── #}
+        {% if academic_board_members %}
+        <div class="mb-14">
+            <h3 class="text-xl sm:text-2xl font-bold text-primary-950 font-['Poppins'] mb-6 flex items-center gap-3">
+                <span class="w-8 h-1 bg-blue-500 rounded-full inline-block"></span>
+                Academic Board
+            </h3>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for member in academic_board_members %}
+                <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
+                    <div class="h-56 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        {% if member.photo %}
+                        <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
+                        {% else %}
+                        <i data-lucide="user-circle" class="w-20 h-20 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
+                        {% endif %}
+                    </div>
+                    <div class="p-6 text-center">
+                        <h4 class="font-bold text-lg lg:text-xl mb-1 text-primary-950 font-['Poppins']">{{ member.name }}</h4>
+                        <p class="text-blue-600 font-semibold text-sm mb-3 font-['Inter']">{{ member.role }}</p>
+                        {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── ADVISORATE BOARD ── #}
+        {% if advisorate_board_members %}
+        <div class="mb-14">
+            <h3 class="text-xl sm:text-2xl font-bold text-primary-950 font-['Poppins'] mb-6 flex items-center gap-3">
+                <span class="w-8 h-1 bg-purple-500 rounded-full inline-block"></span>
+                Advisorate Board
+            </h3>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for member in advisorate_board_members %}
+                <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
+                    <div class="h-56 bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        {% if member.photo %}
+                        <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
+                        {% else %}
+                        <i data-lucide="user-circle" class="w-20 h-20 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
+                        {% endif %}
+                    </div>
+                    <div class="p-6 text-center">
+                        <h4 class="font-bold text-lg lg:text-xl mb-1 text-primary-950 font-['Poppins']">{{ member.name }}</h4>
+                        <p class="text-purple-600 font-semibold text-sm mb-3 font-['Inter']">{{ member.role }}</p>
+                        {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── STAFF ── #}
+        {% if staff_members %}
+        <div class="mb-6">
+            <h3 class="text-xl sm:text-2xl font-bold text-primary-950 font-['Poppins'] mb-6 flex items-center gap-3">
+                <span class="w-8 h-1 bg-emerald-500 rounded-full inline-block"></span>
+                Staff
+            </h3>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for member in staff_members %}
+                <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
+                    <div class="h-56 bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        {% if member.photo %}
+                        <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
+                        {% else %}
+                        <i data-lucide="user-circle" class="w-20 h-20 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
+                        {% endif %}
+                    </div>
+                    <div class="p-6 text-center">
+                        <h4 class="font-bold text-lg lg:text-xl mb-1 text-primary-950 font-['Poppins']">{{ member.name }}</h4>
+                        <p class="text-emerald-600 font-semibold text-sm mb-3 font-['Inter']">{{ member.role }}</p>
+                        {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── FALLBACK if nothing is in DB yet ── #}
+        {% if not admin_board_members and not academic_board_members and not advisorate_board_members and not staff_members %}
+        <div class="text-center py-16">
+            <i data-lucide="users" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+            <p class="text-gray-400 font-['Inter']">Leadership profiles coming soon.</p>
+        </div>
+        {% endif %}
+
     </div>
 </section>
 

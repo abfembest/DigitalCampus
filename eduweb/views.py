@@ -465,7 +465,7 @@ def index(request):
 
 @check_for_auth
 def about(request):
-    from .models import Faculty, InstitutionMember
+    from .models import Faculty, InstitutionMember, SiteConfig, SiteHistoryMilestone
     faculties = Faculty.objects.filter(
         is_active=True
     ).order_by('display_order', 'name')
@@ -481,12 +481,16 @@ def about(request):
     staff_members = InstitutionMember.objects.filter(
         member_type='staff', is_active=True
     ).order_by('display_order')
+    history_milestones = SiteHistoryMilestone.objects.filter(
+        is_active=True
+    ).order_by('display_order', 'year')
     return render(request, 'about.html', {
         'faculties': faculties,
         'admin_board_members': admin_board_members,
         'academic_board_members': academic_board_members,
         'advisorate_board_members': advisorate_board_members,
         'staff_members': staff_members,
+        'history_milestones': history_milestones,
     })
 
 def all_programs(request):

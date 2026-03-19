@@ -181,6 +181,29 @@ urlpatterns = [
     path('payroll/create/', views.staff_payroll_create, name='staff_payroll_create'),
     path('payroll/<str:payroll_reference>/edit/', views.staff_payroll_edit, name='staff_payroll_edit'),
     path('payroll/<str:payroll_reference>/delete/', views.staff_payroll_delete, name='staff_payroll_delete'),
+
+    # Site Configuration
+    path('site-config/general/', views.site_config_general, name='site_config_general'),
+    path('site-config/index/', views.site_config_index, name='site_config_index'),
+    path('site-config/about/', views.site_config_about, name='site_config_about'),
+
+    # History Milestones
+    path('site-config/milestones/', views.site_milestones_list, name='site_milestones_list'),
+    path('site-config/milestones/create/', views.site_milestone_create, name='site_milestone_create'),
+    path('site-config/milestones/<int:pk>/edit/', views.site_milestone_edit, name='site_milestone_edit'),
+    path('site-config/milestones/<int:pk>/delete/', views.site_milestone_delete, name='site_milestone_delete'),
+
+    # Testimonials
+    path('site-config/testimonials/', views.testimonials_list, name='testimonials_list'),
+    path('site-config/testimonials/create/', views.testimonial_create, name='testimonial_create'),
+    path('site-config/testimonials/<int:pk>/edit/', views.testimonial_edit, name='testimonial_edit'),
+    path('site-config/testimonials/<int:pk>/delete/', views.testimonial_delete, name='testimonial_delete'),
+
+    # Institution Members
+    path('site-config/members/', views.institution_members_list, name='institution_members_list'),
+    path('site-config/members/create/', views.institution_member_create, name='institution_member_create'),
+    path('site-config/members/<int:pk>/edit/', views.institution_member_edit, name='institution_member_edit'),
+    path('site-config/members/<int:pk>/delete/', views.institution_member_delete, name='institution_member_delete'),
 ]
 
 if settings.DEBUG:

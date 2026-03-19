@@ -36,7 +36,8 @@ from management.forms import (
     BlogCategoryForm,
     BroadcastMessageForm,
     LMSCourseForm,
-    CertificateForm
+    CertificateForm,
+    SiteConfigGeneralForm, SiteConfigIndexForm, SiteConfigAboutForm,
 )
 
 
@@ -3729,3 +3730,280 @@ def staff_payroll_delete(request, payroll_reference):
     payroll.delete()
     messages.success(request, 'Payroll deleted.')
     return redirect('management:staff_payroll_list')
+
+# ── SITE CONFIG VIEWS ────────────────────────────────────────────────────────
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def site_config_general(request):
+    """Edit base.html / global fields: identity, logos, SEO, footer, social, contact."""
+    from eduweb.models import SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember
+    site = SiteConfig.objects.first()
+    if request.method == 'POST':
+        form = SiteConfigGeneralForm(request.POST, request.FILES, instance=site)
+        if form.is_valid():
+            form.save()
+            AuditLog.objects.create(
+                user=request.user, action='update',
+                model_name='SiteConfig',
+                description='Updated general site configuration'
+            )
+            messages.success(request, 'General site settings saved.')
+            return redirect('management:site_config_general')
+    else:
+        form = SiteConfigGeneralForm(instance=site)
+    return render(request, 'management/site_config/general.html', {'form': form, 'site': site})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def site_config_index(request):
+    """Edit index.html fields: hero slides, promo video, campus map."""
+    from eduweb.models import SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember
+    site = SiteConfig.objects.first()
+    if request.method == 'POST':
+        form = SiteConfigIndexForm(request.POST, request.FILES, instance=site)
+        if form.is_valid():
+            form.save()
+            AuditLog.objects.create(
+                user=request.user, action='update',
+                model_name='SiteConfig',
+                description='Updated index page configuration'
+            )
+            messages.success(request, 'Home page settings saved.')
+            return redirect('management:site_config_index')
+    else:
+        form = SiteConfigIndexForm(instance=site)
+    return render(request, 'management/site_config/index_page.html', {'form': form, 'site': site})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def site_config_about(request):
+    """Edit about.html fields: mission, vision, values, virtual tour."""
+    from eduweb.models import SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember
+    site = SiteConfig.objects.first()
+    if request.method == 'POST':
+        form = SiteConfigAboutForm(request.POST, request.FILES, instance=site)
+        if form.is_valid():
+            form.save()
+            AuditLog.objects.create(
+                user=request.user, action='update',
+                model_name='SiteConfig',
+                description='Updated about page configuration'
+            )
+            messages.success(request, 'About page settings saved.')
+            return redirect('management:site_config_about')
+    else:
+        form = SiteConfigAboutForm(instance=site)
+    return render(request, 'management/site_config/about_page.html', {'form': form, 'site': site})
+
+# ── SITE HISTORY MILESTONES ───────────────────────────────────────────────────
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def site_milestones_list(request):
+    from eduweb.models import SiteHistoryMilestone
+    from .forms import SiteHistoryMilestoneForm
+    milestones = SiteHistoryMilestone.objects.all().order_by('display_order', 'year')
+    return render(request, 'management/site_config/milestones_list.html', {
+        'milestones': milestones,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def site_milestone_create(request):
+    from eduweb.models import SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember, SiteHistoryMilestone
+    from .forms import SiteHistoryMilestoneForm
+    if request.method == 'POST':
+        form = SiteHistoryMilestoneForm(request.POST)
+        if form.is_valid():
+            milestone = form.save(commit=False)
+            milestone.site = SiteConfig.objects.first()
+            milestone.save()
+            AuditLog.objects.create(
+                user=request.user, action='create',
+                model_name='SiteHistoryMilestone',
+                description=f'Created milestone: {milestone}'
+            )
+            messages.success(request, 'Milestone created.')
+            return redirect('management:site_milestones_list')
+    else:
+        form = SiteHistoryMilestoneForm()
+    return render(request, 'management/site_config/milestone_form.html', {
+        'form': form, 'milestone': None,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def site_milestone_edit(request, pk):
+    from eduweb.models import SiteHistoryMilestone
+    from .forms import SiteHistoryMilestoneForm
+    milestone = get_object_or_404(SiteHistoryMilestone, pk=pk)
+    if request.method == 'POST':
+        form = SiteHistoryMilestoneForm(request.POST, instance=milestone)
+        if form.is_valid():
+            form.save()
+            AuditLog.objects.create(
+                user=request.user, action='update',
+                model_name='SiteHistoryMilestone',
+                description=f'Updated milestone: {milestone}'
+            )
+            messages.success(request, 'Milestone updated.')
+            return redirect('management:site_milestones_list')
+    else:
+        form = SiteHistoryMilestoneForm(instance=milestone)
+    return render(request, 'management/site_config/milestone_form.html', {
+        'form': form, 'milestone': milestone,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def site_milestone_delete(request, pk):
+    from eduweb.models import SiteHistoryMilestone
+    milestone = get_object_or_404(SiteHistoryMilestone, pk=pk)
+    if request.method == 'POST':
+        milestone.delete()
+        messages.success(request, 'Milestone deleted.')
+    return redirect('management:site_milestones_list')
+
+
+# ── TESTIMONIALS ──────────────────────────────────────────────────────────────
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def testimonials_list(request):
+    from eduweb.models import Testimonial
+    testimonials = Testimonial.objects.all().order_by('order')
+    return render(request, 'management/site_config/testimonials_list.html', {
+        'testimonials': testimonials,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def testimonial_create(request):
+    from .forms import TestimonialForm
+    if request.method == 'POST':
+        form = TestimonialForm(request.POST, request.FILES)
+        if form.is_valid():
+            t = form.save()
+            AuditLog.objects.create(
+                user=request.user, action='create',
+                model_name='Testimonial',
+                description=f'Created testimonial: {t}'
+            )
+            messages.success(request, 'Testimonial created.')
+            return redirect('management:testimonials_list')
+    else:
+        form = TestimonialForm()
+    return render(request, 'management/site_config/testimonial_form.html', {
+        'form': form, 'testimonial': None,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def testimonial_edit(request, pk):
+    from eduweb.models import Testimonial
+    from .forms import TestimonialForm
+    testimonial = get_object_or_404(Testimonial, pk=pk)
+    if request.method == 'POST':
+        form = TestimonialForm(request.POST, request.FILES, instance=testimonial)
+        if form.is_valid():
+            form.save()
+            AuditLog.objects.create(
+                user=request.user, action='update',
+                model_name='Testimonial',
+                description=f'Updated testimonial: {testimonial}'
+            )
+            messages.success(request, 'Testimonial updated.')
+            return redirect('management:testimonials_list')
+    else:
+        form = TestimonialForm(instance=testimonial)
+    return render(request, 'management/site_config/testimonial_form.html', {
+        'form': form, 'testimonial': testimonial,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def testimonial_delete(request, pk):
+    from eduweb.models import Testimonial
+    testimonial = get_object_or_404(Testimonial, pk=pk)
+    if request.method == 'POST':
+        testimonial.delete()
+        messages.success(request, 'Testimonial deleted.')
+    return redirect('management:testimonials_list')
+
+
+# ── INSTITUTION MEMBERS ───────────────────────────────────────────────────────
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def institution_members_list(request):
+    from eduweb.models import InstitutionMember
+    members = InstitutionMember.objects.all().order_by('member_type', 'display_order')
+    return render(request, 'management/site_config/members_list.html', {
+        'members': members,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def institution_member_create(request):
+    from .forms import InstitutionMemberForm
+    if request.method == 'POST':
+        form = InstitutionMemberForm(request.POST, request.FILES)
+        if form.is_valid():
+            m = form.save()
+            AuditLog.objects.create(
+                user=request.user, action='create',
+                model_name='InstitutionMember',
+                description=f'Created member: {m}'
+            )
+            messages.success(request, 'Member created.')
+            return redirect('management:institution_members_list')
+    else:
+        form = InstitutionMemberForm()
+    return render(request, 'management/site_config/member_form.html', {
+        'form': form, 'member': None,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def institution_member_edit(request, pk):
+    from eduweb.models import InstitutionMember
+    from .forms import InstitutionMemberForm
+    member = get_object_or_404(InstitutionMember, pk=pk)
+    if request.method == 'POST':
+        form = InstitutionMemberForm(request.POST, request.FILES, instance=member)
+        if form.is_valid():
+            form.save()
+            AuditLog.objects.create(
+                user=request.user, action='update',
+                model_name='InstitutionMember',
+                description=f'Updated member: {member}'
+            )
+            messages.success(request, 'Member updated.')
+            return redirect('management:institution_members_list')
+    else:
+        form = InstitutionMemberForm(instance=member)
+    return render(request, 'management/site_config/member_form.html', {
+        'form': form, 'member': member,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def institution_member_delete(request, pk):
+    from eduweb.models import InstitutionMember
+    member = get_object_or_404(InstitutionMember, pk=pk)
+    if request.method == 'POST':
+        member.delete()
+        messages.success(request, 'Member deleted.')
+    return redirect('management:institution_members_list')

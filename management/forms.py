@@ -26,6 +26,7 @@ from eduweb.models import (
     Invoice,
     AllRequiredPayments,
     Announcement,
+    SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember
 )
 import json
 
@@ -779,6 +780,207 @@ class SystemConfigurationForm(forms.ModelForm):
             })
         }
 
+# ── shared Tailwind input attr dicts (matches the rest of this forms.py) ──────
+_SC_I = {'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm'}
+_SC_T = {'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none'}
+_SC_C = {'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm font-mono resize-none'}
+
+
+class SiteConfigGeneralForm(forms.ModelForm):
+    """
+    Covers everything base.html reads:
+    identity, logos, SEO, footer tagline, copyright,
+    social links, contact (phone/email/address).
+    """
+    class Meta:
+        model = SiteConfig
+        fields = [
+            # Identity
+            'school_name', 'school_short_name', 'tagline', 'theme_color',
+            # Logos & images
+            'logo', 'logo_dark', 'favicon', 'og_image',
+            # SEO
+            'meta_description', 'meta_keywords',
+            # Footer
+            'footer_tagline', 'copyright_year',
+            # Contact — footer bar
+            'email', 'phone_primary', 'phone_secondary',
+            'phone_ng_primary', 'phone_ng_secondary', 'whatsapp',
+            # Contact page emails
+            'email_admissions', 'email_info', 'email_international',
+            # Contact page phones
+            'phone_admissions', 'phone_general', 'phone_international',
+            # Addresses
+            'address_usa', 'address_nigeria',
+            # Office hours
+            'office_hours_weekday', 'office_hours_saturday', 'office_hours_sunday',
+            # Social
+            'facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok',
+        ]
+        widgets = {
+            # Identity
+            'school_name':           forms.TextInput(attrs=_SC_I),
+            'school_short_name':     forms.TextInput(attrs=_SC_I),
+            'tagline':               forms.TextInput(attrs=_SC_I),
+            'theme_color':           forms.TextInput(attrs={
+                'type': 'color',
+                'class': 'h-10 w-16 p-1 border border-gray-300 rounded-lg cursor-pointer',
+            }),
+            # SEO
+            'meta_description':      forms.Textarea(attrs={**_SC_T, 'rows': 3}),
+            'meta_keywords':         forms.Textarea(attrs={**_SC_T, 'rows': 2}),
+            # Footer
+            'footer_tagline':        forms.Textarea(attrs={**_SC_T, 'rows': 3}),
+            'copyright_year':        forms.TextInput(attrs=_SC_I),
+            # Contact — footer bar
+            'email':                 forms.EmailInput(attrs=_SC_I),
+            'phone_primary':         forms.TextInput(attrs=_SC_I),
+            'phone_secondary':       forms.TextInput(attrs=_SC_I),
+            'phone_ng_primary':      forms.TextInput(attrs=_SC_I),
+            'phone_ng_secondary':    forms.TextInput(attrs=_SC_I),
+            'whatsapp':              forms.TextInput(attrs=_SC_I),
+            # Contact page emails
+            'email_admissions':      forms.EmailInput(attrs=_SC_I),
+            'email_info':            forms.EmailInput(attrs=_SC_I),
+            'email_international':   forms.EmailInput(attrs=_SC_I),
+            # Contact page phones
+            'phone_admissions':      forms.TextInput(attrs=_SC_I),
+            'phone_general':         forms.TextInput(attrs=_SC_I),
+            'phone_international':   forms.TextInput(attrs=_SC_I),
+            # Addresses
+            'address_usa':           forms.Textarea(attrs={**_SC_T, 'rows': 3}),
+            'address_nigeria':       forms.Textarea(attrs={**_SC_T, 'rows': 3}),
+            # Office hours
+            'office_hours_weekday':  forms.TextInput(attrs=_SC_I),
+            'office_hours_saturday': forms.TextInput(attrs=_SC_I),
+            'office_hours_sunday':   forms.TextInput(attrs=_SC_I),
+            # Social
+            'facebook':              forms.URLInput(attrs=_SC_I),
+            'twitter':               forms.URLInput(attrs=_SC_I),
+            'instagram':             forms.URLInput(attrs=_SC_I),
+            'linkedin':              forms.URLInput(attrs=_SC_I),
+            'youtube':               forms.URLInput(attrs=_SC_I),
+            'tiktok':                forms.URLInput(attrs=_SC_I),
+        }
+
+
+class SiteConfigIndexForm(forms.ModelForm):
+    """
+    Covers everything index.html reads beyond the general fields:
+    hero slides (3×image+video+alt+duration), promo video embed,
+    campus map embed + address.
+    """
+    class Meta:
+        model = SiteConfig
+        fields = [
+            # Hero slide 1
+            'hero_slide_1_image', 'hero_slide_1_video',
+            'hero_slide_1_alt', 'hero_slide_1_duration',
+            # Hero slide 2
+            'hero_slide_2_image', 'hero_slide_2_video',
+            'hero_slide_2_alt', 'hero_slide_2_duration',
+            # Hero slide 3
+            'hero_slide_3_image', 'hero_slide_3_video',
+            'hero_slide_3_alt', 'hero_slide_3_duration',
+            # Embeds
+            'promo_video_url',
+            'campus_map_embed_url', 'campus_map_address',
+        ]
+        widgets = {
+            'hero_slide_1_alt':      forms.TextInput(attrs=_SC_I),
+            'hero_slide_1_duration': forms.NumberInput(attrs=_SC_I),
+            'hero_slide_2_alt':      forms.TextInput(attrs=_SC_I),
+            'hero_slide_2_duration': forms.NumberInput(attrs=_SC_I),
+            'hero_slide_3_alt':      forms.TextInput(attrs=_SC_I),
+            'hero_slide_3_duration': forms.NumberInput(attrs=_SC_I),
+            'promo_video_url':       forms.Textarea(attrs={
+                **_SC_C, 'rows': 4,
+                'placeholder': 'Paste full <iframe> embed code from YouTube/Vimeo',
+            }),
+            'campus_map_embed_url':  forms.Textarea(attrs={
+                **_SC_C, 'rows': 4,
+                'placeholder': 'Paste full <iframe> embed code from Google Maps',
+            }),
+            'campus_map_address':    forms.TextInput(attrs=_SC_I),
+        }
+
+
+class SiteConfigAboutForm(forms.ModelForm):
+    """
+    Covers everything about.html reads beyond the general fields:
+    mission, vision, values (JSON list), virtual tour embed.
+    """
+    about_values = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            **_SC_T, 'rows': 6,
+            'placeholder': 'One value per line e.g.\nExcellence in Education\nDiversity & Inclusion',
+        }),
+        help_text='Enter each core value on its own line. Saved as a JSON list automatically.',
+    )
+
+    class Meta:
+        model = SiteConfig
+        fields = [
+            'about_mission', 'about_vision', 'about_values',
+            'virtual_tour_url',
+        ]
+        widgets = {
+            'about_mission':    forms.Textarea(attrs={**_SC_T, 'rows': 5}),
+            'about_vision':     forms.Textarea(attrs={**_SC_T, 'rows': 5}),
+            'virtual_tour_url': forms.Textarea(attrs={
+                **_SC_C, 'rows': 4,
+                'placeholder': 'Paste full <iframe> embed code for the virtual campus tour',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.about_values:
+            vals = self.instance.about_values
+            if isinstance(vals, list):
+                self.fields['about_values'].initial = '\n'.join(vals)
+
+    def clean_about_values(self):
+        raw = self.cleaned_data.get('about_values', '')
+        lines = [line.strip() for line in raw.splitlines() if line.strip()]
+        return lines
+
+class SiteHistoryMilestoneForm(forms.ModelForm):
+    class Meta:
+        model = SiteHistoryMilestone
+        fields = ['year', 'title', 'description', 'display_order', 'is_active']
+        widgets = {
+            'year':          forms.NumberInput(attrs={**_SC_I, 'placeholder': 'e.g. 1995'}),
+            'title':         forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'Founding'"}),
+            'description':   forms.Textarea(attrs={**_SC_T, 'rows': 3}),
+            'display_order': forms.NumberInput(attrs=_SC_I),
+        }
+
+
+class TestimonialForm(forms.ModelForm):
+    class Meta:
+        model = Testimonial
+        fields = ['author_name', 'author_role', 'quote', 'avatar', 'order', 'is_active']
+        widgets = {
+            'author_name': forms.TextInput(attrs=_SC_I),
+            'author_role': forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'MBA Graduate, 2023'"}),
+            'quote':       forms.Textarea(attrs={**_SC_T, 'rows': 4}),
+            'order':       forms.NumberInput(attrs=_SC_I),
+        }
+
+
+class InstitutionMemberForm(forms.ModelForm):
+    class Meta:
+        model = InstitutionMember
+        fields = ['member_type', 'name', 'role', 'photo', 'bio', 'display_order', 'is_active']
+        widgets = {
+            'member_type':   forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white'}),
+            'name':          forms.TextInput(attrs=_SC_I),
+            'role':          forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'Vice Chancellor'"}),
+            'bio':           forms.Textarea(attrs={**_SC_T, 'rows': 4}),
+            'display_order': forms.NumberInput(attrs=_SC_I),
+        }
 
 class BrandingConfigForm(forms.Form):
     site_name = forms.CharField(

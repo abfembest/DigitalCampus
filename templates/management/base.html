@@ -676,6 +676,43 @@
                         </div>
                     </div>
 
+                    <!-- Site Configuration -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'site-config' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-globe w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Site Content</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'site-config' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
+                        </button>
+                        <div id="siteConfigMenu" class="mt-1 space-y-1 {% if 'site-config' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'management:site_config_general' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'site_config_general' %}bg-white/20{% endif %}">
+                                <i class="fas fa-id-card mr-2" aria-hidden="true"></i>General &amp; Identity
+                            </a>
+                            <a href="{% url 'management:site_config_index' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'site_config_index' %}bg-white/20{% endif %}">
+                                <i class="fas fa-home mr-2" aria-hidden="true"></i>Home Page
+                            </a>
+                            <a href="{% url 'management:site_config_about' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'site_config_about' %}bg-white/20{% endif %}">
+                                <i class="fas fa-info-circle mr-2" aria-hidden="true"></i>About Page
+                            </a>
+                            <a href="{% url 'management:site_milestones_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'milestones' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-clock mr-2" aria-hidden="true"></i>History Timeline
+                            </a>
+                            <a href="{% url 'management:testimonials_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'testimonials' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-quote-right mr-2" aria-hidden="true"></i>Testimonials
+                            </a>
+                            <a href="{% url 'management:institution_members_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'members' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-user-tie mr-2" aria-hidden="true"></i>Leadership &amp; Staff
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Security & Audit -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'audit' in request.path or 'security' in request.path %}bg-white/20{% endif %}">

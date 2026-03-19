@@ -13,7 +13,7 @@ from .models import (
     Enrollment, Faculty, InstitutionMember, Invoice, Lesson, LessonSection, LessonProgress,
     LMSCourse, Message, Notification,
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
-    Review, SiteConfig, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
+    Review, SiteConfig, SiteHistoryMilestone, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
     StaffPayroll, StudyGroup, StudyGroupMember, StudyGroupMessage,
     SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry, Testimonial, FeePayment
 )
@@ -60,10 +60,16 @@ class SiteConfigForm(forms.ModelForm):
         model  = SiteConfig
         fields = '__all__'
 
+class SiteHistoryMilestoneInline(admin.TabularInline):
+    model = SiteHistoryMilestone
+    extra = 1
+    fields = ('year', 'title', 'description', 'display_order', 'is_active')
+    ordering = ('display_order', 'year')
 
 @admin.register(SiteConfig)
 class SiteConfigAdmin(admin.ModelAdmin):
     form = SiteConfigForm
+    inlines = [SiteHistoryMilestoneInline]
     list_display = ('school_name', 'school_short_name', 'email', 'phone_primary')
 
     fieldsets = (
@@ -131,6 +137,9 @@ class SiteConfigAdmin(admin.ModelAdmin):
                 'hero_slide_3_alt', 'hero_slide_3_duration',
             ),
             'classes': ('collapse',),
+        }),
+        ('About Page', {
+            'fields': ('about_mission', 'about_vision', 'about_values'),
         }),
         ('🦶 Footer & Copyright', {
             'fields': ('footer_tagline', 'copyright_year'),

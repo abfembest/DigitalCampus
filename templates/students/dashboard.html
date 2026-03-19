@@ -1,5 +1,5 @@
 {% extends "management/base.html" %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
 
@@ -61,7 +61,7 @@ check assignments, and stay updated with announcements.
                 <!-- Total amount hint shown on sm+ screens -->
                 <p class="hidden sm:block text-xs text-red-500 
                            font-medium mt-1.5 text-right">
-                    ₦{{ outstanding_total|floatformat:2 }} total due
+                    ₦{{ outstanding_total|floatformat:2|intcomma }} total due
                 </p>
             </div>
             {% endif %}

@@ -313,6 +313,29 @@ class SiteConfig(models.Model):
         help_text="Seconds slide 3 stays visible before advancing"
     )
 
+    # =========================================================================
+    # ABOUT PAGE — Mission, Vision & Values
+    # =========================================================================
+    about_mission = models.TextField(
+        blank=True,
+        default='To provide accessible, innovative, and transformative education that empowers individuals from all backgrounds to achieve their full potential and make meaningful contributions to society.',
+        help_text="Our Mission text — about page Mission card"
+    )
+    about_vision = models.TextField(
+        blank=True,
+        default='To be a globally recognized leader in higher education, known for innovation, inclusivity, and preparing future-ready graduates who drive positive change worldwide.',
+        help_text="Our Vision text — about page Vision card"
+    )
+    about_values = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            'List of core values shown in the Values card. '
+            'Store as a JSON array of strings, e.g. '
+            '["Excellence in Education", "Diversity & Inclusion", "Innovation & Creativity", "Global Citizenship"]'
+        )
+    )
+
     class Meta:
         verbose_name        = 'Site Configuration'
         verbose_name_plural = 'Site Configuration'
@@ -324,6 +347,40 @@ class SiteConfig(models.Model):
     def get(cls):
         """Fetch the single site config. Use this in all views."""
         return cls.objects.first()
+
+class SiteHistoryMilestone(models.Model):
+    """
+    One entry in the About page 'Our History' timeline.
+    Add as many as needed; order by `year`.
+    """
+    site = models.ForeignKey(
+        SiteConfig,
+        on_delete=models.CASCADE,
+        related_name='history_milestones',
+    )
+    year = models.PositiveSmallIntegerField(
+        help_text="e.g. 1995"
+    )
+    title = models.CharField(
+        max_length=150,
+        help_text="e.g. 'Founding' — displayed as '1995 – Founding'"
+    )
+    description = models.TextField(
+        help_text="One or two sentences describing what happened that year"
+    )
+    display_order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Lower numbers appear first. Leave 0 to sort by year instead."
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'History Milestone'
+        verbose_name_plural = 'History Milestones'
+        ordering = ['display_order', 'year']
+
+    def __str__(self):
+        return f"{self.year} – {self.title}"
 
 # ==================== TESTIMONIALS ====================
 class Testimonial(models.Model):

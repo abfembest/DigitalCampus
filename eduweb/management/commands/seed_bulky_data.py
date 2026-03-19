@@ -8,7 +8,7 @@ from django.utils import timezone
 from faker import Faker
 
 from eduweb.models import (
-    SiteConfig, InstitutionMember, Testimonial,
+    SiteConfig, SiteHistoryMilestone, InstitutionMember, Testimonial,
     Announcement, Assignment, AssignmentSubmission, AuditLog, Badge, StudentBadge,
     BlogCategory, BlogPost, Certificate, ContactMessage,
     Faculty, Department, Program, Course, AcademicSession, AllRequiredPayments,
@@ -71,7 +71,7 @@ class Command(BaseCommand):
             PaymentGateway, BlogPost, BlogCategory, ContactMessage,
             Vendor, SystemConfiguration, Announcement,
             StudyGroupMessage, StudyGroupMember, StudyGroup, BroadcastMessage,
-            InstitutionMember, SiteConfig, Testimonial, ListOfCountry,
+            InstitutionMember, SiteHistoryMilestone, SiteConfig, Testimonial, ListOfCountry,
         ]
         for model in models_to_clear:
             model.objects.all().delete()
@@ -190,6 +190,29 @@ class Command(BaseCommand):
             meta_keywords='MIU, Melchisedec International University, online degrees, accredited programs',
         )
         self.stdout.write(self.style.SUCCESS("   ✅ SiteConfig created"))
+
+        # ── 1a. HISTORY MILESTONES ────────────────────────────────────────────
+        self.stdout.write("📜 Creating history milestones...")
+        site_cfg = SiteConfig.objects.first()
+        milestones = [
+            (1995, 'Founding',             'Melchisedec International University was established with a founding cohort of 120 students across three faculties.', 1),
+            (2000, 'First Graduation',     'Our inaugural graduating class of 47 students received their degrees at a ceremony attended by dignitaries from 12 countries.', 2),
+            (2005, 'Online Campus Launch', 'MIU became one of the first accredited institutions to offer fully online degree programmes, reaching students in 40+ countries.', 3),
+            (2010, 'Research Excellence',  'The university launched its flagship research centre, securing £4.2 m in grants during its first five years of operation.', 4),
+            (2015, 'Global Expansion',     'Partnership agreements signed with 30 universities worldwide, establishing student and faculty exchange programmes on five continents.', 5),
+            (2020, 'Digital Transformation', 'MIU transitioned its entire curriculum to a hybrid model, enabling uninterrupted learning through global disruptions.', 6),
+            (2024, 'Accreditation Milestone', 'Achieved triple accreditation, placing MIU among the top 2 % of universities worldwide for academic quality and governance.', 7),
+        ]
+        for year, title, desc, order in milestones:
+            SiteHistoryMilestone.objects.create(
+                site=site_cfg,
+                year=year,
+                title=title,
+                description=desc,
+                display_order=order,
+                is_active=True,
+            )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {SiteHistoryMilestone.objects.count()} history milestones created"))
 
         # ── 1b. TESTIMONIALS ─────────────────────────────────────────────────
         self.stdout.write("💬 Creating testimonials...")
@@ -1760,6 +1783,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("=" * 70))
         rows = [
             ("SiteConfig", SiteConfig.objects.count()),
+            ("History Milestones",  SiteHistoryMilestone.objects.count()),
             ("Testimonials",        Testimonial.objects.count()),
             ("Institution Members", InstitutionMember.objects.count()),
             ("Countries", ListOfCountry.objects.count()),

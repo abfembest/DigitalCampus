@@ -171,7 +171,7 @@
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Mission</h3>
                 <p class="text-gray-700 leading-relaxed font-['Inter']">
-                    To provide accessible, innovative, and transformative education that empowers individuals from all backgrounds to achieve their full potential and make meaningful contributions to society.
+                    {{ site_config.about_mission|default:"To provide accessible, innovative, and transformative education that empowers individuals from all backgrounds to achieve their full potential and make meaningful contributions to society." }}
                 </p>
             </article>
 
@@ -181,7 +181,7 @@
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Vision</h3>
                 <p class="text-gray-700 leading-relaxed font-['Inter']">
-                    To be a globally recognized leader in higher education, known for innovation, inclusivity, and preparing future-ready graduates who drive positive change worldwide.
+                    {{ site_config.about_vision|default:"To be a globally recognized leader in higher education, known for innovation, inclusivity, and preparing future-ready graduates who drive positive change worldwide." }}
                 </p>
             </article>
 
@@ -191,22 +191,19 @@
                 </div>
                 <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Values</h3>
                 <ul class="space-y-3">
-                    <li class="flex items-start gap-3">
-                        <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
-                        <span class="text-gray-700 font-['Inter']">Excellence in Education</span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
-                        <span class="text-gray-700 font-['Inter']">Diversity & Inclusion</span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
-                        <span class="text-gray-700 font-['Inter']">Innovation & Creativity</span>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
-                        <span class="text-gray-700 font-['Inter']">Global Citizenship</span>
-                    </li>
+                    {% if site_config.about_values %}
+                        {% for value in site_config.about_values %}
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
+                            <span class="text-gray-700 font-['Inter']">{{ value }}</span>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="flex items-start gap-3"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i><span class="text-gray-700 font-['Inter']">Excellence in Education</span></li>
+                        <li class="flex items-start gap-3"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i><span class="text-gray-700 font-['Inter']">Diversity &amp; Inclusion</span></li>
+                        <li class="flex items-start gap-3"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i><span class="text-gray-700 font-['Inter']">Innovation &amp; Creativity</span></li>
+                        <li class="flex items-start gap-3"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i><span class="text-gray-700 font-['Inter']">Global Citizenship</span></li>
+                    {% endif %}
                 </ul>
             </article>
         </div>
@@ -229,45 +226,33 @@
 
         <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
             <div class="space-y-8">
-                <article class="relative pl-8 pb-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
-                    <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-600 rounded-full group-hover:scale-125 transition-transform"></div>
-                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl">
-                        <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">1995 - Founding</h3>
-                        <p class="text-gray-700 leading-relaxed font-['Inter']">MIU is established with a vision to provide accessible, quality higher education through innovative delivery methods.</p>
-                    </div>
-                </article>
-
-                <article class="relative pl-8 pb-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
-                    <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-600 rounded-full group-hover:scale-125 transition-transform"></div>
-                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl">
-                        <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">2005 - Digital Transformation</h3>
-                        <p class="text-gray-700 leading-relaxed font-['Inter']">Launch of our first fully online degree programs, pioneering digital education.</p>
-                    </div>
-                </article>
-
-                <article class="relative pl-8 pb-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
-                    <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-600 rounded-full group-hover:scale-125 transition-transform"></div>
-                    <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl">
-                        <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">2015 - Global Expansion</h3>
-                        <p class="text-gray-700 leading-relaxed font-['Inter']">Establishment of international campuses in Europe and Asia, serving students from over 80 countries.</p>
-                    </div>
-                </article>
-
-                <article class="relative pl-8 pb-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
-                    <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-600 rounded-full group-hover:scale-125 transition-transform"></div>
-                    <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-6 rounded-xl">
-                        <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">2020 - Innovation Hub</h3>
-                        <p class="text-gray-700 leading-relaxed font-['Inter']">Opening of the {{ site_config.school_short_name|default:"MIU" }} Innovation Center, fostering research and entrepreneurship.</p>
-                    </div>
-                </article>
-
-                <article class="relative pl-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
-                    <div class="absolute -left-3 top-0 w-6 h-6 bg-accent-500 rounded-full group-hover:scale-125 transition-transform"></div>
-                    <div class="bg-gradient-to-br from-yellow-50 to-amber-50 p-6 rounded-xl border-2 border-accent-200">
-                        <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">2025 - Today</h3>
-                        <p class="text-gray-700 leading-relaxed font-['Inter']">Recognized as a top global university with 25,000+ students and 120+ countries represented.</p>
-                    </div>
-                </article>
+                {% if history_milestones %}
+                    {% for milestone in history_milestones %}
+                    <article class="relative {% if not forloop.last %}pb-8{% endif %} pl-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
+                        <div class="absolute -left-3 top-0 w-6 h-6 {% if forloop.last %}bg-accent-500{% else %}bg-primary-600{% endif %} rounded-full group-hover:scale-125 transition-transform"></div>
+                        <div class="{% if forloop.last %}bg-gradient-to-br from-yellow-50 to-amber-50 p-6 rounded-xl border-2 border-accent-200{% else %}bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl{% endif %}">
+                            <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">{{ milestone.year }} – {{ milestone.title }}</h3>
+                            <p class="text-gray-700 leading-relaxed font-['Inter']">{{ milestone.description }}</p>
+                        </div>
+                    </article>
+                    {% endfor %}
+                {% else %}
+                    {# Static fallback if no milestones in DB yet #}
+                    <article class="relative pl-8 pb-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
+                        <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-600 rounded-full group-hover:scale-125 transition-transform"></div>
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl">
+                            <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">1995 – Founding</h3>
+                            <p class="text-gray-700 leading-relaxed font-['Inter']">{{ site_config.school_short_name|default:"MIU" }} is established with a vision to provide accessible, quality higher education through innovative delivery methods.</p>
+                        </div>
+                    </article>
+                    <article class="relative pl-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
+                        <div class="absolute -left-3 top-0 w-6 h-6 bg-accent-500 rounded-full group-hover:scale-125 transition-transform"></div>
+                        <div class="bg-gradient-to-br from-yellow-50 to-amber-50 p-6 rounded-xl border-2 border-accent-200">
+                            <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">Today</h3>
+                            <p class="text-gray-700 leading-relaxed font-['Inter']">Recognized as a top global university with students from 120+ countries represented.</p>
+                        </div>
+                    </article>
+                {% endif %}
             </div>
 
             <div class="relative rounded-2xl overflow-hidden shadow-2xl h-[400px] lg:h-full group">

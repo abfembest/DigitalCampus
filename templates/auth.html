@@ -4,433 +4,1077 @@
 {% block title %}Sign In | Sign Up — {{ site_config.school_short_name|default:"MELBAC" }}{% endblock %}
 
 {% block meta_tags %}
-<meta name="description" content="Sign in or create your MELBAC student account to access free biblical education.">
+<meta name="description" content="Sign in or create your free MELBAC student account.">
 <meta name="robots" content="noindex, nofollow">
 {% endblock %}
 
+{% block extra_css %}
+<style>
+/* ═══════════════════════════════════════════════════
+   AUTH PAGE — Book-flip card, no side panel
+   ═══════════════════════════════════════════════════ */
+
+/* Page */
+.auth-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 110%, rgba(132,3,132,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% -10%, rgba(240,184,0,0.10) 0%, transparent 55%),
+    linear-gradient(160deg, #fdf8ff 0%, #f9f4ff 40%, #fffbf2 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--mb-nav-height, 68px) + 16px) 16px 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle dot grid */
+.auth-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(132,3,132,0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+/* ── Page header (logo + tagline) ── */
+.auth-head {
+  text-align: center;
+  margin-bottom: 28px;
+  position: relative;
+  z-index: 2;
+}
+.auth-head-logo {
+  height: 52px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.auth-head-title {
+  font-family: var(--mb-font-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--mb-text-heading);
+  margin: 0 0 4px;
+  line-height: 1.15;
+}
+.auth-head-sub {
+  font-family: var(--mb-font-body);
+  font-size: 0.95rem;
+  color: var(--mb-text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   BOOK FLIP SCENE
+   ═══════════════════════════════════════════════════ */
+.auth-scene {
+  perspective: 1800px;
+  width: 100%;
+  max-width: 860px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Book spine decoration */
+.auth-scene::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg,
+    rgba(132,3,132,0.0) 0%,
+    rgba(132,3,132,0.25) 20%,
+    rgba(132,3,132,0.35) 50%,
+    rgba(132,3,132,0.25) 80%,
+    rgba(132,3,132,0.0) 100%);
+  border-radius: 3px;
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* Book container — holds both panels */
+.auth-book {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.75s cubic-bezier(0.645, 0.045, 0.355, 1.000);
+  /* When flipped, rotate the entire book */
+}
+
+/* Each panel = one page of the book */
+.auth-page-panel {
+  background: #ffffff;
+  padding: 40px 44px;
+  position: relative;
+  min-height: 540px;
+  display: flex;
+  flex-direction: column;
+  /* Shadow only on outer edge */
+}
+
+/* Left page (Sign In) */
+.auth-page-login {
+  border-radius: 16px 0 0 16px;
+  box-shadow:
+    -8px 4px 32px rgba(132,3,132,0.10),
+    -2px 0 8px rgba(0,0,0,0.04);
+  border-right: 1px solid rgba(132,3,132,0.12);
+}
+
+/* Right page (Sign Up) */
+.auth-page-signup {
+  border-radius: 0 16px 16px 0;
+  box-shadow:
+    8px 4px 32px rgba(132,3,132,0.10),
+    2px 0 8px rgba(0,0,0,0.04);
+  border-left: 1px solid rgba(132,3,132,0.08);
+  background: linear-gradient(160deg, #ffffff 0%, #fdf9ff 100%);
+}
+
+/* ── Flip animation ──
+   When .flipped is on the scene, the right page (signup)
+   visually comes to "front" via a CSS 3D page-turn illusion.
+   We animate the signup panel flipping over to face left.
+*/
+.auth-book .auth-page-signup {
+  transform-origin: left center;
+  transition: transform 0.75s cubic-bezier(0.645, 0.045, 0.355, 1.000),
+              box-shadow 0.4s ease;
+}
+
+.auth-scene.flipped .auth-page-signup {
+  transform: rotateY(-180deg);
+  /* backface hidden so we see the "back of the page" instead */
+}
+
+/* The "back face" of the signup page (what you see after flip) */
+.auth-page-signup-back {
+  position: absolute;
+  inset: 0;
+  padding: 40px 44px;
+  background: #ffffff;
+  border-radius: 0 16px 16px 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* When flipped, the login panel gets a subtle pushed-back shadow */
+.auth-scene.flipped .auth-page-login {
+  box-shadow:
+    -4px 2px 16px rgba(132,3,132,0.06),
+    -1px 0 4px rgba(0,0,0,0.02);
+}
+
+/* ── "Next page" curl hint on the right panel ── */
+.auth-page-signup::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(225deg,
+    rgba(132,3,132,0.12) 0%,
+    transparent 60%);
+  border-radius: 0 0 16px 0;
+  pointer-events: none;
+  transition: width 0.3s, height 0.3s;
+}
+.auth-page-signup:hover::after {
+  width: 56px;
+  height: 56px;
+}
+
+/* ── Page number decorations ── */
+.auth-pg-num {
+  font-family: var(--mb-font-ui);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(132,3,132,0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+.auth-pg-num::before,
+.auth-pg-num::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(132,3,132,0.12);
+}
+
+/* ── Form panel header ── */
+.auth-panel-hd {
+  margin-bottom: 22px;
+}
+.auth-panel-hd h1 {
+  font-family: var(--mb-font-heading);
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--mb-text-heading);
+  margin: 0 0 5px;
+  line-height: 1.15;
+}
+.auth-panel-hd p {
+  font-family: var(--mb-font-body);
+  font-size: 0.97rem;
+  color: var(--mb-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Fields ── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.auth-label {
+  font-family: var(--mb-font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--mb-text-heading);
+  letter-spacing: 0.02em;
+}
+.auth-label-req { color: var(--mb-primary); font-style: normal; }
+
+.auth-input-wrap {
+  position: relative;
+}
+.auth-input-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: #bdbdbd;
+  pointer-events: none;
+}
+.auth-input-wrap input,
+.auth-input-wrap .mb-input {
+  width: 100%;
+  font-family: var(--mb-font-ui);
+  font-size: 0.875rem;
+  color: var(--mb-text-body);
+  background: #fafafa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 10px 13px 10px 38px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.auth-input-wrap input:focus,
+.auth-input-wrap .mb-input:focus {
+  border-color: var(--mb-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(132,3,132,0.09);
+}
+.auth-input-wrap input::placeholder { color: #c0c0c0; }
+
+/* Password eye */
+.auth-pw-eye {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #bdbdbd;
+  padding: 3px;
+  transition: color 0.2s;
+  line-height: 1;
+}
+.auth-pw-eye:hover { color: var(--mb-primary); }
+
+/* Two-column row */
+.auth-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Captcha */
+.auth-captcha-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.auth-captcha-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fdf4ff, #fffbf0);
+  border: 2px dashed rgba(132,3,132,0.3);
+  border-radius: 10px;
+  font-family: var(--mb-font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--mb-primary);
+  min-height: 44px;
+  user-select: none;
+  padding: 6px 10px;
+  text-align: center;
+}
+.auth-captcha-input {
+  /* inherits .auth-input-wrap > input styles but no left icon padding */
+  padding-left: 13px !important;
+}
+
+/* Meta row (remember + forgot) */
+.auth-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.auth-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-family: var(--mb-font-ui);
+  font-size: 0.8rem;
+  color: var(--mb-text-body);
+}
+.auth-check {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--mb-primary);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.auth-forgot {
+  font-family: var(--mb-font-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--mb-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.auth-forgot:hover { color: var(--mb-primary-dark); text-decoration: underline; }
+
+/* Terms */
+.auth-terms-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--mb-font-body);
+  font-size: 0.9rem;
+  color: var(--mb-text-body);
+  line-height: 1.5;
+}
+.auth-terms-link {
+  color: var(--mb-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+.auth-terms-link:hover { color: var(--mb-primary-dark); }
+
+/* Error messages */
+.auth-err {
+  font-family: var(--mb-font-ui);
+  font-size: 0.73rem;
+  color: #c62828;
+  min-height: 0.9em;
+  margin: 1px 0 0;
+}
+
+/* Submit button */
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 0.8rem 1.5rem;
+  font-size: 0.9rem;
+  margin-top: 4px;
+  letter-spacing: 0.01em;
+}
+
+/* Switch row */
+.auth-switch-row {
+  text-align: center;
+  font-family: var(--mb-font-ui);
+  font-size: 0.8rem;
+  color: var(--mb-text-muted);
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f0f0f0;
+}
+.auth-switch-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--mb-font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mb-primary);
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+.auth-switch-btn:hover { color: var(--mb-primary-dark); }
+
+/* Trust badges */
+.auth-trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* Back link */
+.auth-back {
+  text-align: center;
+  margin-top: 18px;
+  position: relative;
+  z-index: 2;
+}
+.auth-back a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mb-font-ui);
+  font-size: 0.78rem;
+  color: var(--mb-text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.auth-back a:hover { color: var(--mb-primary); }
+
+/* ── Decorative gold accent line at top of page ── */
+.auth-accent-bar {
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--mb-primary), var(--mb-gold));
+  border-radius: 0 0 6px 6px;
+  z-index: 5;
+}
+
+/* ── FLIP BUTTON (the clickable "turn page" trigger) ── */
+.auth-flip-trigger {
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: none; /* shown only on desktop */
+}
+
+/* ═══════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════ */
+
+/* Desktop: two-page book */
+@media (min-width: 800px) {
+  .auth-book {
+    grid-template-columns: 1fr 1fr;
+  }
+  .auth-scene::before { display: block; }
+}
+
+/* Tablet / mobile: stack into single centered card */
+@media (max-width: 799px) {
+  .auth-scene {
+    max-width: 480px;
+    perspective: none;
+  }
+  .auth-scene::before { display: none; }
+
+  .auth-book {
+    grid-template-columns: 1fr;
+    transform: none !important;
+  }
+
+  /* On mobile only the active panel shows */
+  .auth-page-panel {
+    border-radius: 16px !important;
+    box-shadow: 0 8px 40px rgba(132,3,132,0.12) !important;
+    border: none !important;
+    min-height: auto;
+  }
+
+  /* Hide inactive panel entirely on mobile */
+  .auth-book:not(.show-signup) .auth-page-signup { display: none; }
+  .auth-book.show-signup .auth-page-login { display: none; }
+
+  /* No 3D flip on mobile — just fade swap */
+  .auth-page-signup { transform: none !important; transition: none !important; }
+  .auth-page-signup-back { display: none !important; }
+
+  .auth-page-panel {
+    padding: 28px 24px;
+  }
+  .auth-panel-hd h1 { font-size: 1.4rem; }
+  .auth-row-2 { grid-template-columns: 1fr; }
+  .auth-head-title { font-size: 1.25rem; }
+}
+
+@media (max-width: 480px) {
+  .auth-page-panel { padding: 22px 18px; }
+  .auth-panel-hd h1 { font-size: 1.25rem; }
+  .auth-captcha-wrap { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="mb-auth-page">
-  <div class="mb-auth-bg-pattern" aria-hidden="true"></div>
+<div class="auth-page">
 
-  <div class="mb-container mb-auth-wrap">
+  <!-- Gold accent line at top of viewport -->
+  <div class="auth-accent-bar" aria-hidden="true"></div>
 
-    <div class="mb-auth-card mb-reveal">
+  <!-- Logo + school name header -->
+  <div class="auth-head mb-reveal">
+    <a href="{% url 'melbac:index' %}" aria-label="MELBAC home">
+      {% if site_config and site_config.logo %}
+        <img src="{{ site_config.logo.url }}"
+             alt="{{ site_config.school_short_name|default:'MELBAC' }}"
+             class="auth-head-logo">
+      {% else %}
+        <img src="{% static 'favicon.png' %}"
+             alt="MELBAC"
+             class="auth-head-logo">
+      {% endif %}
+    </a>
+    <h2 class="auth-head-title">Melchisedec Graduate Bible Academy</h2>
+    <p class="auth-head-sub">"Freely ye have received, freely give." — Matthew 10:8</p>
+  </div>
 
-      <!-- ══ LEFT: Brand panel ══ -->
-      <div class="mb-auth-brand">
-        <div class="mb-auth-brand-dots" aria-hidden="true"></div>
+  <!-- ══════════════════════════════════════════════════
+       BOOK SCENE
+       Left page  = Sign In
+       Right page = Sign Up (flips open like a book)
+       ══════════════════════════════════════════════════ -->
+  <div class="auth-scene mb-reveal d1" id="authScene">
+    <div class="auth-book" id="authBook">
 
-        <div class="mb-auth-brand-logo-wrap">
-          {% if site_config and site_config.logo %}
-            <img src="{{ site_config.logo.url }}"
-                 alt="{{ site_config.school_short_name|default:'MELBAC' }} logo"
-                 class="mb-auth-brand-logo">
-          {% else %}
-            <img src="{% static 'favicon.png' %}"
-                 alt="MELBAC logo"
-                 class="mb-auth-brand-logo">
-          {% endif %}
+      <!-- ════════════════════════════
+           LEFT PAGE — SIGN IN
+           ════════════════════════════ -->
+      <div class="auth-page-panel auth-page-login" id="loginPage">
+
+        <div class="auth-pg-num">
+          <i data-lucide="log-in" class="w-3 h-3" aria-hidden="true"></i>
+          Sign In
         </div>
 
-        <h2 class="mb-auth-brand-title">Melchisedec Graduate<br>Bible Academy</h2>
+        <div class="auth-panel-hd">
+          <h1>Welcome Back</h1>
+          <p>Sign in to continue your biblical studies</p>
+        </div>
 
-        <p class="mb-auth-brand-verse">
-          "Freely ye have received, freely give."<br>
-          <cite>— Matthew 10:8</cite>
+        <form id="loginFormElement" method="POST" class="auth-form" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="login">
+
+          <!-- Username -->
+          <div class="auth-field">
+            <label class="auth-label" for="login_username">
+              Username or Email <span class="auth-label-req">*</span>
+            </label>
+            <div class="auth-input-wrap">
+              <i data-lucide="user" class="auth-input-icon" aria-hidden="true"></i>
+              {{ login_form.username }}
+            </div>
+            <p class="auth-err" id="login_username_error" role="alert"></p>
+          </div>
+
+          <!-- Password -->
+          <div class="auth-field">
+            <label class="auth-label" for="login_password">
+              Password <span class="auth-label-req">*</span>
+            </label>
+            <div class="auth-input-wrap">
+              <i data-lucide="lock" class="auth-input-icon" aria-hidden="true"></i>
+              {{ login_form.password }}
+              <button type="button" class="auth-pw-eye" data-target="id_password"
+                      aria-label="Show or hide password">
+                <i data-lucide="eye" class="w-4 h-4" aria-hidden="true"></i>
+              </button>
+            </div>
+            <p class="auth-err" id="login_password_error" role="alert"></p>
+          </div>
+
+          <!-- Captcha -->
+          <div class="auth-field">
+            <label class="auth-label">Security Check <span class="auth-label-req">*</span></label>
+            <div class="auth-captcha-wrap">
+              <div class="auth-captcha-display" id="loginCaptchaQuestion">
+                {{ captcha_question }} = ?
+              </div>
+              <div class="auth-input-wrap">
+                <input type="number" name="captcha" id="login_captcha" required
+                       placeholder="Answer"
+                       class="auth-captcha-input"
+                       aria-label="Captcha answer">
+              </div>
+            </div>
+            <p class="auth-err" id="login_captcha_error" role="alert"></p>
+          </div>
+
+          <!-- Remember + Forgot -->
+          <div class="auth-meta-row">
+            <label class="auth-check-label">
+              <input type="checkbox" name="remember" class="auth-check">
+              <span>Remember me</span>
+            </label>
+            <a href="#" class="auth-forgot">Forgot password?</a>
+          </div>
+
+          <p class="auth-err" id="login_form_error" role="alert"></p>
+
+          <button type="submit" id="loginSubmitBtn"
+                  class="mb-btn mb-btn-primary auth-submit">
+            <span>Sign In</span>
+            <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
+          </button>
+        </form>
+
+        <p class="auth-switch-row">
+          New to MELBAC?
+          <button type="button" class="auth-switch-btn" data-switch="signup">
+            Create a free account →
+          </button>
         </p>
-
-        <ul class="mb-auth-brand-features" aria-label="MELBAC key facts">
-          <li class="mb-auth-brand-feat">
-            <span class="mb-auth-brand-feat-icon" aria-hidden="true">
-              <i data-lucide="book-open" class="w-4 h-4"></i>
-            </span>
-            <span>
-              <strong>Pure Biblical Education</strong>
-              Undergraduate, Masters &amp; Doctoral programmes
-            </span>
-          </li>
-          <li class="mb-auth-brand-feat">
-            <span class="mb-auth-brand-feat-icon" aria-hidden="true">
-              <i data-lucide="heart" class="w-4 h-4"></i>
-            </span>
-            <span>
-              <strong>Completely Free</strong>
-              No admission fees, no tuition — ever
-            </span>
-          </li>
-          <li class="mb-auth-brand-feat">
-            <span class="mb-auth-brand-feat-icon" aria-hidden="true">
-              <i data-lucide="globe" class="w-4 h-4"></i>
-            </span>
-            <span>
-              <strong>Lagos &amp; Newark</strong>
-              Two campuses serving a global body
-            </span>
-          </li>
-        </ul>
-
-        <a href="{% url 'melbac:index' %}" class="mb-auth-brand-back">
-          <i data-lucide="arrow-left" class="w-3.5 h-3.5" aria-hidden="true"></i>
-          Back to website
-        </a>
-      </div><!-- /mb-auth-brand -->
+      </div><!-- /login page -->
 
 
-      <!-- ══ RIGHT: Forms column ══ -->
-      <div class="mb-auth-forms-col">
+      <!-- ════════════════════════════
+           RIGHT PAGE — SIGN UP
+           Front face (visible before flip)
+           ════════════════════════════ -->
+      <div class="auth-page-panel auth-page-signup" id="signupPage"
+           style="transform-style: preserve-3d; backface-visibility: visible; -webkit-backface-visibility: visible;">
 
-        <!-- Tab bar -->
-        <div class="mb-auth-tabs" role="tablist" aria-label="Authentication options">
-          <button class="mb-auth-tab active" id="tab-login" role="tab"
-                  aria-selected="true" aria-controls="loginPanel" data-tab="login">
-            <i data-lucide="log-in" class="w-4 h-4" aria-hidden="true"></i>
-            Sign In
+        <!-- Front face label (teaser) — visible before flip -->
+        <div class="auth-page-signup-front" id="signupFront"
+             style="height:100%; display:flex; flex-direction:column; align-items:center;
+                    justify-content:center; gap:16px; user-select:none;">
+
+          <div class="mb-icon-wrap" style="width:56px;height:56px;">
+            <i data-lucide="user-plus" class="w-6 h-6 text-gospel-600" aria-hidden="true"></i>
+          </div>
+
+          <div style="text-align:center;">
+            <p style="font-family:var(--mb-font-heading);font-size:1.3rem;font-weight:800;
+                      color:var(--mb-text-heading);margin:0 0 6px;">Join MELBAC</p>
+            <p style="font-family:var(--mb-font-body);font-size:0.95rem;
+                      color:var(--mb-text-muted);margin:0;">
+              Free admission · Free tuition · Pure Word of God
+            </p>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:220px;margin-top:8px;">
+            <div style="display:flex;align-items:center;gap:8px;
+                        font-family:var(--mb-font-ui);font-size:0.78rem;color:var(--mb-text-muted);">
+              <i data-lucide="check-circle" class="w-4 h-4 text-gospel-600" aria-hidden="true"></i>
+              No admission fees, no tuition
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;
+                        font-family:var(--mb-font-ui);font-size:0.78rem;color:var(--mb-text-muted);">
+              <i data-lucide="check-circle" class="w-4 h-4 text-gospel-600" aria-hidden="true"></i>
+              Undergraduate to Doctoral programmes
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;
+                        font-family:var(--mb-font-ui);font-size:0.78rem;color:var(--mb-text-muted);">
+              <i data-lucide="check-circle" class="w-4 h-4 text-gospel-600" aria-hidden="true"></i>
+              Lagos &amp; Newark campuses
+            </div>
+          </div>
+
+          <button type="button" id="openSignupBtn"
+                  class="mb-btn mb-btn-primary"
+                  style="gap:8px;margin-top:8px;padding:0.7rem 1.8rem;">
+            <span>Create Free Account</span>
+            <i data-lucide="chevrons-right" class="w-4 h-4" aria-hidden="true"></i>
           </button>
-          <button class="mb-auth-tab" id="tab-signup" role="tab"
-                  aria-selected="false" aria-controls="signupPanel" data-tab="signup">
-            <i data-lucide="user-plus" class="w-4 h-4" aria-hidden="true"></i>
-            Create Account
-          </button>
+
+          <p style="font-family:var(--mb-font-ui);font-size:0.73rem;
+                    color:rgba(132,3,132,0.45);letter-spacing:0.08em;
+                    text-transform:uppercase;margin-top:4px;">
+            Click to open registration
+          </p>
         </div>
 
-        <div class="mb-auth-panels-scroll">
+        <!-- Back face (the actual signup form — revealed after flip) -->
+        <div class="auth-page-signup-back" id="signupBack">
 
-          <!-- ── LOGIN PANEL ── -->
-          <div id="loginPanel" class="mb-auth-panel active"
-               role="tabpanel" aria-labelledby="tab-login">
+          <div class="auth-pg-num">
+            <i data-lucide="user-plus" class="w-3 h-3" aria-hidden="true"></i>
+            Create Account
+          </div>
 
-            <div class="mb-auth-panel-hd">
-              <div class="mb-icon-wrap mb-auth-panel-icon">
-                <i data-lucide="book-open" class="w-5 h-5 text-gospel-600" aria-hidden="true"></i>
+          <div class="auth-panel-hd" style="margin-bottom:16px;">
+            <h1>Join MELBAC</h1>
+            <p>Free admission · Free tuition · Pure Word of God</p>
+          </div>
+
+          <form id="signupFormElement" method="POST"
+                style="display:flex;flex-direction:column;gap:11px;flex:1;"
+                novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="signup">
+
+            <!-- Name row -->
+            <div class="auth-row-2">
+              <div class="auth-field">
+                <label class="auth-label" for="id_first_name">
+                  First Name <span class="auth-label-req">*</span>
+                </label>
+                {{ signup_form.first_name }}
+                <p class="auth-err" id="first_name_error" role="alert"></p>
               </div>
-              <div>
-                <h1 class="mb-auth-title">Welcome Back</h1>
-                <p class="mb-auth-subtitle">Sign in to continue your biblical studies</p>
-              </div>
-            </div>
-
-            <form id="loginFormElement" method="POST" class="mb-auth-form" novalidate>
-              {% csrf_token %}
-              <input type="hidden" name="action" value="login">
-
-              <!-- Username + Password side by side -->
-              <div class="mb-auth-login-row">
-                <div class="mb-field">
-                  <label class="mb-label" for="login_username">
-                    Username or Email <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  <div class="mb-auth-input-wrap">
-                    <i data-lucide="user" class="mb-auth-input-icon" aria-hidden="true"></i>
-                    {{ login_form.username }}
-                  </div>
-                  <p class="mb-auth-err" id="login_username_error" role="alert"></p>
-                </div>
-
-                <div class="mb-field">
-                  <label class="mb-label" for="login_password">
-                    Password <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  <div class="mb-auth-input-wrap">
-                    <i data-lucide="lock" class="mb-auth-input-icon" aria-hidden="true"></i>
-                    {{ login_form.password }}
-                    <button type="button" class="mb-auth-pw-eye" data-target="id_password"
-                            aria-label="Show or hide password">
-                      <i data-lucide="eye" class="w-4 h-4" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                  <p class="mb-auth-err" id="login_password_error" role="alert"></p>
-                </div>
-              </div>
-
-              <!-- Captcha + Remember/Forgot side by side -->
-              <div class="mb-auth-login-row">
-                <div class="mb-field">
-                  <label class="mb-label">
-                    Security Check <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  <div class="mb-auth-captcha-row">
-                    <div class="mb-auth-captcha-q" id="loginCaptchaQuestion">
-                      {{ captcha_question }} = ?
-                    </div>
-                    <input type="number" name="captcha" id="login_captcha" required
-                           placeholder="Your answer"
-                           class="mb-input mb-auth-captcha-a">
-                  </div>
-                  <p class="mb-auth-err" id="login_captcha_error" role="alert"></p>
-                </div>
-
-                <div class="mb-field mb-auth-login-meta-field">
-                  <div class="mb-auth-meta-row">
-                    <label class="mb-auth-check-label">
-                      <input type="checkbox" name="remember" class="mb-auth-check">
-                      <span>Remember me</span>
-                    </label>
-                    <a href="#" class="mb-auth-forgot">Forgot password?</a>
-                  </div>
-                  <p class="mb-auth-form-err" id="login_form_error" role="alert"></p>
-                </div>
-              </div>
-
-              <button type="submit" id="loginSubmitBtn"
-                      class="mb-btn mb-btn-primary mb-auth-submit-btn">
-                <span>Sign In</span>
-                <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
-              </button>
-            </form>
-
-            <p class="mb-auth-switch-row">
-              New to MELBAC?
-              <button type="button" class="mb-auth-switch-link" data-switch="signup">
-                Create a free account
-              </button>
-            </p>
-          </div><!-- /loginPanel -->
-
-
-          <!-- ── SIGNUP PANEL ── -->
-          <div id="signupPanel" class="mb-auth-panel"
-               role="tabpanel" aria-labelledby="tab-signup">
-
-            <div class="mb-auth-panel-hd">
-              <div class="mb-icon-wrap mb-auth-panel-icon">
-                <i data-lucide="graduation-cap" class="w-5 h-5 text-gospel-600" aria-hidden="true"></i>
-              </div>
-              <div>
-                <h1 class="mb-auth-title">Join MELBAC</h1>
-                <p class="mb-auth-subtitle">Free admission · Free tuition · Pure Word of God</p>
+              <div class="auth-field">
+                <label class="auth-label" for="id_last_name">
+                  Last Name <span class="auth-label-req">*</span>
+                </label>
+                {{ signup_form.last_name }}
+                <p class="auth-err" id="last_name_error" role="alert"></p>
               </div>
             </div>
 
-            <form id="signupFormElement" method="POST" class="mb-auth-form" novalidate>
-              {% csrf_token %}
-              <input type="hidden" name="action" value="signup">
-
-              <div class="mb-form-row">
-                <div class="mb-field">
-                  <label class="mb-label" for="id_first_name">
-                    First Name <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  {{ signup_form.first_name }}
-                  <p class="mb-auth-err" id="first_name_error" role="alert"></p>
+            <!-- Username + Email -->
+            <div class="auth-row-2">
+              <div class="auth-field">
+                <label class="auth-label" for="id_username">
+                  Username <span class="auth-label-req">*</span>
+                </label>
+                <div class="auth-input-wrap">
+                  <i data-lucide="at-sign" class="auth-input-icon" aria-hidden="true"></i>
+                  {{ signup_form.username }}
                 </div>
-                <div class="mb-field">
-                  <label class="mb-label" for="id_last_name">
-                    Last Name <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  {{ signup_form.last_name }}
-                  <p class="mb-auth-err" id="last_name_error" role="alert"></p>
-                </div>
+                <p class="auth-err" id="username_error" role="alert"></p>
               </div>
-
-              <div class="mb-form-row">
-                <div class="mb-field">
-                  <label class="mb-label" for="id_username">
-                    Username <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  <div class="mb-auth-input-wrap">
-                    <i data-lucide="at-sign" class="mb-auth-input-icon" aria-hidden="true"></i>
-                    {{ signup_form.username }}
-                  </div>
-                  <p class="mb-auth-err" id="username_error" role="alert"></p>
+              <div class="auth-field">
+                <label class="auth-label" for="id_email">
+                  Email <span class="auth-label-req">*</span>
+                </label>
+                <div class="auth-input-wrap">
+                  <i data-lucide="mail" class="auth-input-icon" aria-hidden="true"></i>
+                  {{ signup_form.email }}
                 </div>
-                <div class="mb-field">
-                  <label class="mb-label" for="id_email">
-                    Email Address <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  <div class="mb-auth-input-wrap">
-                    <i data-lucide="mail" class="mb-auth-input-icon" aria-hidden="true"></i>
-                    {{ signup_form.email }}
-                  </div>
-                  <p class="mb-auth-err" id="email_error" role="alert"></p>
-                </div>
+                <p class="auth-err" id="email_error" role="alert"></p>
               </div>
+            </div>
 
-              <div class="mb-form-row">
-                <div class="mb-field">
-                  <label class="mb-label" for="id_password1">
-                    Password <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  <div class="mb-auth-input-wrap">
-                    <i data-lucide="lock" class="mb-auth-input-icon" aria-hidden="true"></i>
-                    {{ signup_form.password1 }}
-                    <button type="button" class="mb-auth-pw-eye" data-target="id_password1"
-                            aria-label="Show or hide password">
-                      <i data-lucide="eye" class="w-4 h-4" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                  <p class="mb-auth-err" id="password1_error" role="alert"></p>
+            <!-- Passwords -->
+            <div class="auth-row-2">
+              <div class="auth-field">
+                <label class="auth-label" for="id_password1">
+                  Password <span class="auth-label-req">*</span>
+                </label>
+                <div class="auth-input-wrap">
+                  <i data-lucide="lock" class="auth-input-icon" aria-hidden="true"></i>
+                  {{ signup_form.password1 }}
+                  <button type="button" class="auth-pw-eye" data-target="id_password1"
+                          aria-label="Show or hide password">
+                    <i data-lucide="eye" class="w-4 h-4" aria-hidden="true"></i>
+                  </button>
                 </div>
-                <div class="mb-field">
-                  <label class="mb-label" for="id_password2">
-                    Confirm Password <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  <div class="mb-auth-input-wrap">
-                    <i data-lucide="lock" class="mb-auth-input-icon" aria-hidden="true"></i>
-                    {{ signup_form.password2 }}
-                    <button type="button" class="mb-auth-pw-eye" data-target="id_password2"
-                            aria-label="Show or hide password">
-                      <i data-lucide="eye" class="w-4 h-4" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                  <p class="mb-auth-err" id="password2_error" role="alert"></p>
-                </div>
+                <p class="auth-err" id="password1_error" role="alert"></p>
               </div>
+              <div class="auth-field">
+                <label class="auth-label" for="id_password2">
+                  Confirm <span class="auth-label-req">*</span>
+                </label>
+                <div class="auth-input-wrap">
+                  <i data-lucide="lock" class="auth-input-icon" aria-hidden="true"></i>
+                  {{ signup_form.password2 }}
+                  <button type="button" class="auth-pw-eye" data-target="id_password2"
+                          aria-label="Show or hide password">
+                    <i data-lucide="eye" class="w-4 h-4" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <p class="auth-err" id="password2_error" role="alert"></p>
+              </div>
+            </div>
 
-              <div class="mb-form-row mb-auth-captcha-terms-row">
-                <div class="mb-field">
-                  <label class="mb-label">
-                    Security Check <span class="mb-label-req" aria-hidden="true">*</span>
-                  </label>
-                  <div class="mb-auth-captcha-row">
-                    <div class="mb-auth-captcha-q" id="signupCaptchaQuestion">
-                      {{ captcha_question }} = ?
-                    </div>
+            <!-- Captcha + Terms -->
+            <div class="auth-row-2">
+              <div class="auth-field">
+                <label class="auth-label">Security <span class="auth-label-req">*</span></label>
+                <div class="auth-captcha-wrap">
+                  <div class="auth-captcha-display" id="signupCaptchaQuestion">
+                    {{ captcha_question }} = ?
+                  </div>
+                  <div class="auth-input-wrap">
                     <input type="number" name="captcha" id="signup_captcha" required
                            placeholder="Answer"
-                           class="mb-input mb-auth-captcha-a">
+                           class="auth-captcha-input">
                   </div>
-                  <p class="mb-auth-err" id="captcha_error" role="alert"></p>
                 </div>
-
-                <div class="mb-field mb-auth-terms-field">
-                  <span class="mb-label mb-auth-terms-spacer" aria-hidden="true">&nbsp;</span>
-                  <label class="mb-auth-check-label mb-auth-terms">
-                    <input type="checkbox" required class="mb-auth-check">
-                    <span>
-                      I agree to the
-                      <a href="#" class="mb-auth-terms-link">Terms of Service</a>
-                      and
-                      <a href="#" class="mb-auth-terms-link">Privacy Policy</a>
-                    </span>
-                  </label>
-                  <p class="mb-auth-form-err" id="signup_form_error" role="alert"></p>
-                </div>
+                <p class="auth-err" id="captcha_error" role="alert"></p>
               </div>
 
-              <button type="submit" id="signupSubmitBtn"
-                      class="mb-btn mb-btn-primary mb-auth-submit-btn">
-                <span>Create Free Account</span>
-                <i data-lucide="user-plus" class="w-4 h-4" aria-hidden="true"></i>
-              </button>
-            </form>
-
-            <div class="mb-auth-trust">
-              <span class="mb-badge mb-auth-trust-pill">
-                <i data-lucide="check" class="w-3 h-3" aria-hidden="true"></i>
-                No tuition fees
-              </span>
-              <span class="mb-badge mb-auth-trust-pill">
-                <i data-lucide="check" class="w-3 h-3" aria-hidden="true"></i>
-                Free admission
-              </span>
-              <span class="mb-badge mb-auth-trust-pill">
-                <i data-lucide="check" class="w-3 h-3" aria-hidden="true"></i>
-                Pure Word of God
-              </span>
+              <div class="auth-field" style="justify-content:center;">
+                <label class="auth-terms-label" style="margin-top:18px;">
+                  <input type="checkbox" required class="auth-check" style="margin-top:2px;">
+                  <span style="font-size:0.8rem;">
+                    I agree to the
+                    <a href="#" class="auth-terms-link">Terms</a>
+                    &amp;
+                    <a href="#" class="auth-terms-link">Privacy Policy</a>
+                  </span>
+                </label>
+              </div>
             </div>
 
-            <p class="mb-auth-switch-row">
-              Already have an account?
-              <button type="button" class="mb-auth-switch-link" data-switch="login">
-                Sign in here
-              </button>
-            </p>
-          </div><!-- /signupPanel -->
+            <p class="auth-err" id="signup_form_error" role="alert"></p>
 
-        </div><!-- /mb-auth-panels-scroll -->
-      </div><!-- /mb-auth-forms-col -->
+            <button type="submit" id="signupSubmitBtn"
+                    class="mb-btn mb-btn-primary auth-submit">
+              <span>Create Free Account</span>
+              <i data-lucide="user-plus" class="w-4 h-4" aria-hidden="true"></i>
+            </button>
+          </form>
 
-    </div><!-- /mb-auth-card -->
+          <div class="auth-trust" style="margin-top:10px;">
+            <span class="mb-badge" style="font-size:0.63rem;">
+              <i data-lucide="check" class="w-3 h-3"></i>No fees
+            </span>
+            <span class="mb-badge" style="font-size:0.63rem;">
+              <i data-lucide="check" class="w-3 h-3"></i>Free admission
+            </span>
+            <span class="mb-badge" style="font-size:0.63rem;">
+              <i data-lucide="check" class="w-3 h-3"></i>Pure Word
+            </span>
+          </div>
+
+          <p class="auth-switch-row">
+            Already have an account?
+            <button type="button" class="auth-switch-btn" data-switch="login">
+              ← Sign in here
+            </button>
+          </p>
+        </div><!-- /signupBack -->
+
+      </div><!-- /signup page -->
+
+    </div><!-- /auth-book -->
+  </div><!-- /auth-scene -->
+
+  <!-- Back link -->
+  <div class="auth-back mb-reveal d2">
+    <a href="{% url 'melbac:index' %}">
+      <i data-lucide="arrow-left" class="w-3.5 h-3.5" aria-hidden="true"></i>
+      Back to homepage
+    </a>
   </div>
-</div>
+
+</div><!-- /auth-page -->
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  lucide.createIcons();
+
+  const scene      = document.getElementById('authScene');
+  const book       = document.getElementById('authBook');
+  const signupPage = document.getElementById('signupPage');
+  const signupFront = document.getElementById('signupFront');
+  const signupBack  = document.getElementById('signupBack');
+  const isMobile   = () => window.innerWidth < 800;
+
+  /* ── Flip state ── */
+  let flipped = false;
+
+  function openSignup() {
+    flipped = true;
+    if (isMobile()) {
+      book.classList.add('show-signup');
+    } else {
+      /* 3D flip: rotate the right page 180° around its left edge */
+      signupPage.style.transform = 'rotateY(-180deg)';
+      signupPage.style.boxShadow = '-8px 4px 40px rgba(132,3,132,0.18), 2px 0 8px rgba(0,0,0,0.06)';
+      /* Spine glow */
+      scene.classList.add('flipped');
+    }
+    clearErrors();
+    setTimeout(() => lucide.createIcons(), 40);
+  }
+
+  function openLogin() {
+    flipped = false;
+    if (isMobile()) {
+      book.classList.remove('show-signup');
+    } else {
+      signupPage.style.transform = '';
+      signupPage.style.boxShadow = '';
+      scene.classList.remove('flipped');
+    }
+    clearErrors();
+    setTimeout(() => lucide.createIcons(), 40);
+  }
+
+  /* Open signup when the front-face button is clicked */
+  document.getElementById('openSignupBtn').addEventListener('click', openSignup);
+
+  /* Switch buttons */
+  document.querySelectorAll('.auth-switch-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.dataset.switch === 'signup' ? openSignup() : openLogin();
+    });
+  });
+
+  /* Clicking the signup page front face (anywhere) also opens it */
+  signupFront.addEventListener('click', openSignup);
+
+  /* ── Password toggle ── */
+  document.body.addEventListener('click', function (e) {
+    const btn = e.target.closest('.auth-pw-eye');
+    if (!btn) return;
+    e.preventDefault();
+    const inp = document.getElementById(btn.dataset.target);
+    if (!inp) return;
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.querySelector('[data-lucide]').setAttribute('data-lucide', show ? 'eye-off' : 'eye');
     lucide.createIcons();
+  });
 
-    function activateTab(name) {
-        const isLogin = name === 'login';
-        document.getElementById('tab-login').classList.toggle('active',   isLogin);
-        document.getElementById('tab-login').setAttribute('aria-selected', String(isLogin));
-        document.getElementById('tab-signup').classList.toggle('active',  !isLogin);
-        document.getElementById('tab-signup').setAttribute('aria-selected', String(!isLogin));
-        document.getElementById('loginPanel').classList.toggle('active',   isLogin);
-        document.getElementById('signupPanel').classList.toggle('active', !isLogin);
-        clearErrors();
-        setTimeout(() => lucide.createIcons(), 40);
-    }
-
-    document.querySelectorAll('.mb-auth-tab').forEach(b =>
-        b.addEventListener('click', () => activateTab(b.dataset.tab)));
-    document.querySelectorAll('.mb-auth-switch-link').forEach(b =>
-        b.addEventListener('click', () => activateTab(b.dataset.switch)));
-
-    document.body.addEventListener('click', function (e) {
-        const btn = e.target.closest('.mb-auth-pw-eye');
-        if (!btn) return;
-        e.preventDefault();
-        const inp = document.getElementById(btn.dataset.target);
-        if (!inp) return;
-        const show = inp.type === 'password';
-        inp.type = show ? 'text' : 'password';
-        btn.querySelector('[data-lucide]').setAttribute('data-lucide', show ? 'eye-off' : 'eye');
-        lucide.createIcons();
-    });
-
-    async function handleForm(formEl, btnId, errPrefix, url) {
-        clearErrors();
-        const btn  = document.getElementById(btnId);
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<span>Please wait…</span><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>';
-        btn.disabled  = true;
-        lucide.createIcons();
-        try {
-            const r = await fetch(url, {
-                method:  'POST',
-                body:    new FormData(formEl),
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            const d = await r.json();
-            if (d.success) {
-                window.showToast?.('success', d.message);
-                if (d.redirect_url) setTimeout(() => window.location.href = d.redirect_url, 1500);
-                else                setTimeout(() => formEl.reset(), 2000);
-            } else {
-                if (d.errors) {
-                    for (const [f, m] of Object.entries(d.errors)) {
-                        const id = f === '__all__'
-                            ? `${errPrefix}_form_error`
-                            : (errPrefix === 'login' ? `login_${f}_error` : `${f}_error`);
-                        const el = document.getElementById(id);
-                        if (el) el.textContent = Array.isArray(m) ? m.join(' ') : m;
-                    }
-                }
-                if (d.captcha_question) {
-                    const isL = errPrefix === 'login';
-                    const qEl = document.getElementById(isL ? 'loginCaptchaQuestion' : 'signupCaptchaQuestion');
-                    const aEl = document.getElementById(isL ? 'login_captcha'        : 'signup_captcha');
-                    if (qEl) qEl.textContent = d.captcha_question + ' = ?';
-                    if (aEl) aEl.value = '';
-                }
-                btn.innerHTML = orig; btn.disabled = false; lucide.createIcons();
-            }
-        } catch {
-            window.showToast?.('error', 'An error occurred. Please try again.');
-            btn.innerHTML = orig; btn.disabled = false; lucide.createIcons();
+  /* ── Generic form handler ── */
+  async function handleForm(formEl, btnId, errPrefix, url) {
+    clearErrors();
+    const btn  = document.getElementById(btnId);
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span>Please wait…</span><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>';
+    btn.disabled  = true;
+    lucide.createIcons();
+    try {
+      const r = await fetch(url, {
+        method:  'POST',
+        body:    new FormData(formEl),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const d = await r.json();
+      if (d.success) {
+        window.showToast?.('success', d.message);
+        if (d.redirect_url) setTimeout(() => window.location.href = d.redirect_url, 1500);
+        else                setTimeout(() => formEl.reset(), 2000);
+      } else {
+        if (d.errors) {
+          for (const [f, m] of Object.entries(d.errors)) {
+            const id = f === '__all__'
+              ? `${errPrefix}_form_error`
+              : (errPrefix === 'login' ? `login_${f}_error` : `${f}_error`);
+            const el = document.getElementById(id);
+            if (el) el.textContent = Array.isArray(m) ? m.join(' ') : m;
+          }
         }
+        if (d.captcha_question) {
+          const isL = errPrefix === 'login';
+          const qEl = document.getElementById(isL ? 'loginCaptchaQuestion' : 'signupCaptchaQuestion');
+          const aEl = document.getElementById(isL ? 'login_captcha' : 'signup_captcha');
+          if (qEl) qEl.textContent = d.captcha_question + ' = ?';
+          if (aEl) aEl.value = '';
+        }
+        btn.innerHTML = orig; btn.disabled = false; lucide.createIcons();
+      }
+    } catch {
+      window.showToast?.('error', 'An error occurred. Please try again.');
+      btn.innerHTML = orig; btn.disabled = false; lucide.createIcons();
     }
+  }
 
-    const AUTH_URL = '{% url "eduweb:auth_page" %}';
-    document.getElementById('loginFormElement').addEventListener('submit', e => {
-        e.preventDefault(); handleForm(e.target, 'loginSubmitBtn', 'login', AUTH_URL);
-    });
-    document.getElementById('signupFormElement').addEventListener('submit', e => {
-        e.preventDefault(); handleForm(e.target, 'signupSubmitBtn', 'signup', AUTH_URL);
-    });
+  const AUTH_URL = '{% url "eduweb:auth_page" %}';
+  document.getElementById('loginFormElement').addEventListener('submit', e => {
+    e.preventDefault(); handleForm(e.target, 'loginSubmitBtn', 'login', AUTH_URL);
+  });
+  document.getElementById('signupFormElement').addEventListener('submit', e => {
+    e.preventDefault(); handleForm(e.target, 'signupSubmitBtn', 'signup', AUTH_URL);
+  });
 
-    function clearErrors() {
-        document.querySelectorAll('.mb-auth-err, .mb-auth-form-err').forEach(el => el.textContent = '');
+  function clearErrors() {
+    document.querySelectorAll('.auth-err').forEach(el => el.textContent = '');
+  }
+
+  /* Style Django form inputs to match our design */
+  document.querySelectorAll('.auth-input-wrap input, .auth-input-wrap select').forEach(el => {
+    if (!el.classList.contains('auth-captcha-input')) {
+      el.style.cssText = `
+        width:100%;font-family:var(--mb-font-ui);font-size:0.875rem;
+        color:var(--mb-text-body);background:#fafafa;
+        border:1.5px solid #e0e0e0;border-radius:10px;
+        padding:10px 13px 10px 38px;outline:none;
+        -webkit-appearance:none;appearance:none;
+        transition:border-color 0.2s,background 0.2s,box-shadow 0.2s;
+        box-sizing:border-box;
+      `;
     }
+  });
+  /* Name / other fields without icon wrapping */
+  document.querySelectorAll('.auth-field > input, .auth-field > select').forEach(el => {
+    el.style.cssText = `
+      width:100%;font-family:var(--mb-font-ui);font-size:0.875rem;
+      color:var(--mb-text-body);background:#fafafa;
+      border:1.5px solid #e0e0e0;border-radius:10px;
+      padding:10px 13px;outline:none;
+      -webkit-appearance:none;appearance:none;
+      transition:border-color 0.2s,background 0.2s,box-shadow 0.2s;
+      box-sizing:border-box;
+    `;
+    el.addEventListener('focus', () => {
+      el.style.borderColor = 'var(--mb-primary)';
+      el.style.background = '#fff';
+      el.style.boxShadow = '0 0 0 3px rgba(132,3,132,0.09)';
+    });
+    el.addEventListener('blur', () => {
+      el.style.borderColor = '#e0e0e0';
+      el.style.background = '#fafafa';
+      el.style.boxShadow = '';
+    });
+  });
+  document.querySelectorAll('.auth-input-wrap input').forEach(el => {
+    el.addEventListener('focus', () => {
+      el.style.borderColor = 'var(--mb-primary)';
+      el.style.background = '#fff';
+      el.style.boxShadow = '0 0 0 3px rgba(132,3,132,0.09)';
+    });
+    el.addEventListener('blur', () => {
+      el.style.borderColor = '#e0e0e0';
+      el.style.background = '#fafafa';
+      el.style.boxShadow = '';
+    });
+  });
 });
 </script>
 {% endblock %}

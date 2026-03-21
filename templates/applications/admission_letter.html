@@ -1,0 +1,434 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Admission Letter - {{ application.application_id }}</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link 
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" 
+        rel="stylesheet"
+    >
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#faf5ff', 100: '#f3e8ff', 
+                            200: '#e9d5ff', 300: '#d8b4fe',
+                            400: '#c084fc', 500: '#a855f7', 
+                            600: '#9333ea', 700: '#7e22ce',
+                            800: '#6b21a8', 900: '#581c87', 
+                            950: '#840384',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Poppins', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+        
+        /* A4 Paper: 210mm x 297mm */
+        .a4-container {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .a4-content {
+            padding: 12mm 18mm;
+            box-sizing: border-box;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .body-text {
+            text-align: justify;
+            text-justify: inter-word;
+        }
+        
+        @media print {
+            .no-print { 
+                display: none !important; 
+            }
+            
+            body {
+                background: white !important;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .a4-container {
+                box-shadow: none !important;
+                margin: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+            }
+            
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            @page {
+                size: A4;
+                margin: 0;
+            }
+        }
+        
+        @media screen and (max-width: 768px) {
+            .a4-container {
+                width: 100%;
+                height: auto;
+                min-height: 297mm;
+            }
+            
+            .a4-content {
+                padding: 5mm;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 antialiased font-sans">
+    <div class="min-h-screen py-8">
+        <div class="container mx-auto px-4 max-w-[210mm]">
+            
+            <!-- Actions -->
+            <div class="flex justify-between items-center mb-6 no-print">
+                <a 
+                    href="{% if user.is_staff %}{% url 'management:application_detail' application.application_id %}{% elif application.can_access_student_portal %}{% url 'students:dashboard' %}{% else %}{% url 'eduweb:application_status' %}{% endif %}" 
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all"
+                >
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Back
+                </a>
+                <button 
+                    onclick="downloadPDF()" 
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                >
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    Download PDF
+                </button>
+            </div>
+
+            <!-- A4 Letter Container -->
+            <div id="letterContent" class="a4-container">
+                <div class="a4-content">
+                    
+                    <!-- Header -->
+                    <div class="text-center mb-4 pb-3 border-b-4 border-primary-950">
+                        <img 
+                            src="{% static 'images/miulogo.png' %}" 
+                            alt="MIU Logo" 
+                            class="h-24 mx-auto mb-1"
+                        >
+                        <h1 class="text-2xl font-bold text-primary-950 mb-0.5 font-display leading-tight">
+                            MELCHISEDEC INTERNATIONAL UNIVERSITY
+                        </h1>
+                        <p class="text-xs text-gray-600 leading-tight">
+                            123 University Avenue, Knowledge City, KC 10101
+                        </p>
+                        <p class="text-xs text-gray-600 leading-tight">
+                            Tel: +1 (555) 123-4567 | Email: admissions@miu.edu
+                        </p>
+                    </div>
+
+                    <!-- Title -->
+                    <div class="text-center mb-3">
+                        <h2 class="text-xl font-bold text-gray-900 mb-0.5 font-display">
+                            LETTER OF ADMISSION
+                        </h2>
+                        <p class="text-xs text-gray-600">
+                            Academic Year {{ application.intake.name }}
+                        </p>
+                    </div>
+
+                    <!-- Date & Reference -->
+                    <div class="mb-3 text-xs">
+                        <p class="text-gray-700 mb-0.5">
+                            <strong>Date:</strong> 
+                            {% if application.reviewed_at %}
+                                {{ application.reviewed_at|date:"F d, Y" }}
+                            {% else %}
+                                {% now "F d, Y" %}
+                            {% endif %}
+                        </p>
+                        <p class="text-gray-700">
+                            <strong>Reference Number:</strong> 
+                            {{ application.application_id }}
+                        </p>
+                    </div>
+
+                    <!-- Recipient -->
+                    <div class="mb-3">
+                        <p class="text-gray-900 font-semibold text-sm">
+                            {{ application.get_full_name }}
+                        </p>
+                        <p class="text-xs text-gray-700 leading-tight">
+                            {{ application.address_line1 }}{% if application.address_line2 %}, {{ application.address_line2 }}{% endif %}
+                        </p>
+                        <p class="text-xs text-gray-700 leading-tight">
+                            {{ application.city }}, {{ application.state }} {{ application.postal_code }}
+                        </p>
+                        <p class="text-xs text-gray-700 leading-tight">
+                            {{ application.country }}
+                        </p>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="mb-3 space-y-2 text-xs text-gray-700 leading-snug">
+                        <p>Dear {{ application.first_name }},</p>
+                        
+                        <p class="body-text">
+                            <strong class="text-primary-950">Congratulations!</strong> 
+                            On behalf of the Admissions Committee, I am delighted 
+                            to inform you that you have been accepted to 
+                            Melchisedec International University for the 
+                            <strong>{{ application.program.name }}</strong> program 
+                            leading to a 
+                            <strong>{{ application.program.get_degree_level_display }}</strong>.
+                        </p>
+                        
+                        <p class="body-text">
+                            Your academic achievements and demonstrated potential 
+                            have impressed our selection committee. We believe you 
+                            will make significant contributions to our academic 
+                            community.
+                        </p>
+                        
+                        <p class="font-semibold">Program Details:</p>
+                        <ul class="list-disc list-inside ml-3 space-y-0.5 text-xs leading-snug">
+                            <li><strong>Program:</strong> {{ application.program.name }}</li>
+                            <li><strong>Faculty:</strong> {{ application.program.department.faculty.name }}</li>
+                            <li><strong>Degree Level:</strong> {{ application.program.get_degree_level_display }}</li>
+                            <li><strong>Study Mode:</strong> {{ application.get_study_mode_display }}</li>
+                            <li><strong>Start Date:</strong> {{ application.intake.name }}</li>
+                            {% if application.scholarship %}
+                            <li><strong>Scholarship:</strong> Awarded - Details sent separately</li>
+                            {% endif %}
+                        </ul>
+                        
+                        <p class="font-semibold">Next Steps:</p>
+                        <ol class="list-decimal list-inside ml-3 space-y-0.5 text-xs leading-snug">
+                            <li>Accept your admission offer within 30 days</li>
+                            <li>Complete enrollment registration through your student portal</li>
+                            <li>Submit required enrollment documents</li>
+                            <li>Pay the enrollment deposit of $500 (non-refundable)</li>
+                            <li>Attend the mandatory orientation session</li>
+                        </ol>
+                        
+                        <p class="body-text">
+                            Detailed enrollment instructions and portal access 
+                            will be sent to <strong>{{ application.email }}</strong> 
+                            within 3 business days.
+                        </p>
+                        
+                        <p class="body-text">
+                            For questions, contact our Admissions Office at 
+                            admissions@miu.edu or call +1 (555) 123-4567.
+                        </p>
+                        
+                        <p class="body-text">
+                            Once again, congratulations on your acceptance. 
+                            We look forward to welcoming you to the MIU community!
+                        </p>
+                    </div>
+
+                    <!-- Signature -->
+                    <div class="mt-4 mb-3">
+                        <p class="text-xs text-gray-700 mb-2">Sincerely,</p>
+                        <img 
+                            src="{% static 'signature.png' %}" 
+                            alt="Signature" 
+                            class="h-10 mb-1" 
+                            oncontextmenu="return false;" 
+                            ondragstart="return false;"
+                        >
+                        <div class="border-t-2 border-gray-300 pt-1 inline-block">
+                            <p class="text-gray-900 font-bold text-sm">
+                                Dr. Sarah Johnson
+                            </p>
+                            <p class="text-xs text-gray-700 leading-tight">
+                                Director of Admissions
+                            </p>
+                            <p class="text-xs text-gray-700 leading-tight">
+                                Melchisedec International University
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Footer - Push to bottom -->
+                    <div class="mt-auto pt-3 border-t border-gray-300 text-center text-xs text-gray-600 leading-tight">
+                        <p class="mb-1">
+                            This is an official letter of admission from 
+                            Melchisedec International University.
+                        </p>
+                        <p>
+                            Document ID: {{ application.application_id }} | 
+                            Generated on {% now "F d, Y" %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Info -->
+            <div class="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-5 no-print">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="info" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 mb-2">
+                            Download Instructions
+                        </h3>
+                        <ul class="text-sm text-gray-700 space-y-1">
+                            <li>• Click "Download PDF" for a high-quality PDF</li>
+                            <li>• Letter is formatted for A4 paper size</li>
+                            <li>• All colors and formatting will be preserved</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+
+        // PDF Generation - Optimized
+        async function downloadPDF() {
+            const button = event.target.closest('button');
+            const originalHTML = button.innerHTML;
+            
+            button.innerHTML = `
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                <span>Generating...</span>
+            `;
+            button.disabled = true;
+            lucide.createIcons();
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const element = document.getElementById('letterContent');
+                
+                const a4WidthPx = 794;
+                const a4HeightPx = 1123;
+                
+                const canvas = await html2canvas(element, {
+                    scale: 2.5,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    width: a4WidthPx,
+                    height: a4HeightPx,
+                    windowWidth: a4WidthPx,
+                    windowHeight: a4HeightPx,
+                    scrollY: -window.scrollY,
+                    scrollX: -window.scrollX
+                });
+                
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true
+                });
+                
+                const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                
+                pdf.addImage(
+                    imgData, 
+                    'JPEG', 
+                    0, 
+                    0, 
+                    210, 
+                    297,
+                    undefined,
+                    'FAST'
+                );
+                
+                const filename = 'Admission_Letter_{{ application.get_full_name|escapejs }}_{{ application.application_id }}.pdf';
+                pdf.save(filename);
+                
+                button.innerHTML = `
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>Downloaded!</span>
+                `;
+                button.classList.remove('from-primary-950', 'to-purple-700');
+                button.classList.add('from-green-600', 'to-green-700');
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('from-green-600', 'to-green-700');
+                    button.classList.add('from-primary-950', 'to-purple-700');
+                    button.disabled = false;
+                    lucide.createIcons();
+                }, 2500);
+                
+            } catch (error) {
+                console.error('PDF generation failed:', error);
+                
+                button.innerHTML = `
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                    <span>Failed</span>
+                `;
+                button.classList.remove('from-primary-950', 'to-purple-700');
+                button.classList.add('from-red-600', 'to-red-700');
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('from-red-600', 'to-red-700');
+                    button.classList.add('from-primary-950', 'to-purple-700');
+                    button.disabled = false;
+                    lucide.createIcons();
+                }, 3000);
+            }
+        }
+
+        // Basic security
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        
+        document.addEventListener('keydown', e => {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) ||
+                (e.ctrlKey && e.key === 'u')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>

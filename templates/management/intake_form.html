@@ -1,0 +1,113 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}{% if intake %}Edit{% else %}New{% endif %} Intake - MIU Admin Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
+    <a href="{% url 'management:intakes_list' %}" class="hover:text-primary-600">Course Intakes</a>
+    <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
+    <span class="text-gray-800 font-medium">{% if intake %}Edit Intake{% else %}New Intake{% endif %}</span>
+  </nav>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-5 bg-gray-50 border-b border-gray-100">
+      <h1 class="font-semibold text-gray-800 text-lg">
+        <i class="fas fa-door-open text-primary-500 mr-2" aria-hidden="true"></i>
+        {% if intake %}Edit Intake{% else %}Create New Intake{% endif %}
+      </h1>
+    </div>
+
+    <form method="post" class="p-6 space-y-5">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Program -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Program <span class="text-red-500">*</span></label>
+        <select name="{{ form.program.html_name }}"
+                class="w-full px-4 py-2.5 border {% if form.program.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          <option value="">Select program…</option>
+          {% for prog in form.program.field.queryset %}
+          <option value="{{ prog.pk }}" {% if form.program.value == prog.pk|stringformat:"s" %}selected{% endif %}>
+            {{ prog.name }} ({{ prog.code }})
+          </option>
+          {% endfor %}
+        </select>
+        {% if form.program.errors %}<p class="text-xs text-red-500 mt-1">{{ form.program.errors.0 }}</p>{% endif %}
+      </div>
+
+      <!-- Period + Year -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Intake Period <span class="text-red-500">*</span></label>
+          <select name="{{ form.intake_period.html_name }}"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+            {% for val, label in form.intake_period.field.choices %}
+            <option value="{{ val }}" {% if form.intake_period.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Year <span class="text-red-500">*</span></label>
+          <input type="number" name="{{ form.year.html_name }}" value="{{ form.year.value|default:'' }}"
+                 placeholder="e.g., 2025" min="2020" max="2035"
+                 class="w-full px-4 py-2.5 border {% if form.year.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          {% if form.year.errors %}<p class="text-xs text-red-500 mt-1">{{ form.year.errors.0 }}</p>{% endif %}
+        </div>
+      </div>
+
+      <!-- Dates -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Start Date <span class="text-red-500">*</span></label>
+          <input type="date" name="{{ form.start_date.html_name }}" value="{{ form.start_date.value|default:'' }}"
+                 class="w-full px-4 py-2.5 border {% if form.start_date.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          {% if form.start_date.errors %}<p class="text-xs text-red-500 mt-1">{{ form.start_date.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Application Deadline <span class="text-red-500">*</span></label>
+          <input type="date" name="{{ form.application_deadline.html_name }}" value="{{ form.application_deadline.value|default:'' }}"
+                 class="w-full px-4 py-2.5 border {% if form.application_deadline.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          {% if form.application_deadline.errors %}<p class="text-xs text-red-500 mt-1">{{ form.application_deadline.errors.0 }}</p>{% endif %}
+        </div>
+      </div>
+
+      <!-- Slots + Active -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Available Slots <span class="text-red-500">*</span></label>
+          <input type="number" name="{{ form.available_slots.html_name }}" value="{{ form.available_slots.value|default:'50' }}"
+                 min="1"
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+        </div>
+        <div class="flex items-end pb-1">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" name="{{ form.is_active.html_name }}" {% if form.is_active.value %}checked{% endif %}
+                   class="w-4 h-4 rounded text-primary-600 border-gray-300 focus:ring-primary-500">
+            <span class="text-sm font-medium text-gray-700">Active (open for applications)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex flex-col sm:flex-row justify-end gap-3 pt-2 border-t border-gray-100">
+        <a href="{% url 'management:intakes_list' %}"
+           class="px-5 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm font-medium text-center">Cancel</a>
+        <button type="submit"
+                class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm">
+          <i class="fas fa-save mr-1.5" aria-hidden="true"></i>
+          {% if intake %}Save Changes{% else %}Create Intake{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Notifications</h1>
+            <p class="text-gray-500 mt-1 text-sm">Your activity updates and alerts</p>
+        </div>
+        <span id="unread-badge"
+              class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold
+                     {% if unread_count == 0 %}hidden{% endif %}">
+            <span id="unread-count">{{ unread_count }}</span> unread
+        </span>
+    </div>
+
+    <!-- Notification list -->
+    {% if notifications %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <ul class="divide-y divide-gray-100">
+            {% for notif in notifications %}
+            <li id="notif-{{ notif.id }}"
+                data-read="{{ notif.is_read|yesno:'true,false' }}"
+                onclick="markRead({{ notif.id }})"
+                class="border-l-4 cursor-pointer select-none transition-colors duration-200
+                       {% if not notif.is_read %}bg-gray-100 border-l-primary-500{% else %}bg-white border-l-transparent{% endif %}">
+
+                <div class="flex items-start gap-4 px-6 py-4">
+
+                    <!-- Icon -->
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center
+                        {% if notif.notification_type == 'assignment' %}bg-orange-100
+                        {% elif notif.notification_type == 'grade' %}bg-green-100
+                        {% elif notif.notification_type == 'message' %}bg-blue-100
+                        {% elif notif.notification_type == 'certificate' %}bg-yellow-100
+                        {% elif notif.notification_type == 'enrollment' %}bg-purple-100
+                        {% else %}bg-gray-200{% endif %}">
+                        <i class="text-sm
+                            {% if notif.notification_type == 'assignment' %}fas fa-file-alt text-orange-600
+                            {% elif notif.notification_type == 'grade' %}fas fa-star text-green-600
+                            {% elif notif.notification_type == 'message' %}fas fa-envelope text-blue-600
+                            {% elif notif.notification_type == 'certificate' %}fas fa-certificate text-yellow-600
+                            {% elif notif.notification_type == 'enrollment' %}fas fa-user-check text-purple-600
+                            {% elif notif.notification_type == 'announcement' %}fas fa-bullhorn text-primary-600
+                            {% else %}fas fa-bell text-gray-500{% endif %}"></i>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-900">{{ notif.title }}</p>
+                        <p class="text-sm text-gray-600 mt-0.5">{{ notif.message }}</p>
+                        <time class="text-xs text-gray-400 mt-1 block">
+                            {{ notif.created_at|timesince }} ago
+                        </time>
+                        <span id="status-{{ notif.id }}"
+                              class="inline-flex items-center gap-1 text-xs mt-1
+                                     {% if notif.is_read %}text-green-600{% else %}text-primary-600 font-semibold{% endif %}">
+                            {% if notif.is_read %}
+                            <i class="fas fa-check-double"></i> Read
+                            {% else %}
+                            <i class="fas fa-circle text-xs"></i> New
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Unread dot -->
+                    <span id="dot-{{ notif.id }}"
+                          class="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5
+                                 {% if not notif.is_read %}bg-primary-500{% else %}invisible{% endif %}">
+                    </span>
+
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Pagination -->
+    {% if notifications.has_other_pages %}
+    <div class="mt-6 flex justify-center gap-2">
+        {% if notifications.has_previous %}
+        <a href="?page={{ notifications.previous_page_number }}"
+           class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+            <i class="fas fa-chevron-left mr-1"></i>Previous
+        </a>
+        {% endif %}
+        <span class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium">
+            {{ notifications.number }} / {{ notifications.paginator.num_pages }}
+        </span>
+        {% if notifications.has_next %}
+        <a href="?page={{ notifications.next_page_number }}"
+           class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+            Next<i class="fas fa-chevron-right ml-1"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty state -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 py-20 text-center">
+        <i class="fas fa-bell-slash text-5xl text-gray-200 mb-4"></i>
+        <h3 class="text-lg font-semibold text-gray-700 mb-1">No notifications yet</h3>
+        <p class="text-sm text-gray-400">
+            You'll see assignment updates, grade releases, and announcements here.
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+var unreadCount = {{ unread_count }};
+
+function markRead(id) {
+    var li = document.getElementById('notif-' + id);
+
+    // Already read — do nothing
+    if (li.dataset.read === 'true') return;
+
+    fetch('{% url "students:notifications_view" %}'.replace('notifications/', '') + 'notifications/' + id + '/read/', {
+        method: 'GET',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.success) {
+            // White background, remove left border highlight
+            li.classList.remove('bg-gray-100', 'border-l-primary-500');
+            li.classList.add('bg-white', 'border-l-transparent');
+            li.dataset.read = 'true';
+
+            // Status label → Read
+            var status = document.getElementById('status-' + id);
+            status.className = 'inline-flex items-center gap-1 text-xs mt-1 text-green-600';
+            status.innerHTML = '<i class="fas fa-check-double"></i> Read';
+
+            // Hide dot
+            var dot = document.getElementById('dot-' + id);
+            dot.classList.remove('bg-primary-500');
+            dot.classList.add('invisible');
+
+            // Update badge
+            unreadCount = Math.max(0, unreadCount - 1);
+            var badge = document.getElementById('unread-badge');
+            if (unreadCount === 0) {
+                badge.classList.add('hidden');
+            } else {
+                badge.classList.remove('hidden');
+                document.getElementById('unread-count').textContent = unreadCount;
+            }
+        }
+    })
+    .catch(function() {});
+}
+</script>
+
+{% endblock %}

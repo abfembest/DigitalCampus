@@ -1,0 +1,702 @@
+{% extends "management/base.html" %}
+{% load static humanize %}
+
+{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+
+{% block meta_description %}
+View your student dashboard, track course progress, 
+check assignments, and stay updated with announcements.
+{% endblock %}
+
+{% block extra_head %}
+<!-- Preconnect for performance -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+{% endblock %}
+
+{% block content %}
+<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Page Header -->
+    <!-- Page Header -->
+    <header class="mb-6 lg:mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+
+            <!-- Welcome Text (unchanged content, now flex child) -->
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+                    Welcome back, 
+                    {{ request.user.first_name|default:request.user.username }}!
+                </h1>
+                <p class="text-sm sm:text-base text-gray-600 mt-2">
+                    Here's what's happening with your learning journey
+                </p>
+            </div>
+
+            <!-- Outstanding Fees Button — only renders when student owes fees -->
+            {% if outstanding_count and outstanding_count > 0 %}
+            <div class="flex-shrink-0 self-start sm:self-center">
+                <a href="{% url 'students:my_payments' %}"
+                   class="outstanding-fees-btn inline-flex items-center gap-2
+                          px-4 py-2.5 bg-red-600 hover:bg-red-700
+                          text-white text-sm font-semibold rounded-xl
+                          shadow-md hover:shadow-lg ring-2 ring-red-200
+                          transition-all duration-200 group">
+                    <!-- Bell with badge -->
+                    <span class="relative">
+                        <i class="fas fa-bell text-base 
+                                  group-hover:animate-bounce"></i>
+                        <span class="absolute -top-2 -right-2
+                                     bg-yellow-400 text-red-900
+                                     text-[10px] font-black
+                                     rounded-full w-4 h-4
+                                     flex items-center justify-center
+                                     leading-none shadow-sm">
+                            {{ outstanding_count }}
+                        </span>
+                    </span>
+                    <span>Outstanding Fees</span>
+                    <i class="fas fa-arrow-right text-xs opacity-75
+                              group-hover:translate-x-0.5 
+                              transition-transform"></i>
+                </a>
+                <!-- Total amount hint shown on sm+ screens -->
+                <p class="hidden sm:block text-xs text-red-500 
+                           font-medium mt-1.5 text-right">
+                    ₦{{ outstanding_total|floatformat:2|intcomma }} total due
+                </p>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Mobile-only: amount shown below the button row -->
+        {% if outstanding_count and outstanding_count > 0 %}
+        <p class="sm:hidden text-xs text-red-500 font-medium mt-2">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            ₦{{ outstanding_total|floatformat:2 }} outstanding
+        </p>
+        {% endif %}
+    </header>
+
+    <style>
+    @keyframes pulse-ring {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.45); }
+        50%       { box-shadow: 0 0 0 7px rgba(220,38,38,0); }
+    }
+    .fee-alert-btn { animation: pulse-ring 2.4s ease-in-out infinite; }
+    </style>
+
+    <!-- Stats Overview -->
+    <section 
+        class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 lg:mb-8"
+        aria-label="Learning statistics">
+        
+        <!-- Total Courses -->
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 
+                    border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <p class="text-gray-500 text-xs sm:text-sm 
+                              font-medium truncate">
+                        Enrolled Courses
+                    </p>
+                    <p class="text-2xl sm:text-3xl font-bold 
+                              text-gray-900 mt-1 sm:mt-2">
+                        {{ total_enrolled }}
+                    </p>
+                </div>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 
+                            bg-blue-100 rounded-lg flex items-center 
+                            justify-center flex-shrink-0 ml-2"
+                     aria-hidden="true">
+                    <i class="fas fa-book text-blue-600 
+                              text-lg sm:text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Courses -->
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 
+                    border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <p class="text-gray-500 text-xs sm:text-sm 
+                              font-medium truncate">
+                        Completed
+                    </p>
+                    <p class="text-2xl sm:text-3xl font-bold 
+                              text-gray-900 mt-1 sm:mt-2">
+                        {{ completed_courses }}
+                    </p>
+                </div>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 
+                            bg-green-100 rounded-lg flex items-center 
+                            justify-center flex-shrink-0 ml-2"
+                     aria-hidden="true">
+                    <i class="fas fa-check-circle text-green-600 
+                              text-lg sm:text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Certificates -->
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 
+                    border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <p class="text-gray-500 text-xs sm:text-sm 
+                              font-medium truncate">
+                        Certificates
+                    </p>
+                    <p class="text-2xl sm:text-3xl font-bold 
+                              text-gray-900 mt-1 sm:mt-2">
+                        {{ certificates_earned }}
+                    </p>
+                </div>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 
+                            bg-yellow-100 rounded-lg flex items-center 
+                            justify-center flex-shrink-0 ml-2"
+                     aria-hidden="true">
+                    <i class="fas fa-certificate text-yellow-600 
+                              text-lg sm:text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Tasks -->
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 
+                    border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <p class="text-gray-500 text-xs sm:text-sm 
+                              font-medium truncate">
+                        Pending Tasks
+                    </p>
+                    <p class="text-2xl sm:text-3xl font-bold 
+                              text-gray-900 mt-1 sm:mt-2">
+                        {{ pending_assignments.count }}
+                    </p>
+                </div>
+                <div class="w-10 h-10 sm:w-12 sm:h-12 
+                            bg-red-100 rounded-lg flex items-center 
+                            justify-center flex-shrink-0 ml-2"
+                     aria-hidden="true">
+                    <i class="fas fa-tasks text-red-600 
+                              text-lg sm:text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Active Courses -->
+            <section 
+                class="bg-white rounded-xl shadow-sm border 
+                       border-gray-200"
+                aria-labelledby="active-courses-heading">
+                
+                <div class="p-4 sm:p-6 border-b border-gray-200 
+                            flex flex-col sm:flex-row justify-between 
+                            items-start sm:items-center gap-3">
+                    <h2 id="active-courses-heading" 
+                        class="text-lg sm:text-xl font-bold 
+                               text-gray-900">
+                        Active Courses
+                    </h2>
+                    <a href="{% url 'students:my_courses' %}" 
+                       class="text-primary-600 hover:text-primary-700 
+                              text-sm font-medium inline-flex 
+                              items-center">
+                        View All
+                        <i class="fas fa-arrow-right ml-2 text-xs" 
+                           aria-hidden="true"></i>
+                    </a>
+                </div>
+                
+                <div class="p-4 sm:p-6">
+                    {% if enrollments %}
+                        <div class="space-y-4">
+                            {% for enrollment in enrollments %}
+                            <article 
+                                class="border border-gray-200 rounded-lg 
+                                       p-4 hover:border-primary-300 
+                                       transition-colors">
+                                
+                                <div class="flex flex-col sm:flex-row 
+                                            sm:items-start justify-between 
+                                            gap-4">
+                                    
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-semibold 
+                                                   text-gray-900 mb-1">
+                                            <a href="{% url 'students:course_detail' enrollment.course.id %}" 
+                                               class="hover:text-primary-600 
+                                                      focus:text-primary-600 
+                                                      focus:outline-none 
+                                                      focus:ring-2 
+                                                      focus:ring-primary-500 
+                                                      focus:ring-offset-2 
+                                                      rounded">
+                                                {{ enrollment.course.title }}
+                                            </a>
+                                        </h3>
+                                        
+                                        <p class="text-sm text-gray-600 
+                                                  truncate">
+                                            {{ enrollment.course.instructor_name }}
+                                        </p>
+                                        
+                                        <!-- Progress Bar -->
+                                        <div class="mt-3">
+                                            <div class="flex items-center 
+                                                        justify-between 
+                                                        text-xs sm:text-sm 
+                                                        mb-1">
+                                                <span class="text-gray-600">
+                                                    Progress
+                                                </span>
+                                                <span class="font-medium 
+                                                             text-gray-900">
+                                                    {{ enrollment.progress_percentage|floatformat:0 }}%
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="w-full bg-gray-200 
+                                                        rounded-full h-2"
+                                                 role="progressbar"
+                                                 aria-valuenow="{{ enrollment.progress_percentage }}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100">
+                                                <div class="bg-primary-600 h-2 
+                                                            rounded-full 
+                                                            transition-all 
+                                                            duration-300" 
+                                                     style="width: {{ enrollment.progress_percentage }}%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <a href="{% url 'students:course_detail' enrollment.course.id %}" 
+                                       class="px-4 py-2 bg-primary-600 
+                                              text-white rounded-lg 
+                                              hover:bg-primary-700 
+                                              focus:outline-none 
+                                              focus:ring-2 
+                                              focus:ring-primary-500 
+                                              focus:ring-offset-2 
+                                              text-sm font-medium 
+                                              transition-colors 
+                                              text-center 
+                                              whitespace-nowrap">
+                                        Continue
+                                    </a>
+                                </div>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-8 sm:py-12">
+                            <i class="fas fa-book text-5xl sm:text-6xl 
+                                      text-gray-300 mb-4" 
+                               aria-hidden="true"></i>
+                            <h3 class="text-lg font-semibold 
+                                       text-gray-900 mb-2">
+                                No active courses
+                            </h3>
+                            <p class="text-sm sm:text-base 
+                                      text-gray-600 mb-4">
+                                You haven't enrolled in any courses yet
+                            </p>
+                            <a href="{% url 'students:course_catalog' %}" 
+                               class="inline-block px-4 sm:px-6 py-2 
+                                      sm:py-3 bg-primary-600 text-white 
+                                      rounded-lg hover:bg-primary-700 
+                                      focus:outline-none focus:ring-2 
+                                      focus:ring-primary-500 
+                                      focus:ring-offset-2 
+                                      transition-colors text-sm 
+                                      sm:text-base">
+                                Browse Course Catalog
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Upcoming Assignments -->
+            <section 
+                class="bg-white rounded-xl shadow-sm border 
+                       border-gray-200"
+                aria-labelledby="assignments-heading">
+                
+                <div class="p-4 sm:p-6 border-b border-gray-200 
+                            flex flex-col sm:flex-row justify-between 
+                            items-start sm:items-center gap-3">
+                    <h2 id="assignments-heading" 
+                        class="text-lg sm:text-xl font-bold 
+                               text-gray-900">
+                        Upcoming Assignments
+                    </h2>
+                    <a href="{% url 'students:assignments' %}" 
+                       class="text-primary-600 hover:text-primary-700 
+                              text-sm font-medium inline-flex 
+                              items-center">
+                        View All
+                        <i class="fas fa-arrow-right ml-2 text-xs" 
+                           aria-hidden="true"></i>
+                    </a>
+                </div>
+                
+                <div class="p-4 sm:p-6">
+                    {% if pending_assignments %}
+                        <div class="space-y-3">
+                            {% for assignment in pending_assignments %}
+                            <a href="{% url 'students:assignment_detail' assignment.lesson.course.slug assignment.slug %}"
+                               class="block border border-gray-200 
+                                      rounded-lg p-4 
+                                      hover:border-primary-300 
+                                      focus:outline-none focus:ring-2 
+                                      focus:ring-primary-500 
+                                      focus:ring-offset-2 
+                                      transition-colors">
+                                
+                                <div class="flex flex-col sm:flex-row 
+                                            sm:items-start justify-between 
+                                            gap-3">
+                                    
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-semibold 
+                                                   text-gray-900 mb-1 
+                                                   truncate">
+                                            {{ assignment.title }}
+                                        </h3>
+                                        <p class="text-sm text-gray-600 
+                                                  mb-2 truncate">
+                                            {{ assignment.lesson.course.title }}
+                                        </p>
+                                        <div class="flex items-center 
+                                                    text-xs sm:text-sm">
+                                            <i class="fas fa-clock 
+                                                      text-orange-500 mr-2" 
+                                               aria-hidden="true"></i>
+                                            <time datetime="{{ assignment.due_date|date:'c' }}" 
+                                                  class="text-gray-600">
+                                                Due: {{ assignment.due_date|date:"M d, Y g:i A" }}
+                                            </time>
+                                        </div>
+                                    </div>
+                                    
+                                    <span class="px-3 py-1 bg-orange-100 
+                                                 text-orange-700 rounded-full 
+                                                 text-xs font-medium 
+                                                 whitespace-nowrap 
+                                                 self-start sm:self-auto">
+                                        Pending
+                                    </span>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-6 sm:py-8">
+                            <i class="fas fa-check-circle 
+                                      text-4xl sm:text-5xl 
+                                      text-green-300 mb-3" 
+                               aria-hidden="true"></i>
+                            <p class="text-sm sm:text-base 
+                                      text-gray-600">
+                                No pending assignments
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="space-y-6">
+            
+            <!-- Announcements -->
+            <section 
+                class="bg-white rounded-xl shadow-sm border 
+                       border-gray-200"
+                aria-labelledby="announcements-heading">
+                
+                <div class="p-4 sm:p-6 border-b border-gray-200">
+                    <h2 id="announcements-heading" 
+                        class="text-lg sm:text-xl font-bold 
+                               text-gray-900">
+                        Announcements
+                    </h2>
+                </div>
+                
+                <div class="p-4 sm:p-6">
+                    {% if announcements %}
+                        <div class="space-y-4">
+                            {% for announcement in announcements %}
+                            <article 
+                                class="border-l-4 pl-4
+                                       {% if announcement.priority == 'urgent' %}
+                                       border-red-500
+                                       {% elif announcement.priority == 'high' %}
+                                       border-orange-500
+                                       {% else %}
+                                       border-blue-500
+                                       {% endif %}">
+                                
+                                <h3 class="font-semibold text-gray-900 
+                                           text-sm mb-1">
+                                    {{ announcement.title }}
+                                </h3>
+                                <p class="text-xs text-gray-600 mb-2 
+                                          line-clamp-2">
+                                    {{ announcement.content|truncatewords:20 }}
+                                </p>
+                                <time datetime="{{ announcement.publish_date|date:'c' }}" 
+                                      class="text-xs text-gray-500">
+                                    {{ announcement.publish_date|date:"M d, Y" }}
+                                </time>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-gray-600 text-sm">
+                            No announcements
+                        </p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Admission History -->
+            <section 
+                class="bg-white rounded-xl shadow-sm border 
+                       border-gray-200"
+                aria-labelledby="admission-heading">
+                
+                <div class="p-4 sm:p-6 border-b border-gray-200">
+                    <h2 id="admission-heading" 
+                        class="text-lg sm:text-xl font-bold 
+                               text-gray-900">
+                        Admission History
+                    </h2>
+                </div>
+                
+                <div class="p-4 sm:p-6">
+                    {% if admission_history %}
+                        <div class="space-y-3">
+                            {% for application in admission_history %}
+                            <article 
+                                class="border border-gray-200 rounded-lg 
+                                       p-3 hover:border-primary-300 
+                                       transition-colors">
+                                
+                                <!-- Application Info -->
+                                <div class="mb-2">
+                                    <h3 class="font-semibold text-gray-900 
+                                               text-sm mb-1 truncate">
+                                        {{ application.course.name }}
+                                    </h3>
+                                    <p class="text-xs text-gray-600 
+                                              truncate">
+                                        {{ application.course.faculty.name }}
+                                    </p>
+                                </div>
+                                
+                                <!-- Status Badge -->
+                                <div class="flex items-center 
+                                            justify-between mb-2">
+                                    {% if application.status == 'approved' %}
+                                        {% if application.can_access_student_portal %}
+                                        <span class="px-2 py-1 bg-purple-100 
+                                                     text-purple-700 
+                                                     rounded-full text-xs 
+                                                     font-medium">
+                                            <i class="fas fa-graduation-cap 
+                                                      mr-1" 
+                                               aria-hidden="true"></i>
+                                            Enrolled
+                                        </span>
+                                        {% elif application.admission_accepted %}
+                                        <span class="px-2 py-1 bg-blue-100 
+                                                     text-blue-700 
+                                                     rounded-full text-xs 
+                                                     font-medium">
+                                            <i class="fas fa-clock mr-1" 
+                                               aria-hidden="true"></i>
+                                            Processing
+                                        </span>
+                                        {% else %}
+                                        <span class="px-2 py-1 bg-green-100 
+                                                     text-green-700 
+                                                     rounded-full text-xs 
+                                                     font-medium">
+                                            <i class="fas fa-check-circle 
+                                                      mr-1" 
+                                               aria-hidden="true"></i>
+                                            Approved
+                                        </span>
+                                        {% endif %}
+                                    {% elif application.status == 'under_review' %}
+                                    <span class="px-2 py-1 bg-yellow-100 
+                                                 text-yellow-700 
+                                                 rounded-full text-xs 
+                                                 font-medium">
+                                        <i class="fas fa-search mr-1" 
+                                           aria-hidden="true"></i>
+                                        Under Review
+                                    </span>
+                                    {% elif application.status == 'rejected' %}
+                                    <span class="px-2 py-1 bg-red-100 
+                                                 text-red-700 rounded-full 
+                                                 text-xs font-medium">
+                                        <i class="fas fa-times-circle mr-1" 
+                                           aria-hidden="true"></i>
+                                        Rejected
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-1 bg-gray-100 
+                                                 text-gray-700 rounded-full 
+                                                 text-xs font-medium">
+                                        <i class="fas fa-hourglass mr-1" 
+                                           aria-hidden="true"></i>
+                                        {{ application.get_status_display }}
+                                    </span>
+                                    {% endif %}
+                                    
+                                    <time datetime="{{ application.created_at|date:'c' }}" 
+                                          class="text-xs text-gray-500">
+                                        {{ application.created_at|date:"M d, Y" }}
+                                    </time>
+                                </div>
+                                
+                                <!-- Application ID -->
+                                <div class="text-xs text-gray-500">
+                                    <span class="font-mono">
+                                        {{ application.application_id }}
+                                    </span>
+                                </div>
+                                
+                                <!-- View Letter Link (if approved) -->
+                                {% if application.status == 'approved' %}
+                                <div class="mt-2 pt-2 border-t 
+                                            border-gray-200">
+                                    <a href="{% url 'eduweb:admission_letter' application.application_id %}" target="_blank"
+                                       class="text-xs text-primary-600 
+                                              hover:text-primary-700 
+                                              font-medium inline-flex 
+                                              items-center">
+                                        <i class="fas fa-file-pdf mr-1" 
+                                           aria-hidden="true"></i>
+                                        View Admission Letter
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </article>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- View All Link -->
+                        {% if admission_history|length > 3 %}
+                        <div class="mt-4 text-center">
+                            <a href="{% url 'eduweb:application_status' %}"
+                               class="text-sm text-primary-600 
+                                      hover:text-primary-700 
+                                      font-medium inline-flex 
+                                      items-center">
+                                View All Applications
+                                <i class="fas fa-arrow-right ml-2 text-xs" 
+                                   aria-hidden="true"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-alt text-3xl 
+                                      text-gray-300 mb-2" 
+                               aria-hidden="true"></i>
+                            <p class="text-sm text-gray-600">
+                                No application history
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <nav 
+                class="bg-white rounded-xl shadow-sm border 
+                       border-gray-200"
+                aria-label="Quick actions">
+                
+                <div class="p-4 sm:p-6 border-b border-gray-200">
+                    <h2 class="text-lg sm:text-xl font-bold 
+                               text-gray-900">
+                        Quick Actions
+                    </h2>
+                </div>
+                
+                <div class="p-4 sm:p-6 space-y-2">
+                    <a href="{% url 'students:course_catalog' %}" 
+                       class="flex items-center p-3 rounded-lg 
+                              hover:bg-gray-50 focus:outline-none 
+                              focus:ring-2 focus:ring-primary-500 
+                              focus:ring-offset-2 transition-colors 
+                              border border-gray-200">
+                        <i class="fas fa-search text-primary-600 
+                                  text-xl w-8" aria-hidden="true"></i>
+                        <span class="ml-3 text-gray-900 
+                                     font-medium text-sm">
+                            Browse Courses
+                        </span>
+                    </a>
+                    
+                    <a href="{% url 'students:assignments' %}" 
+                       class="flex items-center p-3 rounded-lg 
+                              hover:bg-gray-50 focus:outline-none 
+                              focus:ring-2 focus:ring-primary-500 
+                              focus:ring-offset-2 transition-colors 
+                              border border-gray-200">
+                        <i class="fas fa-file-alt text-orange-600 
+                                  text-xl w-8" aria-hidden="true"></i>
+                        <span class="ml-3 text-gray-900 
+                                     font-medium text-sm">
+                            View Assignments
+                        </span>
+                    </a>
+                    
+                    <a href="{% url 'students:progress' %}" 
+                       class="flex items-center p-3 rounded-lg 
+                              hover:bg-gray-50 focus:outline-none 
+                              focus:ring-2 focus:ring-primary-500 
+                              focus:ring-offset-2 transition-colors 
+                              border border-gray-200">
+                        <i class="fas fa-chart-line text-green-600 
+                                  text-xl w-8" aria-hidden="true"></i>
+                        <span class="ml-3 text-gray-900 
+                                     font-medium text-sm">
+                            Track Progress
+                        </span>
+                    </a>
+                    
+                    <a href="{% url 'students:certificates' %}" 
+                       class="flex items-center p-3 rounded-lg 
+                              hover:bg-gray-50 focus:outline-none 
+                              focus:ring-2 focus:ring-primary-500 
+                              focus:ring-offset-2 transition-colors 
+                              border border-gray-200">
+                        <i class="fas fa-certificate text-yellow-600 
+                                  text-xl w-8" aria-hidden="true"></i>
+                        <span class="ml-3 text-gray-900 
+                                     font-medium text-sm">
+                            My Certificates
+                        </span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+    </div>
+</div>
+{% endblock %}

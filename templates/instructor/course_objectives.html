@@ -1,0 +1,143 @@
+{% extends 'management/base.html' %}
+
+{% load static %}
+
+{% block title %}Course Learning Objectives - {{ course.title }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="flex mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3">
+        <li class="inline-flex items-center">
+            <a href="{% url 'instructor:course_list' %}" class="text-gray-600 hover:text-primary-600 inline-flex items-center">
+                <i class="fas fa-book mr-2"></i> Courses
+            </a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <a href="{% url 'instructor:course_edit' course.slug %}" class="text-gray-600 hover:text-primary-600">{{ course.title }}</a>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                <span class="text-gray-500">Learning Objectives</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 font-display">Learning Objectives & Prerequisites</h1>
+    <p class="text-gray-600 mt-2">Define what students will learn and what they need to know beforehand</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Form -->
+    <div class="lg:col-span-2">
+        <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-200">
+            {% csrf_token %}
+            
+            <div class="p-6 space-y-6">
+                <!-- Learning Objectives -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 mb-2">
+                        <i class="fas fa-bullseye text-primary-600 mr-2"></i>
+                        Learning Objectives *
+                    </label>
+                    {{ form.objectives }}
+                    <p class="mt-2 text-sm text-gray-600">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Enter one objective per line. These will be displayed to students before enrollment.
+                    </p>
+                    {% if form.objectives.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.objectives.errors }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Prerequisites -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 mb-2">
+                        <i class="fas fa-clipboard-list text-blue-600 mr-2"></i>
+                        Prerequisites (Optional)
+                    </label>
+                    {{ form.prerequisites }}
+                    <p class="mt-2 text-sm text-gray-600">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Enter one prerequisite per line. Leave blank if there are no prerequisites.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
+                <div class="flex items-center justify-between">
+                    <a href="{% url 'instructor:course_edit' course.slug %}" 
+                       class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Course
+                    </a>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all font-medium">
+                        <i class="fas fa-save mr-2"></i> Save Objectives
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sidebar - Current Values -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="font-semibold text-gray-900 mb-4">
+                <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                Best Practices
+            </h3>
+            <ul class="space-y-3 text-sm text-gray-700">
+                <li class="flex items-start">
+                    <i class="fas fa-check text-green-500 mr-3 mt-0.5"></i>
+                    <span>Start objectives with action verbs (e.g., "Understand", "Create", "Analyze")</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check text-green-500 mr-3 mt-0.5"></i>
+                    <span>Be specific and measurable</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check text-green-500 mr-3 mt-0.5"></i>
+                    <span>Focus on student outcomes</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check text-green-500 mr-3 mt-0.5"></i>
+                    <span>List 4-8 key objectives</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check text-green-500 mr-3 mt-0.5"></i>
+                    <span>Clearly state prerequisites to set expectations</span>
+                </li>
+            </ul>
+        </div>
+
+        {% if course.learning_objectives %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-4">
+            <h3 class="font-semibold text-gray-900 mb-4">Current Objectives ({{ course.learning_objectives|length }})</h3>
+            <ul class="space-y-2 text-sm">
+                {% for objective in course.learning_objectives %}
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mr-2 mt-0.5"></i>
+                    <span class="text-gray-700">{{ objective }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add custom styles for form elements -->
+<style>
+    textarea {
+        @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors font-mono text-sm;
+    }
+</style>
+{% endblock %}

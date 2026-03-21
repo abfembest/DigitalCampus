@@ -1,0 +1,201 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Course Intakes - MIU Admin Portal{% endblock %}
+{% block meta_description %}Manage course intake periods{% endblock %}
+
+{% block content %}
+<div class="max-w-full">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800 font-display">Course Intakes</h1>
+      <p class="text-gray-500 mt-1">Manage intake periods for academic programs</p>
+    </div>
+    <a href="{% url 'management:intake_create' %}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm">
+      <i class="fas fa-plus" aria-hidden="true"></i>New Intake
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+    <form method="get" class="flex flex-col sm:flex-row gap-3">
+      <div class="flex-1">
+        <select name="program" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          <option value="">All Programs</option>
+          {% for prog in programs %}
+          <option value="{{ prog.id }}" {% if request.GET.program == prog.id|stringformat:"s" %}selected{% endif %}>{{ prog.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="sm:w-40">
+        <select name="year" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          <option value="">All Years</option>
+          {% for yr in years %}
+          <option value="{{ yr }}" {% if request.GET.year == yr|stringformat:"s" %}selected{% endif %}>{{ yr }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="sm:w-40">
+        <select name="period" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          <option value="">All Periods</option>
+          <option value="january" {% if request.GET.period == 'january' %}selected{% endif %}>January</option>
+          <option value="may" {% if request.GET.period == 'may' %}selected{% endif %}>May</option>
+          <option value="september" {% if request.GET.period == 'september' %}selected{% endif %}>September</option>
+        </select>
+      </div>
+      <div class="sm:w-36">
+        <select name="status" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          <option value="">All Status</option>
+          <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
+      <button type="submit" class="px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium">
+        <i class="fas fa-search mr-1" aria-hidden="true"></i>Filter
+      </button>
+      <a href="{% url 'management:intakes_list' %}" class="px-3 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm">
+        <i class="fas fa-redo" aria-hidden="true"></i>
+      </a>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+      <h2 class="font-semibold text-gray-800">
+        All Intakes <span class="text-sm font-normal text-gray-400 ml-1">({{ intakes.paginator.count }} total)</span>
+      </h2>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
+          <tr>
+            <th class="py-3 px-5 text-left font-semibold">Program</th>
+            <th class="py-3 px-5 text-left font-semibold">Intake Period</th>
+            <th class="py-3 px-5 text-left font-semibold">Start Date</th>
+            <th class="py-3 px-5 text-left font-semibold">Deadline</th>
+            <th class="py-3 px-5 text-left font-semibold">Slots</th>
+            <th class="py-3 px-5 text-left font-semibold">Applications</th>
+            <th class="py-3 px-5 text-left font-semibold">Status</th>
+            <th class="py-3 px-5 text-left font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for intake in intakes %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="py-4 px-5">
+              <div class="font-medium text-gray-800">{{ intake.program.name }}</div>
+              <div class="text-xs text-gray-400">{{ intake.program.department.faculty.name }}</div>
+            </td>
+            <td class="py-4 px-5">
+              <span class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium capitalize">
+                {{ intake.intake_period }}
+              </span>
+              <span class="text-gray-500 ml-1">{{ intake.year }}</span>
+            </td>
+            <td class="py-4 px-5 text-gray-600">{{ intake.start_date|date:"M d, Y" }}</td>
+            <td class="py-4 px-5">
+              {% if intake.application_deadline < today %}
+              <span class="text-red-500 font-medium">{{ intake.application_deadline|date:"M d, Y" }}</span>
+              <span class="text-xs text-red-400 block">Expired</span>
+              {% else %}
+              <span class="text-gray-600">{{ intake.application_deadline|date:"M d, Y" }}</span>
+              {% endif %}
+            </td>
+            <td class="py-4 px-5 font-medium text-gray-700">{{ intake.available_slots }}</td>
+            <td class="py-4 px-5">
+              <span class="font-medium text-primary-600">{{ intake.applications.count }}</span>
+            </td>
+            <td class="py-4 px-5">
+              {% if intake.is_active %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Inactive
+              </span>
+              {% endif %}
+            </td>
+            <td class="py-4 px-5">
+              <div class="flex items-center gap-2">
+                <a href="{% url 'management:intake_edit' intake.pk %}"
+                   class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                  <i class="fas fa-edit text-sm" aria-hidden="true"></i>
+                </a>
+                <button type="button"
+                        onclick="confirmDelete('{% url 'management:intake_delete' intake.pk %}', '{{ intake }}')"
+                        class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+                  <i class="fas fa-trash-alt text-sm" aria-hidden="true"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="py-16 text-center text-gray-400">
+              <i class="fas fa-door-open text-5xl mb-3 block" aria-hidden="true"></i>
+              <p class="font-medium text-gray-600">No intakes found</p>
+              <a href="{% url 'management:intake_create' %}" class="text-primary-600 text-sm hover:underline mt-1 inline-block">Create the first intake</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if intakes.has_other_pages %}
+    <div class="p-5 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-3">
+      <p class="text-sm text-gray-500">Showing {{ intakes.start_index }}–{{ intakes.end_index }} of {{ intakes.paginator.count }}</p>
+      <nav class="flex gap-1" aria-label="Pagination">
+        {% if intakes.has_previous %}
+        <a href="?page={{ intakes.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
+           class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+          <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        </a>
+        {% endif %}
+        {% for num in intakes.paginator.page_range %}
+          {% if intakes.number == num %}
+          <span class="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium">{{ num }}</span>
+          {% elif num > intakes.number|add:"-3" and num < intakes.number|add:"3" %}
+          <a href="?page={{ num }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
+             class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if intakes.has_next %}
+        <a href="?page={{ intakes.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
+           class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </a>
+        {% endif %}
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<form id="deleteForm" method="post" action="" style="display:none;">{% csrf_token %}</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(url, name) {
+  Swal.fire({
+    title: 'Delete Intake?',
+    html: `Delete <strong>${name}</strong>?`,
+    icon: 'warning', showCancelButton: true,
+    confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Delete',
+  }).then(r => {
+    if (r.isConfirmed) {
+      document.getElementById('deleteForm').action = url;
+      document.getElementById('deleteForm').submit();
+    }
+  });
+}
+</script>
+{% endblock %}

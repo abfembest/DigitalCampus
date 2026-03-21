@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@tailwindcss/cli": "^4.2.1",
+    "tailwindcss": "^4.2.1"
+  },
+  "scripts": {
+    "watch:melbac": "npx @tailwindcss/cli -i ./static/src/melbac.css  -o ./static/css/melbac.css  --watch",
+    "build:melbac": "npx @tailwindcss/cli -i ./static/src/melbac.css  -o ./static/css/melbac.css  --minify"
+  }
+}

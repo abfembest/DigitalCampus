@@ -1,0 +1,544 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}{{ enrollment.student.get_full_name }} - Progress Details{% endblock %}
+
+{% block meta_description %}
+Detailed progress tracking for {{ enrollment.student.get_full_name }} in {{ course.title }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* DataTables Custom Styling - Matches Base Design */
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter,
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+    
+    /* Search input styling */
+    .dataTables_wrapper .dataTables_filter input {
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        margin-left: 0.5rem;
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+    
+    .dataTables_wrapper .dataTables_filter input:focus {
+        border-color: #4a6bff;
+        box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.1);
+    }
+    
+    /* Length menu styling */
+    .dataTables_wrapper .dataTables_length select {
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        padding: 0.5rem 2rem 0.5rem 0.75rem;
+        margin: 0 0.5rem;
+        font-size: 0.875rem;
+        outline: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.5rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        appearance: none;
+    }
+    
+    .dataTables_wrapper .dataTables_length select:focus {
+        border-color: #4a6bff;
+        box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.1);
+    }
+    
+    /* Info text styling */
+    .dataTables_wrapper .dataTables_info {
+        color: #6B7280;
+        font-size: 0.875rem;
+        padding-top: 0.5rem;
+    }
+    
+    /* Pagination styling */
+    .dataTables_wrapper .dataTables_paginate {
+        padding-top: 0.5rem;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.5rem 0.75rem;
+        margin: 0 0.125rem;
+        border: 1px solid #D1D5DB;
+        border-radius: 0.5rem;
+        color: #374151;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.875rem;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: #F3F4F6;
+        border-color: #9CA3AF;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: #4a6bff;
+        border-color: #4a6bff;
+        color: white;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        background: #3a56d4;
+        border-color: #3a56d4;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover {
+        background: white;
+        border-color: #D1D5DB;
+    }
+    
+    /* Sorting icons */
+    table.dataTable thead th {
+        position: relative;
+        cursor: pointer;
+    }
+    
+    table.dataTable thead .sorting:after,
+    table.dataTable thead .sorting_asc:after,
+    table.dataTable thead .sorting_desc:after {
+        position: absolute;
+        right: 0.75rem;
+        opacity: 0.3;
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        font-size: 0.75rem;
+    }
+    
+    table.dataTable thead .sorting:after {
+        content: '\f0dc';
+    }
+    
+    table.dataTable thead .sorting_asc:after {
+        content: '\f0de';
+        opacity: 0.7;
+    }
+    
+    table.dataTable thead .sorting_desc:after {
+        content: '\f0dd';
+        opacity: 0.7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<header class="mb-8">
+    <nav class="mb-4" aria-label="Breadcrumb">
+        <ol class="flex items-center space-x-2 text-sm text-gray-600">
+            <li>
+                <a href="{% url 'instructor:dashboard' %}" 
+                   class="hover:text-primary-600">
+                    Dashboard
+                </a>
+            </li>
+            <li><span class="mx-2">/</span></li>
+            <li>
+                <a href="{% url 'instructor:analytics_student_progress' %}" 
+                   class="hover:text-primary-600">
+                    Student Analytics
+                </a>
+            </li>
+            <li><span class="mx-2">/</span></li>
+            <li class="text-gray-900 font-medium">
+                {{ enrollment.student.get_full_name }}
+            </li>
+        </ol>
+    </nav>
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 font-display">
+                Student Progress Details
+            </h1>
+            <p class="text-gray-600 mt-2">
+                Tracking progress for {{ enrollment.student.get_full_name }} 
+                in {{ course.title }}
+            </p>
+        </div>
+        <a href="{% url 'instructor:analytics_student_progress' %}" 
+           class="inline-flex items-center px-4 py-2 border border-gray-300 
+                  rounded-lg text-gray-700 bg-white hover:bg-gray-50 
+                  transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Back to Analytics
+        </a>
+    </div>
+</header>
+
+<!-- Student Info Card -->
+<section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="flex items-center space-x-4">
+            <div class="w-16 h-16 bg-primary-600 rounded-full flex 
+                        items-center justify-center flex-shrink-0">
+                <span class="text-2xl font-bold text-white">
+                    {{ enrollment.student.first_name.0|upper }}{{ enrollment.student.last_name.0|upper }}
+                </span>
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">
+                    {{ enrollment.student.get_full_name }}
+                </h2>
+                <p class="text-sm text-gray-600">
+                    {{ enrollment.student.email }}
+                </p>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <div class="text-3xl font-bold text-primary-600 mb-1">
+                {{ enrollment.progress_percentage }}%
+            </div>
+            <p class="text-sm text-gray-600">Overall Progress</p>
+        </div>
+
+        <div class="text-center">
+            <div class="text-3xl font-bold text-blue-600 mb-1">
+                {{ enrollment.completed_lessons }}/{{ enrollment.total_lessons }}
+            </div>
+            <p class="text-sm text-gray-600">Lessons Completed</p>
+        </div>
+
+        <div class="text-center">
+            <div class="text-3xl font-bold text-green-600 mb-1">
+                {% if enrollment.avg_quiz_score %}
+                    {{ enrollment.avg_quiz_score|floatformat:0 }}%
+                {% else %}
+                    N/A
+                {% endif %}
+            </div>
+            <p class="text-sm text-gray-600">Avg Quiz Score</p>
+        </div>
+    </div>
+</section>
+
+<!-- Performance Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <article class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex 
+                        items-center justify-center">
+                <i class="fas fa-clock text-2xl text-blue-600"></i>
+            </div>
+            <span class="text-2xl font-bold text-gray-900">
+                {{ enrollment.total_time_spent|default:"0h" }}
+            </span>
+        </div>
+        <h3 class="text-sm font-medium text-gray-600">Time Spent</h3>
+    </article>
+
+    <article class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 bg-purple-100 rounded-lg flex 
+                        items-center justify-center">
+                <i class="fas fa-calendar text-2xl text-purple-600"></i>
+            </div>
+            <span class="text-2xl font-bold text-gray-900">
+                {{ enrollment.enrolled_at|date:"M d, Y" }}
+            </span>
+        </div>
+        <h3 class="text-sm font-medium text-gray-600">Enrollment Date</h3>
+    </article>
+
+    <article class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex 
+                        items-center justify-center">
+                <i class="fas fa-check-circle text-2xl text-green-600"></i>
+            </div>
+            <span class="inline-flex items-center px-3 py-1 rounded-full 
+                         text-sm font-medium
+                         {% if enrollment.status == 'active' %}
+                             bg-blue-100 text-blue-800
+                         {% elif enrollment.status == 'completed' %}
+                             bg-green-100 text-green-800
+                         {% else %}
+                             bg-gray-100 text-gray-800
+                         {% endif %}">
+                {{ enrollment.status|title }}
+            </span>
+        </div>
+        <h3 class="text-sm font-medium text-gray-600">Current Status</h3>
+    </article>
+</div>
+
+<!-- Lesson Progress Table -->
+<section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <header class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-bold text-gray-900">Lesson-by-Lesson Progress</h2>
+        <p class="text-gray-600 text-sm mt-1">
+            Detailed breakdown of lesson completion and performance
+        </p>
+    </header>
+    
+    {% if lesson_progress %}
+    <div class="p-6">
+        <table id="lessonProgressTable" class="w-full" 
+               role="table" aria-label="Lesson progress data">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Lesson
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Status
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Progress
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Quiz Score
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Time Spent
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Last Accessed
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+                {% for progress in lesson_progress %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div>
+                            <p class="font-medium text-gray-900">
+                                {{ progress.lesson.title }}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                Section: {{ progress.lesson.section.title }}
+                            </p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if progress.is_completed %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 
+                                     rounded-full text-xs font-medium 
+                                     bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Completed
+                        </span>
+                        {% elif progress.percentage > 0 %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 
+                                     rounded-full text-xs font-medium 
+                                     bg-yellow-100 text-yellow-800">
+                            <i class="fas fa-circle-notch mr-1"></i>
+                            In Progress
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 
+                                     rounded-full text-xs font-medium 
+                                     bg-gray-100 text-gray-800">
+                            <i class="fas fa-circle mr-1"></i>
+                            Not Started
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4" data-order="{{ progress.percentage }}">
+                        <div class="flex flex-col items-center space-y-1">
+                            <div class="w-24 bg-gray-200 rounded-full h-2">
+                                <div class="bg-primary-600 h-2 rounded-full" 
+                                     style="width: {{ progress.percentage }}%">
+                                </div>
+                            </div>
+                            <span class="text-xs font-semibold text-gray-700">
+                                {{ progress.percentage|floatformat:0 }}%
+                            </span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center" data-order="{{ progress.quiz_score|default:0 }}">
+                        {% if progress.quiz_score %}
+                        <span class="font-semibold
+                                     {% if progress.quiz_score >= 80 %}
+                                         text-green-600
+                                     {% elif progress.quiz_score >= 60 %}
+                                         text-yellow-600
+                                     {% else %}
+                                         text-red-600
+                                     {% endif %}">
+                            {{ progress.quiz_score|floatformat:0 }}%
+                        </span>
+                        {% else %}
+                        <span class="text-gray-400 text-sm">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-700">
+                        {{ progress.time_spent|default:"-" }}
+                    </td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-700">
+                        {% if progress.last_accessed %}
+                            {{ progress.last_accessed|date:"M d, Y" }}
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <div class="w-20 h-20 bg-gray-100 rounded-full flex 
+                    items-center justify-center mx-auto mb-4">
+            <i class="fas fa-book-open text-4xl text-gray-400"></i>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">
+            No Progress Data
+        </h3>
+        <p class="text-gray-600">
+            This student hasn't started any lessons yet
+        </p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Quiz Performance Section -->
+{% if enrollment.quiz_attempts %}
+<section class="bg-white rounded-xl shadow-sm border border-gray-200 
+                overflow-hidden mt-8">
+    <header class="p-6 border-b border-gray-200">
+        <h2 class="text-xl font-bold text-gray-900">Quiz Performance</h2>
+        <p class="text-gray-600 text-sm mt-1">
+            All quiz attempts and scores
+        </p>
+    </header>
+    
+    <div class="p-6">
+        <table id="quizPerformanceTable" class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Quiz
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Score
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Attempts
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Best Score
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Last Attempt
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+                {% for attempt in enrollment.quiz_attempts %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <p class="text-sm text-gray-900">{{ attempt.quiz.title }}</p>
+                    </td>
+                    <td class="px-6 py-4 text-center" data-order="{{ attempt.percentage }}">
+                        <span class="font-semibold
+                                     {% if attempt.percentage >= 80 %}
+                                         text-green-600
+                                     {% elif attempt.percentage >= 60 %}
+                                         text-yellow-600
+                                     {% else %}
+                                         text-red-600
+                                     {% endif %}">
+                            {{ attempt.percentage|floatformat:0 }}%
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-700">
+                        {{ attempt.attempt_number }}
+                    </td>
+                    <td class="px-6 py-4 text-center" data-order="{{ attempt.best_score }}">
+                        <span class="font-semibold text-green-600">
+                            {{ attempt.best_score|floatformat:0 }}%
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center text-sm text-gray-700">
+                        {{ attempt.submitted_at|date:"M d, Y H:i" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize Lesson Progress Table
+    $('#lessonProgressTable').DataTable({
+        pageLength: 10,
+        order: [[5, 'desc']], // Sort by last accessed
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ per page",
+            info: "Showing _START_ to _END_ of _TOTAL_ lessons",
+            infoEmpty: "No lessons found",
+            infoFiltered: "(filtered from _MAX_ total)",
+            paginate: {
+                first: "First",
+                last: "Last",
+                next: "Next »",
+                previous: "« Prev"
+            }
+        },
+        columnDefs: [
+            { orderable: false, targets: 2 }, // Progress bar column
+            { className: "text-center", targets: [1, 2, 3, 4, 5] }
+        ],
+        dom: '<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4"lf>rt<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4"ip>',
+        drawCallback: function() {
+            $('.dataTables_paginate .paginate_button').addClass('transition-all duration-200');
+        }
+    });
+
+    // Initialize Quiz Performance Table if it exists
+    if ($('#quizPerformanceTable').length) {
+        $('#quizPerformanceTable').DataTable({
+            pageLength: 10,
+            order: [[4, 'desc']], // Sort by last attempt
+            language: {
+                search: "Search:",
+                lengthMenu: "Show _MENU_ per page",
+                info: "Showing _START_ to _END_ of _TOTAL_ quizzes",
+                infoEmpty: "No quizzes found",
+                infoFiltered: "(filtered from _MAX_ total)",
+                paginate: {
+                    first: "First",
+                    last: "Last",
+                    next: "Next »",
+                    previous: "« Prev"
+                }
+            },
+            columnDefs: [
+                { className: "text-center", targets: [1, 2, 3, 4] }
+            ],
+            dom: '<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4"lf>rt<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4"ip>',
+            drawCallback: function() {
+                $('.dataTables_paginate .paginate_button').addClass('transition-all duration-200');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

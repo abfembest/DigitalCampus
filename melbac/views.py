@@ -31,12 +31,12 @@ def index(request):
         'faculties':     faculties,
         'recent_posts':  recent_posts,
     }
-    return render(request, 'index.html', context)
+    return render(request, 'melbac/index.html', context)
 
 
 def about(request):
     """MELBAC About page."""
-    return render(request, 'about.html', {})
+    return render(request, 'melbac/about.html', {})
 
 
 def academics(request):
@@ -47,7 +47,7 @@ def academics(request):
         .prefetch_related('departments', 'departments__programs')
         .order_by('display_order')
     )
-    return render(request, 'academics.html', {'faculties': faculties})
+    return render(request, 'melbac/academics.html', {'faculties': faculties})
 
 
 def admissions(request):
@@ -55,12 +55,12 @@ def admissions(request):
     Admissions page — all degree levels, requirements, programs.
     No DB query needed; content is static/template-driven.
     """
-    return render(request, 'admissions.html', {})
+    return render(request, 'melbac/admissions.html', {})
 
 
 def activities(request):
     """Student Activities page."""
-    return render(request, 'activities.html', {})
+    return render(request, 'melbac/activities.html', {})
 
 
 def contact(request):
@@ -81,12 +81,12 @@ def contact(request):
                 subject=subject,
                 message=message,
             )
-            messages.success(request, 'Your message has been received. We will respond shortly.')
+            messages.success(request, 'melbac/Your message has been received. We will respond shortly.')
             return redirect('melbac:contact')
         else:
-            messages.error(request, 'Please fill in all required fields.')
+            messages.error(request, 'melbac/Please fill in all required fields.')
 
-    return render(request, 'contact.html', {})
+    return render(request, 'melbac/contact.html', {})
 
 
 def blog_list(request):
@@ -97,7 +97,7 @@ def blog_list(request):
         .select_related('author')
         .order_by('-publish_date')
     )
-    return render(request, 'blog.html', {'posts': posts})
+    return render(request, 'melbac/blog.html', {'posts': posts})
 
 
 def blog_detail(request, slug):
@@ -142,4 +142,4 @@ def blog_detail(request, slug):
         'next_post':    next_post,
         'recent_posts': recent_posts,
     }
-    return render(request, 'blog_detail.html', context)
+    return render(request, 'melbac/blog_detail.html', context)

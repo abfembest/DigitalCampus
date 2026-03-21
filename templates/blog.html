@@ -1,251 +1,295 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Blog — Melchisedec Graduate Bible Academy (MELBAC){% endblock %}
+{% block title %}MIU Blog - News, Stories & Insights | Modern International University{% endblock %}
 
-{% block meta_tags %}
-<meta name="description" content="Read teaching posts from Apostle John Daniel covering forgiveness, authority of a believer, Christian living, and deep biblical doctrine.">
-<meta name="keywords"    content="MELBAC blog, Bible teaching, Apostle John Daniel, Christian doctrine, forgiveness, authority of a believer">
-<meta name="robots"      content="index, follow">
+{% block extra_css %}
+<meta name="description" content="Read the latest news, student stories, research updates, and insights from Modern International University. Stay connected with the MIU community.">
+<meta name="keywords" content="MIU blog, university news, student stories, campus updates, research news, higher education blog">
 {% endblock %}
 
 {% block content %}
 
-<!-- ── PAGE HERO ──────────────────────────────────────────────── -->
-<section class="mb-page-hero" aria-label="Blog page header">
-  <div class="mb-page-hero-pattern" aria-hidden="true"></div>
-  <div class="mb-container mb-page-hero-inner">
-    <nav aria-label="Breadcrumb">
-      <ol class="mb-breadcrumb">
-        <li><a href="{% url 'melbac:index' %}">Home</a></li>
-        <li class="mb-breadcrumb-sep" aria-hidden="true">/</li>
-        <li aria-current="page">Blog</li>
-      </ol>
-    </nav>
-    <h1>Teaching the Word</h1>
-    <p>Deep biblical doctrine and practical teaching from Apostle John Daniel and the MELBAC faculty — grounded in the pure Word of God.</p>
-  </div>
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-primary-950 via-purple-900 to-indigo-900 text-white py-24 lg:py-32 overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-20 left-10 w-64 h-64 bg-purple-300 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-indigo-300 rounded-full blur-3xl"></div>
+    </div>
+    
+    <div class="container mx-auto relative z-10">
+        <div class="max-w-4xl">
+            <nav class="flex mb-8 text-sm" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-2">
+                    <li><a href="{% url 'eduweb:index' %}" class="text-purple-200 hover:text-white transition-colors">Home</a></li>
+                    <li><i data-lucide="chevron-right" class="w-4 h-4 text-purple-300"></i></li>
+                    <li><span class="text-white font-medium">Blog</span></li>
+                </ol>
+            </nav>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl">
+                    <i data-lucide="newspaper" class="w-8 h-8 text-white"></i>
+                </div>
+                <div>
+                    <p class="text-purple-200 text-sm font-medium mb-1">News & Stories</p>
+                    <h1 class="text-4xl lg:text-6xl font-bold font-display">MIU Blog</h1>
+                </div>
+            </div>
+            
+            <p class="text-xl text-purple-100 mb-8 leading-relaxed max-w-3xl">
+                Discover the latest news, student stories, research breakthroughs, and insights from the MIU community.
+            </p>
+        </div>
+    </div>
 </section>
 
-
-<!-- ── BLOG BODY ──────────────────────────────────────────────── -->
-<section class="mb-section mb-bg-s3" aria-labelledby="blog-heading">
-  <div class="mb-container">
-
-    <div class="mb-blog-layout">
-
-      <!-- ── MAIN: post grid ── -->
-      <div>
-        <div class="mb-reveal">
-          <p class="mb-eyebrow">Latest Posts</p>
-          <h2 id="blog-heading">Recent Teaching</h2>
-          <div class="mb-divider"></div>
-        </div>
-
-        <div class="mb-blog-grid">
-
-          {% if posts %}
-            {% for post in posts %}
-            {# Use divisibleby to cycle through d1–d4 delay classes without the invalid mod filter #}
-            <article class="mb-card mb-blog-card mb-reveal {% if forloop.counter|divisibleby:4 %}d4{% elif forloop.counter|divisibleby:3 %}d3{% elif forloop.counter|divisibleby:2 %}d2{% else %}d1{% endif %}"
-                     aria-label="{{ post.title }}">
-              <div class="mb-blog-img-wrap">
-                {% if post.featured_image %}
-                <img src="{{ post.featured_image.url }}"
-                     alt="{{ post.featured_image_alt|default:post.title }}"
-                     class="mb-blog-img" loading="lazy">
-                {% else %}
-                <div class="mb-blog-img-fallback" aria-hidden="true">
-                  <i data-lucide="book-open" class="w-10 h-10 text-gospel-200"></i>
-                </div>
-                {% endif %}
-              </div>
-              <div class="mb-blog-body">
-                <div class="mb-blog-meta">
-                  <span class="mb-badge-gold">Teaching</span>
-                  <time class="mb-blog-date" datetime="{{ post.publish_date|date:'Y-m-d' }}">{{ post.publish_date|date:"M d, Y" }}</time>
-                </div>
-                <h3 class="mb-blog-title">
-                  <a href="{% url 'melbac:blog_detail' post.slug %}">{{ post.title }}</a>
-                </h3>
-                <p class="mb-blog-excerpt">{{ post.excerpt }}</p>
-                <div class="mb-blog-footer">
-                  <span class="mb-blog-author">{{ post.author_name|default:"Apostle John Daniel" }}</span>
-                  <a href="{% url 'melbac:blog_detail' post.slug %}" class="mb-blog-read-more">
-                    Read More
-                    <i data-lucide="arrow-right" class="w-3 h-3" aria-hidden="true"></i>
-                  </a>
-                </div>
-              </div>
-            </article>
-            {% endfor %}
-
-          {% else %}
-            <!-- Static fallback with all 10 known posts -->
-            {% for n in "1234567890"|make_list %}
-            <article class="mb-card mb-blog-card mb-reveal {% if forloop.counter|divisibleby:4 %}d4{% elif forloop.counter|divisibleby:3 %}d3{% elif forloop.counter|divisibleby:2 %}d2{% else %}d1{% endif %}"
-                     aria-label="Blog post {{ forloop.counter }}">
-              <div class="mb-blog-img-wrap">
-                <div class="mb-blog-img-fallback" aria-hidden="true">
-                  <i data-lucide="book-open" class="w-10 h-10 text-gospel-200"></i>
-                </div>
-              </div>
-              <div class="mb-blog-body">
-                <div class="mb-blog-meta">
-                  <span class="mb-badge-gold">Teaching</span>
-                  <time class="mb-blog-date">
-                    {% if forloop.counter == 1 %}Feb 28, 2026
-                    {% elif forloop.counter == 2 %}Feb 21, 2026
-                    {% elif forloop.counter == 3 %}Feb 14, 2026
-                    {% elif forloop.counter == 4 %}Feb 7, 2026
-                    {% elif forloop.counter == 5 %}Jan 31, 2026
-                    {% elif forloop.counter == 6 %}Jan 24, 2026
-                    {% elif forloop.counter == 7 %}Jan 17, 2026
-                    {% elif forloop.counter == 8 %}Jan 10, 2026
-                    {% elif forloop.counter == 9 %}Dec 21, 2025
-                    {% else %}Dec 14, 2025{% endif %}
-                  </time>
-                </div>
-                <h3 class="mb-blog-title">
-                  <a href="#">
-                    {% if forloop.counter == 1 %}61: Part 1 — Due Process in Christendom
-                    {% elif forloop.counter == 2 %}60: Part 5 — Forgiveness: Conclusion
-                    {% elif forloop.counter == 3 %}58: Part 4 — Understanding Blasphemy and the Sin Unto Death
-                    {% elif forloop.counter == 4 %}57: Part 3 — Conditions for God's Forgiveness Towards Men
-                    {% elif forloop.counter == 5 %}56: Part 2 — Steps to a Spirit of Genuine Repentance and of Faith Towards God
-                    {% elif forloop.counter == 6 %}55: Part 1 — The Mystery of Forgiveness
-                    {% elif forloop.counter == 7 %}54: Part 5 — The Authority of a Believer | Mystery of Divine Blessings and Prosperity
-                    {% elif forloop.counter == 8 %}53: Part 4 — The Authority of a Believer: How to be a God Pleaser
-                    {% elif forloop.counter == 9 %}52: Part 3 — The Authority of a Believer: Exercising Kingdom Authority
-                    {% else %}51: Part 2 — The Authority of a Believer: Exercising Kingdom Authority{% endif %}
-                  </a>
-                </h3>
-                <p class="mb-blog-excerpt">
-                  {% if forloop.counter == 1 %}There is a "Due Process" in the Kingdom of God that cannot be skipped, hacked, or hurried. We live in a microwave generation, but we serve a Crock-Pot God.
-                  {% elif forloop.counter == 2 %}In this conclusion of the series on God's Forgiveness, we touch on the spiritual necessity of the sacrifice of Jesus Christ and the specific steps required for genuine repentance.
-                  {% elif forloop.counter == 3 %}We address the serious and often misunderstood topic of blasphemy against the Holy Ghost, revealing specific boundaries to divine pardon that every believer must understand.
-                  {% elif forloop.counter == 4 %}We explore the biblical principles and requirements for receiving God's mercy, diving deep into the "if" found in God's promises.
-                  {% elif forloop.counter == 5 %}Part 2 explores the profound spiritual mechanics of God's Forgiveness and why humanity required a redeemer after the sin of Adam.
-                  {% elif forloop.counter == 6 %}A teaching on the spiritual mechanics of forgiveness — why forgiveness is an 11-letter word that signifies judgment.
-                  {% elif forloop.counter == 7 %}We dive deep into the Mystery of Divine Blessings and Prosperity, learning the divine principles that unlock true wealth through Wisdom, Knowledge, and Understanding.
-                  {% elif forloop.counter == 8 %}We continue our series on the "Authority of a Believer," focusing on the vital difference between being a "God Pleaser" versus a "Man Pleaser."
-                  {% elif forloop.counter == 9 %}We explore the spiritual mechanics of faith, confession, and the "last command" principle in exercising Kingdom Authority.
-                  {% else %}We dive deep into how we can exercise the dominion restored to us by Christ, tackling difficult challenges facing ministers of the Gospel today.{% endif %}
-                </p>
-                <div class="mb-blog-footer">
-                  <span class="mb-blog-author">Apostle John Daniel</span>
-                  <a href="{% url 'melbac:blog' %}" class="mb-blog-read-more">
-                    Read More <i data-lucide="arrow-right" class="w-3 h-3" aria-hidden="true"></i>
-                  </a>
-                </div>
-              </div>
-            </article>
-            {% endfor %}
-          {% endif %}
-
-        </div><!-- /blog-grid -->
-
-        <!-- Pagination -->
-        <nav class="mb-pagination" aria-label="Blog pagination">
-          <a href="#" class="mb-page-link mb-page-link-arrow" aria-label="Previous page">
-            <i data-lucide="chevron-left" class="w-4 h-4" aria-hidden="true"></i>
-          </a>
-          <a href="#" class="mb-page-link active" aria-current="page" aria-label="Page 1">1</a>
-          <a href="#" class="mb-page-link" aria-label="Page 2">2</a>
-          <a href="#" class="mb-page-link" aria-label="Page 3">3</a>
-          <span class="mb-page-link" aria-hidden="true">…</span>
-          <a href="#" class="mb-page-link" aria-label="Page 7">7</a>
-          <a href="#" class="mb-page-link mb-page-link-arrow" aria-label="Next page">
-            <i data-lucide="chevron-right" class="w-4 h-4" aria-hidden="true"></i>
-          </a>
-        </nav>
-      </div><!-- /main -->
-
-      <!-- ── SIDEBAR ── -->
-      <aside class="mb-blog-sidebar" aria-label="Blog sidebar">
-
-        <!-- Search -->
-        <div class="mb-sidebar-widget mb-card" style="padding:18px;">
-          <h3 class="mb-sidebar-title">Search</h3>
-          <form class="mb-blog-search" role="search" action="{% url 'melbac:blog' %}" method="get">
-            <label for="blog-search" class="sr-only">Search posts</label>
-            <input class="mb-input" type="search" id="blog-search" name="q"
-                   placeholder="Search teachings…"
-                   value="{{ request.GET.q|default:'' }}">
-            <button class="mb-blog-search-btn" type="submit" aria-label="Search">
-              <i data-lucide="search" class="w-4 h-4" aria-hidden="true"></i>
+<!-- Categories -->
+<section class="py-8 bg-white border-b border-gray-200">
+    <div class="container mx-auto">
+        <div class="flex flex-wrap gap-3">
+            <button class="px-6 py-2 bg-primary-950 text-white rounded-full font-semibold hover:bg-purple-800 transition-colors duration-200">
+                All Posts
             </button>
-          </form>
+            <button class="px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold hover:bg-gray-200 transition-colors duration-200">
+                Student Life
+            </button>
+            <button class="px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold hover:bg-gray-200 transition-colors duration-200">
+                Research
+            </button>
+            <button class="px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold hover:bg-gray-200 transition-colors duration-200">
+                Academics
+            </button>
+            <button class="px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold hover:bg-gray-200 transition-colors duration-200">
+                Events
+            </button>
+            <button class="px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold hover:bg-gray-200 transition-colors duration-200">
+                Alumni
+            </button>
         </div>
-
-        <!-- Recent Posts -->
-        <div class="mb-sidebar-widget mb-card" style="padding:18px;">
-          <h3 class="mb-sidebar-title">Recent Posts</h3>
-          {% if posts %}
-            {% for post in posts|slice:":5" %}
-            <div class="mb-sidebar-post-item">
-              <div>
-                <a href="{% url 'melbac:blog_detail' post.slug %}" class="mb-sidebar-post-title">{{ post.title }}</a>
-                <p class="mb-sidebar-post-date">{{ post.publish_date|date:"M d, Y" }}</p>
-              </div>
-            </div>
-            {% endfor %}
-          {% else %}
-            {% for n in "12345"|make_list %}
-            <div class="mb-sidebar-post-item">
-              <div>
-                <a href="#" class="mb-sidebar-post-title">
-                  {% if forloop.counter == 1 %}61: Part 1 — Due Process in Christendom
-                  {% elif forloop.counter == 2 %}60: Part 5 — Forgiveness: Conclusion
-                  {% elif forloop.counter == 3 %}58: Part 4 — Understanding Blasphemy and the Sin Unto Death
-                  {% elif forloop.counter == 4 %}57: Part 3 — Conditions for God's Forgiveness Towards Men
-                  {% else %}56: Part 2 — Steps to a Spirit of Genuine Repentance{% endif %}
-                </a>
-                <p class="mb-sidebar-post-date">
-                  {% if forloop.counter == 1 %}Feb 28, 2026
-                  {% elif forloop.counter == 2 %}Feb 21, 2026
-                  {% elif forloop.counter == 3 %}Feb 14, 2026
-                  {% elif forloop.counter == 4 %}Feb 7, 2026
-                  {% else %}Jan 31, 2026{% endif %}
-                </p>
-              </div>
-            </div>
-            {% endfor %}
-          {% endif %}
-        </div>
-
-        <!-- Archives -->
-        <div class="mb-sidebar-widget mb-card" style="padding:18px;">
-          <h3 class="mb-sidebar-title">Archives</h3>
-          <ul class="mb-archive-list" role="list">
-            <li class="mb-archive-item"><a href="#" class="mb-archive-link">February 2026</a><span class="mb-archive-count">4</span></li>
-            <li class="mb-archive-item"><a href="#" class="mb-archive-link">January 2026</a><span class="mb-archive-count">4</span></li>
-            <li class="mb-archive-item"><a href="#" class="mb-archive-link">December 2025</a><span class="mb-archive-count">3</span></li>
-            <li class="mb-archive-item"><a href="#" class="mb-archive-link">November 2025</a><span class="mb-archive-count">5</span></li>
-            <li class="mb-archive-item"><a href="#" class="mb-archive-link">October 2025</a><span class="mb-archive-count">7</span></li>
-            <li class="mb-archive-item"><a href="#" class="mb-archive-link">September 2025</a><span class="mb-archive-count">5</span></li>
-            <li class="mb-archive-item"><a href="#" class="mb-archive-link">August 2025</a><span class="mb-archive-count">7</span></li>
-            <li class="mb-archive-item"><a href="#" class="mb-archive-link">July 2025</a><span class="mb-archive-count">4</span></li>
-          </ul>
-        </div>
-
-        <!-- Apply CTA card -->
-        <div class="mb-card" style="padding:22px;background:var(--mb-primary-xlight);border-color:var(--mb-primary-light);text-align:center;">
-          <div class="mb-icon-wrap" style="width:44px;height:44px;margin:0 auto 14px;">
-            <i data-lucide="book-open" class="w-5 h-5 text-gospel-600" aria-hidden="true"></i>
-          </div>
-          <h3 style="font-family:var(--mb-font-heading);font-size:1rem;font-weight:700;color:var(--mb-text-heading);margin-bottom:8px;">Study With Us</h3>
-          <p style="font-family:var(--mb-font-body);font-size:0.875rem;color:var(--mb-text-muted);margin-bottom:16px;line-height:1.6;">Apply for admission — completely free — and go deeper in the Word.</p>
-          <a href="{% url 'melbac:contact' %}" class="mb-btn mb-btn-primary" style="width:100%;justify-content:center;">
-            <i data-lucide="send" class="w-4 h-4" aria-hidden="true"></i>
-            <span>Apply Now</span>
-          </a>
-        </div>
-
-      </aside><!-- /sidebar -->
-
-    </div><!-- /blog-layout -->
-  </div>
+    </div>
 </section>
+
+<!-- Featured Post -->
+<section class="py-16 bg-gradient-to-br from-purple-50 to-pink-50">
+    <div class="container mx-auto">
+        <div class="max-w-6xl mx-auto bg-white rounded-2xl overflow-hidden shadow-2xl border border-purple-100">
+            <div class="grid md:grid-cols-2">
+                <div class="h-64 md:h-full bg-gradient-to-br from-purple-200 to-pink-200 flex items-center justify-center">
+                    <i data-lucide="image" class="w-24 h-24 text-purple-400"></i>
+                </div>
+                <div class="p-8 md:p-12">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">FEATURED</span>
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Research</span>
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4 font-display">MIU Researchers Develop Breakthrough AI Technology for Early Disease Detection</h2>
+                    <p class="text-gray-600 mb-6 leading-relaxed">
+                        A team of MIU researchers has developed a revolutionary artificial intelligence system that can detect early signs of cancer and cardiovascular diseases with 95% accuracy, potentially saving thousands of lives.
+                    </p>
+                    <div class="flex items-center gap-4 text-sm text-gray-500 mb-6">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                            <span>Dr. Sarah Johnson</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                            <span>January 8, 2026</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                            <span>5 min read</span>
+                        </div>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-2 text-primary-950 font-semibold hover:gap-3 transition-all">
+                        Read Full Story
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% comment %} <!-- Blog Posts Grid -->
+<section class="py-20 bg-white">
+    <div class="container mx-auto">
+        <div class="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Post 1 -->
+            <article class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="h-48 bg-gradient-to-br from-blue-200 to-indigo-200 flex items-center justify-center">
+                    <i data-lucide="graduation-cap" class="w-16 h-16 text-blue-400"></i>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Student Life</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">10 Tips for First-Year Students at MIU</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                        Starting university can be overwhelming, but these essential tips from current students will help you navigate your first year successfully.
+                    </p>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                        <span>By Emily Chen</span>
+                        <span>Jan 5, 2026</span>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-2 text-blue-600 font-semibold text-sm hover:gap-3 transition-all">
+                        Read More
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </article>
+
+            <!-- Post 2 -->
+            <article class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="h-48 bg-gradient-to-br from-green-200 to-emerald-200 flex items-center justify-center">
+                    <i data-lucide="leaf" class="w-16 h-16 text-green-400"></i>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Sustainability</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">MIU Achieves Carbon Neutrality Goal</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                        Our campus has officially achieved carbon neutrality through renewable energy initiatives and sustainable practices.
+                    </p>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                        <span>By Michael Torres</span>
+                        <span>Jan 3, 2026</span>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-2 text-green-600 font-semibold text-sm hover:gap-3 transition-all">
+                        Read More
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </article>
+
+            <!-- Post 3 -->
+            <article class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="h-48 bg-gradient-to-br from-purple-200 to-pink-200 flex items-center justify-center">
+                    <i data-lucide="trophy" class="w-16 h-16 text-purple-400"></i>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">Athletics</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Women's Basketball Team Wins Conference Championship</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                        MIU's women's basketball team secured their third consecutive conference championship with a thrilling victory.
+                    </p>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                        <span>By Alex Kim</span>
+                        <span>Dec 28, 2025</span>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-2 text-purple-600 font-semibold text-sm hover:gap-3 transition-all">
+                        Read More
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </article>
+
+            <!-- Post 4 -->
+            <article class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="h-48 bg-gradient-to-br from-orange-200 to-amber-200 flex items-center justify-center">
+                    <i data-lucide="briefcase" class="w-16 h-16 text-orange-400"></i>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">Alumni</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Alumni Spotlight: Tech Entrepreneur Sarah Martinez</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                        Class of 2018 graduate Sarah Martinez shares her journey from MIU student to successful tech startup founder.
+                    </p>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                        <span>By David Lee</span>
+                        <span>Dec 22, 2025</span>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-2 text-orange-600 font-semibold text-sm hover:gap-3 transition-all">
+                        Read More
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </article>
+
+            <!-- Post 5 -->
+            <article class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="h-48 bg-gradient-to-br from-teal-200 to-cyan-200 flex items-center justify-center">
+                    <i data-lucide="globe" class="w-16 h-16 text-teal-400"></i>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-semibold">Global</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Study Abroad Program Expands to 20 New Countries</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                        MIU announces major expansion of international exchange programs, offering students more opportunities to study globally.
+                    </p>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                        <span>By Jessica Park</span>
+                        <span>Dec 18, 2025</span>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-2 text-teal-600 font-semibold text-sm hover:gap-3 transition-all">
+                        Read More
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </article>
+
+            <!-- Post 6 -->
+            <article class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+                <div class="h-48 bg-gradient-to-br from-rose-200 to-pink-200 flex items-center justify-center">
+                    <i data-lucide="heart" class="w-16 h-16 text-rose-400"></i>
+                </div>
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-xs font-semibold">Community</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Student Volunteers Log 50,000 Community Service Hours</h3>
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-3">
+                        MIU students give back to local communities through various volunteer initiatives and service projects.
+                    </p>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                        <span>By Rachel Green</span>
+                        <span>Dec 15, 2025</span>
+                    </div>
+                    <a href="#" class="inline-flex items-center gap-2 text-rose-600 font-semibold text-sm hover:gap-3 transition-all">
+                        Read More
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                </div>
+            </article>
+        </div>
+
+        <!-- Load More Button -->
+        <div class="text-center mt-12">
+            <button class="px-8 py-4 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-xl font-semibold hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 inline-flex items-center gap-2">
+                Load More Posts
+                <i data-lucide="chevron-down" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+</section> {% endcomment %}
+
+{% comment %} <!-- Newsletter Signup -->
+<section class="py-20 bg-gradient-to-br from-primary-950 via-purple-900 to-indigo-900 text-white">
+    <div class="container mx-auto text-center">
+        <div class="max-w-2xl mx-auto">
+            <i data-lucide="mail" class="w-16 h-16 mx-auto mb-6 text-purple-300"></i>
+            <h2 class="text-4xl font-bold mb-4 font-display">Stay Updated</h2>
+            <p class="text-xl text-purple-100 mb-8">
+                Subscribe to our newsletter and never miss important updates, stories, and announcements from MIU.
+            </p>
+            <form class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                <input type="email" placeholder="Enter your email" required
+                    class="flex-1 px-6 py-4 rounded-xl text-gray-900 focus:ring-2 focus:ring-purple-300 focus:outline-none">
+                <button type="submit" 
+                    class="px-8 py-4 bg-white text-primary-950 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-300 whitespace-nowrap">
+                    Subscribe
+                </button>
+            </form>
+            <p class="text-sm text-purple-200 mt-4">We respect your privacy. Unsubscribe at any time.</p>
+        </div>
+    </div>
+</section> {% endcomment %}
 
 {% endblock %}

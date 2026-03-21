@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ post.title }} | MIU Blog{% endblock %}
+
+{% block meta_tags %}
+<meta name="description" content="{{ post.meta_description|default:post.excerpt }}">
+<meta name="keywords" content="{{ post.meta_keywords }}">
+<meta name="author" content="{{ post.author_name }}">
+
+<!-- Open Graph / Social Media -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ post.title }}">
+<meta property="og:description" content="{{ post.excerpt }}">
+{% if post.featured_image %}
+<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ post.featured_image.url }}">
+{% endif %}
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="article:published_time" content="{{ post.publish_date|date:'c' }}">
+<meta property="article:author" content="{{ post.author_name }}">
+{% if post.category %}
+<meta property="article:section" content="{{ post.category.name }}">
+{% endif %}
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ post.title }}">
+<meta name="twitter:description" content="{{ post.excerpt }}">
+{% if post.featured_image %}
+<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ post.featured_image.url }}">
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-primary-950 via-purple-900 to-indigo-900 text-white py-16 lg:py-24 overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-20 left-10 w-64 h-64 bg-purple-300 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-10 w-96 h-96 bg-indigo-300 rounded-full blur-3xl"></div>
+    </div>
+    
+    <div class="container mx-auto relative z-10">
+        <div class="max-w-4xl mx-auto">
+            <nav class="flex mb-8 text-sm" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-2">
+                    <li><a href="{% url 'eduweb:index' %}" class="text-purple-200 hover:text-white transition-colors">Home</a></li>
+                    <li><i data-lucide="chevron-right" class="w-4 h-4 text-purple-300"></i></li>
+                    <li><a href="{% url 'eduweb:blog' %}" class="text-purple-200 hover:text-white transition-colors">Blog</a></li>
+                    {% if post.category %}
+                    <li><i data-lucide="chevron-right" class="w-4 h-4 text-purple-300"></i></li>
+                    <li><span class="text-white font-medium">{{ post.category.name }}</span></li>
+                    {% endif %}
+                </ol>
+            </nav>
+
+            <!-- Category Badge -->
+            {% if post.category %}
+            <div class="mb-4">
+                <span class="px-4 py-2 bg-{{ post.category.color }}-500 text-white rounded-full text-sm font-semibold">
+                    {{ post.category.name }}
+                </span>
+            </div>
+            {% endif %}
+
+            <!-- Title -->
+            <h1 class="text-4xl lg:text-5xl font-bold font-display mb-4">{{ post.title }}</h1>
+            
+            {% if post.subtitle %}
+            <p class="text-xl text-purple-100 mb-6">{{ post.subtitle }}</p>
+            {% endif %}
+
+            <!-- Meta Information -->
+            <div class="flex flex-wrap items-center gap-6 text-purple-200 text-sm">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="user" class="w-4 h-4"></i>
+                    <span>{{ post.author_name }}</span>
+                    {% if post.author_title %}
+                    <span class="text-purple-300">• {{ post.author_title }}</span>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                    <span>{{ post.publish_date|date:"F d, Y" }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                    <span>{{ post.read_time }} min read</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                    <span>{{ post.views_count }} views</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Article Content -->
+<article class="py-16 bg-white">
+    <div class="container mx-auto">
+        <div class="max-w-4xl mx-auto">
+            <!-- Featured Image -->
+            {% if post.featured_image %}
+            <div class="mb-12 rounded-2xl overflow-hidden shadow-2xl">
+                <img src="{{ post.featured_image.url }}" 
+                     alt="{{ post.featured_image_alt|default:post.title }}" 
+                     class="w-full h-auto">
+            </div>
+            {% endif %}
+
+            <!-- Content -->
+            <div class="prose prose-lg max-w-none">
+                {{ post.content|safe }}
+            </div>
+
+            <!-- Tags -->
+            {% if post.tags %}
+            <div class="mt-12 pt-8 border-t border-gray-200">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Tags:</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for tag in post.tags %}
+                    <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                        #{{ tag }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Share Buttons -->
+            <div class="mt-8 pt-8 border-t border-gray-200">
+                <h3 class="text-sm font-semibold text-gray-700 mb-4">Share this article:</h3>
+                <div class="flex gap-3">
+                    <a href="https://twitter.com/intent/tweet?url={{ request.build_absolute_uri }}&text={{ post.title }}" 
+                       target="_blank"
+                       class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <i data-lucide="twitter" class="w-5 h-5 inline"></i> Twitter
+                    </a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" 
+                       target="_blank"
+                       class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors">
+                        <i data-lucide="facebook" class="w-5 h-5 inline"></i> Facebook
+                    </a>
+                    <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ request.build_absolute_uri }}&title={{ post.title }}" 
+                       target="_blank"
+                       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i data-lucide="linkedin" class="w-5 h-5 inline"></i> LinkedIn
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</article>
+
+<!-- Related Posts -->
+{% if related_posts %}
+<section class="py-16 bg-gray-50">
+    <div class="container mx-auto">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl font-bold text-gray-900 mb-8 font-display">Related Articles</h2>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                {% for related in related_posts %}
+                <article class="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+                    <div class="h-48 bg-gradient-to-br from-{{ related.category.color|default:'blue' }}-200 to-{{ related.category.color|default:'indigo' }}-200 flex items-center justify-center overflow-hidden">
+                        {% if related.featured_image %}
+                        <img src="{{ related.featured_image.url }}" 
+                             alt="{{ related.featured_image_alt|default:related.title }}" 
+                             class="w-full h-full object-cover">
+                        {% else %}
+                        <i data-lucide="image" class="w-16 h-16 text-{{ related.category.color|default:'blue' }}-400"></i>
+                        {% endif %}
+                    </div>
+                    <div class="p-6">
+                        {% if related.category %}
+                        <span class="px-3 py-1 bg-{{ related.category.color }}-100 text-{{ related.category.color }}-700 rounded-full text-xs font-semibold mb-3 inline-block">
+                            {{ related.category.name }}
+                        </span>
+                        {% endif %}
+                        <h3 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2">{{ related.title }}</h3>
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-3">{{ related.excerpt }}</p>
+                        <a href="{% url 'eduweb:blog_detail' related.slug %}" 
+                           class="inline-flex items-center gap-2 text-{{ related.category.color|default:'blue' }}-600 font-semibold text-sm hover:gap-3 transition-all">
+                            Read More
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Back to Blog -->
+<section class="py-12 bg-white border-t border-gray-200">
+    <div class="container mx-auto text-center">
+        <a href="{% url 'eduweb:blog' %}" 
+           class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-xl font-semibold hover:shadow-xl transition-all duration-300">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            Back to All Posts
+        </a>
+    </div>
+</section>
+
+{% endblock %}

@@ -6,7 +6,8 @@ from django.conf.urls.static import static
 app_name = 'eduweb'
 
 urlpatterns = [
-    path('base', views.basefile, name='basefile'),
+    path('contact', views.contact, name='contact'),
+    path('activities/', views.activities, name='activities'),
     path('auth/', views.auth_page, name='auth_page'),
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
     path('logout/', views.user_logout, name='logout'),

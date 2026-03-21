@@ -41,8 +41,11 @@ from .emailservices import *
 
 
 
-def basefile(request):
-    return render(request, 'base.html')
+def contact(request):
+    return render(request, 'contact.html')
+
+def activities(request):
+    return render(request, 'activities.html')
 
 
 
@@ -469,7 +472,7 @@ def resend_verification(request):
 
 @check_for_auth
 def index(request):
-    from .models import Program, Faculty, Testimonial
+    from .models import Program, Faculty, Testimonial, BlogPost
     featured_programs = Program.objects.filter(
         is_active=True, is_featured=True
     ).select_related('department__faculty').order_by('display_order', 'name')[:6]
@@ -477,10 +480,14 @@ def index(request):
         is_active=True
     ).prefetch_related('departments').order_by('display_order', 'name')[:6]
     testimonials = Testimonial.objects.filter(is_active=True).order_by('order')
+    recent_posts = BlogPost.objects.filter(
+        status='published'
+    ).order_by('-publish_date')[:6]
     return render(request, 'index.html', {
         'featured_programs': featured_programs,
         'faculties': faculties,
         'testimonials': testimonials,
+        'recent_posts': recent_posts,
     })
 
 @check_for_auth

@@ -1,382 +1,666 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-  <meta name="theme-color" content="#840384">
-  <meta name="author" content="Melchisedec Graduate Bible Academy">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="keywords"
+        content="{{ site_config.meta_keywords|default:'Melchisedec International University, MIU, United States university, accredited university USA' }}">
+    <meta property="og:title"
+        content="{{ site_config.school_name|default:'Melchisedec International University' }} – Secular &amp; Theological Education in the USA">
+    <meta property="og:description"
+        content="{{ site_config.meta_description|default:'A United States-based university offering accredited secular and theological programs.' }}">
+    <meta name="twitter:title"
+        content="{{ site_config.school_name|default:'Melchisedec International University' }} ({{ site_config.school_short_name|default:'MIU' }})">
+    <meta name="twitter:description"
+        content="{{ site_config.meta_description|default:'Accredited secular and theological degree programs designed for global academic and ministry excellence.' }}">
 
-  {% block meta_tags %}
-  <meta name="description" content="Melchisedec Graduate Bible Academy (MELBAC) — An admission-free and tuition-free Bible university offering Undergraduate, Masters and Doctoral degree programs in Lagos, Nigeria.">
-  <meta name="keywords" content="Melchisedec Graduate Bible Academy, MELBAC, free Bible university, Christian education, theological degrees, Lagos Nigeria">
-  {% endblock %}
+    <!-- Dynamic Meta Tags - Allow child templates to override -->
+    {% block meta_tags %}
+    <meta name="description"
+        content="Melchisedec International University - Empowering global education with flexible online programs, world-class faculty, and innovative learning experiences.">
+    <meta name="keywords"
+        content="online university, distance learning, international education, online degrees, MIU, Melchisedec university, accredited online programs">
+    {% endblock %}
 
-  {% block og_tags %}
-  <meta property="og:type"        content="website">
-  <meta property="og:site_name"   content="Melchisedec Graduate Bible Academy">
-  <meta property="og:title"       content="MELBAC — Freely Ye Have Received, Freely Give">
-  <meta property="og:description" content="A tuition-free, admission-free Bible university training end-time ministers of the Gospel.">
-  <meta property="og:url"         content="{{ request.build_absolute_uri }}">
-  <meta name="twitter:card"       content="summary_large_image">
-  {% endblock %}
+    <meta name="author" content="{{ site_config.school_name|default:'Melchisedec International University' }}">
+    <meta name="theme-color" content="{{ site_config.theme_color|default:'#840384' }}">
 
-  <title>{% block title %}Melchisedec Graduate Bible Academy — MELBAC{% endblock %}</title>
-  <link rel="canonical" href="{{ request.build_absolute_uri }}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{% static 'css/melbac.css' %}">
-  <script src="https://unpkg.com/lucide@latest" defer></script>
+    <!-- Open Graph / Social Media Meta Tags -->
+    {% block og_tags %}
+    <meta property="og:type" content="website">
+    <meta property="og:title"
+        content="{{ site_config.school_short_name|default:'MIU' }} – {{ site_config.school_name|default:'Melchisedec International University' }}">
+    <meta property="og:description"
+        content="{{ site_config.meta_description|default:'Empowering global education with flexible online programs' }}">
+    <meta property="og:image"
+        content="{% if site_config.og_image %}{{ site_config.og_image.url }}{% else %}{% static 'images/miulogo.png' %}{% endif %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    {% endblock %}
 
-  {% block structured_data %}{% endblock %}
-  {% block extra_css %}{% endblock %}
+    <!-- Twitter Card Meta Tags -->
+    {% block twitter_tags %}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title"
+        content="{{ site_config.school_short_name|default:'MIU' }} – {{ site_config.school_name|default:'Melchisedec International University' }}">
+    <meta name="twitter:description"
+        content="{{ site_config.meta_description|default:'Empowering global education with flexible online programs' }}">
+    <meta name="twitter:image"
+        content="{% if site_config.og_image %}{{ site_config.og_image.url }}{% else %}{% static 'images/og-image.jpg' %}{% endif %}">
+    {% endblock %}
+
+    <title>{% block title %}MIU – Melchisedec International University{% endblock %}</title>
+
+    <!-- Favicon -->
+    {% if site_config.favicon %}
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ site_config.favicon.url }}">
+    <link rel="icon" type="image/png" sizes="48x48" href="{{ site_config.favicon.url }}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{{ site_config.favicon.url }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ site_config.favicon.url }}">
+    <link rel="apple-touch-icon" href="{{ site_config.favicon.url }}">
+    {% else %}
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon.png' %}">
+    <link rel="icon" type="image/png" sizes="48x48" href="{% static 'favicon.png' %}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{% static 'favicon.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'apple-touch-icon.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
+    {% endif %}
+
+    <!-- Canonical URL -->
+    {% block canonical %}
+    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+    {% endblock %}
+
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+
+    <!-- Google Fonts - Inter & Poppins -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+    <!-- Font override: forces Inter/Poppins directly in the browser without depending on Tailwind compilation.
+         This guarantees fonts display correctly even if Tailwind hasn't rebuilt the stylesheet yet. -->
+    <style>
+        /* Base font for all body text */
+        *,
+        *::before,
+        *::after {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        /* Headings use Poppins */
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .font-heading,
+        .font-\[\'Poppins\'\] {
+            font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+        }
+
+        /* Explicit Inter override for nav, body text, buttons */
+        body,
+        .font-\[\'Inter\'\] {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+    </style>
+
+    <!-- SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+
+    <!-- Structured Data -->
+    {% block structured_data %}{% endblock %}
+
+    {% block extra_css %}{% endblock %}
 </head>
 
-<body>
+<!-- font-['Inter'] applied directly on body to guarantee Inter loads regardless of Tailwind config resolution -->
 
-  <a href="#main-content"
-     class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100]
-            focus:px-5 focus:py-3 focus:bg-gospel-600 focus:text-white focus:rounded-lg
-            focus:mb-font-ui focus:font-bold focus:text-sm focus:shadow-lg">
-    Skip to main content
-  </a>
+<body class="font-['Inter'] text-gray-900 bg-gray-50 antialiased">
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       HEADER
-       ═══════════════════════════════════════════════════════════════ -->
-  <header id="mb-header" class="fixed top-0 left-0 right-0 z-50" role="banner">
-    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content"
+       class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-6 focus:py-3 focus:bg-gold-400 focus:text-primary-950 focus:rounded-lg focus:font-semibold focus:shadow-lg">
+        Skip to main content
+    </a>
 
-      <!-- Single flex row -->
-      <div class="flex items-center justify-between gap-4 mb-header-row">
+    <!-- ================= NAVIGATION ================= -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass-effect shadow-md border-b border-purple-100 transition-shadow duration-300"
+            role="banner">
+        <nav class="container mx-auto" aria-label="Main navigation">
+            <div class="flex items-center justify-between h-20 lg:h-24 px-4 lg:px-0">
 
-        <!-- ── LOGO ── -->
-        <a href="{% url 'melbac:index' %}"
-           class="flex items-center gap-2 sm:gap-3 flex-shrink-0 group"
-           aria-label="Melchisedec Graduate Bible Academy — Home">
+                <!-- Logo -->
+                <a href="{% url 'eduweb:index' %}"
+                   class="flex items-center space-x-3 group focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2 rounded-lg"
+                   aria-label="{{ site_config.school_name|default:'Melchisedec International University' }} Home">
+                    <div class="relative">
+                        {% if site_config.logo %}
+                        <img src="{{ site_config.logo.url }}"
+                             alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
+                             class="h-28 lg:h-32 w-40 object-contain transition-transform duration-300 group-hover:scale-105"
+                             width="auto" height="100">
+                        {% else %}
+                        <img src="{% static 'images/miulogo.png' %}"
+                             alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
+                             class="h-28 lg:h-32 w-40 object-contain transition-transform duration-300 group-hover:scale-105"
+                             width="auto" height="100">
+                        {% endif %}
+                    </div>
+                </a>
 
-          {# Logo image — shown when file exists #}
-          <img id="mb-logo-img"
-               src="{% static 'favicon.png' %}"
-               alt="Melchisedec Graduate Bible Academy"
-               class="mb-logo-img-el"
-               onerror="this.style.display='none';document.getElementById('mb-logo-emblem').style.display='flex';">
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex items-center space-x-1">
+                    <a href="{% url 'eduweb:index' %}"
+                       class="px-4 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'index' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                        Home
+                    </a>
 
-          {# Fallback emblem — shown only when image is missing #}
-          <div id="mb-logo-emblem" class="mb-logo-emblem-el items-center gap-2">
-            <div class="relative w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0" aria-hidden="true">
-              <div class="absolute inset-0 rounded-full border-2 border-gospel-600 group-hover:border-gold-500 transition-colors duration-300"></div>
-              <div class="absolute inset-1 rounded-full bg-gospel-50 flex items-center justify-center">
-                <span class="text-gospel-600 mb-font-heading font-bold text-xs leading-none">M</span>
-              </div>
-            </div>
-            <div class="leading-tight">
-              <div class="mb-font-heading text-sm font-bold text-gospel-700 group-hover:text-gospel-600 transition-colors tracking-wide">MELBAC</div>
-              <div class="mb-font-ui text-[0.5rem] text-neutral-500 font-semibold tracking-widest uppercase hidden sm:block">Melchisedec Graduate Bible Academy</div>
-            </div>
-          </div>
+                    <a href="{% url 'eduweb:about' %}"
+                       class="px-4 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'about' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                        About
+                    </a>
 
-        </a>
+                    <!-- Faculties Dropdown -->
+                    <div class="relative group">
+                        <button class="px-4 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:text-primary-950 hover:bg-purple-50"
+                                aria-haspopup="true" aria-expanded="false">
+                            Academics
+                            <i data-lucide="chevron-down"
+                               class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"></i>
+                        </button>
+                        <div class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 animate-slide-down"
+                             role="menu">
+                            <div class="p-2">
+                                {% for faculty in all_faculties %}
+                                <a href="{% url 'eduweb:faculty_detail' faculty.slug %}"
+                                   class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item">
+                                    <i data-lucide="{{ faculty.icon }}" class="w-5 h-5 text-primary-950"></i>
+                                    <span class="text-sm font-medium font-['Inter'] group-hover/item:text-primary-950 text-gray-700">{{ faculty.name }}</span>
+                                </a>
+                                {% empty %}
+                                <p class="text-sm font-['Inter'] text-gray-500 px-4 py-2">No faculties available</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
 
-        <!-- ── DESKTOP NAV ── -->
-        <nav class="hidden lg:flex items-center gap-0.5 flex-1 justify-center"
-             role="menubar" aria-label="Primary navigation">
-          <a href="{% url 'melbac:index' %}"       role="menuitem" class="mb-nav-link {% if request.resolver_match.url_name == 'index'      %}active{% endif %}">Home</a>
-          <a href="{% url 'melbac:academics' %}"   role="menuitem" class="mb-nav-link {% if request.resolver_match.url_name == 'academics'   %}active{% endif %}">Academics</a>
-          <a href="{% url 'melbac:admissions' %}"  role="menuitem" class="mb-nav-link {% if request.resolver_match.url_name == 'admissions'  %}active{% endif %}">Admissions</a>
-          <a href="{% url 'melbac:activities' %}"  role="menuitem" class="mb-nav-link {% if request.resolver_match.url_name == 'activities'  %}active{% endif %}">Activities</a>
-          <a href="{% url 'melbac:about' %}"       role="menuitem" class="mb-nav-link {% if request.resolver_match.url_name == 'about'       %}active{% endif %}">About</a>
-          <a href="{% url 'melbac:contact' %}"     role="menuitem" class="mb-nav-link {% if request.resolver_match.url_name == 'contact'     %}active{% endif %}">Contact</a>
-          <a href="{% url 'melbac:blog' %}"        role="menuitem" class="mb-nav-link {% if request.resolver_match.url_name == 'blog'        %}active{% endif %}">Blog</a>
-        </nav>
+                    <!-- Programs Dropdown -->
+                    <div class="relative group">
+                        <button class="px-4 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:text-primary-950 hover:bg-purple-50"
+                                aria-haspopup="true" aria-expanded="false">
+                            Programs
+                            <i data-lucide="chevron-down"
+                               class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"></i>
+                        </button>
+                        <div class="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 animate-slide-down"
+                             role="menu">
+                            <div class="p-2">
+                                {% for course in all_courses %}
+                                <a href="{% url 'eduweb:program_detail' course.slug %}"
+                                   class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600"
+                                   role="menuitem">
+                                    <i data-lucide="{{ course.icon|default:"book-open" }}" class="w-5 h-5 text-accent-600"></i>
+                                    <span class="text-sm font-medium font-['Inter'] group-hover/item:text-accent-700 text-gray-700">{{ course.name }}</span>
+                                </a>
+                                {% empty %}
+                                <p class="text-sm font-['Inter'] text-gray-500 px-4 py-2">No programs available</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
 
-        <!-- ── RIGHT: SOCIALS + CTA + HAMBURGER ── -->
-        <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <a href="{% url 'eduweb:activities' %}"
+                       class="px-4 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'admission' in request.resolver_match.url_name %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                        Activities
+                    </a>
 
-          <!-- Social icons — desktop only -->
-          <div class="hidden xl:flex items-center gap-1.5" aria-label="Social media links">
-            <a href="https://www.facebook.com/melchisedecacademy"
-               target="_blank" rel="noopener noreferrer"
-               aria-label="Facebook page" class="mb-social-btn" title="Facebook">
-              <i data-lucide="facebook" class="w-3.5 h-3.5" aria-hidden="true"></i>
-            </a>
-            <a href="https://www.instagram.com/melchisedec_academy/"
-               target="_blank" rel="noopener noreferrer"
-               aria-label="Instagram page" class="mb-social-btn" title="Instagram">
-              <i data-lucide="instagram" class="w-3.5 h-3.5" aria-hidden="true"></i>
-            </a>
-            <a href="https://www.youtube.com/channel/UCmIBajrcfeWnuqHoYCl-raw"
-               target="_blank" rel="noopener noreferrer"
-               aria-label="YouTube channel" class="mb-social-btn" title="YouTube">
-              <i data-lucide="youtube" class="w-3.5 h-3.5" aria-hidden="true"></i>
-            </a>
-            <a href="https://twitter.com/melbacedu"
-               target="_blank" rel="noopener noreferrer"
-               aria-label="Twitter / X" class="mb-social-btn" title="Twitter/X">
-              <i data-lucide="twitter" class="w-3.5 h-3.5" aria-hidden="true"></i>
-            </a>
-            <a href="http://tiktok.com/@melchisedec1989"
-               target="_blank" rel="noopener noreferrer"
-               aria-label="TikTok page" class="mb-social-btn" title="TikTok">
-              <i data-lucide="music-2" class="w-3.5 h-3.5" aria-hidden="true"></i>
-            </a>
-          </div>
+                    <a href="{% url 'eduweb:contact' %}"
+                       class="px-4 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'contact_submit' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                        Contact
+                    </a>
 
-          <!-- Vertical separator -->
-          <div class="hidden xl:block w-px h-5 bg-neutral-200" aria-hidden="true"></div>
+                    <a href="{% url 'eduweb:blog' %}"
+                       class="px-4 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'blog' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                        Blog
+                    </a>
 
-          <!-- Apply CTA -->
-          <a href="{% url 'eduweb:auth_page' %}"
-             class="hidden lg:inline-flex mb-btn mb-btn-primary text-sm">
-            <i data-lucide="book-open" class="w-4 h-4" aria-hidden="true"></i>
-            <span>Apply Now</span>
-          </a>
-
-          <!-- Hamburger (mobile only) -->
-          <button id="mb-menu-btn"
-                  type="button"
-                  class="lg:hidden flex flex-col items-center justify-center gap-1.5
-                         w-9 h-9 rounded-lg hover:bg-neutral-100 transition-colors"
-                  aria-expanded="false"
-                  aria-controls="mb-mobile-menu"
-                  aria-label="Open navigation menu">
-            <span class="hline w-5 h-0.5 bg-neutral-700 rounded transition-all duration-300" aria-hidden="true"></span>
-            <span class="hline w-5 h-0.5 bg-neutral-700 rounded transition-all duration-300" aria-hidden="true"></span>
-            <span class="hline w-5 h-0.5 bg-neutral-700 rounded transition-all duration-300" aria-hidden="true"></span>
-          </button>
-        </div>
-
-      </div><!-- /flex row -->
-
-      <!-- ── MOBILE MENU ── -->
-      <div id="mb-mobile-menu" role="region" aria-label="Mobile navigation">
-        <div class="border-t border-neutral-100 pb-4 pt-2 flex flex-col gap-0.5">
-          <a href="{% url 'melbac:index' %}"       class="mb-nav-link block py-2.5 {% if request.resolver_match.url_name == 'index'      %}active{% endif %}">Home</a>
-          <a href="{% url 'melbac:academics' %}"   class="mb-nav-link block py-2.5 {% if request.resolver_match.url_name == 'academics'   %}active{% endif %}">Academics</a>
-          <a href="{% url 'melbac:admissions' %}"  class="mb-nav-link block py-2.5 {% if request.resolver_match.url_name == 'admissions'  %}active{% endif %}">Admissions</a>
-          <a href="{% url 'melbac:activities' %}"  class="mb-nav-link block py-2.5 {% if request.resolver_match.url_name == 'activities'  %}active{% endif %}">Activities</a>
-          <a href="{% url 'melbac:about' %}"       class="mb-nav-link block py-2.5 {% if request.resolver_match.url_name == 'about'       %}active{% endif %}">About</a>
-          <a href="{% url 'melbac:contact' %}"     class="mb-nav-link block py-2.5 {% if request.resolver_match.url_name == 'contact'     %}active{% endif %}">Contact</a>
-          <a href="{% url 'melbac:blog' %}"        class="mb-nav-link block py-2.5 {% if request.resolver_match.url_name == 'blog'        %}active{% endif %}">Blog</a>
-
-          <!-- Socials row on mobile -->
-          <div class="flex items-center gap-2 px-2 pt-3 pb-1" aria-label="Social media links">
-            <a href="https://www.facebook.com/melchisedecacademy" target="_blank" rel="noopener noreferrer" aria-label="Facebook"  class="mb-social-btn"><i data-lucide="facebook"  class="w-3.5 h-3.5" aria-hidden="true"></i></a>
-            <a href="https://www.instagram.com/melchisedec_academy/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="mb-social-btn"><i data-lucide="instagram" class="w-3.5 h-3.5" aria-hidden="true"></i></a>
-            <a href="https://www.youtube.com/channel/UCmIBajrcfeWnuqHoYCl-raw" target="_blank" rel="noopener noreferrer" aria-label="YouTube"   class="mb-social-btn"><i data-lucide="youtube"   class="w-3.5 h-3.5" aria-hidden="true"></i></a>
-            <a href="https://twitter.com/melbacedu" target="_blank" rel="noopener noreferrer" aria-label="Twitter/X" class="mb-social-btn"><i data-lucide="twitter"   class="w-3.5 h-3.5" aria-hidden="true"></i></a>
-            <a href="http://tiktok.com/@melchisedec1989" target="_blank" rel="noopener noreferrer" aria-label="TikTok"    class="mb-social-btn"><i data-lucide="music-2"   class="w-3.5 h-3.5" aria-hidden="true"></i></a>
-          </div>
-
-          <div class="pt-2 px-0">
-            <a href="{% url 'melbac:admissions' %}"
-               class="mb-btn mb-btn-primary w-full justify-center text-sm">
-              <i data-lucide="book-open" class="w-4 h-4" aria-hidden="true"></i>
-              Apply Now — It's Free
-            </a>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /max-w container -->
-  </header>
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       MAIN CONTENT
-       ═══════════════════════════════════════════════════════════════ -->
-  <main id="main-content" class="mb-main-content" tabindex="-1">
-    {% block content %}{% endblock %}
-  </main>
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       FOOTER
-       ═══════════════════════════════════════════════════════════════ -->
-  <footer class="mb-footer" role="contentinfo" aria-label="Site footer">
-
-    <div class="mb-footer-container mb-footer-top">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
-
-        <!-- Brand -->
-        <div class="sm:col-span-2 lg:col-span-1">
-          <div class="mb-4">
-            <a href="{% url 'melbac:index' %}"
-               class="flex items-center gap-3 group mb-footer-logo-link"
-               aria-label="Melchisedec Graduate Bible Academy — Home">
-
-              {# Footer logo image #}
-              <img id="mb-footer-logo-img"
-                   src="{% static 'favicon.png' %}"
-                   alt="Melchisedec Graduate Bible Academy"
-                   class="mb-footer-logo-img-el"
-                   onerror="this.style.display='none';document.getElementById('mb-footer-logo-emblem').style.display='flex';">
-
-              {# Fallback emblem #}
-              <div id="mb-footer-logo-emblem" class="mb-footer-logo-emblem-el items-center gap-3">
-                <div class="relative w-12 h-12 flex-shrink-0" aria-hidden="true">
-                  <div class="absolute inset-0 rounded-full border-2 border-white/30 group-hover:border-white/60 transition-colors duration-300"></div>
-                  <div class="absolute inset-1 rounded-full bg-white/10 flex items-center justify-center">
-                    <span class="text-white mb-font-heading font-bold text-base leading-none">M</span>
-                  </div>
+                    <!-- CTA Buttons -->
+                    <div class="flex items-center gap-3 ml-4">
+                        {% if user.is_authenticated %}
+                        {% if has_pending_application %}
+                        <a href="{% url 'eduweb:application_status' %}"
+                           class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold font-['Inter'] text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            View Application
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                        </a>
+                        {% else %}
+                        <a href="{% url 'eduweb:apply' %}"
+                           class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold font-['Inter'] text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            Apply Now
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'eduweb:logout' %}"
+                           class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold font-['Inter'] text-sm hover:shadow-lg transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                            Logout
+                        </a>
+                        {% else %}
+                        <a href="{% url 'eduweb:auth_page' %}"
+                           class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold font-['Inter'] text-sm hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            Sign In / Apply
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="leading-tight min-w-0">
-                  <div class="mb-font-heading font-bold text-white group-hover:text-white/80 transition-colors mb-footer-logo-name">MELBAC</div>
-                  <div class="mb-font-ui font-medium text-white/45 uppercase tracking-widest mb-footer-logo-sub">
-                    Melchisedec Graduate<br>Bible Academy
-                  </div>
+
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn"
+                        class="lg:hidden p-2 rounded-lg hover:bg-purple-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
+                        aria-label="Toggle mobile menu" aria-expanded="false">
+                    <i data-lucide="menu" class="w-6 h-6 text-primary-950" id="menuIcon"></i>
+                </button>
+            </div>
+
+            <!-- Mobile Navigation -->
+            <div id="mobileMenu" class="lg:hidden hidden bg-white border-t border-purple-100 animate-slide-down">
+                <div class="py-4 space-y-1 px-4">
+                    <a href="{% url 'eduweb:index' %}"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'index' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                        <i data-lucide="home" class="w-5 h-5"></i>
+                        <span class="font-medium font-['Inter']">Home</span>
+                    </a>
+
+                    <a href="{% url 'eduweb:about' %}"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'about' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                        <i data-lucide="info" class="w-5 h-5"></i>
+                        <span class="font-medium font-['Inter']">About Us</span>
+                    </a>
+
+                    <!-- Mobile Faculties Dropdown -->
+                    <div>
+                        <button class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:bg-purple-50"
+                                id="mobileFacultiesBtn" aria-expanded="false">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                                <span class="font-medium font-['Inter']">Academics</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200"
+                               id="facultiesChevron"></i>
+                        </button>
+                        <div id="mobileFacultiesMenu" class="hidden bg-purple-50 space-y-1 py-2 mt-1 rounded-lg">
+                            {% for faculty in all_faculties %}
+                            <a href="{% url 'eduweb:faculty_detail' faculty.slug %}"
+                               class="flex items-center gap-3 px-10 py-2.5 text-sm font-['Inter'] rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-600 hover:text-primary-950 hover:bg-white">
+                                <i data-lucide="{{ faculty.icon }}" class="w-4 h-4"></i>
+                                {{ faculty.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Mobile Programs Dropdown -->
+                    <div>
+                        <button class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:bg-purple-50"
+                                id="mobileProgramsBtn" aria-expanded="false">
+                            <div class="flex items-center gap-3">
+                                <i data-lucide="book-open" class="w-5 h-5"></i>
+                                <span class="font-medium font-['Inter']">Programs</span>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200"
+                               id="programsChevron"></i>
+                        </button>
+                        <div id="mobileProgramsMenu" class="hidden bg-orange-50 space-y-1 py-2 mt-1 rounded-lg">
+                            {% for course in all_courses %}
+                            <a href="{% url 'eduweb:program_detail' course.slug %}"
+                               class="flex items-center gap-3 px-10 py-2.5 text-sm font-['Inter'] rounded-lg mx-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-600 text-gray-600 hover:text-accent-700 hover:bg-white">
+                                <i data-lucide="{{ course.icon }}" class="w-4 h-4"></i>
+                                {{ course.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <a href="{% url 'eduweb:activities' %}"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'admission' in request.resolver_match.url_name %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                        <span class="font-medium font-['Inter']">Activities</span>
+                    </a>
+
+                    <a href="{% url 'eduweb:contact' %}"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'admission' in request.resolver_match.url_name %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                        <span class="font-medium font-['Inter']">Contact</span>
+                    </a>
+
+                    <a href="{% url 'eduweb:blog' %}"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if 'admission' in request.resolver_match.url_name %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                        <span class="font-medium font-['Inter']">Blog</span>
+                    </a>
+
+                    <div class="pt-4 space-y-3">
+                        {% if user.is_authenticated %}
+                        {% if has_pending_application %}
+                        <a href="{% url 'eduweb:application_status' %}"
+                           class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold font-['Inter'] hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            View Application
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                        </a>
+                        {% else %}
+                        <a href="{% url 'eduweb:apply' %}"
+                           class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold font-['Inter'] hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            Apply Now
+                            <i data-lucide="rocket" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'eduweb:logout' %}"
+                           class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold font-['Inter'] hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                            Logout
+                        </a>
+                        {% else %}
+                        <a href="{% url 'eduweb:auth_page' %}"
+                           class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold font-['Inter'] hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            Sign In / Apply
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
-              </div>
-
-            </a>
-          </div>
-          <p class="mb-font-body text-sm text-white/60 leading-relaxed mb-5 italic">
-            "Freely ye have received, freely give." — An admission-free and tuition-free Bible university.
-          </p>
-          <div class="flex gap-2" aria-label="Social media links">
-            <a href="https://www.facebook.com/melchisedecacademy"     target="_blank" rel="noopener noreferrer" aria-label="Facebook"  class="mb-social-btn-footer"><i data-lucide="facebook"  class="w-4 h-4" aria-hidden="true"></i></a>
-            <a href="https://www.instagram.com/melchisedec_academy/"  target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="mb-social-btn-footer"><i data-lucide="instagram" class="w-4 h-4" aria-hidden="true"></i></a>
-            <a href="https://www.youtube.com/channel/UCmIBajrcfeWnuqHoYCl-raw" target="_blank" rel="noopener noreferrer" aria-label="YouTube"   class="mb-social-btn-footer"><i data-lucide="youtube"   class="w-4 h-4" aria-hidden="true"></i></a>
-            <a href="https://twitter.com/melbacedu"                   target="_blank" rel="noopener noreferrer" aria-label="Twitter/X" class="mb-social-btn-footer"><i data-lucide="twitter"   class="w-4 h-4" aria-hidden="true"></i></a>
-            <a href="http://tiktok.com/@melchisedec1989"              target="_blank" rel="noopener noreferrer" aria-label="TikTok"    class="mb-social-btn-footer"><i data-lucide="music-2"   class="w-4 h-4" aria-hidden="true"></i></a>
-          </div>
-        </div>
-
-        <!-- Quick Links -->
-        <nav aria-label="Footer quick links">
-          <h2 class="mb-font-ui font-bold text-white text-xs uppercase tracking-widest mb-4">Quick Links</h2>
-          <ul class="space-y-2" role="list">
-            <li><a href="{% url 'melbac:index' %}"      class="mb-font-ui text-sm text-white/55 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3" aria-hidden="true"></i>Home</a></li>
-            <li><a href="{% url 'melbac:academics' %}"  class="mb-font-ui text-sm text-white/55 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3" aria-hidden="true"></i>Academics</a></li>
-            <li><a href="{% url 'melbac:admissions' %}" class="mb-font-ui text-sm text-white/55 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3" aria-hidden="true"></i>Admissions</a></li>
-            <li><a href="{% url 'melbac:activities' %}" class="mb-font-ui text-sm text-white/55 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3" aria-hidden="true"></i>Activities</a></li>
-            <li><a href="{% url 'melbac:about' %}"      class="mb-font-ui text-sm text-white/55 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3" aria-hidden="true"></i>About Us</a></li>
-            <li><a href="{% url 'melbac:contact' %}"    class="mb-font-ui text-sm text-white/55 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3" aria-hidden="true"></i>Contact</a></li>
-            <li><a href="{% url 'melbac:blog' %}"       class="mb-font-ui text-sm text-white/55 hover:text-white transition-colors flex items-center gap-2"><i data-lucide="chevron-right" class="w-3 h-3" aria-hidden="true"></i>Blog</a></li>
-          </ul>
+            </div>
         </nav>
+    </header><!-- Main Content -->
 
-        <!-- Accreditation -->
-        <div>
-          <h2 class="mb-font-ui font-bold text-white text-xs uppercase tracking-widest mb-4">Accreditation</h2>
-          <ul class="space-y-3" role="list">
-            <li class="flex items-start gap-2.5">
-              <i data-lucide="check-circle-2" class="w-4 h-4 text-gold-400 flex-shrink-0 mt-0.5" aria-hidden="true"></i>
-              <span class="mb-font-body text-sm text-white/60 leading-snug">Federal Government of Nigeria<br><span class="text-white/35 text-xs">Abuja, Nigeria</span></span>
-            </li>
-            <li class="flex items-start gap-2.5">
-              <i data-lucide="check-circle-2" class="w-4 h-4 text-gold-400 flex-shrink-0 mt-0.5" aria-hidden="true"></i>
-              <span class="mb-font-body text-sm text-white/60 leading-snug">International Professional Managers Association (IPMA)<br><span class="text-white/35 text-xs">United Kingdom</span></span>
-            </li>
-          </ul>
+    <main id="main-content" class="pt-20 lg:pt-24" role="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ================= FOOTER ================= -->
+
+    <footer class="bg-gradient-to-br from-primary-950 via-purple-900 to-purple-800 text-white" role="contentinfo">
+        <div class="container mx-auto py-16 px-4 lg:px-2">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+
+                <!-- About Section with Logo Image -->
+                <div class="space-y-6">
+                    <div class="inline-flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-lg">
+                        {% if site_config.logo %}
+                        <img src="{{ site_config.logo.url }}"
+                             alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
+                             class="h-16 w-auto object-contain">
+                        {% else %}
+                        <img src="{% static 'images/miulogo.png' %}"
+                             alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
+                             class="h-16 w-auto object-contain">
+                        {% endif %}
+                    </div>
+                    <p class="text-purple-200 font-['Inter'] leading-relaxed">
+                        {{ site_config.footer_tagline|default:"Empowering global education since 1995 with innovative learning experiences and world-class faculty." }}
+                    </p>
+                    {% if site_config.address_usa %}
+                    <div class="flex items-start gap-3 text-purple-200">
+                        <i data-lucide="map-pin" class="w-5 h-5 mt-0.5 flex-shrink-0"></i>
+                        <span class="text-sm font-['Inter']">{{ site_config.address_usa }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Quick Links -->
+                <div>
+                    <!-- font-display replaced with font-['Poppins'] — font-display conflicts with the CSS font-display property -->
+                    <h4 class="text-lg font-bold font-['Poppins'] mb-6 flex items-center gap-2">
+                        <i data-lucide="link" class="w-5 h-5 text-gold-400"></i>
+                        Quick Links
+                    </h4>
+                    <ul class="space-y-3">
+                        <li>
+                            <a href="{% url 'eduweb:about' %}"
+                               class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
+                                <i data-lucide="chevron-right"
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <span class="font-['Inter']">About MIU</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#"
+                               class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
+                                <i data-lucide="chevron-right"
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <span class="font-['Inter']">Programs</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'eduweb:admission_requirement' %}"
+                               class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
+                                <i data-lucide="chevron-right"
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <span class="font-['Inter']">Admissions</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#contact"
+                               class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
+                                <i data-lucide="chevron-right"
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <span class="font-['Inter']">Contact & Map</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Resources -->
+                <div>
+                    <h4 class="text-lg font-bold font-['Poppins'] mb-6 flex items-center gap-2">
+                        <i data-lucide="folder" class="w-5 h-5 text-gold-400"></i>
+                        Resources
+                    </h4>
+                    <ul class="space-y-3">
+                        <li>
+                            <a href="#"
+                               class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
+                                <i data-lucide="chevron-right"
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <span class="font-['Inter']">Library</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#"
+                               class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
+                                <i data-lucide="chevron-right"
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <span class="font-['Inter']">Career Services</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#"
+                               class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
+                                <i data-lucide="chevron-right"
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <span class="font-['Inter']">Student Portal</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#"
+                               class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
+                                <i data-lucide="chevron-right"
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <span class="font-['Inter']">Campus Map</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Connect -->
+                <div>
+                    <h4 class="text-lg font-bold font-['Poppins'] mb-6 flex items-center gap-2">
+                        <i data-lucide="share-2" class="w-5 h-5 text-gold-400"></i>
+                        Connect With Us
+                    </h4>
+                    <div class="flex gap-3 mb-6">
+                        {% if site_config.facebook %}
+                        <a href="{{ site_config.facebook }}" target="_blank" rel="noopener"
+                           class="h-10 w-10 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
+                           aria-label="Facebook">
+                            <i data-lucide="facebook" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
+                        {% if site_config.twitter %}
+                        <a href="{{ site_config.twitter }}" target="_blank" rel="noopener"
+                           class="h-10 w-10 bg-sky-500 hover:bg-sky-600 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
+                           aria-label="Twitter">
+                            <i data-lucide="twitter" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
+                        {% if site_config.linkedin %}
+                        <a href="{{ site_config.linkedin }}" target="_blank" rel="noopener"
+                           class="h-10 w-10 bg-blue-700 hover:bg-blue-800 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
+                           aria-label="LinkedIn">
+                            <i data-lucide="linkedin" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
+                        {% if site_config.youtube %}
+                        <a href="{{ site_config.youtube }}" target="_blank" rel="noopener"
+                           class="h-10 w-10 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
+                           aria-label="YouTube">
+                            <i data-lucide="youtube" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
+                        {% if site_config.instagram %}
+                        <a href="{{ site_config.instagram }}" target="_blank" rel="noopener"
+                           class="h-10 w-10 bg-pink-600 hover:bg-pink-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
+                           aria-label="Instagram">
+                            <i data-lucide="instagram" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
+                        {% if site_config.tiktok %}
+                        <a href="{{ site_config.tiktok }}" target="_blank" rel="noopener"
+                           class="h-10 w-10 bg-gray-900 hover:bg-gray-800 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
+                           aria-label="TikTok">
+                            <i data-lucide="music" class="w-5 h-5"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                    <p class="text-purple-200 text-sm font-['Inter'] leading-relaxed">
+                        Follow us for campus updates, events, and inspiring student stories from around the world.
+                    </p>
+                </div>
+            </div>
+
+
+            <!-- Bottom Bar -->
+            <div class="border-t border-purple-700 pt-8">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+                    <p class="text-purple-300 text-sm font-['Inter']">
+                        &copy; {{ site_config.copyright_year|default:"2025" }} {{site_config.school_name|default:"Melchisedec International University" }} ({{site_config.school_short_name|default:"MIU" }}). All rights reserved.
+                    </p>
+                    <div class="flex flex-wrap items-center justify-center gap-2 text-purple-300 text-sm font-['Inter']">
+                        {% if site_config.phone_primary %}
+                        <a href="tel:{{ site_config.phone_primary }}"
+                           class="flex items-center gap-1 hover:text-gold-400 transition-colors duration-200 focus:outline-none focus:text-gold-400">
+                            <i data-lucide="phone" class="w-4 h-4"></i>
+                            <span>{{ site_config.phone_primary }}</span>
+                        </a>
+                        <span class="hidden sm:inline mx-2">|</span>
+                        {% endif %}
+                        {% if site_config.email %}
+                        <a href="mailto:{{ site_config.email }}"
+                           class="flex items-center gap-1 hover:text-gold-400 transition-colors duration-200 focus:outline-none focus:text-gold-400">
+                            <i data-lucide="mail" class="w-4 h-4"></i>
+                            <span>{{ site_config.email }}</span>
+                        </a>
+                        {% endif %}
+
+                        {% include 'chatbot/chatbot.html' %}
+
+                    </div>
+                </div>
+            </div>
+
+
+
+           
+
         </div>
 
-        <!-- Contact -->
-        <address class="not-italic">
-          <h2 class="mb-font-ui font-bold text-white text-xs uppercase tracking-widest mb-4">Contact Us</h2>
-          <ul class="space-y-3" role="list">
-            <li class="flex items-start gap-2.5">
-              <i data-lucide="map-pin" class="w-4 h-4 text-gold-400 flex-shrink-0 mt-0.5" aria-hidden="true"></i>
-              <span class="mb-font-body text-sm text-white/60 leading-snug">50 4th Avenue, Newark NJ 07104, USA</span>
-            </li>
-            <li class="flex items-start gap-2.5">
-              <i data-lucide="map-pin" class="w-4 h-4 text-gold-400 flex-shrink-0 mt-0.5" aria-hidden="true"></i>
-              <span class="mb-font-body text-sm text-white/60 leading-snug">401 Road B Close, Plot 1649b, Festac Town, Lagos, Nigeria</span>
-            </li>
-            <li class="flex items-start gap-2.5">
-              <i data-lucide="phone" class="w-4 h-4 text-gold-400 flex-shrink-0 mt-0.5" aria-hidden="true"></i>
-              <div class="flex flex-col gap-0.5">
-                <a href="tel:+18624057143"   class="mb-font-ui text-sm text-white/60 hover:text-white transition-colors">+1 862 405 7143</a>
-                <a href="tel:+2349038133047" class="mb-font-ui text-sm text-white/60 hover:text-white transition-colors">+234 903 813 3047</a>
-              </div>
-            </li>
-            <li class="flex items-center gap-2.5">
-              <i data-lucide="mail" class="w-4 h-4 text-gold-400 flex-shrink-0" aria-hidden="true"></i>
-              <a href="mailto:inquiry@melbac.org" class="mb-font-ui text-sm text-white/60 hover:text-white transition-colors break-all">inquiry@melbac.org</a>
-            </li>
-          </ul>
-        </address>
 
-      </div>
-    </div>
 
-    <!-- Copyright bar -->
-    <div class="mb-footer-copyright">
-      <div class="mb-footer-container">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 py-4 text-center sm:text-left">
-          <p class="mb-font-ui text-xs text-white/35">&copy; {% now "Y" %} Melchisedec Graduate Bible Academy (MELBAC). All rights reserved.</p>
-          <p class="mb-font-ui text-xs text-white/25 italic">Est. 2000 &middot; Approved by the Federal Government of Nigeria</p>
-        </div>
-      </div>
-    </div>
 
-  </footer>
+    </footer>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       SCRIPTS
-       ═══════════════════════════════════════════════════════════════ -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    });
 
-    /* Scroll-aware header */
-    (function () {
-      var h = document.getElementById('mb-header');
-      function tick() { h.classList.toggle('scrolled', window.scrollY > 50); }
-      window.addEventListener('scroll', tick, { passive: true });
-      tick();
-    }());
+    
 
-    /* Mobile hamburger */
-    (function () {
-      var btn   = document.getElementById('mb-menu-btn');
-      var menu  = document.getElementById('mb-mobile-menu');
-      var lines = btn.querySelectorAll('.hline');
+    <script src="{% static 'js/main.js' %}"></script>
 
-      function close() {
-        menu.classList.remove('open');
-        btn.setAttribute('aria-expanded', 'false');
-        btn.setAttribute('aria-label', 'Open navigation menu');
-        lines[0].style.cssText = '';
-        lines[1].style.cssText = '';
-        lines[2].style.cssText = '';
-      }
 
-      btn.addEventListener('click', function () {
-        var open = menu.classList.toggle('open');
-        btn.setAttribute('aria-expanded', String(open));
-        btn.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
-        if (open) {
-          lines[0].style.cssText = 'transform:translateY(6px) rotate(45deg);background-color:#840384;';
-          lines[1].style.cssText = 'opacity:0;transform:scaleX(0);';
-          lines[2].style.cssText = 'transform:translateY(-6px) rotate(-45deg);background-color:#840384;';
-        } else {
-          lines[0].style.cssText = '';
-          lines[1].style.cssText = '';
-          lines[2].style.cssText = '';
-        }
-      });
+    {% block extra_js %}
 
-      menu.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', close); });
-    }());
 
-    /* Scroll reveal */
-    (function () {
-      var els = document.querySelectorAll('.mb-reveal');
-      if (!els.length) return;
-      if ('IntersectionObserver' in window) {
-        var obs = new IntersectionObserver(function (entries) {
-          entries.forEach(function (e) {
-            if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
-          });
-        }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
-        els.forEach(function (el) { obs.observe(el); });
-      } else {
-        els.forEach(function (el) { el.classList.add('visible'); });
-      }
-    }());
-  </script>
+    {% endblock %}
 
-  {% block extra_js %}{% endblock %}
-  {% comment %} {% include "chatbot/chatbot.html" %} {% endcomment %}
+    {% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            {% for message in messages %}
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            Toast.fire({
+                icon: '{% if message.tags == "error" or message.tags == "danger" %}error{% elif message.tags == "warning" %}warning{% elif message.tags == "success" %}success{% else %}info{% endif %}',
+                title: '{{ message|escapejs }}'
+            });
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
+
+    <script>
+        // Global toast function for auth.html compatibility
+        window.showToast = function (type, message) {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            Toast.fire({
+                icon: type,
+                title: message
+            });
+        };
+    </script>
+
+
 </body>
+
 </html>

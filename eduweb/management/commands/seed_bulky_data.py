@@ -5,6 +5,7 @@ from datetime import timedelta, date
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.utils.text import slugify
 from faker import Faker
 
 from eduweb.models import (
@@ -33,7 +34,6 @@ EMBED_CODES = [
     '<iframe width="560" height="315" src="https://www.youtube.com/embed/wa0IVAIqbo0?si=7IPmWFuHJm3_r-KX" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
 ]
 
-# ── Campus map embed — Lagos Nigeria (Festac Town) ────────────────────────────
 CAMPUS_MAP_EMBED = (
     '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3964.5!2d3.279!3d6.468!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103b8b0f2d3a0001%3A0xabc123def456!2sFestac+Town%2C+Lagos!5e0!3m2!1sen!2sng!4v1234567890" '
     'width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
@@ -171,6 +171,23 @@ MELBAC_BLOG_POSTS = [
 ]
 
 
+# ── HELPER: generate a guaranteed-unique slug with a uuid suffix ──────────────
+def unique_slug(base_title, model_class, extra_filter=None):
+    """
+    Generates a slug from base_title. If a record with that slug already exists
+    (optionally filtered by extra_filter dict), appends a uuid hex suffix to guarantee
+    uniqueness. Used for models with unique_together on (course, slug) etc.
+    """
+    base = slugify(base_title)
+    slug = base
+    qs = model_class.objects.filter(slug=slug)
+    if extra_filter:
+        qs = qs.filter(**extra_filter)
+    if qs.exists():
+        slug = f"{base}-{uuid.uuid4().hex[:6]}"
+    return slug
+
+
 class Command(BaseCommand):
     help = 'Seeds ALL tables with MELBAC-specific realistic data covering every single field'
 
@@ -240,53 +257,36 @@ class Command(BaseCommand):
         # ── 1. SITE CONFIG ───────────────────────────────────────────────────
         self.stdout.write("🌐 Creating site configuration...")
         SiteConfig.objects.create(
-            # ── Identity ──────────────────────────────────────────────────────
             school_name='Melchisedec Graduate Bible Academy',
             school_short_name='MELBAC',
             tagline='Training End-Time Ministers of God — Free of Charge',
             theme_color='#7c3aed',
-
-            # ── Contact ───────────────────────────────────────────────────────
             email='inquiry@melbac.org',
             phone_primary='+1 862 405 7143',
             phone_secondary='+1 908 205 2535',
             phone_ng_primary='+234 903 8133 047',
             phone_ng_secondary='+234 815 3465 278',
             whatsapp='18624057143',
-
-            # ── Addresses ─────────────────────────────────────────────────────
             address_usa='50 4th Avenue, Newark NJ 07104, USA',
             address_nigeria='401 Road B Close, Plot 1649b (Harmabitrac International Education Network), Festac Town, Lagos, Nigeria',
-
-            # ── Social ────────────────────────────────────────────────────────
             facebook='https://www.facebook.com/melchisedecacademy',
             instagram='https://www.instagram.com/melchisedec_academy/',
             youtube='https://www.youtube.com/channel/UCmIBajrcfeWnuqHoYCl-raw',
             twitter='https://twitter.com/melbacedu',
             tiktok='http://tiktok.com/@melchisedec1989',
             linkedin='https://linkedin.com/school/melchisedec-graduate-bible-academy',
-
-            # ── Labelled Emails ───────────────────────────────────────────────
             email_admissions='inquiry@melbac.org',
             email_info='inquiry@melbac.org',
             email_international='inquiry@melbac.org',
-
-            # ── Labelled Phone Lines ──────────────────────────────────────────
             phone_admissions='+1 862 405 7143',
             phone_general='+234 903 8133 047',
             phone_international='+1 908 205 2535',
-
-            # ── Office Hours ──────────────────────────────────────────────────
             office_hours_weekday='Monday – Friday: 9:00 AM – 5:00 PM',
             office_hours_saturday='Saturday: 10:00 AM – 2:00 PM',
             office_hours_sunday='Sunday: Closed',
-
-            # ── Embed Codes ───────────────────────────────────────────────────
             promo_video_url=PROMO_VIDEO_EMBED,
             campus_map_embed_url=CAMPUS_MAP_EMBED,
             campus_map_address='401 Road B Close, Plot 1649b, Festac Town, Lagos, Nigeria',
-
-            # ── Footer & SEO ──────────────────────────────────────────────────
             footer_tagline=(
                 'Training end-time ministers of God on a free-of-charge basis since 2000 — '
                 'grounded in the pure Word of God, approved by the Federal Government of Nigeria.'
@@ -308,103 +308,70 @@ class Command(BaseCommand):
         self.stdout.write("📜 Creating history milestones...")
         site_cfg = SiteConfig.objects.first()
         milestones = [
-            (
-                1995, 'Foundation of the Ministry',
-                'Melchisedec Graduate Bible Academy is a subsidiary of Help and Reconciliation Ministry '
-                'AKA Harmabitrac World Outreach, which was physically founded in Lagos, Nigeria on '
-                'October 15, 1995 by Apostle John Daniel.',
-                1
-            ),
-            (
-                2000, 'Birth of the Bible Training College',
-                'The Bible study portion of the Ministry was upgraded to an Institution and founded by '
-                'Dr. John A. Daniel on 15th January 2000, registered and approved by the Federal '
-                'Government of Nigeria as Help and Reconciliation Ministry and Bible Training College '
-                'with vested authority to award basic, advanced and diploma certificates to its students.',
-                2
-            ),
-            (
-                2004, 'USA Campus Founded',
-                'In January 2004, Apostle John Daniel physically founded Help and Reconciliation Ministry '
-                'and Bible Training College Newark NJ USA as a non-profit organisation, providing the same '
-                'services as the Lagos office with particular attention to social and charitable services.',
-                3
-            ),
-            (
-                2007, 'Registered as a Degree-Awarding University',
-                'After applying to the Federal Ministry of Education Nigeria and two years of inspecting '
-                'core requirements, MELBAC was finally approved and registered by the Federal Government '
-                'of Nigeria in November 2007 as Melchisedec Graduate Bible Academy Lagos Nigeria.',
-                4
-            ),
-            (
-                2024, 'Full University Status',
-                'Due to further demand from both students and graduates who could not afford tuition fees '
-                'for degree programs at other theological institutions, the Lord granted the request to '
-                'further upgrade the institution to a degree-awarding university, offering Bachelors, '
-                'Masters and Doctorate programs completely free of charge.',
-                5
-            ),
+            (1995, 'Foundation of the Ministry',
+             'Melchisedec Graduate Bible Academy is a subsidiary of Help and Reconciliation Ministry '
+             'AKA Harmabitrac World Outreach, which was physically founded in Lagos, Nigeria on '
+             'October 15, 1995 by Apostle John Daniel.', 1),
+            (2000, 'Birth of the Bible Training College',
+             'The Bible study portion of the Ministry was upgraded to an Institution and founded by '
+             'Dr. John A. Daniel on 15th January 2000, registered and approved by the Federal '
+             'Government of Nigeria as Help and Reconciliation Ministry and Bible Training College '
+             'with vested authority to award basic, advanced and diploma certificates to its students.', 2),
+            (2004, 'USA Campus Founded',
+             'In January 2004, Apostle John Daniel physically founded Help and Reconciliation Ministry '
+             'and Bible Training College Newark NJ USA as a non-profit organisation, providing the same '
+             'services as the Lagos office with particular attention to social and charitable services.', 3),
+            (2007, 'Registered as a Degree-Awarding University',
+             'After applying to the Federal Ministry of Education Nigeria and two years of inspecting '
+             'core requirements, MELBAC was finally approved and registered by the Federal Government '
+             'of Nigeria in November 2007 as Melchisedec Graduate Bible Academy Lagos Nigeria.', 4),
+            (2024, 'Full University Status',
+             'Due to further demand from both students and graduates who could not afford tuition fees '
+             'for degree programs at other theological institutions, the Lord granted the request to '
+             'further upgrade the institution to a degree-awarding university, offering Bachelors, '
+             'Masters and Doctorate programs completely free of charge.', 5),
         ]
         for year, title, desc, order in milestones:
             SiteHistoryMilestone.objects.create(
-                site=site_cfg,
-                year=year,
-                title=title,
-                description=desc,
-                display_order=order,
-                is_active=True,
+                site=site_cfg, year=year, title=title,
+                description=desc, display_order=order, is_active=True,
             )
         self.stdout.write(self.style.SUCCESS(f"   ✅ {SiteHistoryMilestone.objects.count()} history milestones created"))
 
         # ── 1b. TESTIMONIALS ─────────────────────────────────────────────────
         self.stdout.write("💬 Creating testimonials...")
         testimonial_data = [
-            (
-                'MELBAC transformed my understanding of the Word of God. The teachings of Apostle John '
-                'Daniel are deep, uncompromising, and grounded in pure Scripture. My ministry has never '
-                'been the same since I enrolled.',
-                'Pastor Emmanuel Adeyemi', 'Bachelor of Christian Religious Studies, MELBAC Graduate', 1,
-            ),
-            (
-                'The fact that MELBAC charges nothing for tuition is a miracle in itself. I was able to '
-                'obtain my Master\'s degree in Theology while serving full-time in ministry. This '
-                'institution truly operates by faith.',
-                'Rev. Grace Okonkwo', 'Masters in Theology and Pastoral Counseling, MELBAC Graduate', 2,
-            ),
-            (
-                'I enrolled from the United Kingdom with doubts, but within the first semester my faith '
-                'was completely rebuilt on the solid rock of God\'s Word. The Faculty of Arts curriculum '
-                'is exceptional — practical and deeply biblical.',
-                'Minister Chukwuemeka Eze', 'Bachelor of Theology, MELBAC Graduate', 3,
-            ),
-            (
-                'MELBAC\'s teaching on the Authority of a Believer and the Mystery of Forgiveness '
-                'radically changed my approach to prayer and deliverance ministry. I now lead a thriving '
-                'prayer group of 200 members. All glory to God.',
-                'Evangelist Ruth Mensah', 'Bachelor of Intercessory Prayer & Deliverance Studies, MELBAC Graduate', 4,
-            ),
-            (
-                'As a pastor in Lagos for 15 years, I thought I knew the Bible well. But enrolling in '
-                'MELBAC\'s doctoral program showed me how much deeper the Word of God goes. The academic '
-                'rigour combined with the anointing on this institution is unmatched.',
-                'Dr. Samuel Obiora', 'Doctor of Divinity, MELBAC Graduate', 5,
-            ),
+            ('MELBAC transformed my understanding of the Word of God. The teachings of Apostle John '
+             'Daniel are deep, uncompromising, and grounded in pure Scripture. My ministry has never '
+             'been the same since I enrolled.',
+             'Pastor Emmanuel Adeyemi', 'Bachelor of Christian Religious Studies, MELBAC Graduate', 1),
+            ('The fact that MELBAC charges nothing for tuition is a miracle in itself. I was able to '
+             'obtain my Master\'s degree in Theology while serving full-time in ministry. This '
+             'institution truly operates by faith.',
+             'Rev. Grace Okonkwo', 'Masters in Theology and Pastoral Counseling, MELBAC Graduate', 2),
+            ('I enrolled from the United Kingdom with doubts, but within the first semester my faith '
+             'was completely rebuilt on the solid rock of God\'s Word. The Faculty of Arts curriculum '
+             'is exceptional — practical and deeply biblical.',
+             'Minister Chukwuemeka Eze', 'Bachelor of Theology, MELBAC Graduate', 3),
+            ('MELBAC\'s teaching on the Authority of a Believer and the Mystery of Forgiveness '
+             'radically changed my approach to prayer and deliverance ministry. I now lead a thriving '
+             'prayer group of 200 members. All glory to God.',
+             'Evangelist Ruth Mensah', 'Bachelor of Intercessory Prayer & Deliverance Studies, MELBAC Graduate', 4),
+            ('As a pastor in Lagos for 15 years, I thought I knew the Bible well. But enrolling in '
+             'MELBAC\'s doctoral program showed me how much deeper the Word of God goes. The academic '
+             'rigour combined with the anointing on this institution is unmatched.',
+             'Dr. Samuel Obiora', 'Doctor of Divinity, MELBAC Graduate', 5),
         ]
         for quote, author_name, author_role, order in testimonial_data:
             Testimonial.objects.create(
-                quote=quote,
-                author_name=author_name,
-                author_role=author_role,
-                order=order,
-                is_active=True,
+                quote=quote, author_name=author_name,
+                author_role=author_role, order=order, is_active=True,
             )
         self.stdout.write(self.style.SUCCESS(f"   ✅ {Testimonial.objects.count()} testimonials created"))
 
         # ── 2. INSTITUTION MEMBERS ───────────────────────────────────────────
         self.stdout.write("👔 Creating institution members...")
         institution_members_data = [
-            # Administrative / Management Board
             ('admin_board', 'Dr. John Amarachukwu Daniel', 'Founder / President', 0,
              'Founder and President of MELBAC and Harmabitrac World Outreach. Anointed servant of God, '
              'teacher of the pure Word, and visionary behind free theological education in Nigeria and the USA.'),
@@ -420,7 +387,6 @@ class Command(BaseCommand):
             ('admin_board', 'Julian C. Obiora', 'Admin Officer / Board Secretary', 4,
              'Board Secretary and Administrative Officer responsible for correspondence, board minutes, '
              'and the day-to-day administration of MELBAC.'),
-            # Academic Board
             ('academic_board', 'Sunday Ehichioya', 'Registrar', 0,
              'Serves on the Academic Board as Registrar, ensuring alignment between academic policy '
              'and student administration.'),
@@ -442,7 +408,6 @@ class Command(BaseCommand):
             ('academic_board', 'Dr. John Amarachukwu Daniel', 'Founder / President', 6,
              'Founder and President of MELBAC, providing apostolic and academic oversight across '
              'all faculties, programs, and campuses.'),
-            # Advisorate Board
             ('advisorate_board', 'Theophilus O. Ihekoronye', 'Pro-Chancellor / Chairman Board of Advisorate', 0,
              'Pro-Chancellor of MELBAC and Chairman of the Board of Advisorate, providing '
              'governance and strategic oversight for the institution\'s growth and mission.'),
@@ -461,12 +426,8 @@ class Command(BaseCommand):
         ]
         for mtype, name, role, order, bio in institution_members_data:
             InstitutionMember.objects.create(
-                member_type=mtype,
-                name=name,
-                role=role,
-                bio=bio,
-                display_order=order,
-                is_active=True,
+                member_type=mtype, name=name, role=role,
+                bio=bio, display_order=order, is_active=True,
             )
         self.stdout.write(self.style.SUCCESS(f"   ✅ {InstitutionMember.objects.count()} institution members created"))
 
@@ -477,7 +438,6 @@ class Command(BaseCommand):
             'support': [], 'content_managers': [], 'finance': [], 'qa': [],
         }
 
-        # MELBAC-flavoured first and last names (Nigerian + diaspora mix)
         FIRST_NAMES = [
             'Emmanuel', 'Grace', 'Samuel', 'Ruth', 'Chukwuemeka', 'Blessing',
             'Joshua', 'Esther', 'Daniel', 'Patience', 'Ebenezer', 'Faith',
@@ -967,8 +927,6 @@ class Command(BaseCommand):
         self.stdout.write("📅 Creating academic sessions...")
         sessions = []
         session_data = [
-            # name, first_sem_start, first_sem_end, second_sem_start, second_sem_end,
-            # reg_start, reg_end, status, is_current
             ('2023/2024',
              date(2023, 11, 1), date(2024, 4, 5),
              date(2024, 4, 22), date(2024, 8, 23),
@@ -985,14 +943,10 @@ class Command(BaseCommand):
         for (name, fs, fe, ss, se, rs, re, status, is_curr) in session_data:
             s = AcademicSession.objects.create(
                 name=name,
-                first_semester_start=fs,
-                first_semester_end=fe,
-                second_semester_start=ss,
-                second_semester_end=se,
-                registration_start=rs,
-                registration_end=re,
-                status=status,
-                is_current=is_curr,
+                first_semester_start=fs, first_semester_end=fe,
+                second_semester_start=ss, second_semester_end=se,
+                registration_start=rs, registration_end=re,
+                status=status, is_current=is_curr,
             )
             sessions.append(s)
 
@@ -1010,8 +964,8 @@ class Command(BaseCommand):
             (programs[9],  'Church Financial Management Principles',              'CFM101', 'core',     3, 1),
             (programs[9],  'Biblical Stewardship and Accountability',             'CFM102', 'core',     3, 1),
             (programs[10], 'Church and Intercultural Relations',                  'CIR101', 'core',     3, 1),
-            (programs[12], 'Introduction to Missiology',                          'MISS101','core',     3, 1),
-            (programs[18], 'Cross-Cultural Mission Strategies',                   'MISS201','core',     3, 2),
+            (programs[12], 'Introduction to Missiology',                          'MISS101', 'core',    3, 1),
+            (programs[18], 'Cross-Cultural Mission Strategies',                   'MISS201', 'core',    3, 2),
             (programs[20], 'Christian Leadership Principles',                     'CLD201', 'core',     3, 2),
             (programs[20], 'Discipleship: Making and Training Disciples',         'CLD202', 'elective', 3, 2),
             (programs[3],  'Ethics in Christian Ministry',                        'CEE201', 'core',     3, 2),
@@ -1024,9 +978,12 @@ class Command(BaseCommand):
         current_session = sessions[1]
         for prog, title, code, ctype, credits, yr in course_templates:
             c = Course.objects.create(
-                program=prog, session=current_session,
-                title=title, code=code,
-                course_type=ctype, credits=credits,
+                program=prog,
+                academic_session=current_session,
+                name=title,
+                code=code,
+                course_type=ctype,
+                credit_units=credits,
                 year_of_study=yr,
                 description=(
                     f"This course provides a comprehensive study of {title.lower()}, "
@@ -1039,56 +996,67 @@ class Command(BaseCommand):
         # ── 14. COURSE INTAKES ───────────────────────────────────────────────
         self.stdout.write("📋 Creating course intakes...")
         intakes = []
-        for prog in random.sample(programs, k=min(12, len(programs))):
-            for session in sessions[:2]:
-                intake = CourseIntake.objects.create(
+        # ✅ FIX: unique_together = [['program', 'intake_period', 'year']]
+        # Use get_or_create to safely skip duplicates; vary intake_period per session
+        intake_period_cycle = ['january', 'may', 'september']
+        for prog_idx, prog in enumerate(random.sample(programs, k=min(12, len(programs)))):
+            for sess_idx, session in enumerate(sessions[:2]):
+                # Vary period by program index + session index to avoid collisions
+                period = intake_period_cycle[(prog_idx + sess_idx) % 3]
+                year_val = session.first_semester_start.year
+                intake, _ = CourseIntake.objects.get_or_create(
                     program=prog,
-                    session=session,
-                    intake_name=f"{session.name} Intake",
-                    start_date=session.first_semester_start,
-                    end_date=session.second_semester_end,
-                    application_deadline=session.registration_end,
-                    max_students=prog.max_students,
-                    is_active=True,
+                    intake_period=period,
+                    year=year_val,
+                    defaults=dict(
+                        start_date=session.first_semester_start,
+                        application_deadline=session.registration_end,
+                        available_slots=prog.max_students,
+                        is_active=True,
+                    )
                 )
                 intakes.append(intake)
 
         # ── 15. REQUIRED PAYMENTS ────────────────────────────────────────────
         self.stdout.write("💰 Creating required payments...")
         for prog in programs:
+            # ✅ FIX: correct fields — no name/description/currency/is_required/payment_stage
             AllRequiredPayments.objects.create(
                 program=prog,
-                name='Application Processing Fee',
-                description=(
-                    'MELBAC does not charge tuition. This nominal processing fee covers '
-                    'administrative handling of your application documents.'
-                ),
+                purpose='Application Processing Fee',
                 amount=Decimal('0.00'),
-                currency='USD',
-                is_required=False,
-                payment_stage='application',
+                due_date=date.today(),
+                who_to_pay='applicant',
+                is_active=True,
             )
 
         # ── 16. COURSE APPLICATIONS ──────────────────────────────────────────
         self.stdout.write("📝 Creating course applications...")
         applications = []
         statuses = ['approved', 'approved', 'under_review', 'draft', 'approved', 'payment_complete']
+        # ✅ FIX: move verified_admins_list outside loop (no per-iteration change)
+        verified_admins_list = [u for u in users['admins'] if u.profile.email_verified]
         for idx, student in enumerate(users['students']):
             prog = random.choice(programs)
             intake = random.choice(intakes) if intakes else None
             status = statuses[idx % len(statuses)]
             admitted = status == 'approved'
             dept_approved = admitted
-            adm_number = f"MELBAC/{date.today().year}/{str(random.randint(1000, 9999))}" if admitted else ''
-            verified_admins_list = [u for u in users['admins'] if u.profile.email_verified]
+            # ✅ FIX: uuid hex guarantees no UNIQUE collision; None (not '') for non-admitted
+            adm_number = (
+                f"MELBAC/{date.today().year}/{uuid.uuid4().hex[:8].upper()}"
+                if admitted else None
+            )
 
             app = CourseApplication.objects.create(
-                student=student,
+                user=student,                       # ✅ FIX: was student=
                 program=prog,
                 intake=intake,
-                title=random.choice(['Mr', 'Mrs', 'Miss', 'Rev', 'Pastor', 'Dr']),
+                study_mode=random.choice(['full_time', 'part_time', 'online']),  # ✅ required field
                 first_name=student.first_name,
                 last_name=student.last_name,
+                email=student.email,                # ✅ required field
+                phone='+234' + str(random.randint(8000000000, 9099999999)),  # ✅ required field
                 date_of_birth=fake.date_of_birth(minimum_age=22, maximum_age=65),
                 gender=random.choice(['male', 'female']),
                 nationality=random.choice(['Nigerian', 'Ghanaian', 'American', 'British', 'Cameroonian']),
@@ -1112,10 +1080,10 @@ class Command(BaseCommand):
                 language_score=None,
                 work_experience_years=random.randint(0, 20),
                 personal_statement=(
-                    f"I am a born-again, Spirit-filled believer called by God to minister His Word. "
-                    f"I believe MELBAC's training will equip me to fulfil my God-given calling. "
-                    f"I am committed to the study of the pure Word of God and to a life of prayer, "
-                    f"holiness, and faithful ministry."
+                    "I am a born-again, Spirit-filled believer called by God to minister His Word. "
+                    "I believe MELBAC's training will equip me to fulfil my God-given calling. "
+                    "I am committed to the study of the pure Word of God and to a life of prayer, "
+                    "holiness, and faithful ministry."
                 ),
                 how_did_you_hear=random.choice(
                     ['Social Media', 'Friend/Colleague in Ministry', 'Church Announcement',
@@ -1175,7 +1143,7 @@ class Command(BaseCommand):
                 amount=Decimal('0.00'),
                 currency='USD',
                 status='success',
-                payment_method=random.choice(['card', 'bank_transfer', 'mobile_money']),
+                payment_method=random.choice(['card', 'bank_transfer']),
                 payment_reference=f"MELBAC-{uuid.uuid4().hex[:12].upper()}",
                 gateway_payment_id=f"pi_{uuid.uuid4().hex[:24]}",
                 card_last4=str(random.randint(1000, 9999)),
@@ -1229,57 +1197,37 @@ class Command(BaseCommand):
         # ── 20. LMS COURSES ──────────────────────────────────────────────────
         self.stdout.write("🎥 Creating LMS courses...")
         lms_templates = [
-            (
-                'The Authority of a Believer — Complete Series', categories[0], 'intermediate', 12.5,
-                'A 5-part teaching series by Apostle John Daniel unpacking the God-given authority '
-                'of every believer in Christ — from kingdom dominion to divine blessings and prosperity.'
-            ),
-            (
-                'The Mystery of Forgiveness — Complete Series', categories[0], 'beginner', 10.0,
-                'A 5-part series exploring the spiritual mechanics of divine forgiveness, repentance, '
-                'blasphemy, and the conditions for receiving God\'s mercy, taught by Apostle John Daniel.'
-            ),
-            (
-                'Due Process in Christendom', categories[0], 'beginner', 3.5,
-                'A new teaching series revealing the divine protocol and timing of God\'s Kingdom — '
-                'why there are no shortcuts in the spiritual life and how believers must align themselves '
-                'with God\'s process.'
-            ),
-            (
-                'Principles of Intercessory Prayer', categories[1], 'beginner', 8.0,
-                'A foundational course in the ministry of intercession — what it is, how it works, '
-                'and how believers can develop a powerful, consistent prayer life that moves the hand of God.'
-            ),
-            (
-                'Spiritual Warfare & Deliverance Ministry', categories[6], 'intermediate', 14.0,
-                'A comprehensive course covering the theology and practice of spiritual warfare, '
-                'deliverance, binding and loosing, and ministering freedom to the captives in Jesus\'s name.'
-            ),
-            (
-                'Foundations of Systematic Theology', categories[0], 'beginner', 16.0,
-                'A rigorous introduction to systematic theology covering Bibliology, Theology Proper, '
-                'Christology, Pneumatology, Anthropology, Soteriology, Ecclesiology, and Eschatology.'
-            ),
-            (
-                'Christian Leadership & Discipleship', categories[2], 'intermediate', 11.0,
-                'Equipping ministers to lead with character, call, and competence — developing disciples '
-                'who make disciples, in line with the Great Commission of Jesus Christ.'
-            ),
-            (
-                'Introduction to Missiology & Cross-Cultural Ministry', categories[3], 'beginner', 9.5,
-                'A biblical and practical introduction to world missions, covering the theology of the '
-                'Great Commission, cultural intelligence, and strategies for effective cross-cultural ministry.'
-            ),
-            (
-                'Church Financial Management & Biblical Stewardship', categories[4], 'intermediate', 10.5,
-                'Equipping church leaders with the principles of godly financial stewardship, biblical '
-                'accountability, budgeting, and the practical management of church resources.'
-            ),
-            (
-                'Old Testament Survey: From Genesis to Malachi', categories[8], 'beginner', 18.0,
-                'A sweeping survey of the entire Old Testament, exploring the narrative arc of Scripture '
-                'from creation and the fall to the prophets — and how it all points to Jesus Christ.'
-            ),
+            ('The Authority of a Believer — Complete Series', categories[0], 'intermediate', 12.5,
+             'A 5-part teaching series by Apostle John Daniel unpacking the God-given authority '
+             'of every believer in Christ — from kingdom dominion to divine blessings and prosperity.'),
+            ('The Mystery of Forgiveness — Complete Series', categories[0], 'beginner', 10.0,
+             'A 5-part series exploring the spiritual mechanics of divine forgiveness, repentance, '
+             'blasphemy, and the conditions for receiving God\'s mercy, taught by Apostle John Daniel.'),
+            ('Due Process in Christendom', categories[0], 'beginner', 3.5,
+             'A new teaching series revealing the divine protocol and timing of God\'s Kingdom — '
+             'why there are no shortcuts in the spiritual life and how believers must align themselves '
+             'with God\'s process.'),
+            ('Principles of Intercessory Prayer', categories[1], 'beginner', 8.0,
+             'A foundational course in the ministry of intercession — what it is, how it works, '
+             'and how believers can develop a powerful, consistent prayer life that moves the hand of God.'),
+            ('Spiritual Warfare & Deliverance Ministry', categories[6], 'intermediate', 14.0,
+             'A comprehensive course covering the theology and practice of spiritual warfare, '
+             'deliverance, binding and loosing, and ministering freedom to the captives in Jesus\'s name.'),
+            ('Foundations of Systematic Theology', categories[0], 'beginner', 16.0,
+             'A rigorous introduction to systematic theology covering Bibliology, Theology Proper, '
+             'Christology, Pneumatology, Anthropology, Soteriology, Ecclesiology, and Eschatology.'),
+            ('Christian Leadership & Discipleship', categories[2], 'intermediate', 11.0,
+             'Equipping ministers to lead with character, call, and competence — developing disciples '
+             'who make disciples, in line with the Great Commission of Jesus Christ.'),
+            ('Introduction to Missiology & Cross-Cultural Ministry', categories[3], 'beginner', 9.5,
+             'A biblical and practical introduction to world missions, covering the theology of the '
+             'Great Commission, cultural intelligence, and strategies for effective cross-cultural ministry.'),
+            ('Church Financial Management & Biblical Stewardship', categories[4], 'intermediate', 10.5,
+             'Equipping church leaders with the principles of godly financial stewardship, biblical '
+             'accountability, budgeting, and the practical management of church resources.'),
+            ('Old Testament Survey: From Genesis to Malachi', categories[8], 'beginner', 18.0,
+             'A sweeping survey of the entire Old Testament, exploring the narrative arc of Scripture '
+             'from creation and the fall to the prophets — and how it all points to Jesus Christ.'),
         ]
         lms_courses = []
         instructor_course_map = {}
@@ -1318,7 +1266,7 @@ class Command(BaseCommand):
                     'the pure, uncompromised Word of God to end-time ministers worldwide.'
                 ),
                 promo_video_url='https://www.youtube.com/watch?v=-mJFZp84TIY',
-                max_students=None,  # No limit — free for all
+                max_students=None,
                 enrollment_start_date=date(2025, 1, 1),
                 enrollment_end_date=date(2026, 12, 31),
                 is_published=True,
@@ -1480,7 +1428,7 @@ class Command(BaseCommand):
                         f"the spiritual results I see. Scripture references: Romans 8:1, Ephesians 6:10-18."
                     ),
                     score=Decimal(str(round(random.uniform(60, 100), 2))) if graded else None,
-                    is_graded=graded,
+                    status='graded' if graded else 'submitted',  # ✅ FIX: is_graded → status
                     graded_by=random.choice(users['instructors']) if graded else None,
                     graded_at=timezone.now() - timedelta(days=random.randint(1, 14)) if graded else None,
                     feedback=(
@@ -1493,7 +1441,6 @@ class Command(BaseCommand):
         # ── 26 & 27. QUIZZES & QUESTIONS ─────────────────────────────────────
         self.stdout.write("❓ Creating quizzes and questions...")
         quiz_questions_pool = [
-            # (question, [options], correct_index)
             (
                 'According to Matthew 28:18, what did Jesus declare before commissioning His disciples?',
                 ['All authority in heaven and on earth has been given to me',
@@ -1592,9 +1539,8 @@ class Command(BaseCommand):
                 for i, (qtext, options, correct_idx) in enumerate(
                     random.sample(quiz_questions_pool, k=min(5, len(quiz_questions_pool)))
                 ):
-                    qtype = 'multiple_choice'
                     q = QuizQuestion.objects.create(
-                        quiz=quiz, question_type=qtype,
+                        quiz=quiz, question_type='multiple_choice',
                         question_text=qtext,
                         explanation=(
                             'This is a key doctrine taught by Apostle John Daniel at MELBAC. '
@@ -1684,14 +1630,12 @@ class Command(BaseCommand):
         for student in verified_students:
             for _ in range(random.randint(1, 3)):
                 gw = random.choice(gateways)
-                amt = Decimal('0.00')  # MELBAC is free
-                status = 'completed'
                 Transaction.objects.create(
                     user=student, transaction_type='enrollment',
-                    amount=amt, currency='USD',
+                    amount=Decimal('0.00'), currency='USD',
                     gateway=gw,
                     gateway_transaction_id=f"{gw.slug}_{uuid.uuid4().hex[:20]}",
-                    status=status,
+                    status='completed',
                     course=random.choice(lms_courses),
                     metadata={
                         'note': 'MELBAC is free of charge — no payment required.',
@@ -1704,6 +1648,8 @@ class Command(BaseCommand):
         self.stdout.write("🧾 Creating invoices...")
         completed_txns = list(Transaction.objects.filter(status='completed'))
         for txn in random.sample(completed_txns, k=min(30, len(completed_txns))):
+            # ✅ FIX: safe date conversion — completed_at may be None
+            completed_dt = txn.completed_at or timezone.now()
             Invoice.objects.create(
                 student=txn.user,
                 course=txn.course if txn.course else None,
@@ -1712,9 +1658,8 @@ class Command(BaseCommand):
                 discount_amount=Decimal('0.00'),
                 currency='USD',
                 status='paid',
-                due_date=(txn.completed_at + timedelta(days=30)).date()
-                if txn.completed_at else timezone.now().date() + timedelta(days=30),
-                paid_date=txn.completed_at.date() if txn.completed_at else None,
+                due_date=(completed_dt + timedelta(days=30)).date(),
+                paid_date=completed_dt.date(),
                 notes=(
                     f"MELBAC enrollment invoice for transaction {txn.transaction_id}. "
                     f"No charge — MELBAC provides all programs free of charge by the grace of God."
@@ -1759,8 +1704,8 @@ class Command(BaseCommand):
                     defaults=dict(
                         awarded_by=random.choice(users['admins'] + users['instructors']),
                         reason=(
-                            f"Awarded for faithful engagement with MELBAC teaching content "
-                            f"and consistent pursuit of God\'s Word."
+                            "Awarded for faithful engagement with MELBAC teaching content "
+                            "and consistent pursuit of God's Word."
                         ),
                     )
                 )
@@ -1788,13 +1733,6 @@ class Command(BaseCommand):
 
         # ── 36. BLOG POSTS ────────────────────────────────────────────────────
         self.stdout.write("✍️  Creating blog posts (actual MELBAC teachings)...")
-        # Map blog categories to post content
-        category_map = {
-            'Biblical Doctrine & Teaching': blog_categories[0],
-            'Prayer & Intercession': blog_categories[1],
-            'Forgiveness & Repentance': blog_categories[5],
-            'Ministry & Leadership': blog_categories[3],
-        }
         post_category_assignments = [
             blog_categories[0],  # 61 Due Process
             blog_categories[5],  # 60 Forgiveness Conclusion
@@ -1811,6 +1749,7 @@ class Command(BaseCommand):
         for idx, post_data in enumerate(MELBAC_BLOG_POSTS):
             BlogPost.objects.create(
                 title=post_data['title'],
+                slug=post_data['slug'],           # ✅ explicit slug avoids auto-slug collisions
                 subtitle=post_data['subtitle'],
                 excerpt=post_data['excerpt'],
                 content=post_data['content'],
@@ -1833,7 +1772,6 @@ class Command(BaseCommand):
                 meta_description=post_data['excerpt'][:155],
                 meta_keywords=', '.join(post_data['tags'] + ['MELBAC', 'Apostle John Daniel', 'Bible teaching']),
             )
-
         self.stdout.write(self.style.SUCCESS(f"   ✅ {BlogPost.objects.count()} blog posts created"))
 
         # ── 37. DISCUSSIONS & REPLIES ─────────────────────────────────────────
@@ -1851,13 +1789,17 @@ class Command(BaseCommand):
         discussions = []
         for lc in lms_courses:
             enrolled_users = list(User.objects.filter(enrollments__course=lc))
-            for _ in range(random.randint(2, 5)):
+            for disc_idx in range(random.randint(2, 5)):
                 if not enrolled_users:
                     break
                 author = random.choice(enrolled_users)
+                topic = discussion_topics[disc_idx % len(discussion_topics)]
+                # ✅ FIX: unique_together is (course, slug). Build a unique slug per course.
+                disc_slug = unique_slug(topic, Discussion, extra_filter={'course': lc})
                 disc = Discussion.objects.create(
                     course=lc,
-                    title=random.choice(discussion_topics),
+                    title=topic,
+                    slug=disc_slug,
                     content=(
                         'Sharing my reflection on this week\'s teaching. I\'d love to hear how others '
                         'are applying this in their ministries. The Word of God is truly alive and '
@@ -1928,10 +1870,12 @@ class Command(BaseCommand):
                 if sid != creator.id:
                     try:
                         member_user = User.objects.get(id=sid)
-                        StudyGroupMember.objects.create(
+                        StudyGroupMember.objects.get_or_create(
                             study_group=sg, user=member_user,
-                            role=random.choice(['member', 'member', 'moderator']),
-                            is_active=True,
+                            defaults=dict(
+                                role=random.choice(['member', 'member', 'moderator']),
+                                is_active=True,
+                            )
                         )
                         member_users.append(member_user)
                     except User.DoesNotExist:
@@ -2016,6 +1960,7 @@ class Command(BaseCommand):
                 status = random.choice(
                     ['open', 'in_progress', 'waiting_response', 'resolved', 'closed']
                 )
+                # ✅ FIX: 'resolution' field does NOT exist on SupportTicket model — removed
                 ticket = SupportTicket.objects.create(
                     user=creator,
                     category=random.choice(['technical', 'account', 'course', 'payment', 'other']),
@@ -2028,24 +1973,21 @@ class Command(BaseCommand):
                     priority=random.choice(['low', 'normal', 'high', 'urgent']),
                     status=status,
                     assigned_to=random.choice(users['support']),
-                    resolution=(
-                        'The issue has been resolved. Please try again and let us know '
-                        'if you experience any further difficulties. God bless your studies.'
-                    ) if status in ['resolved', 'closed'] else '',
                     resolved_at=timezone.now() - timedelta(days=random.randint(1, 7))
                     if status in ['resolved', 'closed'] else None,
                 )
                 tickets.append(ticket)
                 if random.random() > 0.5:
+                    # ✅ FIX: content → message, is_staff_reply → is_internal_note
                     TicketReply.objects.create(
                         ticket=ticket,
                         author=random.choice(users['support']),
-                        content=(
+                        message=(
                             'Thank you for contacting MELBAC support. We have received your ticket '
                             'and are looking into the issue. We will respond within 24 hours. '
                             'May God continue to bless your study of His Word.'
                         ),
-                        is_staff_reply=True,
+                        is_internal_note=False,
                     )
 
         # ── 41. NOTIFICATIONS ─────────────────────────────────────────────────
@@ -2067,9 +2009,7 @@ class Command(BaseCommand):
                     user=user,
                     title=title,
                     message=message,
-                    notification_type=random.choice(
-                        ['info', 'success', 'warning', 'system']
-                    ),
+                    notification_type=random.choice(['info', 'success', 'warning', 'system']),
                     is_read=random.choice([True, False]),
                     read_at=timezone.now() - timedelta(hours=random.randint(1, 48))
                     if random.random() > 0.5 else None,
@@ -2078,82 +2018,59 @@ class Command(BaseCommand):
         # ── 42. ANNOUNCEMENTS ─────────────────────────────────────────────────
         self.stdout.write("📢 Creating announcements...")
         announcement_data = [
-            (
-                '2025/2026 Academic Session — Registration Now Open',
-                (
-                    'Regular admission for the 2025/2026 academic session is now open. '
-                    'Applications are being accepted from August 25 to October 27, 2025. '
-                    'All programs are completely free of charge. Apply now through the admissions portal '
-                    'or contact us at inquiry@melbac.org.'
-                ),
-                'all', True,
-            ),
-            (
-                'New Teaching Series — Due Process in Christendom',
-                (
-                    'Apostle John Daniel has begun a new teaching series titled "Due Process in Christendom." '
-                    'Part 1 is now available on the blog and MELBAC YouTube channel. This teaching reveals '
-                    'the divine protocol of God\'s Kingdom and why there are no shortcuts in the spiritual life.'
-                ),
-                'all', True,
-            ),
-            (
-                'Convocation & Annual University Seminar — November 2025',
-                (
-                    'MELBAC\'s Annual University Seminar and Convocation will hold in November 2025 '
-                    'at the Lagos campus (Festac Town). All students, graduates, and ministry partners '
-                    'are invited. Details will be communicated via email and the MELBAC social media channels.'
-                ),
-                'all', True,
-            ),
-            (
-                'Ministerial Attachment — August to November 2025',
-                (
-                    'All Diploma and Bachelor\'s Degree graduates from the 2024/2025 session are reminded '
-                    'that ministerial attachment runs from the 3rd week of August to the 2nd week of November. '
-                    'This is a mandatory component of your graduation requirement. Contact the registrar\'s '
-                    'office for placement details.'
-                ),
-                'student', True,
-            ),
-            (
-                'Faculty Meeting — Academic Board',
-                (
-                    'The MELBAC Academic Board meeting will hold on the 2nd Saturday of October. '
-                    'All faculty members and academic board members are required to attend. '
-                    'Minutes from the previous meeting will be circulated prior to the meeting.'
-                ),
-                'staff', False,
-            ),
+            ('2025/2026 Academic Session — Registration Now Open',
+             'Regular admission for the 2025/2026 academic session is now open. '
+             'Applications are being accepted from August 25 to October 27, 2025. '
+             'All programs are completely free of charge. Apply now through the admissions portal '
+             'or contact us at inquiry@melbac.org.',
+             'all', True),
+            ('New Teaching Series — Due Process in Christendom',
+             'Apostle John Daniel has begun a new teaching series titled "Due Process in Christendom." '
+             'Part 1 is now available on the blog and MELBAC YouTube channel. This teaching reveals '
+             'the divine protocol of God\'s Kingdom and why there are no shortcuts in the spiritual life.',
+             'all', True),
+            ('Convocation & Annual University Seminar — November 2025',
+             'MELBAC\'s Annual University Seminar and Convocation will hold in November 2025 '
+             'at the Lagos campus (Festac Town). All students, graduates, and ministry partners '
+             'are invited. Details will be communicated via email and the MELBAC social media channels.',
+             'all', True),
+            ('Ministerial Attachment — August to November 2025',
+             'All Diploma and Bachelor\'s Degree graduates from the 2024/2025 session are reminded '
+             'that ministerial attachment runs from the 3rd week of August to the 2nd week of November. '
+             'This is a mandatory component of your graduation requirement. Contact the registrar\'s '
+             'office for placement details.',
+             'student', True),
+            ('Faculty Meeting — Academic Board',
+             'The MELBAC Academic Board meeting will hold on the 2nd Saturday of October. '
+             'All faculty members and academic board members are required to attend. '
+             'Minutes from the previous meeting will be circulated prior to the meeting.',
+             'staff', False),
         ]
         announcement_creators = users['admins'] + users['content_managers']
         for title, content, audience, is_pub in announcement_data:
+            # ✅ FIX: target_audience/is_published/is_pinned don't exist
+            # Model has: announcement_type, priority, is_active
             Announcement.objects.create(
                 title=title,
                 content=content,
-                target_audience=audience,
-                is_published=is_pub,
+                announcement_type='system',
+                priority='high' if is_pub else 'normal',
+                is_active=is_pub,
                 created_by=random.choice(announcement_creators),
                 publish_date=timezone.now() - timedelta(days=random.randint(1, 60)),
                 expiry_date=timezone.now() + timedelta(days=random.randint(30, 180)),
-                is_pinned=is_pub and random.random() > 0.5,
             )
 
         # ── 43. CONTACT MESSAGES ──────────────────────────────────────────────
         self.stdout.write("📬 Creating contact messages...")
-        contact_subjects = [
-            'Admissions Inquiry',
-            'Program Information',
-            'Campus Visit',
-            'Prayer Request',
-            'Other',
-        ]
+        # ✅ subject must match ContactMessage.SUBJECT_CHOICES keys exactly
+        contact_subjects = ['admissions', 'programs', 'campus', 'financial', 'support', 'other']
         contact_names = [
             'Emmanuel Adeyemi', 'Grace Okonkwo', 'Samuel Ehichioya', 'Faith Williams',
             'Joshua Mensah', 'Patience Daniel', 'Blessing Nwosu', 'Elijah Okeke',
             'Ruth Uzoigwe', 'Deborah Azobu', 'Moses Phillips', 'Miriam Obiora',
         ]
-        contact_messages = [
+        contact_messages_list = [
             'I am interested in enrolling in MELBAC and would like more information about the admission process.',
             'Good day. I am a pastor in Lagos and I want to know if MELBAC can accept mature believers without a secondary school certificate.',
             'I live in the United Kingdom and would like to know if I can study MELBAC programs online.',
@@ -2164,14 +2081,17 @@ class Command(BaseCommand):
             'My church would like to partner with MELBAC as a satellite campus location. Please advise.',
         ]
         for i in range(12):
+            responded = random.random() > 0.5
             ContactMessage.objects.create(
                 name=contact_names[i % len(contact_names)],
                 email=f"contact{i + 1}@example.com",
-                phone='+234' + str(random.randint(8000000000, 9099999999)),
+                # ✅ FIX: 'phone' field does not exist on ContactMessage — removed
                 subject=random.choice(contact_subjects),
-                message=random.choice(contact_messages),
+                message=random.choice(contact_messages_list),
                 is_read=random.choice([True, False]),
-                read_by=random.choice(users['admins']) if random.random() > 0.5 else None,
+                responded=responded,
+                responded_at=timezone.now() - timedelta(days=random.randint(1, 14)) if responded else None,
+                responded_by=random.choice(users['admins']) if responded else None,
             )
 
         # ── 44. AUDIT LOGS ────────────────────────────────────────────────────
@@ -2203,51 +2123,35 @@ class Command(BaseCommand):
         # ── 45. BROADCAST MESSAGES ────────────────────────────────────────────
         self.stdout.write("📡 Creating broadcast messages...")
         broadcast_data = [
-            (
-                'New Teaching Available — Due Process in Christendom',
-                (
-                    'Dear MELBAC family, Apostle John Daniel has released a powerful new teaching series. '
-                    'Part 1 — "Due Process in Christendom" is now available on the blog and YouTube. '
-                    'Do not miss this life-changing message. Shalom.'
-                ),
-                'email', 'all', 'sent',
-            ),
-            (
-                '2025/2026 Admission — Last Call',
-                (
-                    'Supplementary/Late Admission for 2025/2026 is now open until mid-January. '
-                    'Lectures for students admitted in this period begin in late January. '
-                    'Apply now at melbac.org or contact inquiry@melbac.org. All programs are FREE.'
-                ),
-                'email', 'all', 'sent',
-            ),
-            (
-                'MELBAC Annual Seminar — Save the Date',
-                (
-                    'The MELBAC Annual University Seminar and Convocation is scheduled for November. '
-                    'All students, graduates, and partners are encouraged to attend. '
-                    'Watch your email for full details and the programme of events.'
-                ),
-                'email', 'all', 'scheduled',
-            ),
-            (
-                'Reminder: Ministerial Attachment — Diploma & Bachelor Graduates',
-                (
-                    'This is a reminder to all 2024/2025 Diploma and Bachelor Degree graduates that '
-                    'ministerial attachment (3rd week August – 2nd week November) is mandatory. '
-                    'Please contact the registrar\'s office for your placement assignment.'
-                ),
-                'email', 'graduates', 'sent',
-            ),
+            ('New Teaching Available — Due Process in Christendom',
+             'Dear MELBAC family, Apostle John Daniel has released a powerful new teaching series. '
+             'Part 1 — "Due Process in Christendom" is now available on the blog and YouTube. '
+             'Do not miss this life-changing message. Shalom.',
+             'email', 'all', 'sent'),
+            ('2025/2026 Admission — Last Call',
+             'Supplementary/Late Admission for 2025/2026 is now open until mid-January. '
+             'Lectures for students admitted in this period begin in late January. '
+             'Apply now at melbac.org or contact inquiry@melbac.org. All programs are FREE.',
+             'email', 'all', 'sent'),
+            ('MELBAC Annual Seminar — Save the Date',
+             'The MELBAC Annual University Seminar and Convocation is scheduled for November. '
+             'All students, graduates, and partners are encouraged to attend. '
+             'Watch your email for full details and the programme of events.',
+             'email', 'all', 'scheduled'),
+            ('Reminder: Ministerial Attachment — Diploma & Bachelor Graduates',
+             'This is a reminder to all 2024/2025 Diploma and Bachelor Degree graduates that '
+             'ministerial attachment (3rd week August – 2nd week November) is mandatory. '
+             'Please contact the registrar\'s office for your placement assignment.',
+             'email', 'graduates', 'sent'),
         ]
         broadcast_creators = users['admins'] + users['content_managers']
         for title, content, btype, ftype, status in broadcast_data:
             fvals = ['all students', 'active'] if ftype == 'all' else [ftype]
             emails = [fake.email() for _ in range(random.randint(50, 500))]
+            # ✅ FIX: title → subject, content → message, message_type doesn't exist
             BroadcastMessage.objects.create(
-                title=title,
-                content=content,
-                message_type=btype,
+                subject=title,
+                message=content,
                 filter_type=ftype,
                 filter_values=fvals,
                 recipient_emails=emails,
@@ -2281,15 +2185,13 @@ class Command(BaseCommand):
                     tax_deduction=tax,
                     other_deductions=other_ded,
                     payment_status=pstatus,
-                    payment_method=random.choice(
-                        ['bank_transfer', 'mobile_money', 'check']
-                    ),
+                    payment_method=random.choice(['bank_transfer', 'mobile_money', 'check']),
                     payment_date=date(2025, month, random.randint(25, 28))
                     if pstatus == 'paid' else None,
-                    bank_name=random.choice(
-                        ['Zenith Bank', 'GTBank', 'First Bank', 'UBA', 'Access Bank',
-                         'Fidelity Bank', 'Sterling Bank']
-                    ),
+                    bank_name=random.choice([
+                        'Zenith Bank', 'GTBank', 'First Bank', 'UBA', 'Access Bank',
+                        'Fidelity Bank', 'Sterling Bank'
+                    ]),
                     account_number=str(random.randint(1_000_000_000, 9_999_999_999)),
                     notes=(
                         f"Monthly payroll for "
@@ -2314,61 +2216,61 @@ class Command(BaseCommand):
         ))
         self.stdout.write(self.style.SUCCESS("=" * 70))
         rows = [
-            ("SiteConfig", SiteConfig.objects.count()),
-            ("History Milestones",  SiteHistoryMilestone.objects.count()),
-            ("Testimonials",        Testimonial.objects.count()),
-            ("Institution Members", InstitutionMember.objects.count()),
-            ("Countries", ListOfCountry.objects.count()),
-            ("Users", User.objects.count()),
-            ("Vendors", Vendor.objects.count()),
-            ("System Configurations", SystemConfiguration.objects.count()),
-            ("Payment Gateways", PaymentGateway.objects.count()),
-            ("Subscription Plans", SubscriptionPlan.objects.count()),
-            ("Subscriptions", Subscription.objects.count()),
-            ("Faculties", Faculty.objects.count()),
-            ("Departments", Department.objects.count()),
-            ("Programs", Program.objects.count()),
-            ("Academic Sessions", AcademicSession.objects.count()),
-            ("Academic Courses", Course.objects.count()),
-            ("Course Intakes", CourseIntake.objects.count()),
-            ("Required Payments", AllRequiredPayments.objects.count()),
-            ("Applications", CourseApplication.objects.count()),
-            ("Application Documents", ApplicationDocument.objects.count()),
-            ("Application Payments", ApplicationPayment.objects.count()),
-            ("LMS Course Categories", CourseCategory.objects.count()),
-            ("LMS Courses", LMSCourse.objects.count()),
-            ("Lesson Sections", LessonSection.objects.count()),
-            ("Lessons", Lesson.objects.count()),
-            ("Enrollments", Enrollment.objects.count()),
-            ("Lesson Progress", LessonProgress.objects.count()),
-            ("Assignments", Assignment.objects.count()),
-            ("Submissions", AssignmentSubmission.objects.count()),
-            ("Quizzes", Quiz.objects.count()),
-            ("Quiz Questions", QuizQuestion.objects.count()),
-            ("Quiz Attempts", QuizAttempt.objects.count()),
-            ("Reviews", Review.objects.count()),
-            ("Certificates", Certificate.objects.count()),
-            ("Transactions", Transaction.objects.count()),
-            ("Invoices", Invoice.objects.count()),
-            ("Badges", Badge.objects.count()),
-            ("Student Badges", StudentBadge.objects.count()),
-            ("Blog Categories", BlogCategory.objects.count()),
-            ("Blog Posts", BlogPost.objects.count()),
-            ("Discussions", Discussion.objects.count()),
-            ("Discussion Replies", DiscussionReply.objects.count()),
-            ("Study Groups", StudyGroup.objects.count()),
-            ("Study Group Members", StudyGroupMember.objects.count()),
-            ("Study Group Messages", StudyGroupMessage.objects.count()),
-            ("Messages", Message.objects.count()),
-            ("Support Tickets", SupportTicket.objects.count()),
-            ("Ticket Replies", TicketReply.objects.count()),
-            ("Notifications", Notification.objects.count()),
-            ("Announcements", Announcement.objects.count()),
-            ("Contact Messages", ContactMessage.objects.count()),
-            ("Audit Logs", AuditLog.objects.count()),
-            ("Broadcast Messages", BroadcastMessage.objects.count()),
-            ("Staff Payrolls", StaffPayroll.objects.count()),
-            ("Fee Payments", FeePayment.objects.count()),
+            ("SiteConfig",              SiteConfig.objects.count()),
+            ("History Milestones",      SiteHistoryMilestone.objects.count()),
+            ("Testimonials",            Testimonial.objects.count()),
+            ("Institution Members",     InstitutionMember.objects.count()),
+            ("Countries",               ListOfCountry.objects.count()),
+            ("Users",                   User.objects.count()),
+            ("Vendors",                 Vendor.objects.count()),
+            ("System Configurations",   SystemConfiguration.objects.count()),
+            ("Payment Gateways",        PaymentGateway.objects.count()),
+            ("Subscription Plans",      SubscriptionPlan.objects.count()),
+            ("Subscriptions",           Subscription.objects.count()),
+            ("Faculties",               Faculty.objects.count()),
+            ("Departments",             Department.objects.count()),
+            ("Programs",                Program.objects.count()),
+            ("Academic Sessions",       AcademicSession.objects.count()),
+            ("Academic Courses",        Course.objects.count()),
+            ("Course Intakes",          CourseIntake.objects.count()),
+            ("Required Payments",       AllRequiredPayments.objects.count()),
+            ("Applications",            CourseApplication.objects.count()),
+            ("Application Documents",   ApplicationDocument.objects.count()),
+            ("Application Payments",    ApplicationPayment.objects.count()),
+            ("LMS Course Categories",   CourseCategory.objects.count()),
+            ("LMS Courses",             LMSCourse.objects.count()),
+            ("Lesson Sections",         LessonSection.objects.count()),
+            ("Lessons",                 Lesson.objects.count()),
+            ("Enrollments",             Enrollment.objects.count()),
+            ("Lesson Progress",         LessonProgress.objects.count()),
+            ("Assignments",             Assignment.objects.count()),
+            ("Submissions",             AssignmentSubmission.objects.count()),
+            ("Quizzes",                 Quiz.objects.count()),
+            ("Quiz Questions",          QuizQuestion.objects.count()),
+            ("Quiz Attempts",           QuizAttempt.objects.count()),
+            ("Reviews",                 Review.objects.count()),
+            ("Certificates",            Certificate.objects.count()),
+            ("Transactions",            Transaction.objects.count()),
+            ("Invoices",                Invoice.objects.count()),
+            ("Badges",                  Badge.objects.count()),
+            ("Student Badges",          StudentBadge.objects.count()),
+            ("Blog Categories",         BlogCategory.objects.count()),
+            ("Blog Posts",              BlogPost.objects.count()),
+            ("Discussions",             Discussion.objects.count()),
+            ("Discussion Replies",      DiscussionReply.objects.count()),
+            ("Study Groups",            StudyGroup.objects.count()),
+            ("Study Group Members",     StudyGroupMember.objects.count()),
+            ("Study Group Messages",    StudyGroupMessage.objects.count()),
+            ("Messages",                Message.objects.count()),
+            ("Support Tickets",         SupportTicket.objects.count()),
+            ("Ticket Replies",          TicketReply.objects.count()),
+            ("Notifications",           Notification.objects.count()),
+            ("Announcements",           Announcement.objects.count()),
+            ("Contact Messages",        ContactMessage.objects.count()),
+            ("Audit Logs",              AuditLog.objects.count()),
+            ("Broadcast Messages",      BroadcastMessage.objects.count()),
+            ("Staff Payrolls",          StaffPayroll.objects.count()),
+            ("Fee Payments",            FeePayment.objects.count()),
         ]
         for label, count in rows:
             self.stdout.write(f"   {label:<36} {count}")

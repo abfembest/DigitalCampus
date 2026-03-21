@@ -398,7 +398,7 @@
                 <div class="sidebar-header p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0">
                     <a href="{% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% elif request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% else %}{% url 'management:dashboard' %}{% endif %}" class="text-xl font-bold flex items-center font-heading hover:opacity-80 transition-opacity">
                         <i class="fas fa-graduation-cap mr-3" aria-hidden="true"></i>
-                        <span class="whitespace-nowrap">{{ site_config.school_name|default:"Portal" }}</span>
+                        <span class="whitespace-nowrap">{{ site_config.school_short_name|default:"Portal" }}</span>
                     </a>
                     <button id="closeSidebar" class="text-white hover:text-gray-300 focus:outline-none md:hidden" aria-label="Close navigation">
                         <i class="fas fa-times text-xl" aria-hidden="true"></i>
@@ -1325,7 +1325,7 @@
             <!-- Footer -->
             <footer class="bg-white border-t border-gray-200 py-4 px-6">
                 <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-600">
-                    <p>&copy; {% now "Y" %} {{ site_config.school_name|default:"Portal" }}. All rights reserved.</p>
+                    <p>&copy; {% now "Y" %} {{ site_config.school_short_name|default:"Portal" }}. All rights reserved.</p>
                     <p class="mt-2 md:mt-0">Portal v1.0</p>
                 </div>
             </footer>

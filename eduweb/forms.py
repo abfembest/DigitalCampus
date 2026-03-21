@@ -330,11 +330,15 @@ class CourseApplicationForm(forms.ModelForm):
         year = self.cleaned_data.get('graduation_year')
         from datetime import datetime
         current_year = datetime.now().year
-        if year > current_year + 5:
-            raise forms.ValidationError('Graduation year cannot be more than 5 years in the future.')
-        if year < 1950:
+        try:
+            year_int = int(year)
+        except (ValueError, TypeError):
             raise forms.ValidationError('Please enter a valid graduation year.')
-        return year
+        if year_int > current_year + 5:
+            raise forms.ValidationError('Graduation year cannot be more than 5 years in the future.')
+        if year_int < 1950:
+            raise forms.ValidationError('Please enter a valid graduation year.')
+        return str(year_int)  # model field is TextField
     
     def clean_email(self):
         """Validate email format"""

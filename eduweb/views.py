@@ -1,15 +1,9 @@
-from email.mime import application
-from urllib import request
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
-
-import payment
-
-import payment
 from .forms import ContactForm, CourseApplicationForm
-from eduweb.models import ContactMessage, CourseApplication, CourseIntake, Vendor, ListOfCountry,AllRequiredPayments,Faculty, Course, FeePayment,Program, Department, BlogPost, BlogCategory
+from eduweb.models import ContactMessage, CourseApplication, CourseIntake, ListOfCountry, AllRequiredPayments, Faculty, Course, FeePayment, Program, Department, BlogPost, BlogCategory
 from django.http import JsonResponse, HttpResponse, Http404
 from django.utils import timezone
 from .decorators import check_for_auth, smart_redirect_applicant
@@ -28,7 +22,7 @@ from datetime import datetime
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_protect
 from .models import (
-    ContactMessage, CourseApplication, Vendor, 
+    ContactMessage, CourseApplication,
     UserProfile, Course, CourseIntake, Faculty,
     ApplicationDocument, ApplicationPayment,
     Program, Department
@@ -1013,7 +1007,7 @@ def get_payment_summary(request, application_id=None, student_fee_id=None):
             data = {
                 "full_name": full_name,
                 "application_id": application.application_id,
-                "amount": float(application.application_fee),
+                "amount": float(application.program.application_fee) if application.program else 0,
                 "currency": "USD",
                 "description": "Application Processing Fee",
                 "stripe_public_key": settings.STRIPE_PUBLIC_KEY,
@@ -1825,11 +1819,24 @@ def save_application_draft(request):
 
         # -------------------------------------------------
         # 5. ACADEMIC BACKGROUND
+        # Pull from static fields first; fall back to first dynamic academic entry
         # -------------------------------------------------
-        application.highest_qualification = data.get("highest_qualification", "")
-        application.institution_name = data.get("institution_name", "")
-        application.graduation_year = data.get("graduation_year", "")
-        application.gpa_or_grade = data.get("gpa_or_grade", "")
+        application.highest_qualification = (
+            data.get("highest_qualification", "").strip()
+            or data.get("education_level_1", "").strip()
+        )
+        application.institution_name = (
+            data.get("institution_name", "").strip()
+            or data.get("institution_1", "").strip()
+        )
+        application.graduation_year = (
+            data.get("graduation_year", "").strip()
+            or data.get("graduation_year_1", "").strip()
+        )
+        application.gpa_or_grade = (
+            data.get("gpa_or_grade", "").strip()
+            or data.get("gpa_1", "").strip()
+        )
 
         # -------------------------------------------------
         # 6. LANGUAGE PROFICIENCY
@@ -1868,6 +1875,9 @@ def save_application_draft(request):
         application.emergency_contact_name = data.get("emergency_contact_name", "")
         application.emergency_contact_phone = data.get("emergency_contact_phone", "")
         application.emergency_contact_relationship = data.get("emergency_contact_relationship", "")
+        application.emergency_contact_email = data.get("emergency_contact_email", "")
+        application.emergency_contact_address = data.get("emergency_contact_address", "")
+        application.how_did_you_hear_other = data.get("how_did_you_hear_other", "")
 
         # -------------------------------------------------
         # 11. DRAFT STATUS
@@ -1923,11 +1933,11 @@ def upload_application_file(request, application_id):
             'error': 'Application not found or access denied'
         })
     
-    # Check if documents can be uploaded
-    if not application.can_upload_documents():
+    # Check if documents can be uploaded (payment-free flow)
+    if application.status not in ['draft', 'payment_complete', 'documents_uploaded', 'under_review']:
         return JsonResponse({
-            'success': False, 
-            'error': 'Document upload not allowed. Please complete payment first.'
+            'success': False,
+            'error': 'Document upload is not available for this application status.'
         })
     
     file_type = request.POST.get('file_type')
@@ -1968,7 +1978,7 @@ def upload_application_file(request, application_id):
         )
         
         # Update application status if this is first document
-        if application.status == 'payment_complete':
+        if application.status in ['draft', 'payment_complete']:
             application.status = 'documents_uploaded'
             application.save(update_fields=['status'])
 
@@ -1994,86 +2004,6 @@ def upload_application_file(request, application_id):
             'success': False, 
             'error': f'Upload failed: {str(e)}'
         })
-
-@login_required(login_url='eduweb:auth_page')
-def mark_payment_successful(request, application_id):
-    """
-    Mark payment as successful (for testing purposes only).
-    Remove or restrict in production.
-    """
-
-    import uuid
-
-    application = get_application_secure(application_id, request.user)
-    
-    if not application:
-        messages.error(
-            request, 
-            'Application not found or you do not have permission to access it.'
-        )
-        return redirect('eduweb:application_status')
-    
-    try:        
-        # Check if already paid
-        if (hasattr(application, 'payment') and 
-            application.payment.status == 'success'):
-            messages.info(
-                request, 
-                'Payment already completed.'
-            )
-            return redirect('eduweb:application_status')
-        
-        # Generate test payment reference
-        ref = f"TEST-{uuid.uuid4().hex[:12].upper()}"
-        gateway_id = f"pi_test_{uuid.uuid4().hex[:24]}"
-        
-        # Create or update payment
-        payment, created = ApplicationPayment.objects.get_or_create(
-            application=application,
-            defaults={
-                'amount': application.course.application_fee,
-                'currency': 'GBP',
-                'status': 'success',
-                'payment_method': 'stripe',
-                'payment_reference': ref,
-                'gateway_payment_id': gateway_id,
-                'paid_at': timezone.now(),
-                'card_last4': '4242',
-                'card_brand': 'visa',
-                'payment_metadata': {
-                    'test': True,
-                    'timestamp': timezone.now().isoformat()
-                }
-            }
-        )
-        
-        if not created:
-            payment.status = 'success'
-            payment.paid_at = timezone.now()
-            payment.payment_reference = ref
-            payment.gateway_payment_id = gateway_id
-            payment.save()
-        
-        # Update application status
-        application.status = 'payment_complete'
-        application.payment_status = 'success'
-        application.save(
-            update_fields=['status', 'payment_status']
-        )
-        
-        messages.success(
-            request,
-            f'✅ Payment successful! Reference: {ref}'
-        )
-        
-    except Exception as e:
-        logger.error(f"Test payment error: {str(e)}")
-        messages.error(
-            request, 
-            f'Payment failed: {str(e)}'
-        )
-    
-    return redirect('eduweb:application_status')
 
 from django.shortcuts import get_object_or_404
 from .models import Faculty, Course, Department, Program
@@ -2178,14 +2108,6 @@ def submit_application(request, application_id):
         )
         return redirect('eduweb:application_status')
     
-    # Validate payment completed
-    if not application.is_paid:
-        messages.error(
-            request, 
-            'Payment must be completed before submission. Please complete payment first.'
-        )
-        return redirect('eduweb:application_status')
-    
     # Validate documents uploaded
     if not application.documents.exists():
         messages.error(
@@ -2195,7 +2117,7 @@ def submit_application(request, application_id):
         return redirect('eduweb:application_status')
     
     # Check application status allows submission
-    if application.status not in ['payment_complete', 'documents_uploaded']:
+    if application.status not in ['draft', 'payment_complete', 'documents_uploaded']:
         messages.warning(
             request, 
             f'Application cannot be submitted from status: {application.get_status_display()}'

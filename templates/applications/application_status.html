@@ -179,12 +179,10 @@
                                 Your application is currently being reviewed by our admissions committee. We'll notify you of our decision within 4-6 weeks.
                             {% elif application.status == 'documents_uploaded' %}
                                 Documents uploaded successfully! Click "Submit Application" when ready to send for review.
-                            {% elif application.status == 'payment_complete' %}
-                                Payment confirmed! Please upload your required documents to proceed.
-                            {% elif application.status == 'pending_payment' %}
-                                Your application draft is saved. Please complete the payment to continue.
                             {% elif application.status == 'draft' %}
-                                Your application is in draft status. Complete payment and upload documents to submit.
+                                Your application draft has been saved. Please upload your required documents to proceed.
+                            {% elif application.status == 'payment_complete' %}
+                                Your application is saved. Please upload your required documents to proceed.
                             {% else %}
                                 {{ application.get_status_display }}
                             {% endif %}
@@ -227,10 +225,15 @@
                     <!-- Desktop Progress Steps -->
                     <div class="hidden lg:block">
                         <div class="relative">
-                            <div class="absolute top-8 left-0 h-1 bg-green-500 mx-8 transition-all duration-500" style="width: {% if application.status in 'approved,rejected' %}calc(100% - 4rem){% elif application.status == 'under_review' %}calc(75% - 3rem){% elif application.status == 'documents_uploaded' %}calc(60% - 2.5rem){% elif application.is_paid %}calc(40% - 2rem){% elif application.status == 'draft' %}calc(20% - 1rem){% else %}0{% endif %}"></div>
+                            <!-- Progress connector line -->
+                            <div class="absolute left-0 right-0 mx-auto" style="top: 2rem; height: 4px; background: #e5e7eb; z-index: 0; width: calc(100% - 4rem); margin-left: 2rem;">
+                                <div class="h-full bg-green-500 transition-all duration-700 rounded-full"
+                                     style="width: {% if application.status == 'approved' or application.status == 'rejected' %}100{% elif application.status == 'under_review' %}75{% elif application.status == 'documents_uploaded' %}50{% elif application.documents.all %}40{% elif application.status == 'draft' %}10{% else %}0{% endif %}%;">
+                                </div>
+                            </div>
 
-                            <!-- Steps -->
-                            <div class="relative grid grid-cols-5 gap-2">
+                            <!-- Steps — always flex row, never wrap -->
+                            <div class="relative flex flex-row items-start justify-between gap-0" style="z-index: 1;">
                                 <!-- Step 1: Draft Saved -->
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
@@ -240,37 +243,9 @@
                                     <span class="text-xs text-gray-500 text-center mt-1">Draft created</span>
                                 </div>
 
-                                <!-- Step 2: Payment -->
-                                <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full {% if application.is_paid %}bg-green-500{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
-                                        {% if application.is_paid %}
-                                        <i data-lucide="check" class="w-8 h-8"></i>
-                                        {% else %}
-                                        <i data-lucide="credit-card" class="w-8 h-8"></i>
-                                        {% endif %}
-                                    </div>
-
-                                    <span class="text-sm font-semibold text-center {% if application.is_paid %}text-gray-900{% else %}text-gray-500{% endif %}">
-                                        Payment
-                                    </span>
-
-                                    <span class="text-xs text-gray-500 text-center mt-1">
-                                        {% if application.is_paid %}Paid{% else %}Pending{% endif %}
-                                    </span>
-
-                                    {% if not application.is_paid %}
-                                    <a href="{% url 'eduweb:payments' %}?application_id={{ application.application_id }}"
-                                       class="mt-3 px-4 py-2 bg-primary-950 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition">
-                                        Make Payment
-                                    </a>
-                                    {% endif %}
-
-
-                                </div>
-
                                 <!-- Step 3: Documents -->
                                 <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full {% if application.is_paid %}{% if application.documents.all %}bg-green-500{% else %}bg-blue-500 shadow-xl animate-pulse{% endif %}{% else %}bg-gray-300{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
+                                    <div class="w-16 h-16 rounded-full {% if application.documents.all %}bg-green-500{% else %}bg-blue-500 shadow-xl animate-pulse{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
                                         {% if application.documents.all %}
                                         <i data-lucide="check" class="w-8 h-8"></i>
                                         {% else %}
@@ -278,13 +253,11 @@
                                         {% endif %}
                                     </div>
 
-                                    <span class="text-sm font-semibold text-center {% if application.is_paid %}text-gray-900{% else %}text-gray-500{% endif %}">Documents</span>
-
+                                    <span class="text-sm font-semibold text-center text-gray-900">Documents</span>
                                     <span class="text-xs text-gray-500 text-center mt-1">
-                                        {% if application.documents.all %}{{ application.documents.count }} uploaded{% elif application.is_paid %}Required{% else %}Locked{% endif %}
+                                        {% if application.documents.all %}{{ application.documents.count }} uploaded{% else %}Required{% endif %}
                                     </span>
-
-                                    {% if application.is_paid and not application.documents.all %}
+                                    {% if not application.documents.all %}
                                     <button onclick="openUploadModal()"
                                             class="mt-3 px-4 py-2 bg-primary-950 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition">
                                         Upload Documents
@@ -390,40 +363,19 @@
                             <p class="text-sm text-gray-600">Draft created successfully</p>
                         </div>
 
-                        <!-- STEP 2: Payment -->
-                        <div class="p-4 rounded-xl border
-        {% if application.is_paid %}bg-green-50 border-green-400
-        {% else %}bg-blue-50 border-blue-400{% endif %}">
-                            <h4 class="font-bold text-gray-900">💳 Payment</h4>
-                            <p class="text-sm text-gray-600">
-                                {% if application.is_paid %}Payment completed{% else %}Payment required{% endif %}
-                            </p>
+                        
 
-                            {% if not application.is_paid %}
-                            <a href="{% url 'eduweb:payments' %}?application_id={{ application.application_id }}"
-                               class="mt-3 inline-block w-full text-center px-4 py-2 bg-primary-950 text-white rounded-lg text-sm font-semibold">
-                                Make Payment
-                            </a>
-                            {% endif %}
-                        </div>
-
-                        <!-- STEP 3: Documents -->
-                        <div class="p-4 rounded-xl border
-        {% if application.documents.all %}bg-green-50 border-green-400
-        {% elif application.is_paid %}bg-blue-50 border-blue-400
-        {% else %}bg-gray-50 border-gray-300{% endif %}">
+                        <!-- STEP 2: Documents -->
+                        <div class="p-4 rounded-xl border {% if application.documents.all %}bg-green-50 border-green-400{% else %}bg-blue-50 border-blue-400{% endif %}">
                             <h4 class="font-bold text-gray-900">📄 Documents</h4>
                             <p class="text-sm text-gray-600">
                                 {% if application.documents.all %}
-                                {{ application.documents.count }} document{{ application.documents.count|pluralize }} uploaded
-                                {% elif application.is_paid %}
-                                Upload required
+                                    {{ application.documents.count }} document{{ application.documents.count|pluralize }} uploaded
                                 {% else %}
-                                Locked until payment
+                                    Upload required
                                 {% endif %}
                             </p>
-
-                            {% if application.is_paid and not application.documents.all %}
+                            {% if not application.documents.all %}
                             <button onclick="openUploadModal()"
                                     class="mt-3 w-full px-4 py-2 bg-primary-950 text-white rounded-lg text-sm font-semibold">
                                 Upload Documents
@@ -539,6 +491,7 @@
                     </h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <!-- LEFT COLUMN -->
                         <div class="space-y-6">
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
@@ -556,17 +509,10 @@
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="book-open" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Program Applied</p>
+                                    <i data-lucide="mail" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Email</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.program.name }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="layers" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Study Mode</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.get_study_mode_display }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.email }}</p>
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
@@ -577,6 +523,20 @@
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="cake" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Date of Birth</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.date_of_birth|date:"F d, Y" }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="users" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Gender</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.get_gender_display }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
                                     <i data-lucide="flag" class="w-4 h-4 text-primary-950"></i>
                                     <p class="text-sm font-medium text-gray-500">Nationality</p>
                                 </div>
@@ -584,20 +544,39 @@
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="cake" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Date of Birth</p>
+                                    <i data-lucide="map-pin" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Address</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.date_of_birth|date:"F d, Y" }}</p>
+                                <p class="text-base font-semibold text-gray-900 ml-6">
+                                    {{ application.address_line1 }}{% if application.address_line2 %}, {{ application.address_line2 }}{% endif %}<br>
+                                    {{ application.city }}{% if application.state %}, {{ application.state }}{% endif %} {{ application.postal_code }}<br>
+                                    {{ application.country }}
+                                </p>
                             </div>
                         </div>
 
+                        <!-- RIGHT COLUMN -->
                         <div class="space-y-6">
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="book-open" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Program Applied</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.program.name }}</p>
+                            </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
                                     <i data-lucide="graduation-cap" class="w-4 h-4 text-primary-950"></i>
                                     <p class="text-sm font-medium text-gray-500">Degree Level</p>
                                 </div>
                                 <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.program.get_degree_level_display }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="layers" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Study Mode</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.get_study_mode_display }}</p>
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
@@ -618,31 +597,77 @@
                                     <i data-lucide="award" class="w-4 h-4 text-primary-950"></i>
                                     <p class="text-sm font-medium text-gray-500">Highest Qualification</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.highest_qualification }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.highest_qualification|default:"—" }}</p>
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
                                     <i data-lucide="building" class="w-4 h-4 text-primary-950"></i>
                                     <p class="text-sm font-medium text-gray-500">Previous Institution</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.institution_name }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.institution_name|default:"—" }}</p>
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
                                     <i data-lucide="bar-chart" class="w-4 h-4 text-primary-950"></i>
                                     <p class="text-sm font-medium text-gray-500">GPA / Grade</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.gpa_or_grade }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.gpa_or_grade|default:"—" }}</p>
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="map-pin" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Address</p>
+                                    <i data-lucide="globe" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Language Proficiency</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.address_line1 }}{% if application.address_line2 %}, {{ application.address_line2 }}{% endif %}, {{ application.city }}, {{ application.country }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">
+                                    {{ application.get_language_skill_display|default:"—" }}{% if application.language_score %} — Score: {{ application.language_score }}{% endif %}
+                                </p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="briefcase" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Work Experience</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.work_experience_years }} year{{ application.work_experience_years|pluralize }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="star" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">Scholarship Requested</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{% if application.scholarship %}Yes{% else %}No{% endif %}</p>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Emergency Contact Row -->
+                    {% if application.emergency_contact_name %}
+                    <div class="mt-8 pt-6 border-t border-gray-200">
+                        <h3 class="text-base font-bold text-gray-700 mb-4 flex items-center gap-2">
+                            <i data-lucide="phone-call" class="w-4 h-4 text-primary-950"></i>
+                            Emergency Contact
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <p class="text-xs font-medium text-gray-500 mb-1">Name &amp; Relationship</p>
+                                <p class="font-semibold text-gray-900">{{ application.emergency_contact_name }} <span class="text-gray-500 font-normal">({{ application.emergency_contact_relationship }})</span></p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-gray-500 mb-1">Phone</p>
+                                <p class="font-semibold text-gray-900">{{ application.emergency_contact_phone }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-medium text-gray-500 mb-1">Email</p>
+                                <p class="font-semibold text-gray-900">{{ application.emergency_contact_email|default:"—" }}</p>
+                            </div>
+                            {% if application.emergency_contact_address %}
+                            <div class="md:col-span-3">
+                                <p class="text-xs font-medium text-gray-500 mb-1">Address</p>
+                                <p class="font-semibold text-gray-900">{{ application.emergency_contact_address }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </section>
 
                 <!-- Uploaded Documents -->
@@ -685,7 +710,7 @@
                             <i data-lucide="inbox" class="w-8 h-8 text-gray-400"></i>
                         </div>
                         <p class="text-gray-500 font-medium">No documents uploaded yet</p>
-                        {% if application.is_paid and application.status in 'payment_complete,pending_payment,documents_uploaded' %}
+                        {% if application.status in 'draft,payment_complete,documents_uploaded' %}
                         <button onclick="openUploadModal()" 
                                 class="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
                             <i data-lucide="upload" class="w-5 h-5"></i>
@@ -720,29 +745,7 @@
                             </div>
                         </div>
 
-                        {% if application.payment %}
-                        <div class="flex gap-4">
-                            <div class="flex flex-col items-center">
-                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
-                                    <i data-lucide="credit-card" class="w-5 h-5 text-white"></i>
-                                </div>
-                                <div class="w-0.5 h-full bg-gray-200 mt-2"></div>
-                            </div>
-                            <div class="flex-1 pb-6">
-                                <h4 class="font-bold text-gray-900 mb-1">Payment Completed</h4>
-                                <p class="text-sm text-gray-600 mb-2">
-                                    {% if application.payment.paid_at %}
-                                        {{ application.payment.paid_at|date:"M d, Y" }} at {{ application.payment.paid_at|time:"g:i A" }}
-                                    {% else %}
-                                        {{ application.payment.created_at|date:"M d, Y" }} at {{ application.payment.created_at|time:"g:i A" }}
-                                    {% endif %}
-                                </p>
-                                <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    Payment of {{application.payment.currency}} {{ application.payment.amount }} confirmed
-                                </p>
-                            </div>
-                        </div>
-                        {% endif %}
+                        
 
                         {% if application.documents.exists %}
                         <div class="flex gap-4">
@@ -830,22 +833,7 @@
                         Next Steps
                     </h3>
 
-                    {% if not application.is_paid %}
-                    <!-- Need Payment -->
-                    <div class="text-center py-6">
-                        <div class="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <i data-lucide="credit-card" class="w-14 h-14 text-blue-600"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-3">Complete Payment</h3>
-                        <p class="text-gray-600 mb-6 leading-relaxed">Pay the application fee to proceed with document upload and submission.</p>
-                        <a href="{% url 'eduweb:payments' %}?application_id={{ application.application_id }}" 
-                           class="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                            Proceed to Payment
-                        </a>
-                    </div>
-
-                    {% elif application.is_paid and application.status in 'payment_complete,pending_payment,documents_uploaded' and not application.documents.all %}
+                    {% if application.status in 'draft,payment_complete,documents_uploaded' and not application.documents.all %}
                     <!-- Need Documents -->
                     <div class="text-center py-6">
                         <div class="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
@@ -860,7 +848,7 @@
                         </button>
                     </div>
 
-                    {% elif application.is_paid and application.status in 'payment_complete,pending_payment,documents_uploaded' and application.documents.all %}
+                    {% elif application.status in 'draft,payment_complete,documents_uploaded' and application.documents.all %}
                     <!-- Documents Uploaded -->
                     <div class="text-center py-6">
                         <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">

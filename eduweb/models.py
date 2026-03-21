@@ -1674,26 +1674,29 @@ class CourseApplication(models.Model):
 
     @property
     def is_paid(self):
-        """Check if payment is complete"""
-        # First check the status field directly — most reliable
-        if self.status in ['payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
+        """
+        For free-flow applications, all statuses beyond draft are treated as paid.
+        This property is kept for backward compatibility with templates.
+        """
+        # Free flow: draft and above are all "unlocked"
+        if self.status in ['draft', 'payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
             return True
-        # Fallback: check the related payment record
+        # Legacy fallback: check actual payment record if status is pending_payment
         try:
             return self.payment.status == 'success'
         except Exception:
             return False
 
     def can_upload_documents(self):
-        """Check if application allows document uploads"""
-        allowed_statuses = ['payment_complete', 'documents_uploaded', 'under_review']
-        return self.status in allowed_statuses and self.is_paid
+        """Check if application allows document uploads (payment-free flow)"""
+        allowed_statuses = ['draft', 'payment_complete', 'documents_uploaded', 'under_review']
+        return self.status in allowed_statuses
 
     def can_submit(self):
         """Check if application can be submitted"""
-        allowed_statuses = ['payment_complete', 'documents_uploaded']
+        allowed_statuses = ['draft', 'payment_complete', 'documents_uploaded']
         has_documents = self.documents.exists()
-        return self.is_paid and has_documents and self.status in allowed_statuses
+        return has_documents and self.status in allowed_statuses
     
     def mark_as_submitted(self):
         """Mark application as submitted"""

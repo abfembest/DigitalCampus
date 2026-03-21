@@ -93,7 +93,6 @@ urlpatterns = [
     # ================= STAGE 6 =================
     # Upload documents (Ajax)
     path("<str:application_id>/upload-document/", views.upload_application_file, name="upload_application_file"),
-    path('test/mark-payment-success/<str:application_id>/', views.mark_payment_successful, name='mark_payment_successful'),
 
     # eduweb/urls.py — add this line alongside the other API paths
     path("api/student-fee/summary/<int:fee_pk>/", views.get_student_fee_summary, name="get_student_fee_summary"),

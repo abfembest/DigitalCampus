@@ -1,7 +1,4 @@
 // ─── Lucide Icons — safe init ───────────────────────────────────────────────
-// unpkg CDN loads asynchronously. If it hasn't finished by DOMContentLoaded,
-// createIcons() would fail silently and NO icons appear on the page.
-// We try on DOMContentLoaded first, then fall back to window.load.
 function initLucide() {
     if (window.lucide) {
         lucide.createIcons();
@@ -9,7 +6,7 @@ function initLucide() {
 }
 
 document.addEventListener('DOMContentLoaded', initLucide);
-window.addEventListener('load', initLucide); // catches CDN late-load
+window.addEventListener('load', initLucide);
 
 // ─── SweetAlert2 Toast ──────────────────────────────────────────────────────
 const Toast = Swal.mixin({
@@ -38,89 +35,105 @@ window.showToast = function (type, message) {
 // ─── Mobile Menu Toggle ─────────────────────────────────────────────────────
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileMenu    = document.getElementById('mobileMenu');
-const menuIcon      = document.getElementById('menuIcon');
 
-if (mobileMenuBtn && mobileMenu && menuIcon) {
+function closeMobileMenu() {
+    if (!mobileMenu || !mobileMenuBtn) return;
+    mobileMenu.style.maxHeight = '0px';
+    mobileMenu.style.overflowY = 'hidden';
+    mobileMenu.setAttribute('aria-hidden', 'true');
+    mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    const icon = document.getElementById('menuIcon');
+    if (icon) {
+        icon.setAttribute('data-lucide', 'menu');
+        initLucide();
+    }
+}
+
+if (mobileMenuBtn && mobileMenu) {
     mobileMenuBtn.addEventListener('click', function (e) {
         e.stopPropagation();
-        const isHidden = mobileMenu.classList.contains('hidden');
-
-        if (isHidden) {
-            mobileMenu.classList.remove('hidden');
-            mobileMenuBtn.setAttribute('aria-expanded', 'true');
-            menuIcon.outerHTML = '<i data-lucide="x" class="w-6 h-6 text-primary-950" id="menuIcon"></i>';
+        const isOpen = mobileMenu.style.maxHeight && mobileMenu.style.maxHeight !== '0px';
+        if (isOpen) {
+            closeMobileMenu();
         } else {
-            mobileMenu.classList.add('hidden');
-            mobileMenuBtn.setAttribute('aria-expanded', 'false');
-            menuIcon.outerHTML = '<i data-lucide="menu" class="w-6 h-6 text-primary-950" id="menuIcon"></i>';
+            const inner = mobileMenu.querySelector('.py-3');
+            const fullHeight = inner ? inner.scrollHeight + 32 : mobileMenu.scrollHeight;
+            const maxAllowed = Math.floor(window.innerHeight * 0.82);
+            mobileMenu.style.maxHeight = Math.min(fullHeight, maxAllowed) + 'px';
+            mobileMenu.style.overflowY = 'auto';
+            mobileMenu.setAttribute('aria-hidden', 'false');
+            mobileMenuBtn.setAttribute('aria-expanded', 'true');
+            const icon = document.getElementById('menuIcon');
+            if (icon) {
+                icon.setAttribute('data-lucide', 'x');
+                initLucide();
+            }
         }
-        initLucide();
     });
 
+    // Close on outside click
     document.addEventListener('click', function (e) {
         if (!mobileMenuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
-            if (!mobileMenu.classList.contains('hidden')) {
-                mobileMenu.classList.add('hidden');
-                mobileMenuBtn.setAttribute('aria-expanded', 'false');
-                const currentIcon = document.getElementById('menuIcon');
-                if (currentIcon) {
-                    currentIcon.outerHTML = '<i data-lucide="menu" class="w-6 h-6 text-primary-950" id="menuIcon"></i>';
-                    initLucide();
-                }
-            }
+            closeMobileMenu();
         }
     });
 }
 
-// ─── Mobile Dropdown Handlers ───────────────────────────────────────────────
+// ─── Mobile Accordion Handlers ──────────────────────────────────────────────
 function setupMobileDropdown(btnId, menuId, chevronId) {
     const btn     = document.getElementById(btnId);
     const menu    = document.getElementById(menuId);
     const chevron = document.getElementById(chevronId);
+    if (!btn || !menu) return;
 
-    if (btn && menu && chevron) {
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            const isOpen = !menu.classList.contains('hidden');
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = menu.style.maxHeight && menu.style.maxHeight !== '0px';
 
-            if (isOpen) {
-                menu.classList.add('hidden');
-                chevron.classList.remove('rotate-180');
-                btn.setAttribute('aria-expanded', 'false');
-            } else {
-                menu.classList.remove('hidden');
-                chevron.classList.add('rotate-180');
-                btn.setAttribute('aria-expanded', 'true');
-                initLucide(); // re-run after revealing hidden icons
+        // Toggle this accordion
+        menu.style.maxHeight = isOpen ? '0px' : menu.scrollHeight + 'px';
+        btn.setAttribute('aria-expanded', String(!isOpen));
+        if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+        if (!isOpen) initLucide();
+
+        // After transition, let outer menu scroll freely to fit all content
+        // instead of capping — so nothing gets clipped
+        setTimeout(() => {
+            if (mobileMenu && mobileMenu.style.overflowY === 'auto') {
+                // Set to the actual full inner content height, not a viewport cap
+                const inner = mobileMenu.querySelector('.py-3');
+                if (inner) {
+                    const fullHeight = inner.scrollHeight + 32; // 32px padding buffer
+                    const maxAllowed = Math.floor(window.innerHeight * 0.82);
+                    // Use whichever is smaller: content or 82vh
+                    mobileMenu.style.maxHeight = Math.min(fullHeight, maxAllowed) + 'px';
+                }
             }
-        });
-    }
+        }, 320);
+    });
 }
 
 setupMobileDropdown('mobileFacultiesBtn', 'mobileFacultiesMenu', 'facultiesChevron');
 setupMobileDropdown('mobileProgramsBtn',  'mobileProgramsMenu',  'programsChevron');
-setupMobileDropdown('mobileMoreBtn',      'mobileMoreMenu',      'moreChevron');
 
 // ─── Desktop Dropdown Handlers ──────────────────────────────────────────────
 document.querySelectorAll('.relative.group').forEach(dropdown => {
-    const button = dropdown.querySelector('button[aria-haspopup="true"]');
+    const button = dropdown.querySelector('button[aria-haspopup="menu"]');
     const menu   = dropdown.querySelector('[role="menu"]');
 
     if (button && menu) {
         button.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-
             const isVisible = menu.classList.contains('opacity-100') && menu.classList.contains('visible');
 
-            // Close all other open menus first
             document.querySelectorAll('[role="menu"]').forEach(m => {
                 if (m !== menu) {
                     m.classList.remove('opacity-100', 'visible');
                     m.classList.add('opacity-0', 'invisible');
                 }
             });
-            document.querySelectorAll('.relative.group button[aria-haspopup="true"]').forEach(btn => {
+            document.querySelectorAll('.relative.group button[aria-haspopup="menu"]').forEach(btn => {
                 if (btn !== button) btn.setAttribute('aria-expanded', 'false');
             });
 
@@ -132,7 +145,7 @@ document.querySelectorAll('.relative.group').forEach(dropdown => {
                 menu.classList.remove('opacity-0', 'invisible');
                 menu.classList.add('opacity-100', 'visible');
                 button.setAttribute('aria-expanded', 'true');
-                initLucide(); // re-run after revealing dropdown icons
+                initLucide();
             }
         });
 
@@ -141,9 +154,8 @@ document.querySelectorAll('.relative.group').forEach(dropdown => {
                 menu.classList.remove('opacity-0', 'invisible');
                 menu.classList.add('opacity-100', 'visible');
                 button.setAttribute('aria-expanded', 'true');
-                initLucide(); // re-run on hover reveal
+                initLucide();
             });
-
             dropdown.addEventListener('mouseleave', function () {
                 menu.classList.remove('opacity-100', 'visible');
                 menu.classList.add('opacity-0', 'invisible');
@@ -153,29 +165,30 @@ document.querySelectorAll('.relative.group').forEach(dropdown => {
     }
 });
 
-// Close all dropdowns on outside click
+// Close dropdowns on outside click
 document.addEventListener('click', function (e) {
     if (!e.target.closest('.relative.group')) {
-        document.querySelectorAll('[role="menu"]').forEach(menu => {
-            menu.classList.remove('opacity-100', 'visible');
-            menu.classList.add('opacity-0', 'invisible');
+        document.querySelectorAll('[role="menu"]').forEach(m => {
+            m.classList.remove('opacity-100', 'visible');
+            m.classList.add('opacity-0', 'invisible');
         });
-        document.querySelectorAll('.relative.group button[aria-haspopup="true"]').forEach(btn => {
+        document.querySelectorAll('.relative.group button[aria-haspopup="menu"]').forEach(btn => {
             btn.setAttribute('aria-expanded', 'false');
         });
     }
 });
 
-// Close all dropdowns on Escape key
+// Close dropdowns on Escape
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-        document.querySelectorAll('[role="menu"]').forEach(menu => {
-            menu.classList.remove('opacity-100', 'visible');
-            menu.classList.add('opacity-0', 'invisible');
+        document.querySelectorAll('[role="menu"]').forEach(m => {
+            m.classList.remove('opacity-100', 'visible');
+            m.classList.add('opacity-0', 'invisible');
         });
-        document.querySelectorAll('.relative.group button[aria-haspopup="true"]').forEach(btn => {
+        document.querySelectorAll('.relative.group button[aria-haspopup="menu"]').forEach(btn => {
             btn.setAttribute('aria-expanded', 'false');
         });
+        closeMobileMenu();
     }
 });
 
@@ -188,15 +201,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             const target = document.querySelector(href);
             if (target) {
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
-                    mobileMenu.classList.add('hidden');
-                    mobileMenuBtn.setAttribute('aria-expanded', 'false');
-                    const currentIcon = document.getElementById('menuIcon');
-                    if (currentIcon) {
-                        currentIcon.outerHTML = '<i data-lucide="menu" class="w-6 h-6 text-primary-950" id="menuIcon"></i>';
-                        initLucide();
-                    }
-                }
+                closeMobileMenu();
             }
         }
     });

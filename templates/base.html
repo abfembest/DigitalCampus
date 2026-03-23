@@ -282,6 +282,14 @@
                         {% endif %}
                     </div>
 
+                    <!-- Library Button -->
+                    <a href="{% url 'library:home' %}"
+                    class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-950/30 text-primary-950 text-sm font-semibold font-['Inter'] hover:bg-primary-950 hover:text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 whitespace-nowrap"
+                    aria-label="Library – free for all">
+                        <i data-lucide="library" class="w-4 h-4" aria-hidden="true"></i>
+                        Library
+                    </a>
+
                     <!-- CTA Buttons -->
                     {% if user.is_authenticated %}
                         {% if has_pending_application %}
@@ -446,6 +454,12 @@
 
                     <!-- Mobile CTA Buttons -->
                     <div class="pt-1 pb-3 space-y-2 px-2">
+                        <!-- Library -->
+                        <a href="{% url 'library:home' %}"
+                        class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary-950/10 border border-primary-950/30 text-primary-950 rounded-lg font-semibold font-['Inter'] hover:bg-primary-950 hover:text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                            <i data-lucide="library" class="w-5 h-5" aria-hidden="true"></i>
+                            Library – Free Access
+                        </a>
                         {% if user.is_authenticated %}
                             {% if has_pending_application %}
                             <a href="{% url 'eduweb:application_status' %}"
@@ -576,7 +590,7 @@
                     </h4>
                     <ul class="space-y-3">
                         <li>
-                            <a href="#"
+                            <a href="{% url 'library:home' %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
                                 <i data-lucide="chevron-right"
                                    class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>

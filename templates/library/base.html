@@ -25,7 +25,7 @@
   {# Fonts — preconnect first for speed #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   {# Main compiled CSS (Tailwind + melbac tokens) #}
   <link rel="stylesheet" href="{% static 'css/melbac.css' %}">
@@ -43,27 +43,38 @@
         {% if site_config.logo %}
           <img src="{{ site_config.logo.url }}" alt="{{ site_config.school_name }}" class="h-10 md:h-12 w-auto object-contain">
         {% else %}
-          <span class="mb-font-heading text-gospel-700 font-bold text-lg leading-tight">
+          {# Full name on desktop, short name on mobile #}
+          <span class="hidden md:inline mb-font-heading text-gospel-700 font-bold text-lg leading-tight">
+            {{ site_config.school_name|default:"Library" }}
+          </span>
+          <span class="md:hidden mb-font-heading text-gospel-700 font-bold text-base leading-tight">
             {{ site_config.school_short_name|default:"Library" }}
           </span>
         {% endif %}
       </a>
 
-      {# Desktop nav links #}
+      {# Desktop nav — Library + Search side by side #}
       <nav class="hidden md:flex items-center gap-1" aria-label="Primary navigation">
         <a href="{% url 'library:home' %}"
-           class="mb-font-ui text-sm font-medium px-3 py-2 rounded-lg transition-colors {% if 'library' in request.path %}bg-gospel-600 text-white{% else %}text-neutral-700 hover:text-gospel-700 hover:bg-gospel-50{% endif %}">
+           class="mb-font-ui text-sm font-medium px-3 py-2 rounded-lg transition-colors {% if 'library' in request.path and 'search' not in request.path %}bg-gospel-600 text-white{% else %}text-neutral-700 hover:text-gospel-700 hover:bg-gospel-50{% endif %}">
           Library
+        </a>
+        <a href="{% url 'library:search' %}"
+           class="mb-font-ui text-sm font-medium px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 {% if 'search' in request.path %}bg-gospel-600 text-white{% else %}text-neutral-700 hover:text-gospel-700 hover:bg-gospel-50{% endif %}">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+          </svg>
+          Search
         </a>
         {% block extra_nav %}{% endblock %}
       </nav>
 
-      {# Right side: search + hamburger #}
+      {# Right side: hamburger only (search moved into nav) #}
       <div class="flex items-center gap-2 sm:gap-3">
 
-        {# Quick search icon — links to search page #}
+        {# Mobile search icon — visible on mobile only #}
         <a href="{% url 'library:search' %}"
-           class="w-9 h-9 flex items-center justify-center rounded-lg text-neutral-500 hover:text-gospel-600 hover:bg-gospel-50 transition-colors"
+           class="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-neutral-500 hover:text-gospel-600 hover:bg-gospel-50 transition-colors"
            aria-label="Search library">
           <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
@@ -88,7 +99,7 @@
          aria-hidden="true">
       <nav class="mb-container py-4 space-y-1" aria-label="Mobile navigation">
         <a href="{% url 'library:home' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-font-ui text-sm font-medium {% if 'library' in request.path %}bg-gospel-50 text-gospel-700{% else %}text-neutral-700 hover:bg-neutral-100{% endif %} transition-colors">
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-font-ui text-sm font-medium {% if 'library' in request.path and 'search' not in request.path %}bg-gospel-50 text-gospel-700{% else %}text-neutral-700 hover:bg-neutral-100{% endif %} transition-colors">
           <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
           Library
         </a>

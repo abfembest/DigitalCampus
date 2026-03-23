@@ -2107,6 +2107,12 @@
   .border-primary-950 {
     border-color: var(--color-primary-950);
   }
+  .border-primary-950\/30 {
+    border-color: color-mix(in srgb, #840384 30%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-primary-950) 30%, transparent);
+    }
+  }
   .border-purple-100 {
     border-color: var(--color-purple-100);
   }
@@ -2517,6 +2523,12 @@
   }
   .bg-primary-950 {
     background-color: var(--color-primary-950);
+  }
+  .bg-primary-950\/10 {
+    background-color: color-mix(in srgb, #840384 10%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-primary-950) 10%, transparent);
+    }
   }
   .bg-purple-50 {
     background-color: var(--color-purple-50);
@@ -5323,6 +5335,13 @@
     &:hover {
       @media (hover: hover) {
         border-color: var(--color-primary-500);
+      }
+    }
+  }
+  .hover\:border-primary-950 {
+    &:hover {
+      @media (hover: hover) {
+        border-color: var(--color-primary-950);
       }
     }
   }

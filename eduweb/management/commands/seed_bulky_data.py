@@ -20,7 +20,7 @@ from eduweb.models import (
     QuizAnswer, QuizAttempt, QuizResponse, Review, SubscriptionPlan,
     Subscription, SystemConfiguration, UserProfile, Vendor, StudyGroup,
     StudyGroupMember, StudyGroupMessage, BroadcastMessage, StaffPayroll,
-    ListOfCountry, FeePayment,
+    ListOfCountry, FeePayment, LibraryItem
 )
 
 fake = Faker()
@@ -211,7 +211,7 @@ class Command(BaseCommand):
             PaymentGateway, BlogPost, BlogCategory, ContactMessage,
             Vendor, SystemConfiguration, Announcement,
             StudyGroupMessage, StudyGroupMember, StudyGroup, BroadcastMessage,
-            InstitutionMember, SiteHistoryMilestone, SiteConfig, Testimonial, ListOfCountry,
+            InstitutionMember, SiteHistoryMilestone, SiteConfig, Testimonial, ListOfCountry, LibraryItem, FeePayment
         ]
         for model in models_to_clear:
             model.objects.all().delete()
@@ -1136,18 +1136,18 @@ class Command(BaseCommand):
                 )
 
         # ── 18. APPLICATION PAYMENTS ─────────────────────────────────────────
-        self.stdout.write("💰 Creating application payments...")
         for app in [a for a in applications if a.status in ['payment_complete', 'under_review', 'approved']]:
+            method = random.choice(['card', 'bank_transfer'])   # ← pull method out first
             ApplicationPayment.objects.create(
                 application=app,
                 amount=Decimal('0.00'),
                 currency='USD',
                 status='success',
-                payment_method=random.choice(['card', 'bank_transfer']),
+                payment_method=method,
                 payment_reference=f"MELBAC-{uuid.uuid4().hex[:12].upper()}",
                 gateway_payment_id=f"pi_{uuid.uuid4().hex[:24]}",
-                card_last4=str(random.randint(1000, 9999)),
-                card_brand=random.choice(['Visa', 'Mastercard', 'Verve']),
+                card_last4=str(random.randint(1000, 9999)) if method == 'card' else '',   # ← guarded
+                card_brand=random.choice(['Visa', 'Mastercard', 'Verve']) if method == 'card' else '',  # ← guarded
                 paid_at=timezone.now() - timedelta(days=random.randint(1, 60)),
                 payment_metadata={
                     'note': 'MELBAC is free — no tuition charged.',
@@ -2175,34 +2175,503 @@ class Command(BaseCommand):
                 tax = Decimal(str(round(float(base + allowances + bonuses) * 0.07, 2)))
                 other_ded = Decimal(str(round(random.uniform(10, 100), 2)))
                 pstatus = random.choice(['paid', 'paid', 'paid', 'pending', 'processing'])
-                StaffPayroll.objects.create(
+                StaffPayroll.objects.get_or_create(
                     staff=staff,
                     month=month,
                     year=2025,
-                    base_salary=base,
-                    allowances=allowances,
-                    bonuses=bonuses,
-                    tax_deduction=tax,
-                    other_deductions=other_ded,
-                    payment_status=pstatus,
-                    payment_method=random.choice(['bank_transfer', 'mobile_money', 'check']),
-                    payment_date=date(2025, month, random.randint(25, 28))
-                    if pstatus == 'paid' else None,
-                    bank_name=random.choice([
-                        'Zenith Bank', 'GTBank', 'First Bank', 'UBA', 'Access Bank',
-                        'Fidelity Bank', 'Sterling Bank'
-                    ]),
-                    account_number=str(random.randint(1_000_000_000, 9_999_999_999)),
-                    notes=(
-                        f"Monthly payroll for "
-                        f"{date(2025, month, 1).strftime('%B %Y')}. "
-                        f"Processed by MELBAC finance team. All staff are valued servants of God."
-                    ),
-                    created_by=finance_admin,
-                    approved_by=approver if pstatus == 'paid' else None,
-                    approved_at=timezone.now() - timedelta(days=random.randint(1, 28))
-                    if pstatus == 'paid' else None,
+                    defaults=dict(
+                        base_salary=base,
+                        allowances=allowances,
+                        bonuses=bonuses,
+                        tax_deduction=tax,
+                        other_deductions=other_ded,
+                        payment_status=pstatus,
+                        payment_method=random.choice(['bank_transfer', 'mobile_money', 'check']),
+                        payment_date=date(2025, month, random.randint(25, 28))
+                        if pstatus == 'paid' else None,
+                        bank_name=random.choice([
+                            'Zenith Bank', 'GTBank', 'First Bank', 'UBA', 'Access Bank',
+                            'Fidelity Bank', 'Sterling Bank'
+                        ]),
+                        account_number=str(random.randint(1_000_000_000, 9_999_999_999)),
+                        notes=(
+                            f"Monthly payroll for "
+                            f"{date(2025, month, 1).strftime('%B %Y')}. "
+                            f"Processed by MELBAC finance team. All staff are valued servants of God."
+                        ),
+                        created_by=finance_admin,
+                        approved_by=approver if pstatus == 'paid' else None,
+                        approved_at=timezone.now() - timedelta(days=random.randint(1, 28))
+                        if pstatus == 'paid' else None,
+                    )
                 )
+
+        # ── 47. FEE PAYMENTS ─────────────────────────────────────────────────
+        self.stdout.write("💵 Creating fee payments...")
+        all_required_payments = list(AllRequiredPayments.objects.all())
+        if all_required_payments and verified_students:
+            for student in verified_students:
+                # Give each student 1–3 fee payments
+                sampled_fees = random.sample(
+                    all_required_payments,
+                    k=min(random.randint(1, 3), len(all_required_payments))
+                )
+                for fee in sampled_fees:
+                    status = random.choice(['success', 'success', 'success', 'pending', 'failed'])
+                    method = random.choice(['card', 'bank_transfer', 'paypal'])
+                    FeePayment.objects.create(
+                        fee=fee,
+                        user=student,
+                        amount=fee.amount,
+                        currency='USD',
+                        status=status,
+                        payment_method=method,
+                        gateway_payment_id=f"gw_{uuid.uuid4().hex[:24]}" if status == 'success' else '',
+                        card_last4=str(random.randint(1000, 9999)) if method == 'card' else '',
+                        card_brand=random.choice(['Visa', 'Mastercard', 'Verve']) if method == 'card' else '',
+                        failure_reason='' if status != 'failed' else 'Insufficient funds',
+                        paid_at=timezone.now() - timedelta(days=random.randint(1, 90))
+                        if status == 'success' else None,
+                    )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {FeePayment.objects.count()} fee payments created"))
+
+        # ── 48. LIBRARY ITEMS ─────────────────────────────────────────────────
+        self.stdout.write("📚 Seeding digital library...")
+ 
+        LIBRARY_SEED_DATA = [
+            # ── BOOKS ─────────────────────────────────────────────────────────
+            {
+                'category': 'Books', 'subcategory': 'Melbac Books',
+                'title': 'Christian Race To The End (Qualification For The Throne)',
+                'author': 'Apostle Dr. John Daniel',
+                'description': 'A compelling examination of what it means to run the Christian race faithfully to the end and qualify for the heavenly throne.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': True,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Melbac Books',
+                'title': 'Covenant',
+                'author': 'Apostle Dr. John Daniel',
+                'description': 'An in-depth study of the covenants of God — from Eden to the New Covenant in Christ — and their implications for the believer today.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Melbac Books',
+                'title': 'Jesus Christ The Special Grace Of God To Humanity',
+                'author': 'Apostle Dr. John Daniel',
+                'description': 'Explores the unique grace that Jesus Christ represents to all humanity — a theological and devotional study.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Melbac Books',
+                'title': 'Endtime Spiritual Ways of Praying Prayers',
+                'author': 'Apostle Dr. John Daniel',
+                'description': 'A practical and prophetic guide to end-time prayer, equipping believers with spiritual strategies for intercession.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': True,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Melbac Books',
+                'title': 'Submission: The Authority Channel of God',
+                'author': 'Apostle Dr. John Daniel',
+                'description': 'Unpacks the biblical doctrine of submission as the God-ordained channel through which divine authority flows in the home, church, and nation.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Melbac Books',
+                'title': 'Tabernacle As A Shadow of Christ',
+                'author': 'Apostle Dr. John Daniel',
+                'description': 'A detailed typological study of the Old Testament Tabernacle and how every element foreshadows the person and work of Jesus Christ.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Apologetics Books',
+                'title': 'Apologetics Study Collection',
+                'author': '',
+                'description': 'A curated collection of texts defending the Christian faith against philosophical and theological objections.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org/library',
+                'external_url_label': 'Browse Collection',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Bible Studies Books',
+                'title': 'Bible Studies Resource Library',
+                'author': '',
+                'description': 'Comprehensive Bible study materials covering both Old and New Testaments, suitable for individual and group use.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org/library',
+                'external_url_label': 'Browse Collection',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Christian Counseling Books',
+                'title': 'Counseling Recipes',
+                'author': 'Timothy Tow',
+                'description': 'Practical biblical counseling guidance drawn from Scripture, offering applicable principles for Christian counselors.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org/library',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Christian Counseling Books',
+                'title': 'Biblical Counseling Manual',
+                'author': 'Adam Pulanski',
+                'description': 'A structured manual providing biblical frameworks and practical tools for Christian counselors in ministry settings.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org/library',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Christian Counseling Books',
+                'title': 'Biblical Counseling Seminar',
+                'author': 'Dr. Edward Watke Jr.',
+                'description': 'Seminar notes and teaching material on the foundations and practice of biblical counseling.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org/library',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Theology Books',
+                'title': 'Theology Reference Collection',
+                'author': '',
+                'description': 'A wide-ranging selection of theological texts covering systematic, biblical, and historical theology.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org/library',
+                'external_url_label': 'Browse Collection',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Evangelism Books',
+                'title': 'Evangelism Resource Library',
+                'author': '',
+                'description': 'Books and manuals equipping believers and ministers with practical evangelism strategies rooted in Scripture.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org/library',
+                'external_url_label': 'Browse Collection',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Books', 'subcategory': 'Leadership Books',
+                'title': 'Christian Leadership Library',
+                'author': '',
+                'description': 'Books on servant leadership, pastoral ministry, and kingdom leadership principles for Christian leaders.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://melbac.org/library',
+                'external_url_label': 'Browse Collection',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+ 
+            # ── PERIODICALS ───────────────────────────────────────────────────
+            {
+                'category': 'Periodicals', 'subcategory': 'Acta Theologica',
+                'title': 'Acta Theologica — Full Journal Archive',
+                'author': '',
+                'description': 'South African journal of theology covering biblical studies, church history, and systematic theology.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://journals.ufs.ac.za/index.php/at',
+                'external_url_label': 'Visit Journal',
+                'allow_download': False, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Periodicals', 'subcategory': 'Tyndale Bulletin',
+                'title': 'Tyndale Bulletin — Complete Archive',
+                'author': '',
+                'description': 'Peer-reviewed journal of biblical and theological research published by Tyndale House, Cambridge.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.tyndalehouse.com/tynbul/',
+                'external_url_label': 'Visit Journal',
+                'allow_download': False, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Periodicals', 'subcategory': 'Westminster Theological Journal',
+                'title': 'Westminster Theological Journal — Archive',
+                'author': '',
+                'description': 'Reformed theological journal published by Westminster Theological Seminary covering exegesis, theology, and church history.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.wts.edu/resources/westminster-theological-journal/',
+                'external_url_label': 'Visit Journal',
+                'allow_download': False, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Periodicals', 'subcategory': 'Theology Today',
+                'title': 'Theology Today — Journal Archive',
+                'author': '',
+                'description': 'Interdenominational journal of theology and culture published by Princeton Theological Seminary.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://journals.sagepub.com/home/ttj',
+                'external_url_label': 'Visit Journal',
+                'allow_download': False, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'Periodicals', 'subcategory': 'Old Testament Essays',
+                'title': 'Old Testament Essays — Full Archive',
+                'author': '',
+                'description': 'Journal of the Old Testament Society of South Africa covering all aspects of OT scholarship.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://ojs.unisa.ac.za/index.php/OTE',
+                'external_url_label': 'Visit Journal',
+                'allow_download': False, 'allow_read_online': True, 'featured': False,
+            },
+ 
+            # ── REFERENCES: Commentaries ──────────────────────────────────────
+            {
+                'category': 'References', 'subcategory': 'Commentaries',
+                'title': 'Commentary on the Whole Bible',
+                'author': 'Matthew Henry',
+                'description': 'The classic, complete verse-by-verse commentary on the entire Bible by the Puritan minister Matthew Henry.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/henry/mhc',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': True,
+            },
+            {
+                'category': 'References', 'subcategory': 'Commentaries',
+                'title': 'Commentary Critical and Explanatory on the Whole Bible',
+                'author': 'Jamieson, Fausset & Brown',
+                'description': 'A thorough critical and explanatory commentary on every book of the Bible, widely used in evangelical scholarship.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/jamieson/jfb',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': True,
+            },
+            {
+                'category': 'References', 'subcategory': 'Commentaries',
+                'title': 'Commentary on the New Testament from the Talmud and Hebraica',
+                'author': 'John Lightfoot',
+                'description': 'Lightfoot\'s pioneering work situating the New Testament in its Jewish context using Talmudic and Hebraic sources.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/lightfoot/talmud',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'References', 'subcategory': 'Commentaries',
+                'title': "Coffman's Commentaries on the Bible",
+                'author': 'James Burton Coffman',
+                'description': 'A comprehensive set of evangelical commentaries on every book of the Bible, known for clarity and faithfulness to the text.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.studylight.org/commentaries/bcc/',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'References', 'subcategory': 'Commentaries',
+                'title': 'Bible Commentary by David Guzik',
+                'author': 'David Guzik',
+                'description': 'Accessible, verse-by-verse commentary on the entire Bible combining solid exposition with pastoral application.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://enduringword.com/bible-commentary/',
+                'external_url_label': 'Read Online',
+                'allow_download': False, 'allow_read_online': True, 'featured': False,
+            },
+ 
+            # ── REFERENCES: Dictionaries ──────────────────────────────────────
+            {
+                'category': 'References', 'subcategory': 'Dictionaries',
+                'title': "Smith's Bible Dictionary",
+                'author': 'William Smith',
+                'description': "One of the most widely used Bible dictionaries, covering persons, places, and subjects of the Bible with scholarly depth.",
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/smith_w/bibledict',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'References', 'subcategory': 'Dictionaries',
+                'title': "Easton's Bible Dictionary",
+                'author': 'George Easton',
+                'description': 'A concise and reliable Bible dictionary covering the key terms, names, and concepts of both testaments.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/easton/ebd',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'References', 'subcategory': 'Dictionaries',
+                'title': "Holman Bible Dictionary",
+                'author': 'Trent C. Butler',
+                'description': 'A comprehensive evangelical Bible dictionary with detailed articles on persons, places, theology, and archaeology.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.studylight.org/dictionaries/hbd/',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'References', 'subcategory': 'Dictionaries',
+                'title': "Baker's Evangelical Dictionary of Biblical Theology",
+                'author': 'Walter Elwell',
+                'description': 'An authoritative reference covering the major theological themes and concepts of the Bible from an evangelical perspective.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.biblestudytools.com/dictionaries/bakers-evangelical-dictionary/',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+ 
+            # ── REFERENCES: Encyclopedias ─────────────────────────────────────
+            {
+                'category': 'References', 'subcategory': 'Encyclopedias',
+                'title': 'International Standard Bible Encyclopedia',
+                'author': 'James Orr',
+                'description': 'A comprehensive multi-volume Bible encyclopedia covering biblical history, geography, theology, and archaeology.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/orr/isbe',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': True,
+            },
+            {
+                'category': 'References', 'subcategory': 'Encyclopedias',
+                'title': 'New Schaff-Herzog Encyclopedia of Religious Knowledge',
+                'author': 'Samuel Macauley Jackson',
+                'description': 'The definitive multi-volume encyclopedia of Christian and world religious knowledge, covering history, doctrine, and biography.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/schaff/encyc',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+ 
+            # ── REFERENCES: Concordances ──────────────────────────────────────
+            {
+                'category': 'References', 'subcategory': 'Concordances',
+                'title': "Strong's Exhaustive Concordance",
+                'author': 'James Strong',
+                'description': 'The most widely used biblical concordance, providing every word in the KJV Bible with Hebrew and Greek lexicon numbers.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.blueletterbible.org/lexicon/h1/kjv/wlc/0-1/',
+                'external_url_label': 'Read Online',
+                'allow_download': False, 'allow_read_online': True, 'featured': True,
+            },
+ 
+            # ── REFERENCES: Creeds ────────────────────────────────────────────
+            {
+                'category': 'References', 'subcategory': 'Creeds',
+                'title': 'Creeds of Christendom, with History and Critical Notes — Vol. 1',
+                'author': 'Philip Schaff',
+                'description': 'A scholarly collection and critical study of the historic creeds of the Christian church, tracing their development and theological significance.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/schaff/creeds1',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+ 
+            # ── REFERENCES: History ───────────────────────────────────────────
+            {
+                'category': 'References', 'subcategory': 'History',
+                'title': 'History of the Christian Church (8 Volumes)',
+                'author': 'Philip Schaff',
+                'description': "Schaff's monumental eight-volume history of the Christian Church from the apostolic era through the Reformation.",
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/schaff/hcc1',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'References', 'subcategory': 'History',
+                'title': 'The History of Protestantism',
+                'author': 'J.A. Wylie',
+                'description': "A sweeping narrative history of the Protestant Reformation and its spread across Europe, tracing God's hand in church history.",
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/wylie/protestantism',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+ 
+            # ── REFERENCES: Theology References ───────────────────────────────
+            {
+                'category': 'References', 'subcategory': 'Theology References',
+                'title': 'Institutes of the Christian Religion',
+                'author': 'John Calvin',
+                'description': "Calvin's foundational systematic theology — the definitive statement of Reformed doctrine, covering God, man, Christ, and the church.",
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/calvin/institutes',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': True,
+            },
+            {
+                'category': 'References', 'subcategory': 'Theology References',
+                'title': 'Manual of Theology',
+                'author': 'J.L. Dagg',
+                'description': 'A systematic theology written from a Baptist perspective, covering doctrine in a clear and devotional manner.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/dagg/theology',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+ 
+            # ── REFERENCES: Notes on the Bible ────────────────────────────────
+            {
+                'category': 'References', 'subcategory': 'Notes on the Bible',
+                'title': "Wesley's Notes on the New Testament",
+                'author': 'John Wesley',
+                'description': "John Wesley's devotional and expository notes on the New Testament, widely used in Methodist and evangelical traditions.",
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/wesley/notes',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'References', 'subcategory': 'Notes on the Bible',
+                'title': 'Barnes Notes on the New Testament',
+                'author': 'Albert Barnes',
+                'description': "Albert Barnes's thorough and practical notes on the New Testament, combining scholarly insight with pastoral application.",
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/barnes/notes',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+            {
+                'category': 'References', 'subcategory': 'Notes on the Bible',
+                'title': 'Scofield Reference Notes',
+                'author': 'C.I. Scofield',
+                'description': 'The influential Scofield Reference Bible notes, providing dispensational commentary and cross-references throughout Scripture.',
+                'language': 'en', 'access': 'public',
+                'external_url': 'https://www.ccel.org/ccel/scofield/notes',
+                'external_url_label': 'Read Online',
+                'allow_download': True, 'allow_read_online': True, 'featured': False,
+            },
+        ]
+ 
+        library_admin = users['admins'][0]
+        for order_idx, item_data in enumerate(LIBRARY_SEED_DATA):
+            LibraryItem.objects.get_or_create(
+                title=item_data['title'],
+                category=item_data['category'],
+                subcategory=item_data['subcategory'],
+                defaults={
+                    'author':               item_data.get('author', ''),
+                    'description':          item_data.get('description', ''),
+                    'language':             item_data.get('language', 'en'),
+                    'access':               item_data.get('access', 'public'),
+                    'external_url':         item_data.get('external_url', ''),
+                    'external_url_label':   item_data.get('external_url_label', 'Read / Download'),
+                    'allow_download':       item_data.get('allow_download', True),
+                    'allow_read_online':    item_data.get('allow_read_online', True),
+                    'featured':             item_data.get('featured', False),
+                    'is_active':            True,
+                    'order':                order_idx,
+                    'created_by':           library_admin,
+                },
+            )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {LibraryItem.objects.count()} library items seeded"))
 
         # ── FINAL: UPDATE COURSE STATISTICS ──────────────────────────────────
         self.stdout.write("📊 Updating course statistics...")
@@ -2271,6 +2740,7 @@ class Command(BaseCommand):
             ("Broadcast Messages",      BroadcastMessage.objects.count()),
             ("Staff Payrolls",          StaffPayroll.objects.count()),
             ("Fee Payments",            FeePayment.objects.count()),
+            ("Library Items",           LibraryItem.objects.count()),
         ]
         for label, count in rows:
             self.stdout.write(f"   {label:<36} {count}")

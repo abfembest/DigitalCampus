@@ -1,7 +1,7 @@
 {% extends "management/base.html" %}
 {% load static %}
 
-{% block title %}{{ course.title }} - Course Details | MIU Student Portal{% endblock %}
+{% block title %}{{ course.title }} - Course Details | {{site_config.school_short_name}} Student Portal{% endblock %}
 
 {% block meta_description %}{{ course.short_description|truncatewords:30 }}{% endblock %}
 

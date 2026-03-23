@@ -4,7 +4,11 @@
     "tailwindcss": "^4.2.1"
   },
   "scripts": {
+    "watch:css":    "npx @tailwindcss/cli -i ./static/src/styles.css  -o ./static/css/styles.css  --watch",
+    "build:css":    "npx @tailwindcss/cli -i ./static/src/styles.css  -o ./static/css/styles.css  --minify",
     "watch:melbac": "npx @tailwindcss/cli -i ./static/src/melbac.css  -o ./static/css/melbac.css  --watch",
-    "build:melbac": "npx @tailwindcss/cli -i ./static/src/melbac.css  -o ./static/css/melbac.css  --minify"
+    "build:melbac": "npx @tailwindcss/cli -i ./static/src/melbac.css  -o ./static/css/melbac.css  --minify",
+    "watch:all":    "npx concurrently \"npm run watch:css\" \"npm run watch:melbac\"",
+    "build:all":    "npm run build:css && npm run build:melbac"
   }
 }

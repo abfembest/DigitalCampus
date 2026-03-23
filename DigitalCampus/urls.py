@@ -29,7 +29,7 @@ urlpatterns = [
     path('chatbot/', include('chatbot.urls')),
 
     path('melbac/', include('melbac.urls')),
-
+    path('library/', include('library.urls')),
 ]
 
 # Serve media files during development

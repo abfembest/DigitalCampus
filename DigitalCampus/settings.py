@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "instructor",
     "payment",
     "melbac",
+    "library",
 
     "django.contrib.humanize",
     'chatbot',

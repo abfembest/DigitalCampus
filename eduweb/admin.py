@@ -1958,6 +1958,15 @@ class ListOfCountryAdmin(admin.ModelAdmin):
         }),
     )
 
+from .models import LibraryItem
+
+@admin.register(LibraryItem)
+class LibraryItemAdmin(admin.ModelAdmin):
+    list_display  = ['title', 'author', 'category', 'subcategory', 'access', 'is_active', 'featured']
+    list_filter   = ['category', 'access', 'is_active', 'featured', 'language']
+    search_fields = ['title', 'author', 'subcategory', 'tags']
+    prepopulated_fields = {'slug': ('title', 'author')}
+
 
 # ==================== ADMIN SITE BRANDING ====================
 admin.site.site_header = "LMS Administration"

@@ -82,7 +82,7 @@ urlpatterns = [
 
     # ================= STAGE 5 =================
     # Preload payment details (Ajax)
-    path("<str:application_id>/payment-details/",views.payment_details, name="payment_details"),
+    # path("<str:application_id>/payment-details/",views.payment_details, name="payment_details"),
 
     # Stripe payment handoff (to be implemented later)
    # path("payments/stripe/start/", views.start_stripe_payment, name="start_stripe_payment"),

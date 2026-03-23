@@ -534,160 +534,150 @@ def all_programs(request):
 @login_required
 @smart_redirect_applicant
 def apply(request):
-    # Check if email is verified
-    if request.user.profile.email_verified is False:
+    """Multi-step course application form (Steps 1-4 of 6)."""
+ 
+    # ── Guard: email must be verified ────────────────────────────────────────
+    if not request.user.profile.email_verified:
         messages.warning(request, 'Please verify your email before applying.')
         return redirect('eduweb:auth_page')
-
-    # Check if user already has a pending application
-    existing_application = CourseApplication.objects.filter(
+ 
+    # ── Guard: no duplicate in-progress application ──────────────────────────
+    existing = CourseApplication.objects.filter(
         user=request.user,
-        status__in=['draft', 'pending_payment', 'payment_complete', 'documents_uploaded', 'under_review']
+        status__in=['draft', 'pending_payment', 'payment_complete',
+                    'documents_uploaded', 'under_review'],
     ).first()
-
-    if existing_application:
+    if existing:
         messages.info(request, 'You already have an application in progress.')
         return redirect('eduweb:application_status')
-
-    # -------------------------------
-    # FETCH COURSES (UPDATED)
-    # -------------------------------
-    from .models import Program, Faculty, CourseIntake
-
-    programs = Program.objects.filter(
-        is_active=True
-    ).select_related('department__faculty')
+ 
+    # ── Fetch programs & build JSON for JS dynamic dropdowns ─────────────────
+    programs = (
+        Program.objects
+        .filter(is_active=True)
+        .select_related('department__faculty')
+        .order_by('department__faculty__name', 'name')
+    )
     faculties = Faculty.objects.filter(is_active=True)
-
-    # Group programs by faculty
+    countries = ListOfCountry.objects.order_by('country')
+ 
     courses_by_faculty = {}
-    for program in programs:
-        faculty_name = program.department.faculty.name
-        if faculty_name not in courses_by_faculty:
-            courses_by_faculty[faculty_name] = []
-
-        # Get active intakes for this program
-        intakes = CourseIntake.objects.filter(
-            program=program,
-            is_active=True,
-            application_deadline__gte=timezone.now().date()
-        ).values('id', 'intake_period', 'year', 'start_date')
-
+    for prog in programs:
+        faculty_name = prog.department.faculty.name
+        courses_by_faculty.setdefault(faculty_name, [])
+ 
+        intakes = list(
+            CourseIntake.objects.filter(
+                program=prog,
+                is_active=True,
+                application_deadline__gte=timezone.now().date(),
+            ).values('id', 'intake_period', 'year', 'start_date')
+        )
+ 
         courses_by_faculty[faculty_name].append({
-            "id": program.id,
-            "name": program.name,
-            "code": program.code,
-            "degree_level": program.degree_level,
-            "available_study_modes": program.available_study_modes,
-            "application_fee": str(program.application_fee),
-            "tuition_fee": str(program.tuition_fee),
-            "intakes": list(intakes)
+            'id':                   prog.id,
+            'name':                 prog.name,
+            'code':                 prog.code,
+            'degree_level':         prog.degree_level,
+            'available_study_modes': prog.available_study_modes,
+            'application_fee':      str(prog.application_fee),
+            'tuition_fee':          str(prog.tuition_fee),
+            'intakes':              intakes,
         })
-
+ 
     courses_json = json.dumps(courses_by_faculty, cls=DjangoJSONEncoder)
-
-    # -------------------------------
-    # POST LOGIC (UNCHANGED)
-    # -------------------------------
+ 
+    # ── POST — validate & save full application ───────────────────────────────
     if request.method == 'POST':
         form = CourseApplicationForm(request.POST, request.FILES)
-
+ 
         if form.is_valid():
             try:
-                # Collect academic history
+                # Save application without committing yet
+                application = form.save(commit=False)
+                application.user = request.user  # ← assign user separately
+ 
+                # Build academic history from dynamic POST fields
                 academic_history = []
                 entry_count = 1
                 while True:
                     education_level = request.POST.get(f'education_level_{entry_count}')
                     if not education_level:
                         break
-
                     academic_history.append({
-                        'education_level': education_level,
-                        'institution': request.POST.get(f'institution_{entry_count}', ''),
-                        'field_of_study': request.POST.get(f'field_of_study_{entry_count}', ''),
-                        'graduation_year': request.POST.get(f'graduation_year_{entry_count}', ''),
-                        'gpa': request.POST.get(f'gpa_{entry_count}', ''),
+                        'degree':          education_level,
+                        'institution':     request.POST.get(f'institution_{entry_count}', '').strip(),
+                        'field_of_study':  request.POST.get(f'field_of_study_{entry_count}', '').strip(),
+                        'graduation_year': request.POST.get(f'graduation_year_{entry_count}', '').strip(),
+                        'gpa':             request.POST.get(f'gpa_{entry_count}', '').strip(),
                     })
                     entry_count += 1
-
-                application = form.save(commit=False, user=request.user)
-                application.academic_history = academic_history
+ 
+                # Populate fields not handled by the form widget
+                application.status = 'draft'
                 application.save()
-
-                documents = {}
-                from .models import ApplicationDocument
-
+ 
+                # Handle document uploads (optional at this stage)
                 file_field_mapping = {
-                    'transcript_file': 'transcript',
-                    'certificate_file': 'certificate',
-                    'english_test_file': 'english_test',
-                    'id_document_file': 'id_document',
-                    'cv_file': 'cv',
-                    'recommendation_file': 'recommendation'
+                    'transcript_file':   'transcript',
+                    'certificate_file':  'certificate',
+                    'english_test_file': 'other',
+                    'id_document_file':  'id_document',
+                    'cv_file':           'cv',
+                    'recommendation_file': 'recommendation',
                 }
-
-                for form_field, file_type in file_field_mapping.items():
-                    if form_field in request.FILES:
-                        file_obj = request.FILES[form_field]
+                for field_name, file_type in file_field_mapping.items():
+                    if field_name in request.FILES:
+                        f = request.FILES[field_name]
                         ApplicationDocument.objects.create(
                             application=application,
-                            file=file_obj,
+                            file=f,
                             file_type=file_type,
-                            original_filename=file_obj.name,
-                            file_size=file_obj.size
+                            original_filename=f.name,
+                            file_size=f.size,
                         )
-
+ 
+                # Fire confirmation emails asynchronously
                 from threading import Thread
-
-                def send_emails_async():
+                def _send_emails():
                     send_application_confirmation_email(application)
                     send_application_admin_notification(application)
-
-                Thread(target=send_emails_async, daemon=True).start()
-
+                Thread(target=_send_emails, daemon=True).start()
+ 
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': True,
                         'application_id': application.application_id,
-                        'redirect_url': reverse('eduweb:application_status')
+                        'redirect_url': reverse('eduweb:application_status'),
                     })
-
+ 
                 messages.success(
                     request,
-                    f'Application submitted successfully! Your ID: {application.application_id}'
+                    f'Application saved! Your reference: {application.application_id}'
                 )
                 return redirect('eduweb:application_status')
-
-            except Exception as e:
+ 
+            except Exception as exc:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse(
-                        {'success': False, 'error': str(e)},
-                        status=500
-                    )
-                messages.error(request, str(e))
-
+                    return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+                messages.error(request, f'An error occurred: {exc}')
+ 
         else:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse(
-                    {'success': False, 'errors': form.errors},
-                    status=400
-                )
-            messages.error(request, 'Please correct the errors in the form.')
-
-    # -------------------------------
-    # GET LOGIC (UNCHANGED)
-    # -------------------------------
-    if request.user.is_authenticated:
-        form = CourseApplicationForm(initial={'email': request.user.email})
+                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+            messages.error(request, 'Please correct the errors highlighted in the form.')
+ 
+    # ── GET — render blank (or pre-filled) form ───────────────────────────────
     else:
-        form = CourseApplicationForm()
-
+        initial = {'email': request.user.email} if request.user.is_authenticated else {}
+        form = CourseApplicationForm(initial=initial)
+ 
     return render(request, 'form.html', {
-        'form': form,
-        'courses': programs,
+        'form':         form,
+        'courses':      programs,
+        'faculties':    faculties,
         'courses_json': courses_json,
-        'countries': ListOfCountry.objects.all().order_by('country'),
+        'countries':    countries,
     })
 
 @check_for_auth
@@ -1728,190 +1718,177 @@ def get_student_fee_summary(request, fee_pk):
 ###################### APPLICATION SUBMISSION ##############################################
 
 @login_required
-@require_POST
-@csrf_protect
 def save_application_draft(request):
     """
-    Safely save or update a CourseApplication as a draft.
-    Compatible with FormData submissions.
+    Save or update a CourseApplication draft via FormData (AJAX POST).
+    Called by the multi-step form on the final Save & Continue step.
     """
-
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+ 
     try:
-        # -------------------------------------------------
-        # 0. CHECK FOR OPEN APPLICATION
-        # -------------------------------------------------
-        if request.user.is_authenticated:
-            open_application = CourseApplication.objects.filter(
-                user=request.user,
-                in_processing=True
-            ).exists()
-
-            if open_application:
-                # Redirect to status page with message
-                messages.info(request, "You have an open application")
-                return redirect("eduweb:application_status")
-
         data = request.POST
-
-        # -------------------------------------------------
-        # 1. GET OR CREATE APPLICATION
-        # -------------------------------------------------
-        application_id = data.get("application_id")
-        application = None
-
+ 
+        # ── Guard: reject if user already has a processing application ────────
+        if CourseApplication.objects.filter(user=request.user, in_processing=True).exists():
+            return redirect('eduweb:application_status')
+ 
+        # ── Get or create the draft ───────────────────────────────────────────
+        application_id = data.get('application_id', '').strip()
         if application_id:
             application = CourseApplication.objects.filter(
-                application_id=application_id
+                application_id=application_id,
+                user=request.user,           # security: own record only
+                status='draft',
             ).first()
-
+        else:
+            application = None
+ 
         if not application:
-            application = CourseApplication(
-                user=request.user if request.user.is_authenticated else None
-            )
-
-        # -------------------------------------------------
-        # 2. COURSE & INTAKE
-        # -------------------------------------------------
-        program_id = data.get("program")
+            application = CourseApplication(user=request.user)
+ 
+        # ── 1. Course & Intake ────────────────────────────────────────────────
+        program_id = data.get('program')
         if program_id:
             try:
-                from .models import Program
-                application.program = Program.objects.get(id=program_id)
+                application.program = Program.objects.get(id=program_id, is_active=True)
             except Program.DoesNotExist:
                 pass
-
-        intake_id = data.get("intake")
+ 
+        intake_id = data.get('intake')
         if intake_id:
             try:
                 application.intake = CourseIntake.objects.get(id=intake_id)
             except CourseIntake.DoesNotExist:
                 pass
-
-        application.study_mode = data.get("study_mode", "")
-
-        # -------------------------------------------------
-        # 3. PERSONAL INFORMATION
-        # -------------------------------------------------
-        application.first_name = data.get("first_name", "").strip()
-        application.last_name = data.get("last_name", "").strip()
-        application.email = data.get("email", "").strip()
-        application.phone = data.get("phone", "").strip()
-        application.gender = data.get("gender", "")
-        application.nationality = data.get("nationality", "")
-        application.country = data.get("country", "")
-
-        dob = data.get("date_of_birth")
+ 
+        application.study_mode = data.get('study_mode', '')
+ 
+        # ── 2. Personal Information ───────────────────────────────────────────
+        application.first_name  = data.get('first_name', '').strip()
+        application.last_name   = data.get('last_name', '').strip()
+        application.email       = data.get('email', '').strip().lower()
+        application.phone       = data.get('phone', '').strip()
+        application.gender      = data.get('gender', '')
+        application.nationality = data.get('nationality', '')
+ 
+        dob = data.get('date_of_birth', '')
         if dob:
             try:
-                application.date_of_birth = datetime.strptime(dob, "%Y-%m-%d").date()
+                from datetime import datetime as _dt
+                application.date_of_birth = _dt.strptime(dob, '%Y-%m-%d').date()
             except ValueError:
                 pass
-
-        # -------------------------------------------------
-        # 4. ADDRESS
-        # -------------------------------------------------
-        application.address_line1 = data.get("address_line1", "").strip()
-        application.address_line2 = data.get("address_line2", "").strip()
-        application.city = data.get("city", "").strip()
-        application.state = data.get("state", "").strip()
-        application.postal_code = data.get("postal_code", "").strip()
-        application.country = data.get("country", "")
-
-        # -------------------------------------------------
-        # 5. ACADEMIC BACKGROUND
-        # Pull from static fields first; fall back to first dynamic academic entry
-        # -------------------------------------------------
+ 
+        # ── 3. Address ────────────────────────────────────────────────────────
+        application.address_line1 = data.get('address_line1', '').strip()
+        application.address_line2 = data.get('address_line2', '').strip()
+        application.city          = data.get('city', '').strip()
+        application.state         = data.get('state', '').strip()
+        application.postal_code   = data.get('postal_code', '').strip()
+        application.country       = data.get('country', '')
+ 
+        # ── 4. Academic Background ────────────────────────────────────────────
+        # Prefer the explicit single-entry fields; fall back to dynamic entry 1
         application.highest_qualification = (
-            data.get("highest_qualification", "").strip()
-            or data.get("education_level_1", "").strip()
+            data.get('highest_qualification', '').strip()
+            or data.get('education_level_1', '').strip()
         )
         application.institution_name = (
-            data.get("institution_name", "").strip()
-            or data.get("institution_1", "").strip()
+            data.get('institution_name', '').strip()
+            or data.get('institution_1', '').strip()
         )
         application.graduation_year = (
-            data.get("graduation_year", "").strip()
-            or data.get("graduation_year_1", "").strip()
+            data.get('graduation_year', '').strip()
+            or data.get('graduation_year_1', '').strip()
         )
         application.gpa_or_grade = (
-            data.get("gpa_or_grade", "").strip()
-            or data.get("gpa_1", "").strip()
+            data.get('gpa_or_grade', '').strip()
+            or data.get('gpa_1', '').strip()
         )
-
-        # -------------------------------------------------
-        # 6. LANGUAGE PROFICIENCY
-        # -------------------------------------------------
-        application.language_skill = data.get("language_skill", "")
-        application.language_score = data.get("language_score", "")
-
-        # -------------------------------------------------
-        # 7. FULL ACADEMIC HISTORY
-        # -------------------------------------------------
-        academic_history = data.get("academic_history")
-        if academic_history:
+ 
+        # ── 5. Language Proficiency ───────────────────────────────────────────
+        application.language_skill = data.get('language_skill', '') or None
+        lang_score_raw = data.get('language_score', '').strip()
+        if lang_score_raw:
             try:
-                application.academic_history = json.loads(academic_history)
-            except json.JSONDecodeError:
+                application.language_score = float(lang_score_raw)
+            except ValueError:
                 pass
-
-        # -------------------------------------------------
-        # 8. ADDITIONAL INFORMATION
-        # -------------------------------------------------
-        application.work_experience_years = data.get("work_experience_years") or 0
-        application.personal_statement = data.get("personal_statement", "")
-        application.how_did_you_hear = data.get("how_did_you_hear", "")
-
-        # -------------------------------------------------
-        # 9. PRIVACY & CONSENT
-        # -------------------------------------------------
-        application.accept_privacy_policy = data.get("accept_privacy_policy") in ("true", "on", "1")
-        application.accept_terms_conditions = data.get("accept_terms_conditions") in ("true", "on", "1")
-        application.marketing_consent = data.get("marketing_consent") in ("true", "on", "1")
-        application.scholarship = data.get("scholarship") in ("true", "on", "1")
-
-        # -------------------------------------------------
-        # 10. EMERGENCY CONTACT
-        # -------------------------------------------------
-        application.emergency_contact_name = data.get("emergency_contact_name", "")
-        application.emergency_contact_phone = data.get("emergency_contact_phone", "")
-        application.emergency_contact_relationship = data.get("emergency_contact_relationship", "")
-        application.emergency_contact_email = data.get("emergency_contact_email", "")
-        application.emergency_contact_address = data.get("emergency_contact_address", "")
-        application.how_did_you_hear_other = data.get("how_did_you_hear_other", "")
-
-        # -------------------------------------------------
-        # 11. DRAFT STATUS
-        # -------------------------------------------------
-        application.status = "draft"
-
-        # -------------------------------------------------
-        # 12. SAVE
-        # -------------------------------------------------
+        else:
+            application.language_score = None
+ 
+        # ── 6. Academic History JSON (from JS serialisation) ──────────────────
+        academic_history_raw = data.get('academic_history', '')
+        if academic_history_raw:
+            try:
+                application.academic_history_json = json.loads(academic_history_raw)
+            except (json.JSONDecodeError, ValueError):
+                pass
+ 
+        # ── 7. Additional Information ─────────────────────────────────────────
+        work_exp = data.get('work_experience_years', '0').strip()
+        try:
+            application.work_experience_years = int(work_exp) if work_exp else 0
+        except ValueError:
+            application.work_experience_years = 0
+ 
+        application.personal_statement  = data.get('personal_statement', '').strip()
+        application.how_did_you_hear     = data.get('how_did_you_hear', '')
+        application.how_did_you_hear_other = data.get('how_did_you_hear_other', '').strip()
+ 
+        # ── 8. Privacy & Consent ─────────────────────────────────────────────
+        def _bool(val):
+            return val in ('true', 'on', '1', 'True')
+ 
+        application.accept_privacy_policy    = _bool(data.get('accept_privacy_policy'))
+        application.accept_terms_conditions  = _bool(data.get('accept_terms_conditions'))
+        application.marketing_consent        = _bool(data.get('marketing_consent'))
+        application.scholarship              = _bool(data.get('scholarship'))
+ 
+        # ── 9. Emergency Contact ──────────────────────────────────────────────
+        application.emergency_contact_name         = data.get('emergency_contact_name', '').strip()
+        application.emergency_contact_phone        = data.get('emergency_contact_phone', '').strip()
+        application.emergency_contact_relationship = data.get('emergency_contact_relationship', '').strip()
+        application.emergency_contact_email        = data.get('emergency_contact_email', '').strip()
+        application.emergency_contact_address      = data.get('emergency_contact_address', '').strip()
+ 
+        # ── 10. Status & Save ─────────────────────────────────────────────────
+        application.status = 'draft'
         application.save()
+ 
+        # AJAX response or standard redirect
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'application_id': application.application_id,
+                'redirect_url': reverse('eduweb:application_status'),
+            })
+ 
+        return redirect('eduweb:application_status')
+ 
+    except Exception as exc:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
+        messages.error(request, f'Could not save your application: {exc}')
+        return redirect('eduweb:apply')
+ 
 
-        return redirect("eduweb:application_status")
+# @login_required
+# def payment_details(request, application_id):
+#     app = CourseApplication.objects.get(
+#         application_id=application_id,
+#         user=request.user
+#     )
 
-    except Exception as e:
-        return JsonResponse({
-            "success": False,
-            "error": str(e)
-        }, status=400)
-
-@login_required
-def payment_details(request, application_id):
-    app = CourseApplication.objects.get(
-        application_id=application_id,
-        user=request.user
-    )
-
-    return JsonResponse({
-        "application_id": app.application_id,
-        "name": app.get_full_name(),
-        "program": app.program.name if app.program else '',
-        "faculty": app.program.department.faculty.name if app.program else '',
-        "amount": float(app.program.application_fee) if app.program else 0,
-        "payment_status": app.payment_status if hasattr(app, 'payment') else 'pending'
-    })
+#     return JsonResponse({
+#         "application_id": app.application_id,
+#         "name": app.get_full_name(),
+#         "program": app.program.name if app.program else '',
+#         "faculty": app.program.department.faculty.name if app.program else '',
+#         "amount": float(app.program.application_fee) if app.program else 0,
+#         "payment_status": app.payment_status if hasattr(app, 'payment') else 'pending'
+#     })
 
 @login_required(login_url='eduweb:auth_page')
 def upload_application_file(request, application_id):

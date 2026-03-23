@@ -1,1284 +1,1093 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Application Status - Modern International University{% endblock %}
+{% block title %}Application Status — {{ site_config.school_name|default:"MIU" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Modal ── */
+  .modal { display:none; position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.45); animation:fadeIn .2s ease; }
+  .modal.active { display:flex; align-items:center; justify-content:center; }
+  .modal-box { animation:slideUp .25s ease; max-height:90vh; overflow-y:auto; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── Upload area ── */
+  .upload-drop { border:2px dashed #d1d5db; transition:all .2s; }
+  .upload-drop:hover { border-color:#7e22ce; background:#f9f5ff; }
+
+  /* ── Progress stepper connector ── */
+  .step-connector { flex:1; height:3px; background:#e5e7eb; margin-top:2rem; }
+  .step-connector.done { background:#22c55e; }
+
+  /* ── Summary info row ── */
+  .info-row { display:flex; flex-direction:column; gap:.25rem; }
+  .info-label { font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af; }
+  .info-value { font-size:.9rem; font-weight:600; color:#111827; line-height:1.4; }
+
+  /* ── Timeline ── */
+  .tl-line { width:2px; background:#e5e7eb; flex:1; min-height:1.5rem; }
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-    select option:disabled {
-        color: #9CA3AF;
-        font-style: italic;
-    }
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50 py-8 px-4">
+<div class="max-w-6xl mx-auto">
 
-    select:invalid {
-        color: #9CA3AF;
-    }
+  <!-- ═══════════════════════════════════════
+       PAGE HEADER
+  ═══════════════════════════════════════ -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 sm:w-12 sm:h-12 bg-purple-700 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+        <i data-lucide="clipboard-list" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">Application Dashboard</h1>
+        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Track your university application progress</p>
+      </div>
+    </div>
 
-    select:valid {
-        color: #111827;
-    }
+    {% if application %}
+    <div class="flex flex-wrap gap-2">
+      {% if application.status == 'approved' %}
+      <button onclick="openAdmissionLetter('{% url 'eduweb:admission_letter' application.application_id %}')"
+         class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow-md">
+        <i data-lucide="file-check" class="w-4 h-4"></i>
+        <span class="sm:hidden">Download PDF</span>
+        <span class="hidden sm:inline">Admission Letter</span>
+      </button>
+      {% endif %}
 
-    .document-upload-area {
-        border: 2px dashed #D1D5DB;
-        border-radius: 0.5rem;
-        padding: 2rem;
-        text-align: center;
-        transition: all 0.3s;
-    }
+      {% if application.status == 'approved' and not application.admission_accepted %}
+      <form method="post" action="{% url 'eduweb:accept_admission' application.application_id %}" class="inline">
+        {% csrf_token %}
+        <button type="submit"
+          class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow-md">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          Accept Offer
+        </button>
+      </form>
+      {% endif %}
 
-    .document-upload-area:hover {
-        border-color: #840384;
-        background-color: #F9FAFB;
-    }
+      {% if application.can_access_student_portal %}
+      <a href="{% url 'students:dashboard' %}"
+         class="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-sm font-semibold transition-all shadow-sm hover:shadow-md">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        Student Portal
+      </a>
+      {% endif %}
 
-    .document-upload-area.dragover {
-        border-color: #840384;
-        background-color: #F3E8FF;
-    }
+      <a href="{% url 'eduweb:index' %}"
+         class="inline-flex items-center gap-1.5 px-4 py-2 bg-white border-2 border-gray-200 hover:border-purple-300 text-gray-700 rounded-lg text-sm font-semibold transition-all">
+        <i data-lucide="home" class="w-4 h-4"></i>
+        Home
+      </a>
+    </div>
+    {% endif %}
+  </div>
 
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 50;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        animation: fadeIn 0.3s ease-out;
-    }
+  <!-- ═══════════════════════════════════════
+       STATUS ALERT BANNER
+  ═══════════════════════════════════════ -->
+  {% if application %}
+  <div class="rounded-xl p-4 sm:p-5 mb-7 border-2 flex items-start gap-3 sm:gap-4
+    {% if application.status == 'approved' %}bg-green-50 border-green-200
+    {% elif application.status == 'rejected' %}bg-red-50 border-red-200
+    {% else %}bg-blue-50 border-blue-200{% endif %}">
+    <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center flex-shrink-0 shadow
+      {% if application.status == 'approved' %}bg-green-500
+      {% elif application.status == 'rejected' %}bg-red-500
+      {% elif application.status == 'under_review' %}bg-blue-500
+      {% else %}bg-purple-500{% endif %}">
+      <i data-lucide="{% if application.status == 'approved' %}check-circle{% elif application.status == 'rejected' %}x-circle{% else %}clock{% endif %}"
+         class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
+    </div>
+    <div>
+      <p class="font-bold text-gray-900 text-sm sm:text-base mb-0.5">
+        {% if application.status == 'approved' %}
+          {% if application.admission_accepted and application.department_approved %}🎉 Congratulations — Fully Enrolled
+          {% elif application.admission_accepted %}✅ Admission Accepted — Awaiting Department Approval
+          {% else %}🎓 Application Approved — Please Accept Your Offer
+          {% endif %}
+        {% elif application.status == 'rejected' %}Application Not Approved
+        {% elif application.status == 'under_review' %}Under Review
+        {% elif application.status == 'documents_uploaded' %}Documents Uploaded — Ready to Submit
+        {% elif application.status == 'draft' %}Draft Saved — Upload Documents to Continue
+        {% elif application.status == 'payment_complete' %}Application Saved — Upload Documents to Continue
+        {% else %}{{ application.get_status_display }}{% endif %}
+      </p>
+      <p class="text-xs sm:text-sm text-gray-600 leading-relaxed">
+        {% if application.status == 'approved' and application.admission_accepted and application.department_approved %}
+          Your admission number is <strong class="text-gray-900">{{ application.admission_number }}</strong>. Access the student portal to get started.
+        {% elif application.status == 'approved' and application.admission_accepted %}
+          Your admission number <strong>{{ application.admission_number }}</strong> has been issued. Awaiting final department sign-off.
+        {% elif application.status == 'approved' %}
+          Use the <strong>Accept Offer</strong> button above to confirm your place and receive your admission number.
+        {% elif application.status == 'rejected' %}
+          Thank you for applying. Detailed feedback has been sent to your email address.
+        {% elif application.status == 'under_review' %}
+          Our admissions committee is reviewing your application. You'll hear back within 4–6 weeks.
+        {% elif application.status == 'documents_uploaded' %}
+          Click Upload Documents to add more files, or submit when ready.
+        {% elif application.status in 'draft,payment_complete' %}
+          Upload your supporting documents to move your application forward.
+        {% endif %}
+      </p>
+    </div>
+  </div>
 
-    .modal.active {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+  {% else %}
+  <!-- ── No Application ── -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+    <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <i data-lucide="alert-triangle" class="w-8 h-8 text-amber-500"></i>
+    </div>
+    <h3 class="text-xl font-bold text-gray-900 mb-2">No Application Found</h3>
+    <p class="text-gray-500 text-sm mb-6 max-w-sm mx-auto">You haven't submitted an application yet. Start your journey with us today!</p>
+    <a href="{% url 'eduweb:apply' %}"
+       class="inline-flex items-center gap-2 px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md">
+      <i data-lucide="rocket" class="w-4 h-4"></i> Start Application
+    </a>
+  </div>
+  {% endif %}
 
-    .modal-content {
-        animation: slideDown 0.3s ease-out;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
+  {% if application %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
+    <!-- ═══════════════════════════════════════
+         LEFT / MAIN COLUMN
+    ═══════════════════════════════════════ -->
+    <div class="lg:col-span-2 space-y-6">
 
-    @keyframes slideDown {
-        from { 
-            transform: translateY(-20px);
-            opacity: 0;
-        }
-        to { 
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-</style>
+      <!-- ── Progress Stepper ── -->
+      <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-7">
+        <h2 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
+          <i data-lucide="activity" class="w-4 h-4 sm:w-5 sm:h-5 text-purple-700"></i>
+          Application Progress
+        </h2>
 
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 py-12">
-    <div class="container mx-auto px-4 max-w-[90rem]">
-        
-        <!-- Header -->
-        <header class="mb-10 animate-fade-in">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                <div>
-                    <h1 class="text-3xl md:text-4xl font-bold text-gray-900 flex items-center gap-3">
-                        <div class="w-12 h-12 bg-gradient-to-br from-primary-950 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
-                            <i data-lucide="clipboard-list" class="w-7 h-7 text-white"></i>
-                        </div>
-                        Application Dashboard
-                    </h1>
-                    <p class="text-gray-600 mt-2 ml-15">Track your university application progress</p>
+        <!-- Desktop Stepper -->
+        <div class="hidden sm:flex items-start">
+
+          <!-- Step 1: Saved -->
+          <div class="flex flex-col items-center w-24 flex-shrink-0">
+            <div class="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center shadow-md mb-2">
+              <i data-lucide="check" class="w-6 h-6"></i>
+            </div>
+            <span class="text-xs font-semibold text-gray-800 text-center">Saved</span>
+            <span class="text-xs text-gray-400 text-center mt-0.5">Draft created</span>
+          </div>
+
+          <div class="step-connector mt-6 {% if application.documents.exists %}done{% endif %}"></div>
+
+          <!-- Step 2: Documents -->
+          <div class="flex flex-col items-center w-24 flex-shrink-0">
+            <div class="w-12 h-12 rounded-full {% if application.documents.exists %}bg-green-500{% else %}bg-purple-600 animate-pulse{% endif %} text-white flex items-center justify-center shadow-md mb-2">
+              {% if application.documents.exists %}<i data-lucide="check" class="w-6 h-6"></i>
+              {% else %}<i data-lucide="upload" class="w-6 h-6"></i>{% endif %}
+            </div>
+            <span class="text-xs font-semibold text-gray-800 text-center">Documents</span>
+            <span class="text-xs text-gray-400 text-center mt-0.5">
+              {% if application.documents.exists %}{{ application.documents.count }} uploaded{% else %}Required{% endif %}
+            </span>
+            {% if not application.documents.exists %}
+            <button onclick="openUploadModal()"
+              class="mt-2 px-2.5 py-1 bg-purple-700 text-white rounded-lg text-xs font-semibold hover:bg-purple-800 transition-all">
+              Upload
+            </button>
+            {% endif %}
+          </div>
+
+          <div class="step-connector mt-6 {% if application.status in 'under_review,approved,rejected' %}done{% endif %}"></div>
+
+          <!-- Step 3: Submitted -->
+          <div class="flex flex-col items-center w-24 flex-shrink-0">
+            <div class="w-12 h-12 rounded-full
+              {% if application.status in 'under_review,approved,rejected' %}bg-green-500
+              {% elif application.documents.exists %}bg-purple-600 animate-pulse
+              {% else %}bg-gray-200{% endif %}
+              text-white flex items-center justify-center shadow-md mb-2">
+              {% if application.status in 'under_review,approved,rejected' %}<i data-lucide="check" class="w-6 h-6"></i>
+              {% else %}<i data-lucide="send" class="w-6 h-6 {% if not application.documents.exists %}text-gray-400{% endif %}"></i>{% endif %}
+            </div>
+            <span class="text-xs font-semibold {% if application.status in 'under_review,approved,rejected' or application.documents.exists %}text-gray-800{% else %}text-gray-400{% endif %} text-center">Submitted</span>
+            <span class="text-xs text-gray-400 text-center mt-0.5">
+              {% if application.status in 'under_review,approved,rejected' %}Complete
+              {% elif application.documents.exists %}Ready
+              {% else %}Pending{% endif %}
+            </span>
+          </div>
+
+          <div class="step-connector mt-6 {% if application.status in 'approved,rejected' %}done{% endif %}"></div>
+
+          <!-- Step 4: Decision -->
+          <div class="flex flex-col items-center w-24 flex-shrink-0">
+            <div class="w-12 h-12 rounded-full
+              {% if application.status == 'approved' %}bg-green-500
+              {% elif application.status == 'rejected' %}bg-red-500
+              {% elif application.status == 'under_review' %}bg-blue-500 animate-pulse
+              {% else %}bg-gray-200{% endif %}
+              text-white flex items-center justify-center shadow-md mb-2">
+              {% if application.status == 'approved' %}<i data-lucide="check-circle" class="w-6 h-6"></i>
+              {% elif application.status == 'rejected' %}<i data-lucide="x-circle" class="w-6 h-6"></i>
+              {% elif application.status == 'under_review' %}<i data-lucide="hourglass" class="w-6 h-6"></i>
+              {% else %}<i data-lucide="award" class="w-6 h-6 text-gray-400"></i>{% endif %}
+            </div>
+            <span class="text-xs font-semibold {% if application.status in 'under_review,approved,rejected' %}text-gray-800{% else %}text-gray-400{% endif %} text-center">Decision</span>
+            <span class="text-xs text-gray-400 text-center mt-0.5">
+              {% if application.status == 'approved' %}Accepted
+              {% elif application.status == 'rejected' %}Not Approved
+              {% elif application.status == 'under_review' %}In Review
+              {% else %}Pending{% endif %}
+            </span>
+          </div>
+
+          {% if application.status == 'approved' %}
+          <div class="step-connector mt-6 {% if application.can_access_student_portal %}done{% endif %}"></div>
+
+          <!-- Step 5: Enrollment -->
+          <div class="flex flex-col items-center w-24 flex-shrink-0">
+            <div class="w-12 h-12 rounded-full
+              {% if application.can_access_student_portal %}bg-green-500
+              {% elif application.admission_accepted %}bg-blue-500 animate-pulse
+              {% else %}bg-gray-200{% endif %}
+              text-white flex items-center justify-center shadow-md mb-2">
+              {% if application.can_access_student_portal %}<i data-lucide="graduation-cap" class="w-6 h-6"></i>
+              {% elif application.admission_accepted %}<i data-lucide="clock" class="w-6 h-6"></i>
+              {% else %}<i data-lucide="user-check" class="w-6 h-6 text-gray-400"></i>{% endif %}
+            </div>
+            <span class="text-xs font-semibold {% if application.admission_accepted %}text-gray-800{% else %}text-gray-400{% endif %} text-center">Enrolled</span>
+            <span class="text-xs text-gray-400 text-center mt-0.5">
+              {% if application.can_access_student_portal %}Active
+              {% elif application.admission_accepted %}Pending
+              {% else %}Accept Offer{% endif %}
+            </span>
+          </div>
+          {% endif %}
+
+        </div>
+
+        <!-- Mobile Stepper (vertical cards) -->
+        <div class="sm:hidden space-y-3">
+
+          <div class="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+            <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="check" class="w-4 h-4 text-white"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900">Application Saved</p>
+              <p class="text-xs text-gray-500">Draft created on {{ application.created_at|date:"M d, Y" }}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 p-3 {% if application.documents.exists %}bg-green-50 border-green-200{% else %}bg-purple-50 border-purple-200{% endif %} border rounded-xl">
+            <div class="w-8 h-8 rounded-full {% if application.documents.exists %}bg-green-500{% else %}bg-purple-600{% endif %} flex items-center justify-center flex-shrink-0">
+              <i data-lucide="{% if application.documents.exists %}check{% else %}upload{% endif %}" class="w-4 h-4 text-white"></i>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-gray-900">Documents</p>
+              <p class="text-xs text-gray-500">{% if application.documents.exists %}{{ application.documents.count }} uploaded{% else %}Upload required{% endif %}</p>
+            </div>
+            {% if not application.documents.exists %}
+            <button onclick="openUploadModal()" class="px-3 py-1.5 bg-purple-700 text-white rounded-lg text-xs font-semibold">Upload</button>
+            {% endif %}
+          </div>
+
+          <div class="flex items-center gap-3 p-3
+            {% if application.status in 'under_review,approved,rejected' %}bg-green-50 border-green-200
+            {% elif application.documents.exists %}bg-purple-50 border-purple-200
+            {% else %}bg-gray-50 border-gray-200{% endif %} border rounded-xl">
+            <div class="w-8 h-8 rounded-full
+              {% if application.status in 'under_review,approved,rejected' %}bg-green-500
+              {% elif application.documents.exists %}bg-purple-600
+              {% else %}bg-gray-300{% endif %} flex items-center justify-center flex-shrink-0">
+              <i data-lucide="{% if application.status in 'under_review,approved,rejected' %}check{% else %}send{% endif %}" class="w-4 h-4 text-white"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-{% if application.documents.exists %}900{% else %}400{% endif %}">Submitted</p>
+              <p class="text-xs text-gray-500">{% if application.status in 'under_review,approved,rejected' %}Complete{% elif application.documents.exists %}Ready{% else %}Pending{% endif %}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 p-3
+            {% if application.status == 'approved' %}bg-green-50 border-green-200
+            {% elif application.status == 'rejected' %}bg-red-50 border-red-200
+            {% elif application.status == 'under_review' %}bg-blue-50 border-blue-200
+            {% else %}bg-gray-50 border-gray-200{% endif %} border rounded-xl">
+            <div class="w-8 h-8 rounded-full
+              {% if application.status == 'approved' %}bg-green-500
+              {% elif application.status == 'rejected' %}bg-red-500
+              {% elif application.status == 'under_review' %}bg-blue-500
+              {% else %}bg-gray-300{% endif %} flex items-center justify-center flex-shrink-0">
+              <i data-lucide="{% if application.status == 'approved' %}check-circle{% elif application.status == 'rejected' %}x-circle{% elif application.status == 'under_review' %}hourglass{% else %}award{% endif %}" class="w-4 h-4 text-white"></i>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-gray-{% if application.status in 'under_review,approved,rejected' %}900{% else %}400{% endif %}">Decision</p>
+              <p class="text-xs text-gray-500">
+                {% if application.status == 'approved' %}Accepted{% elif application.status == 'rejected' %}Not Approved{% elif application.status == 'under_review' %}In Review{% else %}Pending{% endif %}
+              </p>
+            </div>
+            {% if application.status == 'approved' %}
+            <button onclick="openAdmissionLetter('{% url 'eduweb:admission_letter' application.application_id %}')" class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold">
+              <span class="sm:hidden">PDF</span>
+              <span class="hidden sm:inline">Letter</span>
+            </button>
+            {% endif %}
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════
+           APPLICATION SUMMARY (Redesigned)
+      ══════════════════════════════════ -->
+      <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+
+        <div class="flex items-center gap-2 px-5 sm:px-7 py-4 border-b border-gray-100 bg-gray-50">
+          <i data-lucide="file-text" class="w-4 h-4 sm:w-5 sm:h-5 text-purple-700"></i>
+          <h2 class="text-base sm:text-lg font-bold text-gray-900">Application Summary</h2>
+        </div>
+
+        <div class="p-5 sm:p-7 space-y-6">
+
+          <!-- BLOCK 1: Personal Details -->
+          <div>
+            <p class="text-xs font-bold text-purple-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <i data-lucide="user" class="w-3.5 h-3.5"></i> Personal Details
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div class="info-row col-span-2 sm:col-span-1">
+                <span class="info-label">Full Name</span>
+                <span class="info-value">{{ application.get_full_name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Application ID</span>
+                <span class="info-value font-mono text-xs sm:text-sm">{{ application.application_id }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Date of Birth</span>
+                <span class="info-value">{{ application.date_of_birth|date:"d M Y" }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Gender</span>
+                <span class="info-value">{{ application.get_gender_display }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Nationality</span>
+                <span class="info-value">{{ application.nationality }}</span>
+              </div>
+              <div class="info-row col-span-2 sm:col-span-1">
+                <span class="info-label">Email</span>
+                <span class="info-value break-all text-xs sm:text-sm">{{ application.email }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Phone</span>
+                <span class="info-value">{{ application.phone }}</span>
+              </div>
+            </div>
+            <!-- Address full width -->
+            <div class="info-row mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+              <span class="info-label flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> Address</span>
+              <span class="info-value text-xs sm:text-sm">
+                {{ application.address_line1 }}{% if application.address_line2 %}, {{ application.address_line2 }}{% endif %},
+                {{ application.city }}{% if application.state %}, {{ application.state }}{% endif %} {{ application.postal_code }},
+                {{ application.country }}
+              </span>
+            </div>
+          </div>
+
+          <hr class="border-gray-100">
+
+          <!-- BLOCK 2: Program Details -->
+          <div>
+            <p class="text-xs font-bold text-purple-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Program Details
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div class="info-row col-span-2 sm:col-span-3">
+                <span class="info-label">Program Applied</span>
+                <span class="info-value text-purple-800">{{ application.program.name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Degree Level</span>
+                <span class="info-value">{{ application.program.get_degree_level_display }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Study Mode</span>
+                <span class="info-value">{{ application.get_study_mode_display }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Intake Term</span>
+                <span class="info-value">{{ application.intake.get_intake_period_display }} {{ application.intake.year }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Application Date</span>
+                <span class="info-value">{{ application.created_at|date:"d M Y" }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Scholarship</span>
+                <span class="info-value">
+                  {% if application.scholarship %}
+                  <span class="inline-flex items-center gap-1 text-amber-600"><i data-lucide="star" class="w-3 h-3"></i> Requested</span>
+                  {% else %}No{% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <hr class="border-gray-100">
+
+          <!-- BLOCK 3: Academic Background -->
+          <div>
+            <p class="text-xs font-bold text-purple-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> Academic Background
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div class="info-row">
+                <span class="info-label">Highest Qualification</span>
+                <span class="info-value">{{ application.highest_qualification|default:"—" }}</span>
+              </div>
+              <div class="info-row col-span-1 sm:col-span-2">
+                <span class="info-label">Previous Institution</span>
+                <span class="info-value">{{ application.institution_name|default:"—" }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Graduation Year</span>
+                <span class="info-value">{{ application.graduation_year|default:"—" }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">GPA / Grade</span>
+                <span class="info-value">{{ application.gpa_or_grade|default:"—" }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Language Proficiency</span>
+                <span class="info-value">
+                  {{ application.get_language_skill_display|default:"—" }}{% if application.language_score %} — {{ application.language_score }}{% endif %}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Work Experience</span>
+                <span class="info-value">{{ application.work_experience_years }} yr{{ application.work_experience_years|pluralize }}</span>
+              </div>
+            </div>
+          </div>
+
+          {% if application.emergency_contact_name %}
+          <hr class="border-gray-100">
+
+          <!-- BLOCK 4: Emergency Contact -->
+          <div>
+            <p class="text-xs font-bold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <i data-lucide="phone-call" class="w-3.5 h-3.5"></i> Emergency Contact
+            </p>
+            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div class="info-row">
+                <span class="info-label">Name</span>
+                <span class="info-value">{{ application.emergency_contact_name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Relationship</span>
+                <span class="info-value">{{ application.emergency_contact_relationship }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Phone</span>
+                <span class="info-value">{{ application.emergency_contact_phone }}</span>
+              </div>
+              {% if application.emergency_contact_email %}
+              <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value break-all text-xs sm:text-sm">{{ application.emergency_contact_email }}</span>
+              </div>
+              {% endif %}
+              {% if application.emergency_contact_address %}
+              <div class="info-row col-span-2">
+                <span class="info-label">Address</span>
+                <span class="info-value text-xs sm:text-sm">{{ application.emergency_contact_address }}</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+      </section>
+
+
+      <!-- ── Uploaded Documents ── -->
+      <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="flex items-center justify-between px-5 sm:px-7 py-4 border-b border-gray-100 bg-gray-50">
+          <div class="flex items-center gap-2">
+            <i data-lucide="folder-open" class="w-4 h-4 sm:w-5 sm:h-5 text-purple-700"></i>
+            <h2 class="text-base sm:text-lg font-bold text-gray-900">Documents</h2>
+            {% if application.documents.exists %}
+            <span class="ml-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">{{ application.documents.count }}</span>
+            {% endif %}
+          </div>
+          {% if application.status in 'draft,payment_complete,documents_uploaded' %}
+          <button onclick="openUploadModal()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-semibold transition-all">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Upload
+          </button>
+          {% endif %}
+        </div>
+
+        <div class="p-5 sm:p-7">
+          {% if application.documents.exists %}
+          <div class="space-y-2.5">
+            {% for doc in application.documents.all %}
+            <div class="flex items-center gap-3 p-3 sm:p-4 bg-gray-50 border border-gray-100 rounded-xl hover:border-purple-200 transition-colors">
+              <div class="w-9 h-9 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i data-lucide="file-text" class="w-4 h-4 text-white"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 truncate">{{ doc.get_file_type_display }}</p>
+                <p class="text-xs text-gray-400">{{ doc.uploaded_at|date:"d M Y, g:i A" }}</p>
+              </div>
+              {% if doc.file %}
+              <a href="{{ doc.file.url }}" target="_blank"
+                 class="px-3 py-1.5 border border-purple-300 text-purple-700 hover:bg-purple-700 hover:text-white rounded-lg text-xs font-semibold transition-all flex-shrink-0">
+                View
+              </a>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="py-10 text-center">
+            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <i data-lucide="inbox" class="w-6 h-6 text-gray-300"></i>
+            </div>
+            <p class="text-sm text-gray-400 font-medium mb-3">No documents uploaded yet</p>
+            {% if application.status in 'draft,payment_complete,documents_uploaded' %}
+            <button onclick="openUploadModal()"
+              class="inline-flex items-center gap-1.5 px-5 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-sm font-semibold transition-all">
+              <i data-lucide="upload" class="w-4 h-4"></i> Upload Documents
+            </button>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+
+      <!-- ── Activity Timeline ── -->
+      <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="flex items-center gap-2 px-5 sm:px-7 py-4 border-b border-gray-100 bg-gray-50">
+          <i data-lucide="git-branch" class="w-4 h-4 sm:w-5 sm:h-5 text-purple-700"></i>
+          <h2 class="text-base sm:text-lg font-bold text-gray-900">Activity Timeline</h2>
+        </div>
+
+        <div class="p-5 sm:p-7">
+          <div class="space-y-0">
+
+            <!-- Event: Created -->
+            <div class="flex gap-3 sm:gap-4">
+              <div class="flex flex-col items-center flex-shrink-0">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-500 flex items-center justify-center shadow-sm">
+                  <i data-lucide="file-plus" class="w-4 h-4 text-white"></i>
                 </div>
-                {% if application %}
-                <div class="mt-4 md:mt-0 flex gap-3">
-                    {% if application.status == 'approved' %}
-                    <a href="{% url 'eduweb:admission_letter' application.application_id %}" 
-                       class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                        <i data-lucide="file-check" class="w-5 h-5"></i>
-                        View Admission Letter
-                    </a>
-                    {% endif %}
-                    {% if application.status == 'approved' and not application.admission_accepted %}
-                    <!-- Accept Admission Button -->
-                    <form method="post" action="{% url 'eduweb:accept_admission' application.application_id %}" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" 
-                        class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                            <i data-lucide="check-circle" class="w-5 h-5"></i>
-                            Accept Admission Offer
-                        </button>
-                    </form>
-                    {% endif %}
-                    {% if application.can_access_student_portal %}
-                    <!-- Student Dashboard Access -->
-                    <a href="{% url 'students:dashboard' %}" 
-                    class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                        Go to Student Dashboard
-                    </a>
-                    {% endif %}
-
-                    <a href="{% url 'eduweb:index' %}" 
-                    class="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:border-primary-950 hover:text-primary-950 transition-all duration-300 shadow-sm hover:shadow-md">
-                        <i data-lucide="home" class="w-5 h-5"></i>
-                        Back to Home
-                    </a>
-                </div>
-                {% endif %}
+                <div class="tl-line"></div>
+              </div>
+              <div class="pb-5 flex-1 pt-0.5">
+                <p class="text-sm font-bold text-gray-900 mb-0.5">Application Draft Created</p>
+                <p class="text-xs text-gray-400 mb-2">{{ application.created_at|date:"d M Y" }} at {{ application.created_at|time:"g:i A" }}</p>
+                <p class="text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">Application form saved and ID assigned: <strong>{{ application.application_id }}</strong></p>
+              </div>
             </div>
 
-            {% if application %}
-            <!-- Status Alert -->
-            <div class="rounded-xl p-6 mb-8 border-2 animate-slide-down 
-                {% if application.status == 'approved' %}bg-gradient-to-r from-green-50 to-emerald-50 border-green-300
-                {% elif application.status == 'rejected' %}bg-gradient-to-r from-red-50 to-rose-50 border-red-300
-                {% else %}bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300{% endif %} shadow-lg">
-                <div class="flex items-start">
-                    <div class="flex-shrink-0">
-                        <div class="w-12 h-12 rounded-full 
-                            {% if application.status == 'approved' %}bg-green-500
-                            {% elif application.status == 'rejected' %}bg-red-500
-                            {% elif application.status == 'waitlisted' %}bg-yellow-500
-                            {% else %}bg-blue-500{% endif %} flex items-center justify-center shadow-md">
-                            <i data-lucide="{% if application.status == 'approved' %}check-circle{% elif application.status == 'rejected' %}x-circle{% else %}clock{% endif %}" class="w-7 h-7 text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">
-                            {% if application.status == 'approved' %}
-                                <span class="text-green-700">Admission Approved</span>
-                            {% elif application.status == 'rejected' %}
-                                <span class="text-red-700">Application Not Approved</span>
-                            {% else %}
-                                Current Status: {{ application.get_status_display }}
-                            {% endif %}
-                        </h3>
-                        <p class="text-gray-700 leading-relaxed">
-                            {% if application.status == 'approved' %}
-                                {% if application.admission_accepted %}
-                                    {% if application.department_approved %}
-                                        <strong>🎉 Congratulations!</strong> Your admission is fully approved. 
-                                        <br><strong>Admission Number:</strong> {{ application.admission_number }}
-                                        <br>You can now access the student dashboard.
-                                    {% elif application.admission_number %}
-                                        <strong>✅ Admission Accepted!</strong> Your admission number is <strong>{{ application.admission_number }}</strong>. 
-                                        <br>Awaiting department approval. You will receive an email when approved.
-                                    {% else %}
-                                        <strong>✅ Admission Accepted!</strong> Processing your admission number. You will receive confirmation shortly.
-                                    {% endif %}
-                                {% else %}
-                                    Congratulations! Your application has been accepted. 
-                                    <strong>Please accept the admission offer using the button above to proceed.</strong>
-                                {% endif %}
-                            {% elif application.status == 'rejected' %}
-                                Thank you for your interest. Unfortunately, we are unable to offer you admission at this time. Detailed feedback has been sent to your email.
-                            {% elif application.status == 'under_review' %}
-                                Your application is currently being reviewed by our admissions committee. We'll notify you of our decision within 4-6 weeks.
-                            {% elif application.status == 'documents_uploaded' %}
-                                Documents uploaded successfully! Click "Submit Application" when ready to send for review.
-                            {% elif application.status == 'draft' %}
-                                Your application draft has been saved. Please upload your required documents to proceed.
-                            {% elif application.status == 'payment_complete' %}
-                                Your application is saved. Please upload your required documents to proceed.
-                            {% else %}
-                                {{ application.get_status_display }}
-                            {% endif %}
-                        </p>
-                    </div>
+            {% if application.documents.exists %}
+            <!-- Event: Documents -->
+            <div class="flex gap-3 sm:gap-4">
+              <div class="flex flex-col items-center flex-shrink-0">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-purple-600 flex items-center justify-center shadow-sm">
+                  <i data-lucide="file-text" class="w-4 h-4 text-white"></i>
                 </div>
-            </div>
-            {% else %}
-            <!-- No Application -->
-            <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl p-8 text-center shadow-lg animate-scale-in">
-                <div class="w-20 h-20 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-                    <i data-lucide="alert-triangle" class="w-10 h-10 text-white"></i>
+                <div class="tl-line"></div>
+              </div>
+              <div class="pb-5 flex-1 pt-0.5">
+                <p class="text-sm font-bold text-gray-900 mb-0.5">Documents Uploaded</p>
+                <p class="text-xs text-gray-400 mb-2">{{ application.documents.first.uploaded_at|date:"d M Y" }} at {{ application.documents.first.uploaded_at|time:"g:i A" }}</p>
+                <div class="text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                  <p class="font-semibold mb-1">{{ application.documents.count }} document{{ application.documents.count|pluralize }} uploaded:</p>
+                  {% for doc in application.documents.all %}<p class="text-gray-500">✓ {{ doc.get_file_type_display }}</p>{% endfor %}
                 </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-3">No Application Found</h3>
-                <p class="text-gray-700 mb-6 max-w-md mx-auto">You haven't submitted an application yet. Start your journey with us today!</p>
-                <a href="{% url 'eduweb:apply' %}" 
-                   class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold text-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
-                    <i data-lucide="rocket" class="w-6 h-6"></i>
-                    Start Application
-                </a>
+              </div>
             </div>
             {% endif %}
-        </header>
 
-        {% if application %}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Left Column: Progress & Summary -->
-            <div class="lg:col-span-2 space-y-8">
-                
-                <!-- Progress Tracker -->
-                <section class="bg-white rounded-xl shadow-xl p-6 md:p-8 border border-gray-200 animate-slide-up">
-                    <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                        <div class="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-3 shadow-md">
-                            <i data-lucide="activity" class="w-5 h-5 md:w-6 md:h-6 text-white"></i>
-                        </div>
-                        Application Progress
-                    </h2>
-
-                    <!-- Desktop Progress Steps -->
-                    <div class="hidden lg:block">
-                        <div class="relative">
-                            <!-- Progress connector line -->
-                            <div class="absolute left-0 right-0 mx-auto" style="top: 2rem; height: 4px; background: #e5e7eb; z-index: 0; width: calc(100% - 4rem); margin-left: 2rem;">
-                                <div class="h-full bg-green-500 transition-all duration-700 rounded-full"
-                                     style="width: {% if application.status == 'approved' or application.status == 'rejected' %}100{% elif application.status == 'under_review' %}75{% elif application.status == 'documents_uploaded' %}50{% elif application.documents.all %}40{% elif application.status == 'draft' %}10{% else %}0{% endif %}%;">
-                                </div>
-                            </div>
-
-                            <!-- Steps — always flex row, never wrap -->
-                            <div class="relative flex flex-row items-start justify-between gap-0" style="z-index: 1;">
-                                <!-- Step 1: Draft Saved -->
-                                <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
-                                        <i data-lucide="check" class="w-8 h-8"></i>
-                                    </div>
-                                    <span class="text-sm font-semibold text-center text-gray-900">Saved</span>
-                                    <span class="text-xs text-gray-500 text-center mt-1">Draft created</span>
-                                </div>
-
-                                <!-- Step 3: Documents -->
-                                <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full {% if application.documents.all %}bg-green-500{% else %}bg-blue-500 shadow-xl animate-pulse{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
-                                        {% if application.documents.all %}
-                                        <i data-lucide="check" class="w-8 h-8"></i>
-                                        {% else %}
-                                        <i data-lucide="upload" class="w-8 h-8"></i>
-                                        {% endif %}
-                                    </div>
-
-                                    <span class="text-sm font-semibold text-center text-gray-900">Documents</span>
-                                    <span class="text-xs text-gray-500 text-center mt-1">
-                                        {% if application.documents.all %}{{ application.documents.count }} uploaded{% else %}Required{% endif %}
-                                    </span>
-                                    {% if not application.documents.all %}
-                                    <button onclick="openUploadModal()"
-                                            class="mt-3 px-4 py-2 bg-primary-950 text-white rounded-lg text-xs font-semibold hover:opacity-90 transition">
-                                        Upload Documents
-                                    </button>
-                                    {% elif application.documents.all %}
-                                    <span class="mt-3 text-xs text-green-600 font-semibold">
-                                        ✓ Uploaded
-                                    </span>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Step 4: Submitted -->
-                                <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full
-                                        {% if application.status in 'under_review,approved,rejected' %}bg-green-500
-                                        {% elif application.status == 'documents_uploaded' %}bg-blue-500 shadow-xl animate-pulse
-                                        {% else %}bg-gray-300{% endif %}
-                                        text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
-                                        {% if application.status in 'under_review,approved,rejected' %}
-                                        <i data-lucide="check" class="w-8 h-8"></i>
-                                        {% else %}
-                                        <i data-lucide="send" class="w-8 h-8"></i>
-                                        {% endif %}
-                                    </div>
-                                    <span class="text-sm font-semibold text-center
-                                        {% if application.status in 'documents_uploaded,under_review,approved,rejected' %}text-gray-900
-                                        {% else %}text-gray-500{% endif %}">
-                                        Submitted
-                                    </span>
-                                    <span class="text-xs text-gray-500 text-center mt-1">
-                                        {% if application.status in 'under_review,approved,rejected' %}Complete
-                                        {% elif application.documents.all %}Ready
-                                        {% else %}Pending{% endif %}
-                                    </span>
-                                </div>
-
-                                <!-- Step 5: Decision -->
-                                <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full
-                                        {% if application.status == 'approved' %}bg-green-500 shadow-xl
-                                        {% elif application.status == 'rejected' %}bg-red-500 shadow-xl
-                                        {% elif application.status in 'under_review,reviewed' %}bg-blue-500 animate-pulse
-                                        {% else %}bg-gray-300{% endif %} text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
-                                        {% if application.status == 'approved' %}
-                                        <i data-lucide="check-circle" class="w-8 h-8"></i>
-                                        {% elif application.status == 'rejected' %}
-                                        <i data-lucide="x-circle" class="w-8 h-8"></i>
-                                        {% elif application.status == 'waitlisted' %}
-                                        <i data-lucide="clock" class="w-8 h-8"></i>
-                                        {% else %}
-                                        <i data-lucide="award" class="w-8 h-8"></i>
-                                        {% endif %}
-                                    </div>
-                                    <span class="text-sm font-semibold text-center {% if application.status in 'under_review,reviewed,accepted,rejected,waitlisted' %}text-gray-900{% else %}text-gray-500{% endif %}">Decision</span>
-                                    <span class="text-xs text-gray-500 text-center mt-1">
-                                        {% if application.status == 'approved' %}Accepted
-                                        {% elif application.status == 'rejected' %}Not Accepted
-                                        {% elif application.status == 'waitlisted' %}Waitlisted
-                                        {% elif application.status in 'under_review,reviewed' %}In Review
-                                        {% else %}Pending{% endif %}
-                                    </span>
-                                </div>
-
-                                <!-- Step 6: Admission Accepted (NEW) -->
-                                {% if application.status == 'approved' %}
-                                <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-full
-                                        {% if application.can_access_student_portal %}bg-green-500 shadow-xl
-                                        {% elif application.admission_accepted %}bg-blue-500 animate-pulse
-                                        {% else %}bg-gray-300{% endif %}
-                                        text-white flex items-center justify-center text-lg mb-3 z-10 shadow-lg relative">
-                                        {% if application.can_access_student_portal %}
-                                        <i data-lucide="graduation-cap" class="w-8 h-8"></i>
-                                        {% elif application.admission_accepted %}
-                                        <i data-lucide="clock" class="w-8 h-8"></i>
-                                        {% else %}
-                                        <i data-lucide="user-check" class="w-8 h-8"></i>
-                                        {% endif %}
-                                    </div>
-                                    <span class="text-sm font-semibold text-center
-                                        {% if application.admission_accepted or application.can_access_student_portal %}text-gray-900
-                                        {% else %}text-gray-500{% endif %}">
-                                        Enrollment
-                                    </span>
-                                    <span class="text-xs text-gray-500 text-center mt-1">
-                                        {% if application.can_access_student_portal %}Portal Active
-                                        {% elif application.admission_accepted %}Pending Approval
-                                        {% else %}Accept Offer{% endif %}
-                                    </span>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-
-                    <!-- Mobile/Tablet Progress (Enhanced – Same as Desktop) -->
-                    <div class="lg:hidden space-y-4">
-
-                        <!-- STEP 1: Draft -->
-                        <div class="p-4 rounded-xl border bg-green-50 border-green-400">
-                            <h4 class="font-bold text-gray-900">✔ Application Draft</h4>
-                            <p class="text-sm text-gray-600">Draft created successfully</p>
-                        </div>
-
-                        
-
-                        <!-- STEP 2: Documents -->
-                        <div class="p-4 rounded-xl border {% if application.documents.all %}bg-green-50 border-green-400{% else %}bg-blue-50 border-blue-400{% endif %}">
-                            <h4 class="font-bold text-gray-900">📄 Documents</h4>
-                            <p class="text-sm text-gray-600">
-                                {% if application.documents.all %}
-                                    {{ application.documents.count }} document{{ application.documents.count|pluralize }} uploaded
-                                {% else %}
-                                    Upload required
-                                {% endif %}
-                            </p>
-                            {% if not application.documents.all %}
-                            <button onclick="openUploadModal()"
-                                    class="mt-3 w-full px-4 py-2 bg-primary-950 text-white rounded-lg text-sm font-semibold">
-                                Upload Documents
-                            </button>
-                            {% endif %}
-                        </div>
-
-                        <!-- STEP 4: Submission -->
-                        <div class="p-4 rounded-xl border
-        {% if application.status in 'under_review,approved,rejected' %}
-            bg-green-50 border-green-400
-        {% elif application.documents.all %}
-            bg-blue-50 border-blue-400
-        {% else %}
-            bg-gray-50 border-gray-300
-        {% endif %}">
-                            <h4 class="font-bold text-gray-900">📤 Submission</h4>
-                            <p class="text-sm text-gray-600">
-                                {% if application.status in 'under_review,approved,rejected' %}
-                                Application submitted
-                                {% elif application.documents.all %}
-                                Ready to submit
-                                {% else %}
-                                Pending
-                                {% endif %}
-                            </p>
-                        </div>
-
-                        <!-- STEP 5: Decision -->
-                        <div class="p-4 rounded-xl border
-        {% if application.status == 'approved' %}
-            bg-green-50 border-green-400
-        {% elif application.status == 'rejected' %}
-            bg-red-50 border-red-400
-        {% elif application.status in 'under_review,reviewed' %}
-            bg-blue-50 border-blue-400
-        {% else %}
-            bg-gray-50 border-gray-300
-        {% endif %}">
-                            <h4 class="font-bold text-gray-900">🏆 Decision</h4>
-                            <p class="text-sm text-gray-600">
-                                {% if application.status == 'approved' %}
-                                Accepted
-                                {% elif application.status == 'rejected' %}
-                                Not Accepted
-                                {% elif application.status in 'under_review,reviewed' %}
-                                Under Review
-                                {% else %}
-                                Pending
-                                {% endif %}
-                            </p>
-
-                            {% if application.status == 'approved' %}
-                            <a href="{% url 'eduweb:admission_letter' application.application_id %}"
-                               class="mt-3 inline-block w-full text-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">
-                                View Admission Letter
-                            </a>
-                            {% endif %}
-                        </div>
-
-                        <!-- STEP 6: Admission Acceptance / Portal -->
-                        {% if application.status == 'approved' %}
-                        <div class="p-4 rounded-xl border
-        {% if application.can_access_student_portal %}
-            bg-green-50 border-green-400
-        {% elif application.admission_accepted %}
-            bg-blue-50 border-blue-400
-        {% else %}
-            bg-gray-50 border-gray-300
-        {% endif %}">
-                            <h4 class="font-bold text-gray-900">🎓 Enrollment</h4>
-                            <p class="text-sm text-gray-600">
-                                {% if application.can_access_student_portal %}
-                                Student portal active
-                                {% elif application.admission_accepted %}
-                                Awaiting department approval
-                                {% else %}
-                                Accept admission offer
-                                {% endif %}
-                            </p>
-
-                            {% if application.status == 'approved' and not application.admission_accepted %}
-                            <form method="post" action="{% url 'eduweb:accept_admission' application.application_id %}">
-                                {% csrf_token %}
-                                <button type="submit"
-                                        class="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold">
-                                    Accept Admission Offer
-                                </button>
-                            </form>
-                            {% endif %}
-
-                            {% if application.can_access_student_portal %}
-                            <a href="{% url 'students:dashboard' %}"
-                               class="mt-3 inline-block w-full text-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold">
-                                Go to Student Dashboard
-                            </a>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-
-                    </div>
-
-                    
-                </section>
-
-                <!-- Application Summary -->
-                <section class="bg-white rounded-xl shadow-xl p-8 border border-gray-200 animate-slide-up">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                        <div class="w-10 h-10 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-3 shadow-md">
-                            <i data-lucide="file-text" class="w-6 h-6 text-white"></i>
-                        </div>
-                        Application Summary
-                    </h2>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <!-- LEFT COLUMN -->
-                        <div class="space-y-6">
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="user" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Applicant Name</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.get_full_name }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="hash" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Application ID</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6 font-mono">{{ application.application_id }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="mail" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Email</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.email }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="phone" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Phone Number</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.phone }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="cake" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Date of Birth</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.date_of_birth|date:"F d, Y" }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="users" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Gender</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.get_gender_display }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="flag" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Nationality</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.nationality }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="map-pin" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Address</p>
-                                </div>
-                                <p class="text-base font-semibold text-gray-900 ml-6">
-                                    {{ application.address_line1 }}{% if application.address_line2 %}, {{ application.address_line2 }}{% endif %}<br>
-                                    {{ application.city }}{% if application.state %}, {{ application.state }}{% endif %} {{ application.postal_code }}<br>
-                                    {{ application.country }}
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- RIGHT COLUMN -->
-                        <div class="space-y-6">
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="book-open" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Program Applied</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.program.name }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="graduation-cap" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Degree Level</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.program.get_degree_level_display }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="layers" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Study Mode</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.get_study_mode_display }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="calendar" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Intake Term</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.intake.get_intake_period_display }} {{ application.intake.year }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="clock" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Application Date</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.created_at|date:"F d, Y" }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="award" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Highest Qualification</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.highest_qualification|default:"—" }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="building" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Previous Institution</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.institution_name|default:"—" }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="bar-chart" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">GPA / Grade</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.gpa_or_grade|default:"—" }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="globe" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Language Proficiency</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">
-                                    {{ application.get_language_skill_display|default:"—" }}{% if application.language_score %} — Score: {{ application.language_score }}{% endif %}
-                                </p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="briefcase" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Work Experience</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.work_experience_years }} year{{ application.work_experience_years|pluralize }}</p>
-                            </div>
-                            <div class="group">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <i data-lucide="star" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Scholarship Requested</p>
-                                </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{% if application.scholarship %}Yes{% else %}No{% endif %}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Emergency Contact Row -->
-                    {% if application.emergency_contact_name %}
-                    <div class="mt-8 pt-6 border-t border-gray-200">
-                        <h3 class="text-base font-bold text-gray-700 mb-4 flex items-center gap-2">
-                            <i data-lucide="phone-call" class="w-4 h-4 text-primary-950"></i>
-                            Emergency Contact
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <p class="text-xs font-medium text-gray-500 mb-1">Name &amp; Relationship</p>
-                                <p class="font-semibold text-gray-900">{{ application.emergency_contact_name }} <span class="text-gray-500 font-normal">({{ application.emergency_contact_relationship }})</span></p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-medium text-gray-500 mb-1">Phone</p>
-                                <p class="font-semibold text-gray-900">{{ application.emergency_contact_phone }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-medium text-gray-500 mb-1">Email</p>
-                                <p class="font-semibold text-gray-900">{{ application.emergency_contact_email|default:"—" }}</p>
-                            </div>
-                            {% if application.emergency_contact_address %}
-                            <div class="md:col-span-3">
-                                <p class="text-xs font-medium text-gray-500 mb-1">Address</p>
-                                <p class="font-semibold text-gray-900">{{ application.emergency_contact_address }}</p>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
-                </section>
-
-                <!-- Uploaded Documents -->
-                <section class="bg-white rounded-xl shadow-xl p-8 border border-gray-200 animate-slide-up">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                        <div class="w-10 h-10 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-3 shadow-md">
-                            <i data-lucide="folder-open" class="w-6 h-6 text-white"></i>
-                        </div>
-                        Uploaded Documents
-                    </h2>
-
-                    {% if application.documents.all %}
-                    <div class="space-y-3">
-                        {% for document in application.documents.all %}
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
-                            <div class="flex items-center gap-3 flex-1">
-                                <div class="w-10 h-10 bg-primary-950 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                                    <i data-lucide="file-text" class="w-5 h-5 text-white"></i>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-gray-900 truncate">{{ document.get_file_type_display }}</p>
-                                    <p class="text-sm text-gray-600">{{ document.uploaded_at|date:"M d, Y - g:i A" }}</p>
-                                </div>
-                            </div>
-                            {% if document.file %}
-                            <div class="flex items-center gap-2">
-                                <a href="{{ document.file.url }}" target="_blank" 
-                                   class="px-4 py-2 bg-white border-2 border-primary-950 text-primary-950 rounded-lg text-sm font-semibold hover:bg-primary-950 hover:text-white transition-all duration-300 flex items-center gap-2">
-                                    <i data-lucide="eye" class="w-4 h-4"></i>
-                                    View
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-                        <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i data-lucide="inbox" class="w-8 h-8 text-gray-400"></i>
-                        </div>
-                        <p class="text-gray-500 font-medium">No documents uploaded yet</p>
-                        {% if application.status in 'draft,payment_complete,documents_uploaded' %}
-                        <button onclick="openUploadModal()" 
-                                class="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                            <i data-lucide="upload" class="w-5 h-5"></i>
-                            Upload Now
-                        </button>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </section>
-
-                <!-- Activity Timeline -->
-                <section class="bg-white rounded-xl shadow-xl p-8 border border-gray-200 animate-slide-up">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                        <div class="w-10 h-10 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-3 shadow-md">
-                            <i data-lucide="activity" class="w-6 h-6 text-white"></i>
-                        </div>
-                        Activity Timeline
-                    </h2>
-
-                    <div class="space-y-6">
-                        <div class="flex gap-4">
-                            <div class="flex flex-col items-center">
-                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
-                                    <i data-lucide="file-plus" class="w-5 h-5 text-white"></i>
-                                </div>
-                                <div class="w-0.5 h-full bg-gray-200 mt-2"></div>
-                            </div>
-                            <div class="flex-1 pb-6">
-                                <h4 class="font-bold text-gray-900 mb-1">Application Draft Created</h4>
-                                <p class="text-sm text-gray-600 mb-2">{{ application.created_at|date:"M d, Y" }} at {{ application.created_at|time:"g:i A" }}</p>
-                                <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">Application form saved successfully</p>
-                            </div>
-                        </div>
-
-                        
-
-                        {% if application.documents.exists %}
-                        <div class="flex gap-4">
-                            <div class="flex flex-col items-center">
-                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-md">
-                                    <i data-lucide="file-text" class="w-5 h-5 text-white"></i>
-                                </div>
-                                {% if application.status not in 'under_review,approved,rejected' %}
-                                <div class="w-0.5 h-full bg-gray-200 mt-2"></div>
-                                {% endif %}
-                            </div>
-                            <div class="flex-1 pb-6">
-                                <h4 class="font-bold text-gray-900 mb-1">Documents Uploaded</h4>
-                                <p class="text-sm text-gray-600 mb-2">{{ application.documents.first.uploaded_at|date:"M d, Y" }} at {{ application.documents.first.uploaded_at|time:"g:i A" }}</p>
-                                <div class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    <p class="font-semibold mb-2">{{ application.documents.count }} document{{ application.documents.count|pluralize }} uploaded:</p>
-                                    <ul class="space-y-1">
-                                        {% for doc in application.documents.all %}
-                                        <li class="flex items-center gap-2">
-                                            <i data-lucide="check" class="w-3 h-3 text-green-600"></i>
-                                            <span>{{ doc.get_file_type_display }}</span>
-                                        </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% if application.submitted_at %}
-                        <div class="flex gap-4">
-                            <div class="flex flex-col items-center">
-                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
-                                    <i data-lucide="send" class="w-5 h-5 text-white"></i>
-                                </div>
-                                {% if application.status not in 'approved,rejected' %}
-                                <div class="w-0.5 h-full bg-gray-200 mt-2"></div>
-                                {% endif %}
-                            </div>
-                            <div class="flex-1 pb-6">
-                                <h4 class="font-bold text-gray-900 mb-1">Application Submitted</h4>
-                                <p class="text-sm text-gray-600 mb-2">{{ application.submitted_at|date:"M d, Y" }} at {{ application.submitted_at|time:"g:i A" }}</p>
-                                <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    Application submitted for review
-                                </p>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% if application.reviewed_at %}
-                        <div class="flex gap-4">
-                            <div class="flex flex-col items-center">
-                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-{% if application.status == 'approved' %}green{% elif application.status == 'rejected' %}red{% else %}yellow{% endif %}-500 to-{% if application.status == 'approved' %}emerald{% elif application.status == 'rejected' %}rose{% else %}orange{% endif %}-600 flex items-center justify-center shadow-md">
-                                    <i data-lucide="{% if application.status == 'approved' %}check-circle{% elif application.status == 'rejected' %}x-circle{% else %}clock{% endif %}" class="w-5 h-5 text-white"></i>
-                                </div>
-                            </div>
-                            <div class="flex-1 pb-6">
-                                <h4 class="font-bold text-gray-900 mb-1">Decision Made</h4>
-                                <p class="text-sm text-gray-600 mb-2">{{ application.reviewed_at|date:"M d, Y" }} at {{ application.reviewed_at|time:"g:i A" }}</p>
-                                <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    {% if application.status == 'approved' %}
-                                    Application approved - Check your email for next steps
-                                    {% elif application.status == 'rejected' %}
-                                    Decision communicated via email
-                                    {% else %}
-                                    Review completed
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </section>
+            {% if application.submitted_at %}
+            <!-- Event: Submitted -->
+            <div class="flex gap-3 sm:gap-4">
+              <div class="flex flex-col items-center flex-shrink-0">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-500 flex items-center justify-center shadow-sm">
+                  <i data-lucide="send" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="tl-line"></div>
+              </div>
+              <div class="pb-5 flex-1 pt-0.5">
+                <p class="text-sm font-bold text-gray-900 mb-0.5">Application Submitted</p>
+                <p class="text-xs text-gray-400 mb-2">{{ application.submitted_at|date:"d M Y" }} at {{ application.submitted_at|time:"g:i A" }}</p>
+                <p class="text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">Application sent for review by the admissions committee.</p>
+              </div>
             </div>
+            {% endif %}
 
-            <!-- Right Column -->
-            <div class="space-y-8">
-                
-                <!-- Next Steps Card -->
-                <section class="bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl shadow-xl p-8 border-2 border-purple-200 animate-scale-in sticky top-8">
-                    <h3 class="font-bold text-gray-900 mb-4 flex items-center text-lg">
-                        <div class="w-8 h-8 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-2 shadow-md">
-                            <i data-lucide="compass" class="w-5 h-5 text-white"></i>
-                        </div>
-                        Next Steps
-                    </h3>
-
-                    {% if application.status in 'draft,payment_complete,documents_uploaded' and not application.documents.all %}
-                    <!-- Need Documents -->
-                    <div class="text-center py-6">
-                        <div class="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <i data-lucide="upload" class="w-14 h-14 text-purple-600"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-3">Upload Documents</h3>
-                        <p class="text-gray-600 mb-6 leading-relaxed">Payment complete! Upload required documents to submit your application.</p>
-                        <button onclick="openUploadModal()" 
-                                class="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                            <i data-lucide="arrow-down" class="w-5 h-5"></i>
-                            Upload Documents
-                        </button>
-                    </div>
-
-                    {% elif application.status in 'draft,payment_complete,documents_uploaded' and application.documents.all %}
-                    <!-- Documents Uploaded -->
-                    <div class="text-center py-6">
-                        <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <i data-lucide="check-circle" class="w-14 h-14 text-green-600"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-3">Documents Uploaded</h3>
-                        <p class="text-gray-600 mb-4 leading-relaxed">
-                            {{ application.documents.count }} document{{ application.documents.count|pluralize }} uploaded. 
-                            Upload more or submit your application.
-                        </p>
-                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                            <p class="text-sm text-gray-700">
-                                <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
-                                Check "Submit after upload" when uploading your final document
-                            </p>
-                        </div>
-                        <button onclick="openUploadModal()" 
-                                class="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                            <i data-lucide="upload" class="w-5 h-5"></i>
-                            Upload More Documents
-                        </button>
-                    </div>
-                    
-                    {% elif application.status in 'approved,rejected' %}
-                    <!-- Decision Made -->
-                    <div class="text-center py-6">
-                        <div class="w-24 h-24 {% if application.status == 'approved' %}bg-green-100{% else %}bg-red-100{% endif %} rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <i data-lucide="{% if application.status == 'approved' %}check-circle{% else %}x-circle{% endif %}" class="w-14 h-14 {% if application.status == 'approved' %}text-green-600{% else %}text-red-600{% endif %}"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold {% if application.status == 'approved' %}text-green-700{% else %}text-red-700{% endif %} mb-3">
-                            {% if application.status == 'approved' %}Accepted!{% else %}Decision Made{% endif %}
-                        </h3>
-                        <p class="text-gray-600 mb-4 leading-relaxed">
-                            {% if application.status == 'approved' %}
-                                Congratulations! Check your email for enrollment instructions.
-                            {% else %}
-                                Thank you for your interest. Check your email for detailed feedback.
-                            {% endif %}
-                        </p>
-                        {% if application.status == 'approved' %}
-                        <a href="{% url 'eduweb:admission_letter' application.application_id %}" 
-                           class="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                            <i data-lucide="file-check" class="w-5 h-5"></i>
-                            View Admission Letter
-                        </a>
-                        {% endif %}
-                    </div>
-                    
-                    {% else %}
-                    <!-- Under Review -->
-                    <div class="text-center py-6">
-                        <div class="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <i data-lucide="hourglass" class="w-14 h-14 text-blue-600"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-3">Under Review</h3>
-                        <p class="text-gray-600 mb-6 leading-relaxed">
-                            Your application is being reviewed. Decision will be released within 4-6 weeks.
-                        </p>
-                        <div class="flex justify-center mb-4">
-                            <div class="h-2 bg-blue-200 rounded-full w-3/4 overflow-hidden shadow-inner">
-                                <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full animate-pulse" 
-                                    style="width: {% if application.status == 'reviewed' %}90{% elif application.status == 'under_review' %}60{% else %}30{% endif %}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </section>
-
-                <!-- Help Section -->
-                <section class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl shadow-xl p-8 border-2 border-blue-200 animate-scale-in">
-                    <h3 class="font-bold text-gray-900 mb-4 flex items-center text-lg">
-                        <div class="w-8 h-8 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center mr-2 shadow-md">
-                            <i data-lucide="headphones" class="w-5 h-5 text-white"></i>
-                        </div>
-                        Need Help?
-                    </h3>
-                    <p class="text-gray-700 mb-4 leading-relaxed">If you have questions about your application, contact our admissions team:</p>
-                    <div class="space-y-3">
-                        <a href="mailto:admissions@miu.edu" class="flex items-center gap-3 p-3 bg-white rounded-lg hover:bg-blue-50 transition-colors group">
-                            <div class="w-10 h-10 bg-primary-950 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                                <i data-lucide="mail" class="w-5 h-5 text-white"></i>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-primary-950">admissions@miu.edu</span>
-                        </a>
-                        <a href="tel:+15551234567" class="flex items-center gap-3 p-3 bg-white rounded-lg hover:bg-blue-50 transition-colors group">
-                            <div class="w-10 h-10 bg-primary-950 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                                <i data-lucide="phone" class="w-5 h-5 text-white"></i>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700 group-hover:text-primary-950">+1 (555) 123-4567</span>
-                        </a>
-                        <div class="flex items-center gap-3 p-3 bg-white rounded-lg">
-                            <div class="w-10 h-10 bg-primary-950 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-                                <i data-lucide="clock" class="w-5 h-5 text-white"></i>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700">Mon-Fri, 9 AM - 5 PM EST</span>
-                        </div>
-                    </div>
-                </section>
+            {% if application.reviewed_at %}
+            <!-- Event: Decision -->
+            <div class="flex gap-3 sm:gap-4">
+              <div class="flex flex-col items-center flex-shrink-0">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full {% if application.status == 'approved' %}bg-green-500{% elif application.status == 'rejected' %}bg-red-500{% else %}bg-amber-500{% endif %} flex items-center justify-center shadow-sm">
+                  <i data-lucide="{% if application.status == 'approved' %}check-circle{% elif application.status == 'rejected' %}x-circle{% else %}clock{% endif %}" class="w-4 h-4 text-white"></i>
+                </div>
+                {% if application.admission_accepted %}<div class="tl-line"></div>{% endif %}
+              </div>
+              <div class="pb-5 flex-1 pt-0.5">
+                <p class="text-sm font-bold text-gray-900 mb-0.5">Decision Made</p>
+                <p class="text-xs text-gray-400 mb-2">{{ application.reviewed_at|date:"d M Y" }} at {{ application.reviewed_at|time:"g:i A" }}</p>
+                <p class="text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                  {% if application.status == 'approved' %}Application approved — check your email for further instructions.
+                  {% elif application.status == 'rejected' %}Decision communicated via email.
+                  {% else %}Review completed.{% endif %}
+                </p>
+              </div>
             </div>
+            {% endif %}
+
+            {% if application.admission_accepted %}
+            <!-- Event: Accepted -->
+            <div class="flex gap-3 sm:gap-4">
+              <div class="flex flex-col items-center flex-shrink-0">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-indigo-500 flex items-center justify-center shadow-sm">
+                  <i data-lucide="user-check" class="w-4 h-4 text-white"></i>
+                </div>
+              </div>
+              <div class="pb-2 flex-1 pt-0.5">
+                <p class="text-sm font-bold text-gray-900 mb-0.5">Admission Accepted</p>
+                <p class="text-xs text-gray-400 mb-2">{{ application.admission_accepted_at|date:"d M Y" }} at {{ application.admission_accepted_at|time:"g:i A" }}</p>
+                <p class="text-xs text-gray-600 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100">
+                  Admission number issued: <strong>{{ application.admission_number }}</strong>
+                </p>
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
         </div>
-        {% endif %}
+      </section>
+
     </div>
+
+
+    <!-- ═══════════════════════════════════════
+         RIGHT SIDEBAR
+    ═══════════════════════════════════════ -->
+    <div class="space-y-5 lg:sticky lg:top-24 self-start">
+
+      <!-- ── Next Steps ── -->
+      <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="flex items-center gap-2 px-5 py-4 border-b border-gray-100 bg-gray-50">
+          <i data-lucide="compass" class="w-4 h-4 text-purple-700"></i>
+          <h3 class="text-sm font-bold text-gray-900">Next Steps</h3>
+        </div>
+        <div class="p-5">
+
+          {% if application.status in 'draft,payment_complete,documents_uploaded' and not application.documents.exists %}
+          <!-- Need documents -->
+          <div class="text-center py-3">
+            <div class="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <i data-lucide="upload" class="w-7 h-7 text-purple-600"></i>
+            </div>
+            <p class="text-sm font-semibold text-gray-900 mb-1">Upload Documents</p>
+            <p class="text-xs text-gray-500 mb-4 leading-relaxed">Upload your supporting documents to move your application forward.</p>
+            <button onclick="openUploadModal()"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-sm font-semibold transition-all">
+              <i data-lucide="upload" class="w-4 h-4"></i> Upload Documents
+            </button>
+          </div>
+
+          {% elif application.status in 'draft,payment_complete,documents_uploaded' and application.documents.exists %}
+          <!-- Has documents -->
+          <div class="text-center py-3">
+            <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <i data-lucide="check-circle" class="w-7 h-7 text-green-600"></i>
+            </div>
+            <p class="text-sm font-semibold text-gray-900 mb-1">{{ application.documents.count }} Document{{ application.documents.count|pluralize }} Uploaded</p>
+            <p class="text-xs text-gray-500 mb-3 leading-relaxed">Upload more files or check "Submit after upload" on your final document.</p>
+            <button onclick="openUploadModal()"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-sm font-semibold transition-all">
+              <i data-lucide="upload" class="w-4 h-4"></i> Upload More
+            </button>
+          </div>
+
+          {% elif application.status in 'approved,rejected' %}
+          <!-- Decision -->
+          <div class="text-center py-3">
+            <div class="w-14 h-14 {% if application.status == 'approved' %}bg-green-100{% else %}bg-red-100{% endif %} rounded-full flex items-center justify-center mx-auto mb-3">
+              <i data-lucide="{% if application.status == 'approved' %}check-circle{% else %}x-circle{% endif %}" class="w-7 h-7 {% if application.status == 'approved' %}text-green-600{% else %}text-red-500{% endif %}"></i>
+            </div>
+            <p class="text-sm font-bold {% if application.status == 'approved' %}text-green-700{% else %}text-red-700{% endif %} mb-1">
+              {% if application.status == 'approved' %}Accepted!{% else %}Not Approved{% endif %}
+            </p>
+            <p class="text-xs text-gray-500 mb-4 leading-relaxed">
+              {% if application.status == 'approved' %}Check your email for enrollment instructions.
+              {% else %}Check your email for detailed feedback.{% endif %}
+            </p>
+            {% if application.status == 'approved' %}
+            <button onclick="openAdmissionLetter('{% url 'eduweb:admission_letter' application.application_id %}')"
+               class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-all mb-2">
+              <i data-lucide="file-check" class="w-4 h-4"></i>
+              <span class="sm:hidden">Download PDF</span>
+              <span class="hidden sm:inline">Admission Letter</span>
+            </button>
+            {% if not application.admission_accepted %}
+            <form method="post" action="{% url 'eduweb:accept_admission' application.application_id %}">
+              {% csrf_token %}
+              <button type="submit" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> Accept Offer
+              </button>
+            </form>
+            {% endif %}
+            {% endif %}
+          </div>
+
+          {% else %}
+          <!-- Under Review -->
+          <div class="text-center py-3">
+            <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <i data-lucide="hourglass" class="w-7 h-7 text-blue-600"></i>
+            </div>
+            <p class="text-sm font-semibold text-gray-900 mb-1">Under Review</p>
+            <p class="text-xs text-gray-500 mb-4 leading-relaxed">Decision expected within 4–6 weeks. We'll notify you by email.</p>
+            <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div class="h-full bg-blue-500 rounded-full animate-pulse"
+                style="width: {% if application.status == 'reviewed' %}90{% elif application.status == 'under_review' %}60{% else %}30{% endif %}%"></div>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+      </section>
+
+      <!-- ── Status Badge ── -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i data-lucide="radio" class="w-3.5 h-3.5 text-purple-600"></i> Current Status</p>
+        <div class="flex items-center gap-2.5">
+          <div class="w-2.5 h-2.5 rounded-full flex-shrink-0
+            {% if application.status == 'approved' %}bg-green-500
+            {% elif application.status == 'rejected' %}bg-red-500
+            {% elif application.status == 'under_review' %}bg-blue-500 animate-pulse
+            {% else %}bg-amber-400{% endif %}"></div>
+          <span class="text-sm font-bold text-gray-900">{{ application.get_status_display }}</span>
+          <span class="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full
+            {% if application.status == 'approved' %}bg-green-100 text-green-700
+            {% elif application.status == 'rejected' %}bg-red-100 text-red-700
+            {% elif application.status == 'under_review' %}bg-blue-100 text-blue-700
+            {% elif application.status == 'documents_uploaded' %}bg-purple-100 text-purple-700
+            {% else %}bg-amber-100 text-amber-700{% endif %}">
+            {% if application.status == 'approved' %}✓ Approved
+            {% elif application.status == 'rejected' %}✗ Rejected
+            {% elif application.status == 'under_review' %}⏳ In Review
+            {% elif application.status == 'documents_uploaded' %}📄 Docs Uploaded
+            {% elif application.status == 'draft' %}✏️ Draft
+            {% else %}{{ application.get_status_display }}{% endif %}
+          </span>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">Last updated: {{ application.updated_at|date:"d M Y, g:i A" }}</p>
+      </div>
+
+      <!-- ── Help ── -->
+      <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="flex items-center gap-2 px-5 py-4 border-b border-gray-100 bg-gray-50">
+          <i data-lucide="headphones" class="w-4 h-4 text-purple-700"></i>
+          <h3 class="text-sm font-bold text-gray-900">Need Help?</h3>
+        </div>
+        <div class="p-5 space-y-2">
+          {% if site_config.email_admissions %}
+          <a href="mailto:{{ site_config.email_admissions }}"
+             class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-purple-50 hover:border-purple-200 transition-all group">
+            <div class="w-8 h-8 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
+              <i data-lucide="mail" class="w-3.5 h-3.5 text-white"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-700 group-hover:text-purple-700 break-all">{{ site_config.email_admissions }}</span>
+          </a>
+          {% else %}
+          <a href="mailto:admissions@miu.edu"
+             class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-purple-50 hover:border-purple-200 transition-all group">
+            <div class="w-8 h-8 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
+              <i data-lucide="mail" class="w-3.5 h-3.5 text-white"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-700 group-hover:text-purple-700">admissions@miu.edu</span>
+          </a>
+          {% endif %}
+
+          {% if site_config.phone_admissions %}
+          <a href="tel:{{ site_config.phone_admissions }}"
+             class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-purple-50 hover:border-purple-200 transition-all group">
+            <div class="w-8 h-8 bg-purple-700 rounded-lg flex items-center justify-center flex-shrink-0">
+              <i data-lucide="phone" class="w-3.5 h-3.5 text-white"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-700 group-hover:text-purple-700">{{ site_config.phone_admissions }}</span>
+          </a>
+          {% endif %}
+
+          <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-100">
+            <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i>
+            </div>
+            <span class="text-xs text-gray-500">Mon–Fri, 9 AM – 5 PM</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+  {% endif %}
+
+</div>
 </div>
 
-<!-- Upload Modal - Enhanced Bulk Upload -->
+
+<!-- ═══════════════════════════════════════
+     UPLOAD MODAL
+═══════════════════════════════════════ -->
+{% if application %}
 <div id="uploadModal" class="modal">
-    <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-8">
-        <div class="flex justify-between items-center mb-6 border-b pb-4">
-            <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                <div class="w-10 h-10 bg-gradient-to-br from-primary-950 to-purple-700 rounded-lg flex items-center justify-center shadow-md">
-                    <i data-lucide="upload" class="w-6 h-6 text-white"></i>
-                </div>
-                Upload Documents
-            </h2>
-            <button onclick="closeUploadModal()" class="text-gray-500 hover:text-gray-700 transition-colors">
-                <i data-lucide="x" class="w-6 h-6"></i>
-            </button>
-        </div>
+  <!-- Single wrapper with consistent padding — no more per-child mx-6 -->
+  <div class="modal-box bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 p-6">
 
-        <!-- Enhanced Instructions Section -->
-        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
-            <div class="flex items-start gap-4">
-                <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
-                        <i data-lucide="info" class="w-7 h-7 text-white"></i>
-                    </div>
-                </div>
-                <div class="flex-1">
-                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <i data-lucide="lightbulb" class="w-5 h-5 text-yellow-500"></i>
-                        How to Upload Your Documents
-                    </h3>
-                    <div class="space-y-3 text-sm text-gray-700">
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">1</div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Select Document Type</p>
-                                <p class="text-gray-600">Choose the appropriate category for each document (e.g., Academic Transcript, Certificate, ID Document)</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">2</div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Choose Your File</p>
-                                <p class="text-gray-600">Click to select files from your device. Accepted formats: <strong>PDF, JPG, PNG</strong> (Max 5MB per file)</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">3</div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Add Multiple Documents</p>
-                                <p class="text-gray-600">Click <strong>"Add Another Document"</strong> to upload additional files in one go</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">4</div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Upload & Submit (Optional)</p>
-                                <p class="text-gray-600">
-                                    ✅ Check <strong>"Submit application after upload"</strong> if these are your final documents<br>
-                                    ⏸️ Leave unchecked if you want to upload more later
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Required Documents Alert -->
-                    <div class="mt-4 bg-yellow-50 border border-yellow-300 rounded-lg p-3">
-                        <div class="flex items-start gap-2">
-                            <i data-lucide="alert-circle" class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"></i>
-                            <div>
-                                <p class="font-semibold text-yellow-900 text-sm">Required Documents:</p>
-                                <p class="text-xs text-yellow-800 mt-1">
-                                    • Academic Transcript/Results<br>
-                                    • Certificate/Diploma<br>
-                                    • Valid ID/Passport<br>
-                                    • CV/Resume (if applicable)
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="uploadSections" class="space-y-4 max-h-96 overflow-y-auto mb-6">
-            <!-- Upload sections will be added here dynamically -->
-        </div>
-
-        <div class="flex gap-3">
-            <button type="button" 
-                    onclick="addUploadSection()" 
-                    class="px-6 py-3 bg-gray-100 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-all">
-                <i data-lucide="plus" class="w-5 h-5 inline mr-2"></i>
-                Add Another Document
-            </button>
-            <button type="button" 
-                    onclick="uploadAllDocuments()" 
-                    class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300">
-                <i data-lucide="upload" class="w-5 h-5"></i>
-                Upload All Documents
-            </button>
-        </div>
-
-        <div class="mt-6 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-            <label class="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" 
-                       id="globalAutoSubmit" 
-                       class="mt-1 w-5 h-5 text-primary-950 border-gray-300 rounded focus:ring-primary-950">
-                <div>
-                    <p class="font-semibold text-gray-900">Submit application after all uploads complete</p>
-                    <p class="text-sm text-gray-600 mt-1">
-                        Check this if these are your final documents and you're ready to submit
-                    </p>
-                </div>
-            </label>
-        </div>
-
-        <!-- Progress Bar -->
-        <div id="uploadProgress" class="hidden mt-6">
-            <div class="flex justify-between text-sm text-gray-600 mb-2">
-                <span id="progressText">Uploading documents...</span>
-                <span id="progressCount">0 / 0</span>
-            </div>
-            <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
-                <div id="progressBar" class="h-full bg-gradient-to-r from-primary-950 to-purple-700 transition-all duration-300" style="width: 0%"></div>
-            </div>
-        </div>
+    <!-- Header — flush to top, negative margin to cancel wrapper padding -->
+    <div class="flex items-center justify-between -mx-6 -mt-6 px-6 py-4 border-b border-gray-100 mb-5">
+      <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+        <i data-lucide="upload" class="w-4 h-4 text-purple-700"></i> Upload Documents
+      </h2>
+      <button onclick="closeUploadModal()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
     </div>
+
+    <!-- Instructions -->
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+      <p class="text-xs font-bold text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+        <i data-lucide="info" class="w-3.5 h-3.5"></i> How it works
+      </p>
+      <div class="grid sm:grid-cols-2 gap-1.5 text-xs text-gray-600">
+        <p>① Select document type for each file</p>
+        <p>② Choose PDF, JPG or PNG (max 5 MB)</p>
+        <p>③ Add multiple files with "Add Document"</p>
+        <p>④ Check "Submit after upload" when done</p>
+      </div>
+      <div class="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-800">
+        <strong>Required:</strong> Transcript · Certificate/Diploma · ID/Passport · CV (if applicable)
+      </div>
+    </div>
+
+    <!-- Upload sections — scrollable area, negative side margin
+         so cards sit flush with wrapper edges, scroll stays contained -->
+    <div id="uploadSections" class="-mx-6 px-6 space-y-3 max-h-64 overflow-y-auto mb-4"></div>
+
+    <!-- Add Another -->
+    <button type="button" onclick="addUploadSection()"
+      class="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-purple-300 text-purple-700 rounded-xl text-sm font-semibold hover:bg-purple-50 hover:border-purple-500 transition-all mb-4">
+      <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Another Document
+    </button>
+
+    <!-- Auto-submit -->
+    <div class="p-4 bg-green-50 border border-green-200 rounded-xl mb-4">
+      <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" id="globalAutoSubmit" class="mt-0.5 w-4 h-4 accent-purple-700 rounded focus:ring-purple-500">
+        <div>
+          <p class="text-sm font-semibold text-gray-900">Submit application after upload</p>
+          <p class="text-xs text-gray-500 mt-0.5">Check if these are your final documents.</p>
+        </div>
+      </label>
+    </div>
+
+    <!-- Upload button -->
+    <button type="button" onclick="uploadAllDocuments()"
+      class="w-full flex items-center justify-center gap-2 px-5 py-3 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm hover:shadow-md">
+      <i data-lucide="upload" class="w-4 h-4"></i> Upload All Documents
+    </button>
+
+    <!-- Progress bar -->
+    <div id="uploadProgress" class="hidden mt-4">
+      <div class="flex justify-between text-xs text-gray-500 mb-1.5">
+        <span id="progressText">Uploading…</span>
+        <span id="progressCount"></span>
+      </div>
+      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div id="progressBar" class="h-full bg-purple-700 transition-all duration-300 rounded-full" style="width:0%"></div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script>
-    let uploadSectionCounter = 0;
-    let uploadedFiles = [];
+let uploadSectionCounter = 0;
 
-    function createUploadSection() {
-        const sectionId = `section-${uploadSectionCounter++}`;
-        
-        return `
-            <div class="upload-section bg-gray-50 border-2 border-gray-200 rounded-lg p-4" data-section-id="${sectionId}">
-                <div class="flex justify-between items-start mb-3">
-                    <h3 class="font-semibold text-gray-900">Document ${uploadSectionCounter}</h3>
-                    ${uploadSectionCounter > 1 ? `
-                        <button type="button" 
-                                onclick="removeUploadSection('${sectionId}')" 
-                                class="text-red-500 hover:text-red-700 transition-colors">
-                            <i data-lucide="trash-2" class="w-5 h-5"></i>
-                        </button>
-                    ` : ''}
-                </div>
+function createUploadSection() {
+  const id = `sec-${Date.now()}-${uploadSectionCounter++}`;
+  const num = uploadSectionCounter;
+  const removeBtn = num > 1
+    ? `<button type="button" onclick="removeSection('${id}')" class="text-red-400 hover:text-red-600 transition-colors p-1">
+         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+       </button>`
+    : '';
+  return `
+  <div class="upload-section bg-gray-50 border-2 border-gray-100 rounded-xl p-4 sm:p-5" data-id="${id}">
+    <div class="flex items-center justify-between mb-3">
+      <p class="text-xs font-semibold text-purple-600 uppercase tracking-widest">Document ${num}</p>
+      ${removeBtn}
+    </div>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Type <span class="text-red-500">*</span></label>
+        <select class="doc-type w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm text-gray-800 focus:border-purple-700 focus:ring-2 focus:ring-purple-100 outline-none bg-white transition-all" required>
+          <option value="" disabled selected>— Select —</option>
+          <option value="transcript">Academic Transcript</option>
+          <option value="certificate">Certificate / Diploma</option>
+          <option value="id_document">ID Document</option>
+          <option value="passport">Passport Copy</option>
+          <option value="cv">CV / Resume</option>
+          <option value="recommendation">Recommendation Letter</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">File <span class="text-red-500">*</span></label>
+        <div class="upload-drop border rounded-lg p-3 text-center cursor-pointer" onclick="this.querySelector('input').click()">
+          <input type="file" class="doc-file hidden" accept=".pdf,.jpg,.jpeg,.png" required onchange="handleFile(this,'${id}')">
+          <svg class="w-5 h-5 text-gray-300 mx-auto mb-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p class="text-xs text-gray-400 file-label">PDF, JPG, PNG — max 5 MB</p>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
 
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Document Type <span class="text-red-500">*</span>
-                        </label>
-                        <select class="doc-type w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-950 focus:border-primary-950" required>
-                            <option value="" disabled selected>-- Select Type --</option>
-                            <option value="transcript">Academic Transcript</option>
-                            <option value="certificate">Certificate/Diploma</option>
-                            <option value="id_document">ID Document (Passport/National ID)</option>
-                            <option value="passport">Passport Copy</option>
-                            <option value="cv">CV/Resume</option>
-                            <option value="recommendation">Letter of Recommendation</option>
-                            <option value="other">Other Document</option>
-                        </select>
-                    </div>
+function handleFile(input, id) {
+  const section = document.querySelector(`[data-id="${id}"]`);
+  const label = section.querySelector('.file-label');
+  if (!input.files[0]) return;
+  if (input.files[0].size > 5 * 1024 * 1024) {
+    alert('File too large. Max 5 MB.');
+    input.value = '';
+    return;
+  }
+  const mb = (input.files[0].size / 1048576).toFixed(2);
+  label.textContent = `✓ ${input.files[0].name} (${mb} MB)`;
+  label.classList.add('text-green-600', 'font-semibold');
+}
 
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            Select File <span class="text-red-500">*</span>
-                        </label>
-                        <div class="document-upload-area-mini border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-950 hover:bg-purple-50 transition-all cursor-pointer">
-                            <input type="file" 
-                                   class="doc-file hidden" 
-                                   accept=".pdf,.jpg,.jpeg,.png" 
-                                   required
-                                   onchange="handleFileSelect(this, '${sectionId}')">
-                            <label class="cursor-pointer block" onclick="this.previousElementSibling.click()">
-                                <i data-lucide="file-plus" class="w-8 h-8 text-primary-950 mx-auto mb-2"></i>
-                                <p class="text-sm text-gray-700 font-medium file-name">Click to select file</p>
-                                <p class="text-xs text-gray-500 mt-1">PDF, JPG, PNG (max 5MB)</p>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+function removeSection(id) {
+  document.querySelector(`[data-id="${id}"]`)?.remove();
+  renumberSections();
+}
+
+function renumberSections() {
+  document.querySelectorAll('.upload-section').forEach((s, i) => {
+    s.querySelector('p').textContent = `Document ${i + 1}`;
+  });
+}
+
+function addUploadSection() {
+  document.getElementById('uploadSections').insertAdjacentHTML('beforeend', createUploadSection());
+}
+
+async function uploadAllDocuments() {
+  const sections = document.querySelectorAll('.upload-section');
+  const uploads = [];
+  for (const s of sections) {
+    const t = s.querySelector('.doc-type').value;
+    const f = s.querySelector('.doc-file').files[0];
+    if (!t || !f) { alert('Please fill in all document types and select files.'); return; }
+    uploads.push({ type: t, file: f });
+  }
+
+  const autoSubmit = document.getElementById('globalAutoSubmit').checked;
+  closeUploadModal();
+
+  // Toast
+  const toast = document.createElement('div');
+  toast.id = 'ul-toast';
+  toast.className = 'fixed bottom-6 right-4 sm:right-6 z-50 bg-white border border-gray-200 shadow-xl rounded-2xl px-5 py-3.5 flex items-center gap-3 text-sm font-medium text-gray-800 max-w-xs';
+  toast.innerHTML = `<svg class="animate-spin w-4 h-4 text-purple-600 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+    <span>Uploading ${uploads.length} document${uploads.length > 1 ? 's' : ''}…</span>`;
+  document.body.appendChild(toast);
+
+  try {
+    const results = await Promise.all(uploads.map((u, i) => {
+      const fd = new FormData();
+      fd.append('file_type', u.type);
+      fd.append('file', u.file);
+      if (i === uploads.length - 1 && autoSubmit) fd.append('auto_submit', 'true');
+      return fetch('{% url "eduweb:upload_application_file" application.application_id %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}', 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+      }).then(r => r.json());
+    }));
+    const failed = results.filter(r => !r.success);
+    if (failed.length) {
+      toast.innerHTML = `<span class="text-red-600">⚠️ ${failed.length} upload(s) failed. Please retry.</span>`;
+    } else {
+      toast.innerHTML = `<span class="text-green-600">✅ Documents uploaded successfully!</span>`;
     }
+  } catch (err) {
+    toast.innerHTML = `<span class="text-red-600">⚠️ Upload error: ${err.message}</span>`;
+  }
 
-    function handleFileSelect(input, sectionId) {
-        const section = document.querySelector(`[data-section-id="${sectionId}"]`);
-        const fileNameDisplay = section.querySelector('.file-name');
-        
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            const fileSize = (file.size / 1024 / 1024).toFixed(2);
-            
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File size must be less than 5MB');
-                input.value = '';
-                fileNameDisplay.textContent = 'Click to select file';
-                return;
-            }
-            
-            fileNameDisplay.textContent = `${file.name} (${fileSize} MB)`;
-            fileNameDisplay.classList.add('text-green-600', 'font-semibold');
-        }
-    }
+  setTimeout(() => { toast.remove(); window.location.reload(); }, 2500);
+}
 
-    function addUploadSection() {
-        const container = document.getElementById('uploadSections');
-        const newSection = createUploadSection();
-        container.insertAdjacentHTML('beforeend', newSection);
-        lucide.createIcons();
-    }
+function openUploadModal() {
+  uploadSectionCounter = 0;
+  document.getElementById('uploadSections').innerHTML = '';
+  document.getElementById('globalAutoSubmit').checked = false;
+  addUploadSection();
+  document.getElementById('uploadModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  if (window.lucide) lucide.createIcons();
+}
 
-    function removeUploadSection(sectionId) {
-        const section = document.querySelector(`[data-section-id="${sectionId}"]`);
-        if (section) {
-            section.remove();
-            // Renumber remaining sections
-            const sections = document.querySelectorAll('.upload-section');
-            sections.forEach((s, index) => {
-                s.querySelector('h3').textContent = `Document ${index + 1}`;
-            });
-        }
-    }
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('active');
+  document.body.style.overflow = '';
+  // Reset state
+  document.getElementById('uploadSections').innerHTML = '';
+  document.getElementById('globalAutoSubmit').checked = false;
+  const prog = document.getElementById('uploadProgress');
+  if (prog) { prog.classList.add('hidden'); }
+  const bar = document.getElementById('progressBar');
+  if (bar) { bar.style.width = '0%'; }
+}
 
-    async function uploadAllDocuments() {
-        const sections = document.querySelectorAll('.upload-section');
-        const uploads = [];
-        
-        for (const section of sections) {
-            const fileType = section.querySelector('.doc-type').value;
-            const fileInput = section.querySelector('.doc-file');
-            if (!fileType || !fileInput.files[0]) {
-                alert('Please select document type and file for all sections');
-                return;
-            }
-            uploads.push({ fileType, file: fileInput.files[0] });
-        }
+document.getElementById('uploadModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeUploadModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUploadModal(); });
 
-        const autoSubmit = document.getElementById('globalAutoSubmit').checked;
-        
-        // Close modal immediately — upload runs silently in background
-        closeUploadModal();
+// ── Admission letter: mobile = direct PDF tab, desktop = letter page ────────
+function openAdmissionLetter(url) {
+  if (window.innerWidth < 768) {
+    // Mobile: open the letter page with ?auto_pdf=1
+    // The letter page detects this and auto-triggers the PDF download
+    window.open(url + '?auto_pdf=1', '_blank', 'noopener');
+  } else {
+    // Desktop: open the full letter page in a new tab
+    window.open(url, '_blank', 'noopener');
+  }
+}
 
-        // Show a non-blocking toast
-        const toast = document.createElement('div');
-        toast.id = 'upload-toast';
-        toast.className = 'fixed bottom-6 right-6 z-50 bg-white border border-gray-200 shadow-xl rounded-xl px-6 py-4 flex items-center gap-3 text-sm font-medium text-gray-800';
-        toast.innerHTML = `<svg class="animate-spin w-5 h-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Uploading ${uploads.length} document${uploads.length > 1 ? 's' : ''}...`;
-        document.body.appendChild(toast);
-
-        try {
-            // Upload all files in parallel
-            const results = await Promise.all(uploads.map((upload, i) => {
-                const formData = new FormData();
-                formData.append('file_type', upload.fileType);
-                formData.append('file', upload.file);
-                // Only the last upload triggers auto-submit
-                if (i === uploads.length - 1 && autoSubmit) {
-                    formData.append('auto_submit', 'true');
-                }
-                return fetch('{% url "eduweb:upload_application_file" application.application_id %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
-                }).then(r => r.json());
-            }));
-
-            const failed = results.filter(r => !r.success);
-            if (failed.length > 0) {
-                toast.innerHTML = `<span class="text-red-600">⚠️ ${failed.length} upload(s) failed. Please try again.</span>`;
-            } else {
-                toast.innerHTML = `<span class="text-green-600">✅ All documents uploaded successfully!</span>`;
-            }
-        } catch (err) {
-            toast.innerHTML = `<span class="text-red-600">⚠️ Upload error: ${err.message}</span>`;
-        }
-
-        // Auto-dismiss toast and reload
-        setTimeout(() => {
-            toast.remove();
-            window.location.reload();
-        }, 2500);
-    }
-
-    function openUploadModal() {
-        const modal = document.getElementById('uploadModal');
-        const sectionsContainer = document.getElementById('uploadSections');
-        
-        // Clear and add first section
-        uploadSectionCounter = 0;
-        sectionsContainer.innerHTML = '';
-        addUploadSection();
-        
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        lucide.createIcons();
-    }
-
-    function closeUploadModal() {
-        const modal = document.getElementById('uploadModal');
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-        
-        // Reset
-        document.getElementById('uploadSections').innerHTML = '';
-        document.getElementById('uploadProgress').classList.add('hidden');
-        document.getElementById('progressBar').style.width = '0%';
-        document.getElementById('globalAutoSubmit').checked = false;
-    }
-
-    // Close modal on outside click
-    document.getElementById('uploadModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeUploadModal();
-        }
-    });
-
-    // Close modal on ESC key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeUploadModal();
-        }
-    });
+// ── Init Lucide icons on page load ──────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.lucide) lucide.createIcons();
+});
+// Fallback: also run after window load in case CDN was slow
+window.addEventListener('load', function () {
+  if (window.lucide) lucide.createIcons();
+});
 </script>
+{% endif %}
+
 {% endblock %}

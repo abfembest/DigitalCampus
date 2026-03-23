@@ -356,6 +356,54 @@
             background-color: rgba(255, 255, 255, 0.2);
         }
 
+        /* ==================== SIDEBAR OVERLAY (mobile backdrop) ==================== */
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 35;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* ==================== DROPDOWN — MOBILE OVERFLOW FIX ==================== */
+        /* Clamp both dropdowns so they never exceed the viewport width */
+        #notificationMenu,
+        #profileMenu {
+            max-width: min(20rem, calc(100vw - 1rem));
+        }
+
+        /* On small phones: switch to fixed positioning so they cannot overflow left */
+        @media (max-width: 480px) {
+            #notificationMenu {
+                position: fixed !important;
+                top: 3.6rem;
+                right: 0.5rem;
+                left: auto;
+                width: calc(100vw - 1rem);
+                max-width: 22rem;
+                max-height: calc(100dvh - 4.5rem);
+                overflow-y: auto;
+                z-index: 50;
+            }
+            #profileMenu {
+                position: fixed !important;
+                top: 3.6rem;
+                right: 0.5rem;
+                left: auto;
+                width: calc(100vw - 1rem);
+                max-width: 16rem;
+                max-height: calc(100dvh - 4.5rem);
+                overflow-y: auto;
+                z-index: 50;
+            }
+        }
+
         /* ==================== SMOOTH SCROLLBARS - SLIM & SUBTLE ==================== */
         /* WebKit browsers (Chrome, Safari, Edge) */
         #sidebar::-webkit-scrollbar {
@@ -1188,68 +1236,82 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div id="mainContent" class="flex-1 flex flex-col min-h-screen">
+        <div id="mainContent" class="flex-1 flex flex-col min-h-screen min-w-0">
             <!-- Top Header Bar -->
             <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
-                <div class="flex items-center justify-between p-4">
+                <div class="flex items-center justify-between px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 gap-2">
                     <!-- Left: Mobile Menu + Desktop Collapse + Breadcrumbs -->
-                    <div class="flex items-center space-x-4">
+                    <div class="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
                         <!-- Mobile Hamburger Menu -->
-                        <button id="toggleSidebar" class="md:hidden text-gray-600 hover:text-gray-900 focus:outline-none" aria-label="Toggle navigation">
-                            <i class="fas fa-bars text-xl" aria-hidden="true"></i>
+                        <button id="toggleSidebar" class="md:hidden flex-shrink-0 text-gray-600 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-100 focus:outline-none transition-colors" aria-label="Toggle navigation">
+                            <i class="fas fa-bars text-lg" aria-hidden="true"></i>
                         </button>
 
                         <!-- Desktop Sidebar Collapse Toggle -->
-                        <button id="collapseSidebar" class="hidden md:block text-gray-600 hover:text-gray-900 focus:outline-none" aria-label="Collapse sidebar">
-                            <i class="fas fa-bars text-xl" aria-hidden="true"></i>
+                        <button id="collapseSidebar" class="hidden md:flex flex-shrink-0 text-gray-600 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-100 focus:outline-none transition-colors" aria-label="Collapse sidebar">
+                            <i class="fas fa-bars text-lg" aria-hidden="true"></i>
                         </button>
 
                         <!-- Breadcrumbs -->
-                        <nav aria-label="Breadcrumb" class="hidden sm:block">
-                            <ol class="flex items-center space-x-2 text-sm text-gray-600">
-                                <li><a href="{% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% elif request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% else %}{% url 'management:dashboard' %}{% endif %}" class="hover:text-primary-600">Home</a></li>
-                                <li><i class="fas fa-chevron-right text-xs" aria-hidden="true"></i></li>
-                                <li class="text-gray-900 font-medium">{% block breadcrumb %}Dashboard{% endblock %}</li>
+                        <nav aria-label="Breadcrumb" class="hidden sm:flex items-center min-w-0">
+                            <ol class="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 min-w-0">
+                                <li class="flex-shrink-0">
+                                    <a href="{% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% elif request.user.profile.role == 'student' %}{% url 'students:dashboard' %}{% else %}{% url 'management:dashboard' %}{% endif %}"
+                                    class="hover:text-primary-600 whitespace-nowrap font-medium transition-colors">Home</a>
+                                </li>
+                                <li class="flex-shrink-0 text-gray-400"><i class="fas fa-chevron-right text-[10px]" aria-hidden="true"></i></li>
+                                <li class="text-gray-900 font-semibold min-w-0">
+                                    <span class="block truncate max-w-[120px] sm:max-w-[180px] md:max-w-[260px] lg:max-w-[380px] xl:max-w-none" title="{% block breadcrumb_title %}{% endblock %}">
+                                        {% block breadcrumb %}Dashboard{% endblock %}
+                                    </span>
+                                </li>
                             </ol>
                         </nav>
                     </div>
 
                     <!-- Right: Notifications + Profile -->
-                    <div class="flex items-center space-x-4">
+                    <div class="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
                         <!-- Notifications Dropdown -->
                         <div class="relative">
-                            <button id="notificationDropdown" class="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all" aria-label="Notifications">
-                                <i class="fas fa-bell text-xl" aria-hidden="true"></i>
-                                <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                            <button id="notificationDropdown" class="relative p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all focus:outline-none" aria-label="Notifications">
+                                <i class="fas fa-bell text-base sm:text-lg md:text-xl" aria-hidden="true"></i>
+                                <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full"></span>
                             </button>
 
-                            <div id="notificationMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 max-h-96 overflow-y-auto">
-                                <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                                    <h4 class="font-semibold text-gray-900">Notifications</h4>
-                                    <span class="text-xs text-gray-500">3 new</span>
+                            <div id="notificationMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200 max-h-80 sm:max-h-96 overflow-y-auto z-50">
+                                <div class="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                                    <h4 class="font-semibold text-gray-900 text-sm sm:text-base">Notifications</h4>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500">3 new</span>
+                                        <button onclick="document.getElementById('notificationMenu').classList.remove('show')"
+                                                class="sm:hidden text-gray-400 hover:text-gray-600 p-1 rounded transition-colors"
+                                                aria-label="Close">
+                                            <i class="fas fa-times text-xs"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="divide-y divide-gray-100">
-                                    <div class="p-4 hover:bg-gray-50 cursor-pointer transition-all">
-                                        <div class="flex items-start space-x-3">
-                                            <div class="flex-shrink-0 w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                                                <i class="fas fa-bell text-primary-600" aria-hidden="true"></i>
+                                    <div class="p-3 sm:p-4 hover:bg-gray-50 cursor-pointer transition-all">
+                                        <div class="flex items-start gap-2.5 sm:gap-3">
+                                            <div class="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-bell text-primary-600 text-xs sm:text-sm" aria-hidden="true"></i>
                                             </div>
-                                            <div class="flex-1">
-                                                <h5 class="font-medium text-gray-900">
+                                            <div class="flex-1 min-w-0">
+                                                <h5 class="font-medium text-gray-900 text-xs sm:text-sm">
                                                     {% if request.user.profile.role == 'student' %}
                                                     New Assignment Available
                                                     {% else %}
                                                     New Application Received
                                                     {% endif %}
                                                 </h5>
-                                                <p class="text-sm text-gray-600 mt-1">
+                                                <p class="text-xs text-gray-600 mt-0.5 line-clamp-2">
                                                     {% if request.user.profile.role == 'student' %}
                                                     Introduction to Python - Due in 3 days
                                                     {% else %}
                                                     John Doe submitted an application for Computer Science
                                                     {% endif %}
                                                 </p>
-                                                <p class="text-xs text-gray-500 mt-2">2 hours ago</p>
+                                                <p class="text-xs text-gray-400 mt-1">2 hours ago</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1259,43 +1321,54 @@
 
                         <!-- User Profile Dropdown -->
                         <div class="relative">
-                            <button id="profileDropdown" class="flex items-center space-x-3 p-1 rounded-full hover:bg-gray-100 transition-all" aria-haspopup="true">
-                                <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-500">
+                            <button id="profileDropdown" class="flex items-center gap-1.5 sm:gap-2 p-1 rounded-full hover:bg-gray-100 transition-all focus:outline-none" aria-haspopup="true">
+                                <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-primary-500 flex-shrink-0">
                                     <img src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=4a6bff&color=fff" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
                                 </div>
-                                <div class="hidden md:block text-left">
-                                    <p class="font-medium text-gray-800">{{ request.user.get_full_name|default:request.user.username }}</p>
-                                    <p class="text-sm text-gray-500">{{ request.user.profile.get_role_display }}</p>
+                                <div class="hidden md:block text-left min-w-0">
+                                    <p class="font-medium text-gray-800 text-sm truncate max-w-[120px] lg:max-w-[160px]">{{ request.user.get_full_name|default:request.user.username }}</p>
+                                    <p class="text-xs text-gray-500 leading-snug">{{ request.user.profile.get_role_display }}</p>
                                 </div>
-                                <i class="fas fa-chevron-down text-gray-500 hidden md:block" aria-hidden="true"></i>
+                                <i class="fas fa-chevron-down text-gray-400 text-xs hidden md:block" aria-hidden="true"></i>
                             </button>
 
-                            <div id="profileMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200">
+                            <div id="profileMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                                <!-- Mobile-only header row with close button -->
+                                <div class="sm:hidden flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+                                    <span class="text-xs font-medium text-gray-700 truncate max-w-[130px]">
+                                        {{ request.user.get_full_name|default:request.user.username }}
+                                    </span>
+                                    <button onclick="document.getElementById('profileMenu').classList.remove('show')"
+                                            class="text-gray-400 hover:text-gray-600 p-1 rounded transition-colors flex-shrink-0"
+                                            aria-label="Close">
+                                        <i class="fas fa-times text-xs"></i>
+                                    </button>
+                                </div>
                                 {% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}
                                 {# admin — no separate profile/settings pages yet #}
-                                <span class="block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm">
+                                <span class="hidden sm:block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm truncate">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> {{ request.user.get_full_name|default:request.user.username }}
                                 </span>
                                 {% elif request.user.profile.role == 'instructor' %}
-                                <a href="{% url 'instructor:profile' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% url 'instructor:profile' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
                                 </a>
-                                <a href="{% url 'instructor:settings' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% url 'instructor:settings' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
                                 </a>
                                 {% elif request.user.profile.role == 'student' %}
-                                <a href="{% url 'students:profile' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% url 'students:profile' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
                                 </a>
-                                <a href="{% url 'students:settings' %}" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <a href="{% url 'students:settings' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
                                 </a>
                                 {% else %}
-                                <span class="block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm">
+                                <span class="hidden sm:block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm truncate">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> {{ request.user.get_full_name|default:request.user.username }}
                                 </span>
                                 {% endif %}
-                                <a href="#" onclick="portalLogout(event)" class="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all">
+                                <a href="#" onclick="portalLogout(event)" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all">
                                     <i class="fas fa-sign-out-alt mr-3 w-5" aria-hidden="true"></i> Logout
                                 </a>
                             </div>
@@ -1318,7 +1391,7 @@
             {% endif %} {% endcomment %}
 
             <!-- Main Content -->
-            <main class="flex-1 p-4 md:p-6">
+            <main class="flex-1 p-3 sm:p-4 md:p-6">
                 {% block content %}{% endblock %}
             </main>
 
@@ -1494,12 +1567,18 @@
                     menu.classList.toggle('show');
                 });
                 menu.addEventListener('click', (e) => e.stopPropagation());
+                menu.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
             }
             setupDropdown('profileDropdown', 'profileMenu');
             setupDropdown('notificationDropdown', 'notificationMenu');
-            document.addEventListener('click', () => {
+
+            function closeAllDropdowns() {
                 document.querySelectorAll('.dropdown-menu.show').forEach(d => d.classList.remove('show'));
-            });
+            }
+            document.addEventListener('click', closeAllDropdowns);
+            document.addEventListener('touchstart', closeAllDropdowns, { passive: true });
+            // Also close dropdowns when the mobile sidebar opens
+            toggleBtn?.addEventListener('click', closeAllDropdowns);
 
             // Chatbot
            /* const chatbotToggle = document.getElementById('chatbotToggle');

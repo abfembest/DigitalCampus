@@ -692,6 +692,27 @@
                         </div>
                     </div>
 
+                    <!-- Library -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'library' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-book-open w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Library</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'library' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
+                        </button>
+                        <div id="libraryMenu" class="mt-1 space-y-1 {% if 'library' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'management:library_items_list' %}"
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'library_items_list' %}bg-white/20{% endif %}">
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i>All Items
+                            </a>
+                            <a href="{% url 'management:library_item_create' %}"
+                            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'library_item_create' %}bg-white/20{% endif %}">
+                                <i class="fas fa-plus mr-2" aria-hidden="true"></i>Add Item
+                            </a>
+                        </div>
+                    </div>
+
                     <!-- Divider -->
                     <div class="border-t border-white/10 my-4"></div>
                     <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">System</div>

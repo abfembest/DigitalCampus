@@ -3908,3 +3908,10 @@ class LibraryItem(models.Model):
             return (f"{int(self.file_size_mb * 1024)} KB"
                     if self.file_size_mb < 1 else f"{self.file_size_mb} MB")
         return ''
+
+    @property
+    def tags_list(self):
+        """Return tags as a clean list, split on comma."""
+        if not self.tags:
+            return []
+        return [t.strip() for t in self.tags.split(',') if t.strip()]

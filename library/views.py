@@ -14,8 +14,6 @@ from eduweb.models import LibraryItem
 
 
 # ── UI decoration only — NOT the source of truth for slugs/names ─────────────
-# Category names must match the choices on LibraryItem.category exactly.
-# Slugs here are what appear in the URL; they are derived via slugify(name).
 CATEGORY_META = {
     'Books': {
         'description': (
@@ -83,9 +81,8 @@ def _slug_to_category(slug):
     """
     Derive the canonical category name from a URL slug.
     Uses the LibraryItem.CATEGORY_CHOICES so we never rely on hardcoded dict keys.
-    Returns None if not found.
     """
-    choices = dict(LibraryItem.CATEGORY_CHOICES)  # e.g. {'Books': 'Books', ...}
+    choices = dict(LibraryItem.CATEGORY_CHOICES)
     for name in choices:
         if slugify(name) == slug:
             return name
@@ -97,16 +94,32 @@ def _category_slug(name):
     return slugify(name)
 
 
+def _nav_categories(user):
+    """
+    Returns a list of {name, slug} dicts for ALL active categories in the DB.
+    Used to build dynamic nav links in the base template via context_processor
+    or passed directly to each view. Here we pass it from each view.
+    """
+    qs = _base_qs(user)
+    rows = (
+        qs.values('category')
+          .annotate(count=Count('id'))
+          .order_by('category')
+    )
+    return [
+        {'name': r['category'], 'slug': _category_slug(r['category']), 'count': r['count']}
+        for r in rows
+    ]
+
+
 # ── Views ─────────────────────────────────────────────────────────────────────
 
 def home(request):
     """
     Library landing — hero stats, featured shelf, category cards, recent additions.
-    Category cards are built purely from DB data; no hardcoded slug mapping.
     """
     qs = _base_qs(request.user)
 
-    # Build category cards dynamically from DB distinct values
     cat_rows = (
         qs.values('category')
           .annotate(count=Count('id'))
@@ -135,7 +148,6 @@ def home(request):
             'top_subcategories': top_subs,
         })
 
-    # Stats strip — driven entirely by DB, no hardcoded category names
     stats = [{'label': 'Total Resources', 'count': qs.count()}]
     for row in cat_rows:
         stats.append({'label': row['category'], 'count': row['count']})
@@ -144,17 +156,17 @@ def home(request):
     recent_items   = qs.order_by('-created_at')[:10]
 
     return render(request, 'library/home.html', {
-        'categories':    categories,
-        'stats':         stats,
+        'categories':     categories,
+        'stats':          stats,
         'featured_items': featured_items,
-        'recent_items':  recent_items,
+        'recent_items':   recent_items,
+        'nav_categories': _nav_categories(request.user),  # dynamic nav
     })
 
 
 def category(request, category_slug):
     """
     Category listing, grouped by subcategory.
-    category_slug is matched against slugify(category_name) from DB choices.
     """
     cat_name = _slug_to_category(category_slug)
     if not cat_name:
@@ -173,7 +185,6 @@ def category(request, category_slug):
             Q(tags__icontains=q)
         )
 
-    # Build subcategory filter tabs from DB
     sub_rows = (
         _base_qs(request.user)
         .filter(category=cat_name)
@@ -190,7 +201,6 @@ def category(request, category_slug):
         for r in sub_rows
     ]
 
-    # Apply subcategory filter
     if active_sub and active_sub != 'all':
         matched_name = next(
             (s['name'] for s in subcategories if s['slug'] == active_sub),
@@ -206,7 +216,6 @@ def category(request, category_slug):
     page_obj   = paginator.get_page(request.GET.get('page'))
     page_items = list(page_obj.object_list)
 
-    # Group by subcategory for template rendering
     groups_dict = {}
     for item in page_items:
         sub = item.subcategory
@@ -224,6 +233,7 @@ def category(request, category_slug):
         'groups':               groups,
         'total_count':          total_count,
         'page_obj':             page_obj,
+        'nav_categories':       _nav_categories(request.user),  # dynamic nav
     })
 
 
@@ -231,9 +241,6 @@ def detail(request, slug):
     """Single item detail — metadata, PDF viewer, download button."""
     qs   = LibraryItem.objects.filter(is_active=True)
     item = get_object_or_404(qs, slug=slug)
-
-    # Members-only: still render, template controls visibility
-    # (no hard redirect so public users can see the teaser)
 
     item.increment_views()
 
@@ -244,13 +251,13 @@ def detail(request, slug):
         .order_by('order', 'title')[:4]
     )
 
-    # Build category slug for breadcrumb link
     category_slug = _category_slug(item.category)
 
     return render(request, 'library/detail.html', {
         'item':           item,
         'related_items':  related_items,
         'category_slug':  category_slug,
+        'nav_categories': _nav_categories(request.user),  # dynamic nav
     })
 
 
@@ -306,7 +313,6 @@ def search(request):
     else:
         qs = qs.order_by('category', 'subcategory', 'order', 'title')
 
-    # Category breakdown for filter tabs — based on the same search results
     search_base = _base_qs(request.user)
     if q:
         search_base = search_base.filter(
@@ -330,4 +336,5 @@ def search(request):
         'sort':            sort,
         'page_obj':        page_obj,
         'category_counts': category_counts,
+        'nav_categories':  _nav_categories(request.user),  # dynamic nav
     })

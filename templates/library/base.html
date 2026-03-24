@@ -12,9 +12,18 @@
   <meta property="og:site_name"   content="{{ site_config.school_name }}">
   <meta property="og:title"       content="{% block og_title %}Library – {{ site_config.school_name }}{% endblock %}">
   <meta property="og:description" content="{% block og_description %}{{ site_config.tagline }}{% endblock %}">
+  <meta property="og:url"         content="{{ request.build_absolute_uri }}">
   {% if site_config.og_image %}
   <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ site_config.og_image.url }}">
   {% endif %}
+
+  {# Twitter Card #}
+  <meta name="twitter:card"        content="summary_large_image">
+  <meta name="twitter:title"       content="{% block twitter_title %}Library – {{ site_config.school_name }}{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}{{ site_config.tagline }}{% endblock %}">
+
+  {# Canonical #}
+  <link rel="canonical" href="{{ request.build_absolute_uri }}">
 
   <title>{% block title %}Library – {{ site_config.school_name }}{% endblock %}</title>
 
@@ -39,11 +48,12 @@
     <div class="mb-container flex items-center justify-between h-16 md:h-[68px]">
 
       {# Logo #}
-      <a href="{% url 'eduweb:index' %}" class="flex items-center gap-3 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gospel-500 rounded-md">
+      <a href="{% url 'eduweb:index' %}"
+         class="flex items-center gap-3 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gospel-500 rounded-md"
+         aria-label="{{ site_config.school_name|default:'Home' }}">
         {% if site_config.logo %}
           <img src="{{ site_config.logo.url }}" alt="{{ site_config.school_name }}" class="h-10 md:h-12 w-auto object-contain">
         {% else %}
-          {# Full name on desktop, short name on mobile #}
           <span class="hidden md:inline mb-font-heading text-gospel-700 font-bold text-lg leading-tight">
             {{ site_config.school_name|default:"Library" }}
           </span>
@@ -53,15 +63,25 @@
         {% endif %}
       </a>
 
-      {# Desktop nav — Library + Search side by side #}
+      {# Desktop nav — Library + dynamic categories + Search #}
       <nav class="hidden md:flex items-center gap-1" aria-label="Primary navigation">
         <a href="{% url 'library:home' %}"
-           class="mb-font-ui text-sm font-medium px-3 py-2 rounded-lg transition-colors {% if 'library' in request.path and 'search' not in request.path %}bg-gospel-600 text-white{% else %}text-neutral-700 hover:text-gospel-700 hover:bg-gospel-50{% endif %}">
+           class="mb-font-ui text-sm font-medium px-3 py-2 rounded-lg transition-colors {% if request.resolver_match.url_name == 'home' %}bg-gospel-600 text-white{% else %}text-neutral-700 hover:text-gospel-700 hover:bg-gospel-50{% endif %}">
           Library
         </a>
+
+        {# Dynamic category links from DB — no hardcoded slugs #}
+        {% for cat in nav_categories %}
+        <a href="{% url 'library:category' cat.slug %}"
+           class="mb-font-ui text-sm font-medium px-3 py-2 rounded-lg transition-colors {% if request.resolver_match.kwargs.category_slug == cat.slug %}bg-gospel-600 text-white{% else %}text-neutral-700 hover:text-gospel-700 hover:bg-gospel-50{% endif %}">
+          {{ cat.name }}
+        </a>
+        {% endfor %}
+
         <a href="{% url 'library:search' %}"
-           class="mb-font-ui text-sm font-medium px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 {% if 'search' in request.path %}bg-gospel-600 text-white{% else %}text-neutral-700 hover:text-gospel-700 hover:bg-gospel-50{% endif %}">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+           class="mb-font-ui text-sm font-medium px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 {% if request.resolver_match.url_name == 'search' %}bg-gospel-600 text-white{% else %}text-neutral-700 hover:text-gospel-700 hover:bg-gospel-50{% endif %}"
+           aria-label="Search library">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
           </svg>
           Search
@@ -69,14 +89,12 @@
         {% block extra_nav %}{% endblock %}
       </nav>
 
-      {# Right side: hamburger only (search moved into nav) #}
+      {# Right side: mobile search icon + hamburger #}
       <div class="flex items-center gap-2 sm:gap-3">
-
-        {# Mobile search icon — visible on mobile only #}
         <a href="{% url 'library:search' %}"
            class="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-neutral-500 hover:text-gospel-600 hover:bg-gospel-50 transition-colors"
            aria-label="Search library">
-          <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
           </svg>
         </a>
@@ -84,7 +102,7 @@
         {# Hamburger — mobile only #}
         <button id="mb-menu-toggle"
                 class="md:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
-                aria-label="Toggle menu" aria-expanded="false" aria-controls="mb-mobile-menu">
+                aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="mb-mobile-menu">
           <span class="block w-5 h-0.5 bg-neutral-700 transition-transform duration-300" id="hb-line1"></span>
           <span class="block w-5 h-0.5 bg-neutral-700 transition-opacity duration-300"   id="hb-line2"></span>
           <span class="block w-5 h-0.5 bg-neutral-700 transition-transform duration-300" id="hb-line3"></span>
@@ -99,23 +117,28 @@
          aria-hidden="true">
       <nav class="mb-container py-4 space-y-1" aria-label="Mobile navigation">
         <a href="{% url 'library:home' %}"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-font-ui text-sm font-medium {% if 'library' in request.path and 'search' not in request.path %}bg-gospel-50 text-gospel-700{% else %}text-neutral-700 hover:bg-neutral-100{% endif %} transition-colors">
-          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-          Library
+           class="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-font-ui text-sm font-medium {% if request.resolver_match.url_name == 'home' %}bg-gospel-50 text-gospel-700{% else %}text-neutral-700 hover:bg-neutral-100{% endif %} transition-colors">
+          <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          Library Home
         </a>
 
-        {# Category quick links #}
+        {# Dynamic category links — no hardcoded slugs #}
+        {% if nav_categories %}
         <div class="pt-2 pb-1">
           <p class="px-3 mb-font-ui text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Browse</p>
-          <a href="{% url 'library:category' 'books' %}"
-             class="flex items-center gap-3 px-3 py-2 rounded-xl mb-font-ui text-sm text-neutral-600 hover:bg-neutral-100 hover:text-gospel-700 transition-colors">Books</a>
-          <a href="{% url 'library:category' 'periodicals' %}"
-             class="flex items-center gap-3 px-3 py-2 rounded-xl mb-font-ui text-sm text-neutral-600 hover:bg-neutral-100 hover:text-gospel-700 transition-colors">Periodicals</a>
-          <a href="{% url 'library:category' 'references' %}"
-             class="flex items-center gap-3 px-3 py-2 rounded-xl mb-font-ui text-sm text-neutral-600 hover:bg-neutral-100 hover:text-gospel-700 transition-colors">References</a>
+          {% for cat in nav_categories %}
+          <a href="{% url 'library:category' cat.slug %}"
+             class="flex items-center justify-between px-3 py-2 rounded-xl mb-font-ui text-sm {% if request.resolver_match.kwargs.category_slug == cat.slug %}text-gospel-700 bg-gospel-50 font-semibold{% else %}text-neutral-600 hover:bg-neutral-100 hover:text-gospel-700{% endif %} transition-colors">
+            <span>{{ cat.name }}</span>
+            <span class="text-neutral-400 text-xs font-normal">{{ cat.count }}</span>
+          </a>
+          {% endfor %}
           <a href="{% url 'library:search' %}"
-             class="flex items-center gap-3 px-3 py-2 rounded-xl mb-font-ui text-sm text-neutral-600 hover:bg-neutral-100 hover:text-gospel-700 transition-colors">Search</a>
+             class="flex items-center gap-3 px-3 py-2 rounded-xl mb-font-ui text-sm {% if request.resolver_match.url_name == 'search' %}text-gospel-700 bg-gospel-50 font-semibold{% else %}text-neutral-600 hover:bg-neutral-100 hover:text-gospel-700{% endif %} transition-colors">
+            Search
+          </a>
         </div>
+        {% endif %}
       </nav>
     </div>
   </header>
@@ -128,7 +151,7 @@
   <footer class="bg-[#2d0035] text-white">
 
     {# Top section #}
-    <div class="mb-footer-container py-12 md:py-16 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 lg:gap-12 border-b border-white/10 mb-footer-top">
+    <div class="mb-footer-container py-12 md:py-16 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 lg:gap-12 border-b border-white/10">
 
       {# Brand column #}
       <div class="lg:col-span-2">
@@ -144,14 +167,14 @@
         {% endif %}
       </div>
 
-      {# Library quick links #}
+      {# Library quick links — dynamic, no hardcoded category slugs #}
       <div>
         <h3 class="mb-font-ui text-[11px] font-bold text-gold-400 uppercase tracking-widest mb-4">Library</h3>
-        <ul class="space-y-2.5">
+        <ul class="space-y-2.5" role="list">
           <li><a href="{% url 'library:home' %}" class="mb-font-ui text-sm text-white/70 hover:text-white transition-colors">Library Home</a></li>
-          <li><a href="{% url 'library:category' 'books' %}" class="mb-font-ui text-sm text-white/70 hover:text-white transition-colors">Books</a></li>
-          <li><a href="{% url 'library:category' 'periodicals' %}" class="mb-font-ui text-sm text-white/70 hover:text-white transition-colors">Periodicals</a></li>
-          <li><a href="{% url 'library:category' 'references' %}" class="mb-font-ui text-sm text-white/70 hover:text-white transition-colors">References</a></li>
+          {% for cat in nav_categories %}
+          <li><a href="{% url 'library:category' cat.slug %}" class="mb-font-ui text-sm text-white/70 hover:text-white transition-colors">{{ cat.name }}</a></li>
+          {% endfor %}
           <li><a href="{% url 'library:search' %}" class="mb-font-ui text-sm text-white/70 hover:text-white transition-colors">Search</a></li>
         </ul>
       </div>
@@ -159,11 +182,11 @@
       {# Contact #}
       <div>
         <h3 class="mb-font-ui text-[11px] font-bold text-gold-400 uppercase tracking-widest mb-4">Contact</h3>
-        <ul class="space-y-2.5">
+        <ul class="space-y-2.5" role="list">
           {% if site_config.email %}
           <li>
             <a href="mailto:{{ site_config.email }}" class="mb-font-ui text-sm text-white/70 hover:text-white transition-colors flex items-center gap-2">
-              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
               {{ site_config.email }}
             </a>
           </li>
@@ -171,7 +194,7 @@
           {% if site_config.phone_primary %}
           <li>
             <a href="tel:{{ site_config.phone_primary }}" class="mb-font-ui text-sm text-white/70 hover:text-white transition-colors flex items-center gap-2">
-              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
               {{ site_config.phone_primary }}
             </a>
           </li>
@@ -205,11 +228,7 @@
     var header = document.getElementById('mb-header');
     if (header) {
       var onScroll = function () {
-        if (window.scrollY > 10) {
-          header.classList.add('scrolled');
-        } else {
-          header.classList.remove('scrolled');
-        }
+        header.classList.toggle('scrolled', window.scrollY > 10);
       };
       window.addEventListener('scroll', onScroll, { passive: true });
       onScroll();
@@ -227,36 +246,24 @@
       open = state;
       toggle.setAttribute('aria-expanded', String(state));
       menu.setAttribute('aria-hidden', String(!state));
-      if (state) {
-        menu.style.maxHeight = '680px';
-        menu.style.opacity   = '1';
-        if (line1) { line1.style.transform = 'translateY(8px) rotate(45deg)'; }
-        if (line2) { line2.style.opacity   = '0'; }
-        if (line3) { line3.style.transform = 'translateY(-8px) rotate(-45deg)'; }
-      } else {
-        menu.style.maxHeight = '0';
-        menu.style.opacity   = '0';
-        if (line1) { line1.style.transform = ''; }
-        if (line2) { line2.style.opacity   = '1'; }
-        if (line3) { line3.style.transform = ''; }
-      }
+      menu.style.maxHeight = state ? '720px' : '0';
+      menu.style.opacity   = state ? '1'     : '0';
+      if (line1) line1.style.transform  = state ? 'translateY(8px) rotate(45deg)'  : '';
+      if (line2) line2.style.opacity    = state ? '0' : '1';
+      if (line3) line3.style.transform  = state ? 'translateY(-8px) rotate(-45deg)' : '';
     }
 
     if (toggle && menu) {
       toggle.addEventListener('click', function () { setMenu(!open); });
-      // Close on outside click
       document.addEventListener('click', function (e) {
-        if (open && !menu.contains(e.target) && !toggle.contains(e.target)) {
-          setMenu(false);
-        }
+        if (open && !menu.contains(e.target) && !toggle.contains(e.target)) setMenu(false);
       });
-      // Close on Escape
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && open) setMenu(false);
       });
     }
 
-    // ── Scroll-reveal (mb-reveal elements) ───────────────────
+    // ── Scroll-reveal ─────────────────────────────────────────
     if ('IntersectionObserver' in window) {
       var revealObs = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {

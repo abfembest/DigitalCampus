@@ -26,7 +26,7 @@ from eduweb.models import (
     Invoice,
     AllRequiredPayments,
     Announcement,
-    SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember
+    SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember, LibraryItem
 )
 import json
 
@@ -1096,15 +1096,11 @@ class NotificationConfigForm(forms.Form):
 class CourseCategoryForm(forms.ModelForm):
     class Meta:
         model = CourseCategory
-        fields = ('name', 'slug', 'description', 'icon', 'color', 'is_active', 'display_order')
+        fields = ('name', 'description', 'icon', 'color', 'is_active', 'display_order')
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
                 'placeholder': 'e.g., Programming'
-            }),
-            'slug': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'programming (auto-generated)'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
@@ -2096,3 +2092,183 @@ class AllRequiredPaymentsForm(forms.ModelForm):
         self.fields['course'].required = False
         self.fields['academic_session'].required = False
 
+class LibraryItemForm(forms.ModelForm):
+    """
+    Create / edit form for LibraryItem.
+ 
+    Exact editable fields from the model:
+      category, subcategory, title,
+      author, publisher, year, edition, isbn, language,
+      description, tags,
+      cover_image, file,
+      external_url, external_url_label,
+      allow_download, allow_read_online,
+      access, featured, is_active, order
+ 
+    Auto-filled / editable=False excluded:
+      id, file_size_mb, file_type,
+      view_count, download_count,
+      created_by, created_at, updated_at
+    """
+ 
+    class Meta:
+        from eduweb.models import LibraryItem as _LI
+        model  = _LI
+        fields = [
+            'category', 'subcategory',
+            'title',
+            'author', 'publisher', 'year', 'edition', 'isbn', 'language',
+            'description', 'tags',
+            'cover_image', 'file',
+            'external_url', 'external_url_label',
+            'allow_download', 'allow_read_online',
+            'access', 'featured', 'is_active', 'order',
+        ]
+        widgets = {
+            # ── taxonomy ──────────────────────────────────────────────────
+            'category': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. Books',
+                'list': 'category_datalist',
+            }),
+            'subcategory': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. Systematic Theology, Church History, Commentaries …',
+            }),
+            # ── identity ──────────────────────────────────────────────────
+            'title': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. Systematic Theology',
+            }),
+            
+            # ── bibliographic ─────────────────────────────────────────────
+            'author': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. Wayne Grudem',
+            }),
+            'publisher': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. Zondervan',
+            }),
+            'year': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. 2009',
+                'min': 1000, 'max': 2100,
+            }),
+            'edition': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. 3rd Edition, Vol. 2',
+            }),
+            'isbn': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm font-mono transition-colors',
+                'placeholder': 'e.g. 978-0-310-28441-6',
+            }),
+            'language': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. English',
+                'list': 'language_datalist',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors resize-none',
+                'rows': 4,
+                'placeholder': 'Abstract, synopsis, or table of contents …',
+            }),
+            'tags': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'theology, salvation, grace  (comma-separated)',
+            }),
+            # ── external link ─────────────────────────────────────────────
+            'external_url': forms.URLInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'https://drive.google.com/… or https://gutenberg.org/…',
+            }),
+            'external_url_label': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'Read / Download',
+            }),
+            # ── access & ordering ─────────────────────────────────────────
+            'access': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'placeholder': 'e.g. public',
+                'list': 'access_datalist',
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
+                         'text-sm transition-colors',
+                'min': 0,
+            }),
+            # ── file / image — styled via template drop-zones ─────────────
+            'cover_image': forms.ClearableFileInput(attrs={
+                'class': 'sr-only',
+                'accept': 'image/*',
+                'id': 'id_cover_image',
+            }),
+            'file': forms.ClearableFileInput(attrs={
+                'class': 'sr-only',
+                'accept': '.pdf,.doc,.docx,.epub,.txt,.pptx,.xlsx',
+                'id': 'id_file',
+            }),
+            # ── booleans — styled as toggles by JS in the template ────────
+            'allow_download':    forms.CheckboxInput(),
+            'allow_read_online': forms.CheckboxInput(),
+            'featured':          forms.CheckboxInput(),
+            'is_active':         forms.CheckboxInput(),
+        }
+ 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+ 
+        optional_fields = [
+            'author', 'publisher', 'year', 'edition', 'isbn',
+            'description', 'tags', 'cover_image', 'file',
+            'external_url', 'external_url_label', 'order',
+        ]
+        for f in optional_fields:
+            if f in self.fields:
+                self.fields[f].required = False
+ 
+        self.fields['tags'].help_text = (
+            'Comma-separated keywords. Improves front-end search results.'
+        )
+        self.fields['file'].help_text = (
+            'Accepted formats: PDF, DOCX, EPUB, TXT, PPTX, XLSX.'
+        )
+        self.fields['cover_image'].help_text = (
+            'Recommended: 400 × 560 px, JPG or PNG.'
+        )
+        self.fields['external_url'].help_text = (
+            'Paste a public link if the document is hosted externally '
+            '(Google Drive, archive.org, Project Gutenberg, etc.).'
+        )
+        self.fields['external_url_label'].help_text = (
+            'Button label shown on the front-end, default: "Read / Download".'
+        )

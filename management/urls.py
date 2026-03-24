@@ -204,6 +204,13 @@ urlpatterns = [
     path('site-config/members/create/', views.institution_member_create, name='institution_member_create'),
     path('site-config/members/<int:pk>/edit/', views.institution_member_edit, name='institution_member_edit'),
     path('site-config/members/<int:pk>/delete/', views.institution_member_delete, name='institution_member_delete'),
+
+    # ── Library ──────────────────────────────────────────────────────────────
+    path('library/',                             views.library_items_list,         name='library_items_list'),
+    path('library/create/',                      views.library_item_create,        name='library_item_create'),
+    path('library/<uuid:pk>/edit/',              views.library_item_edit,          name='library_item_edit'),
+    path('library/<uuid:pk>/delete/',            views.library_item_delete,        name='library_item_delete'),
+    path('library/<uuid:pk>/toggle-active/',     views.library_item_toggle_active, name='library_item_toggle_active'),
 ]
 
 if settings.DEBUG:

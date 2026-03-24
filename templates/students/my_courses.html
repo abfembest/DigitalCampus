@@ -1,7 +1,7 @@
 {% extends "management/base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }} - MIU Student Portal{% endblock %}
+{% block title %}{{ page_title }} - {{site_config.school_short_name}} Student Portal{% endblock %}
 
 {% block meta_description %}
 View and manage your enrolled courses. Track progress, 
@@ -9,62 +9,40 @@ continue learning, and access course materials.
 {% endblock %}
 
 {% block content %}
-<div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+
     <!-- Page Header -->
-    <header class="mb-6 lg:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+    <header class="mb-4 sm:mb-6 lg:mb-8">
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
             My Courses
         </h1>
-        <p class="text-sm sm:text-base text-gray-600 mt-2">
+        <p class="text-xs sm:text-sm lg:text-base text-gray-600 mt-1 sm:mt-2">
             Track your learning journey
         </p>
     </header>
 
-    <!-- Filters -->
-    <nav 
-        class="bg-white rounded-xl shadow-sm border 
-               border-gray-200 p-4 mb-6"
-        aria-label="Course status filter">
-        <div class="flex items-center space-x-4 overflow-x-auto">
-            <a 
-                href="?status=active" 
-                class="px-4 py-2 rounded-lg whitespace-nowrap
-                       transition-colors
-                       {% if status_filter == 'active' %}
-                       bg-primary-600 text-white
-                       {% else %}
-                       bg-gray-100 text-gray-700 
-                       hover:bg-gray-200
-                       {% endif %}
-                       focus:outline-none focus:ring-2 
-                       focus:ring-primary-500 
-                       focus:ring-offset-2"
-                {% if status_filter == 'active' %}
-                aria-current="page"
-                {% endif %}>
-                <i class="fas fa-book-open mr-2" 
-                   aria-hidden="true"></i>
+    <!-- Status Filter Tabs -->
+    <nav class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-4 sm:mb-6"
+         aria-label="Course status filter">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <a href="?status=active"
+               class="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2
+                      rounded-lg text-xs sm:text-sm font-medium transition-colors
+                      {% if status_filter == 'active' %}bg-primary-600 text-white shadow-sm
+                      {% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}
+                      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+               {% if status_filter == 'active' %}aria-current="page"{% endif %}>
+                <i class="fas fa-book-open text-xs" aria-hidden="true"></i>
                 Active
             </a>
-            
-            <a 
-                href="?status=completed" 
-                class="px-4 py-2 rounded-lg whitespace-nowrap
-                       transition-colors
-                       {% if status_filter == 'completed' %}
-                       bg-primary-600 text-white
-                       {% else %}
-                       bg-gray-100 text-gray-700 
-                       hover:bg-gray-200
-                       {% endif %}
-                       focus:outline-none focus:ring-2 
-                       focus:ring-primary-500 
-                       focus:ring-offset-2"
-                {% if status_filter == 'completed' %}
-                aria-current="page"
-                {% endif %}>
-                <i class="fas fa-check-circle mr-2" 
-                   aria-hidden="true"></i>
+            <a href="?status=completed"
+               class="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2
+                      rounded-lg text-xs sm:text-sm font-medium transition-colors
+                      {% if status_filter == 'completed' %}bg-primary-600 text-white shadow-sm
+                      {% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}
+                      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+               {% if status_filter == 'completed' %}aria-current="page"{% endif %}>
+                <i class="fas fa-check-circle text-xs" aria-hidden="true"></i>
                 Completed
             </a>
         </div>
@@ -72,234 +50,175 @@ continue learning, and access course materials.
 
     <!-- Courses Grid -->
     {% if enrollments %}
-    <div class="grid grid-cols-1 md:grid-cols-2 
-                lg:grid-cols-3 xl:grid-cols-4 
-                gap-4 sm:gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
         {% for enrollment in enrollments %}
-        <article 
-            class="bg-white rounded-xl shadow-sm border 
-                   border-gray-200 overflow-hidden 
-                   hover:shadow-lg transition-shadow">
-            
-            <!-- Course Thumbnail -->
-            <div class="h-40 bg-gradient-to-br 
-                        from-primary-500 to-secondary-500 
-                        relative">
+        <article class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden
+                        hover:shadow-md transition-shadow duration-200 flex flex-col">
+
+            <!-- Thumbnail -->
+            <div class="relative h-40 sm:h-44 bg-gradient-to-br from-primary-500 to-secondary-500 flex-shrink-0">
                 {% if enrollment.course.thumbnail %}
-                <img 
-                    src="{{ enrollment.course.thumbnail.url }}" 
-                    alt="{{ enrollment.course.title }}" 
-                    class="w-full h-full object-cover"
-                    loading="lazy">
+                <img src="{{ enrollment.course.thumbnail.url }}"
+                     alt="{{ enrollment.course.title }}"
+                     class="w-full h-full object-cover"
+                     loading="lazy">
                 {% else %}
-                <div class="w-full h-full flex items-center 
-                            justify-center">
-                    <i class="fas fa-book text-white 
-                              text-5xl opacity-50" 
-                       aria-hidden="true"></i>
+                <div class="w-full h-full flex items-center justify-center">
+                    <i class="fas fa-book text-white text-5xl opacity-30" aria-hidden="true"></i>
                 </div>
                 {% endif %}
-                
-                <!-- Status Badge -->
+
+                <!-- TOP-RIGHT: Status badge — clean circle, not a wide pill that floats awkwardly -->
                 <div class="absolute top-3 right-3">
                     {% if enrollment.status == 'completed' %}
-                    <span class="px-3 py-1 bg-green-500 
-                                 text-white rounded-full text-xs 
-                                 font-semibold">
-                        <i class="fas fa-check mr-1" 
-                           aria-hidden="true"></i>
-                        Completed
+                    <span class="w-7 h-7 sm:w-8 sm:h-8 bg-green-500 rounded-full shadow
+                                 flex items-center justify-center"
+                          title="Completed" aria-label="Completed">
+                        <i class="fas fa-check text-white text-xs" aria-hidden="true"></i>
                     </span>
                     {% elif enrollment.status == 'active' %}
-                    <span class="px-3 py-1 bg-blue-500 
-                                 text-white rounded-full text-xs 
-                                 font-semibold">
-                        <i class="fas fa-play mr-1" 
-                           aria-hidden="true"></i>
-                        In Progress
+                    <span class="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500 rounded-full shadow
+                                 flex items-center justify-center"
+                          title="In Progress" aria-label="In Progress">
+                        <i class="fas fa-play text-white text-xs" aria-hidden="true"></i>
                     </span>
                     {% endif %}
                 </div>
             </div>
 
-            <div class="p-4 sm:p-5">
-                <!-- Category -->
+            <!-- Card Body -->
+            <div class="p-4 sm:p-5 flex flex-col flex-1">
+
+                <!-- Category pill -->
                 {% if enrollment.course.category %}
-                <span class="px-3 py-1 bg-blue-100 
-                             text-blue-700 rounded-full text-xs 
-                             font-medium mb-3 inline-block">
+                <span class="inline-block self-start px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100
+                             rounded-full text-xs font-medium mb-2.5 max-w-full truncate">
                     {{ enrollment.course.category.name }}
                 </span>
                 {% endif %}
 
-                <!-- Course Title -->
-                <h2 class="text-base sm:text-lg font-bold 
-                           text-gray-900 mb-2 line-clamp-2 
-                           min-h-[3.5rem]">
+                <!-- Title: two-line fixed height to keep cards aligned in a row -->
+                <h2 class="text-sm sm:text-[0.9375rem] font-bold text-gray-900 mb-1.5 leading-snug"
+                    style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                           overflow: hidden; min-height: 2.75rem;">
                     {{ enrollment.course.title }}
                 </h2>
 
                 <!-- Instructor -->
-                <p class="text-xs sm:text-sm text-gray-600 
-                          mb-4 truncate">
-                    <i class="fas fa-user-tie mr-1" 
-                       aria-hidden="true"></i>
+                <p class="text-xs text-gray-500 mb-3 truncate">
+                    <i class="fas fa-user-tie mr-1 text-gray-400 text-xs" aria-hidden="true"></i>
                     {{ enrollment.course.instructor_name|default:'MIU Staff' }}
                 </p>
 
-                <!-- Progress -->
-                <div class="mb-4">
-                    <div class="flex items-center justify-between 
-                                mb-2 text-xs sm:text-sm">
-                        <span class="text-gray-600">Progress</span>
-                        <span class="font-semibold text-gray-900">
+                <!-- Progress bar -->
+                <div class="mb-3">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs text-gray-500">Progress</span>
+                        <span class="text-xs sm:text-sm font-bold text-gray-900">
                             {{ enrollment.progress_percentage|floatformat:0 }}%
                         </span>
                     </div>
-                    
-                    <div class="w-full bg-gray-200 rounded-full 
-                                h-2.5"
+                    <div class="w-full bg-gray-200 rounded-full h-2"
                          role="progressbar"
                          aria-valuenow="{{ enrollment.progress_percentage }}"
                          aria-valuemin="0"
-                         aria-valuemax="100">
-                        <div class="h-2.5 rounded-full 
-                                    transition-all duration-500
-                                    {% if enrollment.progress_percentage == 100 %}
-                                    bg-green-500
-                                    {% else %}
-                                    bg-primary-600
-                                    {% endif %}" 
+                         aria-valuemax="100"
+                         aria-label="Course progress: {{ enrollment.progress_percentage|floatformat:0 }}%">
+                        <div class="h-2 rounded-full transition-all duration-500
+                                    {% if enrollment.progress_percentage == 100 %}bg-green-500
+                                    {% else %}bg-primary-600{% endif %}"
                              style="width: {{ enrollment.progress_percentage }}%">
                         </div>
                     </div>
-                    
-                    <p class="text-xs text-gray-500 mt-1">
-                        {{ enrollment.completed_lessons_count }} 
-                        of 
-                        {{ enrollment.course.active_lessons|length }} 
+                    <p class="text-xs text-gray-400 mt-1">
+                        {{ enrollment.completed_lessons_count }} of
+                        {{ enrollment.course.active_lessons|length }}
                         lesson{{ enrollment.course.active_lessons|length|pluralize }}
                     </p>
                 </div>
 
-                <!-- Enrollment Info -->
-                <div class="text-xs text-gray-500 mb-4 pb-4 
-                            border-b border-gray-200">
-                    <div class="flex items-center mb-1">
-                        <i class="fas fa-calendar mr-1 
-                                  flex-shrink-0" 
-                           aria-hidden="true"></i>
+                <!-- Enrollment dates -->
+                <div class="text-xs text-gray-400 mb-4 pb-3 border-b border-gray-100 space-y-1">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fas fa-calendar text-gray-300 w-3 flex-shrink-0" aria-hidden="true"></i>
                         <time datetime="{{ enrollment.enrolled_at|date:'c' }}">
                             Enrolled: {{ enrollment.enrolled_at|date:"M d, Y" }}
                         </time>
                     </div>
-                    
                     {% if enrollment.last_accessed %}
-                    <div class="flex items-center">
-                        <i class="fas fa-clock mr-1 flex-shrink-0" 
-                           aria-hidden="true"></i>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fas fa-clock text-gray-300 w-3 flex-shrink-0" aria-hidden="true"></i>
                         <time datetime="{{ enrollment.last_accessed|date:'c' }}">
-                            Last accessed: 
-                            {{ enrollment.last_accessed|date:"M d, Y" }}
+                            Last: {{ enrollment.last_accessed|date:"M d, Y" }}
                         </time>
                     </div>
                     {% endif %}
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="flex gap-2">
+                <!-- Action buttons — pinned to bottom -->
+                <div class="flex gap-2 mt-auto">
                     {% if enrollment.status == 'completed' %}
-                    <a 
-                        href="{% url 'students:course_detail' enrollment.course.slug %}" 
-                        class="flex-1 text-center px-3 sm:px-4 
-                               py-2 sm:py-2.5 bg-gray-600 
-                               text-white rounded-lg 
-                               hover:bg-gray-700 
-                               focus:outline-none focus:ring-2 
-                               focus:ring-gray-500 
-                               focus:ring-offset-2 
-                               transition-colors font-medium 
-                               text-sm">
-                        <i class="fas fa-eye mr-2"></i>
+                    <a href="{% url 'students:course_detail' enrollment.course.slug %}"
+                       class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5
+                              bg-gray-600 text-white rounded-lg hover:bg-gray-700
+                              focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2
+                              transition-colors font-semibold text-xs sm:text-sm">
+                        <i class="fas fa-eye text-xs" aria-hidden="true"></i>
                         Review
                     </a>
                     {% else %}
-                    <a 
-                        href="{% url 'students:course_detail' enrollment.course.slug %}" 
-                        class="flex-1 text-center px-3 sm:px-4 
-                               py-2 sm:py-2.5 bg-primary-600 
-                               text-white rounded-lg 
-                               hover:bg-primary-700 
-                               focus:outline-none focus:ring-2 
-                               focus:ring-primary-500 
-                               focus:ring-offset-2 
-                               transition-colors font-medium 
-                               text-sm">
-                        <i class="fas fa-play-circle mr-2"></i>
+                    <a href="{% url 'students:course_detail' enrollment.course.slug %}"
+                       class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5
+                              bg-primary-600 text-white rounded-lg hover:bg-primary-700
+                              focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+                              transition-colors font-semibold text-xs sm:text-sm">
+                        <i class="fas fa-play-circle text-xs" aria-hidden="true"></i>
                         Continue
                     </a>
                     {% endif %}
-                    
+
                     {% if enrollment.status == 'completed' and enrollment.course.has_certificate %}
-                    <a 
-                        href="{% url 'students:certificates' %}" 
-                        class="px-3 sm:px-4 py-2 sm:py-2.5 
-                               bg-yellow-500 text-white 
-                               rounded-lg hover:bg-yellow-600 
-                               focus:outline-none focus:ring-2 
-                               focus:ring-yellow-500 
-                               focus:ring-offset-2 
-                               transition-colors text-sm"
-                        title="View certificate"
-                        aria-label="View certificate for {{ enrollment.course.title }}">
-                        <i class="fas fa-certificate"></i>
+                    <a href="{% url 'students:certificates' %}"
+                       class="flex items-center justify-center w-10 sm:w-11 py-2.5 flex-shrink-0
+                              bg-yellow-500 text-white rounded-lg hover:bg-yellow-600
+                              focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2
+                              transition-colors text-xs sm:text-sm"
+                       title="View certificate"
+                       aria-label="View certificate for {{ enrollment.course.title }}">
+                        <i class="fas fa-certificate" aria-hidden="true"></i>
                     </a>
                     {% endif %}
                 </div>
+
             </div>
         </article>
         {% endfor %}
     </div>
+
     {% else %}
-    
     <!-- Empty State -->
-    <div class="bg-white rounded-xl shadow-sm border 
-                border-gray-200 p-8 sm:p-12">
-        <div class="text-center max-w-md mx-auto">
-            <i class="fas fa-book-open text-5xl sm:text-6xl 
-                      text-gray-300 mb-4" 
-               aria-hidden="true"></i>
-            
-            <h3 class="text-lg sm:text-xl font-semibold 
-                       text-gray-900 mb-2">
-                No courses found
-            </h3>
-            
-            <p class="text-sm sm:text-base text-gray-600 mb-6">
-                {% if status_filter == 'active' %}
-                You don't have any active courses yet
-                {% elif status_filter == 'completed' %}
-                You haven't completed any courses yet
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-10 sm:p-16">
+        <div class="text-center max-w-sm mx-auto">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <i class="fas fa-book-open text-2xl sm:text-3xl text-gray-300" aria-hidden="true"></i>
+            </div>
+            <h3 class="text-base sm:text-xl font-semibold text-gray-900 mb-2">No courses found</h3>
+            <p class="text-xs sm:text-sm text-gray-500 mb-6">
+                {% if status_filter == 'active' %}You don't have any active courses yet
+                {% elif status_filter == 'completed' %}You haven't completed any courses yet
                 {% endif %}
             </p>
-            
-            <a 
-                href="{% url 'students:course_catalog' %}" 
-                class="inline-block px-4 sm:px-6 
-                       py-2 sm:py-3 bg-primary-600 
-                       text-white rounded-lg 
-                       hover:bg-primary-700 
-                       focus:outline-none focus:ring-2 
-                       focus:ring-primary-500 
-                       focus:ring-offset-2 
-                       transition-colors font-semibold 
-                       text-sm sm:text-base">
-                <i class="fas fa-search mr-2" 
-                   aria-hidden="true"></i>
+            <a href="{% url 'students:course_catalog' %}"
+               class="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3
+                      bg-primary-600 text-white rounded-lg hover:bg-primary-700
+                      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+                      transition-colors font-semibold text-sm">
+                <i class="fas fa-search" aria-hidden="true"></i>
                 Browse Course Catalog
             </a>
         </div>
     </div>
     {% endif %}
+
 </div>
 {% endblock %}

@@ -1674,26 +1674,29 @@ class CourseApplication(models.Model):
 
     @property
     def is_paid(self):
-        """Check if payment is complete"""
-        # First check the status field directly — most reliable
-        if self.status in ['payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
+        """
+        For free-flow applications, all statuses beyond draft are treated as paid.
+        This property is kept for backward compatibility with templates.
+        """
+        # Free flow: draft and above are all "unlocked"
+        if self.status in ['draft', 'payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
             return True
-        # Fallback: check the related payment record
+        # Legacy fallback: check actual payment record if status is pending_payment
         try:
             return self.payment.status == 'success'
         except Exception:
             return False
 
     def can_upload_documents(self):
-        """Check if application allows document uploads"""
-        allowed_statuses = ['payment_complete', 'documents_uploaded', 'under_review']
-        return self.status in allowed_statuses and self.is_paid
+        """Check if application allows document uploads (payment-free flow)"""
+        allowed_statuses = ['draft', 'payment_complete', 'documents_uploaded', 'under_review']
+        return self.status in allowed_statuses
 
     def can_submit(self):
         """Check if application can be submitted"""
-        allowed_statuses = ['payment_complete', 'documents_uploaded']
+        allowed_statuses = ['draft', 'payment_complete', 'documents_uploaded']
         has_documents = self.documents.exists()
-        return self.is_paid and has_documents and self.status in allowed_statuses
+        return has_documents and self.status in allowed_statuses
     
     def mark_as_submitted(self):
         """Mark application as submitted"""
@@ -3662,3 +3665,253 @@ class FeePayment(models.Model):
 
     def __str__(self):
         return f"{self.user} - {getattr(self.fee, 'purpose', 'N/A')} - {self.status}"
+
+def library_file_upload_path(instance, filename):
+    ext       = filename.split('.')[-1].lower()
+    safe_name = f"{uuid.uuid4().hex}.{ext}"
+    cat_slug  = slugify(instance.category or 'misc')
+    return f'library/{cat_slug}/{safe_name}'
+ 
+ 
+def library_cover_upload_path(instance, filename):
+    name, ext = os.path.splitext(filename)
+    return f'library/covers/{slugify(name)}{ext}'
+ 
+ 
+class LibraryItem(models.Model):
+    """
+    Single-table digital library.
+ 
+    category / subcategory are plain text — no extra lookup tables needed.
+    Use them exactly as they appear on the front-end:
+ 
+        category = "Books"        subcategory = "Apologetics Books"
+        category = "Periodicals"  subcategory = "Acta Theologica"
+        category = "References"   subcategory = "Dictionaries"
+        category = "References"   subcategory = "Commentaries"
+        …
+ 
+    Access modes (pick one or both per record):
+        A. Upload a file  (PDF / DOCX / EPUB …)
+        B. Paste an external URL  (Google Drive, Project Gutenberg, etc.)
+    """
+ 
+    # ── Category (top-bar tabs on the library page) ───────────────────────────
+    CATEGORY_CHOICES = [
+        ('Books',       'Books'),
+        ('Periodicals', 'Periodicals'),
+        ('References',  'References'),
+        ('Other',       'Other'),
+    ]
+ 
+    # ── Access ────────────────────────────────────────────────────────────────
+    ACCESS_CHOICES = [
+        ('public',  'Public – anyone can access'),
+        ('members', 'Members only – must be logged in'),
+    ]
+ 
+    # ── Language ──────────────────────────────────────────────────────────────
+    LANGUAGE_CHOICES = [
+        ('en',    'English'),
+        ('es',    'Español (Spanish)'),
+        ('fr',    'Français (French)'),
+        ('pt_br', 'Português (Brazil)'),
+        ('ja',    '日本語 (Japanese)'),
+        ('zh',    '简体中文 (Chinese Simplified)'),
+        ('ko',    '한국어 (Korean)'),
+        ('ur',    'اردو (Urdu)'),
+        ('ar',    'العربية (Arabic)'),
+        ('hi',    'हिन्दी (Hindi)'),
+        ('other', 'Other'),
+    ]
+ 
+    # ── Primary key ───────────────────────────────────────────────────────────
+    id   = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    slug = models.SlugField(max_length=260, unique=True, blank=True)
+ 
+    # ── Taxonomy — two plain text fields, zero extra tables ───────────────────
+    category    = models.CharField(
+        max_length=50, choices=CATEGORY_CHOICES, default='Books',
+        db_index=True,
+        help_text="Top-level section: Books | Periodicals | References | Other"
+    )
+    subcategory = models.CharField(
+        max_length=200, db_index=True,
+        help_text=(
+            "Sub-section label exactly as shown on the front-end, e.g. "
+            "'Apologetics Books', 'Dictionaries', 'Acta Theologica', 'Commentaries' …"
+        )
+    )
+ 
+    # ── Bibliographic metadata ────────────────────────────────────────────────
+    title       = models.CharField(max_length=500)
+    author      = models.CharField(max_length=300, blank=True,
+                                   help_text="Author / Editor full name")
+    publisher   = models.CharField(max_length=200, blank=True)
+    year        = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                   help_text="Year of publication")
+    edition     = models.CharField(max_length=50, blank=True,
+                                   help_text="e.g. 'Vol. 2', '3rd Edition'")
+    isbn        = models.CharField(max_length=30, blank=True,
+                                   verbose_name='ISBN / ISSN')
+    language    = models.CharField(max_length=10, choices=LANGUAGE_CHOICES,
+                                   default='en')
+    description = models.TextField(blank=True,
+                                   help_text="Abstract, synopsis, or table of contents")
+    tags        = models.CharField(max_length=500, blank=True,
+                                   help_text="Comma-separated keywords for search")
+ 
+    # ── Cover / thumbnail ─────────────────────────────────────────────────────
+    cover_image = models.ImageField(
+        upload_to=library_cover_upload_path, blank=True, null=True,
+        help_text="Optional thumbnail shown on library cards"
+    )
+ 
+    # ── File upload ───────────────────────────────────────────────────────────
+    file = models.FileField(
+        upload_to=library_file_upload_path, blank=True, null=True,
+        validators=[FileExtensionValidator(
+            allowed_extensions=['pdf', 'doc', 'docx', 'epub', 'txt', 'pptx', 'xlsx']
+        )],
+        help_text="Upload PDF, DOCX, EPUB, TXT, PPTX or XLSX"
+    )
+    file_size_mb = models.DecimalField(max_digits=8, decimal_places=2,
+                                       null=True, blank=True, editable=False,
+                                       help_text="Auto-filled on save")
+    file_type    = models.CharField(max_length=10, blank=True, editable=False,
+                                    help_text="Auto-detected extension: pdf, docx …")
+ 
+    # ── External link (alternative or supplement to upload) ───────────────────
+    external_url = models.URLField(
+        max_length=1000, blank=True,
+        help_text=(
+            "Paste a URL if the document is hosted externally "
+            "(Google Drive, Project Gutenberg, archive.org, etc.)"
+        )
+    )
+    external_url_label = models.CharField(
+        max_length=100, blank=True, default='Read / Download',
+        help_text="Front-end button label for the external link"
+    )
+ 
+    # ── Front-end behaviour flags ─────────────────────────────────────────────
+    allow_download    = models.BooleanField(
+        default=True,
+        help_text="Show a Download button on the front-end"
+    )
+    allow_read_online = models.BooleanField(
+        default=True,
+        help_text="Show an embedded PDF viewer (Read Online) on the front-end"
+    )
+ 
+    # ── Access control ────────────────────────────────────────────────────────
+    access = models.CharField(
+        max_length=20, choices=ACCESS_CHOICES, default='public',
+        help_text="Who can see and open this item"
+    )
+ 
+    # ── Stats & display flags ─────────────────────────────────────────────────
+    view_count     = models.PositiveIntegerField(default=0, editable=False)
+    download_count = models.PositiveIntegerField(default=0, editable=False)
+    featured       = models.BooleanField(
+        default=False,
+        help_text="Pin this item to the library home / featured shelf"
+    )
+    is_active = models.BooleanField(default=True)
+    order     = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Display order within the sub-category (lower number = first)"
+    )
+ 
+    # ── Audit ─────────────────────────────────────────────────────────────────
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='library_items_created'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+ 
+    class Meta:
+        verbose_name        = 'Library Item'
+        verbose_name_plural = 'Library Items'
+        ordering            = ['category', 'subcategory', 'order', 'title']
+        indexes = [
+            models.Index(fields=['category', 'subcategory']),
+            models.Index(fields=['access', 'is_active']),
+            models.Index(fields=['featured']),
+            models.Index(fields=['slug']),
+        ]
+ 
+    def __str__(self):
+        author_str = f" — {self.author}" if self.author else ""
+        return f"[{self.category} / {self.subcategory}] {self.title}{author_str}"
+ 
+    def save(self, *args, **kwargs):
+        # Auto-generate unique slug
+        if not self.slug:
+            base    = slugify(f"{self.title} {self.author}")[:250]
+            slug    = base
+            counter = 1
+            while LibraryItem.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug    = f"{base}-{counter}"
+                counter += 1
+            self.slug = slug
+ 
+        # Auto-fill file metadata
+        if self.file:
+            try:
+                self.file_size_mb = round(self.file.size / (1024 * 1024), 2)
+                self.file_type    = self.file.name.split('.')[-1].lower()
+            except Exception:
+                pass
+ 
+        super().save(*args, **kwargs)
+ 
+    # ── Convenience helpers used in templates / views ─────────────────────────
+    def has_file(self):
+        return bool(self.file)
+ 
+    def has_external_url(self):
+        return bool(self.external_url)
+ 
+    def is_accessible(self):
+        """True when at least one of file or external_url is present."""
+        return self.has_file() or self.has_external_url()
+ 
+    def increment_views(self):
+        LibraryItem.objects.filter(pk=self.pk).update(
+            view_count=models.F('view_count') + 1
+        )
+ 
+    def increment_downloads(self):
+        LibraryItem.objects.filter(pk=self.pk).update(
+            download_count=models.F('download_count') + 1
+        )
+ 
+    def get_file_icon(self):
+        """Return a Bootstrap-icon class matching the detected file type."""
+        icons = {
+            'pdf':  'bi-file-earmark-pdf text-danger',
+            'doc':  'bi-file-earmark-word text-primary',
+            'docx': 'bi-file-earmark-word text-primary',
+            'epub': 'bi-book text-success',
+            'txt':  'bi-file-earmark-text text-secondary',
+            'pptx': 'bi-file-earmark-slides text-warning',
+            'xlsx': 'bi-file-earmark-spreadsheet text-success',
+        }
+        return icons.get(self.file_type, 'bi-file-earmark')
+ 
+    @property
+    def file_size_display(self):
+        """Human-readable file size string."""
+        if self.file_size_mb:
+            return (f"{int(self.file_size_mb * 1024)} KB"
+                    if self.file_size_mb < 1 else f"{self.file_size_mb} MB")
+        return ''
+
+    @property
+    def tags_list(self):
+        """Return tags as a clean list, split on comma."""
+        if not self.tags:
+            return []
+        return [t.strip() for t in self.tags.split(',') if t.strip()]

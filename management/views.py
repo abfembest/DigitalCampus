@@ -12,6 +12,7 @@ from datetime import timedelta
 import json
 from django.core.mail import send_mass_mail
 import threading
+import uuid
 
 # Model imports
 from eduweb.models import (
@@ -25,7 +26,7 @@ from eduweb.models import (
     LMSCourse,
     CourseCategory,
     AuditLog,
-    Certificate
+    Certificate, LibraryItem
 )
 
 # Form imports
@@ -37,7 +38,7 @@ from management.forms import (
     BroadcastMessageForm,
     LMSCourseForm,
     CertificateForm,
-    SiteConfigGeneralForm, SiteConfigIndexForm, SiteConfigAboutForm,
+    SiteConfigGeneralForm, SiteConfigIndexForm, SiteConfigAboutForm, LibraryItemForm
 )
 
 
@@ -4012,3 +4013,155 @@ def institution_member_delete(request, pk):
         member.delete()
         messages.success(request, 'Member deleted.')
     return redirect('management:institution_members_list')
+
+# ── Library: Item List ────────────────────────────────────────────────────────
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def library_items_list(request):
+    """
+    Paginated, filterable list of all LibraryItems.
+    Filters: q (search), category, access, status (active/inactive).
+    """
+    qs = LibraryItem.objects.all().order_by('category', 'subcategory', 'order', 'title')
+ 
+    q          = request.GET.get('q', '').strip()
+    cat_filter = request.GET.get('category', '')
+    access_f   = request.GET.get('access', '')
+    status_f   = request.GET.get('status', '')   # 'active' | 'inactive'
+ 
+    if q:
+        qs = qs.filter(
+            Q(title__icontains=q)       |
+            Q(author__icontains=q)      |
+            Q(subcategory__icontains=q) |
+            Q(tags__icontains=q)        |
+            Q(isbn__icontains=q)
+        )
+    if cat_filter:
+        qs = qs.filter(category=cat_filter)
+    if access_f:
+        qs = qs.filter(access=access_f)
+    if status_f == 'active':
+        qs = qs.filter(is_active=True)
+    elif status_f == 'inactive':
+        qs = qs.filter(is_active=False)
+ 
+    # Stats strip
+    total_count    = LibraryItem.objects.count()
+    active_count   = LibraryItem.objects.filter(is_active=True).count()
+    public_count   = LibraryItem.objects.filter(access='public').count()
+    featured_count = LibraryItem.objects.filter(featured=True).count()
+ 
+    category_choices = LibraryItem.CATEGORY_CHOICES  # [('Books','Books'), ...]
+ 
+    paginator = Paginator(qs, 20)
+    page_obj  = paginator.get_page(request.GET.get('page'))
+ 
+    return render(request, 'management/library/items_list.html', {
+        'page_obj':         page_obj,
+        'query':            q,
+        'cat_filter':       cat_filter,
+        'access_filter':    access_f,
+        'status_filter':    status_f,
+        'total_count':      total_count,
+        'active_count':     active_count,
+        'public_count':     public_count,
+        'featured_count':   featured_count,
+        'category_choices': category_choices,
+    })
+ 
+ 
+# ── Library: Create ───────────────────────────────────────────────────────────
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def library_item_create(request):
+    """Create a new LibraryItem. Records created_by from request.user."""
+    if request.method == 'POST':
+        form = LibraryItemForm(request.POST, request.FILES)
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.created_by = request.user
+            item.save()
+            messages.success(request, f'"{item.title}" added to the library.')
+            if 'save_and_add' in request.POST:
+                return redirect('management:library_item_create')
+            return redirect('management:library_items_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = LibraryItemForm()
+ 
+    return render(request, 'management/library/item_form.html', {
+        'form':       form,
+        'page_title': 'Add Library Item',
+        'is_create':  True,
+    })
+ 
+ 
+# ── Library: Edit ─────────────────────────────────────────────────────────────
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def library_item_edit(request, pk):
+    """Edit an existing LibraryItem. pk is a UUID."""
+    item = get_object_or_404(LibraryItem, pk=pk)
+ 
+    if request.method == 'POST':
+        form = LibraryItemForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'"{item.title}" updated successfully.')
+            return redirect('management:library_items_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = LibraryItemForm(instance=item)
+ 
+    return render(request, 'management/library/item_form.html', {
+        'form':       form,
+        'item':       item,
+        'page_title': f'Edit — {item.title}',
+        'is_create':  False,
+    })
+ 
+ 
+# ── Library: Delete ───────────────────────────────────────────────────────────
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def library_item_delete(request, pk):
+    """Hard-delete a LibraryItem (POST only). pk is a UUID."""
+    item = get_object_or_404(LibraryItem, pk=pk)
+    if request.method == 'POST':
+        title = item.title
+        item.delete()
+        messages.success(request, f'"{title}" removed from the library.')
+    return redirect('management:library_items_list')
+ 
+ 
+# ── Library: Toggle Active ────────────────────────────────────────────────────
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def library_item_toggle_active(request, pk):
+    """
+    Quick-toggle is_active on a LibraryItem.
+    Supports both standard POST redirect and AJAX JSON response.
+    pk is a UUID.
+    """
+    item = get_object_or_404(LibraryItem, pk=pk)
+    if request.method == 'POST':
+        item.is_active = not item.is_active
+        item.save(update_fields=['is_active'])
+        state = 'published' if item.is_active else 'unpublished'
+ 
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success':   True,
+                'is_active': item.is_active,
+                'state':     state,
+            })
+        messages.success(request, f'"{item.title}" {state}.')
+    return redirect('management:library_items_list')

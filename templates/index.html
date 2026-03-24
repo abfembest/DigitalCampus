@@ -245,78 +245,140 @@
 
 
 <!-- ═══════════════════════════════════════════
-     OVERVIEW GRID
+     OVERVIEW GRID — Redesigned
      ═══════════════════════════════════════════ -->
 <section class="py-16 sm:py-20 lg:py-28 bg-white border-t border-gray-100" aria-labelledby="overview-heading">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
 
-        <!-- Header row -->
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-24 mb-12 lg:mb-16">
+        <!-- Section Header -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-14 lg:mb-18">
             <div>
-                <h2 id="overview-heading" class="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 font-display">Overview</h2>
+                <span class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary-950 mb-3">
+                    <span class="w-6 h-px bg-primary-950 inline-block"></span>
+                    What We Offer
+                </span>
+                <h2 id="overview-heading" class="text-4xl sm:text-5xl lg:text-6xl font-black text-gray-900 font-display leading-tight">
+                    University<br><span class="gradient-text">Overview</span>
+                </h2>
             </div>
-            <div>
-                <div class="w-10 h-0.5 bg-primary-600 mb-5"></div>
-                <p class="text-gray-700 leading-relaxed font-['Inter'] text-sm sm:text-base mb-3">
-                    We offer comprehensive degree programs in Christian disciplines for both Undergraduate and Graduate students.
-                </p>
-                <p class="text-gray-700 leading-relaxed font-['Inter'] text-sm sm:text-base">
-                    Our excellence is unparalled. We forge partnerships with organizations, dedicated to the service of God.
+            <div class="lg:max-w-sm">
+                <p class="text-gray-500 leading-relaxed font-['Inter'] text-sm sm:text-base">
+                    Comprehensive degree programs in Christian disciplines — grounded in Scripture, shaped for purpose-driven ministry and global service.
                 </p>
             </div>
         </div>
 
-        <!-- Top row — 3 cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Bento Grid — Row 1: Academics (tall left) + Right column stack -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-4 sm:mb-5">
 
-            <a href="{% url 'eduweb:all_programs' %}" class="group block">
-                <div class="overflow-hidden rounded-xl mb-4 h-56 sm:h-60 bg-gray-100">
-                    <img src="{% static 'images/hero.webp' %}" alt="Academics"
-                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+            <!-- Card 1 — Academics (tall, full left column) -->
+            <a href="{% url 'eduweb:all_programs' %}"
+               class="group relative overflow-hidden rounded-2xl min-h-[420px] lg:min-h-[500px] block focus:outline-none focus:ring-4 focus:ring-primary-400/50"
+               aria-label="Academics">
+                <img src="{% static 'images/hero.webp' %}" alt="Academics"
+                     class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-950/85 via-gray-950/30 to-transparent"></div>
+                <div class="absolute top-5 left-5">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 backdrop-blur-md border border-white/20 rounded-full text-white text-xs font-semibold tracking-wide">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                        Academics
+                    </span>
                 </div>
-                <h3 class="font-bold text-xl text-gray-900 mb-1 font-display group-hover:text-primary-600 transition-colors">Academics</h3>
-                <p class="text-gray-500 text-sm font-['Inter'] leading-relaxed">Explore our diverse programs and embark on a journey of purpose-driven Christian education.</p>
+                <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+                    <h3 class="font-black text-3xl sm:text-4xl text-white font-display mb-2 group-hover:text-gold-300 transition-colors duration-300">Academics</h3>
+                    <p class="text-white/75 text-sm font-['Inter'] leading-relaxed mb-4">Explore our diverse programs and embark on a journey of purpose-driven Christian education.</p>
+                    <span class="inline-flex items-center gap-2 text-gold-300 text-sm font-semibold group-hover:gap-3 transition-all duration-300">
+                        Explore Programs <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </span>
+                </div>
             </a>
 
-            <a href="{% url 'eduweb:admission_requirement' %}" class="group block">
-                <div class="overflow-hidden rounded-xl mb-4 h-56 sm:h-60 bg-gray-100">
+            <!-- Right column: Admissions on top, Who We Are below — stacked to match left height -->
+            <div class="flex flex-col gap-4 sm:gap-5">
+
+                <!-- Card 2 — Admissions -->
+                <a href="{% url 'eduweb:admission_requirement' %}"
+                   class="group relative overflow-hidden rounded-2xl flex-1 min-h-[230px] block focus:outline-none focus:ring-4 focus:ring-primary-400/50"
+                   aria-label="Admissions">
                     <img src="{% static 'images/hero2.webp' %}" alt="Admissions"
-                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                </div>
-                <h3 class="font-bold text-xl text-gray-900 mb-1 font-display group-hover:text-primary-600 transition-colors">Admissions</h3>
-                <p class="text-gray-500 text-sm font-['Inter'] leading-relaxed">Join us, and let's shape a future where faith illuminates every field of study.</p>
-            </a>
+                         class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
+                    <div class="absolute inset-0 bg-gradient-to-r from-primary-950/80 via-primary-950/50 to-transparent"></div>
+                    <div class="absolute top-5 left-5">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 backdrop-blur-md border border-white/20 rounded-full text-white text-xs font-semibold tracking-wide">
+                            <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
+                            Admissions
+                        </span>
+                    </div>
+                    <div class="absolute bottom-0 left-0 p-6 sm:p-7">
+                        <h3 class="font-black text-xl sm:text-2xl text-white font-display mb-1.5 group-hover:text-gold-300 transition-colors duration-300">Admissions</h3>
+                        <p class="text-white/70 text-sm font-['Inter'] leading-relaxed mb-3 max-w-xs">Join us, and let's shape a future where faith illuminates every field of study.</p>
+                        <span class="inline-flex items-center gap-2 text-gold-300 text-sm font-semibold group-hover:gap-3 transition-all duration-300">
+                            Apply Now <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                </a>
 
-            <a href="{% url 'eduweb:about' %}" class="group block">
-                <div class="overflow-hidden rounded-xl mb-4 h-56 sm:h-60 bg-gray-100">
-                    <img src="{% static 'images/hero3.webp' %}" alt="Who we Are"
-                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                </div>
-                <h3 class="font-bold text-xl text-gray-900 mb-1 font-display group-hover:text-primary-600 transition-colors">Who we Are</h3>
-                <p class="text-gray-500 text-sm font-['Inter'] leading-relaxed">Discover what makes us a unique Christ-centered university.</p>
-            </a>
+                <!-- Card 3 — Who We Are -->
+                <a href="{% url 'eduweb:about' %}"
+                   class="group relative overflow-hidden rounded-2xl flex-1 min-h-[230px] block focus:outline-none focus:ring-4 focus:ring-primary-400/50"
+                   aria-label="Who We Are">
+                    <img src="{% static 'images/hero3.webp' %}" alt="Who We Are"
+                         class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
+                    <div class="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/40 to-transparent"></div>
+                    <div class="absolute top-5 left-5">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 backdrop-blur-md border border-white/20 rounded-full text-white text-xs font-semibold tracking-wide">
+                            <i data-lucide="heart" class="w-3.5 h-3.5"></i>
+                            About Us
+                        </span>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+                        <h3 class="font-black text-xl sm:text-2xl text-white font-display mb-1 group-hover:text-gold-300 transition-colors duration-300">Who We Are</h3>
+                        <p class="text-white/70 text-sm font-['Inter'] leading-relaxed">Discover what makes us a unique Christ-centered university.</p>
+                    </div>
+                </a>
 
+            </div>
         </div>
 
-        <!-- Bottom row — 2 cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:max-w-2xl">
+        <!-- Row 2: Library + Academic Calendar — always full width, equal split -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
 
-            <a href="#" class="group block">
-                <div class="overflow-hidden rounded-xl mb-4 h-56 sm:h-60 bg-gray-100">
-                    <img src="{% static 'images/hero.webp' %}" alt="Library"
-                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-75">
+            <!-- Card 4 — Library -->
+            <a href="{% url 'library:home' %}"
+               class="group relative overflow-hidden rounded-2xl min-h-[230px] flex flex-col justify-between p-6 sm:p-8 block focus:outline-none focus:ring-4 focus:ring-primary-400/50"
+               style="background: linear-gradient(135deg, #840384 0%, #6b21a8 50%, #4c1d95 100%);"
+               aria-label="Library">
+                <div class="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/5 -translate-y-12 translate-x-12 pointer-events-none"></div>
+                <div class="absolute bottom-0 left-0 w-36 h-36 rounded-full bg-white/5 translate-y-10 -translate-x-10 pointer-events-none"></div>
+                <div>
+                    <div class="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
+                        <i data-lucide="library" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <h3 class="font-black text-2xl text-white font-display mb-2">Library</h3>
+                    <p class="text-white/70 text-sm font-['Inter'] leading-relaxed">A vast collection of books, journals, and digital resources — open to all students.</p>
                 </div>
-                <h3 class="font-bold text-xl text-gray-900 mb-1 font-display group-hover:text-primary-600 transition-colors">Library</h3>
-                <p class="text-gray-500 text-sm font-['Inter'] leading-relaxed">A vast collection of books, journals, and digital resources.</p>
+                <span class="inline-flex items-center gap-2 text-gold-300 text-sm font-semibold mt-4 group-hover:gap-3 transition-all duration-300">
+                    Browse Resources <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </span>
             </a>
 
-            <a href="#" class="group block">
-                <div class="overflow-hidden rounded-xl mb-4 h-56 sm:h-60 bg-gray-100">
-                    <img src="{% static 'images/hero2.webp' %}" alt="Academic Calendar"
-                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-75">
+            <!-- Card 5 — Academic Calendar -->
+            <a href="#"
+               class="group relative overflow-hidden rounded-2xl min-h-[230px] flex flex-col justify-between p-6 sm:p-8 block focus:outline-none focus:ring-4 focus:ring-accent-400/50"
+               style="background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);"
+               aria-label="Academic Calendar">
+                <div class="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/10 -translate-y-12 translate-x-12 pointer-events-none"></div>
+                <div class="absolute bottom-0 left-0 w-36 h-36 rounded-full bg-white/10 translate-y-10 -translate-x-10 pointer-events-none"></div>
+                <div>
+                    <div class="w-11 h-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
+                        <i data-lucide="calendar-days" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <h3 class="font-black text-2xl text-white font-display mb-2">Academic Calendar</h3>
+                    <p class="text-white/80 text-sm font-['Inter'] leading-relaxed">Key dates, deadlines, and events for the academic year at a glance.</p>
                 </div>
-                <h3 class="font-bold text-xl text-gray-900 mb-1 font-display group-hover:text-primary-600 transition-colors">Academic Calendar</h3>
-                <p class="text-gray-500 text-sm font-['Inter'] leading-relaxed">Access important dates, deadlines, and events for the academic year at a glance.</p>
+                <span class="inline-flex items-center gap-2 text-white/90 text-sm font-semibold mt-4 group-hover:gap-3 transition-all duration-300">
+                    View Calendar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </span>
             </a>
 
         </div>

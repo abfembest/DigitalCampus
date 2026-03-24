@@ -1244,9 +1244,15 @@
                 <!-- User Info at Bottom -->
                 <div class="user-info-bottom p-4 border-t border-white/10 flex-shrink-0">
                     <div class="flex items-center space-x-3">
+                        {% if request.user.profile.avatar %}
+                        <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30">
+                            <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
+                        </div>
+                        {% else %}
                         <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30">
                             <img src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=4a6bff&color=fff" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
                         </div>
+                        {% endif %}
                         <div class="flex-1">
                             <p class="font-medium text-sm truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
                             <p class="text-xs text-white/70">{{ request.user.profile.get_role_display }}</p>
@@ -1343,9 +1349,15 @@
                         <!-- User Profile Dropdown -->
                         <div class="relative">
                             <button id="profileDropdown" class="flex items-center gap-1.5 sm:gap-2 p-1 rounded-full hover:bg-gray-100 transition-all focus:outline-none" aria-haspopup="true">
+                                {% if request.user.profile.avatar %}
+                                <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-primary-500 flex-shrink-0">
+                                    <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
+                                </div>
+                                {% else %}
                                 <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-primary-500 flex-shrink-0">
                                     <img src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=4a6bff&color=fff" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
                                 </div>
+                                {% endif %}
                                 <div class="hidden md:block text-left min-w-0">
                                     <p class="font-medium text-gray-800 text-sm truncate max-w-[120px] lg:max-w-[160px]">{{ request.user.get_full_name|default:request.user.username }}</p>
                                     <p class="text-xs text-gray-500 leading-snug">{{ request.user.profile.get_role_display }}</p>

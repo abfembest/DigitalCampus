@@ -1326,18 +1326,48 @@ def resources(request):
     # Pool resources from lessons
     lesson_videos = []
     lesson_docs = []
-    
+
+    import re
+
+    def extract_youtube_url(raw):
+        """
+        Accepts either a plain URL or an iframe embed snippet and always
+        returns a clean https://www.youtube.com/watch?v=... URL, or None.
+        """
+        # Already a plain URL — return as-is
+        if raw.strip().startswith('http'):
+            # Normalise embed URLs → watch URLs
+            raw = raw.strip()
+            match = re.search(r'youtube\.com/embed/([a-zA-Z0-9_-]+)', raw)
+            if match:
+                return f'https://www.youtube.com/watch?v={match.group(1)}'
+            return raw  # e.g. already a watch URL or youtu.be link
+
+        # It's an iframe snippet — pull the src attribute
+        match = re.search(r'src=["\']([^"\']+)["\']', raw)
+        if match:
+            src = match.group(1)
+            # Convert embed URL → watch URL
+            vid_match = re.search(r'youtube\.com/embed/([a-zA-Z0-9_-]+)', src)
+            if vid_match:
+                return f'https://www.youtube.com/watch?v={vid_match.group(1)}'
+            return src  # fallback: return the src as-is
+
+        return None
+
     for course in instructor_courses:
         for lesson in course.lessons.all():
             # Videos
             if lesson.video_url:
-                lesson_videos.append({
-                    'course': course,
-                    'lesson': lesson,
-                    'url': lesson.video_url,
-                    'type': 'video',
-                    'uploaded': lesson.created_at
-                })
+                clean_url = extract_youtube_url(lesson.video_url)
+                if clean_url:
+                    lesson_videos.append({
+                        'course': course,
+                        'lesson': lesson,
+                        'url': clean_url,
+                        'type': 'video',
+                        'uploaded': lesson.created_at
+                    })
             
             # Documents
             if lesson.file:

@@ -1322,7 +1322,7 @@ class LMSCourseAdmin(admin.ModelAdmin):
             'fields': ('is_published', 'is_featured')
         }),
         ('Certificate', {
-            'fields': ('has_certificate', 'certificate_template')
+            'fields': ('has_certificate', 'certificate_template', 'certificate_fee')
         }),
         ('SEO', {
             'fields': ('meta_description', 'meta_keywords'),

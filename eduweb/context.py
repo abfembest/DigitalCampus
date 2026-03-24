@@ -128,7 +128,10 @@ def navigation_data(request):
 #    Unread messages + notifications for the student nav bar badges.
 # ─────────────────────────────────────────────────────────────────────────────
 def student_counts(request):
-    """Inject unread message and notification counts for student nav badges."""
+    """
+    Inject unread message count, unread notification count,
+    and the 5 most recent unread notifications for the nav dropdown.
+    """
     if not request.user.is_authenticated:
         return {}
     if not hasattr(request.user, 'profile'):
@@ -137,22 +140,27 @@ def student_counts(request):
         return {}
 
     try:
+        unread_notifs_qs = Notification.objects.filter(
+            user=request.user,
+            is_read=False,
+        ).order_by('-created_at')
+
         return {
             'unread_messages_count': Message.objects.filter(
                 recipient=request.user,
                 is_read=False,
                 parent__isnull=True,
             ).count(),
-            'unread_notifications_count': Notification.objects.filter(
-                user=request.user,
-                is_read=False,
-            ).count(),
+            'unread_notifications_count': unread_notifs_qs.count(),
+            # Last 5 unread for the nav bell dropdown — once read they leave
+            'nav_notifications': list(unread_notifs_qs[:5]),
         }
     except Exception:
         logger.exception('student_counts: failed to fetch counts')
         return {
             'unread_messages_count': 0,
             'unread_notifications_count': 0,
+            'nav_notifications': [],
         }
 
 

@@ -63,8 +63,9 @@
                     </div>
                 </div>
 
-                <!-- Actions: View + Download -->
+                <!-- Actions: View + Download — requires certificate fee payment -->
                 <div class="flex gap-2 mb-3">
+                    {% if certificate_fee_paid %}
                     <button onclick="viewCertificate('{{ certificate.id }}', '{{ certificate.course.title|escapejs }}', '{{ certificate.issued_date|date:"M d, Y" }}', '{{ certificate.certificate_id }}')"
                             class="flex-1 inline-flex items-center justify-center gap-1.5
                                    px-2.5 sm:px-3 py-2 sm:py-2.5 bg-primary-600 text-white rounded-lg
@@ -87,6 +88,14 @@
                                    hover:bg-yellow-600 transition-colors font-medium text-xs sm:text-sm">
                         <i class="fas fa-download text-xs" aria-hidden="true"></i>Download
                     </button>
+                    {% endif %}
+                    {% else %}
+                    <a href="{% url 'students:my_payments' %}"
+                       class="flex-1 inline-flex items-center justify-center gap-1.5
+                              px-2.5 sm:px-3 py-2 sm:py-2.5 bg-red-500 text-white rounded-lg
+                              hover:bg-red-600 transition-colors font-medium text-xs sm:text-sm">
+                        <i class="fas fa-lock text-xs" aria-hidden="true"></i>Pay to Unlock
+                    </a>
                     {% endif %}
                 </div>
 

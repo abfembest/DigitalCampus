@@ -844,8 +844,14 @@ class Certificate(models.Model):
             models.Index(fields=['verification_code']),
         ]
     
-    def __str__(self):
-        return f"{self.student.username} - {self.course.title} - {self.certificate_id}"
+    def has_paid_certificate_fee(self, user):
+        """Return True if the student has a successful FeePayment for a certificate fee."""
+        from .models import FeePayment
+        return FeePayment.objects.filter(
+            user=user,
+            status='success',
+            fee__purpose__icontains='certificate',
+        ).exists()
     
     def save(self, *args, **kwargs):
         if not self.certificate_id:
@@ -2231,6 +2237,12 @@ class LMSCourse(models.Model):
     
     # Certificate
     has_certificate = models.BooleanField(default=False)
+    certificate_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Fee charged to the student to receive their certificate"
+    )
     certificate_template = models.CharField(max_length=100, blank=True)
     
     # SEO
@@ -2443,6 +2455,7 @@ class Notification(models.Model):
     NOTIFICATION_TYPE_CHOICES = [
         ('enrollment', 'Enrollment'),
         ('assignment', 'Assignment'),
+        ('quiz', 'Quiz'),
         ('grade', 'Grade'),
         ('announcement', 'Announcement'),
         ('message', 'Message'),

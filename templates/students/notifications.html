@@ -16,13 +16,21 @@
                 Your activity updates and alerts
             </p>
         </div>
-        <!-- Unread count badge — only visible when there are unread items -->
-        <span id="unread-badge"
-              class="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-600
-                     rounded-full text-xs sm:text-sm font-semibold
-                     {% if unread_count == 0 %}hidden{% endif %}">
-            <span id="unread-count">{{ unread_count }}</span> unread
-        </span>
+        <!-- Unread count badge + mark all read -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+            <span id="unread-badge"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-600
+                         rounded-full text-xs sm:text-sm font-semibold
+                         {% if unread_count == 0 %}hidden{% endif %}">
+                <span id="unread-count">{{ unread_count }}</span> unread
+            </span>
+            {% if unread_count > 0 %}
+            <a href="?mark_all=1"
+               class="text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-medium underline">
+                Mark all read
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Notification List -->

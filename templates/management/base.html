@@ -1300,16 +1300,29 @@
                     <div class="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
                         <!-- Notifications Dropdown -->
                         <div class="relative">
-                            <button id="notificationDropdown" class="relative p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all focus:outline-none" aria-label="Notifications">
+                            <button id="notificationDropdown"
+                                    class="relative p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all focus:outline-none"
+                                    aria-label="Notifications">
                                 <i class="fas fa-bell text-base sm:text-lg md:text-xl" aria-hidden="true"></i>
+                                {% if unread_notifications_count > 0 %}
                                 <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full"></span>
+                                {% endif %}
                             </button>
 
-                            <div id="notificationMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200 max-h-80 sm:max-h-96 overflow-y-auto z-50">
+                            <div id="notificationMenu"
+                                 class="dropdown-menu absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200 max-h-80 sm:max-h-96 overflow-y-auto z-50">
+
+                                <!-- Header -->
                                 <div class="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
                                     <h4 class="font-semibold text-gray-900 text-sm sm:text-base">Notifications</h4>
                                     <div class="flex items-center gap-2">
-                                        <span class="text-xs text-gray-500">3 new</span>
+                                        {% if unread_notifications_count > 0 %}
+                                        <span class="text-xs font-medium text-primary-600">
+                                            {{ unread_notifications_count }} new
+                                        </span>
+                                        {% else %}
+                                        <span class="text-xs text-gray-400">All caught up</span>
+                                        {% endif %}
                                         <button onclick="document.getElementById('notificationMenu').classList.remove('show')"
                                                 class="sm:hidden text-gray-400 hover:text-gray-600 p-1 rounded transition-colors"
                                                 aria-label="Close">
@@ -1317,32 +1330,69 @@
                                         </button>
                                     </div>
                                 </div>
+
+                                <!-- Notification Items -->
                                 <div class="divide-y divide-gray-100">
-                                    <div class="p-3 sm:p-4 hover:bg-gray-50 cursor-pointer transition-all">
-                                        <div class="flex items-start gap-2.5 sm:gap-3">
-                                            <div class="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                                                <i class="fas fa-bell text-primary-600 text-xs sm:text-sm" aria-hidden="true"></i>
+                                    {% if nav_notifications %}
+                                        {% for notif in nav_notifications %}
+                                        <a href="{% url 'students:notifications_view' %}"
+                                           class="flex items-start gap-2.5 sm:gap-3 p-3 sm:p-4 hover:bg-gray-50 transition-all group">
+                                            <!-- Type icon -->
+                                            <div class="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mt-0.5
+                                                {% if notif.notification_type == 'assignment' %}bg-orange-100
+                                                {% elif notif.notification_type == 'grade' %}bg-green-100
+                                                {% elif notif.notification_type == 'message' %}bg-blue-100
+                                                {% elif notif.notification_type == 'certificate' %}bg-yellow-100
+                                                {% elif notif.notification_type == 'enrollment' %}bg-purple-100
+                                                {% elif notif.notification_type == 'announcement' %}bg-primary-100
+                                                {% else %}bg-gray-100{% endif %}">
+                                                <i class="text-xs
+                                                    {% if notif.notification_type == 'assignment' %}fas fa-file-alt text-orange-500
+                                                    {% elif notif.notification_type == 'grade' %}fas fa-star text-green-500
+                                                    {% elif notif.notification_type == 'message' %}fas fa-envelope text-blue-500
+                                                    {% elif notif.notification_type == 'certificate' %}fas fa-certificate text-yellow-500
+                                                    {% elif notif.notification_type == 'enrollment' %}fas fa-user-check text-purple-500
+                                                    {% elif notif.notification_type == 'announcement' %}fas fa-bullhorn text-primary-500
+                                                    {% else %}fas fa-bell text-gray-400{% endif %}">
+                                                </i>
                                             </div>
+                                            <!-- Text -->
                                             <div class="flex-1 min-w-0">
-                                                <h5 class="font-medium text-gray-900 text-xs sm:text-sm">
-                                                    {% if request.user.profile.role == 'student' %}
-                                                    New Assignment Available
-                                                    {% else %}
-                                                    New Application Received
-                                                    {% endif %}
-                                                </h5>
-                                                <p class="text-xs text-gray-600 mt-0.5 line-clamp-2">
-                                                    {% if request.user.profile.role == 'student' %}
-                                                    Introduction to Python - Due in 3 days
-                                                    {% else %}
-                                                    John Doe submitted an application for Computer Science
-                                                    {% endif %}
+                                                <p class="font-medium text-gray-900 text-xs sm:text-sm leading-snug line-clamp-1">
+                                                    {{ notif.title }}
                                                 </p>
-                                                <p class="text-xs text-gray-400 mt-1">2 hours ago</p>
+                                                <p class="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
+                                                    {{ notif.message }}
+                                                </p>
+                                                <p class="text-xs text-gray-400 mt-1">
+                                                    {{ notif.created_at|timesince }} ago
+                                                </p>
                                             </div>
+                                            <!-- Unread dot -->
+                                            <div class="flex-shrink-0 self-center">
+                                                <span class="block w-2 h-2 rounded-full bg-primary-500"></span>
+                                            </div>
+                                        </a>
+                                        {% endfor %}
+                                    {% else %}
+                                        <!-- Empty state -->
+                                        <div class="py-10 px-4 text-center">
+                                            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2.5">
+                                                <i class="fas fa-bell-slash text-gray-300 text-sm" aria-hidden="true"></i>
+                                            </div>
+                                            <p class="text-xs text-gray-400 leading-relaxed">No new notifications</p>
                                         </div>
-                                    </div>
+                                    {% endif %}
                                 </div>
+
+                                <!-- Footer: View all -->
+                                <div class="p-2.5 sm:p-3 border-t border-gray-100 sticky bottom-0 bg-white">
+                                    <a href="{% url 'students:notifications_view' %}"
+                                       class="block w-full text-center text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-medium py-1.5 rounded-lg hover:bg-primary-50 transition-colors">
+                                        View all notifications
+                                    </a>
+                                </div>
+
                             </div>
                         </div>
 

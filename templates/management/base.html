@@ -1140,6 +1140,21 @@
                         </div>
                     </a>
 
+                    <!-- Notifications -->
+                    <a href="{% url 'instructor:notifications' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
+                              {% if 'notifications' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-bell w-5 mr-3" aria-hidden="true"></i>
+                            <span>Notifications</span>
+                        </div>
+                        {% if instructor_unread_notifications_count > 0 %}
+                        <span class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                            {{ instructor_unread_notifications_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+
                     {% elif request.user.profile.role == 'content_manager' %}
                     <!-- CONTENT MANAGER MENU (for future implementation) -->
                     <a href="{% url 'content:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
@@ -1155,26 +1170,39 @@
                     </a>
 
                     {% elif request.user.profile.role == 'finance' %}
-                    <!-- FINANCE MANAGER MENU -->
+                    <!-- ================================================ -->
+                    <!-- FINANCE MANAGER MENU                             -->
+                    <!-- ================================================ -->
+ 
                     <!-- Dashboard -->
                     <a href="{% url 'finance:dashboard' %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' and 'finance' in request.path %}bg-white/20{% endif %}">
-                        <i class="fas fa-chart-bar w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Dashboard</span>
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
+                              {% if request.resolver_match.url_name == 'dashboard' and 'finance' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-chart-bar w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Dashboard</span>
+                        </div>
                     </a>
 
-                    <!-- Payment Management -->
+                    <!-- Divider + label -->
+                    <div class="border-t border-white/10 my-3"></div>
+                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Finance</div>
+ 
+                    <!-- Payments submenu -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payments' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-credit-card w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Payments</span>
                             </div>
-                            <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'payments' in request.path %}rotate-180{% endif %}"
+                               aria-hidden="true"></i>
                         </button>
-                        <div id="paymentsMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
-                            <a href="{% url 'payments:payment_management' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'payment_management' or request.resolver_match.url_name == 'payment_detail' %}bg-white/20{% endif %}">
+                        <div id="paymentsMenu"
+                             class="mt-1 space-y-1 {% if 'payments' not in request.path %}hidden{% endif %}
+                                    bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'finance:payment_management' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'payment_management' or request.resolver_match.url_name == 'application_payment_detail' or request.resolver_match.url_name == 'fee_payment_detail' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> All Payments
                             </a>
                             <a href="{% url 'payments:transaction_reports' %}"
@@ -1188,19 +1216,48 @@
                         </div>
                     </div>
 
-                    <!-- Subscription Management -->
-                    <a href="{% url 'finance:subscription_list' %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'subscription' in request.path %}bg-white/20{% endif %}">
-                        <i class="fas fa-crown w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Subscriptions</span>
+                    <!-- Required Payments -->
+                    <a href="{% url 'finance:required_payments_list' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
+                              {% if 'required-payments' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-receipt w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Required Payments</span>
+                        </div>
                     </a>
 
-                    <!-- Payroll Management -->
-                    <a href="{% url 'finance:payroll_management' %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payroll' in request.path %}bg-white/20{% endif %}">
-                        <i class="fas fa-money-bill-wave w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Payroll</span>
+                    <!-- Subscriptions -->
+                    <a href="{% url 'finance:subscription_list' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
+                              {% if 'subscription' in request.path %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-crown w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Subscriptions</span>
+                        </div>
                     </a>
+ 
+                    <!-- Payroll submenu -->
+                    <div class="mb-1">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all
+                                       {% if 'payroll' in request.path %}bg-white/20{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas fa-money-bill-wave w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3">Payroll</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform
+                                      {% if 'payroll' in request.path %}rotate-180{% endif %}"
+                               aria-hidden="true"></i>
+                        </button>
+                        <div id="payrollMenu"
+                             class="mt-1 space-y-1 {% if 'payroll' not in request.path %}hidden{% endif %}
+                                    bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'finance:payroll_management' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
+                                      {% if request.resolver_match.url_name == 'payroll_management' %}bg-white/20{% endif %}">
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i> All Payrolls
+                            </a>
+                        </div>
+                    </div>
 
                     {% elif request.user.profile.role == 'qa' %}
                     <!-- QA REVIEWER MENU (for future implementation) -->
@@ -1244,9 +1301,15 @@
                 <!-- User Info at Bottom -->
                 <div class="user-info-bottom p-4 border-t border-white/10 flex-shrink-0">
                     <div class="flex items-center space-x-3">
+                        {% if request.user.profile.avatar %}
+                        <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30">
+                            <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
+                        </div>
+                        {% else %}
                         <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30">
                             <img src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=4a6bff&color=fff" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
                         </div>
+                        {% endif %}
                         <div class="flex-1">
                             <p class="font-medium text-sm truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
                             <p class="text-xs text-white/70">{{ request.user.profile.get_role_display }}</p>
@@ -1294,16 +1357,29 @@
                     <div class="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
                         <!-- Notifications Dropdown -->
                         <div class="relative">
-                            <button id="notificationDropdown" class="relative p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all focus:outline-none" aria-label="Notifications">
+                            <button id="notificationDropdown"
+                                    class="relative p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all focus:outline-none"
+                                    aria-label="Notifications">
                                 <i class="fas fa-bell text-base sm:text-lg md:text-xl" aria-hidden="true"></i>
+                                {% if unread_notifications_count > 0 %}
                                 <span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full"></span>
+                                {% endif %}
                             </button>
 
-                            <div id="notificationMenu" class="dropdown-menu absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200 max-h-80 sm:max-h-96 overflow-y-auto z-50">
+                            <div id="notificationMenu"
+                                 class="dropdown-menu absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-xl border border-gray-200 max-h-80 sm:max-h-96 overflow-y-auto z-50">
+
+                                <!-- Header -->
                                 <div class="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
                                     <h4 class="font-semibold text-gray-900 text-sm sm:text-base">Notifications</h4>
                                     <div class="flex items-center gap-2">
-                                        <span class="text-xs text-gray-500">3 new</span>
+                                        {% if unread_notifications_count > 0 %}
+                                        <span class="text-xs font-medium text-primary-600">
+                                            {{ unread_notifications_count }} new
+                                        </span>
+                                        {% else %}
+                                        <span class="text-xs text-gray-400">All caught up</span>
+                                        {% endif %}
                                         <button onclick="document.getElementById('notificationMenu').classList.remove('show')"
                                                 class="sm:hidden text-gray-400 hover:text-gray-600 p-1 rounded transition-colors"
                                                 aria-label="Close">
@@ -1311,41 +1387,84 @@
                                         </button>
                                     </div>
                                 </div>
+
+                                <!-- Notification Items -->
                                 <div class="divide-y divide-gray-100">
-                                    <div class="p-3 sm:p-4 hover:bg-gray-50 cursor-pointer transition-all">
-                                        <div class="flex items-start gap-2.5 sm:gap-3">
-                                            <div class="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                                                <i class="fas fa-bell text-primary-600 text-xs sm:text-sm" aria-hidden="true"></i>
+                                    {% if nav_notifications %}
+                                        {% for notif in nav_notifications %}
+                                        <a href="{% url 'students:notifications_view' %}"
+                                           class="flex items-start gap-2.5 sm:gap-3 p-3 sm:p-4 hover:bg-gray-50 transition-all group">
+                                            <!-- Type icon -->
+                                            <div class="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mt-0.5
+                                                {% if notif.notification_type == 'assignment' %}bg-orange-100
+                                                {% elif notif.notification_type == 'grade' %}bg-green-100
+                                                {% elif notif.notification_type == 'message' %}bg-blue-100
+                                                {% elif notif.notification_type == 'certificate' %}bg-yellow-100
+                                                {% elif notif.notification_type == 'enrollment' %}bg-purple-100
+                                                {% elif notif.notification_type == 'announcement' %}bg-primary-100
+                                                {% else %}bg-gray-100{% endif %}">
+                                                <i class="text-xs
+                                                    {% if notif.notification_type == 'assignment' %}fas fa-file-alt text-orange-500
+                                                    {% elif notif.notification_type == 'grade' %}fas fa-star text-green-500
+                                                    {% elif notif.notification_type == 'message' %}fas fa-envelope text-blue-500
+                                                    {% elif notif.notification_type == 'certificate' %}fas fa-certificate text-yellow-500
+                                                    {% elif notif.notification_type == 'enrollment' %}fas fa-user-check text-purple-500
+                                                    {% elif notif.notification_type == 'announcement' %}fas fa-bullhorn text-primary-500
+                                                    {% else %}fas fa-bell text-gray-400{% endif %}">
+                                                </i>
                                             </div>
+                                            <!-- Text -->
                                             <div class="flex-1 min-w-0">
-                                                <h5 class="font-medium text-gray-900 text-xs sm:text-sm">
-                                                    {% if request.user.profile.role == 'student' %}
-                                                    New Assignment Available
-                                                    {% else %}
-                                                    New Application Received
-                                                    {% endif %}
-                                                </h5>
-                                                <p class="text-xs text-gray-600 mt-0.5 line-clamp-2">
-                                                    {% if request.user.profile.role == 'student' %}
-                                                    Introduction to Python - Due in 3 days
-                                                    {% else %}
-                                                    John Doe submitted an application for Computer Science
-                                                    {% endif %}
+                                                <p class="font-medium text-gray-900 text-xs sm:text-sm leading-snug line-clamp-1">
+                                                    {{ notif.title }}
                                                 </p>
-                                                <p class="text-xs text-gray-400 mt-1">2 hours ago</p>
+                                                <p class="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
+                                                    {{ notif.message }}
+                                                </p>
+                                                <p class="text-xs text-gray-400 mt-1">
+                                                    {{ notif.created_at|timesince }} ago
+                                                </p>
                                             </div>
+                                            <!-- Unread dot -->
+                                            <div class="flex-shrink-0 self-center">
+                                                <span class="block w-2 h-2 rounded-full bg-primary-500"></span>
+                                            </div>
+                                        </a>
+                                        {% endfor %}
+                                    {% else %}
+                                        <!-- Empty state -->
+                                        <div class="py-10 px-4 text-center">
+                                            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2.5">
+                                                <i class="fas fa-bell-slash text-gray-300 text-sm" aria-hidden="true"></i>
+                                            </div>
+                                            <p class="text-xs text-gray-400 leading-relaxed">No new notifications</p>
                                         </div>
-                                    </div>
+                                    {% endif %}
                                 </div>
+
+                                <!-- Footer: View all -->
+                                <div class="p-2.5 sm:p-3 border-t border-gray-100 sticky bottom-0 bg-white">
+                                    <a href="{% url 'students:notifications_view' %}"
+                                       class="block w-full text-center text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-medium py-1.5 rounded-lg hover:bg-primary-50 transition-colors">
+                                        View all notifications
+                                    </a>
+                                </div>
+
                             </div>
                         </div>
 
                         <!-- User Profile Dropdown -->
                         <div class="relative">
                             <button id="profileDropdown" class="flex items-center gap-1.5 sm:gap-2 p-1 rounded-full hover:bg-gray-100 transition-all focus:outline-none" aria-haspopup="true">
+                                {% if request.user.profile.avatar %}
+                                <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-primary-500 flex-shrink-0">
+                                    <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
+                                </div>
+                                {% else %}
                                 <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-primary-500 flex-shrink-0">
                                     <img src="https://ui-avatars.com/api/?name={{ request.user.get_full_name|urlencode }}&background=4a6bff&color=fff" alt="{{ request.user.get_full_name }}" class="w-full h-full object-cover">
                                 </div>
+                                {% endif %}
                                 <div class="hidden md:block text-left min-w-0">
                                     <p class="font-medium text-gray-800 text-sm truncate max-w-[120px] lg:max-w-[160px]">{{ request.user.get_full_name|default:request.user.username }}</p>
                                     <p class="text-xs text-gray-500 leading-snug">{{ request.user.profile.get_role_display }}</p>

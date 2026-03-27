@@ -118,6 +118,20 @@ urlpatterns = [
     ),
 
     # ------------------------------------------------------------------
+    # NOTIFICATIONS
+    # ------------------------------------------------------------------
+    path(
+        'notifications/',
+        views.instructor_notifications,
+        name='notifications',
+    ),
+    path(
+        'notifications/<int:notif_id>/read/',
+        views.instructor_notification_read,
+        name='notification_read',
+    ),
+
+    # ------------------------------------------------------------------
     # MESSAGES  (inbox / sent / thread / compose / reply / mark-all-read)
     # ------------------------------------------------------------------
     path(

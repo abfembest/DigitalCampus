@@ -11,12 +11,14 @@ from django.contrib.auth import update_session_auth_hash
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 
 from eduweb.models import (
     LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
     QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
-    Announcement, Review
+    Announcement, Review, Notification
 )
 from .forms import (
     CourseForm, CourseObjectivesForm, LessonForm, SectionForm,
@@ -25,17 +27,35 @@ from .forms import (
 )
 from eduweb.decorators import instructor_required
 
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Avg, Count, Q
-from django.utils import timezone
 from eduweb.models import (
-    LMSCourse, Announcement, QuizAttempt, QuizResponse,
-    Message, Discussion, DiscussionReply, Enrollment
+    LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
+    QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
+    Announcement, Review, Notification,
+    QuizAttempt, QuizResponse, Message, Discussion, DiscussionReply
 )
 
+# ── Notification helper ────────────────────────────────────────────────────
+def _notify_instructor(instructor, title, message, notif_type='system', link=''):
+    """
+    Create a Notification for an instructor and prune old ones beyond 100.
+    notif_type must be one of Notification.NOTIFICATION_TYPE_CHOICES keys.
+    """
+    Notification.objects.create(
+        user=instructor,
+        notification_type=notif_type,
+        title=title,
+        message=message,
+        link=link,
+    )
+    # Keep only the latest 100 notifications per instructor
+    old_ids = (
+        Notification.objects
+        .filter(user=instructor)
+        .order_by('-created_at')
+        .values_list('id', flat=True)[100:]
+    )
+    if old_ids:
+        Notification.objects.filter(id__in=list(old_ids)).delete()
 
 # ==================== DASHBOARD ====================
 @login_required(login_url='auth')
@@ -368,6 +388,19 @@ def lesson_create(request, course_slug):
             lesson.course = course
             lesson.save()
             messages.success(request, 'Lesson created successfully!')
+            # Notify enrolled students about new lesson content
+            if lesson.is_published if hasattr(lesson, 'is_published') else True:
+                enrolled = Enrollment.objects.filter(
+                    course=course, status='active'
+                ).select_related('student')
+                for enrollment in enrolled:
+                    _notify_instructor(
+                        instructor=enrollment.student,
+                        title=f'New Lesson: {lesson.title}',
+                        message=f'A new lesson "{lesson.title}" is now available in "{course.title}".',
+                        notif_type='announcement',
+                        link=f'/courses/{course.slug}/',
+                    )
             return redirect(
                 'instructor:lesson_list',
                 course_slug=course.slug
@@ -491,6 +524,18 @@ def quiz_create(request, course_slug, lesson_slug):
             quiz.lesson = lesson
             quiz.save()
             messages.success(request, 'Quiz created successfully!')
+            # Notify enrolled students about the new quiz
+            enrolled = Enrollment.objects.filter(
+                course=course, status='active'
+            ).select_related('student')
+            for enrollment in enrolled:
+                _notify_instructor(
+                    instructor=enrollment.student,
+                    title=f'New Quiz: {quiz.title}',
+                    message=f'A new quiz "{quiz.title}" has been added to "{course.title}" in the lesson "{lesson.title}".',
+                    notif_type='quiz',
+                    link=f'/courses/{course.slug}/',
+                )
             return redirect(
                 'instructor:quiz_questions',
                 course_slug=course.slug,
@@ -737,6 +782,19 @@ def assignment_create(request, course_slug, lesson_slug):
             assignment.lesson = lesson
             assignment.save()
             messages.success(request, 'Assignment created successfully!')
+            # Notify enrolled students about the new assignment
+            enrolled = Enrollment.objects.filter(
+                course=course, status='active'
+            ).select_related('student')
+            for enrollment in enrolled:
+                _notify_instructor(
+                    instructor=enrollment.student,
+                    title=f'New Assignment: {assignment.title}',
+                    message=f'A new assignment "{assignment.title}" has been posted in "{course.title}". '
+                            f'Due: {assignment.due_date.strftime("%b %d, %Y") if assignment.due_date else "No deadline"}.',
+                    notif_type='assignment',
+                    link=f'/courses/{course.slug}/',
+                )
             return redirect(
                 'instructor:assignment_list',
                 course_slug=course.slug,
@@ -864,6 +922,14 @@ def grade_submission(request, course_slug, submission_id):
         submission.save()
         
         messages.success(request, 'Submission graded successfully!')
+        # Notify the student that their submission was graded
+        _notify_instructor(
+            instructor=submission.student,
+            title='Assignment Graded',
+            message=f'Your submission for "{assignment.title}" in "{course.title}" has been graded. Score: {submission.score}.',
+            notif_type='grade',
+            link=f'/courses/{course.slug}/',
+        )
         return redirect(
             'instructor:assignment_submissions',
             course_slug=course.slug,
@@ -953,10 +1019,17 @@ def enroll_student(request, course_slug):
                 )
             else:
                 # Create enrollment
+                from datetime import datetime
+                parsed_date = None
+                if enrollment_date:
+                    try:
+                        parsed_date = datetime.strptime(enrollment_date, '%Y-%m-%d')
+                    except (ValueError, TypeError):
+                        parsed_date = None
                 enrollment = Enrollment.objects.create(
                     course=course,
                     student=student,
-                    enrolled_at=enrollment_date if enrollment_date else timezone.now(),
+                    enrolled_at=parsed_date or timezone.now(),
                     status='active'
                 )
                 
@@ -968,6 +1041,21 @@ def enroll_student(request, course_slug):
                 messages.success(
                     request,
                     f'{student.get_full_name()} has been successfully enrolled in {course.title}!'
+                )
+                _notify_instructor(
+                    instructor=request.user,
+                    title='Student Enrolled',
+                    message=f'{student.get_full_name() or student.username} was manually enrolled in "{course.title}".',
+                    notif_type='enrollment',
+                    link=f'/instructor/courses/{course.slug}/students/',
+                )
+                # Also notify the student they have been enrolled
+                _notify_instructor(
+                    instructor=student,
+                    title=f'Enrolled in {course.title}',
+                    message=f'You have been enrolled in "{course.title}". You can start learning now.',
+                    notif_type='enrollment',
+                    link=f'/courses/{course.slug}/',
                 )
         except User.DoesNotExist:
             messages.error(request, 'Student not found.')
@@ -994,6 +1082,26 @@ def announcement_create(request, course_slug):
             announcement.created_by = request.user
             announcement.save()
             messages.success(request, 'Announcement created successfully!')
+            # Notify all enrolled students about the new announcement
+            enrolled_students = Enrollment.objects.filter(
+                course=course, status='active'
+            ).select_related('student')
+            for enrollment in enrolled_students:
+                _notify_instructor(
+                    instructor=enrollment.student,
+                    title=f'New Announcement: {announcement.title}',
+                    message=f'Your instructor posted a new announcement in "{course.title}".',
+                    notif_type='announcement',
+                    link=f'/courses/{course.slug}/',
+                )
+            # Also notify the instructor themselves (confirmation)
+            _notify_instructor(
+                instructor=request.user,
+                title='Announcement Published',
+                message=f'Your announcement "{announcement.title}" was published to "{course.title}".',
+                notif_type='announcement',
+                link=f'/instructor/courses/{course.slug}/announcements/',
+            )
             return redirect('instructor:course_edit', slug=course.slug)
     else:
         form = AnnouncementForm()
@@ -1708,6 +1816,13 @@ def announcement_edit(request, course_slug, announcement_slug):
         if form.is_valid():
             form.save()
             messages.success(request, 'Announcement updated successfully!')
+            _notify_instructor(
+                instructor=request.user,
+                title='Announcement Updated',
+                message=f'Your announcement "{announcement.title}" in "{course.title}" was updated.',
+                notif_type='announcement',
+                link=f'/instructor/courses/{course.slug}/announcements/',
+            )
             return redirect('instructor:announcement_list', course_slug=course.slug)
     else:
         form = AnnouncementForm(instance=announcement)
@@ -1862,6 +1977,52 @@ def message_thread(request, message_id):
     })
 
 
+# ============================================================
+# INSTRUCTOR NOTIFICATIONS
+# ============================================================
+
+@login_required(login_url='auth')
+@instructor_required
+def instructor_notifications(request):
+    """Show all notifications for the logged-in instructor."""
+
+    # Mark all as read if requested
+    if request.GET.get('mark_all') == '1':
+        Notification.objects.filter(
+            user=request.user, is_read=False
+        ).update(is_read=True, read_at=timezone.now())
+        messages.success(request, 'All notifications marked as read.')
+        return redirect('instructor:notifications')
+
+    notifs_qs = Notification.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
+
+    unread_count = notifs_qs.filter(is_read=False).count()
+
+    paginator = Paginator(notifs_qs, 20)
+    page = request.GET.get('page')
+    notifications = paginator.get_page(page)
+
+    return render(request, 'instructor/notifications.html', {
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'page_title': 'Notifications',
+    })
+
+
+@login_required(login_url='auth')
+@instructor_required
+def instructor_notification_read(request, notif_id):
+    """Mark a single instructor notification as read (AJAX)."""
+    notif = get_object_or_404(Notification, id=notif_id, user=request.user)
+    if not notif.is_read:
+        notif.is_read = True
+        notif.read_at = timezone.now()
+        notif.save(update_fields=['is_read', 'read_at'])
+    return JsonResponse({'success': True})
+
+
 @login_required(login_url='auth')
 @instructor_required
 def message_compose(request):
@@ -1888,6 +2049,13 @@ def message_compose(request):
             msg.sender = request.user
             msg.save()
             messages.success(request, f'Message sent to {msg.recipient.get_full_name()}!')
+            _notify_instructor(
+                instructor=msg.recipient,
+                title=f'New Message from {request.user.get_full_name() or request.user.username}',
+                message=f'Subject: {msg.subject}',
+                notif_type='message',
+                link='/instructor/messages/',
+            )
             return redirect('instructor:messages_inbox')
     else:
         form = MessageForm(initial=initial)
@@ -1920,7 +2088,7 @@ def message_reply(request, message_id):
         body = request.POST.get('body', '').strip()
         if body:
             other = root.recipient if root.sender == request.user else root.sender
-            Message.objects.create(
+            reply_msg = Message.objects.create(
                 sender    = request.user,
                 recipient = other,
                 subject   = f'Re: {root.subject}',
@@ -1928,6 +2096,13 @@ def message_reply(request, message_id):
                 parent    = root,
             )
             messages.success(request, 'Reply sent.')
+            _notify_instructor(
+                instructor=other,
+                title=f'New Reply from {request.user.get_full_name() or request.user.username}',
+                message=f'Re: {root.subject}',
+                notif_type='message',
+                link=f'/instructor/messages/{root.id}/',
+            )
         else:
             messages.error(request, 'Reply cannot be empty.')
 
@@ -2000,6 +2175,15 @@ def discussion_reply(request, course_slug, discussion_slug):
                 content=content,
             )
             messages.success(request, 'Reply posted.')
+            # Notify discussion author if they are not the instructor
+            if discussion.author != request.user:
+                _notify_instructor(
+                    instructor=discussion.author,
+                    title='Instructor Replied to Your Discussion',
+                    message=f'Your instructor replied to "{discussion.title}" in "{course.title}".',
+                    notif_type='announcement',
+                    link=f'/instructor/courses/{course.slug}/discussions/{discussion.slug}/',
+                )
         else:
             messages.error(request, 'Reply cannot be empty.')
 
@@ -2066,6 +2250,14 @@ def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
         reply.save(update_fields=['is_solution'])
         state = 'marked as solution' if reply.is_solution else 'unmarked'
         messages.success(request, f'Reply {state}.')
+        if reply.is_solution and reply.author != request.user:
+            _notify_instructor(
+                instructor=reply.author,
+                title='Your Reply Was Marked as Solution',
+                message=f'Your reply in "{discussion.title}" was marked as the solution by the instructor.',
+                notif_type='announcement',
+                link=f'/instructor/courses/{course.slug}/discussions/{discussion.slug}/',
+            )
 
     return redirect('instructor:discussion_detail',
                     course_slug=course.slug, discussion_slug=discussion.slug)

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "payment",
     "melbac",
     "library",
+    'finance',
 
     "django.contrib.humanize",
     'chatbot',
@@ -89,7 +90,8 @@ TEMPLATES = [
                 "eduweb.views.application_status_context",
                 "eduweb.context.navigation_data",
                 'eduweb.context.site_config_context',
-                "eduweb.context.student_counts",
+                'eduweb.context.student_counts',
+                'eduweb.context.instructor_counts',
                 'eduweb.context.admin_counts',
             ],
         },

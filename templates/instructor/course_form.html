@@ -147,6 +147,21 @@
                                 {{ form.has_certificate }}
                                 <span class="text-sm font-medium text-gray-700">Offer Certificate upon completion</span>
                             </label>
+                            <!-- Certificate Fee & Template (shown conditionally) -->
+                            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Fee</label>
+                                    {{ form.certificate_fee }}
+                                    <p class="mt-1 text-xs text-gray-500">Set to 0 for a free certificate</p>
+                                    {% if form.certificate_fee.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_fee.errors }}</p>{% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Template</label>
+                                    {{ form.certificate_template }}
+                                    <p class="mt-1 text-xs text-gray-500">Template name/identifier to use</p>
+                                    {% if form.certificate_template.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_template.errors }}</p>{% endif %}
+                                </div>
+                            </div>
                             <label class="flex items-center cursor-pointer gap-2">
                                 {{ form.is_published }}
                                 <span class="text-sm font-medium text-gray-700">Publish Course (make visible to students)</span>

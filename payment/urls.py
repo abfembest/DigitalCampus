@@ -5,26 +5,7 @@ app_name = 'payments'
 
 urlpatterns = [
 
-    # List + filter
-    path(
-        '',
-        views.payment_management,
-        name='payment_management',
-    ),
-
-    # Detail view
-    path(
-        '<str:payment_reference>/',
-        views.payment_detail,
-        name='payment_detail',
-    ),
-
-    # Refund action (POST only)
-    path(
-        '<str:payment_reference>/refund/',
-        views.refund_payment,
-        name='refund_payment',
-    ),
+    # ── Static / named paths FIRST — must come before the catch-all ──────────
 
     # Transaction reports
     path(
@@ -33,16 +14,23 @@ urlpatterns = [
         name='transaction_reports',
     ),
 
-    # Invoice pages
+    # Invoice list page
     path(
         'invoices/',
         views.invoice_generation,
         name='invoice_generation',
     ),
+
+    # Invoice PDF download
     path(
         'invoices/<str:payment_reference>/pdf/',
         views.generate_invoice_pdf,
         name='generate_invoice_pdf',
     ),
-    path("refund/<str:payment_reference>/", views.refund_payment, name="refund_payment"),
+
+    path(
+        '<str:payment_reference>/refund/',
+        views.refund_payment,
+        name='refund_payment',
+    ),
 ]

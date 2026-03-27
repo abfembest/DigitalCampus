@@ -30,6 +30,7 @@ urlpatterns = [
 
     path('melbac/', include('melbac.urls')),
     path('library/', include('library.urls')),
+    path('finance/', include('finance.urls')),
 ]
 
 # Serve media files during development

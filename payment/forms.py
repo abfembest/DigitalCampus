@@ -18,9 +18,9 @@ class PaymentFilterForm(forms.Form):
 
     METHOD_CHOICES = [
         ('', 'All Methods'),
-        ('paystack', 'Paystack'),
+        ('card', 'Credit/Debit Card'),
+        ('paypal', 'PayPal'),
         ('bank_transfer', 'Bank Transfer'),
-        ('cash', 'Cash'),
     ]
 
     _cls = (
@@ -139,11 +139,14 @@ class InvoiceGenerateForm(forms.Form):
     """Form to select a successful payment for invoice generation"""
 
     payment = forms.ModelChoiceField(
+        # ❌ OLD: .select_related('application__user', 'application__course')
+        # The FK on CourseApplication is `program`, NOT `course`.
+        # ✅ NEW: .select_related('application__user', 'application__program')
         queryset=ApplicationPayment.objects.filter(
             status='success'
         ).select_related(
             'application__user',
-            'application__course'
+            'application__program',   # correct FK name
         ),
         widget=forms.Select(attrs={
             'class': (

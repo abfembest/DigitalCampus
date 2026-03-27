@@ -165,7 +165,41 @@ def student_counts(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. ADMIN BADGE COUNTS
+# 4. INSTRUCTOR BADGE COUNTS
+#    Unread notifications for the instructor nav bar bell.
+# ─────────────────────────────────────────────────────────────────────────────
+def instructor_counts(request):
+    """
+    Inject unread notification count and the 5 most recent unread notifications
+    for the instructor nav bell dropdown.
+    """
+    if not request.user.is_authenticated:
+        return {}
+    if not hasattr(request.user, 'profile'):
+        return {}
+    if request.user.profile.role != 'instructor':
+        return {}
+
+    try:
+        unread_notifs_qs = Notification.objects.filter(
+            user=request.user,
+            is_read=False,
+        ).order_by('-created_at')
+
+        return {
+            'instructor_unread_notifications_count': unread_notifs_qs.count(),
+            'instructor_nav_notifications': list(unread_notifs_qs[:5]),
+        }
+    except Exception:
+        logger.exception('instructor_counts: failed to fetch counts')
+        return {
+            'instructor_unread_notifications_count': 0,
+            'instructor_nav_notifications': [],
+        }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. ADMIN BADGE COUNTS
 #    Open tickets + unread contact messages for the admin nav bar.
 # ─────────────────────────────────────────────────────────────────────────────
 def admin_counts(request):

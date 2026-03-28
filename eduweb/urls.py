@@ -6,11 +6,15 @@ from django.conf.urls.static import static
 app_name = 'eduweb'
 
 urlpatterns = [
-    path('base', views.basefile, name='basefile'),
+    path('contact', views.contact, name='contact'),
+    path('activities/', views.activities, name='activities'),
     path('auth/', views.auth_page, name='auth_page'),
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
     path('logout/', views.user_logout, name='logout'),
     path('resend-verification/', views.resend_verification, name='resend_verification'),
+
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/<uuid:token>/', views.reset_password, name='reset_password'),
     
     path('', views.index, name='index'),
     path('about-us/', views.about, name='about'),
@@ -81,7 +85,7 @@ urlpatterns = [
 
     # ================= STAGE 5 =================
     # Preload payment details (Ajax)
-    path("<str:application_id>/payment-details/",views.payment_details, name="payment_details"),
+    # path("<str:application_id>/payment-details/",views.payment_details, name="payment_details"),
 
     # Stripe payment handoff (to be implemented later)
    # path("payments/stripe/start/", views.start_stripe_payment, name="start_stripe_payment"),
@@ -92,7 +96,6 @@ urlpatterns = [
     # ================= STAGE 6 =================
     # Upload documents (Ajax)
     path("<str:application_id>/upload-document/", views.upload_application_file, name="upload_application_file"),
-    path('test/mark-payment-success/<str:application_id>/', views.mark_payment_successful, name='mark_payment_successful'),
 
     # eduweb/urls.py — add this line alongside the other API paths
     path("api/student-fee/summary/<int:fee_pk>/", views.get_student_fee_summary, name="get_student_fee_summary"),

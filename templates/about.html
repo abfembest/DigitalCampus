@@ -1,821 +1,934 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
-{% block title %}About {{ site_config.school_short_name|default:"MIU" }} - {{ site_config.school_name|default:"Melchisedec International University" }} | Our Story & Mission{% endblock %}
+{% block title %}About {{ site_config.school_short_name|default:"MELBAC" }} — {{ site_config.school_name|default:"Melchisedec Graduate Bible Academy" }} | Our Story, Mission &amp; Leadership{% endblock %}
+
+{% block meta_tags %}
+<meta name="description" content="Learn about {{ site_config.school_name|default:'Melchisedec Graduate Bible Academy' }} — a non-denominational, non-profit Christian seminary training end-time ministers of God, free of charge, since 1995. Discover our story, mission, vision, leadership and accreditations.">
+<meta name="keywords" content="{{ site_config.school_name|default:'Melchisedec Graduate Bible Academy' }}, {{ site_config.school_short_name|default:'MELBAC' }}, Christian seminary, Bible academy Nigeria, free theological education, ministerial training, non-denominational university">
+<meta name="robots" content="index, follow">
+<meta name="author" content="{{ site_config.school_name|default:'Melchisedec Graduate Bible Academy' }}">
+{% endblock %}
+
+{% block og_tags %}
+<meta property="og:type" content="website">
+<meta property="og:title" content="About {{ site_config.school_short_name|default:'MELBAC' }} — {{ site_config.school_name|default:'Melchisedec Graduate Bible Academy' }}">
+<meta property="og:description" content="A non-denominational, non-profit Christian education and seminary institution training end-time ministers of God, free of charge, since 1995.">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+{% if site_config.og_image %}<meta property="og:image" content="{{ site_config.og_image.url }}">{% endif %}
+{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  "name": "{{ site_config.school_name|default:'Melchisedec Graduate Bible Academy'|escapejs }}",
+  "alternateName": "{{ site_config.school_short_name|default:'MELBAC'|escapejs }}",
+  "description": "A non-denominational, non-profit Christian education and seminary institution established in 1995.",
+  "url": "{{ request.build_absolute_uri }}",
+  "foundingDate": "1995",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Lagos",
+    "addressCountry": "NG"
+  },
+  "sameAs": []
+}
+</script>
+{% endblock %}
+
 {% block content %}
-<!-- ================= HERO SECTION ================= -->
-<section class="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800" id="main-content">
-    <div class="absolute inset-0 opacity-10">
-        <div class="absolute top-20 left-10 w-72 h-72 bg-accent-400 rounded-full blur-3xl"></div>
-        <div class="absolute bottom-20 right-10 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+<main id="main-content">
+
+<!-- ═══════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════ -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 text-white"
+         aria-labelledby="about-heading">
+
+  <!-- Decorative blobs -->
+  <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+    <div class="absolute top-10 left-4 sm:left-10 w-40 h-40 sm:w-64 sm:h-64 lg:w-72 lg:h-72 bg-accent-400 rounded-full blur-3xl opacity-10"></div>
+    <div class="absolute bottom-6 right-4 sm:right-10 w-48 h-48 sm:w-72 sm:h-72 lg:w-96 lg:h-96 bg-purple-400 rounded-full blur-3xl opacity-10"></div>
+  </div>
+
+  <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-24 sm:pt-28 lg:pt-36 pb-14 sm:pb-18 lg:pb-24">
+
+    <!-- Breadcrumb -->
+    <nav class="mb-6 sm:mb-8" aria-label="Breadcrumb">
+      <ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm"
+          itemscope itemtype="https://schema.org/BreadcrumbList">
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a href="{% url 'eduweb:index' %}" itemprop="item"
+             class="text-white/60 hover:text-white transition-colors underline-offset-2 hover:underline">
+            <span itemprop="name">Home</span>
+          </a>
+          <meta itemprop="position" content="1">
+        </li>
+        <li aria-hidden="true"><i data-lucide="chevron-right" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/40 flex-shrink-0"></i></li>
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" aria-current="page">
+          <span itemprop="name" class="text-white/80 font-medium">About Us</span>
+          <meta itemprop="position" content="2">
+        </li>
+      </ol>
+    </nav>
+
+    <!-- "Discover Our Story" pill -->
+    <div class="inline-flex items-center gap-2 bg-accent-400/20 backdrop-blur-sm text-accent-300 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-5 sm:mb-6 border border-accent-400/30"
+         aria-hidden="true">
+      <i data-lucide="info" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+      <span>Discover Our Story</span>
     </div>
 
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div class="max-w-4xl">
-            <div class="inline-flex items-center gap-2 bg-accent-400/20 backdrop-blur-sm text-accent-300 px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-accent-400/30 font-['Inter']">
-                <i data-lucide="info" class="w-4 h-4"></i>
-                <span>Discover Our Story</span>
-            </div>
+    <!-- Heading -->
+    <h1 id="about-heading"
+        class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold font-['Poppins'] leading-tight mb-5 sm:mb-6 text-white">
+      About<br>
+      {% with name=site_config.school_name|default:"Melchisedec Graduate Bible Academy" %}
+      {% endwith %}
+      <span class="text-accent-400">Academy</span>
+    </h1>
 
-            <h1 class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-tight font-['Poppins'] text-white">
-                {% with name=site_config.school_name|default:"Melchisedec International University" %}
-                {% with words=name.split %}
-                About
-                {% for word in words %}{% if not forloop.last %}{{ word }} {% endif %}{% endfor %}<span class="text-accent-400">{{ words|last }}</span>
-                {% endwith %}
-                {% endwith %}
-            </h1>
+    <p class="text-base sm:text-lg lg:text-xl xl:text-2xl text-gray-200 leading-relaxed max-w-2xl lg:max-w-3xl mb-8 sm:mb-10">
+      A non-denominational, non-profit Christian education and seminary institution — training end-time ministers of God, free of charge, since 1995.
+    </p>
 
-            <p class="text-xl lg:text-2xl mb-10 text-gray-200 leading-relaxed max-w-3xl font-['Inter']">
-                A world-class institution dedicated to empowering global education, innovation, and student success since 1995.
-            </p>
-
-            <div class="flex flex-col sm:flex-row gap-4">
-                <a href="#our-story" class="inline-flex items-center justify-center gap-2 bg-accent-400 text-primary-950 px-8 py-4 rounded-xl font-bold text-base lg:text-lg hover:bg-accent-500 transition-all shadow-xl hover:shadow-2xl hover:scale-105 font-['Inter']">
-                    <i data-lucide="book-open" class="w-5 h-5"></i>
-                    Our Story
-                </a>
-                <a href="#leadership" class="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:bg-white hover:text-primary-950 transition-all font-['Inter']">
-                    <i data-lucide="users" class="w-5 h-5"></i>
-                    Meet Our Leadership
-                </a>
-            </div>
-        </div>
+    <!-- CTA buttons -->
+    <div class="flex flex-col xs:flex-row flex-wrap gap-3 sm:gap-4">
+      <a href="#our-story"
+         class="inline-flex items-center justify-center gap-2 bg-accent-400 hover:bg-accent-500 active:bg-accent-600 text-primary-950 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base transition-all shadow-xl hover:shadow-2xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-accent-300 focus:ring-offset-2 focus:ring-offset-primary-950">
+        <i data-lucide="book-open" class="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true"></i>
+        Our Story
+      </a>
+      <a href="#leadership"
+         class="inline-flex items-center justify-center gap-2 border-2 border-white/70 hover:border-white text-white hover:bg-white hover:text-primary-950 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950">
+        <i data-lucide="users" class="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true"></i>
+        Meet Our Leadership
+      </a>
     </div>
+
+  </div>
 </section>
 
-<!-- ================= QUICK STATS ================= -->
-<section class="py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <article class="group p-6 lg:p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105">
-                <div class="flex items-center justify-center mb-4">
-                    <i data-lucide="award" class="w-10 h-10 lg:w-12 lg:h-12 text-primary-600"></i>
-                </div>
-                <div class="text-center">
-                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins'] animated-number" data-target="30">0</div>
-                    <div class="text-gray-600 font-medium text-sm sm:text-base font-['Inter']">Years of Excellence</div>
-                </div>
-            </article>
 
-            <article class="group p-6 lg:p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105">
-                <div class="flex items-center justify-center mb-4">
-                    <i data-lucide="globe" class="w-10 h-10 lg:w-12 lg:h-12 text-primary-600"></i>
-                </div>
-                <div class="text-center">
-                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins'] animated-number" data-target="120">0</div>
-                    <div class="text-gray-600 font-medium text-sm sm:text-base font-['Inter']">Countries Represented</div>
-                </div>
-            </article>
+<!-- ═══════════════════════════════════════════════════════
+     QUICK STATS
+═══════════════════════════════════════════════════════ -->
+<section class="py-10 sm:py-14 lg:py-20 bg-gradient-to-br from-gray-50 to-purple-50"
+         aria-label="Key facts and statistics">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
 
-            <article class="group p-6 lg:p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105">
-                <div class="flex items-center justify-center mb-4">
-                    <i data-lucide="trending-up" class="w-10 h-10 lg:w-12 lg:h-12 text-primary-600"></i>
-                </div>
-                <div class="text-center">
-                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins']">
-                        <span class="animated-number" data-target="95">0</span>%
-                    </div>
-                    <div class="text-gray-600 font-medium text-sm sm:text-base font-['Inter']">Graduate Employment</div>
-                </div>
-            </article>
-
-            <article class="group p-6 lg:p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:scale-105">
-                <div class="flex items-center justify-center mb-4">
-                    <i data-lucide="book-open" class="w-10 h-10 lg:w-12 lg:h-12 text-primary-600"></i>
-                </div>
-                <div class="text-center">
-                    <div class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-700 mb-2 font-['Poppins']">
-                        <span class="animated-number" data-target="50">0</span>+
-                    </div>
-                    <div class="text-gray-600 font-medium text-sm sm:text-base font-['Inter']">Academic Programs</div>
-                </div>
-            </article>
+      {% with stats="1995,Year Founded,calendar|2007,Govt. Approved,landmark|3,Degree Levels,graduation-cap|100%,Free Tuition,badge-check" %}
+      <!-- 1995 -->
+      <article class="group p-5 sm:p-6 lg:p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+        <div class="flex items-center justify-center mb-3 sm:mb-4" aria-hidden="true">
+          <i data-lucide="calendar" class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-primary-600"></i>
         </div>
-    </div>
-</section>
-
-<!-- ================= WHO WE ARE ================= -->
-<section class="py-16 lg:py-24 bg-white" id="who-we-are">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="building" class="w-4 h-4"></i>
-                <span>Our Identity</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Who We Are</h2>
-            <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                {{ site_config.school_name|default:"Melchisedec International University" }} is a globally recognized institution delivering high-quality, innovative education with flexibility and excellence.
-            </p>
-        </div>
-
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div class="order-2 lg:order-1">
-                <h3 class="text-2xl lg:text-3xl font-bold mb-6 text-primary-950 font-['Poppins']">Global Outlook, Local Impact</h3>
-
-                <div class="space-y-4 mb-8">
-                    <p class="text-gray-700 leading-relaxed font-['Inter']">
-                        Founded in 1995, MIU has been at the forefront of digital education transformation, providing accessible, world-class education that empowers students to achieve their personal and professional goals, regardless of geographic location.
-                    </p>
-                    <p class="text-gray-700 leading-relaxed font-['Inter']">
-                        Our diverse community of learners, faculty, and staff from over 120 countries creates a rich, multicultural environment that prepares students for success in an interconnected world.
-                    </p>
-                </div>
-
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <a href="#international" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all font-['Inter']">
-                        <i data-lucide="globe" class="w-5 h-5"></i>
-                        Our Global Community
-                    </a>
-                </div>
-            </div>
-
-            <div class="order-1 lg:order-2">
-                <div class="relative rounded-2xl overflow-hidden shadow-2xl aspect-video bg-gray-100">
-                    {% if site_config.promo_video_url %}
-                    <div class="absolute inset-0 w-full h-full [&>iframe]:w-full [&>iframe]:h-full">{{ site_config.promo_video_url|safe }}</div>
-                    {% else %}
-                    <iframe
-                        class="absolute inset-0 w-full h-full"
-                        src="https://www.youtube.com/embed/wzcQ5_XU58I?start=4"
-                        title="{{ site_config.school_short_name|default:'MIU' }} Global Learning Community"
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerpolicy="strict-origin-when-cross-origin"
-                        allowfullscreen
-                        loading="lazy">
-                    </iframe>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ================= MISSION, VISION & VALUES ================= -->
-<section class="py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-blue-50">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="compass" class="w-4 h-4"></i>
-                <span>Our Foundation</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Mission, Vision & Values</h2>
-        </div>
-
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            <article class="group bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-t-4 border-blue-500">
-                <div class="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <i data-lucide="target" class="w-8 h-8 text-blue-600"></i>
-                </div>
-                <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Mission</h3>
-                <p class="text-gray-700 leading-relaxed font-['Inter']">
-                    {{ site_config.about_mission|default:"To provide accessible, innovative, and transformative education that empowers individuals from all backgrounds to achieve their full potential and make meaningful contributions to society." }}
-                </p>
-            </article>
-
-            <article class="group bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-t-4 border-purple-500">
-                <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <i data-lucide="eye" class="w-8 h-8 text-purple-600"></i>
-                </div>
-                <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Vision</h3>
-                <p class="text-gray-700 leading-relaxed font-['Inter']">
-                    {{ site_config.about_vision|default:"To be a globally recognized leader in higher education, known for innovation, inclusivity, and preparing future-ready graduates who drive positive change worldwide." }}
-                </p>
-            </article>
-
-            <article class="group bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 border-t-4 border-accent-400 md:col-span-2 lg:col-span-1">
-                <div class="w-16 h-16 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <i data-lucide="heart" class="w-8 h-8 text-accent-600"></i>
-                </div>
-                <h3 class="font-bold text-xl lg:text-2xl mb-4 text-primary-950 font-['Poppins']">Our Values</h3>
-                <ul class="space-y-3">
-                    {% if site_config.about_values %}
-                        {% for value in site_config.about_values %}
-                        <li class="flex items-start gap-3">
-                            <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i>
-                            <span class="text-gray-700 font-['Inter']">{{ value }}</span>
-                        </li>
-                        {% endfor %}
-                    {% else %}
-                        <li class="flex items-start gap-3"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i><span class="text-gray-700 font-['Inter']">Excellence in Education</span></li>
-                        <li class="flex items-start gap-3"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i><span class="text-gray-700 font-['Inter']">Diversity &amp; Inclusion</span></li>
-                        <li class="flex items-start gap-3"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i><span class="text-gray-700 font-['Inter']">Innovation &amp; Creativity</span></li>
-                        <li class="flex items-start gap-3"><i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-green-600 mt-0.5"></i><span class="text-gray-700 font-['Inter']">Global Citizenship</span></li>
-                    {% endif %}
-                </ul>
-            </article>
-        </div>
-    </div>
-</section>
-
-<!-- ================= OUR HISTORY ================= -->
-<section class="py-16 lg:py-24 bg-white" id="our-story">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="clock" class="w-4 h-4"></i>
-                <span>Our Journey</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Our History</h2>
-            <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                From our founding to becoming a global education leader, discover {{ site_config.school_short_name|default:"MIU" }}'s journey of innovation and growth.
-            </p>
-        </div>
-
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
-            <div class="space-y-8">
-                {% if history_milestones %}
-                    {% for milestone in history_milestones %}
-                    <article class="relative {% if not forloop.last %}pb-8{% endif %} pl-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
-                        <div class="absolute -left-3 top-0 w-6 h-6 {% if forloop.last %}bg-accent-500{% else %}bg-primary-600{% endif %} rounded-full group-hover:scale-125 transition-transform"></div>
-                        <div class="{% if forloop.last %}bg-gradient-to-br from-yellow-50 to-amber-50 p-6 rounded-xl border-2 border-accent-200{% else %}bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl{% endif %}">
-                            <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">{{ milestone.year }} – {{ milestone.title }}</h3>
-                            <p class="text-gray-700 leading-relaxed font-['Inter']">{{ milestone.description }}</p>
-                        </div>
-                    </article>
-                    {% endfor %}
-                {% else %}
-                    {# Static fallback if no milestones in DB yet #}
-                    <article class="relative pl-8 pb-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
-                        <div class="absolute -left-3 top-0 w-6 h-6 bg-primary-600 rounded-full group-hover:scale-125 transition-transform"></div>
-                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl">
-                            <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">1995 – Founding</h3>
-                            <p class="text-gray-700 leading-relaxed font-['Inter']">{{ site_config.school_short_name|default:"MIU" }} is established with a vision to provide accessible, quality higher education through innovative delivery methods.</p>
-                        </div>
-                    </article>
-                    <article class="relative pl-8 border-l-4 border-primary-200 hover:border-primary-600 transition-colors group">
-                        <div class="absolute -left-3 top-0 w-6 h-6 bg-accent-500 rounded-full group-hover:scale-125 transition-transform"></div>
-                        <div class="bg-gradient-to-br from-yellow-50 to-amber-50 p-6 rounded-xl border-2 border-accent-200">
-                            <h3 class="font-bold text-xl lg:text-2xl mb-2 text-primary-950 font-['Poppins']">Today</h3>
-                            <p class="text-gray-700 leading-relaxed font-['Inter']">Recognized as a top global university with students from 120+ countries represented.</p>
-                        </div>
-                    </article>
-                {% endif %}
-            </div>
-
-            <div class="relative rounded-2xl overflow-hidden shadow-2xl h-[400px] lg:h-full group">
-                <img src="https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
-                     alt="MIU Campus Historical Building"
-                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                     loading="lazy">
-                <div class="absolute inset-0 bg-gradient-to-t from-primary-950/50 to-transparent"></div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ================= ACADEMIC EXCELLENCE ================= -->
-<section class="py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-blue-50">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="graduation-cap" class="w-4 h-4"></i>
-                <span>Our Faculties</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Academic Excellence</h2>
-            <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                Our academic structure is designed to foster interdisciplinary collaboration and innovation across diverse fields.
-            </p>
-        </div>
-
-        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {% for faculty in faculties %}
-            <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
-                <div class="p-6 lg:p-8">
-                    <div class="w-14 h-14 bg-gradient-to-r from-primary-100 to-purple-200 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <i data-lucide="{{ faculty.icon }}" class="w-7 h-7 text-primary-700"></i>
-                    </div>
-                    <h3 class="font-bold text-xl mb-3 text-primary-950 font-['Poppins']">{{ faculty.name }}</h3>
-                    <p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ faculty.description|truncatewords:20 }}</p>
-                </div>
-            </article>
-            {% endfor %}
-        </div>
-
         <div class="text-center">
-            <a href="{% url 'eduweb:all_programs' %}"
-                class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all font-['Inter']">
-                <i data-lucide="grid-3x3" class="w-5 h-5"></i>
-                Explore All Programs
-            </a>
+          <div class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-700 mb-1 sm:mb-2 font-['Poppins']">1995</div>
+          <div class="text-gray-600 font-medium text-xs sm:text-sm lg:text-base">Year Founded</div>
         </div>
-    </div>
-</section>
+      </article>
 
-<!-- ================= INTERNATIONAL COMMUNITY ================= -->
-<section class="py-16 lg:py-24 bg-white" id="international">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="globe" class="w-4 h-4"></i>
-                <span>Global Presence</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">International Community</h2>
-            <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                Welcome to our diverse community of students from 120+ countries across the globe.
-            </p>
+      <!-- 2007 -->
+      <article class="group p-5 sm:p-6 lg:p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+        <div class="flex items-center justify-center mb-3 sm:mb-4" aria-hidden="true">
+          <i data-lucide="landmark" class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-primary-600"></i>
         </div>
-
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 mb-12">
-            <div>
-                <h3 class="text-2xl lg:text-3xl font-bold mb-6 text-primary-950 font-['Poppins']">Global Campuses & Partnerships</h3>
-                <p class="text-gray-700 mb-6 leading-relaxed font-['Inter']">
-                    With campuses on three continents and partnerships with 200+ institutions worldwide, MIU offers truly global educational experiences. Our exchange programs allow students to study abroad while earning credits toward their degrees.
-                </p>
-
-                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 lg:p-8 border border-blue-100">
-                    <h4 class="font-bold text-lg lg:text-xl mb-4 text-blue-900 font-['Poppins']">International Student Support</h4>
-                    <ul class="space-y-3">
-                        <li class="flex items-start gap-3">
-                            <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-blue-600 mt-0.5"></i>
-                            <span class="text-gray-700 font-['Inter']">Visa and immigration assistance</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-blue-600 mt-0.5"></i>
-                            <span class="text-gray-700 font-['Inter']">Airport pickup and arrival services</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-blue-600 mt-0.5"></i>
-                            <span class="text-gray-700 font-['Inter']">Cross-cultural training programs</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i data-lucide="check-circle" class="w-5 h-5 flex-shrink-0 text-blue-600 mt-0.5"></i>
-                            <span class="text-gray-700 font-['Inter']">International student advisors</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <h3 class="text-2xl lg:text-3xl font-bold mb-8 text-primary-950 font-['Poppins']">Global Reach</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex items-center bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl group hover:scale-105 transition-transform">
-                        <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                            <i data-lucide="globe" class="w-6 h-6 text-white"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">120+</div>
-                            <div class="text-sm text-gray-600 font-['Inter']">Countries</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl group hover:scale-105 transition-transform">
-                        <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                            <i data-lucide="building" class="w-6 h-6 text-white"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">200+</div>
-                            <div class="text-sm text-gray-600 font-['Inter']">Partner Institutions</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-xl group hover:scale-105 transition-transform">
-                        <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                            <i data-lucide="plane" class="w-6 h-6 text-white"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">40+</div>
-                            <div class="text-sm text-gray-600 font-['Inter']">Exchange Programs</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center bg-gradient-to-br from-yellow-50 to-amber-100 p-5 rounded-xl group hover:scale-105 transition-transform">
-                        <div class="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                            <i data-lucide="languages" class="w-6 h-6 text-white"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-2xl text-primary-950 font-['Poppins']">15+</div>
-                            <div class="text-sm text-gray-600 font-['Inter']">Languages Spoken</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ================= LEADERSHIP & GOVERNANCE ================= -->
-<section class="py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-blue-50" id="leadership">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="users" class="w-4 h-4"></i>
-                <span>Our Leaders</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Leadership & Governance</h2>
-            <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                Guided by experienced leaders committed to educational excellence and innovation.
-            </p>
-        </div>
-
-        {% comment %}— reusable card macro via include would be ideal but inline is fine here —{% endcomment %}
-
-        {# ── ADMINISTRATIVE / MANAGEMENT BOARD ── #}
-        {% if admin_board_members %}
-        <div class="mb-14">
-            <h3 class="text-xl sm:text-2xl font-bold text-primary-950 font-['Poppins'] mb-6 flex items-center gap-3">
-                <span class="w-8 h-1 bg-primary-600 rounded-full inline-block"></span>
-                Administrative &amp; Management Board
-            </h3>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {% for member in admin_board_members %}
-                <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
-                    <div class="h-56 bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center relative overflow-hidden">
-                        <div class="absolute inset-0 bg-black/10"></div>
-                        {% if member.photo %}
-                        <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
-                        {% else %}
-                        <i data-lucide="user-circle" class="w-20 h-20 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
-                        {% endif %}
-                    </div>
-                    <div class="p-6 text-center">
-                        <h4 class="font-bold text-lg lg:text-xl mb-1 text-primary-950 font-['Poppins']">{{ member.name }}</h4>
-                        <p class="text-primary-600 font-semibold text-sm mb-3 font-['Inter']">{{ member.role }}</p>
-                        {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
-                    </div>
-                </article>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {# ── ACADEMIC BOARD ── #}
-        {% if academic_board_members %}
-        <div class="mb-14">
-            <h3 class="text-xl sm:text-2xl font-bold text-primary-950 font-['Poppins'] mb-6 flex items-center gap-3">
-                <span class="w-8 h-1 bg-blue-500 rounded-full inline-block"></span>
-                Academic Board
-            </h3>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {% for member in academic_board_members %}
-                <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
-                    <div class="h-56 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center relative overflow-hidden">
-                        <div class="absolute inset-0 bg-black/10"></div>
-                        {% if member.photo %}
-                        <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
-                        {% else %}
-                        <i data-lucide="user-circle" class="w-20 h-20 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
-                        {% endif %}
-                    </div>
-                    <div class="p-6 text-center">
-                        <h4 class="font-bold text-lg lg:text-xl mb-1 text-primary-950 font-['Poppins']">{{ member.name }}</h4>
-                        <p class="text-blue-600 font-semibold text-sm mb-3 font-['Inter']">{{ member.role }}</p>
-                        {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
-                    </div>
-                </article>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {# ── ADVISORATE BOARD ── #}
-        {% if advisorate_board_members %}
-        <div class="mb-14">
-            <h3 class="text-xl sm:text-2xl font-bold text-primary-950 font-['Poppins'] mb-6 flex items-center gap-3">
-                <span class="w-8 h-1 bg-purple-500 rounded-full inline-block"></span>
-                Advisorate Board
-            </h3>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {% for member in advisorate_board_members %}
-                <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
-                    <div class="h-56 bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center relative overflow-hidden">
-                        <div class="absolute inset-0 bg-black/10"></div>
-                        {% if member.photo %}
-                        <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
-                        {% else %}
-                        <i data-lucide="user-circle" class="w-20 h-20 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
-                        {% endif %}
-                    </div>
-                    <div class="p-6 text-center">
-                        <h4 class="font-bold text-lg lg:text-xl mb-1 text-primary-950 font-['Poppins']">{{ member.name }}</h4>
-                        <p class="text-purple-600 font-semibold text-sm mb-3 font-['Inter']">{{ member.role }}</p>
-                        {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
-                    </div>
-                </article>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {# ── STAFF ── #}
-        {% if staff_members %}
-        <div class="mb-6">
-            <h3 class="text-xl sm:text-2xl font-bold text-primary-950 font-['Poppins'] mb-6 flex items-center gap-3">
-                <span class="w-8 h-1 bg-emerald-500 rounded-full inline-block"></span>
-                Staff
-            </h3>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {% for member in staff_members %}
-                <article class="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
-                    <div class="h-56 bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center relative overflow-hidden">
-                        <div class="absolute inset-0 bg-black/10"></div>
-                        {% if member.photo %}
-                        <img src="{{ member.photo.url }}" alt="{{ member.name }}" class="absolute inset-0 w-full h-full object-cover object-top">
-                        {% else %}
-                        <i data-lucide="user-circle" class="w-20 h-20 text-white/90 relative z-10 group-hover:scale-110 transition-transform"></i>
-                        {% endif %}
-                    </div>
-                    <div class="p-6 text-center">
-                        <h4 class="font-bold text-lg lg:text-xl mb-1 text-primary-950 font-['Poppins']">{{ member.name }}</h4>
-                        <p class="text-emerald-600 font-semibold text-sm mb-3 font-['Inter']">{{ member.role }}</p>
-                        {% if member.bio %}<p class="text-gray-600 text-sm leading-relaxed font-['Inter']">{{ member.bio|truncatewords:20 }}</p>{% endif %}
-                    </div>
-                </article>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {# ── FALLBACK if nothing is in DB yet ── #}
-        {% if not admin_board_members and not academic_board_members and not advisorate_board_members and not staff_members %}
-        <div class="text-center py-16">
-            <i data-lucide="users" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
-            <p class="text-gray-400 font-['Inter']">Leadership profiles coming soon.</p>
-        </div>
-        {% endif %}
-
-    </div>
-</section>
-
-<!-- ================= ACCREDITATION & RANKINGS ================= -->
-<section class="py-16 lg:py-24 bg-white">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="award" class="w-4 h-4"></i>
-                <span>Recognition</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Accreditation & Rankings</h2>
-            <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                Recognized excellence in higher education with global accreditation and rankings.
-            </p>
-        </div>
-
-        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 p-6 text-center border border-gray-100">
-                <div class="w-16 h-16 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <i data-lucide="shield-check" class="w-8 h-8 text-blue-600"></i>
-                </div>
-                <h3 class="font-bold text-lg lg:text-xl mb-2 text-primary-950 font-['Poppins']">Regional Accreditation</h3>
-                <p class="text-gray-600 text-sm font-['Inter']">Accredited by the Higher Learning Commission (HLC)</p>
-            </article>
-
-            <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 p-6 text-center border border-gray-100">
-                <div class="w-16 h-16 bg-gradient-to-r from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <i data-lucide="star" class="w-8 h-8 text-green-600"></i>
-                </div>
-                <h3 class="font-bold text-lg lg:text-xl mb-2 text-primary-950 font-['Poppins']">Global Rankings</h3>
-                <p class="text-gray-600 text-sm font-['Inter']">Top 200 in World University Rankings (Times Higher Education)</p>
-            </article>
-
-            <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 p-6 text-center border border-gray-100">
-                <div class="w-16 h-16 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <i data-lucide="check-circle" class="w-8 h-8 text-purple-600"></i>
-                </div>
-                <h3 class="font-bold text-lg lg:text-xl mb-2 text-primary-950 font-['Poppins']">Program Accreditation</h3>
-                <p class="text-gray-600 text-sm font-['Inter']">AACSB, ABET, and CCNE accredited programs</p>
-            </article>
-
-            <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 p-6 text-center border border-gray-100">
-                <div class="w-16 h-16 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <i data-lucide="trophy" class="w-8 h-8 text-yellow-600"></i>
-                </div>
-                <h3 class="font-bold text-lg lg:text-xl mb-2 text-primary-950 font-['Poppins']">Quality Recognition</h3>
-                <p class="text-gray-600 text-sm font-['Inter']">5 Stars QS Rating for Teaching & Facilities</p>
-            </article>
-        </div>
-    </div>
-</section>
-
-<!-- ================= CAMPUS & FACILITIES ================= -->
-<section class="py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-blue-50">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="building-2" class="w-4 h-4"></i>
-                <span>Our Facilities</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Campus & Facilities</h2>
-            <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                State-of-the-art facilities designed to enhance learning experiences and campus life.
-            </p>
-        </div>
-
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
-                <div class="h-48 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1589998059171-988d887df646?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                         alt="Modern MIU Library Interior"
-                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                         loading="lazy">
-                </div>
-                <div class="p-6">
-                    <h3 class="font-bold text-xl lg:text-2xl mb-3 text-primary-950 font-['Poppins']">Modern Library</h3>
-                    <p class="text-gray-700 mb-4 leading-relaxed font-['Inter']">500,000+ physical and digital resources, 24/7 access, and collaborative study spaces.</p>
-                    <div class="flex items-center text-sm text-gray-500 font-['Inter']">
-                        <i data-lucide="clock" class="w-4 h-4 mr-2 text-primary-600"></i>
-                        <span>Open 24/7 during exam periods</span>
-                    </div>
-                </div>
-            </article>
-
-            <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden">
-                <div class="h-48 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                         alt="MIU Advanced Research Laboratory"
-                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                         loading="lazy">
-                </div>
-                <div class="p-6">
-                    <h3 class="font-bold text-xl lg:text-2xl mb-3 text-primary-950 font-['Poppins']">Research Laboratories</h3>
-                    <p class="text-gray-700 mb-4 leading-relaxed font-['Inter']">Advanced research facilities for biotechnology, AI, engineering, and data science.</p>
-                    <div class="flex items-center text-sm text-gray-500 font-['Inter']">
-                        <i data-lucide="flask-conical" class="w-4 h-4 mr-2 text-primary-600"></i>
-                        <span>15 interdisciplinary research centers</span>
-                    </div>
-                </div>
-            </article>
-
-            <article class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 overflow-hidden md:col-span-2 lg:col-span-1">
-                <div class="h-48 overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                         alt="MIU Sports and Recreation Center"
-                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                         loading="lazy">
-                </div>
-                <div class="p-6">
-                    <h3 class="font-bold text-xl lg:text-2xl mb-3 text-primary-950 font-['Poppins']">Recreation Center</h3>
-                    <p class="text-gray-700 mb-4 leading-relaxed font-['Inter']">Olympic-sized pool, fitness center, basketball courts, and wellness programs.</p>
-                    <div class="flex items-center text-sm text-gray-500 font-['Inter']">
-                        <i data-lucide="heart" class="w-4 h-4 mr-2 text-primary-600"></i>
-                        <span>Free for all students and staff</span>
-                    </div>
-                </div>
-            </article>
-        </div>
-
-        {% if site_config.virtual_tour_url %}
         <div class="text-center">
-            <button onclick="document.getElementById('tourModal').classList.remove('hidden')"
-                    class="inline-flex items-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all font-['Inter']">
-                <i data-lucide="video" class="w-5 h-5"></i>
-                Take Virtual Campus Tour
-            </button>
+          <div class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-700 mb-1 sm:mb-2 font-['Poppins']">2007</div>
+          <div class="text-gray-600 font-medium text-xs sm:text-sm lg:text-base">Govt. Approved</div>
         </div>
+      </article>
 
-        <!-- Virtual Tour Modal -->
-        <div id="tourModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Virtual Campus Tour">
-            <div class="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden shadow-2xl">
-                <!-- Close button -->
-                <button onclick="closeTourModal()"
-                        class="absolute top-3 right-3 z-10 w-10 h-10 bg-white/10 hover:bg-white/25 rounded-full flex items-center justify-center text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white"
-                        aria-label="Close virtual tour">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-                <!-- Video embed -->
-                <div class="aspect-video w-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0">
-                    {{ site_config.virtual_tour_url|safe }}
-                </div>
-            </div>
+      <!-- 3 -->
+      <article class="group p-5 sm:p-6 lg:p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+        <div class="flex items-center justify-center mb-3 sm:mb-4" aria-hidden="true">
+          <i data-lucide="graduation-cap" class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-primary-600"></i>
         </div>
+        <div class="text-center">
+          <div class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-700 mb-1 sm:mb-2 font-['Poppins']">3</div>
+          <div class="text-gray-600 font-medium text-xs sm:text-sm lg:text-base">Degree Levels</div>
+        </div>
+      </article>
 
-        <script>
-        function closeTourModal() {
-            document.getElementById('tourModal').classList.add('hidden');
-            // Stop video by replacing the embed (removes autoplay src)
-            const container = document.querySelector('#tourModal .aspect-video');
-            const html = container.innerHTML;
-            container.innerHTML = '';
-            setTimeout(() => { container.innerHTML = html; }, 100);
-        }
-        // Close on backdrop click
-        document.getElementById('tourModal').addEventListener('click', function(e) {
-            if (e.target === this) closeTourModal();
-        });
-        // Close on Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeTourModal();
-        });
-        </script>
-        {% endif %}
+      <!-- 100% -->
+      <article class="group p-5 sm:p-6 lg:p-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+        <div class="flex items-center justify-center mb-3 sm:mb-4" aria-hidden="true">
+          <i data-lucide="badge-check" class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-primary-600"></i>
+        </div>
+        <div class="text-center">
+          <div class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-700 mb-1 sm:mb-2 font-['Poppins']">100%</div>
+          <div class="text-gray-600 font-medium text-xs sm:text-sm lg:text-base">Free Tuition</div>
+        </div>
+      </article>
+      {% endwith %}
+
     </div>
+  </div>
 </section>
 
-<!-- ================= STUDENT SUPPORT & SERVICES ================= -->
-<section class="py-16 lg:py-24 bg-white">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12 lg:mb-16">
-            <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 font-['Inter']">
-                <i data-lucide="life-buoy" class="w-4 h-4"></i>
-                <span>Student Services</span>
-            </div>
-            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary-950 mb-4 font-['Poppins']">Student Support & Services</h2>
-            <p class="text-gray-600 max-w-3xl mx-auto text-base lg:text-lg leading-relaxed font-['Inter']">
-                Comprehensive support services for holistic student development and success.
-            </p>
-        </div>
 
-        <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <article class="bg-gradient-to-br from-blue-50 to-blue-100 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-blue-200">
-                <div class="w-14 h-14 bg-blue-500 rounded-xl flex items-center justify-center mb-4">
-                    <i data-lucide="book-open" class="w-7 h-7 text-white"></i>
-                </div>
-                <h3 class="font-bold text-xl mb-4 text-primary-950 font-['Poppins']">Academic Support</h3>
-                <ul class="space-y-3 text-gray-700">
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Tutoring centers for all subjects</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Writing and research assistance</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Academic advising and mentoring</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Technology support and digital literacy</span>
-                    </li>
-                </ul>
-            </article>
+<!-- ═══════════════════════════════════════════════════════
+     WHO WE ARE
+═══════════════════════════════════════════════════════ -->
+<section class="py-12 sm:py-16 lg:py-24 bg-white" id="who-we-are" aria-labelledby="who-heading">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
 
-            <article class="bg-gradient-to-br from-green-50 to-green-100 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-green-200">
-                <div class="w-14 h-14 bg-green-500 rounded-xl flex items-center justify-center mb-4">
-                    <i data-lucide="briefcase" class="w-7 h-7 text-white"></i>
-                </div>
-                <h3 class="font-bold text-xl mb-4 text-primary-950 font-['Poppins']">Career Services</h3>
-                <ul class="space-y-3 text-gray-700">
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Career counseling and job search strategies</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Internship and co-op placement</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Networking events and career fairs</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Resume and interview preparation</span>
-                    </li>
-                </ul>
-            </article>
-
-            <article class="bg-gradient-to-br from-purple-50 to-purple-100 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 border border-purple-200">
-                <div class="w-14 h-14 bg-purple-500 rounded-xl flex items-center justify-center mb-4">
-                    <i data-lucide="heart-pulse" class="w-7 h-7 text-white"></i>
-                </div>
-                <h3 class="font-bold text-xl mb-4 text-primary-950 font-['Poppins']">Health & Wellbeing</h3>
-                <ul class="space-y-3 text-gray-700">
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">24/7 health center with medical professionals</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Counseling and mental health services</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Nutritional counseling and wellness programs</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <i data-lucide="check-circle" class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0"></i>
-                        <span class="font-['Inter']">Disability support and accessibility services</span>
-                    </li>
-                </ul>
-            </article>
-        </div>
+    <!-- Section header -->
+    <div class="text-center mb-10 sm:mb-12 lg:mb-16">
+      <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4"
+           aria-hidden="true">
+        <i data-lucide="building" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <span>Our Identity</span>
+      </div>
+      <h2 id="who-heading" class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-950 font-['Poppins']">
+        Who We Are
+      </h2>
     </div>
-</section>
 
-<!-- ================= CALL TO ACTION ================= -->
-<section class="py-20 lg:py-28 bg-gray-50">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 font-['Poppins'] text-primary-950">
-            Ready to Start Your Journey with {{ site_config.school_short_name|default:"MIU" }}?
-        </h2>
-        <p class="text-xl lg:text-2xl mb-10 text-gray-600 max-w-3xl mx-auto leading-relaxed font-['Inter']">
-            {{ site_config.footer_tagline|default:"Join our global community of learners and innovators. Your future starts here." }}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16 items-start">
+
+      <!-- Founder photo -->
+      <div class="order-2 lg:order-1">
+        {% with founder=admin_board_members.first %}
+          {% if founder and founder.photo %}
+            <div class="relative rounded-2xl overflow-hidden shadow-2xl"
+                 itemscope itemtype="https://schema.org/Person">
+              <img src="{{ founder.photo.url }}"
+                   alt="Portrait of {{ founder.name }}, {{ founder.role }}"
+                   class="w-full h-64 sm:h-80 lg:h-[480px] object-cover object-top"
+                   loading="lazy"
+                   itemprop="image">
+              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-primary-950/90 via-primary-950/50 to-transparent px-4 sm:px-6 py-4 sm:py-6">
+                <p class="font-bold text-white text-base sm:text-lg font-['Poppins']" itemprop="name">{{ founder.name }}</p>
+                <p class="text-accent-300 text-xs sm:text-sm font-semibold" itemprop="jobTitle">{{ founder.role }}</p>
+              </div>
+            </div>
+          {% else %}
+            <div class="relative rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary-900 to-primary-700 h-64 sm:h-80 lg:h-[480px] flex flex-col items-center justify-center gap-4 sm:gap-5"
+                 role="img"
+                 aria-label="{% if founder %}{{ founder.name }}, {{ founder.role }}{% else %}Dr. John Amarachukwu Daniel, Founder / President{% endif %}">
+              <div class="w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-white/15 flex items-center justify-center" aria-hidden="true">
+                <i data-lucide="user-circle" class="w-12 h-12 sm:w-16 sm:h-16 text-white/70"></i>
+              </div>
+              <div class="text-center px-4 sm:px-6">
+                <p class="font-bold text-white text-lg sm:text-xl font-['Poppins'] mb-1">
+                  {% if founder %}{{ founder.name }}{% else %}Dr. John Amarachukwu Daniel{% endif %}
+                </p>
+                <p class="text-accent-300 text-xs sm:text-sm font-semibold">
+                  {% if founder %}{{ founder.role }}{% else %}Founder / President{% endif %}
+                </p>
+              </div>
+            </div>
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <!-- Intro text -->
+      <div class="order-1 lg:order-2 space-y-4 sm:space-y-5">
+        <p class="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg">
+          {{ site_config.school_name|default:"Melchisedec Graduate Bible Academy" }} is a non-denominational, non-profit Christian education and seminary institution established by the Lord Jesus through His anointed servant Dr. John A. Daniel.
         </p>
-        <div class="flex flex-col sm:flex-row justify-center gap-4 lg:gap-6">
-            <a href="{% url 'eduweb:apply' %}" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 text-white px-8 py-4 lg:px-10 lg:py-5 rounded-xl font-bold text-base lg:text-lg hover:shadow-xl hover:scale-105 transition-all font-['Inter']">
-                <i data-lucide="send" class="w-5 h-5"></i>
-                Apply Now
-            </a>
-            <a href="{% url 'eduweb:all_programs' %}" class="inline-flex items-center justify-center gap-2 border-2 border-primary-700 text-primary-700 px-8 py-4 lg:px-10 lg:py-5 rounded-xl font-semibold text-base lg:text-lg hover:bg-primary-700 hover:text-white transition-all font-['Inter']">
-                <i data-lucide="grid-3x3" class="w-5 h-5"></i>
-                Explore Programs
-            </a>
-            <a href="#contact" class="inline-flex items-center justify-center gap-2 border-2 border-primary-700 text-primary-700 px-8 py-4 lg:px-10 lg:py-5 rounded-xl font-semibold text-base lg:text-lg hover:bg-primary-700 hover:text-white transition-all font-['Inter']">
-                <i data-lucide="phone" class="w-5 h-5"></i>
-                Contact Admissions
-            </a>
+        <p class="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg">
+          The institution was physically founded by Dr. John A. Daniel on 15th January 2000 and approved by the Federal Government of Nigeria as Help and Reconciliation Ministry and Bible Training College, with vested authority to award diploma certificates to its students.
+        </p>
+        <p class="text-gray-700 leading-relaxed text-sm sm:text-base lg:text-lg">
+          Due to popular demand from both students and graduates who could not afford fees for degree programs at other theological institutions — and following the Lord's direction — the institution was upgraded to a degree-awarding university, approved and registered by the Federal Government in November 2007, hence the final birth of Melchisedec Graduate Bible Academy.
+        </p>
+
+        <!-- Key fact chips -->
+        <div class="flex flex-wrap gap-2 sm:gap-3 pt-2">
+          <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-primary-50 text-primary-700 border border-primary-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
+            Lagos, Nigeria
+          </span>
+          <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-primary-50 text-primary-700 border border-primary-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold">
+            <i data-lucide="award" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
+            BSc · MSc · PhD
+          </span>
+          <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-accent-50 text-accent-700 border border-accent-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold">
+            <i data-lucide="heart" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
+            Free Tuition
+          </span>
+          <span class="inline-flex items-center gap-1.5 sm:gap-2 bg-primary-50 text-primary-700 border border-primary-200 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold">
+            <i data-lucide="globe" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
+            Non-Denominational
+          </span>
         </div>
+
+        <!-- Action buttons -->
+        <div class="flex flex-col xs:flex-row flex-wrap gap-3 pt-2">
+          <a href="{% url 'eduweb:apply' %}"
+             class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary-950 to-primary-700 hover:from-primary-800 hover:to-primary-600 text-white px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl font-semibold text-sm sm:text-base hover:shadow-xl hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-primary-700 focus:ring-offset-2">
+            <i data-lucide="send" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
+            Apply Now
+          </a>
+          <a href="#leadership"
+             class="inline-flex items-center justify-center gap-2 border-2 border-primary-700 text-primary-700 hover:bg-primary-700 hover:text-white px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl font-semibold text-sm sm:text-base transition-all focus:outline-none focus:ring-2 focus:ring-primary-700 focus:ring-offset-2">
+            <i data-lucide="users" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
+            Our Leaders
+          </a>
+        </div>
+      </div>
+
     </div>
+  </div>
 </section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     HISTORY TIMELINE
+═══════════════════════════════════════════════════════ -->
+<section class="py-12 sm:py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-purple-50"
+         id="our-story"
+         aria-labelledby="history-heading">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+
+    <div class="text-center mb-10 sm:mb-12 lg:mb-16">
+      <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4"
+           aria-hidden="true">
+        <i data-lucide="clock" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <span>Our Journey</span>
+      </div>
+      <h2 id="history-heading" class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-950 mb-3 sm:mb-4 font-['Poppins']">
+        Our History: Faith in Action
+      </h2>
+      <p class="text-gray-600 max-w-xl sm:max-w-2xl mx-auto text-sm sm:text-base lg:text-lg leading-relaxed">
+        From a Bible study in Lagos to a recognised degree-awarding institution — a journey guided by faith.
+      </p>
+    </div>
+
+    <!-- Timeline -->
+    <div class="max-w-sm sm:max-w-2xl lg:max-w-3xl mx-auto" role="list" aria-label="Historical milestones">
+
+      {% if history_milestones %}
+        {% for milestone in history_milestones %}
+        <div class="relative flex gap-4 sm:gap-6 {% if not forloop.last %}pb-8 sm:pb-10{% endif %}" role="listitem">
+          <!-- Rail + dot -->
+          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 z-10
+              {% if forloop.first %}bg-primary-600 shadow-lg shadow-primary-200
+              {% elif forloop.last %}bg-accent-500 shadow-lg shadow-accent-200
+              {% else %}bg-white border-2 border-primary-400 shadow-md{% endif %}">
+              {% if forloop.first %}<i data-lucide="flag" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+              {% elif forloop.last %}<i data-lucide="star" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+              {% else %}<i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>{% endif %}
+            </div>
+            {% if not forloop.last %}
+            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
+            {% endif %}
+          </div>
+          <!-- Card -->
+          <div class="flex-1 pb-2">
+            <span class="inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold tracking-widest uppercase px-2.5 sm:px-3 py-1 rounded-full mb-2 sm:mb-3
+              {% if forloop.first %}bg-primary-600 text-white
+              {% elif forloop.last %}bg-accent-500 text-white
+              {% else %}bg-primary-100 text-primary-700{% endif %}"
+                  aria-label="Year: {{ milestone.year }}">
+              <i data-lucide="calendar" class="w-2.5 h-2.5 sm:w-3 sm:h-3" aria-hidden="true"></i>
+              {{ milestone.year }}
+            </span>
+            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6
+              {% if forloop.first %}border-l-4 border-primary-600
+              {% elif forloop.last %}border-l-4 border-accent-500
+              {% else %}border-l-4 border-primary-300{% endif %}">
+              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-1.5 sm:mb-2 font-['Poppins']">{{ milestone.title }}</h3>
+              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">{{ milestone.description }}</p>
+            </article>
+          </div>
+        </div>
+        {% endfor %}
+
+      {% else %}
+        <!-- Static fallback milestones -->
+
+        <!-- 1995 -->
+        <div class="relative flex gap-4 sm:gap-6 pb-8 sm:pb-10" role="listitem">
+          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-primary-600 shadow-lg shadow-primary-200">
+              <i data-lucide="flag" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+            </div>
+            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
+          </div>
+          <div class="flex-1 pb-2">
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-primary-600 text-white">
+              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 1995
+            </span>
+            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-primary-600">
+              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">Beginning</h3>
+              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">Melchisedec Graduate Bible Academy is a subsidiary of Help and Reconciliation Ministry AKA Harmabitrac World Outreach, physically founded in Lagos Nigeria on October 15, 1995 by Apostle John Daniel.</p>
+            </article>
+          </div>
+        </div>
+
+        <!-- 2000 -->
+        <div class="relative flex gap-4 sm:gap-6 pb-8 sm:pb-10" role="listitem">
+          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-white border-2 border-primary-400 shadow-md">
+              <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>
+            </div>
+            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
+          </div>
+          <div class="flex-1 pb-2">
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-primary-100 text-primary-700">
+              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 2000
+            </span>
+            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-primary-300">
+              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">From Bible Study to College</h3>
+              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">The Bible study portion of the Ministry was upgraded to an Institution and founded by Dr John A. Daniel on 15th January 2000. It was registered and approved by the Federal Government of Nigeria as Help and Reconciliation Ministry and Bible Training College with authority to award basic, advanced and diploma certificates to its students.</p>
+            </article>
+          </div>
+        </div>
+
+        <!-- 2004 -->
+        <div class="relative flex gap-4 sm:gap-6 pb-8 sm:pb-10" role="listitem">
+          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-white border-2 border-primary-400 shadow-md">
+              <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>
+            </div>
+            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
+          </div>
+          <div class="flex-1 pb-2">
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-primary-100 text-primary-700">
+              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 2004
+            </span>
+            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-primary-300">
+              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">Expansion — USA Campus</h3>
+              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">In January 2004, Apostle John Daniel founded Help and Reconciliation Ministry and Bible Training College Newark NJ USA as a non-profit organization, providing the same services as the Lagos office but with particular attention to social and charitable services. See <a href="http://www.harmabitrac.org" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline focus:outline-none focus:ring-1 focus:ring-primary-600 rounded">www.harmabitrac.org</a> for details.</p>
+            </article>
+          </div>
+        </div>
+
+        <!-- 2007 -->
+        <div class="relative flex gap-4 sm:gap-6 pb-8 sm:pb-10" role="listitem">
+          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-white border-2 border-primary-400 shadow-md">
+              <i data-lucide="clock" class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600"></i>
+            </div>
+            <div class="flex-1 w-0.5 bg-gradient-to-b from-primary-300 to-primary-100 mt-2"></div>
+          </div>
+          <div class="flex-1 pb-2">
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-primary-100 text-primary-700">
+              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 2007
+            </span>
+            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-primary-300">
+              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">Government Approval</h3>
+              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">We applied to the Federal Ministry of Education Nigeria, and after 2 years of inspecting our core requirements, we were finally approved and registered by the Federal Government of Nigeria in November 2007 as Melchisedec Graduate Bible Academy Lagos Nigeria.</p>
+            </article>
+          </div>
+        </div>
+
+        <!-- 2024 -->
+        <div class="relative flex gap-4 sm:gap-6" role="listitem">
+          <div class="flex flex-col items-center flex-shrink-0 w-10 sm:w-12" aria-hidden="true">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-10 bg-accent-500 shadow-lg shadow-accent-200">
+              <i data-lucide="star" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+            </div>
+          </div>
+          <div class="flex-1 pb-2">
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full mb-3 bg-accent-500 text-white">
+              <i data-lucide="calendar" class="w-3 h-3" aria-hidden="true"></i> 2024
+            </span>
+            <article class="bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-0.5 p-4 sm:p-6 border-l-4 border-accent-500">
+              <h3 class="font-bold text-base sm:text-lg text-primary-950 mb-2 font-['Poppins']">From College to University</h3>
+              <p class="text-gray-600 text-xs sm:text-sm leading-relaxed">Due to continued demand from both students and graduates of the institution who could not afford tuition fees for degree programs, the Lord granted our request to further upgrade the institution to a degree awarding university (Bachelors, Masters and Doctorate).</p>
+            </article>
+          </div>
+        </div>
+
+      {% endif %}
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MISSION · VISION · VALUES
+═══════════════════════════════════════════════════════ -->
+<section class="py-12 sm:py-16 lg:py-24 bg-white" aria-labelledby="mvv-heading">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+
+    <div class="text-center mb-10 sm:mb-12 lg:mb-16">
+      <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4"
+           aria-hidden="true">
+        <i data-lucide="compass" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <span>Our Foundation</span>
+      </div>
+      <h2 id="mvv-heading" class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-950 font-['Poppins']">
+        Mission, Vision &amp; Values
+      </h2>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-8">
+
+      <!-- Mission -->
+      <article class="group bg-white p-6 sm:p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-primary-600">
+        <div class="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform" aria-hidden="true">
+          <i data-lucide="target" class="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-primary-700"></i>
+        </div>
+        <h3 class="font-bold text-lg sm:text-xl lg:text-2xl mb-3 sm:mb-4 text-primary-950 font-['Poppins']">Our Mission</h3>
+        <p class="text-gray-700 leading-relaxed text-sm sm:text-base">
+          {{ site_config.about_mission|default:"Our mission according to the Lord's command is to train end-time ministers of God on a free-of-charge basis in preparation for their ministerial duties. Our curriculum exceeds both national and international standards for Christian universities." }}
+        </p>
+      </article>
+
+      <!-- Vision -->
+      <article class="group bg-white p-6 sm:p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-purple-500">
+        <div class="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform" aria-hidden="true">
+          <i data-lucide="eye" class="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-purple-600"></i>
+        </div>
+        <h3 class="font-bold text-lg sm:text-xl lg:text-2xl mb-3 sm:mb-4 text-primary-950 font-['Poppins']">Our Vision</h3>
+        <p class="text-gray-700 leading-relaxed text-sm sm:text-base">
+          {{ site_config.about_vision|default:"Our vision is to teach the pure word of God which many people in Christendom today call \"old school\" — imparting true Christian discipline and helping prospective ministers build on a solid foundation of true Christianity and not the wisdom of men." }}
+        </p>
+      </article>
+
+      <!-- Core Values -->
+      <article class="group bg-white p-6 sm:p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-t-4 border-accent-400 sm:col-span-2 lg:col-span-1">
+        <div class="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-accent-100 to-yellow-100 rounded-xl flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform" aria-hidden="true">
+          <i data-lucide="heart" class="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-accent-600"></i>
+        </div>
+        <h3 class="font-bold text-lg sm:text-xl lg:text-2xl mb-3 sm:mb-4 text-primary-950 font-['Poppins']">Our Core Values</h3>
+        <ul class="space-y-2 sm:space-y-3" role="list">
+          {% if site_config.about_values %}
+            {% for value in site_config.about_values %}
+            <li class="flex items-start gap-2 sm:gap-3">
+              <i data-lucide="check-circle" class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-primary-600 mt-0.5" aria-hidden="true"></i>
+              <span class="text-gray-700 text-sm sm:text-base">{{ value }}</span>
+            </li>
+            {% endfor %}
+          {% else %}
+            {% for val in "Sound Biblical Foundation,Personal Relationship with the Lord Jesus,Non-Denominational Service to the Christian Family,Free & Accessible Ministerial Training,End-time Readiness & Gospel Excellence"|split:"," %}
+            <li class="flex items-start gap-2 sm:gap-3">
+              <i data-lucide="check-circle" class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-primary-600 mt-0.5" aria-hidden="true"></i>
+              <span class="text-gray-700 text-sm sm:text-base">{{ val }}</span>
+            </li>
+            {% endfor %}
+          {% endif %}
+        </ul>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     GOVERNING BOARDS
+═══════════════════════════════════════════════════════ -->
+<section class="py-12 sm:py-16 lg:py-24 bg-gradient-to-br from-gray-50 to-purple-50"
+         id="leadership"
+         aria-labelledby="leadership-heading">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+
+    <div class="text-center mb-10 sm:mb-12 lg:mb-16">
+      <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4"
+           aria-hidden="true">
+        <i data-lucide="users" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <span>Our Leaders</span>
+      </div>
+      <h2 id="leadership-heading" class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-950 mb-3 sm:mb-4 font-['Poppins']">
+        Leadership &amp; Governance
+      </h2>
+      <p class="text-gray-600 max-w-xl sm:max-w-2xl mx-auto text-sm sm:text-base lg:text-lg leading-relaxed">
+        Guided by experienced and dedicated ministers of God committed to sound biblical education.
+      </p>
+    </div>
+
+    <!-- ── BOARD REUSABLE MACRO ── -->
+    {% comment %}Admin board{% endcomment %}
+    {% if admin_board_members %}
+    <div class="mb-10 sm:mb-14 lg:mb-16">
+      <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-primary-950 font-['Poppins'] mb-5 sm:mb-6 lg:mb-8 flex items-center gap-3">
+        <span class="w-6 sm:w-8 h-1 bg-primary-600 rounded-full inline-block" aria-hidden="true"></span>
+        Administrative &amp; Management Board
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        {% for member in admin_board_members %}
+        <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                 itemscope itemtype="https://schema.org/Person">
+          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden flex items-center justify-center">
+            {% if member.photo %}
+              <img src="{{ member.photo.url }}"
+                   alt="Portrait of {{ member.name }}"
+                   class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                   loading="lazy"
+                   itemprop="image">
+            {% else %}
+              <i data-lucide="user-circle" class="w-12 h-12 sm:w-16 sm:h-16 text-primary-400 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
+            {% endif %}
+          </div>
+          <div class="p-3 sm:p-4 text-center">
+            <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1" itemprop="name">{{ member.name }}</p>
+            <p class="text-xs text-primary-600 font-semibold mb-1 sm:mb-2 leading-tight" itemprop="jobTitle">{{ member.role }}</p>
+            {% if member.bio %}
+              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio }}</p>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="mb-10 sm:mb-14 lg:mb-16">
+      <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-primary-950 font-['Poppins'] mb-5 sm:mb-6 lg:mb-8 flex items-center gap-3">
+        <span class="w-6 sm:w-8 h-1 bg-primary-600 rounded-full inline-block" aria-hidden="true"></span>
+        Administrative &amp; Management Board
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        {% for item in "12345"|make_list %}
+        <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden">
+          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden flex items-center justify-center">
+            <img src="{% static 'images/board-admin-'|add:forloop.counter|add:'.jpg' %}"
+                 alt=""
+                 class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                 onerror="this.style.display='none';"
+                 loading="lazy">
+            <i data-lucide="user-circle" class="w-12 h-12 sm:w-16 sm:h-16 text-primary-400" aria-hidden="true"></i>
+          </div>
+          <div class="p-3 sm:p-4 text-center">
+            <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1">
+              {% if forloop.counter == 1 %}Dr. John Amarachukwu Daniel
+              {% elif forloop.counter == 2 %}Mrs. Blessings J. Daniel
+              {% elif forloop.counter == 3 %}Sunday Ehichioya
+              {% elif forloop.counter == 4 %}Ruth Phillips
+              {% else %}Julian C. Obiora{% endif %}
+            </p>
+            <p class="text-xs text-primary-600 font-semibold leading-tight">
+              {% if forloop.counter == 1 %}Founder / President
+              {% elif forloop.counter == 2 %}Vice President Administration
+              {% elif forloop.counter == 3 %}Registrar
+              {% elif forloop.counter == 4 %}Coordinator, MELBAC Satellite Campuses &amp; Special Asst. on Foreign Affairs
+              {% else %}Admin Officer / Board Secretary{% endif %}
+            </p>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Academic Board -->
+    {% if academic_board_members %}
+    <div class="mb-10 sm:mb-14 lg:mb-16">
+      <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-primary-950 font-['Poppins'] mb-5 sm:mb-6 lg:mb-8 flex items-center gap-3">
+        <span class="w-6 sm:w-8 h-1 bg-blue-500 rounded-full inline-block" aria-hidden="true"></span>
+        Academic Board
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        {% for member in academic_board_members %}
+        <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden"
+                 itemscope itemtype="https://schema.org/Person">
+          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden flex items-center justify-center">
+            {% if member.photo %}
+              <img src="{{ member.photo.url }}"
+                   alt="Portrait of {{ member.name }}"
+                   class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                   loading="lazy"
+                   itemprop="image">
+            {% else %}
+              <i data-lucide="user-circle" class="w-12 h-12 sm:w-16 sm:h-16 text-blue-400 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
+            {% endif %}
+          </div>
+          <div class="p-3 sm:p-4 text-center">
+            <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1" itemprop="name">{{ member.name }}</p>
+            <p class="text-xs text-blue-600 font-semibold mb-1 sm:mb-2 leading-tight" itemprop="jobTitle">{{ member.role }}</p>
+            {% if member.bio %}
+              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio }}</p>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="mb-10 sm:mb-14 lg:mb-16">
+      <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-primary-950 font-['Poppins'] mb-5 sm:mb-6 lg:mb-8 flex items-center gap-3">
+        <span class="w-6 sm:w-8 h-1 bg-blue-500 rounded-full inline-block" aria-hidden="true"></span>
+        Academic Board
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        {% for item in "1234567"|make_list %}
+        <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden">
+          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden flex items-center justify-center">
+            <img src="{% static 'images/board-academic-'|add:forloop.counter|add:'.jpg' %}"
+                 alt=""
+                 class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                 onerror="this.style.display='none';"
+                 loading="lazy">
+            <i data-lucide="user-circle" class="w-12 h-12 sm:w-16 sm:h-16 text-blue-400" aria-hidden="true"></i>
+          </div>
+          <div class="p-3 sm:p-4 text-center">
+            <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1">
+              {% if forloop.counter == 1 %}Sunday Ehichioya{% elif forloop.counter == 2 %}Titus Ehizode{% elif forloop.counter == 3 %}Chidi Akoma{% elif forloop.counter == 4 %}Boniface Uzoigwe{% elif forloop.counter == 5 %}Goodluck Olatunji{% elif forloop.counter == 6 %}George Odjeni{% else %}Dr. John Amarachukwu Daniel{% endif %}
+            </p>
+            <p class="text-xs text-blue-600 font-semibold leading-tight">
+              {% if forloop.counter == 1 %}Registrar{% elif forloop.counter == 2 %}Dean, Faculty of Arts{% elif forloop.counter == 3 %}Dean of Student Affairs{% elif forloop.counter == 4 %}Dean, Faculty of Christian Education{% elif forloop.counter == 5 %}Dean of Post Graduate Studies{% elif forloop.counter == 6 %}Vice President, Academic Matters{% else %}Founder / President{% endif %}
+            </p>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Advisorate Board -->
+    {% if advisorate_board_members %}
+    <div class="mb-10 sm:mb-14 lg:mb-16">
+      <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-primary-950 font-['Poppins'] mb-5 sm:mb-6 lg:mb-8 flex items-center gap-3">
+        <span class="w-6 sm:w-8 h-1 bg-purple-500 rounded-full inline-block" aria-hidden="true"></span>
+        Advisorate Board
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        {% for member in advisorate_board_members %}
+        <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden"
+                 itemscope itemtype="https://schema.org/Person">
+          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden flex items-center justify-center">
+            {% if member.photo %}
+              <img src="{{ member.photo.url }}"
+                   alt="Portrait of {{ member.name }}"
+                   class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                   loading="lazy"
+                   itemprop="image">
+            {% else %}
+              <i data-lucide="user-circle" class="w-12 h-12 sm:w-16 sm:h-16 text-purple-400 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
+            {% endif %}
+          </div>
+          <div class="p-3 sm:p-4 text-center">
+            <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1" itemprop="name">{{ member.name }}</p>
+            <p class="text-xs text-purple-600 font-semibold mb-1 sm:mb-2 leading-tight" itemprop="jobTitle">{{ member.role }}</p>
+            {% if member.bio %}
+              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio }}</p>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="mb-10 sm:mb-14 lg:mb-16">
+      <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-primary-950 font-['Poppins'] mb-5 sm:mb-6 lg:mb-8 flex items-center gap-3">
+        <span class="w-6 sm:w-8 h-1 bg-purple-500 rounded-full inline-block" aria-hidden="true"></span>
+        Advisorate Board
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        {% for item in "12345"|make_list %}
+        <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden">
+          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-purple-100 to-purple-200 overflow-hidden flex items-center justify-center">
+            <img src="{% static 'images/board-advisorate-'|add:forloop.counter|add:'.jpg' %}"
+                 alt=""
+                 class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                 onerror="this.style.display='none';"
+                 loading="lazy">
+            <i data-lucide="user-circle" class="w-12 h-12 sm:w-16 sm:h-16 text-purple-400" aria-hidden="true"></i>
+          </div>
+          <div class="p-3 sm:p-4 text-center">
+            <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1">
+              {% if forloop.counter == 1 %}Theophilus O. Ihekoronye{% elif forloop.counter == 2 %}Dr. John Amarachukwu Daniel{% elif forloop.counter == 3 %}Cyril Azobu{% elif forloop.counter == 4 %}Ezenwa Anumnu{% else %}Sunny Faith Ugbah{% endif %}
+            </p>
+            <p class="text-xs text-purple-600 font-semibold leading-tight">
+              {% if forloop.counter == 1 %}Pro-Chancellor / Chairman Board of Advisorate{% elif forloop.counter == 2 %}Founder / President{% elif forloop.counter == 3 %}Adviser on Financial Matters{% elif forloop.counter == 4 %}Adviser on Legal Affairs{% else %}Vice Chairman / Adviser Administrative Matters{% endif %}
+            </p>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Staff (DB only) -->
+    {% if staff_members %}
+    <div>
+      <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-primary-950 font-['Poppins'] mb-5 sm:mb-6 lg:mb-8 flex items-center gap-3">
+        <span class="w-6 sm:w-8 h-1 bg-emerald-500 rounded-full inline-block" aria-hidden="true"></span>
+        Staff
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        {% for member in staff_members %}
+        <article class="group bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden"
+                 itemscope itemtype="https://schema.org/Person">
+          <div class="relative h-36 sm:h-44 lg:h-48 bg-gradient-to-br from-emerald-100 to-emerald-200 overflow-hidden flex items-center justify-center">
+            {% if member.photo %}
+              <img src="{{ member.photo.url }}"
+                   alt="Portrait of {{ member.name }}"
+                   class="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                   loading="lazy"
+                   itemprop="image">
+            {% else %}
+              <i data-lucide="user-circle" class="w-12 h-12 sm:w-16 sm:h-16 text-emerald-400 group-hover:scale-110 transition-transform" aria-hidden="true"></i>
+            {% endif %}
+          </div>
+          <div class="p-3 sm:p-4 text-center">
+            <p class="font-bold text-xs sm:text-sm text-primary-950 font-['Poppins'] leading-snug mb-0.5 sm:mb-1" itemprop="name">{{ member.name }}</p>
+            <p class="text-xs text-emerald-600 font-semibold mb-1 sm:mb-2 leading-tight" itemprop="jobTitle">{{ member.role }}</p>
+            {% if member.bio %}
+              <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed" itemprop="description">{{ member.bio }}</p>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     ACCREDITATION · AFFILIATES · PARTNERS
+═══════════════════════════════════════════════════════ -->
+<section class="py-12 sm:py-16 lg:py-24 bg-white" aria-labelledby="accred-heading">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+
+    <div class="text-center mb-10 sm:mb-12 lg:mb-16">
+      <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4"
+           aria-hidden="true">
+        <i data-lucide="award" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <span>Recognition</span>
+      </div>
+      <h2 id="accred-heading" class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-950 mb-3 sm:mb-4 font-['Poppins']">
+        Accreditation, Affiliates &amp; Partners
+      </h2>
+      <p class="text-gray-600 max-w-xl sm:max-w-2xl mx-auto text-sm sm:text-base lg:text-lg leading-relaxed">
+        Recognised nationally and internationally through formal accreditations, affiliations and strategic partnerships.
+      </p>
+    </div>
+
+    <div class="max-w-full lg:max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+
+      <!-- Accreditation -->
+      <div class="bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden">
+        <div class="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-5 bg-primary-950" role="heading" aria-level="3">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0" aria-hidden="true">
+            <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+          </div>
+          <span class="font-bold text-white font-['Poppins'] text-sm sm:text-base">Accreditation</span>
+        </div>
+        <ul class="px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4" role="list">
+          <li class="flex items-start gap-2 sm:gap-3">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">Federal Government of Nigeria, Abuja</span>
+          </li>
+          <li class="flex items-start gap-2 sm:gap-3">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">International Professional Managers Association (IPMA) — UK</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Affiliations -->
+      <div class="bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden">
+        <div class="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-5 bg-primary-700" role="heading" aria-level="3">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0" aria-hidden="true">
+            <i data-lucide="link-2" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+          </div>
+          <span class="font-bold text-white font-['Poppins'] text-sm sm:text-base">Affiliations</span>
+        </div>
+        <ul class="px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4" role="list">
+          <li class="flex items-start gap-2 sm:gap-3">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">Association of Christian Theological Education in Africa (ACTEA)</span>
+          </li>
+          <li class="flex items-start gap-2 sm:gap-3">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">Institute for Cultural Diplomacy (ICD), Berlin Germany</span>
+          </li>
+          <li class="flex items-start gap-2 sm:gap-3">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">International Association for the Promotion of Christian Higher Education (IAPCHE)</span>
+          </li>
+          <li class="flex items-start gap-2 sm:gap-3">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">Vision International University USA</span>
+          </li>
+          <li class="flex items-start gap-2 sm:gap-3">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">World Evangelical Theological Institute Association USA</span>
+          </li>
+          <li class="flex items-start gap-2 sm:gap-3">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">International Professional Managers Association (IPMA) UK</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Partners -->
+      <div class="bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden sm:col-span-2 md:col-span-1">
+        <div class="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-5 bg-primary-950" role="heading" aria-level="3">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0" aria-hidden="true">
+            <i data-lucide="handshake" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+          </div>
+          <span class="font-bold text-white font-['Poppins'] text-sm sm:text-base">Partners</span>
+        </div>
+        <ul class="px-4 sm:px-6 py-4 sm:py-5 space-y-3 sm:space-y-4" role="list">
+          {% for partner in partners_list %}
+            <li class="flex items-start gap-3 sm:gap-4">
+              {% if partner.logo %}
+              <img src="{{ partner.logo.url }}"
+                  alt="{{ partner.name }} logo"
+                  class="h-8 w-8 sm:h-10 sm:w-10 object-contain rounded flex-shrink-0 mt-0.5"
+                  loading="lazy">
+              {% else %}
+              <i data-lucide="check-circle" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-600 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
+              {% endif %}
+              <span class="text-gray-700 text-xs sm:text-sm leading-relaxed">
+                {{ partner.name }}{% if partner.location %}, <span class="text-gray-500">{{ partner.location }}</span>{% endif %}
+              </span>
+            </li>
+            {% empty %}
+            <li class="text-gray-400 text-xs sm:text-sm italic">No partners listed yet.</li>
+            {% endfor %}
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CTA
+═══════════════════════════════════════════════════════ -->
+<section class="py-14 sm:py-18 lg:py-24 bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 relative overflow-hidden"
+         aria-labelledby="cta-heading">
+
+  <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+    <div class="absolute top-6 right-8 sm:right-20 w-40 h-40 sm:w-64 sm:h-64 lg:w-72 lg:h-72 bg-accent-400 rounded-full blur-3xl opacity-10"></div>
+    <div class="absolute bottom-6 left-6 sm:left-10 w-36 h-36 sm:w-56 sm:h-56 lg:w-64 lg:h-64 bg-purple-400 rounded-full blur-3xl opacity-10"></div>
+  </div>
+
+  <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 text-center">
+    <h2 id="cta-heading" class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mb-4 sm:mb-6 font-['Poppins'] text-white">
+      Ready to Start Your Journey with
+      <span class="text-accent-400">{{ site_config.school_short_name|default:"MELBAC" }}</span>?
+    </h2>
+    <p class="text-base sm:text-lg lg:text-xl xl:text-2xl mb-8 sm:mb-10 text-gray-200 max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto leading-relaxed">
+      {{ site_config.footer_tagline|default:"Join our community of dedicated ministers of the Gospel. Your calling starts here — completely free of charge." }}
+    </p>
+    <div class="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 lg:gap-6">
+      <a href="{% url 'eduweb:apply' %}"
+         class="inline-flex items-center justify-center gap-2 bg-accent-400 hover:bg-accent-500 active:bg-accent-600 text-primary-950 px-6 sm:px-8 lg:px-10 py-3.5 sm:py-4 lg:py-5 rounded-xl font-bold text-sm sm:text-base lg:text-lg hover:shadow-2xl hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-accent-300 focus:ring-offset-2 focus:ring-offset-primary-950">
+        <i data-lucide="send" class="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true"></i>
+        Apply Now
+      </a>
+      <a href="{% url 'eduweb:all_programs' %}"
+         class="inline-flex items-center justify-center gap-2 border-2 border-white/70 hover:border-white text-white hover:bg-white hover:text-primary-950 px-6 sm:px-8 lg:px-10 py-3.5 sm:py-4 lg:py-5 rounded-xl font-semibold text-sm sm:text-base lg:text-lg transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950">
+        <i data-lucide="grid-3x3" class="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true"></i>
+        Explore Programs
+      </a>
+      <a href="{% url 'eduweb:contact' %}"
+         class="inline-flex items-center justify-center gap-2 border-2 border-white/40 hover:border-white/70 text-white hover:bg-white/10 px-6 sm:px-8 lg:px-10 py-3.5 sm:py-4 lg:py-5 rounded-xl font-semibold text-sm sm:text-base lg:text-lg transition-all focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-primary-950">
+        <i data-lucide="phone" class="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true"></i>
+        Contact Admissions
+      </a>
+    </div>
+  </div>
+</section>
+
+</main>
 {% endblock %}

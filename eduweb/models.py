@@ -348,6 +348,35 @@ class SiteConfig(models.Model):
         """Fetch the single site config. Use this in all views."""
         return cls.objects.first()
 
+class InstitutionPartner(models.Model):
+    """
+    Partners, affiliates, and accreditation bodies shown on the About page.
+    Manageable from the Django admin without touching template code.
+    """
+    CATEGORY_CHOICES = [
+        ('partner',      'Partner'),
+        ('affiliation',  'Affiliation'),
+        ('accreditation','Accreditation'),
+    ]
+
+    name          = models.CharField(max_length=300, help_text="Full institution name")
+    category      = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='partner')
+    location      = models.CharField(max_length=200, blank=True, help_text="e.g. 'New Jersey, USA'")
+    logo          = models.ImageField(
+                        upload_to='partners/logos/', blank=True, null=True,
+                        help_text="Partner logo image (PNG/SVG recommended, transparent background)"
+                    )
+    is_active     = models.BooleanField(default=True)
+    display_order = models.PositiveSmallIntegerField(default=0, help_text="Lower = shown first")
+
+    class Meta:
+        verbose_name        = 'Institution Partner / Affiliation'
+        verbose_name_plural = 'Institution Partners & Affiliations'
+        ordering            = ['display_order', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
 class SiteHistoryMilestone(models.Model):
     """
     One entry in the About page 'Our History' timeline.
@@ -2912,6 +2941,10 @@ class UserProfile(models.Model):
     # Verification
     email_verified = models.BooleanField(default=False)
     verification_token = models.UUIDField(default=uuid.uuid4, editable=False)
+
+    # Password Reset
+    password_reset_token = models.UUIDField(null=True, blank=True, editable=False)
+    password_reset_token_created = models.DateTimeField(null=True, blank=True)
     
     # Timestamps
     created_at = models.DateTimeField(default=timezone.now)
@@ -2928,10 +2961,27 @@ class UserProfile(models.Model):
         self.verification_token = uuid.uuid4()
         self.save()
         return self.verification_token
+    
+    def generate_password_reset_token(self):
+        import uuid
+        from django.utils import timezone
+        self.password_reset_token = uuid.uuid4()
+        self.password_reset_token_created = timezone.now()
+        self.save(update_fields=['password_reset_token', 'password_reset_token_created'])
+        return self.password_reset_token
 
+    def is_reset_token_valid(self):
+        """Token expires after 1 hour"""
+        from django.utils import timezone
+        from datetime import timedelta
+        if not self.password_reset_token or not self.password_reset_token_created:
+            return False
+        return timezone.now() < self.password_reset_token_created + timedelta(hours=1)
 
-   
-
+    def clear_reset_token(self):
+        self.password_reset_token = None
+        self.password_reset_token_created = None
+        self.save(update_fields=['password_reset_token', 'password_reset_token_created'])
 
 
 # ==================== VENDOR MANAGEMENT ====================

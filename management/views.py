@@ -1,50 +1,330 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.http import JsonResponse
-from django.utils import timezone
-from django.core.mail import EmailMultiAlternatives
-from django.conf import settings
-from django.urls import reverse
-from datetime import timedelta
+# =============================================================================
+# IMPORTS
+# =============================================================================
+
+# Standard library
+import csv
 import json
-from django.core.mail import send_mass_mail
 import threading
 import uuid
+from datetime import timedelta
 
-# Model imports
+# Django
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
+from django.core.mail import EmailMultiAlternatives, send_mail, send_mass_mail
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q, Count
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+# Models
 from eduweb.models import (
-    CourseApplication, 
-    User, 
-    Faculty, 
-    Course, 
-    BlogPost, 
-    BlogCategory,
-    BroadcastMessage,
-    LMSCourse,
-    CourseCategory,
+    AcademicSession,
+    AllRequiredPayments,
+    Announcement,
     AuditLog,
-    Certificate, LibraryItem
+    Badge,
+    BlogCategory,
+    BlogPost,
+    BroadcastMessage,
+    Certificate,
+    ContactMessage,
+    Course,
+    CourseApplication,
+    CourseCategory,
+    CourseIntake,
+    Department,
+    Enrollment,
+    Faculty,
+    InstitutionMember,
+    LMSCourse,
+    LibraryItem,
+    Notification,
+    PaymentGateway,
+    Program,
+    Review,
+    SiteConfig,
+    SiteHistoryMilestone,
+    StaffPayroll,
+    StudentBadge,
+    SupportTicket,
+    SystemConfiguration,
+    Testimonial,
+    TicketReply,
+    Transaction,
+    UserProfile,
+    Message,
 )
 
-# Form imports
+# Forms
 from management.forms import (
-    FacultyForm, 
-    CourseForm, 
-    BlogPostForm, 
+    AcademicSessionForm,
+    AllRequiredPaymentsForm,
+    AnnouncementForm,
+    AuditLogFilterForm,
+    BadgeForm,
     BlogCategoryForm,
+    BlogPostForm,
+    BrandingConfigForm,
     BroadcastMessageForm,
-    LMSCourseForm,
     CertificateForm,
-    SiteConfigGeneralForm, SiteConfigIndexForm, SiteConfigAboutForm, LibraryItemForm
+    CourseCategoryForm,
+    CourseForm,
+    CourseIntakeForm,
+    DepartmentForm,
+    EmailConfigForm,
+    EnrollmentForm,
+    FacultyForm,
+    InstitutionMemberForm,
+    LMSCourseForm,
+    LibraryItemForm,
+    NotificationConfigForm,
+    PaymentGatewayForm,
+    ProgramForm,
+    QuickRoleChangeForm,
+    ReviewForm,
+    SiteConfigAboutForm,
+    SiteConfigGeneralForm,
+    SiteConfigIndexForm,
+    SiteHistoryMilestoneForm,
+    StaffPayrollForm,
+    StudentBadgeForm,
+    SystemConfigurationForm,
+    TestimonialForm,
+    UserCreateForm,
+    UserEditForm,
+    UserProfileForm,
+    UserSearchForm,
 )
+
+
+def _notify(user, title, message, notif_type='system', link=''):
+    """Create a Notification for any user and prune beyond 100."""
+    Notification.objects.create(
+        user=user, notification_type=notif_type,
+        title=title, message=message, link=link,
+    )
+    old_ids = (
+        Notification.objects.filter(user=user)
+        .order_by('-created_at').values_list('id', flat=True)[100:]
+    )
+    if old_ids:
+        Notification.objects.filter(id__in=list(old_ids)).delete()
+
+
+# ===========================================================================
+# ADMIN INBOX / MESSAGING
+# ===========================================================================
+
+@login_required(login_url='eduweb:auth_page')
+def admin_inbox(request):
+    """
+    Admin/staff inbox — shows all received and sent messages.
+    Marks all unread received messages as read on open.
+    """
+    user = request.user
+
+    received = (
+        Message.objects
+        .filter(recipient=user, parent__isnull=True)
+        .select_related('sender', 'sender__profile')
+        .order_by('-created_at')
+    )
+    sent = (
+        Message.objects
+        .filter(sender=user, parent__isnull=True)
+        .select_related('recipient', 'recipient__profile')
+        .order_by('-created_at')
+    )
+
+    unread_count = received.filter(is_read=False).count()
+
+    Message.objects.filter(
+        recipient=user, is_read=False, parent__isnull=True
+    ).update(is_read=True, read_at=timezone.now())
+
+    tab = request.GET.get('tab', 'received')
+    paginator_received = Paginator(received, 20)
+    paginator_sent = Paginator(sent, 20)
+    page = request.GET.get('page', 1)
+
+    return render(request, 'management/inbox.html', {
+        'page_title': 'Inbox',
+        'received': paginator_received.get_page(page),
+        'sent': paginator_sent.get_page(page),
+        'unread_count': unread_count,
+        'tab': tab,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+def admin_compose_message(request):
+    """
+    Admin compose — send a new message to any user.
+    Supports ?to=<user_id> query param to pre-fill recipient.
+    """
+    from .forms import AdminMessageComposeForm
+
+    if request.method == 'POST':
+        form = AdminMessageComposeForm(request.POST)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.sender = request.user
+            msg.save()
+            # In-app notification to recipient
+            _notify(
+                user=msg.recipient,
+                title=f'New Message from {request.user.get_full_name() or request.user.username}',
+                message=f'You have a new message: "{msg.subject}"',
+                notif_type='message',
+                link=f'/management/inbox/{msg.id}/',
+            )
+            try:
+                from eduweb.emailservices import send_new_message_email
+                send_new_message_email(msg.recipient, request.user, msg)
+            except Exception:
+                pass
+            messages.success(request, 'Message sent successfully!')
+            return redirect('management:admin_inbox')
+        messages.error(request, 'Please fix the errors below.')
+    else:
+        initial = {}
+        to_id = request.GET.get('to')
+        if to_id:
+            try:
+                from django.contrib.auth.models import User as AuthUser
+                initial['recipient'] = AuthUser.objects.get(pk=to_id)
+            except Exception:
+                pass
+        form = AdminMessageComposeForm(initial=initial)
+
+    return render(request, 'management/compose_message.html', {
+        'page_title': 'Compose Message',
+        'form': form,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+def admin_message_thread(request, message_id):
+    """
+    View a full message thread and reply.
+    Only sender or recipient may access.
+    """
+    msg = get_object_or_404(
+        Message.objects.select_related(
+            'sender', 'sender__profile',
+            'recipient', 'recipient__profile'
+        ),
+        pk=message_id,
+    )
+
+    if msg.sender != request.user and msg.recipient != request.user:
+        messages.error(request, 'You do not have permission to view this message.')
+        return redirect('management:admin_inbox')
+
+    if msg.recipient == request.user and not msg.is_read:
+        msg.mark_as_read()
+
+    thread_replies = (
+        Message.objects
+        .filter(parent=msg)
+        .select_related('sender', 'sender__profile', 'recipient', 'recipient__profile')
+        .order_by('created_at')
+    )
+
+    if request.method == 'POST':
+        body = request.POST.get('body', '').strip()
+        if len(body) >= 5:
+            reply_to = msg.sender if msg.recipient == request.user else msg.recipient
+            Message.objects.create(
+                sender=request.user,
+                recipient=reply_to,
+                subject=f'Re: {msg.subject}',
+                body=body,
+                parent=msg,
+            )
+            _notify(
+                user=reply_to,
+                title=f'Reply from {request.user.get_full_name() or request.user.username}',
+                message=f'New reply on: "{msg.subject}"',
+                notif_type='message',
+                link=f'/management/inbox/{msg.id}/',
+            )
+            try:
+                from eduweb.emailservices import send_new_message_email
+                send_new_message_email(reply_to, request.user, msg)
+            except Exception:
+                pass
+            messages.success(request, 'Reply sent!')
+            return redirect('management:admin_message_thread', message_id=message_id)
+        messages.error(request, 'Reply must be at least 5 characters.')
+
+    return render(request, 'management/message_thread.html', {
+        'page_title': msg.subject,
+        'message': msg,
+        'thread_replies': thread_replies,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+def notifications_view(request):
+    """
+    Notifications page for admin and staff roles.
+    Marks all as read if ?mark_all=1. Paginated at 15 per page.
+    """
+    if not request.user.is_authenticated:
+        return redirect('eduweb:auth_page')
+
+    if request.GET.get('mark_all') == '1':
+        Notification.objects.filter(
+            user=request.user, is_read=False
+        ).update(is_read=True, read_at=timezone.now())
+        return redirect('management:notifications_view')
+
+    notifs = (
+        Notification.objects
+        .filter(user=request.user)
+        .order_by('-created_at')
+    )
+    unread_count = notifs.filter(is_read=False).count()
+    page_obj = Paginator(notifs, 15).get_page(request.GET.get('page', 1))
+
+    return render(request, 'management/notifications.html', {
+        'page_title': 'Notifications',
+        'notifications': page_obj,
+        'unread_count': unread_count,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+def mark_notification_read(request, notification_id):
+    """Mark a single notification as read — AJAX GET."""
+    notif = get_object_or_404(
+        Notification,
+        pk=notification_id,
+        user=request.user,
+    )
+    notif.mark_as_read()
+    return JsonResponse({'success': True})
 
 
 def is_admin(user):
-    """Check if user is staff/admin"""
-    return user.is_staff or user.is_superuser
+    """Check if user is staff, superuser, or has admin role."""
+    return (
+        user.is_authenticated and (
+            user.is_staff or
+            user.is_superuser or
+            (hasattr(user, 'profile') and user.profile.role == 'admin')
+        )
+    )
+
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
@@ -148,7 +428,6 @@ def applications_list(request):
     # Get pending count for sidebar
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
-    from eduweb.models import Program
 
     context = {
         'applications': page_obj,
@@ -247,10 +526,28 @@ def make_decision(request, pk):
         send_decision_email(application)
         
         messages.success(
-            request, 
+            request,
             f'Decision "{decision.capitalize()}" has been recorded and email sent to applicant.'
         )
-        
+        # In-app notification to applicant if they have a user account
+        if application.user:
+            if decision == 'approved':
+                _notify(
+                    user=application.user,
+                    title='Application Approved',
+                    message=f'Congratulations! Your application ({application.application_id}) has been approved.',
+                    notif_type='enrollment',
+                    link='/dashboard/',
+                )
+            else:
+                _notify(
+                    user=application.user,
+                    title='Application Decision',
+                    message=f'A decision has been made on your application ({application.application_id}). Please log in for details.',
+                    notif_type='system',
+                    link='/dashboard/',
+                )
+
         return redirect('management:application_detail', application_id=application.application_id)
     
     return redirect('management:applications_list')
@@ -439,12 +736,6 @@ def send_decision_email(application):
         return False
     
 
-# Add these imports at the top
-from eduweb.models import Faculty, Course
-from management.forms import FacultyForm, CourseForm
-from django.urls import reverse
-
-# Add these new views AFTER your existing views
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
@@ -535,7 +826,6 @@ def courses(request):
     """
     Unified courses management page with tabs for programs and categories
     """
-    from django.db.models import Count
     
     # Get all programs with related data
     programs = Program.objects.select_related(
@@ -673,11 +963,6 @@ def course_delete(request, pk):
         return redirect('management:courses')
     
     return redirect('management:courses')
-
-from eduweb.models import BlogPost, BlogCategory
-from management.forms import BlogPostForm, BlogCategoryForm
-
-# Add these views to management/views.py
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -856,25 +1141,8 @@ def blog_category_delete(request, pk):
     
     return redirect('management:blog_categories_list')
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.db import transaction
-from .forms import (
     UserSearchForm, UserCreateForm, UserEditForm, 
     UserProfileForm, QuickRoleChangeForm
-)
-from eduweb.models import UserProfile
-
-
-def is_admin(user):
-    """Check if user is admin or staff"""
-    return user.is_authenticated and (user.is_staff or user.is_superuser)
 
 
 @login_required
@@ -1029,7 +1297,25 @@ def user_toggle_active(request, pk):
     
     status = 'activated' if user.is_active else 'deactivated'
     messages.success(request, f'User {user.username} has been {status}.')
-    
+
+    # Notify the affected user about their account status change
+    if user.is_active:
+        _notify(
+            user=user,
+            title='Account Activated',
+            message='Your account has been activated. You can now log in and access the portal.',
+            notif_type='account',
+            link='/dashboard/',
+        )
+    else:
+        _notify(
+            user=user,
+            title='Account Deactivated',
+            message='Your account has been deactivated. Please contact support if you believe this is an error.',
+            notif_type='account',
+            link='/',
+        )
+
     # Return JSON for AJAX requests
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
@@ -1051,12 +1337,21 @@ def user_change_role(request, pk):
     if form.is_valid():
         user.profile.role = form.cleaned_data['role']
         user.profile.save()
-        
+
         messages.success(
-            request, 
+            request,
             f"Role changed to {user.profile.get_role_display()}"
         )
-        
+
+        # Notify the user their role has changed
+        _notify(
+            user=user,
+            title='Your Role Has Been Updated',
+            message=f'Your account role has been changed to "{user.profile.get_role_display()}" by an administrator.',
+            notif_type='account',
+            link='/dashboard/',
+        )
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
@@ -1098,11 +1393,27 @@ def bulk_user_action(request):
     if action == 'activate':
         users.update(is_active=True)
         messages.success(request, f'{count} user(s) activated successfully.')
-    
+        for u in User.objects.filter(id__in=user_ids):
+            _notify(
+                user=u,
+                title='Account Activated',
+                message='Your account has been activated by an administrator. You can now log in and access the portal.',
+                notif_type='account',
+                link='/dashboard/',
+            )
+
     elif action == 'deactivate':
         users.update(is_active=False)
         messages.success(request, f'{count} user(s) deactivated successfully.')
-    
+        for u in User.objects.filter(id__in=user_ids):
+            _notify(
+                user=u,
+                title='Account Deactivated',
+                message='Your account has been deactivated by an administrator. Please contact support if you believe this is an error.',
+                notif_type='account',
+                link='/',
+            )
+
     else:
         messages.error(request, 'Invalid action specified.')
     
@@ -1130,39 +1441,17 @@ def user_quick_info(request, pk):
     
     return JsonResponse(data)
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.http import JsonResponse, HttpResponse
-from django.utils import timezone
-from django.contrib.auth.models import User
-from datetime import timedelta
-import json
-import csv
 
-# Import models
-from eduweb.models import (
     SystemConfiguration, 
     CourseCategory, 
     AuditLog
-)
 
-# Import forms
-from management.forms import (
     SystemConfigurationForm,
     BrandingConfigForm,
     EmailConfigForm,
     NotificationConfigForm,
     CourseCategoryForm,
     AuditLogFilterForm
-)
-
-
-def is_admin(user):
-    """Check if user is staff/admin"""
-    return user.is_staff or user.is_superuser
 
 
 # ==================== SYSTEM CONFIGURATION VIEWS ====================
@@ -1611,8 +1900,9 @@ def lms_course_edit(request, pk):
     if request.method == 'POST':
         form = LMSCourseForm(request.POST, request.FILES, instance=course)
         if form.is_valid():
+            was_published = course.is_published
             course = form.save()
-            
+
             # Create audit log
             AuditLog.objects.create(
                 user=request.user,
@@ -1621,8 +1911,25 @@ def lms_course_edit(request, pk):
                 object_id=course.id,
                 description=f'Updated LMS course: {course.title}'
             )
-            
+
             messages.success(request, f'LMS course "{course.title}" updated successfully.')
+
+            # Notify enrolled students if the course was just published
+            if not was_published and course.is_published:
+                enrolled_students = User.objects.filter(
+                    enrollments__course=course,
+                    enrollments__status='active',
+                    is_active=True,
+                ).distinct()
+                for student in enrolled_students:
+                    _notify(
+                        user=student,
+                        title=f'Course Now Available: {course.title}',
+                        message=f'The course "{course.title}" you are enrolled in has been published and is now available.',
+                        notif_type='enrollment',
+                        link=f'/courses/{course.slug}/',
+                    )
+
             return redirect('management:lms_courses_list')
     else:
         form = LMSCourseForm(instance=course)
@@ -2044,7 +2351,6 @@ def broadcast_send(request, slug):
         return redirect('management:broadcast_center')
     
     if request.method == 'POST':
-        import threading
         
         def send_emails_background():
             """Background thread to send emails"""
@@ -2198,7 +2504,15 @@ def approve_department(request, pk):
             request,
             f'Department approval granted for {application.admission_number}'
         )
-        
+        if application.user:
+            _notify(
+                user=application.user,
+                title='Department Approval Granted',
+                message=f'Your admission ({application.admission_number}) has received department approval. You now have full portal access.',
+                notif_type='enrollment',
+                link='/dashboard/',
+            )
+
         return redirect('management:application_detail', application_id=application.application_id)
     
     return redirect('management:applications_list')
@@ -2294,32 +2608,13 @@ def send_department_approval_email(application):
         print(f"Error sending approval email: {str(e)}")
         return False
 
-# ============================================================
-# ADD THESE IMPORTS TO THE TOP OF views.py (if not already present)
-# ============================================================
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.utils import timezone
-from django.http import JsonResponse
-from django.core.mail import send_mail
-from django.conf import settings
 
-# ── Import your models ──────────────────────────────────────────────────────
-from eduweb.models import (
     Department, Program, AcademicSession, CourseIntake,
     CourseCategory, SupportTicket, TicketReply,
     ContactMessage, Announcement, Faculty
-)
 
 
 # ── Helper: restrict to admin/staff ─────────────────────────────────────────
-def is_admin(user):
-    return user.is_staff or user.is_superuser or (
-        hasattr(user, 'profile') and user.profile.role == 'admin'
-    )
 
 
 # ===========================================================================
@@ -2365,7 +2660,6 @@ def departments_list(request):
 @login_required
 @user_passes_test(is_admin)
 def department_create(request):
-    from .forms import DepartmentForm
     if request.method == 'POST':
         form = DepartmentForm(request.POST)
         if form.is_valid():
@@ -2380,7 +2674,6 @@ def department_create(request):
 @login_required
 @user_passes_test(is_admin)
 def department_edit(request, pk):
-    from .forms import DepartmentForm
     dept = get_object_or_404(Department, pk=pk)
     if request.method == 'POST':
         form = DepartmentForm(request.POST, instance=dept)
@@ -2446,7 +2739,6 @@ def programs_list(request):
 @login_required
 @user_passes_test(is_admin)
 def program_create(request):
-    from .forms import ProgramForm
     if request.method == 'POST':
         form = ProgramForm(request.POST, request.FILES)
         if form.is_valid():
@@ -2461,7 +2753,6 @@ def program_create(request):
 @login_required
 @user_passes_test(is_admin)
 def program_edit(request, pk):
-    from .forms import ProgramForm
     program = get_object_or_404(Program, pk=pk)
     if request.method == 'POST':
         form = ProgramForm(request.POST, request.FILES, instance=program)
@@ -2515,7 +2806,6 @@ def academic_sessions_list(request):
 @login_required
 @user_passes_test(is_admin)
 def academic_session_create(request):
-    from .forms import AcademicSessionForm
     if request.method == 'POST':
         form = AcademicSessionForm(request.POST)
         if form.is_valid():
@@ -2530,7 +2820,6 @@ def academic_session_create(request):
 @login_required
 @user_passes_test(is_admin)
 def academic_session_edit(request, pk):
-    from .forms import AcademicSessionForm
     session = get_object_or_404(AcademicSession, pk=pk)
     if request.method == 'POST':
         form = AcademicSessionForm(request.POST, instance=session)
@@ -2622,7 +2911,6 @@ def intakes_list(request):
 @login_required
 @user_passes_test(is_admin)
 def intake_create(request):
-    from .forms import CourseIntakeForm
     if request.method == 'POST':
         form = CourseIntakeForm(request.POST)
         if form.is_valid():
@@ -2637,7 +2925,6 @@ def intake_create(request):
 @login_required
 @user_passes_test(is_admin)
 def intake_edit(request, pk):
-    from .forms import CourseIntakeForm
     intake = get_object_or_404(CourseIntake, pk=pk)
     if request.method == 'POST':
         form = CourseIntakeForm(request.POST, instance=intake)
@@ -2683,7 +2970,6 @@ def course_categories_list(request):
 @login_required
 @user_passes_test(is_admin)
 def tickets_list(request):
-    from eduweb.models import SupportTicket
     qs = SupportTicket.objects.select_related('user', 'assigned_to').order_by('-created_at')
 
     search = request.GET.get('search', '').strip()
@@ -2720,8 +3006,6 @@ def tickets_list(request):
 @login_required
 @user_passes_test(is_admin)
 def ticket_detail(request, pk):
-    from eduweb.models import SupportTicket, TicketReply
-    from django.contrib.auth.models import User
     ticket = get_object_or_404(SupportTicket.objects.select_related('user', 'assigned_to'), pk=pk)
     replies = ticket.replies.select_related('author').order_by('created_at')
     staff_users = User.objects.filter(
@@ -2737,7 +3021,6 @@ def ticket_detail(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def ticket_reply(request, pk):
-    from eduweb.models import SupportTicket, TicketReply
     ticket = get_object_or_404(SupportTicket, pk=pk)
     if request.method == 'POST':
         message = request.POST.get('message', '').strip()
@@ -2754,6 +3037,15 @@ def ticket_reply(request, pk):
                 ticket.status = 'in_progress'
                 ticket.save(update_fields=['status'])
             messages.success(request, 'Reply posted.')
+            # Notify ticket owner if the reply is not an internal note
+            if not is_internal and ticket.submitted_by != request.user:
+                _notify(
+                    user=ticket.submitted_by,
+                    title='Support Ticket Reply',
+                    message=f'Your support ticket "{ticket.subject}" has received a reply.',
+                    notif_type='system',
+                    link='/support/',
+                )
     return redirect('management:ticket_detail', pk=pk)
 
 
@@ -2761,13 +3053,21 @@ def ticket_reply(request, pk):
 @user_passes_test(is_admin)
 def ticket_change_status(request, pk):
     if request.method == 'POST':
-        from eduweb.models import SupportTicket
         ticket = get_object_or_404(SupportTicket, pk=pk)
         new_status = request.POST.get('status')
         if new_status in dict(SupportTicket.STATUS_CHOICES):
             ticket.status = new_status
             ticket.save(update_fields=['status', 'resolved_at', 'updated_at'])
             messages.success(request, f'Status changed to {ticket.get_status_display()}.')
+            # Notify the ticket submitter about the status change
+            if ticket.submitted_by:
+                _notify(
+                    user=ticket.submitted_by,
+                    title=f'Support Ticket Status Updated',
+                    message=f'Your support ticket "{ticket.subject}" status has been changed to "{ticket.get_status_display()}".',
+                    notif_type='system',
+                    link='/support/',
+                )
     return redirect('management:ticket_detail', pk=pk)
 
 
@@ -2775,16 +3075,25 @@ def ticket_change_status(request, pk):
 @user_passes_test(is_admin)
 def ticket_assign(request, pk):
     if request.method == 'POST':
-        from eduweb.models import SupportTicket
-        from django.contrib.auth.models import User
         ticket = get_object_or_404(SupportTicket, pk=pk)
         assigned_to_id = request.POST.get('assigned_to')
         if assigned_to_id:
             ticket.assigned_to = get_object_or_404(User, pk=assigned_to_id)
+            ticket.save(update_fields=['assigned_to'])
+            messages.success(request, 'Ticket assigned.')
+            # Notify the staff member they have been assigned this ticket
+            if ticket.assigned_to != request.user:
+                _notify(
+                    user=ticket.assigned_to,
+                    title='Support Ticket Assigned to You',
+                    message=f'You have been assigned support ticket "{ticket.subject}". Please review and respond.',
+                    notif_type='system',
+                    link=f'/management/tickets/{ticket.pk}/',
+                )
         else:
             ticket.assigned_to = None
-        ticket.save(update_fields=['assigned_to'])
-        messages.success(request, 'Ticket assigned.')
+            ticket.save(update_fields=['assigned_to'])
+            messages.success(request, 'Ticket unassigned.')
     return redirect('management:ticket_detail', pk=pk)
 
 
@@ -2795,7 +3104,6 @@ def ticket_assign(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def contact_messages_list(request):
-    from eduweb.models import ContactMessage
     qs = ContactMessage.objects.select_related('user', 'responded_by').order_by('-created_at')
 
     search = request.GET.get('search', '').strip()
@@ -2835,7 +3143,6 @@ def contact_messages_list(request):
 @login_required
 @user_passes_test(is_admin)
 def contact_message_detail(request, pk):
-    from eduweb.models import ContactMessage
     msg = get_object_or_404(ContactMessage, pk=pk)
     # Auto-mark as read on open
     if not msg.is_read:
@@ -2848,7 +3155,6 @@ def contact_message_detail(request, pk):
 @user_passes_test(is_admin)
 def contact_message_mark_read(request, pk):
     if request.method == 'POST':
-        from eduweb.models import ContactMessage
         msg = get_object_or_404(ContactMessage, pk=pk)
         msg.is_read = True
         msg.save(update_fields=['is_read'])
@@ -2860,7 +3166,6 @@ def contact_message_mark_read(request, pk):
 @user_passes_test(is_admin)
 def contact_message_respond(request, pk):
     if request.method == 'POST':
-        from eduweb.models import ContactMessage
         msg = get_object_or_404(ContactMessage, pk=pk)
         response_text = request.POST.get('response', '').strip()
         if response_text:
@@ -2915,7 +3220,6 @@ def announcements_list(request):
 @login_required
 @user_passes_test(is_admin)
 def announcement_create(request):
-    from .forms import AnnouncementForm
     if request.method == 'POST':
         form = AnnouncementForm(request.POST)
         if form.is_valid():
@@ -2923,6 +3227,48 @@ def announcement_create(request):
             ann.created_by = request.user
             ann.save()
             messages.success(request, 'Announcement created.')
+            # Notify users based on announcement type
+            if ann.announcement_type == 'system':
+                # Notify all active users
+                recipients = User.objects.filter(is_active=True).exclude(id=request.user.id)
+                for u in recipients:
+                    _notify(
+                        user=u,
+                        title=f'Announcement: {ann.title}',
+                        message=ann.content[:200],
+                        notif_type='announcement',
+                        link='/',
+                    )
+            elif ann.announcement_type == 'course' and ann.course:
+                # Notify only students enrolled in this specific course
+                enrolled_users = User.objects.filter(
+                    enrollments__course=ann.course,
+                    enrollments__status='active',
+                    is_active=True,
+                ).exclude(id=request.user.id).distinct()
+                for u in enrolled_users:
+                    _notify(
+                        user=u,
+                        title=f'Course Announcement: {ann.title}',
+                        message=ann.content[:200],
+                        notif_type='announcement',
+                        link=f'/courses/{ann.course.slug}/',
+                    )
+            elif ann.announcement_type == 'category' and ann.category:
+                # Notify students enrolled in any course under this category
+                enrolled_users = User.objects.filter(
+                    enrollments__course__category=ann.category,
+                    enrollments__status='active',
+                    is_active=True,
+                ).exclude(id=request.user.id).distinct()
+                for u in enrolled_users:
+                    _notify(
+                        user=u,
+                        title=f'Announcement: {ann.title}',
+                        message=ann.content[:200],
+                        notif_type='announcement',
+                        link='/',
+                    )
             return redirect('management:announcements_list')
     else:
         form = AnnouncementForm()
@@ -2932,7 +3278,6 @@ def announcement_create(request):
 @login_required
 @user_passes_test(is_admin)
 def announcement_edit(request, pk):
-    from .forms import AnnouncementForm
     announcement = get_object_or_404(Announcement, pk=pk)
     if request.method == 'POST':
         form = AnnouncementForm(request.POST, instance=announcement)
@@ -2966,8 +3311,6 @@ def announcement_delete(request, pk):
 @user_passes_test(is_admin)
 def enrollments_list(request):
     """List all student enrollments"""
-    from eduweb.models import Enrollment
-    from .forms import EnrollmentForm
     
     qs = Enrollment.objects.select_related(
         'student', 'course'
@@ -2998,19 +3341,32 @@ def enrollments_list(request):
 @user_passes_test(is_admin)
 def enrollment_create(request):
     """Create new enrollment"""
-    from .forms import EnrollmentForm
     
     if request.method == 'POST':
         form = EnrollmentForm(request.POST)
         if form.is_valid():
-            form.save()
+            enrollment = form.save()
             messages.success(request, 'Enrollment created.')
+            _notify(
+                user=enrollment.student,
+                title=f'Enrolled in {enrollment.course.title}',
+                message=f'You have been enrolled in "{enrollment.course.title}" by the administration.',
+                notif_type='enrollment',
+                link=f'/courses/{enrollment.course.slug}/',
+            )
+            # Notify course instructor
+            if enrollment.course.instructor:
+                _notify(
+                    user=enrollment.course.instructor,
+                    title='New Student Enrolled',
+                    message=f'{enrollment.student.get_full_name() or enrollment.student.username} was enrolled in "{enrollment.course.title}" by admin.',
+                    notif_type='enrollment',
+                    link=f'/instructor/courses/{enrollment.course.slug}/students/',
+                )
             return redirect('management:enrollments_list')
     else:
         form = EnrollmentForm()
     
-    from django.contrib.auth.models import User
-    from eduweb.models import LMSCourse
     return render(request, 'management/enrollment_form.html', {
         'form': form,
         'students': User.objects.filter(is_active=True).order_by('last_name', 'first_name'),
@@ -3022,21 +3378,33 @@ def enrollment_create(request):
 @user_passes_test(is_admin)
 def enrollment_edit(request, pk):
     """Edit enrollment"""
-    from eduweb.models import Enrollment
-    from .forms import EnrollmentForm
-    
+
     enrollment = get_object_or_404(Enrollment, pk=pk)
     if request.method == 'POST':
+        old_status = enrollment.status
         form = EnrollmentForm(request.POST, instance=enrollment)
         if form.is_valid():
-            form.save()
+            updated = form.save()
             messages.success(request, 'Enrollment updated.')
+            # Notify student only if their enrollment status changed
+            if updated.status != old_status:
+                status_messages = {
+                    'active':    'Your enrollment has been reactivated.',
+                    'completed': 'Your enrollment has been marked as completed. Congratulations!',
+                    'dropped':   'Your enrollment has been dropped. Contact support if this was unexpected.',
+                    'suspended': 'Your enrollment has been suspended. Please contact the administration.',
+                }
+                _notify(
+                    user=updated.student,
+                    title=f'Enrollment Status Updated — {updated.course.title}',
+                    message=status_messages.get(updated.status, f'Your enrollment status changed to "{updated.get_status_display()}".'),
+                    notif_type='enrollment',
+                    link='/dashboard/',
+                )
             return redirect('management:enrollments_list')
     else:
         form = EnrollmentForm(instance=enrollment)
     
-    from django.contrib.auth.models import User
-    from eduweb.models import LMSCourse
     return render(request, 'management/enrollment_form.html', {
         'form': form,
         'enrollment': enrollment,
@@ -3049,10 +3417,16 @@ def enrollment_edit(request, pk):
 @user_passes_test(is_admin)
 def enrollment_delete(request, pk):
     """Delete enrollment"""
-    from eduweb.models import Enrollment
     
     enrollment = get_object_or_404(Enrollment, pk=pk)
     if request.method == 'POST':
+        _notify(
+            user=enrollment.student,
+            title=f'Enrollment Removed — {enrollment.course.title}',
+            message=f'Your enrollment in "{enrollment.course.title}" has been removed by the administration. Please contact support if you believe this is an error.',
+            notif_type='enrollment',
+            link='/dashboard/',
+        )
         enrollment.delete()
         messages.success(request, 'Enrollment deleted.')
     return redirect('management:enrollments_list')
@@ -3096,8 +3470,15 @@ def certificate_create(request):
     if request.method == 'POST':
         form = CertificateForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            certificate = form.save()
             messages.success(request, 'Certificate issued successfully.')
+            _notify(
+                user=certificate.student,
+                title='Certificate Issued',
+                message=f'Your certificate for "{certificate.course.title}" has been issued. Congratulations!',
+                notif_type='certificate',
+                link='/dashboard/',
+            )
         else:
             # Surface the first meaningful error as a flash message
             first_error = next(
@@ -3141,8 +3522,6 @@ def certificate_delete(request, certificate_id):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def reviews_list(request):
-    from eduweb.models import Review, LMSCourse, UserProfile
-    from .forms import ReviewForm
 
     qs = Review.objects.select_related('student', 'course').order_by('-created_at')
 
@@ -3186,8 +3565,6 @@ def reviews_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def review_create(request):
-    from eduweb.models import Review
-    from .forms import ReviewForm
 
     if request.method == 'POST':
         form = ReviewForm(request.POST)
@@ -3206,8 +3583,6 @@ def review_create(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def review_edit(request, pk):
-    from eduweb.models import Review
-    from .forms import ReviewForm
 
     review = get_object_or_404(Review, pk=pk)
     if request.method == 'POST':
@@ -3227,7 +3602,6 @@ def review_edit(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def review_delete(request, pk):
-    from eduweb.models import Review
 
     review = get_object_or_404(Review, pk=pk)
     if request.method == 'POST':
@@ -3243,8 +3617,6 @@ def review_delete(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def badges_list(request):
-    from eduweb.models import Badge
-    from .forms import BadgeForm
 
     qs = Badge.objects.order_by('name')
 
@@ -3264,7 +3636,6 @@ def badges_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def badge_create(request):
-    from .forms import BadgeForm
 
     if request.method == 'POST':
         form = BadgeForm(request.POST)
@@ -3283,8 +3654,6 @@ def badge_create(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def badge_edit(request, slug):
-    from eduweb.models import Badge
-    from .forms import BadgeForm
 
     badge = get_object_or_404(Badge, slug=slug)
     if request.method == 'POST':
@@ -3304,7 +3673,6 @@ def badge_edit(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def badge_delete(request, slug):
-    from eduweb.models import Badge
 
     badge = get_object_or_404(Badge, slug=slug)
     if request.method == 'POST':
@@ -3320,8 +3688,6 @@ def badge_delete(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def student_badges_list(request):
-    from eduweb.models import StudentBadge, Badge
-    from .forms import StudentBadgeForm
 
     qs = StudentBadge.objects.select_related(
         'student', 'student__profile', 'badge', 'awarded_by'
@@ -3357,7 +3723,6 @@ def student_badges_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def student_badge_assign(request):
-    from .forms import StudentBadgeForm
 
     if request.method == 'POST':
         form = StudentBadgeForm(request.POST)
@@ -3366,6 +3731,13 @@ def student_badge_assign(request):
             assignment.awarded_by = request.user
             assignment.save()
             messages.success(request, 'Badge assigned.')
+            _notify(
+                user=assignment.student,
+                title=f'Badge Awarded: {assignment.badge.name}',
+                message=f'You have been awarded the "{assignment.badge.name}" badge!',
+                notif_type='system',
+                link='/dashboard/',
+            )
         else:
             first_error = next(
                 (e for errs in form.errors.values() for e in errs),
@@ -3378,7 +3750,6 @@ def student_badge_assign(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def student_badge_delete(request, pk):
-    from eduweb.models import StudentBadge
 
     student_badge = get_object_or_404(StudentBadge, pk=pk)
     if request.method == 'POST':
@@ -3393,8 +3764,6 @@ def student_badge_delete(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def payment_gateways_list(request):
-    from eduweb.models import PaymentGateway
-    from .forms import PaymentGatewayForm
 
     gateways = PaymentGateway.objects.order_by('name')
     form     = PaymentGatewayForm()
@@ -3407,7 +3776,6 @@ def payment_gateways_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def payment_gateway_create(request):
-    from .forms import PaymentGatewayForm
 
     if request.method != 'POST':
         return redirect('management:payment_gateways_list')
@@ -3428,8 +3796,6 @@ def payment_gateway_create(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def payment_gateway_edit(request, slug):
-    from eduweb.models import PaymentGateway
-    from .forms import PaymentGatewayForm
 
     if request.method != 'POST':
         return redirect('management:payment_gateways_list')
@@ -3459,7 +3825,6 @@ def payment_gateway_edit(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def payment_gateway_delete(request, slug):
-    from eduweb.models import PaymentGateway
 
     if request.method != 'POST':
         return redirect('management:payment_gateways_list')
@@ -3477,7 +3842,6 @@ def payment_gateway_delete(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def transactions_list(request):
-    from eduweb.models import Transaction
 
     qs = Transaction.objects.select_related('user', 'gateway').order_by('-created_at')
 
@@ -3515,7 +3879,6 @@ def transactions_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def transaction_detail(request, transaction_id):
-    from eduweb.models import Transaction
 
     txn = get_object_or_404(
         Transaction.objects.select_related('user', 'gateway', 'course'),
@@ -3533,8 +3896,6 @@ def transaction_detail(request, transaction_id):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def required_payments_list(request):
-    from eduweb.models import AllRequiredPayments, Program, Course
-    from .forms import AllRequiredPaymentsForm
 
     qs = AllRequiredPayments.objects.select_related(
         'program', 'course', 'academic_session'
@@ -3572,7 +3933,6 @@ def required_payments_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def required_payment_create(request):
-    from .forms import AllRequiredPaymentsForm
 
     if request.method != 'POST':
         return redirect('management:required_payments_list')
@@ -3593,8 +3953,6 @@ def required_payment_create(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def required_payment_edit(request, pk):
-    from eduweb.models import AllRequiredPayments
-    from .forms import AllRequiredPaymentsForm
 
     if request.method != 'POST':
         return redirect('management:required_payments_list')
@@ -3616,7 +3974,6 @@ def required_payment_edit(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def required_payment_delete(request, pk):
-    from eduweb.models import AllRequiredPayments
 
     if request.method != 'POST':
         return redirect('management:required_payments_list')
@@ -3634,8 +3991,6 @@ def required_payment_delete(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def staff_payroll_list(request):
-    from eduweb.models import StaffPayroll
-    from .forms import StaffPayrollForm
 
     STAFF_ROLES = ['instructor', 'support', 'admin', 'content_manager', 'finance']
 
@@ -3678,15 +4033,23 @@ def staff_payroll_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def staff_payroll_create(request):
-    from .forms import StaffPayrollForm
 
     if request.method != 'POST':
         return redirect('management:staff_payroll_list')
 
     form = StaffPayrollForm(request.POST)
     if form.is_valid():
-        form.save()
+        payroll = form.save()
         messages.success(request, 'Payroll record created.')
+        # Notify the staff member a payroll record has been created for them
+        month_name = payroll.get_month_display()
+        _notify(
+            user=payroll.staff,
+            title='Payroll Record Created',
+            message=f'A payroll record for {month_name} {payroll.year} has been created. Net salary: {payroll.net_salary}.',
+            notif_type='payroll',
+            link='/dashboard/',
+        )
     else:
         msg = next(
             (e for errs in form.errors.values() for e in errs),
@@ -3699,8 +4062,6 @@ def staff_payroll_create(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def staff_payroll_edit(request, payroll_reference):
-    from eduweb.models import StaffPayroll
-    from .forms import StaffPayrollForm
 
     if request.method != 'POST':
         return redirect('management:staff_payroll_list')
@@ -3708,8 +4069,17 @@ def staff_payroll_edit(request, payroll_reference):
     payroll = get_object_or_404(StaffPayroll, payroll_reference=payroll_reference)
     form    = StaffPayrollForm(request.POST, instance=payroll)
     if form.is_valid():
-        form.save()
+        updated_payroll = form.save()
         messages.success(request, 'Payroll updated.')
+        # Notify staff member their payroll record was updated
+        month_name = updated_payroll.get_month_display()
+        _notify(
+            user=updated_payroll.staff,
+            title='Payroll Record Updated',
+            message=f'Your payroll record for {month_name} {updated_payroll.year} has been updated. Net salary: {updated_payroll.net_salary}.',
+            notif_type='payroll',
+            link='/dashboard/',
+        )
     else:
         msg = next(
             (e for errs in form.errors.values() for e in errs),
@@ -3722,7 +4092,6 @@ def staff_payroll_edit(request, payroll_reference):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def staff_payroll_delete(request, payroll_reference):
-    from eduweb.models import StaffPayroll
 
     if request.method != 'POST':
         return redirect('management:staff_payroll_list')
@@ -3738,7 +4107,6 @@ def staff_payroll_delete(request, payroll_reference):
 @user_passes_test(is_admin)
 def site_config_general(request):
     """Edit base.html / global fields: identity, logos, SEO, footer, social, contact."""
-    from eduweb.models import SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember
     site = SiteConfig.objects.first()
     if request.method == 'POST':
         form = SiteConfigGeneralForm(request.POST, request.FILES, instance=site)
@@ -3760,7 +4128,6 @@ def site_config_general(request):
 @user_passes_test(is_admin)
 def site_config_index(request):
     """Edit index.html fields: hero slides, promo video, campus map."""
-    from eduweb.models import SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember
     site = SiteConfig.objects.first()
     if request.method == 'POST':
         form = SiteConfigIndexForm(request.POST, request.FILES, instance=site)
@@ -3782,7 +4149,6 @@ def site_config_index(request):
 @user_passes_test(is_admin)
 def site_config_about(request):
     """Edit about.html fields: mission, vision, values, virtual tour."""
-    from eduweb.models import SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember
     site = SiteConfig.objects.first()
     if request.method == 'POST':
         form = SiteConfigAboutForm(request.POST, request.FILES, instance=site)
@@ -3804,7 +4170,6 @@ def site_config_about(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def site_milestones_list(request):
-    from eduweb.models import SiteHistoryMilestone
     milestones = SiteHistoryMilestone.objects.all().order_by('display_order', 'year')
     return render(request, 'management/site_config/milestones_list.html', {
         'milestones': milestones,
@@ -3815,8 +4180,6 @@ def site_milestones_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def site_milestone_create(request):
-    from eduweb.models import SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember, SiteHistoryMilestone
-    from .forms import SiteHistoryMilestoneForm
     if request.method == 'POST':
         form = SiteHistoryMilestoneForm(request.POST)
         if form.is_valid():
@@ -3840,8 +4203,6 @@ def site_milestone_create(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def site_milestone_edit(request, pk):
-    from eduweb.models import SiteHistoryMilestone
-    from .forms import SiteHistoryMilestoneForm
     milestone = get_object_or_404(SiteHistoryMilestone, pk=pk)
     if request.method == 'POST':
         form = SiteHistoryMilestoneForm(request.POST, instance=milestone)
@@ -3864,7 +4225,6 @@ def site_milestone_edit(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def site_milestone_delete(request, pk):
-    from eduweb.models import SiteHistoryMilestone
     milestone = get_object_or_404(SiteHistoryMilestone, pk=pk)
     if request.method == 'POST':
         milestone.delete()
@@ -3877,7 +4237,6 @@ def site_milestone_delete(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def testimonials_list(request):
-    from eduweb.models import Testimonial
     testimonials = Testimonial.objects.all().order_by('order')
     return render(request, 'management/site_config/testimonials_list.html', {
         'testimonials': testimonials,
@@ -3888,7 +4247,6 @@ def testimonials_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def testimonial_create(request):
-    from .forms import TestimonialForm
     if request.method == 'POST':
         form = TestimonialForm(request.POST, request.FILES)
         if form.is_valid():
@@ -3910,8 +4268,6 @@ def testimonial_create(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def testimonial_edit(request, pk):
-    from eduweb.models import Testimonial
-    from .forms import TestimonialForm
     testimonial = get_object_or_404(Testimonial, pk=pk)
     if request.method == 'POST':
         form = TestimonialForm(request.POST, request.FILES, instance=testimonial)
@@ -3934,7 +4290,6 @@ def testimonial_edit(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def testimonial_delete(request, pk):
-    from eduweb.models import Testimonial
     testimonial = get_object_or_404(Testimonial, pk=pk)
     if request.method == 'POST':
         testimonial.delete()
@@ -3947,7 +4302,6 @@ def testimonial_delete(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def institution_members_list(request):
-    from eduweb.models import InstitutionMember
     members = InstitutionMember.objects.all().order_by('member_type', 'display_order')
     return render(request, 'management/site_config/members_list.html', {
         'members': members,
@@ -3961,7 +4315,6 @@ def institution_members_list(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def institution_member_create(request):
-    from .forms import InstitutionMemberForm
     if request.method == 'POST':
         form = InstitutionMemberForm(request.POST, request.FILES)
         if form.is_valid():
@@ -3983,8 +4336,6 @@ def institution_member_create(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def institution_member_edit(request, pk):
-    from eduweb.models import InstitutionMember
-    from .forms import InstitutionMemberForm
     member = get_object_or_404(InstitutionMember, pk=pk)
     if request.method == 'POST':
         form = InstitutionMemberForm(request.POST, request.FILES, instance=member)
@@ -4007,7 +4358,6 @@ def institution_member_edit(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def institution_member_delete(request, pk):
-    from eduweb.models import InstitutionMember
     member = get_object_or_404(InstitutionMember, pk=pk)
     if request.method == 'POST':
         member.delete()

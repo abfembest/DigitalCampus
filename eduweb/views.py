@@ -504,7 +504,7 @@ def about(request):
         'accreditations_list': partners_qs.filter(category='accreditation'),
     })
 
-
+@check_for_auth
 def all_programs(request):
     faculties = (
         Faculty.objects
@@ -525,11 +525,11 @@ def all_programs(request):
     )
     return render(request, 'all_programs.html', {'faculties': faculties})
 
-
+@check_for_auth
 def contact(request):
     return render(request, 'contact.html')
 
-
+@check_for_auth
 def activities(request):
     return render(request, 'activities.html')
 
@@ -677,7 +677,7 @@ def contact_submit(request):
 # =============================================================================
 # FACULTY & PROGRAM PAGES
 # =============================================================================
-
+@check_for_auth
 def faculty_detail(request, slug):
     """
     Faculty detail: Faculty → Departments → Programs → Courses
@@ -1208,8 +1208,9 @@ def upload_application_file(request, application_id):
         if application.status in ['draft', 'payment_complete']:
             application.status = 'documents_uploaded'
             application.save(update_fields=['status'])
-            send_document_upload_confirmation(application, document)
-            send_document_upload_admin_notification(application, document)
+
+        send_document_upload_confirmation(application, document)
+        send_document_upload_admin_notification(application, document)
 
         if auto_submit:
             application.mark_as_submitted()

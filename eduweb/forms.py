@@ -327,3 +327,54 @@ class ApplicationDocumentUploadForm(forms.ModelForm):
             if ext not in allowed_extensions:
                 raise forms.ValidationError('Only PDF, JPG, and PNG files are allowed.')
         return file
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PASSWORD RESET FORMS
+# ─────────────────────────────────────────────────────────────────────────────
+class PasswordResetRequestForm(forms.Form):
+    email = forms.EmailField(
+        label='Email Address',
+        widget=forms.EmailInput(attrs={
+            'class': _INPUT,
+            'placeholder': 'Enter your registered email',
+            'autocomplete': 'email',
+        })
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip().lower()
+        if not User.objects.filter(email=email, is_active=True).exists():
+            # Deliberate vague error — don't reveal if email exists
+            raise ValidationError(
+                'If this email is registered, you will receive a reset link shortly.'
+            )
+        return email
+
+
+class SetNewPasswordForm(forms.Form):
+    password1 = forms.CharField(
+        label='New Password',
+        widget=forms.PasswordInput(attrs={
+            'class': _INPUT,
+            'placeholder': 'Enter new password',
+            'autocomplete': 'new-password',
+        })
+    )
+    password2 = forms.CharField(
+        label='Confirm New Password',
+        widget=forms.PasswordInput(attrs={
+            'class': _INPUT,
+            'placeholder': 'Confirm new password',
+            'autocomplete': 'new-password',
+        })
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        p1 = cleaned.get('password1')
+        p2 = cleaned.get('password2')
+        if p1 and p2 and p1 != p2:
+            raise ValidationError({'password2': 'Passwords do not match.'})
+        if p1 and len(p1) < 8:
+            raise ValidationError({'password1': 'Password must be at least 8 characters.'})
+        return cleaned

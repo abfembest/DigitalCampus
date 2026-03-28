@@ -5,37 +5,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="keywords"
-        content="{{ site_config.meta_keywords|default:'Melchisedec International University, MIU, United States university, accredited university USA' }}">
-    <meta property="og:title"
-        content="{{ site_config.school_name|default:'Melchisedec International University' }} – Secular &amp; Theological Education in the USA">
-    <meta property="og:description"
-        content="{{ site_config.meta_description|default:'A United States-based university offering accredited secular and theological programs.' }}">
-    <meta name="twitter:title"
-        content="{{ site_config.school_name|default:'Melchisedec International University' }} ({{ site_config.school_short_name|default:'MIU' }})">
-    <meta name="twitter:description"
-        content="{{ site_config.meta_description|default:'Accredited secular and theological degree programs designed for global academic and ministry excellence.' }}">
 
-    <!-- Dynamic Meta Tags - Allow child templates to override -->
-    {% block meta_tags %}
-    <meta name="description"
-        content="Melchisedec International University - Empowering global education with flexible online programs, world-class faculty, and innovative learning experiences.">
-    <meta name="keywords"
-        content="online university, distance learning, international education, online degrees, MIU, Melchisedec university, accredited online programs">
-    {% endblock %}
-
+    <!-- Base-level SEO meta (always present; children push more via blocks) -->
+    <meta name="robots" content="index, follow">
     <meta name="author" content="{{ site_config.school_name|default:'Melchisedec International University' }}">
     <meta name="theme-color" content="{{ site_config.theme_color|default:'#840384' }}">
+    <meta name="keywords"
+          content="{{ site_config.meta_keywords|default:'Melchisedec International University, MIU, United States university, accredited university USA' }}">
+
+    <!-- OG base (rendered before overridable block so crawlers always see something) -->
+    <meta property="og:title"
+          content="{{ site_config.school_name|default:'Melchisedec International University' }} – Secular &amp; Theological Education in the USA">
+    <meta property="og:description"
+          content="{{ site_config.meta_description|default:'A United States-based university offering accredited secular and theological programs.' }}">
+    <meta property="og:site_name"
+          content="{{ site_config.school_name|default:'Melchisedec International University' }}">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter base -->
+    <meta name="twitter:title"
+          content="{{ site_config.school_name|default:'Melchisedec International University' }} ({{ site_config.school_short_name|default:'MIU' }})">
+    <meta name="twitter:description"
+          content="{{ site_config.meta_description|default:'Accredited secular and theological degree programs designed for global academic and ministry excellence.' }}">
+
+    <!-- Dynamic Meta Tags – child templates override these -->
+    {% block meta_tags %}
+    <meta name="description"
+          content="Melchisedec International University - Empowering global education with flexible online programs, world-class faculty, and innovative learning experiences.">
+    <meta name="keywords"
+          content="online university, distance learning, international education, online degrees, MIU, Melchisedec university, accredited online programs">
+    {% endblock %}
 
     <!-- Open Graph / Social Media Meta Tags -->
     {% block og_tags %}
     <meta property="og:type" content="website">
     <meta property="og:title"
-        content="{{ site_config.school_short_name|default:'MIU' }} – {{ site_config.school_name|default:'Melchisedec International University' }}">
+          content="{{ site_config.school_short_name|default:'MIU' }} – {{ site_config.school_name|default:'Melchisedec International University' }}">
     <meta property="og:description"
-        content="{{ site_config.meta_description|default:'Empowering global education with flexible online programs' }}">
+          content="{{ site_config.meta_description|default:'Empowering global education with flexible online programs' }}">
     <meta property="og:image"
-        content="{% if site_config.og_image %}{{ site_config.og_image.url }}{% else %}{% static 'images/miulogo.png' %}{% endif %}">
+          content="{% if site_config.og_image %}{{ site_config.og_image.url }}{% else %}{% static 'images/miulogo.png' %}{% endif %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
     {% endblock %}
 
@@ -43,34 +52,34 @@
     {% block twitter_tags %}
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title"
-        content="{{ site_config.school_short_name|default:'MIU' }} – {{ site_config.school_name|default:'Melchisedec International University' }}">
+          content="{{ site_config.school_short_name|default:'MIU' }} – {{ site_config.school_name|default:'Melchisedec International University' }}">
     <meta name="twitter:description"
-        content="{{ site_config.meta_description|default:'Empowering global education with flexible online programs' }}">
+          content="{{ site_config.meta_description|default:'Empowering global education with flexible online programs' }}">
     <meta name="twitter:image"
-        content="{% if site_config.og_image %}{{ site_config.og_image.url }}{% else %}{% static 'images/og-image.jpg' %}{% endif %}">
+          content="{% if site_config.og_image %}{{ site_config.og_image.url }}{% else %}{% static 'images/og-image.jpg' %}{% endif %}">
     {% endblock %}
 
     <title>{% block title %}MIU – Melchisedec International University{% endblock %}</title>
-
-    <!-- Favicon -->
-    {% if site_config.favicon %}
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ site_config.favicon.url }}">
-    <link rel="icon" type="image/png" sizes="48x48" href="{{ site_config.favicon.url }}">
-    <link rel="icon" type="image/png" sizes="96x96" href="{{ site_config.favicon.url }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ site_config.favicon.url }}">
-    <link rel="apple-touch-icon" href="{{ site_config.favicon.url }}">
-    {% else %}
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon.png' %}">
-    <link rel="icon" type="image/png" sizes="48x48" href="{% static 'favicon.png' %}">
-    <link rel="icon" type="image/png" sizes="96x96" href="{% static 'favicon.png' %}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'apple-touch-icon.png' %}">
-    <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
-    {% endif %}
 
     <!-- Canonical URL -->
     {% block canonical %}
     <link rel="canonical" href="{{ request.build_absolute_uri }}">
     {% endblock %}
+
+    <!-- Favicon -->
+    {% if site_config.favicon %}
+    <link rel="icon" type="image/png" sizes="32x32"  href="{{ site_config.favicon.url }}">
+    <link rel="icon" type="image/png" sizes="48x48"  href="{{ site_config.favicon.url }}">
+    <link rel="icon" type="image/png" sizes="96x96"  href="{{ site_config.favicon.url }}">
+    <link rel="apple-touch-icon" sizes="180x180"     href="{{ site_config.favicon.url }}">
+    <link rel="apple-touch-icon"                     href="{{ site_config.favicon.url }}">
+    {% else %}
+    <link rel="icon" type="image/png" sizes="32x32"  href="{% static 'favicon.png' %}">
+    <link rel="icon" type="image/png" sizes="48x48"  href="{% static 'favicon.png' %}">
+    <link rel="icon" type="image/png" sizes="96x96"  href="{% static 'favicon.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180"     href="{% static 'apple-touch-icon.png' %}">
+    <link rel="apple-touch-icon"                     href="{% static 'apple-touch-icon.png' %}">
+    {% endif %}
 
     <!-- Preload critical resources -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -78,9 +87,8 @@
     <link rel="preconnect" href="https://unpkg.com">
 
     <!-- Google Fonts - Inter & Poppins -->
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap"
+          rel="stylesheet">
 
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
@@ -92,6 +100,7 @@
         *::before,
         *::after {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            box-sizing: border-box;
         }
 
         /* Headings use Poppins */
@@ -111,6 +120,12 @@
         .font-\[\'Inter\'\] {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
+
+        /* Prevent horizontal scroll at any viewport width */
+        html, body { overflow-x: hidden; }
+
+        /* Ensure media never breaks out of its container */
+        img, video, iframe { max-width: 100%; }
     </style>
 
     <!-- SweetAlert2 CDN -->
@@ -118,7 +133,6 @@
 
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-
 
     <!-- Structured Data -->
     {% block structured_data %}{% endblock %}
@@ -132,17 +146,17 @@
 
     <!-- Skip to main content for accessibility -->
     <a href="#main-content"
-       class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-6 focus:py-3 focus:bg-gold-400 focus:text-primary-950 focus:rounded-lg focus:font-semibold focus:shadow-lg">
+       class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:px-6 focus:py-3 focus:bg-gold-400 focus:text-primary-950 focus:rounded-lg focus:font-semibold focus:shadow-lg focus:outline-none">
         Skip to main content
     </a>
 
     <!-- ================= NAVIGATION ================= -->
     <header class="fixed top-0 left-0 right-0 z-50 glass-effect shadow-md border-b border-purple-100 transition-shadow duration-300"
             role="banner">
-        <nav class="container mx-auto px-4 xl:px-0" aria-label="Main navigation">
+        <nav class="container mx-auto px-4 sm:px-5 xl:px-0" aria-label="Main navigation">
 
             <!-- ── Primary bar ── -->
-            <div class="flex items-center justify-between h-16 lg:h-20">
+            <div class="flex items-center justify-between h-16 lg:h-20 gap-2">
 
                 <!-- Logo -->
                 <a href="{% url 'eduweb:index' %}"
@@ -151,41 +165,43 @@
                     {% if site_config.logo %}
                     <img src="{{ site_config.logo.url }}"
                          alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
-                         class="h-12 lg:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                         width="140" height="56">
+                         class="h-12 sm:h-13 lg:h-16 w-auto max-w-[150px] sm:max-w-[170px] lg:max-w-[200px] object-contain transition-transform duration-300 group-hover:scale-105"
+                         width="200" height="64"
+                         loading="eager" fetchpriority="high">
                     {% else %}
                     <img src="{% static 'images/miulogo.png' %}"
                          alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
-                         class="h-12 lg:h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                         width="140" height="56">
+                         class="h-12 sm:h-13 lg:h-16 w-auto max-w-[150px] sm:max-w-[170px] lg:max-w-[200px] object-contain transition-transform duration-300 group-hover:scale-105"
+                         width="200" height="64"
+                         loading="eager" fetchpriority="high">
                     {% endif %}
                 </a>
 
-                <!-- Desktop Navigation Links -->
-                <div class="hidden lg:flex items-center gap-0.5" role="menubar">
+                <!-- Desktop Navigation Links (lg+) -->
+                <div class="hidden lg:flex items-center gap-0.5 flex-1 justify-center" role="menubar">
 
                     <a href="{% url 'eduweb:index' %}" role="menuitem"
-                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'index' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 whitespace-nowrap {% if request.resolver_match.url_name == 'index' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         Home
                     </a>
 
                     <a href="{% url 'eduweb:about' %}" role="menuitem"
-                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'about' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 whitespace-nowrap {% if request.resolver_match.url_name == 'about' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         About
                     </a>
 
                     <!-- Academics Dropdown -->
                     <div class="relative group">
                         <button type="button"
-                                class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:text-primary-950 hover:bg-purple-50"
+                                class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:text-primary-950 hover:bg-purple-50 whitespace-nowrap"
                                 aria-haspopup="menu" aria-expanded="false" aria-controls="academicsMenu">
                             Academics
-                            <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" aria-hidden="true"></i>
+                            <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180 flex-shrink-0" aria-hidden="true"></i>
                         </button>
                         <div id="academicsMenu"
                              class="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50"
                              role="menu" aria-label="Academics submenu">
-                            <div class="p-2">
+                            <div class="p-2 max-h-80 overflow-y-auto">
                                 {% for faculty in all_faculties %}
                                 <a href="{% url 'eduweb:faculty_detail' faculty.slug %}" role="menuitem"
                                    class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-primary-950">
@@ -193,7 +209,7 @@
                                     <span class="text-sm font-medium font-['Inter'] group-hover/item:text-primary-950 text-gray-700">{{ faculty.name }}</span>
                                 </a>
                                 {% empty %}
-                                <p class="text-sm font-['Inter'] text-gray-500 px-4 py-2">No faculties available</p>
+                                <p class="text-sm font-['Inter'] text-gray-500 px-4 py-3">No faculties available</p>
                                 {% endfor %}
                             </div>
                         </div>
@@ -202,15 +218,15 @@
                     <!-- Programs Dropdown -->
                     <div class="relative group">
                         <button type="button"
-                                class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:text-primary-950 hover:bg-purple-50"
+                                class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:text-primary-950 hover:bg-purple-50 whitespace-nowrap"
                                 aria-haspopup="menu" aria-expanded="false" aria-controls="programsMenu">
                             Programs
-                            <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180" aria-hidden="true"></i>
+                            <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-180 flex-shrink-0" aria-hidden="true"></i>
                         </button>
                         <div id="programsMenu"
                              class="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-purple-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50"
                              role="menu" aria-label="Programs submenu">
-                            <div class="p-2">
+                            <div class="p-2 max-h-80 overflow-y-auto">
                                 {% for course in all_courses %}
                                 <a href="{% url 'eduweb:program_detail' course.slug %}" role="menuitem"
                                    class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 transition-all duration-200 group/item focus:outline-none focus:ring-2 focus:ring-accent-600">
@@ -218,65 +234,65 @@
                                     <span class="text-sm font-medium font-['Inter'] group-hover/item:text-accent-700 text-gray-700">{{ course.name }}</span>
                                 </a>
                                 {% empty %}
-                                <p class="text-sm font-['Inter'] text-gray-500 px-4 py-2">No programs available</p>
+                                <p class="text-sm font-['Inter'] text-gray-500 px-4 py-3">No programs available</p>
                                 {% endfor %}
                             </div>
                         </div>
                     </div>
 
                     <a href="{% url 'eduweb:activities' %}" role="menuitem"
-                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'activities' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 whitespace-nowrap {% if request.resolver_match.url_name == 'activities' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         Activities
                     </a>
 
                     <a href="{% url 'eduweb:contact' %}" role="menuitem"
-                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'contact' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 whitespace-nowrap {% if request.resolver_match.url_name == 'contact' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         Contact
                     </a>
 
                     <a href="{% url 'eduweb:blog' %}" role="menuitem"
-                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'blog' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
+                       class="px-3 py-2 rounded-lg text-sm font-medium font-['Inter'] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 whitespace-nowrap {% if request.resolver_match.url_name == 'blog' or request.resolver_match.url_name == 'blog_detail' or request.resolver_match.url_name == 'blog_category' %}text-primary-950 bg-purple-50 font-semibold{% else %}text-gray-700 hover:text-primary-950 hover:bg-purple-50{% endif %}">
                         Blog
                     </a>
                 </div>
 
-                <!-- Desktop: Social Icons + CTA -->
-                <div class="hidden lg:flex items-center gap-2">
+                <!-- Desktop: Social Icons + CTA (lg+) -->
+                <div class="hidden lg:flex items-center gap-2 flex-shrink-0">
 
-                    <!-- Social Icons -->
+                    <!-- Social Icons (xl only) -->
                     <div class="hidden xl:flex items-center gap-1 pr-3 border-r border-purple-200">
                         {% if site_config.twitter %}
                         <a href="{{ site_config.twitter }}" target="_blank" rel="noopener noreferrer"
                            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="X / Twitter">
+                           aria-label="X / Twitter (opens in new tab)">
                             <i data-lucide="twitter" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.facebook %}
                         <a href="{{ site_config.facebook }}" target="_blank" rel="noopener noreferrer"
                            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="Facebook">
+                           aria-label="Facebook (opens in new tab)">
                             <i data-lucide="facebook" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.instagram %}
                         <a href="{{ site_config.instagram }}" target="_blank" rel="noopener noreferrer"
                            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="Instagram">
+                           aria-label="Instagram (opens in new tab)">
                             <i data-lucide="instagram" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.youtube %}
                         <a href="{{ site_config.youtube }}" target="_blank" rel="noopener noreferrer"
                            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="YouTube">
+                           aria-label="YouTube (opens in new tab)">
                             <i data-lucide="youtube" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.tiktok %}
                         <a href="{{ site_config.tiktok }}" target="_blank" rel="noopener noreferrer"
                            class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="TikTok">
+                           aria-label="TikTok (opens in new tab)">
                             <i data-lucide="music-2" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
@@ -284,8 +300,8 @@
 
                     <!-- Library Button -->
                     <a href="{% url 'library:home' %}"
-                    class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-950/30 text-primary-950 text-sm font-semibold font-['Inter'] hover:bg-primary-950 hover:text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 whitespace-nowrap"
-                    aria-label="Library – free for all">
+                       class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-950/30 text-primary-950 text-sm font-semibold font-['Inter'] hover:bg-primary-950 hover:text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 whitespace-nowrap"
+                       aria-label="Library – free for all">
                         <i data-lucide="library" class="w-4 h-4" aria-hidden="true"></i>
                         Library
                     </a>
@@ -319,9 +335,9 @@
                     {% endif %}
                 </div>
 
-                <!-- Mobile Hamburger -->
+                <!-- Mobile Hamburger (< lg) -->
                 <button id="mobileMenuBtn" type="button"
-                        class="lg:hidden p-2 rounded-lg hover:bg-purple-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950"
+                        class="lg:hidden p-2 rounded-lg hover:bg-purple-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 flex-shrink-0"
                         aria-label="Toggle mobile menu" aria-expanded="false" aria-controls="mobileMenu">
                     <i data-lucide="menu" class="w-6 h-6 text-primary-950" id="menuIcon" aria-hidden="true"></i>
                 </button>
@@ -329,19 +345,20 @@
 
             <!-- ── Mobile Navigation Drawer ── -->
             <div id="mobileMenu"
-                class="lg:hidden overflow-hidden max-h-0 transition-[max-height] duration-300 ease-in-out bg-white border-t border-purple-100"
-                style="overflow-y: hidden; max-height: 0px;">
+                 class="lg:hidden overflow-hidden max-h-0 transition-[max-height] duration-300 ease-in-out bg-white border-t border-purple-100"
+                 style="overflow-y: hidden; max-height: 0px;"
+                 aria-hidden="true">
                 <div class="py-3 space-y-1 px-2">
 
                     <a href="{% url 'eduweb:index' %}"
                        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'index' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
-                        <i data-lucide="home" class="w-5 h-5" aria-hidden="true"></i>
+                        <i data-lucide="home" class="w-5 h-5 flex-shrink-0" aria-hidden="true"></i>
                         <span class="font-medium font-['Inter']">Home</span>
                     </a>
 
                     <a href="{% url 'eduweb:about' %}"
                        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'about' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
-                        <i data-lucide="info" class="w-5 h-5" aria-hidden="true"></i>
+                        <i data-lucide="info" class="w-5 h-5 flex-shrink-0" aria-hidden="true"></i>
                         <span class="font-medium font-['Inter']">About Us</span>
                     </a>
 
@@ -351,10 +368,10 @@
                                 class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:bg-purple-50"
                                 id="mobileFacultiesBtn" aria-expanded="false" aria-controls="mobileFacultiesMenu">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="graduation-cap" class="w-5 h-5" aria-hidden="true"></i>
+                                <i data-lucide="graduation-cap" class="w-5 h-5 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-medium font-['Inter']">Academics</span>
                             </div>
-                            <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200" id="facultiesChevron" aria-hidden="true"></i>
+                            <i data-lucide="chevron-down" class="w-5 h-5 flex-shrink-0 transition-transform duration-200" id="facultiesChevron" aria-hidden="true"></i>
                         </button>
                         <div id="mobileFacultiesMenu"
                              class="overflow-hidden max-h-0 transition-[max-height] duration-300 ease-in-out">
@@ -376,10 +393,10 @@
                                 class="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 text-gray-700 hover:bg-purple-50"
                                 id="mobileProgramsBtn" aria-expanded="false" aria-controls="mobileProgramsMenu">
                             <div class="flex items-center gap-3">
-                                <i data-lucide="book-open" class="w-5 h-5" aria-hidden="true"></i>
+                                <i data-lucide="book-open" class="w-5 h-5 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-medium font-['Inter']">Programs</span>
                             </div>
-                            <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-200" id="programsChevron" aria-hidden="true"></i>
+                            <i data-lucide="chevron-down" class="w-5 h-5 flex-shrink-0 transition-transform duration-200" id="programsChevron" aria-hidden="true"></i>
                         </button>
                         <div id="mobileProgramsMenu"
                              class="overflow-hidden max-h-0 transition-[max-height] duration-300 ease-in-out">
@@ -397,19 +414,19 @@
 
                     <a href="{% url 'eduweb:activities' %}"
                        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'activities' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
-                        <i data-lucide="heart-handshake" class="w-5 h-5" aria-hidden="true"></i>
+                        <i data-lucide="heart-handshake" class="w-5 h-5 flex-shrink-0" aria-hidden="true"></i>
                         <span class="font-medium font-['Inter']">Activities</span>
                     </a>
 
                     <a href="{% url 'eduweb:contact' %}"
                        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'contact' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
-                        <i data-lucide="mail" class="w-5 h-5" aria-hidden="true"></i>
+                        <i data-lucide="mail" class="w-5 h-5 flex-shrink-0" aria-hidden="true"></i>
                         <span class="font-medium font-['Inter']">Contact</span>
                     </a>
 
                     <a href="{% url 'eduweb:blog' %}"
-                       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'blog' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
-                        <i data-lucide="newspaper" class="w-5 h-5" aria-hidden="true"></i>
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-950 {% if request.resolver_match.url_name == 'blog' or request.resolver_match.url_name == 'blog_detail' or request.resolver_match.url_name == 'blog_category' %}bg-purple-50 text-primary-950 font-semibold{% else %}text-gray-700 hover:bg-purple-50 hover:text-primary-950{% endif %}">
+                        <i data-lucide="newspaper" class="w-5 h-5 flex-shrink-0" aria-hidden="true"></i>
                         <span class="font-medium font-['Inter']">Blog</span>
                     </a>
 
@@ -418,35 +435,35 @@
                         {% if site_config.twitter %}
                         <a href="{{ site_config.twitter }}" target="_blank" rel="noopener noreferrer"
                            class="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center text-primary-950 hover:bg-purple-100 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="X / Twitter">
+                           aria-label="X / Twitter (opens in new tab)">
                             <i data-lucide="twitter" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.facebook %}
                         <a href="{{ site_config.facebook }}" target="_blank" rel="noopener noreferrer"
                            class="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center text-primary-950 hover:bg-purple-100 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="Facebook">
+                           aria-label="Facebook (opens in new tab)">
                             <i data-lucide="facebook" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.instagram %}
                         <a href="{{ site_config.instagram }}" target="_blank" rel="noopener noreferrer"
                            class="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center text-primary-950 hover:bg-purple-100 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="Instagram">
+                           aria-label="Instagram (opens in new tab)">
                             <i data-lucide="instagram" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.youtube %}
                         <a href="{{ site_config.youtube }}" target="_blank" rel="noopener noreferrer"
                            class="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center text-primary-950 hover:bg-purple-100 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="YouTube">
+                           aria-label="YouTube (opens in new tab)">
                             <i data-lucide="youtube" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.tiktok %}
                         <a href="{{ site_config.tiktok }}" target="_blank" rel="noopener noreferrer"
                            class="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center text-primary-950 hover:bg-purple-100 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="TikTok">
+                           aria-label="TikTok (opens in new tab)">
                             <i data-lucide="music-2" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
@@ -456,7 +473,7 @@
                     <div class="pt-1 pb-3 space-y-2 px-2">
                         <!-- Library -->
                         <a href="{% url 'library:home' %}"
-                        class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary-950/10 border border-primary-950/30 text-primary-950 rounded-lg font-semibold font-['Inter'] hover:bg-primary-950 hover:text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
+                           class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary-950/10 border border-primary-950/30 text-primary-950 rounded-lg font-semibold font-['Inter'] hover:bg-primary-950 hover:text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
                             <i data-lucide="library" class="w-5 h-5" aria-hidden="true"></i>
                             Library – Free Access
                         </a>
@@ -495,37 +512,40 @@
     </header>
 
     <!-- Main Content — pt matches nav height: h-16 mobile / h-20 desktop -->
-    <main id="main-content" class="pt-16 lg:pt-20" role="main">
+    <main id="main-content" class="pt-16 lg:pt-20" role="main" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 
     <!-- ================= FOOTER ================= -->
-
-    <footer class="bg-gradient-to-br from-primary-950 via-purple-900 to-purple-800 text-white" role="contentinfo">
-        <div class="container mx-auto py-16 px-4 lg:px-2">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+    <footer class="bg-gradient-to-br from-primary-950 via-purple-900 to-purple-800 text-white"
+            role="contentinfo"
+            aria-label="Site footer">
+        <div class="container mx-auto py-16 px-4 sm:px-6 lg:px-8 xl:px-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-12 mb-12">
 
                 <!-- About Section with Logo Image -->
-                <div class="space-y-6">
+                <div class="space-y-6 sm:col-span-2 lg:col-span-1">
                     <div class="inline-flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-lg">
                         {% if site_config.logo %}
                         <img src="{{ site_config.logo.url }}"
                              alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
-                             class="h-16 w-auto object-contain">
+                             class="h-16 w-auto object-contain"
+                             loading="lazy" width="160" height="64">
                         {% else %}
                         <img src="{% static 'images/miulogo.png' %}"
                              alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
-                             class="h-16 w-auto object-contain">
+                             class="h-16 w-auto object-contain"
+                             loading="lazy" width="160" height="64">
                         {% endif %}
                     </div>
                     <p class="text-purple-200 font-['Inter'] leading-relaxed">
                         {{ site_config.footer_tagline|default:"Empowering global education since 1995 with innovative learning experiences and world-class faculty." }}
                     </p>
                     {% if site_config.address_usa %}
-                    <div class="flex items-start gap-3 text-purple-200">
-                        <i data-lucide="map-pin" class="w-5 h-5 mt-0.5 flex-shrink-0"></i>
+                    <address class="not-italic flex items-start gap-3 text-purple-200">
+                        <i data-lucide="map-pin" class="w-5 h-5 mt-0.5 flex-shrink-0" aria-hidden="true"></i>
                         <span class="text-sm font-['Inter']">{{ site_config.address_usa }}</span>
-                    </div>
+                    </address>
                     {% endif %}
                 </div>
 
@@ -533,49 +553,49 @@
                 <div>
                     <!-- font-display replaced with font-['Poppins'] — font-display conflicts with the CSS font-display property -->
                     <h4 class="text-lg font-bold font-['Poppins'] mb-6 flex items-center gap-2">
-                        <i data-lucide="link" class="w-5 h-5 text-gold-400"></i>
+                        <i data-lucide="link" class="w-5 h-5 text-gold-400" aria-hidden="true"></i>
                         Quick Links
                     </h4>
-                    <ul class="space-y-3">
+                    <ul class="space-y-3" role="list">
                         <li>
                             <a href="{% url 'eduweb:about' %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
-                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
-                                <span class="font-['Inter']">About {{site_config.school_short_name|default:'MELBAC'}}</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
+                                <span class="font-['Inter']">About {{ site_config.school_short_name|default:'MELBAC' }}</span>
                             </a>
                         </li>
                         <li>
                             <a href="{% url 'eduweb:all_programs' %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
-                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Programs</span>
                             </a>
                         </li>
                         <li>
                             <a href="{% url 'eduweb:admission_requirement' %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
-                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Admissions</span>
                             </a>
                         </li>
                         <li>
                             <a href="{% url 'eduweb:activities' %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
-                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Activities</span>
                             </a>
                         </li>
                         <li>
                             <a href="{% url 'eduweb:contact' %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
-                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Contact Us</span>
                             </a>
                         </li>
                         <li>
                             <a href="{% url 'eduweb:blog' %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
-                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Blog</span>
                             </a>
                         </li>
@@ -585,15 +605,15 @@
                 <!-- Resources -->
                 <div>
                     <h4 class="text-lg font-bold font-['Poppins'] mb-6 flex items-center gap-2">
-                        <i data-lucide="folder" class="w-5 h-5 text-gold-400"></i>
+                        <i data-lucide="folder" class="w-5 h-5 text-gold-400" aria-hidden="true"></i>
                         Resources
                     </h4>
-                    <ul class="space-y-3">
+                    <ul class="space-y-3" role="list">
                         <li>
                             <a href="{% url 'library:home' %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
                                 <i data-lucide="chevron-right"
-                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Library</span>
                             </a>
                         </li>
@@ -601,14 +621,14 @@
                             <a href="#"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
                                 <i data-lucide="chevron-right"
-                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Career Services</span>
                             </a>
                         </li>
                         <li>
                             <a href="{% if user.is_authenticated %}{% url 'eduweb:application_status' %}{% else %}{% url 'eduweb:auth_page' %}{% endif %}"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
-                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Student Portal</span>
                             </a>
                         </li>
@@ -616,7 +636,7 @@
                             <a href="#"
                                class="text-purple-200 hover:text-gold-400 transition-colors duration-200 flex items-center gap-2 group focus:outline-none focus:text-gold-400">
                                 <i data-lucide="chevron-right"
-                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"></i>
+                                   class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200 flex-shrink-0" aria-hidden="true"></i>
                                 <span class="font-['Inter']">Campus Map</span>
                             </a>
                         </li>
@@ -626,50 +646,50 @@
                 <!-- Connect -->
                 <div>
                     <h4 class="text-lg font-bold font-['Poppins'] mb-6 flex items-center gap-2">
-                        <i data-lucide="share-2" class="w-5 h-5 text-gold-400"></i>
+                        <i data-lucide="share-2" class="w-5 h-5 text-gold-400" aria-hidden="true"></i>
                         Connect With Us
                     </h4>
-                    <div class="flex gap-3 mb-6">
+                    <div class="flex gap-3 mb-6 flex-wrap">
                         {% if site_config.facebook %}
-                        <a href="{{ site_config.facebook }}" target="_blank" rel="noopener"
+                        <a href="{{ site_config.facebook }}" target="_blank" rel="noopener noreferrer"
                            class="h-10 w-10 bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                           aria-label="Facebook">
-                            <i data-lucide="facebook" class="w-5 h-5"></i>
+                           aria-label="Facebook (opens in new tab)">
+                            <i data-lucide="facebook" class="w-5 h-5" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.twitter %}
-                        <a href="{{ site_config.twitter }}" target="_blank" rel="noopener"
+                        <a href="{{ site_config.twitter }}" target="_blank" rel="noopener noreferrer"
                            class="h-10 w-10 bg-sky-500 hover:bg-sky-600 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                           aria-label="Twitter">
-                            <i data-lucide="twitter" class="w-5 h-5"></i>
+                           aria-label="Twitter / X (opens in new tab)">
+                            <i data-lucide="twitter" class="w-5 h-5" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.linkedin %}
-                        <a href="{{ site_config.linkedin }}" target="_blank" rel="noopener"
+                        <a href="{{ site_config.linkedin }}" target="_blank" rel="noopener noreferrer"
                            class="h-10 w-10 bg-blue-700 hover:bg-blue-800 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                           aria-label="LinkedIn">
-                            <i data-lucide="linkedin" class="w-5 h-5"></i>
+                           aria-label="LinkedIn (opens in new tab)">
+                            <i data-lucide="linkedin" class="w-5 h-5" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.youtube %}
-                        <a href="{{ site_config.youtube }}" target="_blank" rel="noopener"
+                        <a href="{{ site_config.youtube }}" target="_blank" rel="noopener noreferrer"
                            class="h-10 w-10 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                           aria-label="YouTube">
-                            <i data-lucide="youtube" class="w-5 h-5"></i>
+                           aria-label="YouTube (opens in new tab)">
+                            <i data-lucide="youtube" class="w-5 h-5" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.instagram %}
-                        <a href="{{ site_config.instagram }}" target="_blank" rel="noopener"
+                        <a href="{{ site_config.instagram }}" target="_blank" rel="noopener noreferrer"
                            class="h-10 w-10 bg-pink-600 hover:bg-pink-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                           aria-label="Instagram">
-                            <i data-lucide="instagram" class="w-5 h-5"></i>
+                           aria-label="Instagram (opens in new tab)">
+                            <i data-lucide="instagram" class="w-5 h-5" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                         {% if site_config.tiktok %}
-                        <a href="{{ site_config.tiktok }}" target="_blank" rel="noopener"
+                        <a href="{{ site_config.tiktok }}" target="_blank" rel="noopener noreferrer"
                            class="h-10 w-10 bg-gray-900 hover:bg-gray-800 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gold-400"
-                           aria-label="TikTok">
-                            <i data-lucide="music" class="w-5 h-5"></i>
+                           aria-label="TikTok (opens in new tab)">
+                            <i data-lucide="music" class="w-5 h-5" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                     </div>
@@ -679,27 +699,26 @@
                 </div>
             </div>
 
-
             <!-- Bottom Bar -->
             <div class="border-t border-purple-700 pt-8">
-                <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
                     <p class="text-purple-300 text-sm font-['Inter']">
-                        &copy; {{ site_config.copyright_year|default:"2025" }} {{site_config.school_name|default:"Melchisedec International University" }} ({{site_config.school_short_name|default:"MIU" }}). All rights reserved.
+                        &copy; {{ site_config.copyright_year|default:"2025" }} {{ site_config.school_name|default:"Melchisedec International University" }} ({{ site_config.school_short_name|default:"MIU" }}). All rights reserved.
                     </p>
-                    <div class="flex flex-wrap items-center justify-center gap-2 text-purple-300 text-sm font-['Inter']">
+                    <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2 text-purple-300 text-sm font-['Inter']">
                         {% if site_config.phone_primary %}
                         <a href="tel:{{ site_config.phone_primary }}"
                            class="flex items-center gap-1 hover:text-gold-400 transition-colors duration-200 focus:outline-none focus:text-gold-400">
-                            <i data-lucide="phone" class="w-4 h-4"></i>
+                            <i data-lucide="phone" class="w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
                             <span>{{ site_config.phone_primary }}</span>
                         </a>
-                        <span class="hidden sm:inline mx-2">|</span>
+                        <span class="hidden sm:inline mx-2" aria-hidden="true">|</span>
                         {% endif %}
                         {% if site_config.email %}
                         <a href="mailto:{{ site_config.email }}"
                            class="flex items-center gap-1 hover:text-gold-400 transition-colors duration-200 focus:outline-none focus:text-gold-400">
-                            <i data-lucide="mail" class="w-4 h-4"></i>
-                            <span>{{ site_config.email }}</span>
+                            <i data-lucide="mail" class="w-4 h-4 flex-shrink-0" aria-hidden="true"></i>
+                            <span class="break-all sm:break-normal">{{ site_config.email }}</span>
                         </a>
                         {% endif %}
 
@@ -709,19 +728,9 @@
                 </div>
             </div>
 
-
-
-           
-
         </div>
 
-
-
-
     </footer>
-
-
-    
 
     <script src="{% static 'js/main.js' %}"></script>
 
@@ -730,9 +739,7 @@
         if (window.lucide) { lucide.createIcons(); }
     </script>
 
-
     {% block extra_js %}
-
 
     {% endblock %}
 
@@ -782,7 +789,6 @@
             });
         };
     </script>
-
 
 </body>
 

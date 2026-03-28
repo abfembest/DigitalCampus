@@ -129,14 +129,14 @@ def navigation_data(request):
 # ─────────────────────────────────────────────────────────────────────────────
 def student_counts(request):
     """
-    Inject unread message count, unread notification count,
-    and the 5 most recent unread notifications for the nav dropdown.
+    Inject unread notification count and nav bell notifications for ALL
+    authenticated roles. Also injects unread_messages_count for students.
+    Renamed body but keeps the same context variable names so base.html
+    works unchanged for every role.
     """
     if not request.user.is_authenticated:
         return {}
     if not hasattr(request.user, 'profile'):
-        return {}
-    if request.user.profile.role != 'student':
         return {}
 
     try:
@@ -145,16 +145,22 @@ def student_counts(request):
             is_read=False,
         ).order_by('-created_at')
 
-        return {
-            'unread_messages_count': Message.objects.filter(
+        result = {
+            'unread_notifications_count': unread_notifs_qs.count(),
+            'nav_notifications': list(unread_notifs_qs[:5]),
+            'unread_messages_count': 0,
+        }
+
+        # Unread messages only meaningful for students (inbox feature)
+        if request.user.profile.role == 'student':
+            result['unread_messages_count'] = Message.objects.filter(
                 recipient=request.user,
                 is_read=False,
                 parent__isnull=True,
-            ).count(),
-            'unread_notifications_count': unread_notifs_qs.count(),
-            # Last 5 unread for the nav bell dropdown — once read they leave
-            'nav_notifications': list(unread_notifs_qs[:5]),
-        }
+            ).count()
+
+        return result
+
     except Exception:
         logger.exception('student_counts: failed to fetch counts')
         return {

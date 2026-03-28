@@ -39,23 +39,27 @@ def _notify_instructor(instructor, title, message, notif_type='system', link='')
     """
     Create a Notification for an instructor and prune old ones beyond 100.
     notif_type must be one of Notification.NOTIFICATION_TYPE_CHOICES keys.
+    Silently fails so it never breaks the main action.
     """
-    Notification.objects.create(
-        user=instructor,
-        notification_type=notif_type,
-        title=title,
-        message=message,
-        link=link,
-    )
-    # Keep only the latest 100 notifications per instructor
-    old_ids = (
-        Notification.objects
-        .filter(user=instructor)
-        .order_by('-created_at')
-        .values_list('id', flat=True)[100:]
-    )
-    if old_ids:
-        Notification.objects.filter(id__in=list(old_ids)).delete()
+    try:
+        Notification.objects.create(
+            user=instructor,
+            notification_type=notif_type,
+            title=title,
+            message=message,
+            link=link,
+        )
+        # Keep only the latest 100 notifications per instructor
+        old_ids = (
+            Notification.objects
+            .filter(user=instructor)
+            .order_by('-created_at')
+            .values_list('id', flat=True)[100:]
+        )
+        if old_ids:
+            Notification.objects.filter(id__in=list(old_ids)).delete()
+    except Exception:
+        pass
 
 # ==================== DASHBOARD ====================
 @login_required(login_url='auth')
@@ -389,7 +393,7 @@ def lesson_create(request, course_slug):
             lesson.save()
             messages.success(request, 'Lesson created successfully!')
             # Notify enrolled students about new lesson content
-            if lesson.is_published if hasattr(lesson, 'is_published') else True:
+            if lesson.is_active:
                 enrolled = Enrollment.objects.filter(
                     course=course, status='active'
                 ).select_related('student')
@@ -928,8 +932,10 @@ def grade_submission(request, course_slug, submission_id):
             title='Assignment Graded',
             message=f'Your submission for "{assignment.title}" in "{course.title}" has been graded. Score: {submission.score}.',
             notif_type='grade',
-            link=f'/courses/{course.slug}/',
+            link=f'/student/courses/{course.slug}/assignments/{assignment.slug}/',
         )
+        from eduweb.emailservices import send_assignment_graded_email
+        send_assignment_graded_email(submission.student, submission)
         return redirect(
             'instructor:assignment_submissions',
             course_slug=course.slug,
@@ -1684,6 +1690,13 @@ Role: Instructor
                     'Your support ticket has been submitted successfully! '
                     'Our team will get back to you within 24-48 hours.'
                 )
+                _notify_instructor(
+                    instructor=request.user,
+                    title='Support Ticket Submitted',
+                    message=f'Your ticket "{form.cleaned_data["subject"]}" has been received. We will respond within 24-48 hours.',
+                    notif_type='system',
+                    link='/instructor/help-support/',
+                )
                 return redirect('instructor:help_support')
             
             except Exception as e:
@@ -2056,6 +2069,8 @@ def message_compose(request):
                 notif_type='message',
                 link='/instructor/messages/',
             )
+            from eduweb.emailservices import send_new_message_email
+            send_new_message_email(msg.recipient, request.user, msg)
             return redirect('instructor:messages_inbox')
     else:
         form = MessageForm(initial=initial)
@@ -2103,6 +2118,8 @@ def message_reply(request, message_id):
                 notif_type='message',
                 link=f'/instructor/messages/{root.id}/',
             )
+            from eduweb.emailservices import send_new_message_email
+            send_new_message_email(other, request.user, root)
         else:
             messages.error(request, 'Reply cannot be empty.')
 
@@ -2182,7 +2199,7 @@ def discussion_reply(request, course_slug, discussion_slug):
                     title='Instructor Replied to Your Discussion',
                     message=f'Your instructor replied to "{discussion.title}" in "{course.title}".',
                     notif_type='announcement',
-                    link=f'/instructor/courses/{course.slug}/discussions/{discussion.slug}/',
+                    link=f'/student/community/thread/{discussion.id}/',
                 )
         else:
             messages.error(request, 'Reply cannot be empty.')
@@ -2256,7 +2273,7 @@ def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
                 title='Your Reply Was Marked as Solution',
                 message=f'Your reply in "{discussion.title}" was marked as the solution by the instructor.',
                 notif_type='announcement',
-                link=f'/instructor/courses/{course.slug}/discussions/{discussion.slug}/',
+                link=f'/student/community/thread/{discussion.id}/',
             )
 
     return redirect('instructor:discussion_detail',

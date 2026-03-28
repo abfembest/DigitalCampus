@@ -374,15 +374,15 @@ def send_application_confirmation_email(application):
                             </p>
                             <p>
                                 <strong>Program:</strong>
-                                {application.course.name}
+                                {application.program.name}
                             </p>
                             <p>
                                 <strong>Degree Level:</strong>
-                                {application.course.get_degree_level_display()}
+                                {application.program.get_degree_level_display()}
                             </p>
                             <p>
                                 <strong>Faculty:</strong>
-                                {application.course.faculty.name}
+                                {application.program.department.faculty.name}
                             </p>
                             <p>
                                 <strong>Submission Date:</strong>
@@ -406,9 +406,19 @@ def send_application_confirmation_email(application):
         </html>
         """
 
+        text_body = (
+            f"Dear {application.first_name} {application.last_name},\n\n"
+            f"Thank you for applying to {site.school_name}. "
+            f"Your application has been received.\n\n"
+            f"Application ID: {application.application_id}\n"
+            f"Program: {application.program.name}\n\n"
+            f"Our admissions team will contact you within 5-7 business days.\n\n"
+            f"Best regards,\nThe {site.school_short_name} Admissions Team"
+        )
+
         msg = EmailMultiAlternatives(
             subject=subject,
-            body=f"Application ID: {application.application_id}",
+            body=text_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[application.email],
         )
@@ -464,15 +474,15 @@ def send_application_admin_notification(application):
                 </p>
                 <p>
                     <strong>Course:</strong>
-                    {application.course.name} ({application.course.code})
+                    {application.program.name} ({application.program.code})
                 </p>
                 <p>
                     <strong>Degree Level:</strong>
-                    {application.course.get_degree_level_display()}
+                    {application.program.get_degree_level_display()}
                 </p>
                 <p>
                     <strong>Faculty:</strong>
-                    {application.course.faculty.name}
+                    {application.program.department.faculty.name}
                 </p>
                 <p>
                     <strong>Intake:</strong>
@@ -547,27 +557,12 @@ def send_document_upload_confirmation(application, documents):
         for idx, doc in enumerate(documents, 1):
             docs_html += f"""
             <div style="background-color: #f9fafb;
-                        padding: 15px;
+                        padding: 12px 15px;
                         border-radius: 6px;
-                        margin-bottom: 10px;">
-                <p style="margin: 5px 0;">
-                    <strong>Document {idx}:</strong>
-                </p>
-                <p style="margin: 5px 0; padding-left: 15px;">
-                    <strong>Type:</strong>
-                    {doc.get_file_type_display()}
-                </p>
-                <p style="margin: 5px 0; padding-left: 15px;">
-                    <strong>File:</strong>
-                    {doc.original_filename}
-                </p>
-                <p style="margin: 5px 0; padding-left: 15px;">
-                    <strong>Size:</strong>
-                    {doc.get_file_size_display()}
-                </p>
-                <p style="margin: 5px 0; padding-left: 15px;">
-                    <strong>Uploaded:</strong>
-                    {doc.uploaded_at.strftime('%B %d, %Y at %I:%M %p')}
+                        margin-bottom: 8px;">
+                <p style="margin: 0;">
+                    <strong>{idx}. {doc.get_file_type_display()}</strong>
+                    &nbsp;—&nbsp;{doc.original_filename}
                 </p>
             </div>
             """
@@ -575,14 +570,7 @@ def send_document_upload_confirmation(application, documents):
         # Build document list text
         docs_text = ""
         for idx, doc in enumerate(documents, 1):
-            docs_text += f"""
-Document {idx}:
-  Type: {doc.get_file_type_display()}
-  File: {doc.original_filename}
-  Size: {doc.get_file_size_display()}
-  Uploaded: {doc.uploaded_at.strftime('%B %d, %Y at %I:%M %p')}
-
-"""
+            docs_text += f"  {idx}. {doc.get_file_type_display()} — {doc.original_filename}\n"
 
         html_content = f"""
         <html>
@@ -619,16 +607,9 @@ Document {idx}:
                                     padding: 20px;
                                     border-radius: 8px;
                                     margin: 25px 0;">
-                            <h3 style="color: #0F2A44; margin-top: 0;">
-                                Upload Summary
-                            </h3>
-                            <p>
+                            <p style="margin: 0;">
                                 <strong>Application ID:</strong>
                                 {application.application_id}
-                            </p>
-                            <p>
-                                <strong>Total Documents:</strong>
-                                {doc_count}
                             </p>
                         </div>
 
@@ -662,11 +643,9 @@ Dear {application.first_name} {application.last_name},
 Your {'documents have' if doc_count > 1 else 'document has'} been
 successfully uploaded to your application.
 
-Upload Summary:
-- Application ID: {application.application_id}
-- Total Documents: {doc_count}
+Application ID: {application.application_id}
 
-{'Documents' if doc_count > 1 else 'Document'} Uploaded:
+{'Documents' if doc_count > 1 else 'Document'} uploaded:
 {docs_text}
 
 You can continue uploading additional documents or submit your
@@ -802,7 +781,7 @@ def send_document_upload_admin_notification(application, documents):
                             Course:
                         </td>
                         <td style="padding: 8px;">
-                            {application.course.name}
+                            {application.program.name}
                         </td>
                     </tr>
                 </table>
@@ -1131,36 +1110,25 @@ def send_payment_emails(payment):
     )
     symbol = currency_symbols.get(str(currency_code).upper(), currency_code + ' ')
 
-    if payment.user and payment.user.email:
-        send_mail(
-            "Payment Receipt",
-            f"""
+    user = getattr(payment, 'user', None) or getattr(payment.application, 'user', None)
+    user_email = user.email if user and user.email else payment.application.email
+
+    send_mail(
+        "Payment Receipt",
+        f"""
 Payment Successful
 
 Amount: {symbol}{payment.amount}
-Application ID: {payment.application_id}
-Transaction: {payment.stripe_payment_intent}
+Application ID: {payment.application.application_id}
+Reference: {payment.payment_reference}
 
 Best regards,
 The {site.school_short_name} Team
-            """,
-            settings.DEFAULT_FROM_EMAIL,
-            [payment.user.email],
-            fail_silently=True,
-        )
-
-        send_mail(
-            "New Payment Received",
-            f"""
-Vendor Payment Alert
-
-Application ID: {payment.application_id}
-Amount: {symbol}{payment.amount}
-            """,
-            settings.DEFAULT_FROM_EMAIL,
-            [payment.vendor.email],
-            fail_silently=True,
-        )
+        """,
+        settings.DEFAULT_FROM_EMAIL,
+        [user_email],
+        fail_silently=True,
+    )
 
 
 #######################################################
@@ -1220,7 +1188,7 @@ def send_admission_acceptance_email(application):
                             </p>
                             <p>
                                 <strong>Program:</strong>
-                                {application.course.name}
+                                {application.program.name}
                             </p>
                         </div>
 
@@ -1694,5 +1662,445 @@ The {site.school_short_name} Admissions Team
         logger.error(
             "Admission offer accepted email failed for %s: %s",
             application.email, e, exc_info=True,
+        )
+        return False
+
+
+#######################################################
+# CERTIFICATE FEE PAID — SENT TO STUDENT
+#######################################################
+def send_certificate_fee_paid_email(user, certificate):
+    """
+    Sent when a student's certificate fee payment is confirmed
+    and their certificate is now available to download.
+
+    Trigger: Call after Certificate.mark_paid() succeeds in the
+             payment confirmation flow.
+    Recipients: Student
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+
+        if certificate.certificate_type == 'program' and certificate.program:
+            cert_title = certificate.program.name
+        elif certificate.course:
+            cert_title = certificate.course.title
+        else:
+            cert_title = 'Your Certificate'
+
+        subject = f'Your Certificate is Ready — {site.school_short_name}'
+
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .btn       {{ display: inline-block; padding: 14px 32px;
+                              background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
+                              color: white; text-decoration: none;
+                              border-radius: 8px; font-weight: bold; font-size: 15px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎓 Certificate Ready!</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <p>
+                        Great news! Your payment has been confirmed and your certificate
+                        for <strong>{cert_title}</strong> is now available to download.
+                    </p>
+                    <p><strong>Certificate ID:</strong> {certificate.certificate_id}</p>
+                    <p style="font-size:13px; color:#666;">
+                        If you have any issues accessing your certificate, contact us at
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+Certificate Ready — {site.school_name}
+
+Dear {user.get_full_name() or user.username},
+
+Your payment has been confirmed and your certificate for "{cert_title}"
+is now available to download from your student portal.
+
+Certificate ID: {certificate.certificate_id}
+
+Visit: /student/certificates/
+
+Questions? Contact us at {contact}
+
+Best regards,
+The {site.school_short_name} Team
+        """
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Certificate fee paid email failed for %s: %s",
+            user.email, e, exc_info=True,
+        )
+        return False
+
+
+#######################################################
+# GRADUATION CONFIRMED — SENT TO STUDENT
+#######################################################
+def send_graduation_confirmed_email(user, application):
+    """
+    Sent when admin marks a student's CourseApplication as
+    is_graduated=True, confirming program completion.
+
+    Trigger: Call after application.is_graduated is set to True
+             and application.save() in the management view.
+    Recipients: Student
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+
+        program_name = (
+            application.program.name
+            if application.program
+            else 'your program'
+        )
+
+        subject = f'Congratulations, You Have Graduated! — {site.school_short_name}'
+
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .highlight {{ background: #FEF3C7; padding: 15px;
+                              border-left: 4px solid #F59E0B;
+                              margin: 20px 0; border-radius: 5px; }}
+                .btn       {{ display: inline-block; padding: 14px 32px;
+                              background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
+                              color: white; text-decoration: none;
+                              border-radius: 8px; font-weight: bold; font-size: 15px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎓 Congratulations, Graduate!</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{application.get_full_name()}</strong>,</p>
+                    <p>
+                        It is with great pride that <strong>{site.school_name}</strong>
+                        officially confirms your graduation from
+                        <strong>{program_name}</strong>.
+                    </p>
+                    <div class="highlight">
+                        <strong>Admission Number:</strong> {application.admission_number}<br>
+                        <strong>Program:</strong> {program_name}<br>
+                        <strong>Graduation Date:</strong> {application.graduated_at}
+                    </div>
+                    <h3>📋 Next Steps:</h3>
+                    <ol>
+                        <li>Log in to your Student Portal to view your graduation status</li>
+                        <li>Pay the certificate fee to receive your official certificate</li>
+                        <li>Request your official academic transcript if needed</li>
+                    </ol>
+                    <p style="font-size:13px; color:#666;">
+                        For any enquiries, contact us at
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        With warmest congratulations,<br>
+                        <strong>The {site.school_short_name} Academic Office</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+Congratulations, Graduate! — {site.school_name}
+
+Dear {application.get_full_name()},
+
+{site.school_name} officially confirms your graduation from {program_name}.
+
+Admission Number : {application.admission_number}
+Program          : {program_name}
+Graduation Date  : {application.graduated_at}
+
+Next Steps:
+1. Log in to your Student Portal to view your graduation status.
+2. Pay the certificate fee to receive your official certificate.
+3. Request your academic transcript if needed.
+
+Questions? Contact us at {contact}
+
+With warmest congratulations,
+The {site.school_short_name} Academic Office
+        """
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[application.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Graduation confirmed email failed for %s: %s",
+            application.email, e, exc_info=True,
+        )
+        return False
+
+#######################################################
+# ASSIGNMENT GRADED — SENT TO STUDENT
+#######################################################
+def send_assignment_graded_email(user, submission):
+    """
+    Sent when an instructor grades a student's assignment submission.
+
+    Trigger: Call after AssignmentSubmission.status is set to 'graded'
+             and submission.save() in the management/instructor grading view.
+    Recipients: Student
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+
+        assignment_title = submission.assignment.title
+        course_title = submission.assignment.lesson.course.title
+        score = submission.score
+        max_score = submission.assignment.max_score
+        graded_by = (
+            (submission.graded_by.get_full_name() or submission.graded_by.username)
+            if submission.graded_by
+            else site.school_short_name
+        )
+
+        subject = f'Assignment Graded: {assignment_title} — {site.school_short_name}'
+
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .score-box {{ background: #DBEAFE; padding: 15px;
+                              border-left: 4px solid #3B82F6;
+                              margin: 20px 0; border-radius: 5px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📝 Assignment Graded</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <p>
+                        Your assignment <strong>"{assignment_title}"</strong>
+                        in <strong>{course_title}</strong> has been graded.
+                    </p>
+                    <div class="score-box">
+                        <strong>Score:</strong> {score} / {max_score}<br>
+                        <strong>Graded by:</strong> {graded_by}
+                    </div>
+                    <p>
+                        Log in to your student portal to view detailed feedback.
+                    </p>
+                    <p style="font-size:13px; color:#666;">
+                        Questions? Contact us at
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+Assignment Graded — {site.school_name}
+
+Dear {user.get_full_name() or user.username},
+
+Your assignment "{assignment_title}" in "{course_title}" has been graded.
+
+Score    : {score} / {max_score}
+Graded by: {graded_by}
+
+Log in to your student portal to view detailed feedback.
+
+Questions? Contact us at {contact}
+
+Best regards,
+The {site.school_short_name} Team
+        """
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Assignment graded email failed for %s: %s",
+            user.email, e, exc_info=True,
+        )
+        return False
+
+
+#######################################################
+# NEW MESSAGE RECEIVED — SENT TO RECIPIENT
+#######################################################
+def send_new_message_email(recipient, sender, message):
+    """
+    Sent when a student or staff sends a new message via the inbox.
+
+    Trigger: Call in compose_message() and message_thread() views
+             after Message.save(), only if the recipient has email
+             notifications enabled (check profile preference if applicable).
+    Recipients: Message recipient
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+
+        sender_name = sender.get_full_name() or sender.username
+        subject_line = message.subject
+
+        subject = f'New Message from {sender_name} — {site.school_short_name}'
+
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .msg-box   {{ background: #f0f4ff; padding: 15px;
+                              border-left: 4px solid #1D4ED8;
+                              margin: 20px 0; border-radius: 5px; }}
+                .btn       {{ display: inline-block; padding: 12px 28px;
+                              background: linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%);
+                              color: white; text-decoration: none;
+                              border-radius: 8px; font-weight: bold; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>✉️ New Message</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{recipient.get_full_name() or recipient.username}</strong>,</p>
+                    <p>
+                        You have received a new message from
+                        <strong>{sender_name}</strong>.
+                    </p>
+                    <div class="msg-box">
+                        <strong>Subject:</strong> {subject_line}
+                    </div>
+                    <p style="font-size:13px; color:#666;">
+                        Questions? Contact us at
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+New Message — {site.school_name}
+
+Dear {recipient.get_full_name() or recipient.username},
+
+You have received a new message from {sender_name}.
+
+Subject: {subject_line}
+
+Log in to your inbox to read and reply:
+/student/inbox/
+
+Questions? Contact us at {contact}
+
+Best regards,
+The {site.school_short_name} Team
+        """
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[recipient.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+
+    except Exception as e:
+        logger.error(
+            "New message email failed for %s: %s",
+            recipient.email, e, exc_info=True,
         )
         return False

@@ -1,4 +1,4 @@
-﻿{% load static %}
+{% load static %}
 {% comment %}
 ============================================================
 chatbot.html — Student Life Chatbot Widget
@@ -279,8 +279,6 @@ MOBILE LAYOUT NOTE:
     </div>
 
 </div>{# /cbWindow #}
-
-
 <style>
     /* Typing bounce */
     @keyframes cbBounce {
@@ -323,8 +321,6 @@ MOBILE LAYOUT NOTE:
         #cbWindow { transition: none !important; }
     }
 </style>
-
-
 <script>
     window._cbUser = {
         authed:    {{ user.is_authenticated|yesno:"true,false" }},

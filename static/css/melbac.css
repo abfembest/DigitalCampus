@@ -3852,6 +3852,9 @@
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
   }
+  .text-\[8px\] {
+    font-size: 8px;
+  }
   .text-\[9px\] {
     font-size: 9px;
   }
@@ -4904,6 +4907,13 @@
     &:is(:where(.group):hover *) {
       @media (hover: hover) {
         color: var(--color-gospel-700);
+      }
+    }
+  }
+  .group-hover\:text-gray-500 {
+    &:is(:where(.group):hover *) {
+      @media (hover: hover) {
+        color: var(--color-gray-500);
       }
     }
   }
@@ -8065,6 +8075,11 @@
   .sm\:py-20 {
     @media (width >= 40rem) {
       padding-block: calc(var(--spacing) * 20);
+    }
+  }
+  .sm\:py-24 {
+    @media (width >= 40rem) {
+      padding-block: calc(var(--spacing) * 24);
     }
   }
   .sm\:pt-2 {

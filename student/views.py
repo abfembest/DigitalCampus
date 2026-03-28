@@ -2008,40 +2008,39 @@ def progress(request):
 @student_required
 def certificates(request):
     """
-    List all earned certificates.
-    Students must have paid a certificate fee before they can view/download.
+    List all earned certificates (LMS course + academic program).
+    Each certificate is gated by its own payment_status field.
     """
     user = request.user
 
-    # Check if the student has a successful certificate fee payment
-    certificate_fee_paid = FeePayment.objects.filter(
-        user=user,
-        status='success',
-        fee__purpose__icontains='certificate',
-    ).exists()
-
-    # Get all certificates with course data
+    # Get all certificates — LMS and program — with their related objects
     certificates = (
         Certificate.objects
         .filter(student=user)
-        .select_related('course', 'course__instructor')
+        .select_related('course', 'course__instructor', 'program', 'program__department')
         .order_by('-issued_date')
     )
 
-    # Add instructor name to each certificate
+    # Annotate each cert with a display label and instructor name
     for cert in certificates:
-        if hasattr(cert.course, 'instructor'):
-            cert.course.instructor_name = (
-                cert.course.instructor.get_full_name()
-                or cert.course.instructor.username
-            )
+        if cert.certificate_type == 'program' and cert.program:
+            cert.display_title = cert.program.name
+            cert.display_subtitle = cert.program.department.faculty.name if cert.program.department else ''
+            cert.instructor_name = 'MIU Academic Office'
         else:
-            cert.course.instructor_name = 'MIU Staff'
+            cert.display_title = cert.course.title if cert.course else 'Course Certificate'
+            cert.display_subtitle = ''
+            if cert.course and cert.course.instructor:
+                cert.instructor_name = (
+                    cert.course.instructor.get_full_name()
+                    or cert.course.instructor.username
+                )
+            else:
+                cert.instructor_name = 'MIU Staff'
 
     context = {
         'page_title': 'My Certificates',
         'certificates': certificates,
-        'certificate_fee_paid': certificate_fee_paid,
     }
 
     return render(request, 'students/certificates.html', context)
@@ -2411,44 +2410,37 @@ def _get_outstanding_for_student(user):
         .select_related('course')
     )
 
-    # Check which courses already have a paid certificate fee
-    already_paid_cert = FeePayment.objects.filter(
-        user=user,
-        status='success',
-        fee__purpose__icontains='certificate',
-    ).exists()
-
     for enrollment in completed_enrollments:
         course = enrollment.course
 
-        # Skip if this student already has a Certificate record for this course
-        # AND has paid — meaning it's fully settled
-        already_has_cert = Certificate.objects.filter(
-            student=user, course=course
-        ).exists()
+        # Check payment status per-certificate, not globally
+        cert = Certificate.objects.filter(
+            student=user, course=course, certificate_type='lms_course'
+        ).first()
 
-        if already_has_cert and already_paid_cert:
-            # Build a paid-style entry so it shows in the paid section
+        if cert and cert.payment_status == 'paid':
+            # Already settled — show in paid section
             paid.append({
                 'purpose': f'Certificate Fee — {course.title}',
                 'amount': course.certificate_fee,
                 'is_certificate_fee': True,
                 'course': course,
             })
-        elif not already_paid_cert:
-            # Build an outstanding certificate fee entry
-            outstanding.append({
-                'payment': {
-                    'purpose': f'Certificate Fee — {course.title}',
-                    'amount': course.certificate_fee,
-                    'due_date': today,
+        elif not cert or cert.payment_status == 'unpaid':
+            if course.certificate_fee and course.certificate_fee > 0:
+                # Outstanding certificate fee entry
+                outstanding.append({
+                    'payment': {
+                        'purpose': f'Certificate Fee — {course.title}',
+                        'amount': course.certificate_fee,
+                        'due_date': today,
+                        'is_certificate_fee': True,
+                        'course': course,
+                        'pk': f'cert_{course.pk}',
+                    },
+                    'is_overdue': False,
                     'is_certificate_fee': True,
-                    'course': course,
-                    'pk': f'cert_{course.pk}',   # synthetic ID used by template
-                },
-                'is_overdue': False,
-                'is_certificate_fee': True,
-            })
+                })
 
     return outstanding, paid
 
@@ -2547,6 +2539,8 @@ def compose_message(request):
                 message=f'You have a new message: "{msg.subject}"',
                 link=f'/student/inbox/{msg.id}/',
             )
+            from eduweb.emailservices import send_new_message_email
+            send_new_message_email(msg.recipient, request.user, msg)
             return redirect('students:inbox')
         messages.error(request, 'Please fix the errors below.')
     else:
@@ -2613,6 +2607,8 @@ def message_thread(request, message_id):
                     message=f'New reply on: "{msg.subject}"',
                     link=f'/student/inbox/{msg.id}/',
                 )
+                from eduweb.emailservices import send_new_message_email
+                send_new_message_email(reply_to, request.user, msg)
                 return redirect('students:message_thread', message_id=message_id)
         messages.error(request, 'Reply must be at least 5 characters.')
 
@@ -2706,6 +2702,13 @@ def submit_review(request, course_slug):
 
     if created:
         messages.success(request, 'Thank you! Your review has been submitted.')
+        _notify(
+            user=request.user,
+            notification_type='enrollment',
+            title=f'Review Submitted: {course.title}',
+            message=f'You rated "{course.title}" {rating}/5 stars. Thank you for your feedback!',
+            link=f'/student/courses/{course_slug}/',
+        )
     else:
         messages.success(request, 'Your review has been updated.')
 
@@ -2754,4 +2757,3 @@ def create_study_group(request):
         'page_title': 'Create Study Group',
         'form': form,
     })
-

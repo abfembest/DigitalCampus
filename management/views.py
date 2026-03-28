@@ -60,6 +60,7 @@ from eduweb.models import (
     TicketReply,
     Transaction,
     UserProfile,
+    Message,
 )
 
 # Forms
@@ -116,6 +117,202 @@ def _notify(user, title, message, notif_type='system', link=''):
     )
     if old_ids:
         Notification.objects.filter(id__in=list(old_ids)).delete()
+
+
+# ===========================================================================
+# ADMIN INBOX / MESSAGING
+# ===========================================================================
+
+@login_required(login_url='eduweb:auth_page')
+def admin_inbox(request):
+    """
+    Admin/staff inbox — shows all received and sent messages.
+    Marks all unread received messages as read on open.
+    """
+    user = request.user
+
+    received = (
+        Message.objects
+        .filter(recipient=user, parent__isnull=True)
+        .select_related('sender', 'sender__profile')
+        .order_by('-created_at')
+    )
+    sent = (
+        Message.objects
+        .filter(sender=user, parent__isnull=True)
+        .select_related('recipient', 'recipient__profile')
+        .order_by('-created_at')
+    )
+
+    unread_count = received.filter(is_read=False).count()
+
+    Message.objects.filter(
+        recipient=user, is_read=False, parent__isnull=True
+    ).update(is_read=True, read_at=timezone.now())
+
+    tab = request.GET.get('tab', 'received')
+    paginator_received = Paginator(received, 20)
+    paginator_sent = Paginator(sent, 20)
+    page = request.GET.get('page', 1)
+
+    return render(request, 'management/inbox.html', {
+        'page_title': 'Inbox',
+        'received': paginator_received.get_page(page),
+        'sent': paginator_sent.get_page(page),
+        'unread_count': unread_count,
+        'tab': tab,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+def admin_compose_message(request):
+    """
+    Admin compose — send a new message to any user.
+    Supports ?to=<user_id> query param to pre-fill recipient.
+    """
+    from .forms import AdminMessageComposeForm
+
+    if request.method == 'POST':
+        form = AdminMessageComposeForm(request.POST)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.sender = request.user
+            msg.save()
+            # In-app notification to recipient
+            _notify(
+                user=msg.recipient,
+                title=f'New Message from {request.user.get_full_name() or request.user.username}',
+                message=f'You have a new message: "{msg.subject}"',
+                notif_type='message',
+                link=f'/management/inbox/{msg.id}/',
+            )
+            try:
+                from eduweb.emailservices import send_new_message_email
+                send_new_message_email(msg.recipient, request.user, msg)
+            except Exception:
+                pass
+            messages.success(request, 'Message sent successfully!')
+            return redirect('management:admin_inbox')
+        messages.error(request, 'Please fix the errors below.')
+    else:
+        initial = {}
+        to_id = request.GET.get('to')
+        if to_id:
+            try:
+                from django.contrib.auth.models import User as AuthUser
+                initial['recipient'] = AuthUser.objects.get(pk=to_id)
+            except Exception:
+                pass
+        form = AdminMessageComposeForm(initial=initial)
+
+    return render(request, 'management/compose_message.html', {
+        'page_title': 'Compose Message',
+        'form': form,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+def admin_message_thread(request, message_id):
+    """
+    View a full message thread and reply.
+    Only sender or recipient may access.
+    """
+    msg = get_object_or_404(
+        Message.objects.select_related(
+            'sender', 'sender__profile',
+            'recipient', 'recipient__profile'
+        ),
+        pk=message_id,
+    )
+
+    if msg.sender != request.user and msg.recipient != request.user:
+        messages.error(request, 'You do not have permission to view this message.')
+        return redirect('management:admin_inbox')
+
+    if msg.recipient == request.user and not msg.is_read:
+        msg.mark_as_read()
+
+    thread_replies = (
+        Message.objects
+        .filter(parent=msg)
+        .select_related('sender', 'sender__profile', 'recipient', 'recipient__profile')
+        .order_by('created_at')
+    )
+
+    if request.method == 'POST':
+        body = request.POST.get('body', '').strip()
+        if len(body) >= 5:
+            reply_to = msg.sender if msg.recipient == request.user else msg.recipient
+            Message.objects.create(
+                sender=request.user,
+                recipient=reply_to,
+                subject=f'Re: {msg.subject}',
+                body=body,
+                parent=msg,
+            )
+            _notify(
+                user=reply_to,
+                title=f'Reply from {request.user.get_full_name() or request.user.username}',
+                message=f'New reply on: "{msg.subject}"',
+                notif_type='message',
+                link=f'/management/inbox/{msg.id}/',
+            )
+            try:
+                from eduweb.emailservices import send_new_message_email
+                send_new_message_email(reply_to, request.user, msg)
+            except Exception:
+                pass
+            messages.success(request, 'Reply sent!')
+            return redirect('management:admin_message_thread', message_id=message_id)
+        messages.error(request, 'Reply must be at least 5 characters.')
+
+    return render(request, 'management/message_thread.html', {
+        'page_title': msg.subject,
+        'message': msg,
+        'thread_replies': thread_replies,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+def notifications_view(request):
+    """
+    Notifications page for admin and staff roles.
+    Marks all as read if ?mark_all=1. Paginated at 15 per page.
+    """
+    if not request.user.is_authenticated:
+        return redirect('eduweb:auth_page')
+
+    if request.GET.get('mark_all') == '1':
+        Notification.objects.filter(
+            user=request.user, is_read=False
+        ).update(is_read=True, read_at=timezone.now())
+        return redirect('management:notifications_view')
+
+    notifs = (
+        Notification.objects
+        .filter(user=request.user)
+        .order_by('-created_at')
+    )
+    unread_count = notifs.filter(is_read=False).count()
+    page_obj = Paginator(notifs, 15).get_page(request.GET.get('page', 1))
+
+    return render(request, 'management/notifications.html', {
+        'page_title': 'Notifications',
+        'notifications': page_obj,
+        'unread_count': unread_count,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+def mark_notification_read(request, notification_id):
+    """Mark a single notification as read — AJAX GET."""
+    notif = get_object_or_404(
+        Notification,
+        pk=notification_id,
+        user=request.user,
+    )
+    notif.mark_as_read()
+    return JsonResponse({'success': True})
 
 
 def is_admin(user):

@@ -97,6 +97,15 @@ urlpatterns = [
     path('config/email/', views.email_config, name='email_config'),
     path('config/notifications/', views.notification_config, name='notification_config'),
 
+    # Notifications — admin/staff
+    path('notifications/', views.notifications_view, name='notifications_view'),
+    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+
+    # Inbox / Messaging — admin/staff
+    path('inbox/', views.admin_inbox, name='admin_inbox'),
+    path('inbox/compose/', views.admin_compose_message, name='admin_compose_message'),
+    path('inbox/<int:message_id>/', views.admin_message_thread, name='admin_message_thread'),
+
     # Audit / Security
     path('audit-logs/', views.audit_logs_list, name='audit_logs_list'),
     path('audit-logs/<int:pk>/', views.audit_log_detail, name='audit_log_detail'),

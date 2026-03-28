@@ -257,7 +257,7 @@
                 </div>
 
                 <!-- Desktop: Social Icons + CTA (lg+) -->
-                <div class="hidden lg:flex items-center gap-2 flex-shrink-0">
+                {% comment %} <div class="hidden lg:flex items-center gap-2 flex-shrink-0">
 
                     <!-- Social Icons (xl only) -->
                     <div class="hidden xl:flex items-center gap-1 pr-3 border-r border-purple-200">
@@ -296,7 +296,7 @@
                             <i data-lucide="music-2" class="w-4 h-4" aria-hidden="true"></i>
                         </a>
                         {% endif %}
-                    </div>
+                    </div> {% endcomment %}
 
                     <!-- Library Button -->
                     <a href="{% url 'library:home' %}"

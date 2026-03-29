@@ -156,7 +156,7 @@
         <nav class="container mx-auto px-4 sm:px-5 xl:px-0" aria-label="Main navigation">
 
             <!-- ── Primary bar ── -->
-            <div class="flex items-center justify-between h-16 lg:h-20 gap-2">
+            <div class="flex items-center justify-between h-20 lg:h-24 gap-2">
 
                 <!-- Logo -->
                 <a href="{% url 'eduweb:index' %}"
@@ -165,13 +165,13 @@
                     {% if site_config.logo %}
                     <img src="{{ site_config.logo.url }}"
                          alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
-                         class="h-12 sm:h-13 lg:h-16 w-auto max-w-[150px] sm:max-w-[170px] lg:max-w-[200px] object-contain transition-transform duration-300 group-hover:scale-105"
-                         width="200" height="64"
+                         class="h-16 sm:h-20 lg:h-20 w-auto max-w-[180px] sm:max-w-[220px] lg:max-w-[240px] object-contain transition-transform duration-300 group-hover:scale-105"
+                         width="240" height="80"
                          loading="eager" fetchpriority="high">
                     {% else %}
                     <img src="{% static 'images/miulogo.png' %}"
                          alt="{{ site_config.school_short_name|default:'MIU' }} Logo"
-                         class="h-12 sm:h-13 lg:h-16 w-auto max-w-[150px] sm:max-w-[170px] lg:max-w-[200px] object-contain transition-transform duration-300 group-hover:scale-105"
+                         class="h-16 sm:h-20 lg:h-20 w-auto max-w-[180px] sm:max-w-[220px] lg:max-w-[240px] object-contain transition-transform duration-300 group-hover:scale-105"
                          width="200" height="64"
                          loading="eager" fetchpriority="high">
                     {% endif %}
@@ -256,47 +256,8 @@
                     </a>
                 </div>
 
-                <!-- Desktop: Social Icons + CTA (lg+) -->
-                {% comment %} <div class="hidden lg:flex items-center gap-2 flex-shrink-0">
-
-                    <!-- Social Icons (xl only) -->
-                    <div class="hidden xl:flex items-center gap-1 pr-3 border-r border-purple-200">
-                        {% if site_config.twitter %}
-                        <a href="{{ site_config.twitter }}" target="_blank" rel="noopener noreferrer"
-                           class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="X / Twitter (opens in new tab)">
-                            <i data-lucide="twitter" class="w-4 h-4" aria-hidden="true"></i>
-                        </a>
-                        {% endif %}
-                        {% if site_config.facebook %}
-                        <a href="{{ site_config.facebook }}" target="_blank" rel="noopener noreferrer"
-                           class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="Facebook (opens in new tab)">
-                            <i data-lucide="facebook" class="w-4 h-4" aria-hidden="true"></i>
-                        </a>
-                        {% endif %}
-                        {% if site_config.instagram %}
-                        <a href="{{ site_config.instagram }}" target="_blank" rel="noopener noreferrer"
-                           class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="Instagram (opens in new tab)">
-                            <i data-lucide="instagram" class="w-4 h-4" aria-hidden="true"></i>
-                        </a>
-                        {% endif %}
-                        {% if site_config.youtube %}
-                        <a href="{{ site_config.youtube }}" target="_blank" rel="noopener noreferrer"
-                           class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="YouTube (opens in new tab)">
-                            <i data-lucide="youtube" class="w-4 h-4" aria-hidden="true"></i>
-                        </a>
-                        {% endif %}
-                        {% if site_config.tiktok %}
-                        <a href="{{ site_config.tiktok }}" target="_blank" rel="noopener noreferrer"
-                           class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-primary-950 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-primary-950"
-                           aria-label="TikTok (opens in new tab)">
-                            <i data-lucide="music-2" class="w-4 h-4" aria-hidden="true"></i>
-                        </a>
-                        {% endif %}
-                    </div> {% endcomment %}
+                <!-- Desktop CTA (lg+) -->
+                <div class="hidden lg:flex items-center gap-2 flex-shrink-0">
 
                     <!-- Library Button -->
                     <a href="{% url 'library:home' %}"
@@ -341,12 +302,12 @@
                         aria-label="Toggle mobile menu" aria-expanded="false" aria-controls="mobileMenu">
                     <i data-lucide="menu" class="w-6 h-6 text-primary-950" id="menuIcon" aria-hidden="true"></i>
                 </button>
-            </div>
+
+            </div><!-- /primary bar -->
 
             <!-- ── Mobile Navigation Drawer ── -->
             <div id="mobileMenu"
                  class="lg:hidden overflow-hidden max-h-0 transition-[max-height] duration-300 ease-in-out bg-white border-t border-purple-100"
-                 style="overflow-y: hidden; max-height: 0px;"
                  aria-hidden="true">
                 <div class="py-3 space-y-1 px-2">
 
@@ -511,8 +472,8 @@
         </nav>
     </header>
 
-    <!-- Main Content — pt matches nav height: h-16 mobile / h-20 desktop -->
-    <main id="main-content" class="pt-16 lg:pt-20" role="main" tabindex="-1">
+    <!-- Main Content — pt matches nav height: h-20 mobile / h-24 desktop -->
+    <main id="main-content" class="pt-20 lg:pt-24" role="main" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 

@@ -80,13 +80,13 @@
         </li>
         <li aria-hidden="true"><i data-lucide="chevron-right" class="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0"></i></li>
         <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" aria-current="page">
-          <span itemprop="name" class="text-white/80 truncate max-w-[120px] xs:max-w-[180px] sm:max-w-xs inline-block">{{ program.name }}</span>
+          <span itemprop="name" class="text-white/80 truncate max-w-[120px] sm:max-w-xs inline-block">{{ program.name }}</span>
           <meta itemprop="position" content="4">
         </li>
       </ol>
     </nav>
 
-    <div class="flex flex-col lg:flex-row gap-8 sm:gap-10 lg:gap-12 xl:gap-16 items-start">
+    <div class="flex flex-col xl:flex-row gap-6 sm:gap-8 xl:gap-16 items-start">
 
       <!-- Left: title + actions -->
       <div class="flex-1 fu fu2">
@@ -127,7 +127,7 @@
         </div>
         {% endif %}
 
-        <div class="flex flex-col xs:flex-row flex-wrap gap-2.5 sm:gap-3">
+        <div class="flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3">
           <a href="{% url 'eduweb:apply' %}"
              class="inline-flex items-center justify-center gap-2 bg-white text-[#840384] hover:bg-yellow-300 hover:text-gray-900 px-5 sm:px-7 py-3 sm:py-3.5 rounded-xl font-bold text-sm transition-all shadow-xl focus:outline-none focus:ring-2 focus:ring-yellow-300">
             <i data-lucide="send" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
@@ -142,7 +142,7 @@
       </div>
 
       <!-- Right: At-a-glance card -->
-      <div class="w-full sm:w-80 lg:w-72 xl:w-80 xl:w-96 flex-shrink-0 fu fu3">
+      <div class="w-full xl:w-96 xl:flex-shrink-0 xl:order-none fu fu3">
         <div class="bg-white/10 border border-white/15 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-7 space-y-3 sm:space-y-4">
           <h2 class="font-['Poppins'] text-xs font-bold text-white/60 uppercase tracking-widest flex items-center gap-2">
             <i data-lucide="info" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>

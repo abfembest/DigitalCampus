@@ -843,39 +843,97 @@ class BlogPost(models.Model):
 
 # ==================== CERTIFICATES ====================
 class Certificate(models.Model):
-    """Course completion certificates"""
+    """Course completion certificates — covers both LMS courses and full academic programs"""
+
+    CERTIFICATE_TYPE_CHOICES = [
+        ('lms_course', 'LMS Course'),
+        ('program',    'Academic Program'),
+    ]
+
+    PAYMENT_STATUS_CHOICES = [
+        ('unpaid',  'Unpaid'),
+        ('paid',    'Paid'),
+    ]
+
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='certificates')
-    course = models.ForeignKey('LMSCourse', on_delete=models.CASCADE, related_name='certificates')
+
+    # LMS course certificate — nullable so program certs don't need a course
+    course = models.ForeignKey(
+        'LMSCourse', on_delete=models.CASCADE,
+        related_name='certificates', null=True, blank=True
+    )
+
+    # Academic program certificate
+    program = models.ForeignKey(
+        'Program', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='program_certificates'
+    )
+
+    certificate_type = models.CharField(
+        max_length=20, choices=CERTIFICATE_TYPE_CHOICES, default='lms_course'
+    )
+
     certificate_id = models.CharField(max_length=50, unique=True, editable=False)
-    
+
     # Certificate Details
     issued_date = models.DateField(auto_now_add=True)
     completion_date = models.DateField()
     grade = models.CharField(max_length=5, blank=True)
-    
+
     # File
     certificate_file = models.FileField(upload_to=get_certificate_upload_path, blank=True, null=True)
-    
+
     # Verification
     verification_code = models.UUIDField(default=uuid.uuid4, editable=False)
     is_verified = models.BooleanField(default=True)
-    
+
+    # Payment gate — student must pay before certificate is released
+    payment_status = models.CharField(
+        max_length=20, choices=PAYMENT_STATUS_CHOICES, default='unpaid',
+        help_text="Certificate is only downloadable once payment_status is 'paid'"
+    )
+    payment_reference = models.CharField(
+        max_length=100, blank=True,
+        help_text="FeePayment.payment_reference that settled this certificate fee"
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-issued_date']
         verbose_name = 'Certificate'
         verbose_name_plural = 'Certificates'
-        unique_together = [['student', 'course']]
         indexes = [
             models.Index(fields=['certificate_id']),
             models.Index(fields=['verification_code']),
+            models.Index(fields=['student', 'certificate_type']),
+            models.Index(fields=['payment_status']),
         ]
-    
+
     def __str__(self):
-        return f"{self.student.username} - {self.course.title} - {self.certificate_id}"
-    
+        if self.certificate_type == 'program' and self.program:
+            return f"{self.student.get_full_name()} — {self.program.name}"
+        return f"{self.student.get_full_name()} — {self.course.title if self.course else 'N/A'}"
+
+    def is_paid(self):
+        """Check if certificate fee has been settled."""
+        return self.payment_status == 'paid'
+
+    def has_paid_certificate_fee(self, user):
+        """Return True if the student has a successful FeePayment for a certificate fee."""
+        return FeePayment.objects.filter(
+            user=user,
+            status='success',
+            fee__purpose__icontains='certificate',
+        ).exists()
+
+    def mark_paid(self, payment_reference=''):
+        """Mark this certificate as paid and store the reference."""
+        self.payment_status = 'paid'
+        self.payment_reference = payment_reference
+        self.save(update_fields=['payment_status', 'payment_reference'])
+
     def save(self, *args, **kwargs):
         if not self.certificate_id:
             self.certificate_id = f"CERT-{uuid.uuid4().hex[:12].upper()}"
@@ -1677,17 +1735,47 @@ class CourseApplication(models.Model):
         help_text="Department head approved the admission"
     )
     department_approved_at = models.DateTimeField(
-        null=True, 
+        null=True,
         blank=True
     )
     department_approved_by = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         related_name='department_approved_applications'
     )
-    
+
+    # Graduation tracking
+    is_graduated = models.BooleanField(
+        default=False,
+        help_text="Student has completed all program requirements and graduated"
+    )
+    graduated_at = models.DateField(
+        null=True, blank=True,
+        help_text="Date graduation was confirmed"
+    )
+    graduated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='graduations_confirmed'
+    )
+
+    # Transcript tracking
+    transcript_requested = models.BooleanField(
+        default=False,
+        help_text="Student has formally requested their academic transcript"
+    )
+    transcript_issued = models.BooleanField(
+        default=False,
+        help_text="Transcript has been generated and made available to the student"
+    )
+    transcript_issued_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the transcript was issued"
+    )
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Course Application'

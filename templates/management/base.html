@@ -630,6 +630,34 @@
                         </div>
                     </a>
 
+                    <!-- Inbox -->
+                    <a href="{% url 'management:admin_inbox' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'inbox' in request.path and request.resolver_match.app_name == 'management' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-inbox w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Inbox</span>
+                        </div>
+                        {% if unread_messages_count > 0 %}
+                        <span class="badge-count bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                            {{ unread_messages_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+
+                    <!-- Notifications -->
+                    <a href="{% url 'management:notifications_view' %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'notifications_view' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-bell w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Notifications</span>
+                        </div>
+                        {% if unread_notifications_count > 0 %}
+                        <span class="badge-count bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                            {{ unread_notifications_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+
                     <!-- Student Management -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'enrollments' in request.path or 'student-badges' in request.path or 'certificates' in request.path %}bg-white/20{% endif %}">
@@ -1267,20 +1295,29 @@
                     </a>
                     {% endif %}
 
-                    <!-- ── COMMON FOOTER LINKS (all roles) ── -->
+                    <!-- ── COMMON FOOTER LINKS (all authenticated users) ── -->
                     <div class="border-t border-white/10 my-4"></div>
 
-                    <!-- Settings — Centralized with role-based URL routing -->
-                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% else %}#{% endif %}"
-                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
+                    <!-- My Profile — role-based URL, shown to all -->
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:profile' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% else %}#{% endif %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-user-circle w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">My Profile</span>
+                        </div>
+                    </a>
+
+                    <!-- Settings — role-based URL, shown to all -->
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:system_config_list' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% else %}#{% endif %}"
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'system_config_list' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-cog w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3">Settings</span>
                         </div>
                     </a>
 
-                    <!-- Help & Support — Centralized with role-based URL routing -->
-                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:help_support' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:help_support' %}{% else %}#{% endif %}"
+                    <!-- Help & Support — role-based URL, shown to all -->
+                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:help_support' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:help_support' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:tickets_list' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% else %}#{% endif %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
@@ -1288,7 +1325,7 @@
                         </div>
                     </a>
 
-                    <!-- Logout — Same for all roles -->
+                    <!-- Logout — same for all roles -->
                     <a href="#" onclick="portalLogout(event)"
                         class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
                         <div class="flex items-center">
@@ -1392,7 +1429,7 @@
                                 <div class="divide-y divide-gray-100">
                                     {% if nav_notifications %}
                                         {% for notif in nav_notifications %}
-                                        <a href="{% url 'students:notifications_view' %}"
+                                        <a href="{% if request.user.profile.role == 'student' %}{% url 'students:notifications_view' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:notifications' %}{% else %}{% url 'management:notifications_view' %}{% endif %}"
                                            class="flex items-start gap-2.5 sm:gap-3 p-3 sm:p-4 hover:bg-gray-50 transition-all group">
                                             <!-- Type icon -->
                                             <div class="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center mt-0.5
@@ -1444,7 +1481,7 @@
 
                                 <!-- Footer: View all -->
                                 <div class="p-2.5 sm:p-3 border-t border-gray-100 sticky bottom-0 bg-white">
-                                    <a href="{% url 'students:notifications_view' %}"
+                                    <a href="{% if request.user.profile.role == 'student' %}{% url 'students:notifications_view' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:notifications' %}{% else %}{% url 'management:notifications_view' %}{% endif %}"
                                        class="block w-full text-center text-xs sm:text-sm text-primary-600 hover:text-primary-800 font-medium py-1.5 rounded-lg hover:bg-primary-50 transition-colors">
                                         View all notifications
                                     </a>
@@ -1484,30 +1521,17 @@
                                         <i class="fas fa-times text-xs"></i>
                                     </button>
                                 </div>
-                                {% if request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}
-                                {# admin — no separate profile/settings pages yet #}
-                                <span class="hidden sm:block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm truncate">
-                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> {{ request.user.get_full_name|default:request.user.username }}
-                                </span>
-                                {% elif request.user.profile.role == 'instructor' %}
-                                <a href="{% url 'instructor:profile' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <!-- My Profile — all roles -->
+                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:profile' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:dashboard' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% else %}#{% endif %}"
+                                   class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
                                 </a>
-                                <a href="{% url 'instructor:settings' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
+                                <!-- Settings — all roles -->
+                                <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:system_config_list' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% else %}#{% endif %}"
+                                   class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
                                     <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
                                 </a>
-                                {% elif request.user.profile.role == 'student' %}
-                                <a href="{% url 'students:profile' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> My Profile
-                                </a>
-                                <a href="{% url 'students:settings' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all border-b border-gray-100">
-                                    <i class="fas fa-cog mr-3 w-5" aria-hidden="true"></i> Settings
-                                </a>
-                                {% else %}
-                                <span class="hidden sm:block px-4 py-3 text-gray-400 border-b border-gray-100 text-sm truncate">
-                                    <i class="fas fa-user mr-3 w-5" aria-hidden="true"></i> {{ request.user.get_full_name|default:request.user.username }}
-                                </span>
-                                {% endif %}
+                                <!-- Logout — all roles -->
                                 <a href="#" onclick="portalLogout(event)" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all">
                                     <i class="fas fa-sign-out-alt mr-3 w-5" aria-hidden="true"></i> Logout
                                 </a>
@@ -1544,50 +1568,6 @@
             </footer>
         </div>
     </div>
-
-    <!-- Chatbot -->
-    <!--<div class="fixed bottom-6 right-6 z-50">
-        <button id="chatbotToggle" class="w-14 h-14 rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 hover:shadow-xl transition-all flex items-center justify-center" aria-label="Open chat assistant">
-            <i class="fas fa-robot text-2xl" aria-hidden="true"></i>
-        </button>
-
-        <div id="chatbotWindow" class="hidden absolute bottom-20 right-0 w-80 md:w-96 h-96 bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col">
-            <div class="bg-primary-600 text-white p-4 rounded-t-2xl flex justify-between items-center">
-                <h4 class="font-semibold flex items-center">
-                    <i class="fas fa-robot mr-3" aria-hidden="true"></i>
-                    {% if request.user.profile.role == 'student' %}Learning{% else %}Admin{% endif %} Assistant
-                </h4>
-                <button id="chatbotClose" class="text-white hover:text-gray-200" aria-label="Close chat">
-                    <i class="fas fa-times" aria-hidden="true"></i>
-                </button>
-            </div>
-
-            <div id="chatbotMessages" class="flex-1 p-4 overflow-y-auto">
-                <div class="mb-4">
-                    <div class="inline-block max-w-[80%] bg-gray-100 rounded-2xl rounded-tl-none p-4">
-                        <p class="text-gray-800">Hello! How can I help you today?</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-4 border-t border-gray-200">
-                <div class="flex space-x-3">
-                    <input type="text" id="chatbotInput" placeholder="Type your message here..." class="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" aria-label="Chat message">
-                    <button id="sendMessage" class="w-12 h-12 rounded-full bg-primary-600 text-white hover:bg-primary-700 transition-all flex items-center justify-center" aria-label="Send message">
-                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                    </button>
-                </div>
-                <div id="quickReplies" class="flex flex-wrap gap-2 mt-3">
-                    {% if request.user.profile.role == 'student' %}
-                    <button class="quick-reply-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm transition-all">My courses</button>
-                    {% else %}
-                    <button class="quick-reply-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm transition-all">View pending applications</button>
-                    {% endif %}
-                    <button class="quick-reply-btn px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-sm transition-all">Help</button>
-                </div>
-            </div>
-        </div>
-    </div>-->
     <!-- Base JavaScript -->
     <script>
         (function () {
@@ -1719,20 +1699,6 @@
             document.addEventListener('touchstart', closeAllDropdowns, { passive: true });
             // Also close dropdowns when the mobile sidebar opens
             toggleBtn?.addEventListener('click', closeAllDropdowns);
-
-            // Chatbot
-           /* const chatbotToggle = document.getElementById('chatbotToggle');
-            const chatbotWindow = document.getElementById('chatbotWindow');
-            const chatbotClose = document.getElementById('chatbotClose');
-            chatbotToggle?.addEventListener('click', (e) => { e.stopPropagation(); chatbotWindow?.classList.toggle('hidden'); });
-            chatbotClose?.addEventListener('click', () => chatbotWindow?.classList.add('hidden'));
-            document.addEventListener('click', (e) => {
-                if (chatbotWindow && !chatbotWindow.classList.contains('hidden') &&
-                    !chatbotWindow.contains(e.target) && !chatbotToggle?.contains(e.target)) {
-                    chatbotWindow.classList.add('hidden');
-                }
-            });
-            chatbotWindow?.addEventListener('click', (e) => e.stopPropagation());*/
 
             // Logout: clear this user's chatbot session before navigating away
             window.portalLogout = async function(e) {

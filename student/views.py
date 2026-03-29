@@ -71,6 +71,25 @@ def student_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+# ==================== NOTIFICATION HELPER ====================
+
+def _notify(user, notification_type, title, message, link=''):
+    """
+    Create a Notification for a student. Silently fails so it never
+    breaks the main action. Auto-purges notifications older than 30 days.
+    """
+    try:
+        Notification.objects.create(
+            user=user,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            link=link,
+        )
+        cutoff = timezone.now() - timedelta(days=30)
+        Notification.objects.filter(user=user, created_at__lt=cutoff).delete()
+    except Exception:
+        pass
 
 @login_required
 @student_required
@@ -200,7 +219,8 @@ def dashboard(request):
         outstanding_items, _ = _get_outstanding_for_student(user)
         outstanding_count = len(outstanding_items)
         outstanding_total = sum(
-            item['payment'].amount for item in outstanding_items
+            (item['payment']['amount'] if isinstance(item['payment'], dict) else item['payment'].amount)
+            for item in outstanding_items
         )
     except Exception:
         outstanding_count = 0
@@ -518,6 +538,13 @@ def enroll_course(request, course_slug):
             request,
             f'Successfully enrolled in {course.title}!'
         )
+        _notify(
+            user=request.user,
+            notification_type='enrollment',
+            title=f'Enrolled in {course.title}',
+            message=f'You have successfully enrolled in "{course.title}". Start learning now!',
+            link=f'/student/courses/{course.slug}/',
+        )
     except Exception as e:
         messages.error(
             request,
@@ -673,11 +700,22 @@ def mark_lesson_complete(request, course_slug, lesson_slug):
             # Update enrollment progress
             if hasattr(enrollment, 'update_progress'):
                 enrollment.update_progress()
-        
+                enrollment.refresh_from_db()
+                # Notify when the entire course is completed
+                if enrollment.status == 'completed':
+                    _notify(
+                        user=request.user,
+                        notification_type='enrollment',
+                        title=f'Course Completed: {enrollment.course.title}',
+                        message=f'Congratulations! You have completed "{enrollment.course.title}". '
+                                f'Your certificate fee is now available in My Payments.',
+                        link='/student/certificates/',
+                    )
+
         return JsonResponse({
             'success': True,
             'message': 'Lesson marked as complete',
-            'progress': enrollment.progress_percentage
+            'progress': float(enrollment.progress_percentage),
         })
         
     except Exception as e:
@@ -946,6 +984,17 @@ def submit_assignment(request, course_slug, assignment_slug):
                         request,
                         'Assignment submitted successfully!'
                     )
+                _notify(
+                    user=request.user,
+                    notification_type='assignment',
+                    title=f'Assignment Submitted: {assignment.title}',
+                    message=(
+                        f'Your submission for "{assignment.title}" has been received'
+                        + (' (late submission — a penalty may apply).' if is_overdue
+                           else '. You will be notified when it is graded.')
+                    ),
+                    link=f'/student/courses/{course_slug}/assignments/{assignment_slug}/',
+                )
                 
                 return redirect(
                     'students:assignment_detail',
@@ -1290,6 +1339,14 @@ def quiz_submit(request, attempt_id):
     attempt.time_taken_minutes = time_taken
     attempt.save()
 
+    passed_label = 'Passed ✓' if attempt.passed else 'Not passed'
+    _notify(
+        user=request.user,
+        notification_type='grade',
+        title=f'Quiz Result: {attempt.quiz.title}',
+        message=f'You scored {attempt.percentage:.1f}% on "{attempt.quiz.title}" — {passed_label}.',
+        link=f'/student/quizzes/attempt/{attempt_id}/result/',
+    )
     messages.success(request, 'Quiz submitted successfully!')
     return redirect('students:quiz_result', attempt_id=attempt_id)
 
@@ -1437,6 +1494,18 @@ def thread_detail(request, thread_id):
             reply.save()
             
             messages.success(request, 'Reply posted successfully!')
+            # Notify thread author if they are not the one replying
+            if thread.author != request.user:
+                _notify(
+                    user=thread.author,
+                    notification_type='message',
+                    title=f'New Reply on Your Thread: {thread.title}',
+                    message=(
+                        f'{request.user.get_full_name() or request.user.username} '
+                        f'replied to your discussion "{thread.title}".'
+                    ),
+                    link=f'/student/community/thread/{thread_id}/',
+                )
             return redirect('students:thread_detail', thread_id=thread_id)
     else:
         form = ReplyCreateForm()
@@ -1471,6 +1540,13 @@ def create_thread(request):
             messages.success(
                 request,
                 'Discussion created successfully!'
+            )
+            _notify(
+                user=request.user,
+                notification_type='announcement',
+                title=f'Discussion Created: {thread.title}',
+                message=f'Your discussion thread "{thread.title}" is now live in the community.',
+                link=f'/student/community/thread/{thread.id}/',
             )
             return redirect('students:thread_detail', thread_id=thread.id)
     else:
@@ -1568,6 +1644,19 @@ def study_group_detail(request, group_id):
                 content=form.cleaned_data['message']
             )
             messages.success(request, 'Message posted!')
+            # Notify all other group members of a new message
+            other_members = StudyGroupMember.objects.filter(
+                study_group=group,
+                is_active=True,
+            ).exclude(user=request.user).select_related('user')
+            for member in other_members:
+                _notify(
+                    user=member.user,
+                    notification_type='message',
+                    title=f'New Message in {group.name}',
+                    message=f'{request.user.get_full_name() or request.user.username} posted in "{group.name}".',
+                    link=f'/student/study-groups/{group_id}/',
+                )
             return redirect('students:study_group_detail', group_id=group_id)
         messages.error(request, 'Please enter a valid message.')
     else:
@@ -1647,6 +1736,14 @@ def join_study_group(request, group_id):
     messages.success(
         request,
         f'Successfully joined {group.name}!'
+    )
+    _notify(
+        user=request.user,
+        notification_type='system',
+        title=f'Joined Study Group: {group.name}',
+        message=f'You are now a member of the study group "{group.name}". '
+                f'Connect and collaborate with other students.',
+        link=f'/student/study-groups/{group_id}/',
     )
     return redirect('students:study_group_detail', group_id=group_id)
 
@@ -1911,33 +2008,41 @@ def progress(request):
 @student_required
 def certificates(request):
     """
-    List all earned certificates
+    List all earned certificates (LMS course + academic program).
+    Each certificate is gated by its own payment_status field.
     """
     user = request.user
-    
-    # Get all certificates with course data
+
+    # Get all certificates — LMS and program — with their related objects
     certificates = (
         Certificate.objects
         .filter(student=user)
-        .select_related('course', 'course__instructor')
+        .select_related('course', 'course__instructor', 'program', 'program__department')
         .order_by('-issued_date')
     )
-    
-    # Add instructor name to each certificate
+
+    # Annotate each cert with a display label and instructor name
     for cert in certificates:
-        if hasattr(cert.course, 'instructor'):
-            cert.course.instructor_name = (
-                cert.course.instructor.get_full_name() 
-                or cert.course.instructor.username
-            )
+        if cert.certificate_type == 'program' and cert.program:
+            cert.display_title = cert.program.name
+            cert.display_subtitle = cert.program.department.faculty.name if cert.program.department else ''
+            cert.instructor_name = 'MIU Academic Office'
         else:
-            cert.course.instructor_name = 'MIU Staff'
-    
+            cert.display_title = cert.course.title if cert.course else 'Course Certificate'
+            cert.display_subtitle = ''
+            if cert.course and cert.course.instructor:
+                cert.instructor_name = (
+                    cert.course.instructor.get_full_name()
+                    or cert.course.instructor.username
+                )
+            else:
+                cert.instructor_name = 'MIU Staff'
+
     context = {
         'page_title': 'My Certificates',
         'certificates': certificates,
     }
-    
+
     return render(request, 'students/certificates.html', context)
 
 
@@ -2128,6 +2233,13 @@ Submission Time: {timezone.now()}
                     'Your support ticket has been submitted! '
                     'Our team will get back to you within 24-48 hours.'
                 )
+                _notify(
+                    user=request.user,
+                    notification_type='system',
+                    title='Support Ticket Submitted',
+                    message=f'Your ticket "{form.cleaned_data["subject"]}" has been received. We will respond within 24-48 hours.',
+                    link='/student/help-support/',
+                )
                 return redirect('students:help_support')
             
             except Exception as e:
@@ -2248,26 +2360,27 @@ def _get_outstanding_for_student(user):
     """
     Returns (outstanding, paid) for a student's required fees.
 
-    Queries AllRequiredPayments for the student's program (who_to_pay='student',
-    is_active=True), then checks FeePayment — the dedicated fee payment table —
-    to determine which have already been successfully paid by this user.
+    Includes:
+    1. AllRequiredPayments for the student's program (admin-created fees)
+    2. Auto-generated certificate fees for any completed courses that have
+       has_certificate=True and no certificate fee has been paid yet.
 
-    outstanding → list of dicts: {'payment': AllRequiredPayments, 'is_overdue': bool}
+    outstanding → list of dicts: {'payment': AllRequiredPayments or dict, 'is_overdue': bool, 'is_certificate_fee': bool}
     paid        → list of AllRequiredPayments instances already settled
     """
+    from eduweb.models import AllRequiredPayments, Enrollment, FeePayment, Certificate
+
     profile = getattr(user, 'profile', None)
     if not profile or not profile.program:
         return [], []
 
-    from eduweb.models import AllRequiredPayments
+    # ── 1. Standard admin-created required fees ───────────────────────────
     required_qs = AllRequiredPayments.objects.filter(
         program=profile.program,
         who_to_pay='student',
         is_active=True,
     ).select_related('program')
 
-    # Use FeePayment directly — fee FK points to AllRequiredPayments,
-    # user FK points to the student. Clean, no metadata hacks needed.
     paid_fee_ids = set(
         FeePayment.objects.filter(
             user=user,
@@ -2286,7 +2399,48 @@ def _get_outstanding_for_student(user):
             outstanding.append({
                 'payment': rp,
                 'is_overdue': rp.due_date < today,
+                'is_certificate_fee': False,
             })
+
+    # ── 2. Auto certificate fees for completed courses ────────────────────
+    # Find all completed enrollments where the course issues a certificate
+    completed_enrollments = (
+        Enrollment.objects
+        .filter(student=user, status='completed', course__has_certificate=True)
+        .select_related('course')
+    )
+
+    for enrollment in completed_enrollments:
+        course = enrollment.course
+
+        # Check payment status per-certificate, not globally
+        cert = Certificate.objects.filter(
+            student=user, course=course, certificate_type='lms_course'
+        ).first()
+
+        if cert and cert.payment_status == 'paid':
+            # Already settled — show in paid section
+            paid.append({
+                'purpose': f'Certificate Fee — {course.title}',
+                'amount': course.certificate_fee,
+                'is_certificate_fee': True,
+                'course': course,
+            })
+        elif not cert or cert.payment_status == 'unpaid':
+            if course.certificate_fee and course.certificate_fee > 0:
+                # Outstanding certificate fee entry
+                outstanding.append({
+                    'payment': {
+                        'purpose': f'Certificate Fee — {course.title}',
+                        'amount': course.certificate_fee,
+                        'due_date': today,
+                        'is_certificate_fee': True,
+                        'course': course,
+                        'pk': f'cert_{course.pk}',
+                    },
+                    'is_overdue': False,
+                    'is_certificate_fee': True,
+                })
 
     return outstanding, paid
 
@@ -2305,7 +2459,8 @@ def my_payments(request):
     )
 
     total_outstanding = sum(
-        item['payment'].amount for item in outstanding_payments
+        (item['payment']['amount'] if isinstance(item['payment'], dict) else item['payment'].amount)
+        for item in outstanding_payments
     )
 
     context = {
@@ -2377,6 +2532,15 @@ def compose_message(request):
             msg.sender = request.user
             msg.save()
             messages.success(request, 'Message sent successfully!')
+            _notify(
+                user=msg.recipient,
+                notification_type='message',
+                title=f'New Message from {request.user.get_full_name() or request.user.username}',
+                message=f'You have a new message: "{msg.subject}"',
+                link=f'/student/inbox/{msg.id}/',
+            )
+            from eduweb.emailservices import send_new_message_email
+            send_new_message_email(msg.recipient, request.user, msg)
             return redirect('students:inbox')
         messages.error(request, 'Please fix the errors below.')
     else:
@@ -2427,16 +2591,25 @@ def message_thread(request, message_id):
     if request.method == 'POST':
         body = request.POST.get('body', '').strip()
         if len(body) >= 5:
-            reply_to = msg.sender if msg.recipient == request.user else msg.recipient
-            Message.objects.create(
-                sender=request.user,
-                recipient=reply_to,
-                subject=f'Re: {msg.subject}',
-                body=body,
-                parent=msg,
-            )
-            messages.success(request, 'Reply sent!')
-            return redirect('students:message_thread', message_id=message_id)
+                reply_to = msg.sender if msg.recipient == request.user else msg.recipient
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=reply_to,
+                    subject=f'Re: {msg.subject}',
+                    body=body,
+                    parent=msg,
+                )
+                messages.success(request, 'Reply sent!')
+                _notify(
+                    user=reply_to,
+                    notification_type='message',
+                    title=f'Reply from {request.user.get_full_name() or request.user.username}',
+                    message=f'New reply on: "{msg.subject}"',
+                    link=f'/student/inbox/{msg.id}/',
+                )
+                from eduweb.emailservices import send_new_message_email
+                send_new_message_email(reply_to, request.user, msg)
+                return redirect('students:message_thread', message_id=message_id)
         messages.error(request, 'Reply must be at least 5 characters.')
 
     return render(request, 'students/message_thread.html', {
@@ -2453,13 +2626,25 @@ def message_thread(request, message_id):
 @login_required
 @student_required
 def notifications_view(request):
+    """
+    Student notifications page.
+    - Shows last 30 days only (older ones auto-purged by _notify).
+    - Paginated at 15 per page.
+    - Marks ALL as read if ?mark_all=1 is passed.
+    """
+    if request.GET.get('mark_all') == '1':
+        Notification.objects.filter(
+            user=request.user, is_read=False
+        ).update(is_read=True, read_at=timezone.now())
+        return redirect('students:notifications_view')
+
     notifs = (
         Notification.objects
         .filter(user=request.user)
         .order_by('-created_at')
     )
     unread_count = notifs.filter(is_read=False).count()
-    page_obj = Paginator(notifs, 20).get_page(request.GET.get('page', 1))
+    page_obj = Paginator(notifs, 15).get_page(request.GET.get('page', 1))
 
     return render(request, 'students/notifications.html', {
         'page_title': 'Notifications',
@@ -2517,6 +2702,13 @@ def submit_review(request, course_slug):
 
     if created:
         messages.success(request, 'Thank you! Your review has been submitted.')
+        _notify(
+            user=request.user,
+            notification_type='enrollment',
+            title=f'Review Submitted: {course.title}',
+            message=f'You rated "{course.title}" {rating}/5 stars. Thank you for your feedback!',
+            link=f'/student/courses/{course_slug}/',
+        )
     else:
         messages.success(request, 'Your review has been updated.')
 
@@ -2549,6 +2741,13 @@ def create_study_group(request):
             )
 
             messages.success(request, f'Study group "{group.name}" created!')
+            _notify(
+                user=request.user,
+                notification_type='system',
+                title=f'Study Group Created: {group.name}',
+                message=f'Your study group "{group.name}" is live. Share it with others to grow your group!',
+                link=f'/student/study-groups/{group.id}/',
+            )
             return redirect('students:study_group_detail', group_id=group.id)
         messages.error(request, 'Please fix the errors below.')
     else:
@@ -2558,4 +2757,3 @@ def create_study_group(request):
         'page_title': 'Create Study Group',
         'form': form,
     })
-

@@ -2272,3 +2272,69 @@ class LibraryItemForm(forms.ModelForm):
         self.fields['external_url_label'].help_text = (
             'Button label shown on the front-end, default: "Read / Download".'
         )
+
+
+# ==================== ADMIN MESSAGING FORMS ====================
+class AdminMessageComposeForm(forms.ModelForm):
+    """
+    Form for admins/staff to compose a message to any user.
+    Unlike the student version, recipient is a visible dropdown
+    covering all active users.
+    """
+    from eduweb.models import Message as _Msg
+
+    recipient = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_active=True)
+            .select_related('profile')
+            .order_by('profile__role', 'first_name', 'last_name'),
+        widget=forms.Select(attrs={
+            'class': (
+                'w-full px-4 py-3 border border-gray-300 rounded-lg '
+                'focus:ring-2 focus:ring-primary-blue-500 focus:border-transparent '
+                'text-sm'
+            )
+        }),
+        label='Recipient',
+    )
+
+    class Meta:
+        from eduweb.models import Message
+        model = Message
+        fields = ['recipient', 'subject', 'body']
+        widgets = {
+            'subject': forms.TextInput(attrs={
+                'class': (
+                    'w-full px-4 py-3 border border-gray-300 rounded-lg '
+                    'focus:ring-2 focus:ring-primary-blue-500 focus:border-transparent text-sm'
+                ),
+                'placeholder': 'Message subject…',
+            }),
+            'body': forms.Textarea(attrs={
+                'class': (
+                    'w-full px-4 py-3 border border-gray-300 rounded-lg '
+                    'focus:ring-2 focus:ring-primary-blue-500 focus:border-transparent text-sm'
+                ),
+                'rows': 7,
+                'placeholder': 'Type your message here…',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Show username + role in the dropdown label
+        self.fields['recipient'].label_from_instance = lambda u: (
+            f"{u.get_full_name() or u.username} "
+            f"[{u.profile.get_role_display() if hasattr(u, 'profile') else 'User'}]"
+        )
+
+    def clean_subject(self):
+        s = self.cleaned_data.get('subject', '').strip()
+        if len(s) < 3:
+            raise forms.ValidationError('Subject must be at least 3 characters.')
+        return s
+
+    def clean_body(self):
+        b = self.cleaned_data.get('body', '').strip()
+        if len(b) < 10:
+            raise forms.ValidationError('Message must be at least 10 characters.')
+        return b

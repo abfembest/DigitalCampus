@@ -1,3 +1,5 @@
+from DigitalCampus.wsgi import application
+=======
 import os
 import sys
 

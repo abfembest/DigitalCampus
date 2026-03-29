@@ -12,7 +12,7 @@ sys.path.insert(0, BASE_DIR)
 # (this replaces "source venv/bin/activate")
 # ==============================
 VENV_SITE_PACKAGES = (
-    "/home/miuenecd/virtualenv/DigitalCampus/3.12/"
+    "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/"
     "lib/python3.12/site-packages"
 )
 
@@ -26,4 +26,3 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "DigitalCampus.settings")
 # ==============================
 # WSGI APPLICATION
 # ==============================
-from DigitalCampus.wsgi import application

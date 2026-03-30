@@ -1724,7 +1724,7 @@ class UserProfileAdmin(admin.ModelAdmin):
             'fields': ('email_notifications', 'marketing_emails')
         }),
         ('Verification', {
-            'fields': ('email_verified', 'verification_token')
+            'fields': ('email_verified', 'verification_token', 'is_logged_in', 'active_session_key')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

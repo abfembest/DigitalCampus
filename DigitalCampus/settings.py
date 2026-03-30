@@ -71,6 +71,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "eduweb.security_middleware.SessionSecurityMiddleware",
 ]
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
@@ -180,8 +181,8 @@ LOGIN_URL = "eduweb:auth_page"
 LOGIN_REDIRECT_URL = "eduweb:apply"
 LOGOUT_REDIRECT_URL = "eduweb:index"
 
-SESSION_COOKIE_AGE = 1209600
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_AGE = 1209600       # Max cookie lifetime (14 days, for remember_me)
+SESSION_SAVE_EVERY_REQUEST = True  # Required so last_activity timestamp updates every request
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -229,3 +230,8 @@ CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 
 # settings.py
 CHAT_SESSION_TIMEOUT_MINUTES = 15
+
+# ── Inactivity session timeout ────────────────────────────────────────────────
+# Minutes of no requests before SessionSecurityMiddleware kills the session.
+# Change this single value to adjust the timeout across the whole platform.
+SESSION_INACTIVITY_TIMEOUT = 15  # minutes

@@ -322,12 +322,43 @@ def auth_page(request):
                     'username', 'Email not verified. Check your inbox for verification link.'
                 )
 
+            # ── Single-device enforcement ─────────────────────────────────────────────────
+            profile = user.profile
+            if profile.is_logged_in and profile.active_session_key:
+                # Check if that session still physically exists in the DB
+                from django.contrib.sessions.models import Session
+                still_alive = Session.objects.filter(
+                    session_key=profile.active_session_key,
+                    expire_date__gte=timezone.now(),
+                ).exists()
+                if still_alive:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'username': [
+                                'This account is already logged in on another terminal.'
+                            ]
+                        },
+                    }, status=403)
+                else:
+                    # Stale flag — previous session expired/browser closed; clear it
+                    profile.is_logged_in = False
+                    profile.active_session_key = ''
+                    profile.save(update_fields=['is_logged_in', 'active_session_key'])
+
             login(request, user)
+
             if request.POST.get('remember_me') == 'on':
                 request.session.set_expiry(1209600)  # 14 days
             else:
-                request.session.set_expiry(0)        # closes with browser
+                request.session.set_expiry(0)        # session dies on browser close
+
             request.session.pop('captcha_answer', None)
+
+            # Mark user as logged in with this session key
+            profile.is_logged_in = True
+            profile.active_session_key = request.session.session_key
+            profile.save(update_fields=['is_logged_in', 'active_session_key'])
 
             role = user.profile.role
             if role == 'admin' or user.is_superuser:
@@ -354,16 +385,23 @@ def auth_page(request):
 
 
 def user_logout(request):
-    """Log out user and invalidate all their active sessions."""
+    """Log out user, clear all their sessions, and reset login status."""
     user = request.user
     if user.is_authenticated:
+        # Delete all active sessions for this user
         for session in Session.objects.filter(expire_date__gte=timezone.now()):
             if session.get_decoded().get('_auth_user_id') == str(user.id):
                 session.delete()
+
+        # Reset single-device tracking fields
+        if hasattr(user, 'profile'):
+            user.profile.is_logged_in = False
+            user.profile.active_session_key = ''
+            user.profile.save(update_fields=['is_logged_in', 'active_session_key'])
+
     logout(request)
     messages.success(request, 'You have been logged out from all devices.')
     return redirect('eduweb:auth_page')
-
 
 @login_required
 def resend_verification(request):

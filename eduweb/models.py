@@ -3037,6 +3037,18 @@ class UserProfile(models.Model):
     # Timestamps
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # ── Single-device session tracking ────────────────────────────────────────────
+    is_logged_in = models.BooleanField(
+        default=False,
+        help_text="True while a session is active for this user."
+    )
+    active_session_key = models.CharField(
+        max_length=40,
+        blank=True,
+        default='',
+        help_text="Django session key of the current active session."
+    )
     
     class Meta:
         verbose_name = 'User Profile'

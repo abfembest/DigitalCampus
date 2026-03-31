@@ -1,0 +1,779 @@
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 29, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/__init__.py", line 19, in setup
+    configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
+                      ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/conf/__init__.py", line 89, in __getattr__
+    self._setup(name)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/conf/__init__.py", line 76, in _setup
+    self._wrapped = Settings(settings_module)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/conf/__init__.py", line 190, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/alt/python312/lib64/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/settings.py", line 17, in <module>
+    config = Config(RepositoryEnv(env_path))
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/decouple.py", line 150, in __init__
+    with open(source, encoding=encoding) as file_:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/miuenecd/theology/DigitalCampus/.env'
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 29, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/__init__.py", line 19, in setup
+    configure_logging(settings.LOGGING_CONFIG, settings.LOGGING)
+                      ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/conf/__init__.py", line 89, in __getattr__
+    self._setup(name)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/conf/__init__.py", line 76, in _setup
+    self._wrapped = Settings(settings_module)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/conf/__init__.py", line 190, in __init__
+    mod = importlib.import_module(self.SETTINGS_MODULE)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/alt/python312/lib64/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/settings.py", line 17, in <module>
+    config = Config(RepositoryEnv(env_path))
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/decouple.py", line 150, in __init__
+    with open(source, encoding=encoding) as file_:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/miuenecd/theology/DigitalCampus/.env'
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 29, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 13, in get_wsgi_application
+    return WSGIHandler()
+           ^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/wsgi.py", line 118, in __init__
+    self.load_middleware()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 40, in load_middleware
+    middleware = import_string(middleware_path)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/module_loading.py", line 30, in import_string
+    return cached_import(module_path, class_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/module_loading.py", line 15, in cached_import
+    module = import_module(module_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/alt/python312/lib64/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'whitenoise'
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 29, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 13, in get_wsgi_application
+    return WSGIHandler()
+           ^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/wsgi.py", line 118, in __init__
+    self.load_middleware()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 40, in load_middleware
+    middleware = import_string(middleware_path)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/module_loading.py", line 30, in import_string
+    return cached_import(module_path, class_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/module_loading.py", line 15, in cached_import
+    module = import_module(module_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/alt/python312/lib64/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'whitenoise'
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 29, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 13, in get_wsgi_application
+    return WSGIHandler()
+           ^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/wsgi.py", line 118, in __init__
+    self.load_middleware()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 40, in load_middleware
+    middleware = import_string(middleware_path)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/module_loading.py", line 30, in import_string
+    return cached_import(module_path, class_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/module_loading.py", line 15, in cached_import
+    module = import_module(module_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/alt/python312/lib64/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'whitenoise'
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 29, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 13, in get_wsgi_application
+    return WSGIHandler()
+           ^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/wsgi.py", line 118, in __init__
+    self.load_middleware()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 40, in load_middleware
+    middleware = import_string(middleware_path)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/module_loading.py", line 30, in import_string
+    return cached_import(module_path, class_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/module_loading.py", line 15, in cached_import
+    module = import_module(module_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/alt/python312/lib64/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'whitenoise'
+Invalid HTTP_HOST header: 'theology.miuedu.com'. You may need to add 'theology.miuedu.com' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'theology.miuedu.com'. You may need to add 'theology.miuedu.com' to ALLOWED_HOSTS.
+Bad Request: /
+Invalid HTTP_HOST header: 'theology.miuedu.com'. You may need to add 'theology.miuedu.com' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'theology.miuedu.com'. You may need to add 'theology.miuedu.com' to ALLOWED_HOSTS.
+Bad Request: /
+Invalid HTTP_HOST header: 'theology.miuedu.com'. You may need to add 'theology.miuedu.com' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'theology.miuedu.com'. You may need to add 'theology.miuedu.com' to ALLOWED_HOSTS.
+Bad Request: /
+navigation_data: failed to fetch faculties
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: eduweb_faculty
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/context.py", line 86, in navigation_data
+    faculties = list(
+                ^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 398, in __iter__
+    self._fetch_all()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: eduweb_faculty
+navigation_data: failed to fetch programs
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: eduweb_program
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/context.py", line 98, in navigation_data
+    courses = list(
+              ^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 398, in __iter__
+    self._fetch_all()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: eduweb_program
+Internal Server Error: /
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: eduweb_program
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 454, in index
+    return render(request, 'index.html', {
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 171, in render
+    return self._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 961, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 961, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 65, in render
+    result = block.nodelist.render(context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 961, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 197, in render
+    len_values = len(values)
+                 ^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 380, in __len__
+    self._fetch_all()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: eduweb_program
+Internal Server Error: /about-us/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 480, in about
+    return render(request, 'about.html', {
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 15, in get_template
+    return engine.get_template(template_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 175, in get_template
+    template, origin = self.find_template(template_name)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 157, in find_template
+    template = loader.get_template(name, skip=skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loaders/cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loaders/base.py", line 28, in get_template
+    return Template(
+           ^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 196, in compile_nodelist
+    return parser.parse()
+           ^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 295, in do_extends
+    nodelist = parser.parse()
+               ^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 234, in do_block
+    nodelist = parser.parse(("endblock",))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 974, in do_if
+    nodelist = parser.parse(("endif",))
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 859, in do_for
+    sequence = parser.compile_filter(bits[in_index + 1])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 597, in compile_filter
+    return FilterExpression(token, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 693, in __init__
+    filter_func = parser.find_filter(filter_name)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 603, in find_filter
+    raise TemplateSyntaxError("Invalid filter: '%s'" % filter_name)
+django.template.exceptions.TemplateSyntaxError: Invalid filter: 'split'
+Internal Server Error: /about-us/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 480, in about
+    return render(request, 'about.html', {
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 15, in get_template
+    return engine.get_template(template_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 175, in get_template
+    template, origin = self.find_template(template_name)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 157, in find_template
+    template = loader.get_template(name, skip=skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loaders/cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loaders/base.py", line 28, in get_template
+    return Template(
+           ^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 196, in compile_nodelist
+    return parser.parse()
+           ^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 295, in do_extends
+    nodelist = parser.parse()
+               ^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 234, in do_block
+    nodelist = parser.parse(("endblock",))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 974, in do_if
+    nodelist = parser.parse(("endif",))
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 859, in do_for
+    sequence = parser.compile_filter(bits[in_index + 1])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 597, in compile_filter
+    return FilterExpression(token, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 693, in __init__
+    filter_func = parser.find_filter(filter_name)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 603, in find_filter
+    raise TemplateSyntaxError("Invalid filter: '%s'" % filter_name)
+django.template.exceptions.TemplateSyntaxError: Invalid filter: 'split'
+Not Found: /favicon.ico
+Not Found: /static/apple-touch-icon.png
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Internal Server Error: /about-us/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 480, in about
+    return render(request, 'about.html', {
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 15, in get_template
+    return engine.get_template(template_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 175, in get_template
+    template, origin = self.find_template(template_name)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 157, in find_template
+    template = loader.get_template(name, skip=skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loaders/cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loaders/base.py", line 28, in get_template
+    return Template(
+           ^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 196, in compile_nodelist
+    return parser.parse()
+           ^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 295, in do_extends
+    nodelist = parser.parse()
+               ^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 234, in do_block
+    nodelist = parser.parse(("endblock",))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 974, in do_if
+    nodelist = parser.parse(("endif",))
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 859, in do_for
+    sequence = parser.compile_filter(bits[in_index + 1])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 597, in compile_filter
+    return FilterExpression(token, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 693, in __init__
+    filter_func = parser.find_filter(filter_name)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 603, in find_filter
+    raise TemplateSyntaxError("Invalid filter: '%s'" % filter_name)
+django.template.exceptions.TemplateSyntaxError: Invalid filter: 'split'
+Internal Server Error: /about-us/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 480, in about
+    return render(request, 'about.html', {
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 15, in get_template
+    return engine.get_template(template_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 175, in get_template
+    template, origin = self.find_template(template_name)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 157, in find_template
+    template = loader.get_template(name, skip=skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loaders/cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loaders/base.py", line 28, in get_template
+    return Template(
+           ^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 196, in compile_nodelist
+    return parser.parse()
+           ^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 295, in do_extends
+    nodelist = parser.parse()
+               ^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 234, in do_block
+    nodelist = parser.parse(("endblock",))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 974, in do_if
+    nodelist = parser.parse(("endif",))
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 510, in parse
+    raise self.error(token, e)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 508, in parse
+    compiled_result = compile_func(self, token)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/defaulttags.py", line 859, in do_for
+    sequence = parser.compile_filter(bits[in_index + 1])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 597, in compile_filter
+    return FilterExpression(token, self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 693, in __init__
+    filter_func = parser.find_filter(filter_name)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 603, in find_filter
+    raise TemplateSyntaxError("Invalid filter: '%s'" % filter_name)
+django.template.exceptions.TemplateSyntaxError: Invalid filter: 'split'
+Not Found: /favicon.ico
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 1
+    <<<<<<< HEAD
+    ^^
+SyntaxError: invalid syntax
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 1
+    <<<<<<< HEAD
+    ^^
+SyntaxError: invalid syntax
+Not Found: /static/apple-touch-icon.png
+Not Found: /static/apple-touch-icon.png
+Not Found: /media/library/covers/whatsapp-image-2026-03-18-at-92056-am.jpeg
+Not Found: /media/avatars/Birthday_Design.jpg
+Not Found: /media/avatars/Birthday_Design.jpg
+Not Found: /media/avatars/Birthday_Design.jpg
+Not Found: /media/avatars/Birthday_Design.jpg
+Not Found: /media/avatars/Birthday_Design.jpg
+Not Found: /media/avatars/Birthday_Design.jpg
+Not Found: /api/student-fee/summary/cert_44/
+Not Found: /media/avatars/Birthday_Design.jpg
+Not Found: /media/avatars/Birthday_Design.jpg
+Session data corrupted
+Session data corrupted
+Session data corrupted
+Session data corrupted
+Session data corrupted
+Session data corrupted
+Session data corrupted
+Not Found: /static/apple-touch-icon.png
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /static/apple-touch-icon.png
+Not Found: /static/apple-touch-icon.png
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt
+Not Found: /.well-known/pki-validation/0F4D3B5F2642F3B85FBE00A35AE5A017.txt

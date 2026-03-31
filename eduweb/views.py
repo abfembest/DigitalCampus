@@ -326,7 +326,6 @@ def auth_page(request):
             profile = user.profile
             if profile.is_logged_in and profile.active_session_key:
                 # Check if that session still physically exists in the DB
-                from django.contrib.sessions.models import Session
                 still_alive = Session.objects.filter(
                     session_key=profile.active_session_key,
                     expire_date__gte=timezone.now(),
@@ -351,7 +350,7 @@ def auth_page(request):
             if request.POST.get('remember_me') == 'on':
                 request.session.set_expiry(1209600)  # 14 days
             else:
-                request.session.set_expiry(0)        # session dies on browser close
+                request.session.set_expiry(900)      # 15 min — inactivity middleware handles logout
 
             request.session.pop('captcha_answer', None)
 
@@ -385,22 +384,20 @@ def auth_page(request):
 
 
 def user_logout(request):
-    """Log out user, clear all their sessions, and reset login status."""
     user = request.user
     if user.is_authenticated:
-        # Delete all active sessions for this user
-        for session in Session.objects.filter(expire_date__gte=timezone.now()):
-            if session.get_decoded().get('_auth_user_id') == str(user.id):
-                session.delete()
-
-        # Reset single-device tracking fields
-        if hasattr(user, 'profile'):
-            user.profile.is_logged_in = False
-            user.profile.active_session_key = ''
-            user.profile.save(update_fields=['is_logged_in', 'active_session_key'])
+        try:
+            profile = user.profile
+            if profile.active_session_key:
+                Session.objects.filter(session_key=profile.active_session_key).delete()
+            profile.is_logged_in = False
+            profile.active_session_key = ''
+            profile.save(update_fields=['is_logged_in', 'active_session_key'])
+        except Exception:
+            pass
 
     logout(request)
-    messages.success(request, 'You have been logged out from all devices.')
+    messages.success(request, 'You have been logged out.')
     return redirect('eduweb:auth_page')
 
 @login_required

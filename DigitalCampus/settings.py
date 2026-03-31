@@ -181,8 +181,9 @@ LOGIN_URL = "eduweb:auth_page"
 LOGIN_REDIRECT_URL = "eduweb:apply"
 LOGOUT_REDIRECT_URL = "eduweb:index"
 
-SESSION_COOKIE_AGE = 1209600       # Max cookie lifetime (14 days, for remember_me)
-SESSION_SAVE_EVERY_REQUEST = True  # Required so last_activity timestamp updates every request
+SESSION_COOKIE_AGE = 1209600
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # per-login set_expiry(0) handles browser-close
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"

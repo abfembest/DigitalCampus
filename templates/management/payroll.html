@@ -127,12 +127,12 @@
 
             <td class="px-5 py-3 text-right text-sm text-gray-700
                        hidden md:table-cell whitespace-nowrap">
-              ${{ p.base_salary|floatformat:2 }}
+              {{ p.currency|default:"USD" }} {{ p.base_salary|floatformat:2 }}
             </td>
 
             <td class="px-5 py-3 text-right whitespace-nowrap">
               <span class="font-semibold text-green-600">
-                ${{ p.net_salary|floatformat:2 }}
+                {{ p.currency|default:"USD" }} {{ p.net_salary|floatformat:2 }}
               </span>
             </td>
 
@@ -413,6 +413,11 @@
                      class="block text-xs text-gray-500 mb-1">Account Number</label>
               {{ form.account_number }}
             </div>
+            <div>
+              <label for="{{ form.currency.id_for_label }}"
+                     class="block text-xs text-gray-500 mb-1">Currency</label>
+              {{ form.currency }}
+            </div>
           </div>
         </fieldset>
 
@@ -454,7 +459,8 @@
   data-method="{{ p.payment_method }}"
   data-date="{{ p.payment_date|date:'Y-m-d' }}"
   data-bank="{{ p.bank_name|escapejs }}"
-  data-account="{{ p.account_number|escapejs }}">
+  data-account="{{ p.account_number|escapejs }}"
+  data-currency="{{ p.currency|default:'USD' }}">
 </template>
 {% endfor %}
 
@@ -505,6 +511,7 @@ var PY = (function () {
       f('payment_date').value      = d.date;
       f('bank_name').value         = d.bank;
       f('account_number').value    = d.account;
+      f('currency').value          = d.currency;
     } else {
       title.textContent  = 'New Payroll Record';
       submit.textContent = 'Save Record';

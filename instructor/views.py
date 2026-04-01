@@ -18,7 +18,7 @@ from django.http import JsonResponse
 from eduweb.models import (
     LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
     QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
-    Announcement, Review, Notification
+    Announcement, Review, Notification, Course, CourseGrade
 )
 from .forms import (
     CourseForm, CourseObjectivesForm, LessonForm, SectionForm,

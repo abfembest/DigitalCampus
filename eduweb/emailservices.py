@@ -2104,3 +2104,458 @@ The {site.school_short_name} Team
             recipient.email, e, exc_info=True,
         )
         return False
+
+
+#######################################################
+# CERTIFICATE READY FOR DOWNLOAD — SENT TO STUDENT
+#######################################################
+def send_certificate_ready_email(user, certificate):
+    """
+    Sent when a certificate payment is completed and certificate is ready for download.
+    
+    Trigger: Call in confirm_payment() or when certificate.mark_paid() is called
+             after successful payment
+    Recipients: Student
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+        
+        cert_title = (
+            certificate.program.name if certificate.certificate_type == 'program'
+            else (certificate.course.title if certificate.course else 'Course Certificate')
+        )
+        
+        subject = f'Your {cert_title} Certificate is Ready — {site.school_short_name}'
+        
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .btn       {{ display: inline-block; padding: 12px 28px;
+                              background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+                              color: white; text-decoration: none;
+                              border-radius: 8px; font-weight: bold; font-size: 14px; margin: 20px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎓 Certificate Ready!</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <p>
+                        Congratulations! Your <strong>{cert_title}</strong> certificate
+                        payment has been processed and your certificate is now ready for download.
+                    </p>
+                    <p>Certificate ID: <strong>{certificate.certificate_id}</strong></p>
+                    <p style="text-align: center;">
+                        <a href="/student/certificates/" class="btn">
+                            Download Certificate
+                        </a>
+                    </p>
+                    <p style="font-size:13px; color:#666; margin-top: 30px;">
+                        Questions? Contact us at
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+Your Certificate is Ready — {site.school_name}
+
+Dear {user.get_full_name() or user.username},
+
+Congratulations! Your {cert_title} certificate payment has been processed
+and your certificate is now ready for download.
+
+Certificate ID: {certificate.certificate_id}
+
+Download your certificate:
+/student/certificates/
+
+Questions? Contact us at {contact}
+
+Best regards,
+The {site.school_short_name} Team
+        """
+        
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+    
+    except Exception as e:
+        logger.error(
+            "Certificate ready email failed for %s: %s",
+            user.email, e, exc_info=True,
+        )
+        return False
+
+
+#######################################################
+# TRANSCRIPT GENERATED — SENT TO STUDENT
+#######################################################
+def send_transcript_generated_email(user, application):
+    """
+    Sent when a student's academic transcript has been generated and is ready for download.
+    
+    Trigger: Call in management view when transcript is marked as issued
+             (application.transcript_issued = True)
+    Recipients: Student
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+        
+        program_name = application.program.name if application.program else 'Your Program'
+        
+        subject = f'Your Academic Transcript is Ready — {site.school_short_name}'
+        
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .btn       {{ display: inline-block; padding: 12px 28px;
+                              background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+                              color: white; text-decoration: none;
+                              border-radius: 8px; font-weight: bold; font-size: 14px; margin: 20px 0; }}
+                .info-box  {{ background: #eff6ff; padding: 15px;
+                              border-left: 4px solid #3b82f6;
+                              margin: 20px 0; border-radius: 5px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📄 Transcript Generated</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <p>
+                        Your official academic transcript for <strong>{program_name}</strong>
+                        has been generated and is ready for download.
+                    </p>
+                    <div class="info-box">
+                        <strong>Application ID:</strong> {application.application_id}<br>
+                        <strong>Program:</strong> {program_name}
+                    </div>
+                    <p>
+                        You can download your transcript from your student portal or
+                        request official copies to be sent to external institutions.
+                    </p>
+                    <p style="text-align: center;">
+                        <a href="/student/dashboard/" class="btn">
+                            View My Records
+                        </a>
+                    </p>
+                    <p style="font-size:13px; color:#666; margin-top: 30px;">
+                        Questions? Contact us at
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+Your Academic Transcript is Ready — {site.school_name}
+
+Dear {user.get_full_name() or user.username},
+
+Your official academic transcript for {program_name} has been generated
+and is ready for download.
+
+Application ID: {application.application_id}
+Program: {program_name}
+
+View your records and download your transcript:
+/student/dashboard/
+
+Questions? Contact us at {contact}
+
+Best regards,
+The {site.school_short_name} Team
+        """
+        
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+    
+    except Exception as e:
+        logger.error(
+            "Transcript generated email failed for %s: %s",
+            user.email, e, exc_info=True,
+        )
+        return False
+
+
+#######################################################
+# PAYMENT REMINDER — OVERDUE FEES
+#######################################################
+def send_overdue_payment_reminder_email(user, fee):
+    """
+    Sent when a student has an overdue fee payment (due_date has passed).
+    
+    Trigger: Call from management command or cron job that checks
+             AllRequiredPayments where due_date < today and student hasn't paid
+    Recipients: Student with overdue fees
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+        
+        subject = f'Payment Reminder: Overdue Fee — {site.school_short_name}'
+        
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .btn       {{ display: inline-block; padding: 12px 28px;
+                              background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+                              color: white; text-decoration: none;
+                              border-radius: 8px; font-weight: bold; font-size: 14px; margin: 20px 0; }}
+                .alert     {{ background: #fee2e2; padding: 15px;
+                              border-left: 4px solid #dc2626;
+                              margin: 20px 0; border-radius: 5px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>⚠️ Payment Reminder</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <div class="alert">
+                        <strong>You have an OVERDUE payment</strong><br>
+                        Please settle this fee as soon as possible to avoid disruption to your account.
+                    </div>
+                    <p>
+                        <strong>Fee Purpose:</strong> {fee.purpose}<br>
+                        <strong>Amount Due:</strong> {fee.currency} {fee.amount:.2f}<br>
+                        <strong>Due Date:</strong> {fee.due_date.strftime('%B %d, %Y')}
+                    </p>
+                    <p style="text-align: center;">
+                        <a href="/student/payments/" class="btn">
+                            Pay Now
+                        </a>
+                    </p>
+                    <p>
+                        If you have already processed this payment, please
+                        disregard this message. Your account will be updated within 24 hours.
+                    </p>
+                    <p style="font-size:13px; color:#666; margin-top: 30px;">
+                        For payment assistance, contact
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+Payment Reminder: Overdue Fee — {site.school_name}
+
+Dear {user.get_full_name() or user.username},
+
+You have an OVERDUE payment. Please settle this fee as soon as possible
+to avoid disruption to your account.
+
+Fee Purpose: {fee.purpose}
+Amount Due: {fee.currency} {fee.amount:.2f}
+Due Date: {fee.due_date.strftime('%B %d, %Y')}
+
+Pay now at:
+/student/payments/
+
+If you have already processed this payment, disregard this message.
+Your account will be updated within 24 hours.
+
+For assistance, contact {contact}
+
+Best regards,
+The {site.school_short_name} Team
+        """
+        
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+    
+    except Exception as e:
+        logger.error(
+            "Overdue payment reminder email failed for %s: %s",
+            user.email, e, exc_info=True,
+        )
+        return False
+
+
+#######################################################
+# PAYROLL PAYMENT NOTIFICATION — SENT TO STAFF
+#######################################################
+def send_payroll_payment_notification_email(payroll):
+    """
+    Sent to staff member when their payroll has been marked as paid.
+    
+    Trigger: Call in payroll update view when payment_status is changed to 'paid'
+    Recipients: Staff member
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+        user = payroll.staff
+        
+        subject = f'Your Payroll Payment Processed — {site.school_short_name}'
+        
+        month_name = payroll.get_month_name() or 'N/A'
+        
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .details   {{ background: #f0fdf4; padding: 15px;
+                              border-left: 4px solid #10b981;
+                              margin: 20px 0; border-radius: 5px; font-size: 14px; }}
+                .amount    {{ font-size: 24px; font-weight: bold; color: #059669; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>💰 Payroll Payment Processed</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <p>
+                        Your payroll for <strong>{month_name} {payroll.year}</strong> has been
+                        processed and payment has been sent to your registered bank account.
+                    </p>
+                    <div class="details">
+                        <strong>Payroll Details:</strong><br>
+                        Reference: {payroll.payroll_reference}<br>
+                        Period: {month_name} {payroll.year}<br>
+                        Gross Salary: <span class="amount">{payroll.currency} {payroll.gross_salary:.2f}</span><br>
+                        Net Salary: <span class="amount">{payroll.currency} {payroll.net_salary:.2f}</span><br>
+                        Payment Date: {payroll.payment_date.strftime('%B %d, %Y') if payroll.payment_date else 'Processed'}<br>
+                        Payment Method: {payroll.get_payment_method_display() if hasattr(payroll, 'get_payment_method_display') else payroll.payment_method}
+                    </div>
+                    <p>
+                        If you have any questions about your payroll or
+                        do not see the payment reflected in your account within 2-3 business days,
+                        please contact our finance team.
+                    </p>
+                    <p style="font-size:13px; color:#666; margin-top: 30px;">
+                        Finance Contact: <a href="mailto:{contact}">{contact}</a>
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+Your Payroll Payment Has Been Processed — {site.school_name}
+
+Dear {user.get_full_name() or user.username},
+
+Your payroll for {month_name} {payroll.year} has been processed and
+payment has been sent to your registered bank account.
+
+Payroll Details:
+Reference: {payroll.payroll_reference}
+Period: {month_name} {payroll.year}
+Gross Salary: {payroll.currency} {payroll.gross_salary:.2f}
+Net Salary: {payroll.currency} {payroll.net_salary:.2f}
+Payment Date: {payroll.payment_date.strftime('%B %d, %Y') if payroll.payment_date else 'Processed'}
+Payment Method: {payroll.get_payment_method_display() if hasattr(payroll, 'get_payment_method_display') else payroll.payment_method}
+
+If you do not see the payment within 2-3 business days or have questions,
+please contact our finance team at {contact}.
+
+Best regards,
+The {site.school_short_name} Team
+        """
+        
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+    
+    except Exception as e:
+        logger.error(
+            "Payroll payment notification email failed for %s: %s",
+            payroll.staff.email, e, exc_info=True,
+        )
+        return False

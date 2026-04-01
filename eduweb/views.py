@@ -54,6 +54,10 @@ from .emailservices import (
     send_user_confirmation_email,
     send_verification_email,
     send_verification_success_email,
+    send_certificate_ready_email,
+    send_transcript_generated_email,
+    send_overdue_payment_reminder_email,
+    send_payroll_payment_notification_email,
 )
 from .forms import (
     ContactForm,
@@ -68,6 +72,7 @@ from .models import (
     ApplicationPayment,
     BlogCategory,
     BlogPost,
+    Certificate,
     ContactMessage,
     Course,
     CourseApplication,
@@ -1519,6 +1524,20 @@ def confirm_payment(request):
                 payment.status  = 'success'
                 payment.paid_at = timezone.now()
                 payment.save(update_fields=['status', 'paid_at'])
+            
+            # ── EMAIL: Certificate fee paid ──────────────────────────────────
+            if created and 'certificate' in fee.purpose.lower():
+                # Check if there are any pending-payment certificates for this user
+                try:
+                    pending_cert = Certificate.objects.filter(
+                        student=request.user,
+                        payment_status='unpaid'
+                    ).first()
+                    if pending_cert:
+                        pending_cert.mark_paid(payment_reference=payment.payment_reference)
+                        send_certificate_ready_email(request.user, pending_cert)
+                except Exception as e:
+                    logger.error("Certificate ready email failed: %s", e)
 
         return JsonResponse({
             'success':      True,

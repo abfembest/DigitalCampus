@@ -525,17 +525,21 @@ class BlogPostAdmin(admin.ModelAdmin):
 # ==================== CERTIFICATES ====================
 @admin.register(Certificate)
 class CertificateAdmin(admin.ModelAdmin):
-    list_display = ('certificate_id', 'student', 'course', 'issued_date', 'completion_date', 'grade', 'is_verified')
-    list_filter = ('is_verified', 'issued_date')
+    list_display = ('certificate_id', 'student', 'course', 'program', 'certificate_type', 'payment_status', 'issued_date', 'completion_date', 'grade', 'is_verified')
+    list_filter = ('certificate_type', 'payment_status', 'is_verified', 'issued_date')
+    search_fields = ('certificate_id', 'student__username', 'course__title', 'program__name')
     search_fields = ('certificate_id', 'student__username', 'course__title')
     readonly_fields = ('certificate_id', 'verification_code', 'issued_date', 'created_at')
 
     fieldsets = (
         ('Certificate Information', {
-            'fields': ('student', 'course', 'certificate_id', 'verification_code')
+            'fields': ('student', 'course', 'program', 'certificate_type', 'certificate_id', 'verification_code')
         }),
         ('Details', {
             'fields': ('issued_date', 'completion_date', 'grade', 'is_verified')
+        }),
+        ('Payment Gate', {
+            'fields': ('payment_status', 'payment_reference'),
         }),
         ('File', {
             'fields': ('certificate_file',)
@@ -543,6 +547,47 @@ class CertificateAdmin(admin.ModelAdmin):
         ('Timestamp', {
             'fields': ('created_at',),
             'classes': ('collapse',)
+        }),
+    )
+
+from .models import CourseGrade
+
+@admin.register(CourseGrade)
+class CourseGradeAdmin(admin.ModelAdmin):
+    list_display = ('student', 'course', 'session', 'grade', 'score', 'credit_units', 'is_passed', 'recorded_at')
+    list_filter = ('session', 'grade', 'is_passed', 'course__program__department__faculty')
+    search_fields = ('student__username', 'course__code', 'course__name')
+    readonly_fields = ('recorded_at', 'updated_at')
+
+    fieldsets = (
+        ('Grade Record', {
+            'fields': ('student', 'course', 'session', 'application')
+        }),
+        ('Grading', {
+            'fields': ('score', 'grade', 'credit_units', 'is_passed')
+        }),
+        ('Recorded By', {
+            'fields': ('recorded_by', 'recorded_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+from .models import InstitutionPartner
+
+@admin.register(InstitutionPartner)
+class InstitutionPartnerAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'location', 'display_order', 'is_active')
+    list_filter = ('category', 'is_active')
+    search_fields = ('name', 'location')
+    list_editable = ('display_order', 'is_active')
+
+    fieldsets = (
+        ('Partner Information', {
+            'fields': ('name', 'category', 'location', 'logo')
+        }),
+        ('Display', {
+            'fields': ('display_order', 'is_active')
         }),
     )
 
@@ -1965,7 +2010,34 @@ class LibraryItemAdmin(admin.ModelAdmin):
     list_display  = ['title', 'author', 'category', 'subcategory', 'access', 'is_active', 'featured']
     list_filter   = ['category', 'access', 'is_active', 'featured', 'language']
     search_fields = ['title', 'author', 'subcategory', 'tags']
-    prepopulated_fields = {'slug': ('title', 'author')}
+    readonly_fields = ['slug', 'view_count', 'download_count', 'file_size_mb', 'file_type', 'created_at', 'updated_at']
+
+    fieldsets = (
+        ('Taxonomy', {
+            'fields': ('category', 'subcategory', 'slug')
+        }),
+        ('Bibliographic', {
+            'fields': ('title', 'author', 'publisher', 'year', 'edition', 'isbn', 'language', 'description', 'tags')
+        }),
+        ('Media', {
+            'fields': ('cover_image', 'file', 'file_size_mb', 'file_type'),
+            'classes': ('collapse',)
+        }),
+        ('External Access', {
+            'fields': ('external_url', 'external_url_label')
+        }),
+        ('Behaviour', {
+            'fields': ('allow_download', 'allow_read_online', 'access', 'featured', 'is_active', 'order')
+        }),
+        ('Stats', {
+            'fields': ('view_count', 'download_count'),
+            'classes': ('collapse',)
+        }),
+        ('Audit', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 # ==================== ADMIN SITE BRANDING ====================

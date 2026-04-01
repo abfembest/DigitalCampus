@@ -693,7 +693,7 @@
 
                     <!-- Finance Management -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payroll' in request.path or 'transactions' in request.path or 'payment-gateways' in request.path or 'required-payments' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payroll' in request.path or 'transactions' in request.path or 'payment-gateways' in request.path or 'required-payments' in request.path or 'analytics' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-dollar-sign w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3">Finance</span>
@@ -701,6 +701,10 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="financeMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            <a href="{% url 'management:financial_analytics' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'analytics/financial' in request.path %}bg-white/20{% endif %}">
+                                <i class="fas fa-chart-line mr-2" aria-hidden="true"></i>Analytics Dashboard
+                            </a>
                             <a href="{% url 'management:staff_payroll_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'payroll' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-wallet mr-2" aria-hidden="true"></i>Staff Payroll
@@ -913,6 +917,15 @@
                             </a>
                         </div>
                     </div>
+
+                    <!-- Academic Record -->
+                    <a href="{% url 'students:academic_records' %}"
+                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'academic_records' %}bg-white/20{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas fa-graduation-cap w-5 text-center" aria-hidden="true"></i>
+                            <span class="ml-3">Academic Records</span>
+                        </div>
+                    </a>
 
                     <!-- Community -->
                     <div class="mb-1">

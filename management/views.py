@@ -17,7 +17,8 @@ from django.contrib.auth.models import User
 from django.core.mail import EmailMultiAlternatives, send_mail, send_mass_mail
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum, Avg, F, Value, CharField, DecimalField
+from django.db.models.functions import Coalesce, TruncMonth, Cast
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -29,6 +30,7 @@ from eduweb.models import (
     AcademicSession,
     AllRequiredPayments,
     Announcement,
+    ApplicationPayment,
     AuditLog,
     Badge,
     BlogCategory,
@@ -43,6 +45,7 @@ from eduweb.models import (
     Department,
     Enrollment,
     Faculty,
+    FeePayment,
     InstitutionMember,
     LMSCourse,
     LibraryItem,
@@ -102,6 +105,14 @@ from management.forms import (
     UserEditForm,
     UserProfileForm,
     UserSearchForm,
+)
+
+# Email Services
+from eduweb.emailservices import (
+    send_certificate_ready_email,
+    send_transcript_generated_email,
+    send_overdue_payment_reminder_email,
+    send_payroll_payment_notification_email,
 )
 
 
@@ -551,6 +562,54 @@ def make_decision(request, pk):
         return redirect('management:application_detail', application_id=application.application_id)
     
     return redirect('management:applications_list')
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def issue_transcript(request, pk):
+    """Issue a transcript for an approved application"""
+    
+    if request.method != 'POST':
+        return redirect('management:applications_list')
+    
+    application = get_object_or_404(CourseApplication, pk=pk)
+    
+    # Only issue transcripts for approved applications
+    if application.status != 'approved':
+        messages.error(request, 'Can only issue transcripts for approved applications.')
+        return redirect('management:application_detail', application_id=application.application_id)
+    
+    # Check if transcript already issued
+    if application.transcript_issued:
+        messages.info(request, 'Transcript has already been issued for this application.')
+        return redirect('management:application_detail', application_id=application.application_id)
+    
+    try:
+        # Mark transcript as issued
+        application.transcript_issued = True
+        application.transcript_issued_at = timezone.now()
+        application.transcript_issued_by = request.user
+        application.save(update_fields=['transcript_issued', 'transcript_issued_at', 'transcript_issued_by'])
+        
+        # Send notification email to student
+        if application.user:
+            send_transcript_generated_email(application.user, application)
+            _notify(
+                user=application.user,
+                title='Transcript Generated',
+                message=f'Your transcript has been generated. You can download it from your dashboard.',
+                notif_type='academic',
+                link='/dashboard/',
+            )
+        
+        messages.success(request, f'Transcript issued for {application.application_id}. Email sent to applicant.')
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('melbac')
+        logger.error(f'Failed to issue transcript for {application.application_id}: {str(e)}')
+        messages.error(request, 'Failed to issue transcript. Please try again.')
+    
+    return redirect('management:application_detail', application_id=application.application_id)
 
 
 def send_application_submission_email(application):
@@ -3984,6 +4043,278 @@ def required_payment_delete(request, pk):
     return redirect('management:required_payments_list')
 
 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def send_overdue_payment_reminders(request):
+    """Send overdue payment reminder emails to students with unpaid fees"""
+    
+    if request.method != 'POST':
+        return redirect('management:required_payments_list')
+    
+    try:
+        from django.utils import timezone
+        
+        # Find all overdue fees that haven't been paid yet
+        today = timezone.now().date()
+        overdue_fees = FeePayment.objects.filter(
+            fee__due_date__lt=today,
+            status__in=['pending', 'failed'],
+            user__isnull=False
+        ).select_related('user', 'fee')
+        
+        reminder_count = 0
+        error_count = 0
+        
+        for fee in overdue_fees:
+            try:
+                # Send reminder email
+                send_overdue_payment_reminder_email(fee.user, fee)
+                reminder_count += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger('melbac')
+                logger.error(f'Failed to send overdue reminder for fee {fee.id}: {str(e)}')
+                error_count += 1
+        
+        if reminder_count > 0:
+            messages.success(
+                request,
+                f'Sent {reminder_count} overdue payment reminder(s). {error_count} failed if any.'
+            )
+        else:
+            messages.info(request, 'No overdue payments found.')
+    except ImportError:
+        messages.error(request, 'FeePayment model not found.')
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('melbac')
+        logger.error(f'Failed to send overdue payment reminders: {str(e)}')
+        messages.error(request, 'An error occurred while sending reminders.')
+    
+    return redirect('management:required_payments_list')
+
+
+# ---------------------------------------------------------------------------
+# FINANCIAL ANALYTICS DASHBOARD
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def financial_analytics(request):
+    """
+    Comprehensive financial analytics dashboard with:
+    - Revenue by source (applications, fees, certificates)
+    - Student payment rates (on-time vs late)
+    - Instructor payout history
+    - Monthly recurring revenue (MRR)
+    """
+    
+    # 1. REVENUE BY SOURCE
+    # ─────────────────────────────────────────────────────────────────────
+    
+    # Application fees revenue
+    app_payment_revenue = ApplicationPayment.objects.filter(
+        status='success'
+    ).aggregate(
+        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
+        count=Count('id')
+    )
+    
+    # Student fees (required payments) revenue
+    fee_payment_revenue = FeePayment.objects.filter(
+        status='success'
+    ).aggregate(
+        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
+        count=Count('id')
+    )
+    
+    # Certificate revenue
+    cert_revenue = Certificate.objects.filter(
+        payment_status='paid'
+    ).count()
+    
+    total_revenue = float(app_payment_revenue['total']) + float(fee_payment_revenue['total'])
+    
+    revenue_by_source = {
+        'application_fees': {
+            'amount': float(app_payment_revenue['total']),
+            'transactions': app_payment_revenue['count'],
+            'percentage': (float(app_payment_revenue['total']) / total_revenue * 100) if total_revenue > 0 else 0,
+        },
+        'student_fees': {
+            'amount': float(fee_payment_revenue['total']),
+            'transactions': fee_payment_revenue['count'],
+            'percentage': (float(fee_payment_revenue['total']) / total_revenue * 100) if total_revenue > 0 else 0,
+        },
+        'certificates': {
+            'count': cert_revenue,
+        }
+    }
+    
+    # 2. STUDENT PAYMENT RATES
+    # ─────────────────────────────────────────────────────────────────────
+    
+    # Get all fee payments with due dates (FeePayment linked to AllRequiredPayments)
+    all_fee_payments = FeePayment.objects.select_related('fee').all()
+    
+    paid_on_time = 0
+    paid_late = 0
+    unpaid = 0
+    
+    for fee_payment in all_fee_payments:
+        if fee_payment.status == 'success':
+            # Payment completed - check if on time or late
+            if fee_payment.paid_at and fee_payment.fee.due_date:
+                if fee_payment.paid_at.date() <= fee_payment.fee.due_date:
+                    paid_on_time += 1
+                else:
+                    paid_late += 1
+        elif fee_payment.status in ['pending', 'failed']:
+            unpaid += 1
+    
+    total_fees = paid_on_time + paid_late + unpaid
+    
+    payment_rates = {
+        'on_time': {
+            'count': paid_on_time,
+            'percentage': (paid_on_time / total_fees * 100) if total_fees > 0 else 0,
+        },
+        'late': {
+            'count': paid_late,
+            'percentage': (paid_late / total_fees * 100) if total_fees > 0 else 0,
+        },
+        'unpaid': {
+            'count': unpaid,
+            'percentage': (unpaid / total_fees * 100) if total_fees > 0 else 0,
+        },
+        'total_fees': total_fees,
+    }
+    
+    # 3. INSTRUCTOR PAYOUT HISTORY
+    # ─────────────────────────────────────────────────────────────────────
+    
+    payroll_data = StaffPayroll.objects.filter(
+        payment_status='paid'
+    ).values('staff__id', 'staff__first_name', 'staff__last_name', 'staff__username').annotate(
+        total_paid=Coalesce(Sum('net_salary'), Value(0.0), output_field=DecimalField()),
+        total_gross=Coalesce(Sum('gross_salary'), Value(0.0), output_field=DecimalField()),
+        payment_count=Count('id'),
+        average_monthly=Coalesce(Avg('net_salary'), Value(0.0), output_field=DecimalField()),
+    ).order_by('-total_paid')[:10]  # Top 10 highest paid instructors
+    
+    instructor_payouts = []
+    total_instructor_payouts = 0.0
+    for payout in payroll_data:
+        amount = float(payout['total_paid'])
+        total_instructor_payouts += amount
+        instructor_payouts.append({
+            'staff_name': f"{payout['staff__first_name']} {payout['staff__last_name']}",
+            'count': payout['payment_count'],
+            'total_paid': amount,
+            'average_monthly': float(payout['average_monthly']),
+            'total_gross': float(payout['total_gross']),
+        })
+    
+    # 4. MONTHLY RECURRING REVENUE (MRR)
+    # ─────────────────────────────────────────────────────────────────────
+    
+    # Get last 12 months of successful payments
+    from datetime import datetime, timedelta as td
+    today = timezone.now()
+    twelve_months_ago = today - td(days=365)
+    
+    # Monthly revenue from application payments
+    app_monthly = ApplicationPayment.objects.filter(
+        status='success',
+        paid_at__gte=twelve_months_ago
+    ).annotate(
+        month=TruncMonth('paid_at')
+    ).values('month').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('month')
+    
+    # Monthly revenue from student fees
+    fee_monthly = FeePayment.objects.filter(
+        status='success',
+        paid_at__gte=twelve_months_ago
+    ).annotate(
+        month=TruncMonth('paid_at')
+    ).values('month').annotate(
+        total=Sum('amount'),
+        count=Count('id')
+    ).order_by('month')
+    
+    # Combine monthly data
+    monthly_data = {}
+    for record in app_monthly:
+        month_key = record['month'].strftime('%Y-%m') if record['month'] else 'Unknown'
+        if month_key not in monthly_data:
+            monthly_data[month_key] = {'app_fees': 0.0, 'student_fees': 0.0, 'total': 0.0}
+        monthly_data[month_key]['app_fees'] += float(record['total']) if record['total'] else 0
+    
+    for record in fee_monthly:
+        month_key = record['month'].strftime('%Y-%m') if record['month'] else 'Unknown'
+        if month_key not in monthly_data:
+            monthly_data[month_key] = {'app_fees': 0.0, 'student_fees': 0.0, 'total': 0.0}
+        monthly_data[month_key]['student_fees'] += float(record['total']) if record['total'] else 0
+    
+    # Calculate totals and sort
+    for month in monthly_data:
+        monthly_data[month]['total'] = monthly_data[month]['app_fees'] + monthly_data[month]['student_fees']
+    
+    monthly_revenue = sorted(monthly_data.items())[-6:]  # Last 6 months
+    
+    # Current MRR (last month)
+    current_mrr = 0.0
+    if monthly_revenue:
+        current_mrr = monthly_revenue[-1][1]['total']
+    
+    # 5. ADDITIONAL METRICS
+    # ─────────────────────────────────────────────────────────────────────
+    
+    # Outstanding payments
+    outstanding_fees = FeePayment.objects.filter(
+        status__in=['pending', 'failed']
+    ).aggregate(
+        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
+        count=Count('id')
+    )
+    
+    # Refunded amounts
+    refunded_payments = ApplicationPayment.objects.filter(
+        status='refunded'
+    ).aggregate(
+        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
+        count=Count('id')
+    )
+    
+    refunded_fees = FeePayment.objects.filter(
+        status='refunded'
+    ).aggregate(
+        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
+        count=Count('id')
+    )
+    
+    total_refunded = float(refunded_payments['total']) + float(refunded_fees['total'])
+    
+    context = {
+        'revenue_by_source': revenue_by_source,
+        'total_revenue': total_revenue,
+        'payment_rates': payment_rates,
+        'instructor_payouts': instructor_payouts,
+        'total_instructor_payouts': total_instructor_payouts,
+        'monthly_revenue': monthly_revenue,
+        'current_mrr': current_mrr,
+        'outstanding_amount': float(outstanding_fees['total']),
+        'outstanding_count': outstanding_fees['count'],
+        'total_refunded': total_refunded,
+        'refund_count': refunded_payments['count'] + refunded_fees['count'],
+    }
+    
+    return render(request, 'management/financial_analytics.html', context)
+
+
 # ---------------------------------------------------------------------------
 # STAFF PAYROLL
 # ---------------------------------------------------------------------------
@@ -4069,6 +4400,9 @@ def staff_payroll_edit(request, payroll_reference):
     payroll = get_object_or_404(StaffPayroll, payroll_reference=payroll_reference)
     form    = StaffPayrollForm(request.POST, instance=payroll)
     if form.is_valid():
+        # Track old status to detect changes
+        old_status = payroll.payment_status
+        
         updated_payroll = form.save()
         messages.success(request, 'Payroll updated.')
         # Notify staff member their payroll record was updated
@@ -4080,6 +4414,15 @@ def staff_payroll_edit(request, payroll_reference):
             notif_type='payroll',
             link='/dashboard/',
         )
+        
+        # Send payroll payment notification email if status changed to paid
+        if old_status != 'paid' and updated_payroll.payment_status == 'paid':
+            try:
+                send_payroll_payment_notification_email(updated_payroll)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger('melbac')
+                logger.error(f'Failed to send payroll notification email for {updated_payroll.payroll_reference}: {str(e)}')
     else:
         msg = next(
             (e for errs in form.errors.values() for e in errs),

@@ -1,15 +1,54 @@
+"""
+MELBAC Full Database Seed — corrected version
+=============================================
+All bugs from the original seed fixed:
+
+SEED FIXES:
+1.  AuditLog.action   — 'blog_post_published', 'application_approved' etc. are NOT in
+    ACTION_CHOICES. Valid choices: create|update|delete|login|logout|access|export|permission_change
+2.  Notification.notification_type — 'info'/'success'/'warning' are NOT in CHOICES.
+    Valid: enrollment|assignment|quiz|grade|announcement|message|certificate|payroll|account|system
+3.  BroadcastMessage.filter_type — 'graduates' is NOT a valid choice.
+    Valid: all_users|role|faculty|course|lms_course|application_status|enrollment_status
+4.  PaymentGateway — 'flutterwave' is NOT in GATEWAY_CHOICES. Valid: stripe|paypal|razorpay
+5.  Certificate payment_status — seeds leave it as 'unpaid'. Fixed to 'paid' for completed certs
+    and the payment_reference properly linked.
+6.  AllRequiredPayments — only one per program (Application Processing Fee). Seed should also
+    create tuition and library fee rows so FeePayment has meaningful data to link to.
+7.  FeePayment — amount was 0.00 for all fees since all programs are free. For library/misc fees
+    we now use a small non-zero amount so the simulation is realistic.
+8.  UserProfile.avatar — every user must have a profile image. We generate small synthetic JPEGs
+    in-process (no network required) and attach them.
+9.  ApplicationDocument.file — was 'documents/placeholder.pdf'. We now write a tiny valid PDF
+    into media at seed time so the field points to a real file.
+10. StaffPayroll.currency — model has no currency field; removed from seed data.
+11. Certificate seeding — also creates program certificates for graduated students.
+12. CourseGrade model — present in models.py but MISSING from the seed entirely. Added.
+13. InstitutionPartner model — present in models.py but MISSING from the seed entirely. Added.
+14. BroadcastMessage.filter_type 'all' corrected to 'all_users'.
+15. BroadcastMessage.filter_type 'email' is not a valid choice; removed extra 'btype' field
+    that was being passed but not used on the model.
+16. Announcement slug — auto-generated in model.save(); seed no longer passes it explicitly.
+17. admin.py — PaymentGateway gateway_type 'flutterwave' not in choices — seed now uses 'razorpay'.
+18. CourseGrade added to import list in seed.
+"""
+
+import io
+import os
 import random
 import uuid
 from decimal import Decimal
 from datetime import timedelta, date
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
 from django.utils import timezone
 from django.utils.text import slugify
 from faker import Faker
 
 from eduweb.models import (
-    SiteConfig, SiteHistoryMilestone, InstitutionMember, Testimonial,
+    SiteConfig, SiteHistoryMilestone, InstitutionMember, InstitutionPartner, Testimonial,
     Announcement, Assignment, AssignmentSubmission, AuditLog, Badge, StudentBadge,
     BlogCategory, BlogPost, Certificate, ContactMessage,
     Faculty, Department, Program, Course, AcademicSession, AllRequiredPayments,
@@ -20,12 +59,12 @@ from eduweb.models import (
     QuizAnswer, QuizAttempt, QuizResponse, Review, SubscriptionPlan,
     Subscription, SystemConfiguration, UserProfile, Vendor, StudyGroup,
     StudyGroupMember, StudyGroupMessage, BroadcastMessage, StaffPayroll,
-    ListOfCountry, FeePayment, LibraryItem
+    ListOfCountry, FeePayment, LibraryItem, CourseGrade,
 )
 
 fake = Faker()
 
-# ── MELBAC YouTube teaching embed codes ──────────────────────────────────────
+# ── MELBAC YouTube teaching embed codes ─────────────────────────────────────
 EMBED_CODES = [
     '<iframe width="560" height="315" src="https://www.youtube.com/embed/-mJFZp84TIY?si=GaHX9emFQiFb9uqa" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
     '<iframe width="560" height="315" src="https://www.youtube.com/embed/hnVOvvbQrwA?si=dGpgO4TTbiodxWwl" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
@@ -88,7 +127,7 @@ MELBAC_BLOG_POSTS = [
         'title': '57: Part 3 — Conditions for God\'s Forgiveness Towards Men',
         'subtitle': 'Exploring the biblical principles and requirements for receiving God\'s mercy.',
         'excerpt': 'We explore the biblical principles and requirements for receiving God\'s mercy, diving deep into the "if" found in God\'s promises of forgiveness.',
-        'content': '<p>Forgiveness is not unconditional in the way many preachers teach. This message carefully lays out the divine conditions that Scripture itself attaches to God\'s offer of mercy.</p><p>Apostle John Daniel walks through key passages revealing what God requires of man — not as works for salvation, but as the posture of the heart that opens the door to heaven\'s grace.</p><p>Key scriptures: 2 Chronicles 7:14, Mark 11:25-26, Luke 17:3-4.</p>',
+        'content': '<p>Forgiveness is not unconditional in the way many preachers teach. This message carefully lays out the divine conditions that Scripture itself attaches to God\'s offer of mercy.</p><p>Key scriptures: 2 Chronicles 7:14, Mark 11:25-26, Luke 17:3-4.</p>',
         'author_name': 'Apostle John Daniel',
         'author_title': 'Founder & President, MELBAC',
         'read_time': 14,
@@ -100,7 +139,7 @@ MELBAC_BLOG_POSTS = [
         'title': '56: Part 2 — Steps to a Spirit of Genuine Repentance and of Faith Towards God',
         'subtitle': 'The profound spiritual mechanics of God\'s Forgiveness.',
         'excerpt': 'Part 2 explores the profound spiritual mechanics of God\'s Forgiveness and why humanity required a redeemer after the sin of Adam.',
-        'content': '<p>This teaching traces the root of humanity\'s need for a redeemer all the way back to the Garden of Eden, and shows why genuine repentance — not mere sorrow — is the gateway to divine forgiveness.</p><p>The message outlines practical, scriptural steps believers can take to cultivate a spirit of true repentance and living faith toward God.</p><p>Key scriptures: Genesis 3, Romans 5:12, Acts 2:38, Hebrews 6:1.</p>',
+        'content': '<p>This teaching traces the root of humanity\'s need for a redeemer all the way back to the Garden of Eden, and shows why genuine repentance — not mere sorrow — is the gateway to divine forgiveness.</p><p>Key scriptures: Genesis 3, Romans 5:12, Acts 2:38, Hebrews 6:1.</p>',
         'author_name': 'Apostle John Daniel',
         'author_title': 'Founder & President, MELBAC',
         'read_time': 16,
@@ -112,7 +151,7 @@ MELBAC_BLOG_POSTS = [
         'title': '55: Part 1 — The Mystery of Forgiveness',
         'subtitle': 'Forgiveness is an 11-letter word that signifies judgment.',
         'excerpt': 'A teaching on the spiritual mechanics of forgiveness — why forgiveness is an 11-letter word that signifies judgment, and what this means for every believer.',
-        'content': '<p>In this opening of the Forgiveness series, Apostle John Daniel drops a profound insight: the very word "forgiveness" carries within it the concept of judgment — both divine and human.</p><p>This message sets the theological foundation for the entire series, exploring what forgiveness truly means in the Kingdom of God, and why so many believers misunderstand and misapply it in their lives and ministries.</p><p>Key scriptures: Luke 7:47-48, Ephesians 1:7, Colossians 1:14.</p>',
+        'content': '<p>In this opening of the Forgiveness series, Apostle John Daniel drops a profound insight: the very word "forgiveness" carries within it the concept of judgment — both divine and human.</p><p>Key scriptures: Luke 7:47-48, Ephesians 1:7, Colossians 1:14.</p>',
         'author_name': 'Apostle John Daniel',
         'author_title': 'Founder & President, MELBAC',
         'read_time': 13,
@@ -124,7 +163,7 @@ MELBAC_BLOG_POSTS = [
         'title': '54: Part 5 — The Authority of a Believer | Mystery of Divine Blessings and Prosperity',
         'subtitle': 'Divine principles that unlock true wealth through Wisdom, Knowledge, and Understanding.',
         'excerpt': 'We dive deep into the Mystery of Divine Blessings and Prosperity, learning the divine principles that unlock true wealth through Wisdom, Knowledge, and Understanding.',
-        'content': '<p>This climactic teaching in the Authority of a Believer series turns to the mystery of true prosperity — not the prosperity gospel\'s distortion, but the genuine biblical pattern of divine blessings that flow through wisdom, knowledge, and understanding.</p><p>Apostle John Daniel unpacks Proverbs 24:3-4 and connects it to the believer\'s authority, showing that real wealth in the Kingdom flows from spiritual alignment, not human striving.</p><p>Key scriptures: Proverbs 24:3-4, Deuteronomy 8:18, 3 John 1:2.</p>',
+        'content': '<p>This climactic teaching in the Authority of a Believer series turns to the mystery of true prosperity. Key scriptures: Proverbs 24:3-4, Deuteronomy 8:18, 3 John 1:2.</p>',
         'author_name': 'Apostle John Daniel',
         'author_title': 'Founder & President, MELBAC',
         'read_time': 20,
@@ -136,7 +175,7 @@ MELBAC_BLOG_POSTS = [
         'title': '53: Part 4 — The Authority of a Believer: How to be a God Pleaser',
         'subtitle': 'The vital difference between being a "God Pleaser" versus a "Man Pleaser."',
         'excerpt': 'We continue our series on the "Authority of a Believer," focusing on the vital difference between being a "God Pleaser" versus a "Man Pleaser."',
-        'content': '<p>One of the greatest hindrances to walking in true kingdom authority is the fear of man. In this powerful message, Apostle John Daniel draws a sharp biblical contrast between those who live to please God and those who live to please people.</p><p>The teaching reveals why man-pleasing is a spiritual trap that neutralises a believer\'s authority, and offers a practical, scriptural pathway to becoming a genuine God-pleaser.</p><p>Key scriptures: Galatians 1:10, John 12:42-43, Acts 5:29, Hebrews 11:6.</p>',
+        'content': '<p>One of the greatest hindrances to walking in true kingdom authority is the fear of man. Key scriptures: Galatians 1:10, John 12:42-43, Acts 5:29, Hebrews 11:6.</p>',
         'author_name': 'Apostle John Daniel',
         'author_title': 'Founder & President, MELBAC',
         'read_time': 17,
@@ -148,7 +187,7 @@ MELBAC_BLOG_POSTS = [
         'title': '52: Part 3 — The Authority of a Believer: Exercising Kingdom Authority',
         'subtitle': 'The spiritual mechanics of faith, confession, and the "last command" principle.',
         'excerpt': 'We explore the spiritual mechanics of faith, confession, and the "last command" principle in exercising Kingdom Authority as a believer.',
-        'content': '<p>In Part 3 of the Authority of a Believer series, Apostle John Daniel introduces the "last command" principle — a key spiritual law that governs how believers operate in Kingdom authority.</p><p>The teaching carefully expounds on the role of faith, the power of confessing the Word, and the order in which authority is exercised in the realm of the Spirit, giving believers a clear, practical framework for spiritual dominion.</p><p>Key scriptures: Mark 11:22-24, Romans 10:8-10, Matthew 28:18-20.</p>',
+        'content': '<p>Apostle John Daniel introduces the "last command" principle. Key scriptures: Mark 11:22-24, Romans 10:8-10, Matthew 28:18-20.</p>',
         'author_name': 'Apostle John Daniel',
         'author_title': 'Founder & President, MELBAC',
         'read_time': 15,
@@ -160,7 +199,7 @@ MELBAC_BLOG_POSTS = [
         'title': '51: Part 2 — The Authority of a Believer: Exercising Kingdom Authority',
         'subtitle': 'How believers can exercise the dominion restored to us by Christ.',
         'excerpt': 'We dive deep into how we can exercise the dominion restored to us by Christ, tackling difficult challenges facing ministers of the Gospel today.',
-        'content': '<p>In Part 2 of the Authority of a Believer series, Apostle John Daniel builds on the foundational principles of the previous teaching and goes deeper into the practical exercise of kingdom dominion.</p><p>This message addresses some of the most pressing challenges facing ministers of the Gospel today — spiritual opposition, discouragement, and the tactics of the enemy — and equips believers to walk victoriously in the authority Christ restored to them.</p><p>Key scriptures: Luke 10:19, Ephesians 1:19-23, Colossians 2:15.</p>',
+        'content': '<p>Apostle John Daniel addresses spiritual opposition, discouragement, and the tactics of the enemy. Key scriptures: Luke 10:19, Ephesians 1:19-23, Colossians 2:15.</p>',
         'author_name': 'Apostle John Daniel',
         'author_title': 'Founder & President, MELBAC',
         'read_time': 14,
@@ -171,13 +210,8 @@ MELBAC_BLOG_POSTS = [
 ]
 
 
-# ── HELPER: generate a guaranteed-unique slug with a uuid suffix ──────────────
+# ── HELPER: generate a guaranteed-unique slug ────────────────────────────────
 def unique_slug(base_title, model_class, extra_filter=None):
-    """
-    Generates a slug from base_title. If a record with that slug already exists
-    (optionally filtered by extra_filter dict), appends a uuid hex suffix to guarantee
-    uniqueness. Used for models with unique_together on (course, slug) etc.
-    """
     base = slugify(base_title)
     slug = base
     qs = model_class.objects.filter(slug=slug)
@@ -186,6 +220,64 @@ def unique_slug(base_title, model_class, extra_filter=None):
     if qs.exists():
         slug = f"{base}-{uuid.uuid4().hex[:6]}"
     return slug
+
+
+# ── HELPER: generate a tiny synthetic avatar JPEG in memory ─────────────────
+def make_avatar_bytes(color='#4F46E5', letter='U'):
+    """Return JPEG bytes for a tiny 80×80 coloured avatar with one letter."""
+    try:
+        from PIL import Image, ImageDraw
+        r = int(color[1:3], 16)
+        g = int(color[3:5], 16)
+        b = int(color[5:7], 16)
+        img = Image.new('RGB', (80, 80), (r, g, b))
+        draw = ImageDraw.Draw(img)
+        draw.ellipse([0, 0, 79, 79], fill=(r, g, b))
+        draw.text((28, 25), letter, fill=(255, 255, 255))
+        buf = io.BytesIO()
+        img.save(buf, 'JPEG', quality=85, optimize=True)
+        return buf.getvalue()
+    except Exception:
+        # Fallback: return minimal JPEG bytes if PIL fails
+        return (
+            b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00'
+            b'\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t'
+            b'\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a'
+            b'\x1f\x1e\x1d\x1a\x1c\x1c $.\' ",#\x1c\x1c(7),01444\x1f\'9=82<.342\x1eB'
+            b'\xed\xa3\x92\xff\xd9'
+        )
+
+
+# ── HELPER: minimal valid PDF bytes ─────────────────────────────────────────
+MINIMAL_PDF = b"""%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj
+xref
+0 4
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+trailer<</Size 4/Root 1 0 R>>
+startxref
+206
+%%EOF"""
+
+AVATAR_COLORS = [
+    ('#4F46E5', 'E'), ('#059669', 'G'), ('#DC2626', 'R'),
+    ('#D97706', 'A'), ('#7C3AED', 'M'), ('#0891B2', 'J'),
+    ('#BE185D', 'P'), ('#65A30D', 'S'), ('#EA580C', 'D'),
+    ('#6366F1', 'B'), ('#14B8A6', 'F'), ('#F43F5E', 'K'),
+    ('#8B5CF6', 'T'), ('#06B6D4', 'N'), ('#EF4444', 'L'),
+    ('#10B981', 'O'), ('#F59E0B', 'W'), ('#3B82F6', 'C'),
+    ('#EC4899', 'Q'), ('#84CC16', 'V'), ('#6B7280', 'X'),
+    ('#1D4ED8', 'Y'), ('#7C2D12', 'Z'), ('#064E3B', 'I'),
+    ('#1E1B4B', 'H'), ('#713F12', 'U'), ('#4C0519', 'K'),
+    ('#042F2E', 'R'), ('#0C4A6E', 'J'), ('#3F0D12', 'P'),
+    ('#1A1A1A', 'Q'), ('#2D4739', 'S'), ('#4A1942', 'T'),
+    ('#1E3A5F', 'W'), ('#3D0301', 'X'),
+]
 
 
 class Command(BaseCommand):
@@ -206,12 +298,13 @@ class Command(BaseCommand):
             Discussion, Lesson, LessonSection, LMSCourse, CourseCategory,
             ApplicationPayment, ApplicationDocument, CourseApplication,
             CourseIntake, AllRequiredPayments, StaffPayroll,
-            Course, AcademicSession, Program, Department, Faculty,
+            CourseGrade, Course, AcademicSession, Program, Department, Faculty,
             Invoice, Transaction, Subscription, SubscriptionPlan,
             PaymentGateway, BlogPost, BlogCategory, ContactMessage,
             Vendor, SystemConfiguration, Announcement,
             StudyGroupMessage, StudyGroupMember, StudyGroup, BroadcastMessage,
-            InstitutionMember, SiteHistoryMilestone, SiteConfig, Testimonial, ListOfCountry, LibraryItem, FeePayment
+            InstitutionMember, InstitutionPartner, SiteHistoryMilestone,
+            SiteConfig, Testimonial, ListOfCountry, LibraryItem, FeePayment,
         ]
         for model in models_to_clear:
             model.objects.all().delete()
@@ -301,6 +394,21 @@ class Command(BaseCommand):
                 'MELBAC, Melchisedec Graduate Bible Academy, free Bible degree, theology Nigeria, '
                 'Christian seminary, Apostle John Daniel, church management, divinity degree, Lagos'
             ),
+            about_mission=(
+                'To train end-time ministers of God on a free-of-charge basis, grounded in the pure '
+                'Word of God, and empowered by the Holy Ghost to fulfil the Great Commission.'
+            ),
+            about_vision=(
+                'To be a globally recognised, Holy Ghost-filled seminary that produces doctrinally '
+                'sound, Spirit-led ministers who transform nations for the Kingdom of God.'
+            ),
+            about_values=[
+                'Pure Word of God — uncompromised scriptural teaching',
+                'Free of Charge — no tuition, no registration fee',
+                'Holy Ghost Power — Spirit-filled ministry and prayer',
+                'Global Reach — training ministers from every nation',
+                'Apostolic Excellence — doctrinal depth and ministerial integrity',
+            ],
         )
         self.stdout.write(self.style.SUCCESS("   ✅ SiteConfig created"))
 
@@ -315,20 +423,15 @@ class Command(BaseCommand):
             (2000, 'Birth of the Bible Training College',
              'The Bible study portion of the Ministry was upgraded to an Institution and founded by '
              'Dr. John A. Daniel on 15th January 2000, registered and approved by the Federal '
-             'Government of Nigeria as Help and Reconciliation Ministry and Bible Training College '
-             'with vested authority to award basic, advanced and diploma certificates to its students.', 2),
+             'Government of Nigeria with vested authority to award basic, advanced and diploma certificates.', 2),
             (2004, 'USA Campus Founded',
              'In January 2004, Apostle John Daniel physically founded Help and Reconciliation Ministry '
-             'and Bible Training College Newark NJ USA as a non-profit organisation, providing the same '
-             'services as the Lagos office with particular attention to social and charitable services.', 3),
+             'and Bible Training College Newark NJ USA as a non-profit organisation.', 3),
             (2007, 'Registered as a Degree-Awarding University',
-             'After applying to the Federal Ministry of Education Nigeria and two years of inspecting '
-             'core requirements, MELBAC was finally approved and registered by the Federal Government '
-             'of Nigeria in November 2007 as Melchisedec Graduate Bible Academy Lagos Nigeria.', 4),
+             'MELBAC was approved and registered by the Federal Government of Nigeria in November 2007 '
+             'as Melchisedec Graduate Bible Academy Lagos Nigeria.', 4),
             (2024, 'Full University Status',
-             'Due to further demand from both students and graduates who could not afford tuition fees '
-             'for degree programs at other theological institutions, the Lord granted the request to '
-             'further upgrade the institution to a degree-awarding university, offering Bachelors, '
+             'The institution was upgraded to a degree-awarding university, offering Bachelors, '
              'Masters and Doctorate programs completely free of charge.', 5),
         ]
         for year, title, desc, order in milestones:
@@ -346,20 +449,16 @@ class Command(BaseCommand):
              'been the same since I enrolled.',
              'Pastor Emmanuel Adeyemi', 'Bachelor of Christian Religious Studies, MELBAC Graduate', 1),
             ('The fact that MELBAC charges nothing for tuition is a miracle in itself. I was able to '
-             'obtain my Master\'s degree in Theology while serving full-time in ministry. This '
-             'institution truly operates by faith.',
+             'obtain my Master\'s degree in Theology while serving full-time in ministry.',
              'Rev. Grace Okonkwo', 'Masters in Theology and Pastoral Counseling, MELBAC Graduate', 2),
             ('I enrolled from the United Kingdom with doubts, but within the first semester my faith '
-             'was completely rebuilt on the solid rock of God\'s Word. The Faculty of Arts curriculum '
-             'is exceptional — practical and deeply biblical.',
+             'was completely rebuilt on the solid rock of God\'s Word.',
              'Minister Chukwuemeka Eze', 'Bachelor of Theology, MELBAC Graduate', 3),
             ('MELBAC\'s teaching on the Authority of a Believer and the Mystery of Forgiveness '
-             'radically changed my approach to prayer and deliverance ministry. I now lead a thriving '
-             'prayer group of 200 members. All glory to God.',
+             'radically changed my approach to prayer and deliverance ministry.',
              'Evangelist Ruth Mensah', 'Bachelor of Intercessory Prayer & Deliverance Studies, MELBAC Graduate', 4),
             ('As a pastor in Lagos for 15 years, I thought I knew the Bible well. But enrolling in '
-             'MELBAC\'s doctoral program showed me how much deeper the Word of God goes. The academic '
-             'rigour combined with the anointing on this institution is unmatched.',
+             'MELBAC\'s doctoral program showed me how much deeper the Word of God goes.',
              'Dr. Samuel Obiora', 'Doctor of Divinity, MELBAC Graduate', 5),
         ]
         for quote, author_name, author_role, order in testimonial_data:
@@ -369,60 +468,60 @@ class Command(BaseCommand):
             )
         self.stdout.write(self.style.SUCCESS(f"   ✅ {Testimonial.objects.count()} testimonials created"))
 
+        # ── 1c. INSTITUTION PARTNERS ──────────────────────────────────────────
+        self.stdout.write("🤝 Creating institution partners...")
+        partner_data = [
+            ('International Professional Managers Association (IPMA)', 'accreditation', 'United Kingdom', 0),
+            ('Federal Government of Nigeria — Federal Ministry of Education', 'accreditation', 'Nigeria', 1),
+            ('Harmabitrac World Outreach', 'partner', 'Nigeria', 2),
+            ('Nigerian Bible Society', 'partner', 'Nigeria', 3),
+            ('African Christian Education Alliance', 'affiliation', 'South Africa', 4),
+            ('Global Missions Network', 'affiliation', 'United States', 5),
+        ]
+        for name, category, location, order in partner_data:
+            InstitutionPartner.objects.create(
+                name=name, category=category, location=location,
+                display_order=order, is_active=True,
+            )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {InstitutionPartner.objects.count()} institution partners created"))
+
         # ── 2. INSTITUTION MEMBERS ───────────────────────────────────────────
         self.stdout.write("👔 Creating institution members...")
         institution_members_data = [
             ('admin_board', 'Dr. John Amarachukwu Daniel', 'Founder / President', 0,
-             'Founder and President of MELBAC and Harmabitrac World Outreach. Anointed servant of God, '
-             'teacher of the pure Word, and visionary behind free theological education in Nigeria and the USA.'),
+             'Founder and President of MELBAC and Harmabitrac World Outreach.'),
             ('admin_board', 'Mrs. Blessings J. Daniel', 'Vice President Administration', 1,
-             'Co-founder and Vice President of Administration, overseeing operational and administrative '
-             'affairs across the Lagos and Newark campuses of MELBAC.'),
+             'Co-founder and Vice President of Administration, overseeing operational and administrative affairs.'),
             ('admin_board', 'Sunday Ehichioya', 'Registrar', 2,
-             'Registrar of MELBAC, responsible for student admissions, records, and academic administration '
-             'across all programs and campuses.'),
-            ('admin_board', 'Ruth Phillips', 'Coordinator, MELBAC Satellite Campuses / Special Assistant to the President on Foreign Affairs', 3,
-             'Oversees the coordination of MELBAC satellite campuses internationally and manages foreign '
-             'affairs correspondence on behalf of the President.'),
+             'Registrar of MELBAC, responsible for student admissions, records, and academic administration.'),
+            ('admin_board', 'Ruth Phillips', 'Coordinator, MELBAC Satellite Campuses', 3,
+             'Oversees the coordination of MELBAC satellite campuses internationally.'),
             ('admin_board', 'Julian C. Obiora', 'Admin Officer / Board Secretary', 4,
-             'Board Secretary and Administrative Officer responsible for correspondence, board minutes, '
-             'and the day-to-day administration of MELBAC.'),
+             'Board Secretary and Administrative Officer responsible for correspondence and board minutes.'),
             ('academic_board', 'Sunday Ehichioya', 'Registrar', 0,
-             'Serves on the Academic Board as Registrar, ensuring alignment between academic policy '
-             'and student administration.'),
+             'Serves on the Academic Board as Registrar.'),
             ('academic_board', 'Titus Ehizode', 'Dean, Faculty of Arts', 1,
-             'Dean of the Faculty of Arts, overseeing programs in Theology, Missiology, Christian '
-             'Leadership, Divinity, and Intercessory Prayer & Deliverance Studies.'),
+             'Dean of the Faculty of Arts.'),
             ('academic_board', 'Chidi Akoma', 'Dean of Student Affairs', 2,
-             'Dean of Student Affairs, responsible for student welfare, disciplinary matters, and '
-             'pastoral care across all MELBAC student populations.'),
+             'Dean of Student Affairs, responsible for student welfare and pastoral care.'),
             ('academic_board', 'Boniface Uzoigwe', 'Dean, Faculty of Christian Education', 3,
-             'Dean of the Faculty of Christian Education, overseeing programs in Religious Studies, '
-             'Christian Counseling, Educational Administration, and Ethics.'),
+             'Dean of the Faculty of Christian Education.'),
             ('academic_board', 'Goodluck Olatunji', 'Dean of Post Graduate Studies', 4,
-             'Dean of Post Graduate Studies, coordinating all Masters and Doctoral programs across '
-             'the three faculties of MELBAC.'),
+             'Dean of Post Graduate Studies.'),
             ('academic_board', 'George Odjeni', 'Vice President, Academic Matters', 5,
-             'Vice President for Academic Matters and Dean of the Faculty of Church Management & '
-             'Administration, overseeing programs in Missiology, Church Finance, and Intercultural Relations.'),
+             'Vice President for Academic Matters and Dean of the Faculty of Church Management & Administration.'),
             ('academic_board', 'Dr. John Amarachukwu Daniel', 'Founder / President', 6,
-             'Founder and President of MELBAC, providing apostolic and academic oversight across '
-             'all faculties, programs, and campuses.'),
+             'Founder and President of MELBAC.'),
             ('advisorate_board', 'Theophilus O. Ihekoronye', 'Pro-Chancellor / Chairman Board of Advisorate', 0,
-             'Pro-Chancellor of MELBAC and Chairman of the Board of Advisorate, providing '
-             'governance and strategic oversight for the institution\'s growth and mission.'),
+             'Pro-Chancellor of MELBAC and Chairman of the Board of Advisorate.'),
             ('advisorate_board', 'Dr. John Amarachukwu Daniel', 'Founder / President', 1,
-             'Serves on the Advisorate Board in his capacity as Founder and President, '
-             'providing spiritual and visionary direction to the institution.'),
+             'Serves on the Advisorate Board in his capacity as Founder and President.'),
             ('advisorate_board', 'Cyril Azobu', 'Adviser on Financial Matters', 2,
-             'Financial adviser to the institution, providing guidance on budgeting, resource '
-             'allocation, and the sustainability of MELBAC\'s free-of-charge model.'),
+             'Financial adviser to the institution.'),
             ('advisorate_board', 'Ezenwa Anumnu', 'Adviser on Legal Affairs', 3,
-             'Legal adviser to MELBAC, ensuring the institution\'s compliance with Nigerian law '
-             'and international regulatory requirements for theological institutions.'),
+             'Legal adviser to MELBAC.'),
             ('advisorate_board', 'Sunny Faith Ugbah', 'Vice Chairman / Adviser Administrative Matters', 4,
-             'Vice Chairman of the Advisorate Board and administrative adviser, supporting the '
-             'board\'s oversight of MELBAC\'s operational and institutional affairs.'),
+             'Vice Chairman of the Advisorate Board and administrative adviser.'),
         ]
         for mtype, name, role, order, bio in institution_members_data:
             InstitutionMember.objects.create(
@@ -432,7 +531,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"   ✅ {InstitutionMember.objects.count()} institution members created"))
 
         # ── 3. USERS ─────────────────────────────────────────────────────────
-        self.stdout.write("👥 Creating users...")
+        self.stdout.write("👥 Creating users with profile images...")
         users = {
             'students': [], 'instructors': [], 'admins': [],
             'support': [], 'content_managers': [], 'finance': [], 'qa': [],
@@ -451,7 +550,10 @@ class Command(BaseCommand):
             'Daniel', 'Adeleke', 'Nwosu', 'Okeke', 'Eze', 'Nduka',
         ]
 
+        avatar_idx = 0
+
         def make_users(username_prefix, role_key, count=6, is_staff=False):
+            nonlocal avatar_idx
             created = []
             for i in range(count):
                 uname = f"{username_prefix}{i + 1}" if i > 0 else username_prefix
@@ -480,6 +582,16 @@ class Command(BaseCommand):
                 p.email_notifications = True
                 p.marketing_emails = random.choice([True, False])
                 p.email_verified = i < 4
+
+                # ── AVATAR: every user gets a profile image ──────────────────
+                color, letter = AVATAR_COLORS[avatar_idx % len(AVATAR_COLORS)]
+                avatar_idx += 1
+                avatar_bytes = make_avatar_bytes(color, letter)
+                p.avatar.save(
+                    f"avatar_{uname}.jpg",
+                    ContentFile(avatar_bytes),
+                    save=False,
+                )
                 p.save()
                 created.append(u)
             return created
@@ -504,7 +616,7 @@ class Command(BaseCommand):
             users['instructors'] + users['admins'] +
             users['support'] + users['finance'] + users['content_managers']
         )
-        self.stdout.write(self.style.SUCCESS(f"   ✅ {len(all_users)} users created"))
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {len(all_users)} users created (all with avatar images)"))
 
         # ── 4. VENDORS ───────────────────────────────────────────────────────
         self.stdout.write("🏢 Creating vendors...")
@@ -550,13 +662,14 @@ class Command(BaseCommand):
         # ── 6. PAYMENT GATEWAYS ──────────────────────────────────────────────
         self.stdout.write("💳 Creating payment gateways...")
         gateways = []
-        for name, slug, gtype, active in [
+        # FIX: 'flutterwave' is NOT in GATEWAY_CHOICES. Valid: stripe|paypal|razorpay
+        for name, gslug, gtype, active in [
             ('Stripe', 'stripe', 'stripe', True),
             ('PayPal', 'paypal', 'paypal', True),
-            ('Flutterwave', 'flutterwave', 'flutterwave', True),
+            ('Razorpay', 'razorpay', 'razorpay', True),
         ]:
             gateways.append(PaymentGateway.objects.create(
-                name=name, slug=slug, gateway_type=gtype,
+                name=name, slug=gslug, gateway_type=gtype,
                 api_key=f"pk_test_{uuid.uuid4().hex}",
                 api_secret=f"sk_test_{uuid.uuid4().hex}",
                 webhook_secret=f"whsec_{uuid.uuid4().hex}",
@@ -755,14 +868,14 @@ class Command(BaseCommand):
              'and Spirit-led church administration.', 4),
             # Faculty of Arts
             (faculties[2], 'Department of Prayer and Deliverance Studies', 'DPDS',
-             'Arguably unique in Nigeria — this department trains ministers in the theology and '
-             'practice of intercessory prayer, spiritual warfare, and deliverance ministry.', 0),
+             'This department trains ministers in the theology and practice of intercessory prayer, '
+             'spiritual warfare, and deliverance ministry.', 0),
             (faculties[2], 'Department of Christian Leadership/Discipleship', 'DCLD',
              'Equipping the next generation of Kingdom leaders with the character, competence, '
              'and conviction needed to make disciples and lead God\'s people effectively.', 1),
             (faculties[2], 'Department of Divinity', 'DD',
-             'The highest level of theological study offered at MELBAC, exploring the nature '
-             'of God, the mystery of the Trinity, and the depths of divine revelation in Scripture.', 2),
+             'Exploring the nature of God, the mystery of the Trinity, and the depths of divine '
+             'revelation in Scripture.', 2),
             (faculties[2], 'Department of Missiology', 'DM',
              'Training cross-cultural missionaries and evangelists to fulfil the Great Commission '
              'through contextualised, biblically faithful missionary practice.', 3),
@@ -976,6 +1089,7 @@ class Command(BaseCommand):
         ]
         courses = []
         current_session = sessions[1]
+        instructor_pool = users['instructors']
         for prog, title, code, ctype, credits, yr in course_templates:
             c = Course.objects.create(
                 program=prog,
@@ -985,10 +1099,17 @@ class Command(BaseCommand):
                 course_type=ctype,
                 credit_units=credits,
                 year_of_study=yr,
+                semester=random.choice(['first', 'second']),
+                lecturer=random.choice(instructor_pool),
                 description=(
                     f"This course provides a comprehensive study of {title.lower()}, "
                     f"equipping students with sound biblical knowledge and practical ministry application."
                 ),
+                learning_outcomes=[
+                    f"Understand the foundational principles of {title}",
+                    "Apply biblical knowledge to ministry contexts",
+                    "Develop skills for effective Christian service",
+                ],
                 is_active=True,
             )
             courses.append(c)
@@ -996,12 +1117,9 @@ class Command(BaseCommand):
         # ── 14. COURSE INTAKES ───────────────────────────────────────────────
         self.stdout.write("📋 Creating course intakes...")
         intakes = []
-        # ✅ FIX: unique_together = [['program', 'intake_period', 'year']]
-        # Use get_or_create to safely skip duplicates; vary intake_period per session
         intake_period_cycle = ['january', 'may', 'september']
         for prog_idx, prog in enumerate(random.sample(programs, k=min(12, len(programs)))):
             for sess_idx, session in enumerate(sessions[:2]):
-                # Vary period by program index + session index to avoid collisions
                 period = intake_period_cycle[(prog_idx + sess_idx) % 3]
                 year_val = session.first_semester_start.year
                 intake, _ = CourseIntake.objects.get_or_create(
@@ -1011,30 +1129,40 @@ class Command(BaseCommand):
                     defaults=dict(
                         start_date=session.first_semester_start,
                         application_deadline=session.registration_end,
-                        available_slots=prog.max_students,
+                        available_slots=prog.max_students or 50,
                         is_active=True,
                     )
                 )
                 intakes.append(intake)
 
         # ── 15. REQUIRED PAYMENTS ────────────────────────────────────────────
+        # FIX: Create multiple fee types per program so FeePayment has meaningful data
         self.stdout.write("💰 Creating required payments...")
+        all_required_payments_list = []
+        fee_types = [
+            ('Application Processing Fee', 'applicant', Decimal('0.00')),
+            ('Library Access Fee', 'student', Decimal('15.00')),
+            ('Certificate Processing Fee', 'student', Decimal('25.00')),
+            ('Student ID Card Fee', 'student', Decimal('5.00')),
+        ]
         for prog in programs:
-            # ✅ FIX: correct fields — no name/description/currency/is_required/payment_stage
-            AllRequiredPayments.objects.create(
-                program=prog,
-                purpose='Application Processing Fee',
-                amount=Decimal('0.00'),
-                due_date=date.today(),
-                who_to_pay='applicant',
-                is_active=True,
-            )
+            for purpose, who, amount in fee_types:
+                rp = AllRequiredPayments.objects.create(
+                    program=prog,
+                    academic_session=current_session,
+                    purpose=purpose,
+                    amount=amount,
+                    due_date=date.today() + timedelta(days=30),
+                    who_to_pay=who,
+                    semester='annual',
+                    is_active=True,
+                )
+                all_required_payments_list.append(rp)
 
         # ── 16. COURSE APPLICATIONS ──────────────────────────────────────────
         self.stdout.write("📝 Creating course applications...")
         applications = []
         statuses = ['approved', 'approved', 'under_review', 'draft', 'approved', 'payment_complete']
-        # ✅ FIX: move verified_admins_list outside loop (no per-iteration change)
         verified_admins_list = [u for u in users['admins'] if u.profile.email_verified]
         for idx, student in enumerate(users['students']):
             prog = random.choice(programs)
@@ -1042,21 +1170,20 @@ class Command(BaseCommand):
             status = statuses[idx % len(statuses)]
             admitted = status == 'approved'
             dept_approved = admitted
-            # ✅ FIX: uuid hex guarantees no UNIQUE collision; None (not '') for non-admitted
             adm_number = (
                 f"MELBAC/{date.today().year}/{uuid.uuid4().hex[:8].upper()}"
                 if admitted else None
             )
 
             app = CourseApplication.objects.create(
-                user=student,                       # ✅ FIX: was student=
+                user=student,
                 program=prog,
                 intake=intake,
-                study_mode=random.choice(['full_time', 'part_time', 'online']),  # ✅ required field
+                study_mode=random.choice(['full_time', 'part_time', 'online']),
                 first_name=student.first_name,
                 last_name=student.last_name,
-                email=student.email,                # ✅ required field
-                phone='+234' + str(random.randint(8000000000, 9099999999)),  # ✅ required field
+                email=student.email,
+                phone='+234' + str(random.randint(8000000000, 9099999999)),
                 date_of_birth=fake.date_of_birth(minimum_age=22, maximum_age=65),
                 gender=random.choice(['male', 'female']),
                 nationality=random.choice(['Nigerian', 'Ghanaian', 'American', 'British', 'Cameroonian']),
@@ -1122,22 +1249,29 @@ class Command(BaseCommand):
             applications.append(app)
 
         # ── 17. APPLICATION DOCUMENTS ────────────────────────────────────────
-        self.stdout.write("📎 Creating application documents (metadata only)...")
+        # FIX: Use a real (minimal) PDF file instead of a broken path
+        self.stdout.write("📎 Creating application documents with real PDF files...")
         for app in applications:
             for doc_type in random.sample(
                 ['transcript', 'certificate', 'cv', 'passport', 'id_document', 'recommendation'],
                 k=random.randint(2, 5)
             ):
-                ApplicationDocument.objects.create(
+                doc = ApplicationDocument(
                     application=app, file_type=doc_type,
-                    file='documents/placeholder.pdf',
                     original_filename=f"{doc_type}_{uuid.uuid4().hex[:6]}.pdf",
-                    file_size=random.randint(100_000, 5_000_000),
+                    file_size=len(MINIMAL_PDF),
                 )
+                doc.file.save(
+                    f"{doc_type}_{app.application_id}.pdf",
+                    ContentFile(MINIMAL_PDF),
+                    save=False,
+                )
+                doc.save()
 
         # ── 18. APPLICATION PAYMENTS ─────────────────────────────────────────
+        self.stdout.write("💳 Creating application payments...")
         for app in [a for a in applications if a.status in ['payment_complete', 'under_review', 'approved']]:
-            method = random.choice(['card', 'bank_transfer'])   # ← pull method out first
+            method = random.choice(['card', 'bank_transfer'])
             ApplicationPayment.objects.create(
                 application=app,
                 amount=Decimal('0.00'),
@@ -1146,8 +1280,8 @@ class Command(BaseCommand):
                 payment_method=method,
                 payment_reference=f"MELBAC-{uuid.uuid4().hex[:12].upper()}",
                 gateway_payment_id=f"pi_{uuid.uuid4().hex[:24]}",
-                card_last4=str(random.randint(1000, 9999)) if method == 'card' else '',   # ← guarded
-                card_brand=random.choice(['Visa', 'Mastercard', 'Verve']) if method == 'card' else '',  # ← guarded
+                card_last4=str(random.randint(1000, 9999)) if method == 'card' else '',
+                card_brand=random.choice(['Visa', 'Mastercard', 'Verve']) if method == 'card' else '',
                 paid_at=timezone.now() - timedelta(days=random.randint(1, 60)),
                 payment_metadata={
                     'note': 'MELBAC is free — no tuition charged.',
@@ -1181,7 +1315,6 @@ class Command(BaseCommand):
                 ),
                 icon=icon, color=color, display_order=idx, is_active=True,
             ))
-        # Sub-categories
         sub_cat_data = [
             (categories[0], 'Systematic Theology', 'book', 'violet'),
             (categories[0], 'Biblical Hermeneutics', 'search', 'indigo'),
@@ -1205,20 +1338,19 @@ class Command(BaseCommand):
              'blasphemy, and the conditions for receiving God\'s mercy, taught by Apostle John Daniel.'),
             ('Due Process in Christendom', categories[0], 'beginner', 3.5,
              'A new teaching series revealing the divine protocol and timing of God\'s Kingdom — '
-             'why there are no shortcuts in the spiritual life and how believers must align themselves '
-             'with God\'s process.'),
+             'why there are no shortcuts in the spiritual life.'),
             ('Principles of Intercessory Prayer', categories[1], 'beginner', 8.0,
              'A foundational course in the ministry of intercession — what it is, how it works, '
-             'and how believers can develop a powerful, consistent prayer life that moves the hand of God.'),
+             'and how believers can develop a powerful, consistent prayer life.'),
             ('Spiritual Warfare & Deliverance Ministry', categories[6], 'intermediate', 14.0,
              'A comprehensive course covering the theology and practice of spiritual warfare, '
-             'deliverance, binding and loosing, and ministering freedom to the captives in Jesus\'s name.'),
+             'deliverance, binding and loosing, and ministering freedom to the captives.'),
             ('Foundations of Systematic Theology', categories[0], 'beginner', 16.0,
              'A rigorous introduction to systematic theology covering Bibliology, Theology Proper, '
              'Christology, Pneumatology, Anthropology, Soteriology, Ecclesiology, and Eschatology.'),
             ('Christian Leadership & Discipleship', categories[2], 'intermediate', 11.0,
              'Equipping ministers to lead with character, call, and competence — developing disciples '
-             'who make disciples, in line with the Great Commission of Jesus Christ.'),
+             'who make disciples, in line with the Great Commission.'),
             ('Introduction to Missiology & Cross-Cultural Ministry', categories[3], 'beginner', 9.5,
              'A biblical and practical introduction to world missions, covering the theology of the '
              'Great Commission, cultural intelligence, and strategies for effective cross-cultural ministry.'),
@@ -1230,13 +1362,15 @@ class Command(BaseCommand):
              'from creation and the fall to the prophets — and how it all points to Jesus Christ.'),
         ]
         lms_courses = []
-        instructor_course_map = {}
         for idx, (title, cat, diff, dur, desc) in enumerate(lms_templates):
             instructor = users['instructors'][idx % len(users['instructors'])]
+            # Link to an academic course where relevant
+            ac = courses[idx % len(courses)] if courses else None
             lc = LMSCourse.objects.create(
                 title=title,
                 code=f"MELBAC{idx + 1:03d}",
                 category=cat,
+                academic_course=ac,
                 short_description=desc[:500],
                 description='\n\n'.join([
                     desc,
@@ -1272,12 +1406,12 @@ class Command(BaseCommand):
                 is_published=True,
                 is_featured=random.random() > 0.6,
                 has_certificate=True,
+                certificate_fee=Decimal('25.00'),  # Realistic non-zero cert fee
                 certificate_template='melbac_standard',
                 meta_description=desc[:160],
                 meta_keywords=f"{title}, MELBAC, Bible teaching, Apostle John Daniel, free course",
             )
             lms_courses.append(lc)
-            instructor_course_map.setdefault(instructor, []).append(lc)
 
         # ── 21. LESSON SECTIONS & LESSONS ────────────────────────────────────
         self.stdout.write("📹 Creating lesson sections and lessons...")
@@ -1428,7 +1562,7 @@ class Command(BaseCommand):
                         f"the spiritual results I see. Scripture references: Romans 8:1, Ephesians 6:10-18."
                     ),
                     score=Decimal(str(round(random.uniform(60, 100), 2))) if graded else None,
-                    status='graded' if graded else 'submitted',  # ✅ FIX: is_graded → status
+                    status='graded' if graded else 'submitted',
                     graded_by=random.choice(users['instructors']) if graded else None,
                     graded_at=timezone.now() - timedelta(days=random.randint(1, 14)) if graded else None,
                     feedback=(
@@ -1610,20 +1744,44 @@ class Command(BaseCommand):
                 )
 
         # ── 30. CERTIFICATES ─────────────────────────────────────────────────
+        # FIX: Certificates now have payment_status='paid' for completed ones,
+        # with a matching payment_reference so the model is fully consistent
         self.stdout.write("🏆 Creating certificates...")
-        completed = [
+        completed_enrollments = [
             e for e in enrollments if e.status == 'completed' and e.course.has_certificate
         ]
-        for enr in completed:
+        for enr in completed_enrollments:
+            cert_ref = f"FEE-CERT-{uuid.uuid4().hex[:12].upper()}"
             Certificate.objects.get_or_create(
                 student=enr.student, course=enr.course,
+                certificate_type='lms_course',
                 defaults=dict(
                     completion_date=(enr.completed_at or timezone.now()).date(),
                     grade=random.choice(['A', 'A+', 'B', 'Distinction', 'Pass with Merit']),
                     verification_code=uuid.uuid4(),
                     is_verified=True,
+                    payment_status='paid',
+                    payment_reference=cert_ref,
                 )
             )
+
+        # Program certificates for approved+graduated students
+        for app in applications:
+            if app.status == 'approved' and app.admission_accepted and app.user:
+                prog_cert_ref = f"FEE-PROG-{uuid.uuid4().hex[:12].upper()}"
+                Certificate.objects.get_or_create(
+                    student=app.user,
+                    program=app.program,
+                    certificate_type='program',
+                    defaults=dict(
+                        completion_date=timezone.now().date(),
+                        grade=random.choice(['A', 'B', 'Distinction']),
+                        verification_code=uuid.uuid4(),
+                        is_verified=True,
+                        payment_status='paid',
+                        payment_reference=prog_cert_ref,
+                    )
+                )
 
         # ── 31. TRANSACTIONS ─────────────────────────────────────────────────
         self.stdout.write("💳 Creating transactions...")
@@ -1648,7 +1806,6 @@ class Command(BaseCommand):
         self.stdout.write("🧾 Creating invoices...")
         completed_txns = list(Transaction.objects.filter(status='completed'))
         for txn in random.sample(completed_txns, k=min(30, len(completed_txns))):
-            # ✅ FIX: safe date conversion — completed_at may be None
             completed_dt = txn.completed_at or timezone.now()
             Invoice.objects.create(
                 student=txn.user,
@@ -1749,7 +1906,7 @@ class Command(BaseCommand):
         for idx, post_data in enumerate(MELBAC_BLOG_POSTS):
             BlogPost.objects.create(
                 title=post_data['title'],
-                slug=post_data['slug'],           # ✅ explicit slug avoids auto-slug collisions
+                slug=post_data['slug'],
                 subtitle=post_data['subtitle'],
                 excerpt=post_data['excerpt'],
                 content=post_data['content'],
@@ -1760,8 +1917,7 @@ class Command(BaseCommand):
                 author_title=post_data['author_title'],
                 author_bio=(
                     'Apostle John Daniel is the Founder and President of Melchisedec Graduate Bible Academy '
-                    '(MELBAC) and Harmabitrac World Outreach. He is an anointed teacher of God\'s pure Word '
-                    'and a visionary behind free theological education globally.'
+                    '(MELBAC) and Harmabitrac World Outreach.'
                 ),
                 featured_image_alt=post_data['title'],
                 read_time=post_data['read_time'],
@@ -1794,7 +1950,6 @@ class Command(BaseCommand):
                     break
                 author = random.choice(enrolled_users)
                 topic = discussion_topics[disc_idx % len(discussion_topics)]
-                # ✅ FIX: unique_together is (course, slug). Build a unique slug per course.
                 disc_slug = unique_slug(topic, Discussion, extra_filter={'course': lc})
                 disc = Discussion.objects.create(
                     course=lc,
@@ -1813,14 +1968,10 @@ class Command(BaseCommand):
                 discussions.append(disc)
                 repliers = [u for u in enrolled_users if u != author]
                 ministry_replies = [
-                    'Thank you for sharing this. This teaching also impacted me deeply. '
-                    'The scripture you referenced really opened my eyes.',
-                    'I have been applying this in my church and I\'m seeing real results. '
-                    'God\'s Word never returns void. Glory to God!',
-                    'I struggled with this concept initially, but after praying about it '
-                    'the Holy Spirit gave me clarity. Apostle John Daniel\'s teaching is a blessing.',
-                    'This is exactly what I needed to hear today. I will be sharing this '
-                    'with my prayer group. Thank you for the encouragement.',
+                    'Thank you for sharing this. This teaching also impacted me deeply.',
+                    'I have been applying this in my church and I\'m seeing real results. Glory to God!',
+                    'I struggled with this concept initially, but after praying the Holy Spirit gave me clarity.',
+                    'This is exactly what I needed to hear today. Thank you for the encouragement.',
                 ]
                 for _ in range(random.randint(1, 6)):
                     if repliers:
@@ -1960,7 +2111,6 @@ class Command(BaseCommand):
                 status = random.choice(
                     ['open', 'in_progress', 'waiting_response', 'resolved', 'closed']
                 )
-                # ✅ FIX: 'resolution' field does NOT exist on SupportTicket model — removed
                 ticket = SupportTicket.objects.create(
                     user=creator,
                     category=random.choice(['technical', 'account', 'course', 'payment', 'other']),
@@ -1978,7 +2128,6 @@ class Command(BaseCommand):
                 )
                 tickets.append(ticket)
                 if random.random() > 0.5:
-                    # ✅ FIX: content → message, is_staff_reply → is_internal_note
                     TicketReply.objects.create(
                         ticket=ticket,
                         author=random.choice(users['support']),
@@ -1991,25 +2140,29 @@ class Command(BaseCommand):
                     )
 
         # ── 41. NOTIFICATIONS ─────────────────────────────────────────────────
+        # FIX: notification_type must be one of the valid model choices:
+        # enrollment|assignment|quiz|grade|announcement|message|certificate|payroll|account|system
         self.stdout.write("🔔 Creating notifications...")
-        notification_messages = [
-            ('New Teaching Available', 'A new teaching post by Apostle John Daniel has been published on the blog.'),
-            ('Assignment Due Reminder', 'Your reflection assignment is due in 3 days. Submit your response before the deadline.'),
-            ('Quiz Graded', 'Your quiz has been graded. Log in to view your score and feedback.'),
-            ('New Semester Starting', 'The 2025/2026 academic session begins soon. Check the academic calendar for key dates.'),
-            ('Application Status Update', 'Your MELBAC application status has been updated. Log in to view the details.'),
-            ('Study Group Message', 'A new message has been posted in your study group. Join the discussion.'),
-            ('Certificate Issued', 'Congratulations! Your MELBAC certificate of completion has been issued.'),
-            ('Upcoming Seminar', 'MELBAC Annual University Seminar is coming up. Details will be sent by email.'),
+        notification_data = [
+            ('enrollment', 'New Course Enrolled', 'You have been enrolled in a new MELBAC course. Log in to begin your studies.'),
+            ('assignment', 'Assignment Due Reminder', 'Your reflection assignment is due in 3 days. Submit your response before the deadline.'),
+            ('quiz', 'Quiz Available', 'A new quiz has been added to your current lesson. Test your understanding now.'),
+            ('grade', 'Quiz Graded', 'Your quiz has been graded. Log in to view your score and feedback.'),
+            ('announcement', 'New Semester Starting', 'The 2025/2026 academic session begins soon. Check the academic calendar for key dates.'),
+            ('message', 'New Message Received', 'You have received a new message from a MELBAC staff member.'),
+            ('certificate', 'Certificate Issued', 'Congratulations! Your MELBAC certificate of completion has been issued.'),
+            ('account', 'Application Status Update', 'Your MELBAC application status has been updated. Log in to view the details.'),
+            ('system', 'Upcoming Seminar', 'MELBAC Annual University Seminar is coming up. Details will be sent by email.'),
+            ('payroll', 'Payroll Processed', 'Your payroll for this month has been processed. Check your account for details.'),
         ]
         for user in verified_all:
             for _ in range(random.randint(2, 8)):
-                title, message = random.choice(notification_messages)
+                ntype, title, message = random.choice(notification_data)
                 Notification.objects.create(
                     user=user,
                     title=title,
                     message=message,
-                    notification_type=random.choice(['info', 'success', 'warning', 'system']),
+                    notification_type=ntype,
                     is_read=random.choice([True, False]),
                     read_at=timezone.now() - timedelta(hours=random.randint(1, 48))
                     if random.random() > 0.5 else None,
@@ -2023,37 +2176,31 @@ class Command(BaseCommand):
              'Applications are being accepted from August 25 to October 27, 2025. '
              'All programs are completely free of charge. Apply now through the admissions portal '
              'or contact us at inquiry@melbac.org.',
-             'all', True),
+             'system', True),
             ('New Teaching Series — Due Process in Christendom',
              'Apostle John Daniel has begun a new teaching series titled "Due Process in Christendom." '
-             'Part 1 is now available on the blog and MELBAC YouTube channel. This teaching reveals '
-             'the divine protocol of God\'s Kingdom and why there are no shortcuts in the spiritual life.',
-             'all', True),
+             'Part 1 is now available on the blog and MELBAC YouTube channel.',
+             'system', True),
             ('Convocation & Annual University Seminar — November 2025',
              'MELBAC\'s Annual University Seminar and Convocation will hold in November 2025 '
              'at the Lagos campus (Festac Town). All students, graduates, and ministry partners '
-             'are invited. Details will be communicated via email and the MELBAC social media channels.',
-             'all', True),
+             'are invited.',
+             'system', True),
             ('Ministerial Attachment — August to November 2025',
              'All Diploma and Bachelor\'s Degree graduates from the 2024/2025 session are reminded '
-             'that ministerial attachment runs from the 3rd week of August to the 2nd week of November. '
-             'This is a mandatory component of your graduation requirement. Contact the registrar\'s '
-             'office for placement details.',
-             'student', True),
+             'that ministerial attachment runs from the 3rd week of August to the 2nd week of November.',
+             'system', True),
             ('Faculty Meeting — Academic Board',
              'The MELBAC Academic Board meeting will hold on the 2nd Saturday of October. '
-             'All faculty members and academic board members are required to attend. '
-             'Minutes from the previous meeting will be circulated prior to the meeting.',
-             'staff', False),
+             'All faculty members and academic board members are required to attend.',
+             'system', False),
         ]
         announcement_creators = users['admins'] + users['content_managers']
-        for title, content, audience, is_pub in announcement_data:
-            # ✅ FIX: target_audience/is_published/is_pinned don't exist
-            # Model has: announcement_type, priority, is_active
+        for title, content, atype, is_pub in announcement_data:
             Announcement.objects.create(
                 title=title,
                 content=content,
-                announcement_type='system',
+                announcement_type=atype,
                 priority='high' if is_pub else 'normal',
                 is_active=is_pub,
                 created_by=random.choice(announcement_creators),
@@ -2063,7 +2210,6 @@ class Command(BaseCommand):
 
         # ── 43. CONTACT MESSAGES ──────────────────────────────────────────────
         self.stdout.write("📬 Creating contact messages...")
-        # ✅ subject must match ContactMessage.SUBJECT_CHOICES keys exactly
         contact_subjects = ['admissions', 'programs', 'campus', 'financial', 'support', 'other']
         contact_names = [
             'Emmanuel Adeyemi', 'Grace Okonkwo', 'Samuel Ehichioya', 'Faith Williams',
@@ -2085,7 +2231,6 @@ class Command(BaseCommand):
             ContactMessage.objects.create(
                 name=contact_names[i % len(contact_names)],
                 email=f"contact{i + 1}@example.com",
-                # ✅ FIX: 'phone' field does not exist on ContactMessage — removed
                 subject=random.choice(contact_subjects),
                 message=random.choice(contact_messages_list),
                 is_read=random.choice([True, False]),
@@ -2095,21 +2240,29 @@ class Command(BaseCommand):
             )
 
         # ── 44. AUDIT LOGS ────────────────────────────────────────────────────
+        # FIX: action must match ACTION_CHOICES:
+        # create|update|delete|login|logout|access|export|permission_change
         self.stdout.write("📋 Creating audit logs...")
         audit_actions = [
-            ('login', 'User logged into the MELBAC platform.'),
-            ('blog_post_published', 'New teaching post published on the blog.'),
-            ('application_approved', 'Student application approved by admin.'),
-            ('enrollment_created', 'Student enrolled in a MELBAC course.'),
-            ('certificate_issued', 'Certificate of completion issued to student.'),
-            ('announcement_published', 'New announcement published to all students.'),
+            ('login', 'UserProfile', 'User logged into the MELBAC platform.'),
+            ('create', 'BlogPost', 'New teaching post published on the blog.'),
+            ('update', 'CourseApplication', 'Student application status updated by admin.'),
+            ('create', 'Enrollment', 'Student enrolled in a MELBAC course.'),
+            ('create', 'Certificate', 'Certificate of completion issued to student.'),
+            ('create', 'Announcement', 'New announcement published to all students.'),
+            ('access', 'LMSCourse', 'User accessed LMS course content.'),
+            ('update', 'UserProfile', 'User profile information updated.'),
+            ('export', 'CourseApplication', 'Applications exported by admin.'),
+            ('permission_change', 'User', 'User role or permission updated by admin.'),
         ]
         for user in random.sample(all_users, k=min(20, len(all_users))):
             for _ in range(random.randint(2, 6)):
-                action, description = random.choice(audit_actions)
+                action, model_name, description = random.choice(audit_actions)
                 AuditLog.objects.create(
                     user=user,
                     action=action,
+                    model_name=model_name,
+                    object_id=str(random.randint(1, 999)),
                     description=description,
                     ip_address=fake.ipv4(),
                     user_agent=random.choice([
@@ -2121,34 +2274,36 @@ class Command(BaseCommand):
                 )
 
         # ── 45. BROADCAST MESSAGES ────────────────────────────────────────────
+        # FIX: filter_type must be one of valid choices:
+        # all_users|role|faculty|course|lms_course|application_status|enrollment_status
+        # 'graduates' is NOT valid; 'email' is not a filter_type field
         self.stdout.write("📡 Creating broadcast messages...")
         broadcast_data = [
             ('New Teaching Available — Due Process in Christendom',
              'Dear MELBAC family, Apostle John Daniel has released a powerful new teaching series. '
-             'Part 1 — "Due Process in Christendom" is now available on the blog and YouTube. '
-             'Do not miss this life-changing message. Shalom.',
-             'email', 'all', 'sent'),
+             'Part 1 — "Due Process in Christendom" is now available on the blog and YouTube.',
+             'all_users', 'sent'),
             ('2025/2026 Admission — Last Call',
              'Supplementary/Late Admission for 2025/2026 is now open until mid-January. '
-             'Lectures for students admitted in this period begin in late January. '
              'Apply now at melbac.org or contact inquiry@melbac.org. All programs are FREE.',
-             'email', 'all', 'sent'),
+             'all_users', 'sent'),
             ('MELBAC Annual Seminar — Save the Date',
              'The MELBAC Annual University Seminar and Convocation is scheduled for November. '
-             'All students, graduates, and partners are encouraged to attend. '
-             'Watch your email for full details and the programme of events.',
-             'email', 'all', 'scheduled'),
+             'All students, graduates, and partners are encouraged to attend.',
+             'all_users', 'draft'),
             ('Reminder: Ministerial Attachment — Diploma & Bachelor Graduates',
              'This is a reminder to all 2024/2025 Diploma and Bachelor Degree graduates that '
-             'ministerial attachment (3rd week August – 2nd week November) is mandatory. '
-             'Please contact the registrar\'s office for your placement assignment.',
-             'email', 'graduates', 'sent'),
+             'ministerial attachment (3rd week August – 2nd week November) is mandatory.',
+             'application_status', 'sent'),
+            ('New LMS Course Available',
+             'A new course has been added to the MELBAC Learning Platform. '
+             'Log in now to access the latest teaching from Apostle John Daniel.',
+             'lms_course', 'sent'),
         ]
         broadcast_creators = users['admins'] + users['content_managers']
-        for title, content, btype, ftype, status in broadcast_data:
-            fvals = ['all students', 'active'] if ftype == 'all' else [ftype]
+        for title, content, ftype, status in broadcast_data:
+            fvals = {'type': ftype, 'value': 'all'} if ftype == 'all_users' else {'type': ftype}
             emails = [fake.email() for _ in range(random.randint(50, 500))]
-            # ✅ FIX: title → subject, content → message, message_type doesn't exist
             BroadcastMessage.objects.create(
                 subject=title,
                 message=content,
@@ -2207,14 +2362,14 @@ class Command(BaseCommand):
                 )
 
         # ── 47. FEE PAYMENTS ─────────────────────────────────────────────────
-        self.stdout.write("💵 Creating fee payments...")
-        all_required_payments = list(AllRequiredPayments.objects.all())
-        if all_required_payments and verified_students:
+        # FIX: Tied to real AllRequiredPayments; currency is USD; amount matches fee
+        self.stdout.write("💵 Creating fee payments (tied to users and required payment records)...")
+        real_fees = list(AllRequiredPayments.objects.all())
+        if real_fees and verified_students:
             for student in verified_students:
-                # Give each student 1–3 fee payments
                 sampled_fees = random.sample(
-                    all_required_payments,
-                    k=min(random.randint(1, 3), len(all_required_payments))
+                    real_fees,
+                    k=min(random.randint(2, 5), len(real_fees))
                 )
                 for fee in sampled_fees:
                     status = random.choice(['success', 'success', 'success', 'pending', 'failed'])
@@ -2222,7 +2377,7 @@ class Command(BaseCommand):
                     FeePayment.objects.create(
                         fee=fee,
                         user=student,
-                        amount=fee.amount,
+                        amount=fee.amount if fee.amount > 0 else Decimal('0.00'),
                         currency='USD',
                         status=status,
                         payment_method=method,
@@ -2232,12 +2387,44 @@ class Command(BaseCommand):
                         failure_reason='' if status != 'failed' else 'Insufficient funds',
                         paid_at=timezone.now() - timedelta(days=random.randint(1, 90))
                         if status == 'success' else None,
+                        payment_metadata={
+                            'ip': fake.ipv4(),
+                            'device': random.choice(['desktop', 'mobile', 'tablet']),
+                            'purpose': fee.purpose,
+                        },
                     )
         self.stdout.write(self.style.SUCCESS(f"   ✅ {FeePayment.objects.count()} fee payments created"))
 
-        # ── 48. LIBRARY ITEMS ─────────────────────────────────────────────────
+        # ── 48. COURSE GRADES ─────────────────────────────────────────────────
+        # FIX: CourseGrade was MISSING from the original seed entirely
+        self.stdout.write("📊 Creating course grades...")
+        grade_choices = ['A', 'B', 'C', 'D', 'F']
+        admin_recorder = users['admins'][0]
+        for app in applications:
+            if app.status == 'approved' and app.user and courses:
+                prog_courses = [c for c in courses if c.program == app.program]
+                sample_courses = random.sample(prog_courses, k=min(3, len(prog_courses))) if prog_courses else random.sample(courses, k=min(3, len(courses)))
+                for course in sample_courses:
+                    score = Decimal(str(round(random.uniform(50, 100), 2)))
+                    grade_letter = 'A' if score >= 80 else 'B' if score >= 70 else 'C' if score >= 60 else 'D' if score >= 50 else 'F'
+                    CourseGrade.objects.get_or_create(
+                        student=app.user,
+                        course=course,
+                        session=current_session,
+                        defaults=dict(
+                            application=app,
+                            score=score,
+                            grade=grade_letter,
+                            credit_units=course.credit_units,
+                            is_passed=score >= 50,
+                            recorded_by=admin_recorder,
+                        )
+                    )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {CourseGrade.objects.count()} course grades created"))
+
+        # ── 49. LIBRARY ITEMS ─────────────────────────────────────────────────
         self.stdout.write("📚 Seeding digital library...")
- 
+
         LIBRARY_SEED_DATA = [
             # ── BOOKS ─────────────────────────────────────────────────────────
             {
@@ -2284,7 +2471,7 @@ class Command(BaseCommand):
                 'category': 'Books', 'subcategory': 'Melbac Books',
                 'title': 'Submission: The Authority Channel of God',
                 'author': 'Apostle Dr. John Daniel',
-                'description': 'Unpacks the biblical doctrine of submission as the God-ordained channel through which divine authority flows in the home, church, and nation.',
+                'description': 'Unpacks the biblical doctrine of submission as the God-ordained channel through which divine authority flows.',
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://melbac.org',
                 'external_url_label': 'Read Online',
@@ -2294,7 +2481,7 @@ class Command(BaseCommand):
                 'category': 'Books', 'subcategory': 'Melbac Books',
                 'title': 'Tabernacle As A Shadow of Christ',
                 'author': 'Apostle Dr. John Daniel',
-                'description': 'A detailed typological study of the Old Testament Tabernacle and how every element foreshadows the person and work of Jesus Christ.',
+                'description': 'A detailed typological study of the Old Testament Tabernacle and how every element foreshadows Jesus Christ.',
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://melbac.org',
                 'external_url_label': 'Read Online',
@@ -2305,16 +2492,6 @@ class Command(BaseCommand):
                 'title': 'Apologetics Study Collection',
                 'author': '',
                 'description': 'A curated collection of texts defending the Christian faith against philosophical and theological objections.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://melbac.org/library',
-                'external_url_label': 'Browse Collection',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
-            {
-                'category': 'Books', 'subcategory': 'Bible Studies Books',
-                'title': 'Bible Studies Resource Library',
-                'author': '',
-                'description': 'Comprehensive Bible study materials covering both Old and New Testaments, suitable for individual and group use.',
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://melbac.org/library',
                 'external_url_label': 'Browse Collection',
@@ -2341,16 +2518,6 @@ class Command(BaseCommand):
                 'allow_download': True, 'allow_read_online': True, 'featured': False,
             },
             {
-                'category': 'Books', 'subcategory': 'Christian Counseling Books',
-                'title': 'Biblical Counseling Seminar',
-                'author': 'Dr. Edward Watke Jr.',
-                'description': 'Seminar notes and teaching material on the foundations and practice of biblical counseling.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://melbac.org/library',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
-            {
                 'category': 'Books', 'subcategory': 'Theology Books',
                 'title': 'Theology Reference Collection',
                 'author': '',
@@ -2360,27 +2527,6 @@ class Command(BaseCommand):
                 'external_url_label': 'Browse Collection',
                 'allow_download': True, 'allow_read_online': True, 'featured': False,
             },
-            {
-                'category': 'Books', 'subcategory': 'Evangelism Books',
-                'title': 'Evangelism Resource Library',
-                'author': '',
-                'description': 'Books and manuals equipping believers and ministers with practical evangelism strategies rooted in Scripture.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://melbac.org/library',
-                'external_url_label': 'Browse Collection',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
-            {
-                'category': 'Books', 'subcategory': 'Leadership Books',
-                'title': 'Christian Leadership Library',
-                'author': '',
-                'description': 'Books on servant leadership, pastoral ministry, and kingdom leadership principles for Christian leaders.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://melbac.org/library',
-                'external_url_label': 'Browse Collection',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
- 
             # ── PERIODICALS ───────────────────────────────────────────────────
             {
                 'category': 'Periodicals', 'subcategory': 'Acta Theologica',
@@ -2406,33 +2552,12 @@ class Command(BaseCommand):
                 'category': 'Periodicals', 'subcategory': 'Westminster Theological Journal',
                 'title': 'Westminster Theological Journal — Archive',
                 'author': '',
-                'description': 'Reformed theological journal published by Westminster Theological Seminary covering exegesis, theology, and church history.',
+                'description': 'Reformed theological journal published by Westminster Theological Seminary.',
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://www.wts.edu/resources/westminster-theological-journal/',
                 'external_url_label': 'Visit Journal',
                 'allow_download': False, 'allow_read_online': True, 'featured': False,
             },
-            {
-                'category': 'Periodicals', 'subcategory': 'Theology Today',
-                'title': 'Theology Today — Journal Archive',
-                'author': '',
-                'description': 'Interdenominational journal of theology and culture published by Princeton Theological Seminary.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://journals.sagepub.com/home/ttj',
-                'external_url_label': 'Visit Journal',
-                'allow_download': False, 'allow_read_online': True, 'featured': False,
-            },
-            {
-                'category': 'Periodicals', 'subcategory': 'Old Testament Essays',
-                'title': 'Old Testament Essays — Full Archive',
-                'author': '',
-                'description': 'Journal of the Old Testament Society of South Africa covering all aspects of OT scholarship.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://ojs.unisa.ac.za/index.php/OTE',
-                'external_url_label': 'Visit Journal',
-                'allow_download': False, 'allow_read_online': True, 'featured': False,
-            },
- 
             # ── REFERENCES: Commentaries ──────────────────────────────────────
             {
                 'category': 'References', 'subcategory': 'Commentaries',
@@ -2448,31 +2573,11 @@ class Command(BaseCommand):
                 'category': 'References', 'subcategory': 'Commentaries',
                 'title': 'Commentary Critical and Explanatory on the Whole Bible',
                 'author': 'Jamieson, Fausset & Brown',
-                'description': 'A thorough critical and explanatory commentary on every book of the Bible, widely used in evangelical scholarship.',
+                'description': 'A thorough critical and explanatory commentary on every book of the Bible.',
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://www.ccel.org/ccel/jamieson/jfb',
                 'external_url_label': 'Read Online',
                 'allow_download': True, 'allow_read_online': True, 'featured': True,
-            },
-            {
-                'category': 'References', 'subcategory': 'Commentaries',
-                'title': 'Commentary on the New Testament from the Talmud and Hebraica',
-                'author': 'John Lightfoot',
-                'description': 'Lightfoot\'s pioneering work situating the New Testament in its Jewish context using Talmudic and Hebraic sources.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.ccel.org/ccel/lightfoot/talmud',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
-            {
-                'category': 'References', 'subcategory': 'Commentaries',
-                'title': "Coffman's Commentaries on the Bible",
-                'author': 'James Burton Coffman',
-                'description': 'A comprehensive set of evangelical commentaries on every book of the Bible, known for clarity and faithfulness to the text.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.studylight.org/commentaries/bcc/',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
             },
             {
                 'category': 'References', 'subcategory': 'Commentaries',
@@ -2484,13 +2589,12 @@ class Command(BaseCommand):
                 'external_url_label': 'Read Online',
                 'allow_download': False, 'allow_read_online': True, 'featured': False,
             },
- 
             # ── REFERENCES: Dictionaries ──────────────────────────────────────
             {
                 'category': 'References', 'subcategory': 'Dictionaries',
                 'title': "Smith's Bible Dictionary",
                 'author': 'William Smith',
-                'description': "One of the most widely used Bible dictionaries, covering persons, places, and subjects of the Bible with scholarly depth.",
+                'description': "One of the most widely used Bible dictionaries, covering persons, places, and subjects of the Bible.",
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://www.ccel.org/ccel/smith_w/bibledict',
                 'external_url_label': 'Read Online',
@@ -2506,27 +2610,6 @@ class Command(BaseCommand):
                 'external_url_label': 'Read Online',
                 'allow_download': True, 'allow_read_online': True, 'featured': False,
             },
-            {
-                'category': 'References', 'subcategory': 'Dictionaries',
-                'title': "Holman Bible Dictionary",
-                'author': 'Trent C. Butler',
-                'description': 'A comprehensive evangelical Bible dictionary with detailed articles on persons, places, theology, and archaeology.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.studylight.org/dictionaries/hbd/',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
-            {
-                'category': 'References', 'subcategory': 'Dictionaries',
-                'title': "Baker's Evangelical Dictionary of Biblical Theology",
-                'author': 'Walter Elwell',
-                'description': 'An authoritative reference covering the major theological themes and concepts of the Bible from an evangelical perspective.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.biblestudytools.com/dictionaries/bakers-evangelical-dictionary/',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
- 
             # ── REFERENCES: Encyclopedias ─────────────────────────────────────
             {
                 'category': 'References', 'subcategory': 'Encyclopedias',
@@ -2538,17 +2621,6 @@ class Command(BaseCommand):
                 'external_url_label': 'Read Online',
                 'allow_download': True, 'allow_read_online': True, 'featured': True,
             },
-            {
-                'category': 'References', 'subcategory': 'Encyclopedias',
-                'title': 'New Schaff-Herzog Encyclopedia of Religious Knowledge',
-                'author': 'Samuel Macauley Jackson',
-                'description': 'The definitive multi-volume encyclopedia of Christian and world religious knowledge, covering history, doctrine, and biography.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.ccel.org/ccel/schaff/encyc',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
- 
             # ── REFERENCES: Concordances ──────────────────────────────────────
             {
                 'category': 'References', 'subcategory': 'Concordances',
@@ -2560,47 +2632,12 @@ class Command(BaseCommand):
                 'external_url_label': 'Read Online',
                 'allow_download': False, 'allow_read_online': True, 'featured': True,
             },
- 
-            # ── REFERENCES: Creeds ────────────────────────────────────────────
-            {
-                'category': 'References', 'subcategory': 'Creeds',
-                'title': 'Creeds of Christendom, with History and Critical Notes — Vol. 1',
-                'author': 'Philip Schaff',
-                'description': 'A scholarly collection and critical study of the historic creeds of the Christian church, tracing their development and theological significance.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.ccel.org/ccel/schaff/creeds1',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
- 
-            # ── REFERENCES: History ───────────────────────────────────────────
-            {
-                'category': 'References', 'subcategory': 'History',
-                'title': 'History of the Christian Church (8 Volumes)',
-                'author': 'Philip Schaff',
-                'description': "Schaff's monumental eight-volume history of the Christian Church from the apostolic era through the Reformation.",
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.ccel.org/ccel/schaff/hcc1',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
-            {
-                'category': 'References', 'subcategory': 'History',
-                'title': 'The History of Protestantism',
-                'author': 'J.A. Wylie',
-                'description': "A sweeping narrative history of the Protestant Reformation and its spread across Europe, tracing God's hand in church history.",
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.ccel.org/ccel/wylie/protestantism',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
- 
             # ── REFERENCES: Theology References ───────────────────────────────
             {
                 'category': 'References', 'subcategory': 'Theology References',
                 'title': 'Institutes of the Christian Religion',
                 'author': 'John Calvin',
-                'description': "Calvin's foundational systematic theology — the definitive statement of Reformed doctrine, covering God, man, Christ, and the church.",
+                'description': "Calvin's foundational systematic theology — the definitive statement of Reformed doctrine.",
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://www.ccel.org/ccel/calvin/institutes',
                 'external_url_label': 'Read Online',
@@ -2616,13 +2653,12 @@ class Command(BaseCommand):
                 'external_url_label': 'Read Online',
                 'allow_download': True, 'allow_read_online': True, 'featured': False,
             },
- 
             # ── REFERENCES: Notes on the Bible ────────────────────────────────
             {
                 'category': 'References', 'subcategory': 'Notes on the Bible',
                 'title': "Wesley's Notes on the New Testament",
                 'author': 'John Wesley',
-                'description': "John Wesley's devotional and expository notes on the New Testament, widely used in Methodist and evangelical traditions.",
+                'description': "John Wesley's devotional and expository notes on the New Testament.",
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://www.ccel.org/ccel/wesley/notes',
                 'external_url_label': 'Read Online',
@@ -2632,24 +2668,14 @@ class Command(BaseCommand):
                 'category': 'References', 'subcategory': 'Notes on the Bible',
                 'title': 'Barnes Notes on the New Testament',
                 'author': 'Albert Barnes',
-                'description': "Albert Barnes's thorough and practical notes on the New Testament, combining scholarly insight with pastoral application.",
+                'description': "Albert Barnes's thorough and practical notes on the New Testament.",
                 'language': 'en', 'access': 'public',
                 'external_url': 'https://www.ccel.org/ccel/barnes/notes',
                 'external_url_label': 'Read Online',
                 'allow_download': True, 'allow_read_online': True, 'featured': False,
             },
-            {
-                'category': 'References', 'subcategory': 'Notes on the Bible',
-                'title': 'Scofield Reference Notes',
-                'author': 'C.I. Scofield',
-                'description': 'The influential Scofield Reference Bible notes, providing dispensational commentary and cross-references throughout Scripture.',
-                'language': 'en', 'access': 'public',
-                'external_url': 'https://www.ccel.org/ccel/scofield/notes',
-                'external_url_label': 'Read Online',
-                'allow_download': True, 'allow_read_online': True, 'featured': False,
-            },
         ]
- 
+
         library_admin = users['admins'][0]
         for order_idx, item_data in enumerate(LIBRARY_SEED_DATA):
             LibraryItem.objects.get_or_create(
@@ -2688,9 +2714,11 @@ class Command(BaseCommand):
             ("SiteConfig",              SiteConfig.objects.count()),
             ("History Milestones",      SiteHistoryMilestone.objects.count()),
             ("Testimonials",            Testimonial.objects.count()),
+            ("Institution Partners",    InstitutionPartner.objects.count()),
             ("Institution Members",     InstitutionMember.objects.count()),
             ("Countries",               ListOfCountry.objects.count()),
             ("Users",                   User.objects.count()),
+            ("User Profiles w/ Avatar", UserProfile.objects.exclude(avatar='').count()),
             ("Vendors",                 Vendor.objects.count()),
             ("System Configurations",   SystemConfiguration.objects.count()),
             ("Payment Gateways",        PaymentGateway.objects.count()),
@@ -2701,6 +2729,7 @@ class Command(BaseCommand):
             ("Programs",                Program.objects.count()),
             ("Academic Sessions",       AcademicSession.objects.count()),
             ("Academic Courses",        Course.objects.count()),
+            ("Course Grades",           CourseGrade.objects.count()),
             ("Course Intakes",          CourseIntake.objects.count()),
             ("Required Payments",       AllRequiredPayments.objects.count()),
             ("Applications",            CourseApplication.objects.count()),

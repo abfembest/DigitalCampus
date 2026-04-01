@@ -68,6 +68,7 @@ urlpatterns = [
 
     # ── Certificates ─────────────────────────────────────────────────────────
     path('certificates/', views.certificates, name='certificates'),
+    path('certificates/<str:certificate_id>/print/', views.certificate_print, name='certificate_print'),
 
     # ── Profile & Settings ───────────────────────────────────────────────────
     path('profile/', views.profile, name='profile'),
@@ -76,7 +77,8 @@ urlpatterns = [
 
     # ── Payments ─────────────────────────────────────────────────────────────
     path('payments/', views.my_payments, name='my_payments'),
-    
+
+    path('academic-records/', views.academic_records, name='academic_records'),
 
     # ── Inbox / Messaging (NEW) ───────────────────────────────────────────────
     path('inbox/', views.inbox, name='inbox'),

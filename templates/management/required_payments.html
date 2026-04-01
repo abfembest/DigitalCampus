@@ -129,7 +129,7 @@
 
             <td class="px-5 py-3 text-right whitespace-nowrap">
               <span class="font-semibold text-gray-800">
-                ${{ pay.amount|floatformat:2 }}
+                {{ pay.currency|default:"USD" }} {{ pay.amount|floatformat:2 }}
               </span>
             </td>
 
@@ -370,8 +370,8 @@
           </div>
         </div>
 
-        {# Amount / Due Date #}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {# Amount / Currency / Due Date #}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label for="{{ form.amount.id_for_label }}"
                    class="block text-xs font-semibold text-gray-600
@@ -379,6 +379,14 @@
               Amount <span class="text-red-500" aria-hidden="true">*</span>
             </label>
             {{ form.amount }}
+          </div>
+          <div>
+            <label for="{{ form.currency.id_for_label }}"
+                   class="block text-xs font-semibold text-gray-600
+                          uppercase tracking-wide mb-1.5">
+              Currency
+            </label>
+            {{ form.currency }}
           </div>
           <div>
             <label for="{{ form.due_date.id_for_label }}"
@@ -435,6 +443,7 @@
   data-purpose="{{ pay.purpose|escapejs }}"
   data-who="{{ pay.who_to_pay }}"
   data-amount="{{ pay.amount }}"
+  data-currency="{{ pay.currency|default:'USD' }}"
   data-due="{{ pay.due_date|date:'Y-m-d' }}"
   data-active="{{ pay.is_active|yesno:'true,false' }}">
 </template>
@@ -488,6 +497,7 @@ var RP = (function () {
       f('purpose').value          = d.purpose;
       f('who_to_pay').value       = d.who;
       f('amount').value           = d.amount;
+      f('currency').value         = d.currency;
       f('due_date').value         = d.due;
       f('is_active').checked      = d.active === 'true';
     } else {

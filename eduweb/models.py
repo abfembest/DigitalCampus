@@ -1570,6 +1570,11 @@ class AllRequiredPayments(models.Model):
         decimal_places=2,
         help_text="Amount to be paid"
     )
+    currency = models.CharField(
+        max_length=3,
+        default='USD',
+        help_text="ISO 4217 currency code e.g. USD, GBP, EUR"
+    )
 
     due_date = models.DateField()
 
@@ -1584,6 +1589,7 @@ class AllRequiredPayments(models.Model):
         verbose_name = "Required Payment"
         verbose_name_plural = "All Required Payments"
         ordering = ["-created_at"]
+        unique_together = [['program', 'academic_session', 'purpose', 'semester']]
 
     def __str__(self):
         session = self.academic_session.name if self.academic_session else 'No Session'
@@ -1863,6 +1869,50 @@ class CourseApplication(models.Model):
     def get_full_name(self):
         """Return applicant's full name"""
         return f"{self.first_name} {self.last_name}" 
+
+    def has_completed_program(self):
+        required_courses = Course.objects.filter(
+            program=self.program,
+            course_type='core',
+            is_active=True,
+        )
+        if not required_courses.exists():
+            return False
+
+        passed_course_ids = CourseGrade.objects.filter(
+            student=self.user,
+            course__program=self.program,
+            is_passed=True,
+        ).values_list('course_id', flat=True)
+
+        return all(c.id in passed_course_ids for c in required_courses)
+
+    def award_program_certificate(self, confirmed_by=None):
+        if not self.has_completed_program():
+            return None
+
+        existing = Certificate.objects.filter(
+            student=self.user,
+            program=self.program,
+            certificate_type='program',
+        ).first()
+        if existing:
+            return existing
+
+        from django.utils import timezone as tz
+        self.is_graduated = True
+        self.graduated_at = tz.now().date()
+        if confirmed_by:
+            self.graduated_by = confirmed_by
+        self.save(update_fields=['is_graduated', 'graduated_at', 'graduated_by'])
+
+        return Certificate.objects.create(
+            student=self.user,
+            program=self.program,
+            certificate_type='program',
+            completion_date=self.graduated_at,
+            payment_status='unpaid',
+        )
     
     def save(self, *args, **kwargs):
         if not self.application_id:
@@ -2323,6 +2373,15 @@ class LMSCourse(models.Model):
     description = models.TextField()
     learning_objectives = models.JSONField(default=list)
     prerequisites = models.JSONField(default=list)
+
+    academic_course = models.ForeignKey(
+        'Course',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lms_courses',
+        help_text="The academic course unit this LMS content delivers"
+    )
     
     # Course Details
     difficulty_level = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner')
@@ -3148,6 +3207,35 @@ def update_course_rating(sender, instance, created, **kwargs):
     """Update course rating when review is added/modified"""
     instance.course.update_statistics()
 
+
+@receiver(post_save, sender=UserProfile)
+def auto_assign_required_fees(sender, instance, **kwargs):
+    """
+    When a student's program is set or changed, auto-create FeePayment
+    records (status='pending') for every active AllRequiredPayments
+    that belongs to that program and doesn't already have a payment
+    record for this student.
+    """
+    if instance.role != 'student' or not instance.program:
+        return
+
+    required_fees = AllRequiredPayments.objects.filter(
+        program=instance.program,
+        who_to_pay='student',
+        is_active=True,
+    )
+
+    for fee in required_fees:
+        FeePayment.objects.get_or_create(
+            user=instance.user,
+            fee=fee,
+            defaults={
+                'amount': fee.amount,
+                'currency': fee.currency,
+                'status': 'pending',
+            }
+        )
+
 # ==================== STUDY GROUPS ====================
 class StudyGroup(models.Model):
     """Study groups for collaborative learning"""
@@ -3513,6 +3601,12 @@ class StaffPayroll(models.Model):
         blank=True,
         default=''
     )
+
+    currency = models.CharField(
+        max_length=3,
+        default='USD',
+        help_text='ISO 4217 currency code e.g. USD, GBP, EUR'
+    )
     
     # =========================================================================
     # FILE ATTACHMENTS - CONSOLIDATED
@@ -3807,6 +3901,7 @@ class FeePayment(models.Model):
         verbose_name = 'Fee Payment'
         verbose_name_plural = 'Fee Payments'
         ordering = ['-created_at']
+        unique_together = [['user', 'fee']]
         indexes = [
             models.Index(fields=['payment_reference']),
             models.Index(fields=['status']),
@@ -4079,3 +4174,32 @@ class LibraryItem(models.Model):
         if not self.tags:
             return []
         return [t.strip() for t in self.tags.split(',') if t.strip()]
+
+class CourseGrade(models.Model):
+    GRADE_CHOICES = [
+        ('A', 'A'), ('B', 'B'), ('C', 'C'),
+        ('D', 'D'), ('F', 'F'), ('I', 'Incomplete'), ('W', 'Withdrawn'),
+    ]
+
+    student     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_grades')
+    course      = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='student_grades')
+    session     = models.ForeignKey('AcademicSession', on_delete=models.CASCADE, related_name='grades')
+    application = models.ForeignKey('CourseApplication', on_delete=models.SET_NULL, null=True, blank=True, related_name='grades')
+
+    score       = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    grade       = models.CharField(max_length=2, choices=GRADE_CHOICES, blank=True)
+    credit_units = models.IntegerField(default=3)
+    is_passed   = models.BooleanField(default=False)
+
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='grades_recorded')
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['student', 'course', 'session']]
+        ordering = ['session', 'course__year_of_study', 'course__semester']
+        verbose_name = 'Course Grade'
+        verbose_name_plural = 'Course Grades'
+
+    def __str__(self):
+        return f"{self.student.username} | {self.course.code} | {self.session} | {self.grade}"

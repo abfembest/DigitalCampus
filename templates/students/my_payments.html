@@ -44,7 +44,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                         Total Outstanding
                     </p>
                     <p class="text-2xl font-bold text-red-700 mt-0.5">
-                        &#8358;{{ total_outstanding|floatformat:2|intcomma }}
+                        {{ display_currency }} {{ total_outstanding|floatformat:2|intcomma }}
                     </p>
                     <p class="text-xs text-red-400 mt-0.5">
                         {{ outstanding_payments|length }} item{{ outstanding_payments|length|pluralize }}
@@ -93,7 +93,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                 <div class="flex-1 min-w-0">
                     <p class="text-gray-500 text-xs sm:text-sm font-medium truncate">Amount Due</p>
                     <p class="text-xl sm:text-2xl font-bold text-red-600 mt-1 sm:mt-2">
-                        &#8358;{{ total_outstanding|floatformat:0|intcomma }}
+                        {{ display_currency }} {{ total_outstanding|floatformat:2|intcomma }}
                     </p>
                 </div>
                 <div class="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-lg
@@ -239,7 +239,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                         <!-- Amount -->
                         <td class="px-6 py-4">
                             <p class="text-base font-bold text-gray-900">
-                                &#8358;{{ item.payment.amount|floatformat:2|intcomma }}
+                                {{ item.payment.currency|default:display_currency }} {{ item.payment.amount|floatformat:2|intcomma }}
                             </p>
                         </td>
 
@@ -306,7 +306,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                         </td>
                         <td colspan="4" class="px-6 py-4">
                             <span class="text-xl font-bold text-red-700">
-                                &#8358;{{ total_outstanding|floatformat:2|intcomma }}
+                                {{ display_currency }} {{ total_outstanding|floatformat:2|intcomma }}
                             </span>
                         </td>
                     </tr>
@@ -350,7 +350,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-xl font-bold text-gray-900">
-                            &#8358;{{ item.payment.amount|floatformat:2|intcomma }}
+                            {{ item.payment.currency|default:display_currency }} {{ item.payment.amount|floatformat:2|intcomma }}
                         </p>
                         <p class="text-xs mt-0.5
                            {% if item.is_overdue %}text-red-500{% else %}text-gray-400{% endif %}">
@@ -374,7 +374,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                         flex items-center justify-between">
                 <span class="text-sm font-semibold text-gray-700">Total Outstanding</span>
                 <span class="text-lg font-bold text-red-700">
-                    &#8358;{{ total_outstanding|floatformat:2|intcomma }}
+                    {{ display_currency }} {{ total_outstanding|floatformat:2|intcomma }}
                 </span>
             </div>
         </div>
@@ -463,7 +463,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                 </div>
                 <div class="text-right flex-shrink-0">
                     <p class="text-sm font-bold text-gray-700">
-                        &#8358;{{ item.amount|floatformat:2|intcomma }}
+                        {{ item.currency|default:display_currency }} {{ item.amount|floatformat:2|intcomma }}
                     </p>
                     <span class="text-xs text-green-600 font-semibold">Paid</span>
                 </div>
@@ -542,7 +542,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
         content.innerHTML = `
         <div class="space-y-2">
             <p><strong>Fee:</strong> ${fee.name}</p>
-            <p><strong>Amount:</strong> &#8358;${parseFloat(payment.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${payment.currency}</p>
+            <p><strong>Amount:</strong> ${payment.currency} ${parseFloat(payment.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
             <p><strong>Paid At:</strong> ${new Date(payment.paid_at).toLocaleString()}</p>
             <p><strong>Payment ID:</strong> ${payment.gateway_payment_id}</p>
         </div>

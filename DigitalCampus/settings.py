@@ -27,12 +27,14 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 
 # FIX: Hardcoded ALLOWED_HOSTS — no https://, no spaces issues, no .env parsing problems
 ALLOWED_HOSTS = [
-    "melbac.com",
-    "melbac.miuedu.com",
     "127.0.0.1",
     "localhost",
-    "https://melbac.miuedu.com",
+    "https://theology.miuedu.com",
     "mail.miuedu.com",
+     'theology.miuedu.com',   # primary domain
+    '.miuedu.com',           # allows all subdomains (recommended if needed)
+    'miuedu.com',            # root domain (if used)
+    'www.theology.miuedu.com',  # if www is configured
 ]
 
 # --------------------------------------------------
@@ -225,6 +227,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.miuedu.com",
     "http://127.0.0.1",
     "http://localhost",
+    "https://www.theology.miuedu.com"
 ]
 
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS

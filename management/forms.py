@@ -1694,7 +1694,8 @@ class StaffPayrollForm(forms.ModelForm):
         fields = [
             'staff', 'month', 'year', 'base_salary', 'allowances',
             'bonuses', 'tax_deduction', 'other_deductions',
-            'payment_method', 'payment_date', 'bank_name', 'account_number'
+            'payment_method', 'payment_date', 'bank_name', 'account_number',
+            'currency'
         ]
         widgets = {
             'staff': forms.Select(attrs={
@@ -1746,6 +1747,11 @@ class StaffPayrollForm(forms.ModelForm):
             'account_number': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'placeholder': 'Account number'
+            }),
+            'currency': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 uppercase',
+                'placeholder': 'e.g. USD, GBP, EUR',
+                'maxlength': '3',
             }),
         }
     
@@ -2047,7 +2053,7 @@ class AllRequiredPaymentsForm(forms.ModelForm):
         model = AllRequiredPayments
         fields = [
             'program', 'course', 'academic_session', 'semester',
-            'purpose', 'who_to_pay', 'amount', 'due_date', 'is_active'
+            'purpose', 'who_to_pay', 'amount', 'currency', 'due_date', 'is_active'
         ]
         widgets = {
             'program': forms.Select(attrs={
@@ -2074,6 +2080,11 @@ class AllRequiredPaymentsForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'step': '0.01',
                 'min': '0'
+            }),
+            'currency': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 uppercase',
+                'placeholder': 'e.g. USD, GBP, EUR',
+                'maxlength': '3',
             }),
             'due_date': forms.DateInput(attrs={
                 'type': 'date',

@@ -169,7 +169,7 @@
                             </div>
                             <div class="flex justify-between text-sm text-gray-600">
                                 <span>Tax</span>
-                                <span>$0.00</span>
+                                <span id="tax-display">0.00</span>
                             </div>
                         </div>
 
@@ -179,7 +179,7 @@
                                 <span class="text-lg font-semibold text-gray-800">Total</span>
                                 <span id="summary-total" class="text-2xl font-bold text-blue-600"></span>
                             </div>
-                            <p class="text-sm text-gray-500 mt-1">USD • Payment processed by Stripe</p>
+                            <p class="text-sm text-gray-500 mt-1" id="currency-label">Payment processed by Stripe</p>
                         </div>
 
                         <!-- Security Features (unchanged) -->
@@ -600,7 +600,7 @@
                             </div>
                             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
                                 <span class="font-semibold text-gray-600">Amount Paid:</span>
-                                <span class="text-lg font-bold text-green-600">&#8358;${parseFloat(payment.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${payment.currency}</span>
+                                <span class="text-lg font-bold text-green-600">${payment.currency} ${parseFloat(payment.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div class="flex justify-between items-center border-b border-gray-200 pb-2">
                                 <span class="font-semibold text-gray-600">Date & Time:</span>

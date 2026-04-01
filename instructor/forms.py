@@ -15,12 +15,14 @@ class CourseForm(forms.ModelForm):
     class Meta:
         model = LMSCourse
         fields = [
-            'title', 'code', 'category', 'short_description', 
+            'title', 'code', 'category', 'short_description',
             'description', 'difficulty_level', 'duration_hours',
             'language', 'thumbnail', 'promo_video_url',
             'max_students',
             'enrollment_start_date', 'enrollment_end_date',
-            'has_certificate', 'is_published', 'is_featured'
+            'academic_course',
+            'has_certificate', 'certificate_fee', 'certificate_template',
+            'is_published', 'is_featured'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -72,11 +74,23 @@ class CourseForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'type': 'date'
             }),
+            'academic_course': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            }),
             'thumbnail': forms.FileInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100'
             }),
             'has_certificate': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'certificate_fee': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'step': '0.01',
+                'placeholder': '0.00 — leave as 0 for free certificate'
+            }),
+            'certificate_template': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'placeholder': 'e.g., default, gold, premium'
             }),
             'is_published': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'

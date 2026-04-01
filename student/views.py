@@ -17,7 +17,7 @@ from eduweb.models import (
     Discussion, DiscussionReply, Badge,
     StudentBadge, LessonSection,
     Message, Notification, Review, StudyGroupMessage,
-    FeePayment,
+    FeePayment, CourseGrade, CourseApplication,
 )
 
 from .forms import AssignmentSubmissionForm, SettingsForm, ProfileUpdateForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm, StudentSupportTicketForm
@@ -222,9 +222,16 @@ def dashboard(request):
             (item['payment']['amount'] if isinstance(item['payment'], dict) else item['payment'].amount)
             for item in outstanding_items
         )
+        # Derive currency from first outstanding item; fall back to USD
+        _first = outstanding_items[0]['payment'] if outstanding_items else None
+        outstanding_currency = (
+            _first.get('currency', 'USD') if isinstance(_first, dict)
+            else getattr(_first, 'currency', 'USD')
+        ) if _first else 'USD'
     except Exception:
         outstanding_count = 0
         outstanding_total = Decimal('0.00')
+        outstanding_currency = 'USD'
 
     context = {
         'page_title': 'My Dashboard',
@@ -237,6 +244,7 @@ def dashboard(request):
         'certificates_earned': stats['certificates_earned'],
         'outstanding_count': outstanding_count,
         'outstanding_total': outstanding_total,
+        'outstanding_currency': outstanding_currency,
     }
     
     return render(request, 'students/dashboard.html', context)
@@ -649,6 +657,128 @@ def lesson_view(request, course_slug, lesson_slug):
 
     return render(request, 'students/lesson.html', context)
 
+def _score_to_grade(percentage):
+    """Convert numeric percentage to letter grade."""
+    if percentage >= 70:   return 'A'
+    elif percentage >= 60: return 'B'
+    elif percentage >= 50: return 'C'
+    elif percentage >= 45: return 'D'
+    else:                  return 'F'
+
+
+def _record_academic_grade(user, enrollment, lms_course):
+    """
+    Automatically record a CourseGrade when a linked LMS course is completed.
+    Derives score from quiz attempts and graded assignment submissions
+    in this course. Falls back to 0 if no assessments exist yet.
+    Uses the current active AcademicSession.
+    """
+    from eduweb.models import AcademicSession, CourseApplication
+
+    academic_course = lms_course.academic_course
+    session = AcademicSession.get_current()
+    if not session:
+        return  # No active session — grade cannot be pinned to a session yet
+
+    # ── Quiz score: best attempt percentage per quiz in this course ───────
+    quiz_attempts = (
+        QuizAttempt.objects
+        .filter(
+            student=user,
+            quiz__lesson__course=lms_course,
+            is_completed=True,
+        )
+        .values('quiz_id')
+        .annotate(best=Max('percentage'))
+    )
+    quiz_scores = [float(row['best']) for row in quiz_attempts]
+
+    # ── Assignment score: graded submissions as percentage of max_score ───
+    from django.db.models import FloatField
+    assignment_scores_qs = (
+        AssignmentSubmission.objects
+        .filter(
+            student=user,
+            assignment__lesson__course=lms_course,
+            status='graded',
+            score__isnull=False,
+        )
+        .annotate(
+            pct=F('score') * 100.0 / F('assignment__max_score')
+        )
+        .values_list('pct', flat=True)
+    )
+    assignment_scores = [float(s) for s in assignment_scores_qs]
+
+    # ── Combined average ──────────────────────────────────────────────────
+    all_scores = quiz_scores + assignment_scores
+    if all_scores:
+        avg_score = sum(all_scores) / len(all_scores)
+    else:
+        # No assessments graded yet — use lesson completion as proxy (100%)
+        avg_score = float(enrollment.progress_percentage)
+
+    letter_grade = _score_to_grade(avg_score)
+    is_passed = avg_score >= 50  # configurable threshold
+
+    # ── Link to CourseApplication if available ────────────────────────────
+    application = (
+        CourseApplication.objects
+        .filter(user=user, program=academic_course.program)
+        .first()
+    )
+
+    # ── Create or update CourseGrade ──────────────────────────────────────
+    CourseGrade.objects.update_or_create(
+        student=user,
+        course=academic_course,
+        session=session,
+        defaults={
+            'score':        round(avg_score, 2),
+            'grade':        letter_grade,
+            'credit_units': academic_course.credit_units,
+            'is_passed':    is_passed,
+            'application':  application,
+            'recorded_by':  None,
+        }
+    )
+
+    # Check if student has now completed all core courses in the program
+    if application:
+        application.award_program_certificate()
+
+@login_required
+@student_required
+def certificate_print(request, certificate_id):
+    cert = get_object_or_404(
+        Certificate,
+        certificate_id=certificate_id,
+        student=request.user,
+    )
+    # Redirect to payment if not yet unlocked
+    if cert.payment_status != 'paid':
+        messages.warning(request, 'Please complete payment to access your certificate.')
+        return redirect('students:my_payments')
+
+    if cert.certificate_type == 'program' and cert.program:
+        cert.display_title = cert.program.name
+        cert.display_subtitle = (
+            cert.program.department.faculty.name
+            if cert.program.department else ''
+        )
+        cert.issuer = 'MIU Academic Office'
+        cert.is_program_cert = True
+    else:
+        cert.display_title = cert.course.title if cert.course else 'Course Certificate'
+        cert.display_subtitle = ''
+        cert.is_program_cert = False
+        cert.issuer = (
+            cert.course.instructor.get_full_name()
+            if cert.course and cert.course.instructor else 'MIU Staff'
+        )
+
+    return render(request, 'students/certificate_print.html', {'cert': cert})
+
 @login_required
 @student_required
 def mark_lesson_complete(request, course_slug, lesson_slug):
@@ -703,14 +833,39 @@ def mark_lesson_complete(request, course_slug, lesson_slug):
                 enrollment.refresh_from_db()
                 # Notify when the entire course is completed
                 if enrollment.status == 'completed':
-                    _notify(
-                        user=request.user,
-                        notification_type='enrollment',
-                        title=f'Course Completed: {enrollment.course.title}',
-                        message=f'Congratulations! You have completed "{enrollment.course.title}". '
-                                f'Your certificate fee is now available in My Payments.',
-                        link='/student/certificates/',
-                    )
+                    lms_course = enrollment.course
+
+                    if lms_course.academic_course_id:
+                        # Linked to an academic Course — record grade automatically
+                        _record_academic_grade(request.user, enrollment, lms_course)
+                        _notify(
+                            user=request.user,
+                            notification_type='enrollment',
+                            title=f'Unit Completed: {lms_course.title}',
+                            message=f'You have completed \"{lms_course.title}\". '
+                                    f'Your academic grade has been recorded.',
+                            link='/student/grades/',
+                        )
+                    else:
+                        # Standalone LMS course — issue individual certificate
+                        if lms_course.has_certificate:
+                            cert, created = Certificate.objects.get_or_create(
+                                student=request.user,
+                                course=lms_course,
+                                certificate_type='lms_course',
+                                defaults={
+                                    'completion_date': timezone.now().date(),
+                                    'payment_status': 'unpaid' if lms_course.certificate_fee > 0 else 'paid',
+                                }
+                            )
+                            _notify(
+                                user=request.user,
+                                notification_type='enrollment',
+                                title=f'Course Completed: {lms_course.title}',
+                                message=f'Congratulations! You have completed \"{lms_course.title}\". '
+                                        + ('Pay your certificate fee to download your certificate.' if lms_course.certificate_fee > 0 else 'Your certificate is ready to download.'),
+                                link='/student/certificates/',
+                            )
 
         return JsonResponse({
             'success': True,
@@ -1867,10 +2022,19 @@ def grades(request):
             else False
         )
     
+    # Academic course grades (from program — recorded by lecturers)
+    academic_grades = (
+        CourseGrade.objects
+        .filter(student=user)
+        .select_related('course', 'course__program', 'session')
+        .order_by('session__name', 'course__year_of_study', 'course__semester')
+    )
+
     context = {
         'page_title': 'Grades & Performance',
         'enrollments': enrollments,
         'submissions': submissions,
+        'academic_grades': academic_grades,
     }
     
     return render(request, 'students/grades.html', context)
@@ -2025,11 +2189,16 @@ def certificates(request):
     for cert in certificates:
         if cert.certificate_type == 'program' and cert.program:
             cert.display_title = cert.program.name
-            cert.display_subtitle = cert.program.department.faculty.name if cert.program.department else ''
+            cert.display_subtitle = (
+                cert.program.department.faculty.name
+                if cert.program.department else ''
+            )
             cert.instructor_name = 'MIU Academic Office'
+            cert.is_program_cert = True
         else:
             cert.display_title = cert.course.title if cert.course else 'Course Certificate'
             cert.display_subtitle = ''
+            cert.is_program_cert = False
             if cert.course and cert.course.instructor:
                 cert.instructor_name = (
                     cert.course.instructor.get_full_name()
@@ -2037,6 +2206,7 @@ def certificates(request):
                 )
             else:
                 cert.instructor_name = 'MIU Staff'
+        cert.is_unlocked = cert.payment_status == 'paid'
 
     context = {
         'page_title': 'My Certificates',
@@ -2044,6 +2214,11 @@ def certificates(request):
     }
 
     return render(request, 'students/certificates.html', context)
+
+
+def _cert_is_unlocked(cert):
+    """True if student can view/download this certificate."""
+    return cert.payment_status == 'paid'
 
 
 # ==================== PROFILE & SETTINGS ====================
@@ -2361,11 +2536,11 @@ def _get_outstanding_for_student(user):
     Returns (outstanding, paid) for a student's required fees.
 
     Includes:
-    1. AllRequiredPayments for the student's program (admin-created fees)
+    1. FeePayment rows for the student's program (auto-created on program assignment)
     2. Auto-generated certificate fees for any completed courses that have
        has_certificate=True and no certificate fee has been paid yet.
 
-    outstanding → list of dicts: {'payment': AllRequiredPayments or dict, 'is_overdue': bool, 'is_certificate_fee': bool}
+    outstanding → list of dicts: {'payment': AllRequiredPayments or dict, 'fee_payment': FeePayment or None, 'is_overdue': bool, 'is_certificate_fee': bool}
     paid        → list of AllRequiredPayments instances already settled
     """
     from eduweb.models import AllRequiredPayments, Enrollment, FeePayment, Certificate
@@ -2374,31 +2549,29 @@ def _get_outstanding_for_student(user):
     if not profile or not profile.program:
         return [], []
 
-    # ── 1. Standard admin-created required fees ───────────────────────────
-    required_qs = AllRequiredPayments.objects.filter(
-        program=profile.program,
-        who_to_pay='student',
-        is_active=True,
-    ).select_related('program')
-
-    paid_fee_ids = set(
-        FeePayment.objects.filter(
+    # ── 1. Read directly from FeePayment rows (auto-created by signal) ───────
+    student_payments = (
+        FeePayment.objects
+        .filter(
             user=user,
-            status='success',
-            fee__in=required_qs,
-        ).values_list('fee_id', flat=True)
+            fee__program=profile.program,
+            fee__who_to_pay='student',
+            fee__is_active=True,
+        )
+        .select_related('fee', 'fee__program', 'fee__academic_session')
     )
 
     today = timezone.now().date()
     outstanding, paid = [], []
 
-    for rp in required_qs:
-        if rp.pk in paid_fee_ids:
-            paid.append(rp)
+    for fp in student_payments:
+        if fp.status == 'success':
+            paid.append(fp.fee)
         else:
             outstanding.append({
-                'payment': rp,
-                'is_overdue': rp.due_date < today,
+                'payment': fp.fee,
+                'fee_payment': fp,
+                'is_overdue': fp.fee.due_date < today,
                 'is_certificate_fee': False,
             })
 
@@ -2463,11 +2636,19 @@ def my_payments(request):
         for item in outstanding_payments
     )
 
+    # Derive display currency from first outstanding item; fall back to USD
+    _first = outstanding_payments[0]['payment'] if outstanding_payments else None
+    display_currency = (
+        _first.get('currency', 'USD') if isinstance(_first, dict)
+        else getattr(_first, 'currency', 'USD')
+    ) if _first else 'USD'
+
     context = {
         'page_title': 'My Payments',
         'outstanding_payments': outstanding_payments,
         'paid_payments': paid_payments,
         'total_outstanding': total_outstanding,
+        'display_currency': display_currency,
     }
     return render(request, 'students/my_payments.html', context)
 
@@ -2757,3 +2938,142 @@ def create_study_group(request):
         'page_title': 'Create Study Group',
         'form': form,
     })
+
+@login_required
+@student_required
+def academic_records(request):
+    """
+    Student academic records page.
+ 
+    Surfaces:
+    • Program info + admission metadata (from CourseApplication)
+    • Program requirements breakdown — core vs elective, credits needed vs earned
+    • Graduation progress bar
+    • Academic history grouped by session/year with letter grades & GPA
+    • Links to transcript export request and certificate
+    """
+    from eduweb.models import Course, AcademicSession
+ 
+    user = request.user
+ 
+    # ── 1. Application / Admission info ─────────────────────────────────────
+    application = (
+        CourseApplication.objects
+        .filter(user=user, status='approved')
+        .select_related(
+            'program',
+            'program__department__faculty',
+            'intake',
+        )
+        .order_by('-created_at')
+        .first()
+    )
+ 
+    program = application.program if application else None
+ 
+    # ── 2. Program requirements (all academic Course rows) ───────────────────
+    program_courses = []
+    if program:
+        program_courses = list(
+            Course.objects
+            .filter(program=program, is_active=True)
+            .select_related('academic_session')
+            .order_by('year_of_study', 'semester', 'display_order')
+        )
+ 
+    core_courses     = [c for c in program_courses if c.course_type == 'core']
+    elective_courses = [c for c in program_courses if c.course_type == 'elective']
+    other_courses    = [c for c in program_courses if c.course_type not in ('core', 'elective')]
+ 
+    total_credits_required = program.credits_required if program else 0
+ 
+    # ── 3. Student's grade records ───────────────────────────────────────────
+    academic_grades = list(
+        CourseGrade.objects
+        .filter(student=user)
+        .select_related('course', 'course__program', 'session')
+        .order_by('session__name', 'course__year_of_study', 'course__semester')
+    )
+ 
+    # Map course_id → grade for quick lookup in requirements table
+    graded_course_ids = {g.course_id: g for g in academic_grades}
+ 
+    # Annotate each program course with the student's grade (if any)
+    for course in program_courses:
+        course.student_grade = graded_course_ids.get(course.id)
+ 
+    # ── 4. Credits earned (passed only) ─────────────────────────────────────
+    credits_earned = sum(
+        g.credit_units for g in academic_grades if g.is_passed
+    )
+    credits_remaining = max(0, total_credits_required - credits_earned)
+    graduation_pct = (
+        round(credits_earned / total_credits_required * 100, 1)
+        if total_credits_required > 0 else 0
+    )
+ 
+    # ── 5. GPA calculation (4.0 scale) ───────────────────────────────────────
+    GRADE_POINTS = {'A': 4.0, 'B': 3.0, 'C': 2.0, 'D': 1.0, 'F': 0.0, 'I': 0.0, 'W': 0.0}
+    weighted_sum   = sum(GRADE_POINTS.get(g.grade, 0) * g.credit_units for g in academic_grades if g.grade)
+    total_gpa_units = sum(g.credit_units for g in academic_grades if g.grade and g.grade not in ('W',))
+    gpa = round(weighted_sum / total_gpa_units, 2) if total_gpa_units > 0 else None
+ 
+    # ── 6. Group grades by session for the history table ────────────────────
+    sessions_dict = {}
+    for g in academic_grades:
+        key = g.session.name if g.session else 'Unassigned'
+        sessions_dict.setdefault(key, []).append(g)
+ 
+    # Per-session GPA
+    session_summaries = []
+    for session_name, grades_list in sessions_dict.items():
+        sess_weighted = sum(GRADE_POINTS.get(g.grade, 0) * g.credit_units for g in grades_list if g.grade)
+        sess_units    = sum(g.credit_units for g in grades_list if g.grade and g.grade not in ('W',))
+        sess_gpa      = round(sess_weighted / sess_units, 2) if sess_units > 0 else None
+        session_summaries.append({
+            'name': session_name,
+            'grades': grades_list,
+            'gpa': sess_gpa,
+            'credits': sum(g.credit_units for g in grades_list if g.is_passed),
+        })
+ 
+    # ── 7. Enrollment summary (LMS courses, for completeness) ────────────────
+    lms_enrollments = (
+        Enrollment.objects
+        .filter(student=user)
+        .select_related('course')
+        .order_by('-enrolled_at')
+    )
+ 
+    # ── 8. Certificates ──────────────────────────────────────────────────────
+    certificates = (
+        Certificate.objects
+        .filter(student=user)
+        .select_related('course', 'program')
+        .order_by('-issued_date')
+    )
+ 
+    context = {
+        'page_title': 'Academic Records',
+        'application': application,
+        'program': program,
+        # Requirements
+        'program_courses': program_courses,
+        'core_courses': core_courses,
+        'elective_courses': elective_courses,
+        'other_courses': other_courses,
+        # Progress
+        'total_credits_required': total_credits_required,
+        'credits_earned': credits_earned,
+        'credits_remaining': credits_remaining,
+        'graduation_pct': graduation_pct,
+        # Grades
+        'academic_grades': academic_grades,
+        'session_summaries': session_summaries,
+        'gpa': gpa,
+        # Misc
+        'lms_enrollments': lms_enrollments,
+        'certificates': certificates,
+    }
+ 
+    return render(request, 'students/academic_records.html', context)

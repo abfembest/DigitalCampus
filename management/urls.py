@@ -15,6 +15,7 @@ urlpatterns = [
     path('applications/<int:pk>/mark-reviewed/', views.mark_reviewed, name='mark_reviewed'),
     path('applications/<int:pk>/make-decision/', views.make_decision, name='make_decision'),
     path('applications/<int:pk>/approve-department/', views.approve_department, name='approve_department'),
+    path('applications/<int:pk>/issue-transcript/', views.issue_transcript, name='issue_transcript'),
 
     # Faculties
     path('faculties/', views.faculties_list, name='faculties_list'),
@@ -184,6 +185,10 @@ urlpatterns = [
     path('required-payments/create/', views.required_payment_create, name='required_payment_create'),
     path('required-payments/<int:pk>/edit/', views.required_payment_edit, name='required_payment_edit'),
     path('required-payments/<int:pk>/delete/', views.required_payment_delete, name='required_payment_delete'),
+    path('required-payments/send-overdue-reminders/', views.send_overdue_payment_reminders, name='send_overdue_payment_reminders'),
+
+    # Financial Analytics Dashboard
+    path('analytics/financial/', views.financial_analytics, name='financial_analytics'),
 
     # Staff Payroll — use payroll_reference (unique, auto-generated string)
     path('payroll/', views.staff_payroll_list, name='staff_payroll_list'),

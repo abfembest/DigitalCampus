@@ -86,8 +86,12 @@
         class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold font-['Poppins'] leading-tight mb-5 sm:mb-6 text-white">
       About<br>
       {% with name=site_config.school_name|default:"Melchisedec Graduate Bible Academy" %}
+        {% with words=name.split %}
+          {% for word in words %}
+            {% if not forloop.last %}{{ word }} {% else %}<br><span class="text-accent-400">{{ word }}</span>{% endif %}
+          {% endfor %}
+        {% endwith %}
       {% endwith %}
-      <span class="text-accent-400">Academy</span>
     </h1>
 
     <p class="text-base sm:text-lg lg:text-xl xl:text-2xl text-gray-200 leading-relaxed max-w-2xl lg:max-w-3xl mb-8 sm:mb-10">
@@ -95,7 +99,7 @@
     </p>
 
     <!-- CTA buttons -->
-    <div class="flex flex-col xs:flex-row flex-wrap gap-3 sm:gap-4">
+    <div class="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
       <a href="#our-story"
          class="inline-flex items-center justify-center gap-2 bg-accent-400 hover:bg-accent-500 active:bg-accent-600 text-primary-950 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base transition-all shadow-xl hover:shadow-2xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-accent-300 focus:ring-offset-2 focus:ring-offset-primary-950">
         <i data-lucide="book-open" class="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true"></i>
@@ -502,7 +506,7 @@
             </li>
             {% endfor %}
           {% else %}
-            {% for val in "Sound Biblical Foundation,Personal Relationship with the Lord Jesus,Non-Denominational Service to the Christian Family,Free & Accessible Ministerial Training,End-time Readiness & Gospel Excellence"|split:"," %}
+            {% for val in "Sound Biblical Foundation,Personal Relationship with the Lord Jesus,Non-Denominational Service to the Christian Family,Free & Accessible Ministerial Training,End-time Readiness & Gospel Excellence"|default:""|make_list %}
             <li class="flex items-start gap-2 sm:gap-3">
               <i data-lucide="check-circle" class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-primary-600 mt-0.5" aria-hidden="true"></i>
               <span class="text-gray-700 text-sm sm:text-base">{{ val }}</span>

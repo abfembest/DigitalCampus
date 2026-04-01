@@ -65,6 +65,11 @@
                         <a href="{% url 'instructor:course_edit' course.slug %}">{{ course.title }}</a>
                     </h3>
                     <p class="text-xs sm:text-sm text-gray-500 font-medium">{{ course.code }}</p>
+                    {% if course.academic_course %}
+                    <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                        <i class="fas fa-university text-xs"></i> Program: {{ course.academic_course.program.code }}
+                    </span>
+                    {% endif %}
                 </div>
 
                 <p class="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2 flex-1">

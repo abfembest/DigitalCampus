@@ -127,10 +127,13 @@
                     </p>
 
                     <h1 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-7xl font-black mb-4 sm:mb-6 leading-[1.1] text-white animate-slide-up font-display" style="animation-delay: 0.3s;">
-                        {% with name=site_config.school_name|default:"Melchisedec inter university School of theology" %}
+                        {% with name=site_config.school_name|default:"MIU School of theology" %}
                         {% with words=name.split %}
                         
-                        {% for word in words %}{% if not forloop.last %}{{ word }} {% endif %}{% endfor %}<span class="block mt-1 sm:mt-2 bg-gradient-to-r from-gold-300 via-gold-400 to-gold-300 bg-clip-text text-transparent">{{ words|last }}</span>
+                        {{ words.0 }}
+                        <span class="block mt-1 sm:mt-2 bg-gradient-to-r from-gold-300 via-gold-400 to-gold-300 bg-clip-text text-transparent">
+                            {{ words|slice:"1:"|join:" " }}
+                        </span>
                         {% endwith %}
                         {% endwith %}
                     </h1>

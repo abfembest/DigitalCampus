@@ -283,6 +283,53 @@
   </div>
 </section>
 
+<!-- ═══════════════════════════════════════════════════════
+     WATCH US IN ACTION
+═══════════════════════════════════════════════════════ -->
+<section class="py-12 sm:py-16 lg:py-24 bg-gray-100" id="watch-us" aria-labelledby="watch-heading">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+
+    <!-- Section header -->
+    <div class="text-center mb-10 sm:mb-12 lg:mb-16">
+      <div class="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4"
+           aria-hidden="true">
+        <i data-lucide="video" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <span>Watch</span>
+      </div>
+      <h2 id="watch-heading"
+          class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-primary-950 font-['Poppins']">
+        Watch Us in Action
+      </h2>
+    </div>
+
+    <!-- Promo video -->
+    <div class="mt-10 sm:mt-12 lg:mt-16">
+      <p class="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-widest mb-3 sm:mb-4">
+        Official community video
+      </p>
+
+      <div class="relative w-full rounded-2xl overflow-hidden shadow-2xl aspect-video bg-gray-100">
+        {% if site_config.promo_video_url %}
+          {# Dynamic video embed from DB #}
+          <div class="absolute inset-0 [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0 [&>video]:w-full [&>video]:h-full [&>video]:object-cover">
+            {{ site_config.promo_video_url|safe }}
+          </div>
+        {% else %}
+          {# Default YouTube fallback #}
+          <iframe class="absolute inset-0 w-full h-full border-0"
+                  src="https://www.youtube.com/embed/wzcQ5_XU58I?start=4"
+                  title="{{ site_config.school_short_name|default:'MIU' }} Global Learning Community — Official Video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                  loading="lazy">
+          </iframe>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</section>
+
 
 <!-- ═══════════════════════════════════════════════════════
      HISTORY TIMELINE

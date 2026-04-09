@@ -1330,9 +1330,6 @@
   .w-48 {
     width: calc(var(--spacing) * 48);
   }
-  .w-50 {
-    width: calc(var(--spacing) * 50);
-  }
   .w-52 {
     width: calc(var(--spacing) * 52);
   }
@@ -1344,9 +1341,6 @@
   }
   .w-72 {
     width: calc(var(--spacing) * 72);
-  }
-  .w-75 {
-    width: calc(var(--spacing) * 75);
   }
   .w-80 {
     width: calc(var(--spacing) * 80);
@@ -2491,6 +2485,18 @@
   }
   .bg-\[\#840384\] {
     background-color: #840384;
+  }
+  .bg-\[\'green\'\] {
+    background-color: 'green';
+  }
+  .bg-\[\'red\'\] {
+    background-color: 'red';
+  }
+  .bg-\[green\] {
+    background-color: green;
+  }
+  .bg-\[red\] {
+    background-color: red;
   }
   .bg-accent-50 {
     background-color: var(--color-accent-50);
@@ -9673,6 +9679,11 @@
       margin-top: calc(var(--spacing) * 12);
     }
   }
+  .lg\:mt-16 {
+    @media (width >= 64rem) {
+      margin-top: calc(var(--spacing) * 16);
+    }
+  }
   .lg\:mb-2 {
     @media (width >= 64rem) {
       margin-bottom: calc(var(--spacing) * 2);
@@ -9781,11 +9792,6 @@
   .lg\:h-24 {
     @media (width >= 64rem) {
       height: calc(var(--spacing) * 24);
-    }
-  }
-  .lg\:h-32 {
-    @media (width >= 64rem) {
-      height: calc(var(--spacing) * 32);
     }
   }
   .lg\:h-44 {
@@ -10192,11 +10198,6 @@
       padding: calc(var(--spacing) * 12);
     }
   }
-  .lg\:px-0 {
-    @media (width >= 64rem) {
-      padding-inline: calc(var(--spacing) * 0);
-    }
-  }
   .lg\:px-2 {
     @media (width >= 64rem) {
       padding-inline: calc(var(--spacing) * 2);
@@ -10310,16 +10311,6 @@
   .lg\:pt-24 {
     @media (width >= 64rem) {
       padding-top: calc(var(--spacing) * 24);
-    }
-  }
-  .lg\:pt-32 {
-    @media (width >= 64rem) {
-      padding-top: calc(var(--spacing) * 32);
-    }
-  }
-  .lg\:pt-36 {
-    @media (width >= 64rem) {
-      padding-top: calc(var(--spacing) * 36);
     }
   }
   .lg\:pt-44 {
@@ -10729,6 +10720,21 @@
     &>iframe {
       border-style: var(--tw-border-style);
       border-width: 0px;
+    }
+  }
+  .\[\&\>video\]\:h-full {
+    &>video {
+      height: 100%;
+    }
+  }
+  .\[\&\>video\]\:w-full {
+    &>video {
+      width: 100%;
+    }
+  }
+  .\[\&\>video\]\:object-cover {
+    &>video {
+      object-fit: cover;
     }
   }
 }

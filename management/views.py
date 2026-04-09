@@ -4691,6 +4691,14 @@ def institution_member_edit(request, pk):
             )
             messages.success(request, 'Member updated.')
             return redirect('management:institution_members_list')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    # Optional: make a nicer message for the photo field
+                    if field == "photo":
+                        messages.error(request, f"Photo upload error: {error}")
+                    else:
+                        messages.error(request, f"{field.capitalize()}: {error}")
     else:
         form = InstitutionMemberForm(instance=member)
     return render(request, 'management/site_config/member_form.html', {

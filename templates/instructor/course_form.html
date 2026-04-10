@@ -35,160 +35,196 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
-        <!-- Main Form -->
+        <!-- ═══════════════════════════════════════════════════════════ Main Form -->
         <div class="lg:col-span-2 order-2 lg:order-1">
             <form method="post" enctype="multipart/form-data" class="bg-white rounded-xl shadow-sm border border-gray-200">
                 {% csrf_token %}
 
+                {% if form.errors %}
+                <div class="mx-4 mt-4 sm:mx-6 sm:mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div class="flex items-start gap-2">
+                        <i class="fas fa-exclamation-circle text-red-500 mt-0.5 flex-shrink-0"></i>
+                        <div>
+                            <p class="text-sm font-semibold text-red-800 mb-1">Please fix the following errors:</p>
+                            <ul class="text-xs text-red-700 space-y-0.5 list-disc list-inside">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="p-4 sm:p-6 space-y-5 sm:space-y-6">
 
-                    <!-- Basic Information -->
+                    <!-- ── Course Type selector ──────────────────────────────── -->
+                    <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                        <label class="block text-sm font-semibold text-indigo-800 mb-1">
+                            <i class="fas fa-university mr-1.5"></i> Link to Academic Course
+                        </label>
+                        <p class="text-xs text-indigo-600 mb-3">
+                            Choose an academic course to link this to the faculty → department → program structure.
+                            Leave blank for a <strong>standalone LMS course</strong>.
+                        </p>
+                        {{ form.academic_course }}
+                        {% if form.academic_course.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.academic_course.errors }}</p>
+                        {% endif %}
+                        <!-- Shown by JS once a value is selected -->
+                        <div id="academic-linked-badge" class="hidden mt-2 inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
+                            <i class="fas fa-link"></i> Academic course linked — code and department inherited.
+                        </div>
+                    </div>
+
+                    <!-- ── Basic Information ─────────────────────────────────── -->
                     <div>
                         <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Basic Information</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 
                             <div class="sm:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Course Title *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Course Title *</label>
                                 {{ form.title }}
-                                {% if form.title.errors %}<p class="mt-1 text-xs sm:text-sm text-red-600">{{ form.title.errors }}</p>{% endif %}
+                                {% if form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ form.title.errors }}</p>{% endif %}
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Course Code *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Course Code</label>
                                 {{ form.code }}
-                                {% if form.code.errors %}<p class="mt-1 text-xs sm:text-sm text-red-600">{{ form.code.errors }}</p>{% endif %}
+                                <p class="mt-1 text-xs text-gray-500">Auto-generated if left blank</p>
+                                {% if form.code.errors %}<p class="mt-1 text-xs text-red-600">{{ form.code.errors }}</p>{% endif %}
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Category *</label>
+                            <!-- Hidden when academic course is selected -->
+                            <div id="wrap-category">
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Category *</label>
                                 {{ form.category }}
-                                {% if form.category.errors %}<p class="mt-1 text-xs sm:text-sm text-red-600">{{ form.category.errors }}</p>{% endif %}
+                                {% if form.category.errors %}<p class="mt-1 text-xs text-red-600">{{ form.category.errors }}</p>{% endif %}
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Difficulty Level</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Difficulty Level</label>
                                 {{ form.difficulty_level }}
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Duration (Hours)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Duration (Hours)</label>
                                 {{ form.duration_hours }}
                             </div>
 
                             <div class="sm:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Language</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Language</label>
                                 {{ form.language }}
                             </div>
 
                             <div class="sm:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Short Description *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Short Description *</label>
                                 {{ form.short_description }}
-                                <p class="mt-1 text-xs sm:text-sm text-gray-500">Max 500 characters — appears in course listings</p>
-                                {% if form.short_description.errors %}<p class="mt-1 text-xs sm:text-sm text-red-600">{{ form.short_description.errors }}</p>{% endif %}
+                                <p class="mt-1 text-xs text-gray-500">Max 500 characters — appears in course listings</p>
+                                {% if form.short_description.errors %}<p class="mt-1 text-xs text-red-600">{{ form.short_description.errors }}</p>{% endif %}
                             </div>
 
                             <div class="sm:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Full Description *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Description *</label>
                                 {{ form.description }}
-                                {% if form.description.errors %}<p class="mt-1 text-xs sm:text-sm text-red-600">{{ form.description.errors }}</p>{% endif %}
+                                {% if form.description.errors %}<p class="mt-1 text-xs text-red-600">{{ form.description.errors }}</p>{% endif %}
                             </div>
 
                         </div>
                     </div>
 
-                    <!-- Media -->
+                    <!-- ── Media ─────────────────────────────────────────────── -->
                     <div>
                         <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Media</h2>
                         <div class="space-y-3 sm:space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Course Thumbnail</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Course Thumbnail</label>
                                 {{ form.thumbnail }}
                                 {% if course.thumbnail %}
-                                <div class="mt-2 sm:mt-3">
+                                <div class="mt-2">
                                     <img src="{{ course.thumbnail.url }}" alt="Current thumbnail"
                                          class="w-36 sm:w-48 h-24 sm:h-32 object-cover rounded-lg border border-gray-200">
                                 </div>
                                 {% endif %}
-                                <p class="mt-1 text-xs sm:text-sm text-gray-500">Recommended: 1280×720px (16:9)</p>
+                                <p class="mt-1 text-xs text-gray-500">Recommended: 1280×720px (16:9)</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Promo Video URL</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Promo Video URL</label>
                                 {{ form.promo_video_url }}
-                                <p class="mt-1 text-xs sm:text-sm text-gray-500">YouTube or Vimeo URL</p>
+                                <p class="mt-1 text-xs text-gray-500">YouTube or Vimeo URL</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Enrollment Settings -->
-                    <div>
+                    <!-- ── Enrollment Settings (hidden when academic-linked) ─── -->
+                    <div id="wrap-enrollment">
                         <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Enrollment Settings</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Max Students</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Max Students</label>
                                 {{ form.max_students }}
-                                <p class="mt-1 text-xs sm:text-sm text-gray-500">Leave blank for unlimited</p>
+                                <p class="mt-1 text-xs text-gray-500">Leave blank for unlimited</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Enrollment Start</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Enrollment Start</label>
                                 {{ form.enrollment_start_date }}
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Enrollment End</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Enrollment End</label>
                                 {{ form.enrollment_end_date }}
                             </div>
                         </div>
                     </div>
 
-                    <!-- Academic Link -->
-                    <div>
-                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Academic Program Link</h2>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Link to Academic Course (Optional)</label>
-                            {{ form.academic_course }}
-                            {% if form.academic_course.errors %}<p class="mt-1 text-xs text-red-600">{{ form.academic_course.errors }}</p>{% endif %}
-                            <p class="mt-1 text-xs text-gray-500">
-                                Link this LMS course to an academic program course unit.
-                                When linked, completing this course records a grade — no individual certificate is issued.
-                                Leave blank for a standalone course that issues its own certificate.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Settings -->
+                    <!-- ── Settings ──────────────────────────────────────────── -->
                     <div>
                         <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Settings</h2>
                         <div class="space-y-2 sm:space-y-3">
-                            <label class="flex items-center cursor-pointer gap-2">
-                                {{ form.has_certificate }}
-                                <span class="text-sm font-medium text-gray-700">Offer Certificate upon completion</span>
-                            </label>
-                            <!-- Certificate Fee & Template (shown conditionally) -->
-                            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Fee</label>
-                                    {{ form.certificate_fee }}
-                                    <p class="mt-1 text-xs text-gray-500">Set to 0 for a free certificate</p>
-                                    {% if form.certificate_fee.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_fee.errors }}</p>{% endif %}
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Template</label>
-                                    {{ form.certificate_template }}
-                                    <p class="mt-1 text-xs text-gray-500">Template name/identifier to use</p>
-                                    {% if form.certificate_template.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_template.errors }}</p>{% endif %}
+
+                            <!-- Certificate (hidden when academic-linked) -->
+                            <div id="wrap-certificate">
+                                <label class="flex items-center cursor-pointer gap-2">
+                                    {{ form.has_certificate }}
+                                    <span class="text-sm font-medium text-gray-700">Offer Certificate upon completion</span>
+                                </label>
+                                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Fee</label>
+                                        {{ form.certificate_fee }}
+                                        <p class="mt-1 text-xs text-gray-500">Set to 0 for a free certificate</p>
+                                        {% if form.certificate_fee.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_fee.errors }}</p>{% endif %}
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Template</label>
+                                        {{ form.certificate_template }}
+                                        <p class="mt-1 text-xs text-gray-500">Template name/identifier to use</p>
+                                        {% if form.certificate_template.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_template.errors }}</p>{% endif %}
+                                    </div>
                                 </div>
                             </div>
+
                             <label class="flex items-center cursor-pointer gap-2">
                                 {{ form.is_published }}
                                 <span class="text-sm font-medium text-gray-700">Publish Course (make visible to students)</span>
                             </label>
-                            <label class="flex items-center cursor-pointer gap-2">
-                                {{ form.is_featured }}
-                                <span class="text-sm font-medium text-gray-700">Feature this course</span>
-                            </label>
+
+                            <!-- Featured (hidden when academic-linked) -->
+                            <div id="wrap-featured">
+                                <label class="flex items-center cursor-pointer gap-2">
+                                    {{ form.is_featured }}
+                                    <span class="text-sm font-medium text-gray-700">Feature this course</span>
+                                </label>
+                            </div>
+
                         </div>
                     </div>
 
-                </div>
+                </div><!-- /p-4 -->
 
                 <!-- Form Actions -->
                 <div class="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
@@ -215,7 +251,7 @@
             </form>
         </div>
 
-        <!-- Sidebar -->
+        <!-- ═══════════════════════════════════════════════════════════ Sidebar -->
         <div class="lg:col-span-1 order-1 lg:order-2">
             {% if course %}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
@@ -294,4 +330,111 @@
                hover:file:bg-primary-100;
     }
 </style>
+
+<script>
+(function () {
+    /* IDs of wrappers that are irrelevant when an academic course is linked.
+       They are hidden AND their inputs disabled so they don't submit stale values. */
+    const HIDE_WHEN_LINKED = ['wrap-category', 'wrap-enrollment', 'wrap-certificate', 'wrap-featured'];
+    // These fields inside a hidden wrapper must submit a safe fallback value
+    // instead of being disabled, so the server always receives something valid.
+    const ZERO_WHEN_LINKED = ['id_certificate_fee'];
+
+    const academicSelect = document.getElementById('id_academic_course');
+    const badge          = document.getElementById('academic-linked-badge');
+
+    function applyState() {
+        const linked = academicSelect && academicSelect.value !== '';
+
+        // Toggle the "linked" confirmation badge
+        if (badge) badge.classList.toggle('hidden', !linked);
+
+        HIDE_WHEN_LINKED.forEach(function (id) {
+            const wrapper = document.getElementById(id);
+            if (!wrapper) return;
+
+            wrapper.style.display = linked ? 'none' : '';
+
+            // Disable every input/select/textarea inside so they are excluded
+            // from form submission and browser validation when hidden.
+            wrapper.querySelectorAll('input, select, textarea').forEach(function (el) {
+                el.disabled = linked;
+            });
+        });
+
+        // For numeric fields that must still POST a value (not disabled),
+        // zero them out when academic course is linked so the server gets 0.00.
+        ZERO_WHEN_LINKED.forEach(function (fieldId) {
+            const el = document.getElementById(fieldId);
+            if (!el) return;
+            if (linked) {
+                el.disabled = false;   // must submit
+                el.value    = '0';
+            }
+        });
+    }
+
+    const titleInput = document.getElementById('id_title');
+    const codeInput  = document.getElementById('id_code');
+
+    // Store the instructor's own typed values so we can restore on deselect
+    let savedTitle = titleInput ? titleInput.value : '';
+    let savedCode  = codeInput  ? codeInput.value  : '';
+
+    function fillFromAcademic() {
+        if (!academicSelect) return;
+        const selectedOption = academicSelect.options[academicSelect.selectedIndex];
+        const linked = academicSelect.value !== '';
+
+        if (linked) {
+            // Parse "CODE — Name" straight from the option text — no AJAX needed
+            // __str__ format is:  "DMD101 — Principles of Graphic Design"
+            const optionText = selectedOption.text.trim();
+            const separatorIdx = optionText.indexOf(' — ');
+
+            const parsedCode  = separatorIdx !== -1 ? optionText.substring(0, separatorIdx).trim() : '';
+            const parsedTitle = separatorIdx !== -1 ? optionText.substring(separatorIdx + 3).trim() : optionText;
+
+            if (titleInput) {
+                titleInput.value    = parsedTitle;
+                titleInput.readOnly = true;
+                titleInput.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+            if (codeInput) {
+                codeInput.value    = parsedCode;
+                codeInput.readOnly = true;
+                codeInput.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+        } else {
+            // Switching back to standalone — restore saved values and unlock
+            if (titleInput) {
+                titleInput.value    = savedTitle;
+                titleInput.readOnly = false;
+                titleInput.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+            if (codeInput) {
+                codeInput.value    = savedCode;
+                codeInput.readOnly = false;
+                codeInput.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+        }
+    }
+
+    function onAcademicChange() {
+        // Snapshot current free-typed values BEFORE we overwrite (only when switching TO linked)
+        if (academicSelect && academicSelect.value !== '') {
+            savedTitle = titleInput ? titleInput.value : '';
+            savedCode  = codeInput  ? codeInput.value  : '';
+        }
+        applyState();
+        fillFromAcademic();
+    }
+
+    if (academicSelect) {
+        academicSelect.addEventListener('change', onAcademicChange);
+        applyState();           // hide/show wrappers on page load
+        fillFromAcademic();     // fill & lock fields if already linked (edit mode)
+    }
+})();
+</script>
 {% endblock %}

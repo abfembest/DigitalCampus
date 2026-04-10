@@ -199,54 +199,60 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="border-b border-gray-200 p-4 sm:p-6">
-            <h2 class="text-lg sm:text-xl font-semibold text-gray-900">Quick Actions</h2>
-        </div>
-        <div class="p-4 sm:p-6">
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div class="mb-6 sm:mb-8">
+        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3">Quick Actions</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-4 gap-3">
+ 
+            <!-- Create Quiz -->
+            <a href="{% url 'instructor:create_assessment' %}?type=quiz"
+               class="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50 hover:shadow-sm transition-all group">
+                <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                    <i class="fas fa-question-circle text-lg"></i>
+                </div>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center leading-tight">Create Quiz</span>
+                <span class="text-xs text-gray-400 text-center leading-tight hidden sm:block">MCQ · Essay</span>
+            </a>
 
-                <a href="{% url 'instructor:course_create' %}"
-                   class="group p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all text-center">
-                    <div class="flex flex-col items-center">
-                        <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary-100 group-hover:bg-primary-600 flex items-center justify-center mb-2 sm:mb-4 transition-colors">
-                            <i class="fas fa-plus-circle text-xl sm:text-3xl text-primary-600 group-hover:text-white transition-colors"></i>
-                        </div>
-                        <h3 class="font-semibold text-gray-900 group-hover:text-primary-700 text-xs sm:text-sm leading-tight">Create New Course</h3>
-                    </div>
-                </a>
+            <!-- Create Assignment -->
+            <a href="{% url 'instructor:create_assessment' %}?type=assignment"
+               class="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-gray-200 hover:border-green-400 hover:bg-green-50 hover:shadow-sm transition-all group">
+                <div class="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                    <i class="fas fa-file-alt text-lg"></i>
+                </div>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center leading-tight">Create Assignment</span>
+                <span class="text-xs text-gray-400 text-center leading-tight hidden sm:block">File / Written</span>
+            </a>
 
-                <a href="{% url 'instructor:course_list' %}"
-                   class="group p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-gray-400 hover:bg-gray-50 transition-all text-center">
-                    <div class="flex flex-col items-center">
-                        <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gray-100 group-hover:bg-gray-600 flex items-center justify-center mb-2 sm:mb-4 transition-colors">
-                            <i class="fas fa-book text-xl sm:text-3xl text-gray-600 group-hover:text-white transition-colors"></i>
-                        </div>
-                        <h3 class="font-semibold text-gray-900 group-hover:text-gray-700 text-xs sm:text-sm leading-tight">Manage Courses</h3>
-                    </div>
-                </a>
+            <!-- Create Exam -->
+            <a href="{% url 'instructor:create_assessment' %}?type=exam"
+               class="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-gray-200 hover:border-purple-400 hover:bg-purple-50 hover:shadow-sm transition-all group">
+                <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                    <i class="fas fa-scroll text-lg"></i>
+                </div>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center leading-tight">Create Exam</span>
+                <span class="text-xs text-gray-400 text-center leading-tight hidden sm:block">Formal · Timetabled</span>
+            </a>
 
-                <a href="#"
-                   class="group p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all text-center">
-                    <div class="flex flex-col items-center">
-                        <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-blue-100 group-hover:bg-blue-600 flex items-center justify-center mb-2 sm:mb-4 transition-colors">
-                            <i class="fas fa-chart-line text-xl sm:text-3xl text-blue-600 group-hover:text-white transition-colors"></i>
-                        </div>
-                        <h3 class="font-semibold text-gray-900 group-hover:text-blue-700 text-xs sm:text-sm leading-tight">View Analytics</h3>
-                    </div>
-                </a>
-
-                <a href="#"
-                   class="group p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all text-center">
-                    <div class="flex flex-col items-center">
-                        <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-green-100 group-hover:bg-green-600 flex items-center justify-center mb-2 sm:mb-4 transition-colors">
-                            <i class="fas fa-cog text-xl sm:text-3xl text-green-600 group-hover:text-white transition-colors"></i>
-                        </div>
-                        <h3 class="font-semibold text-gray-900 group-hover:text-green-700 text-xs sm:text-sm leading-tight">Settings</h3>
-                    </div>
-                </a>
-
-            </div>
+            <!-- Add Lesson (context-sensitive: uses first course if available) -->
+            {% if courses %}
+            <a href="{% url 'instructor:lesson_create' courses.0.slug %}"
+               class="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:bg-yellow-50 hover:shadow-sm transition-all group">
+                <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
+                    <i class="fas fa-film text-lg"></i>
+                </div>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center leading-tight">Add Lesson</span>
+                <span class="text-xs text-gray-400 text-center leading-tight hidden sm:block truncate max-w-full">{{ courses.0.title }}</span>
+            </a>
+            {% else %}
+            <a href="{% url 'instructor:course_create' %}"
+               class="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:bg-yellow-50 hover:shadow-sm transition-all group">
+                <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center group-hover:bg-yellow-200 transition-colors">
+                    <i class="fas fa-plus-circle text-lg"></i>
+                </div>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center leading-tight">Create Course</span>
+            </a>
+            {% endif %}
+ 
         </div>
     </div>
 

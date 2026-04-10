@@ -21,6 +21,68 @@ DEGREE_LEVEL_CHOICES = [
     ('phd', 'PhD')
 ]
 
+import hashlib
+import secrets
+import uuid
+
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.utils import timezone
+from django.utils.text import slugify
+from django.db import IntegrityError, models, transaction
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers (upload_path, unique_slug, ImmutableMixin)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def unique_slug(model_class, base_value, slug_field="slug", max_attempts=20):
+    """Generate a unique slug. Retries with a random suffix on collision."""
+    slug = slugify(base_value)[:200]
+    for attempt in range(max_attempts):
+        candidate = slug if attempt == 0 else f"{slug[:190]}-{secrets.token_hex(3)}"
+        if not model_class._default_manager.filter(**{slug_field: candidate}).exists():
+            return candidate
+    raise RuntimeError(f"Could not generate a unique slug for {model_class.__name__} after {max_attempts} attempts.")
+
+
+class upload_path:
+    """
+    Callable upload-to helper. Renames every uploaded file to a UUID so
+    filenames can never be guessed and path traversal is impossible.
+    """
+    def __init__(self, folder):
+        self.folder = folder
+
+    def __call__(self, instance, filename):
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+        return f"{self.folder}/{uuid.uuid4()}.{ext}"
+
+    def deconstruct(self):
+        return (
+            f"{self.__class__.__module__}.{self.__class__.__qualname__}",
+            [self.folder],
+            {},
+        )
+
+
+class ImmutableMixin:
+    """
+    Prevents any update or delete on records that must be permanently immutable.
+    Usage:  class MyLog(ImmutableMixin, models.Model): ...
+    """
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError(
+                f"{self.__class__.__name__} records are immutable and cannot be updated."
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(
+            f"{self.__class__.__name__} records are immutable and cannot be deleted."
+        )
+
 # ==================== HELPER FUNCTIONS ====================
 def validate_file_size(file, max_size_mb=10):
     """Validate file size"""
@@ -2365,8 +2427,8 @@ class LMSCourse(models.Model):
     # Basic Information
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True)
-    code = models.CharField(max_length=20, unique=True)
-    category = models.ForeignKey(CourseCategory, on_delete=models.SET_NULL, null=True, related_name='lms_courses')
+    code = models.CharField(max_length=20, unique=True, blank=True)
+    category = models.ForeignKey(CourseCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='lms_courses')
     
     # Content
     short_description = models.TextField(max_length=500)
@@ -2385,7 +2447,7 @@ class LMSCourse(models.Model):
     
     # Course Details
     difficulty_level = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner')
-    duration_hours = models.DecimalField(max_digits=5, decimal_places=1, help_text="Estimated duration in hours")
+    duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Estimated duration in hours")
     language = models.CharField(max_length=50, default='English')
     
     # Instructor
@@ -4203,3 +4265,893 @@ class CourseGrade(models.Model):
 
     def __str__(self):
         return f"{self.student.username} | {self.course.code} | {self.session} | {self.grade}"
+
+# =============================================================================
+# EXAM MODULE — append to the bottom of eduweb/models.py
+# =============================================================================
+#
+# Tables:
+#   Exam                  — master record: timetable, scheduling, approval workflow
+#   ExamQuestion          — permanent question bank / pool (never deleted)
+#   StudentExamResponse   — one row per student per exam; question draw + answers + grading
+#   ExamStatusLog         — immutable audit trail (uses ImmutableMixin already in file)
+#
+# All helpers used here (upload_path, unique_slug, ImmutableMixin, User,
+# MinValueValidator, models, secrets, timezone) are already defined earlier
+# in this same models.py — no extra imports needed.
+#
+# FK references use the actual class objects directly (same pattern as the
+# rest of this file) — Course, AcademicSession, Department must be defined
+# above this block in the same file. If they are in a different app, swap to
+# string references like "eduweb.Course".
+#
+# TIMING MODEL (example: start = 08:00, instruction_window_minutes = 10)
+# ──────────────────────────────────────────────────────────────────────────
+#   07:50  instructions_open_at  → student opens instruction page + countdown
+#   08:00  exam_start_datetime   → countdown hits 0 → questions auto-unlock
+#   10:00  exam_end_datetime     → server fires auto-submit for all open attempts
+#
+# SECURITY MODEL
+# ──────────────
+#   • correct answers (is_correct) are stored ONLY in ExamQuestion.options
+#   • the backend strips is_correct before sending any question to the frontend
+#   • on submit the backend fetches ExamQuestion rows and grades server-side
+#   • the frontend never receives the full question pool, only the student's
+#     assigned subset, and never receives marks or correct-answer flags
+# =============================================================================
+
+
+class Exam(models.Model):
+    """
+    Master exam record.
+
+    Lifecycle
+    ─────────
+    DRAFT → SUBMITTED → APPROVED → PUBLISHED
+                      ↘ REJECTED → (instructor corrects & re-submits)
+
+    Every status transition is written to ExamStatusLog (immutable).
+    Rejection never deletes data — the instructor amends and re-submits.
+    Students only see the exam once PUBLISHED and within visible_from/visible_until.
+    """
+
+    # ── Exam type ──────────────────────────────────────────────────────────────
+    CA                = "ca"
+    MID_SEMESTER      = "mid_semester"
+    END_OF_SEMESTER   = "end_of_semester"
+    SUPPLEMENTARY     = "supplementary"
+    RESIT             = "resit"
+    PRACTICAL         = "practical"
+    ORAL              = "oral"
+
+    EXAM_TYPE_CHOICES = [
+        (CA,              "Continuous Assessment"),
+        (MID_SEMESTER,    "Mid-Semester Exam"),
+        (END_OF_SEMESTER, "End-of-Semester Exam"),
+        (SUPPLEMENTARY,   "Supplementary Exam"),
+        (RESIT,           "Resit / Make-up Exam"),
+        (PRACTICAL,       "Practical Exam"),
+        (ORAL,            "Oral / Viva Exam"),
+    ]
+
+    # ── Delivery mode ──────────────────────────────────────────────────────────
+    IN_PERSON = "in_person"
+    ONLINE    = "online"
+    HYBRID    = "hybrid"
+
+    MODE_CHOICES = [
+        (IN_PERSON, "In-Person"),
+        (ONLINE,    "Online"),
+        (HYBRID,    "Hybrid"),
+    ]
+
+    # ── Approval status ────────────────────────────────────────────────────────
+    DRAFT      = "draft"
+    SUBMITTED  = "submitted"
+    APPROVED   = "approved"
+    REJECTED   = "rejected"
+    PUBLISHED  = "published"
+    CANCELLED  = "cancelled"
+
+    STATUS_CHOICES = [
+        (DRAFT,     "Draft"),
+        (SUBMITTED, "Submitted for Approval"),
+        (APPROVED,  "Approved"),
+        (REJECTED,  "Rejected"),
+        (PUBLISHED, "Published"),
+        (CANCELLED, "Cancelled"),
+    ]
+
+    # ── Question-import job status ─────────────────────────────────────────────
+    IMPORT_NONE       = "none"
+    IMPORT_PROCESSING = "processing"
+    IMPORT_DONE       = "done"
+    IMPORT_FAILED     = "failed"
+
+    IMPORT_STATUS_CHOICES = [
+        (IMPORT_NONE,       "No import"),
+        (IMPORT_PROCESSING, "Processing"),
+        (IMPORT_DONE,       "Done"),
+        (IMPORT_FAILED,     "Failed"),
+    ]
+
+    # =========================================================================
+    # IDENTITY
+    # =========================================================================
+    slug           = models.SlugField(unique=True, max_length=220)
+    reference_code = models.CharField(
+        max_length=40, unique=True, db_index=True, blank=True,
+        help_text="Auto-generated on save. Printed on timetables, e.g. EX-2025-4F2A.",
+    )
+    title          = models.CharField(
+        max_length=255,
+        help_text="e.g. 'CSC301 — Data Structures End-of-Semester Exam 2025'",
+    )
+    description    = models.TextField(
+        blank=True,
+        help_text="Internal description; not shown to students.",
+    )
+
+    # =========================================================================
+    # CLASSIFICATION & RELATIONSHIPS
+    # =========================================================================
+    exam_type        = models.CharField(
+        max_length=30, choices=EXAM_TYPE_CHOICES, default=END_OF_SEMESTER,
+    )
+    mode             = models.CharField(
+        max_length=20, choices=MODE_CHOICES, default=IN_PERSON,
+    )
+
+    course = models.ForeignKey(
+        "LMSCourse",
+        on_delete=models.PROTECT,
+        related_name="exams",
+        help_text="LMS course this exam belongs to. This may optionally be linked to an academic course via LMSCourse."
+    )
+
+    academic_session = models.ForeignKey(
+        AcademicSession, on_delete=models.SET_NULL,
+        null=True, blank=True,   # ← must be nullable for standalone exams
+        related_name='exams',
+    )
+    department       = models.ForeignKey(
+        "Department",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="exams",
+        help_text="Denormalised from Course for fast timetable filtering.",
+    )
+    instructor       = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="exams_as_instructor",
+    )
+    invigilators     = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="exams_as_invigilator",
+    )
+
+    # =========================================================================
+    # TIMETABLE — SCHEDULING
+    # ─────────────────────────────────────────────────────────────────────────
+    # instruction_window_minutes: how many minutes before start_time the
+    # instruction page unlocks.  Countdown hits zero → questions auto-unlock.
+    # =========================================================================
+    exam_date                  = models.DateField(db_index=True)
+    start_time                 = models.TimeField(
+        help_text="Exact exam start. The instruction-page countdown counts to this.",
+    )
+    end_time                   = models.TimeField(
+        help_text="Exam end time. Server fires auto-submit at this time.",
+    )
+    duration_minutes           = models.PositiveIntegerField(
+        default=120,
+        help_text="Total duration in minutes — drives the student-facing timer.",
+    )
+    instruction_window_minutes = models.PositiveIntegerField(
+        default=10,
+        help_text=(
+            "Minutes before start_time the instruction page unlocks. "
+            "The countdown reads down to start_time; questions auto-unlock at zero."
+        ),
+    )
+
+    # =========================================================================
+    # VENUE / HALL
+    # =========================================================================
+    venue               = models.CharField(
+        max_length=200, blank=True,
+        help_text="Hall name, room number, or 'Online'.",
+    )
+    hall_capacity       = models.PositiveIntegerField(null=True, blank=True)
+    expected_candidates = models.PositiveIntegerField(null=True, blank=True)
+    eligible_levels     = models.CharField(
+        max_length=100, blank=True,
+        help_text="Comma-separated student levels eligible, e.g. '200,300'.",
+    )
+
+    # =========================================================================
+    # QUESTION POOL CONFIGURATION
+    # =========================================================================
+    questions_per_student   = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Questions served to each student. Blank = give all active questions.",
+    )
+    difficulty_mix          = models.JSONField(
+        default=dict, blank=True,
+        help_text='e.g. {"easy": 40, "medium": 40, "hard": 20}. Empty = ignore difficulty.',
+    )
+    shuffle_questions       = models.BooleanField(
+        default=True,
+        help_text="Serve questions in a different order to each student.",
+    )
+    shuffle_options         = models.BooleanField(
+        default=True,
+        help_text="Shuffle MCQ answer options independently per student.",
+    )
+    total_marks             = models.DecimalField(
+        max_digits=8, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Auto-summed from active pool questions, or set manually.",
+    )
+    pass_mark               = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(0)],
+    )
+    show_result_immediately = models.BooleanField(
+        default=False,
+        help_text="Show score to student immediately after auto-graded submission.",
+    )
+    show_answers_after      = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When correct answers become visible to students.",
+    )
+
+    # =========================================================================
+    # QUESTION IMPORT  (.docx / .xlsx → ExamQuestion rows via background task)
+    # =========================================================================
+    question_import_file = models.FileField(
+        upload_to=upload_path("exam_question_imports"),
+        null=True, blank=True,
+        help_text="Upload .docx or .xlsx. Background task parses into ExamQuestion rows.",
+    )
+    import_status        = models.CharField(
+        max_length=20, choices=IMPORT_STATUS_CHOICES, default=IMPORT_NONE,
+    )
+    import_error_log     = models.TextField(
+        blank=True,
+        help_text="Rows that failed parsing — shown to the instructor.",
+    )
+
+    # =========================================================================
+    # FILE UPLOADS
+    # =========================================================================
+    timetable_file    = models.FileField(
+        upload_to=upload_path("exam_timetables"),
+        null=True, blank=True,
+    )
+    seating_plan_file = models.FileField(
+        upload_to=upload_path("exam_seating_plans"),
+        null=True, blank=True,
+    )
+
+    # =========================================================================
+    # APPROVAL WORKFLOW
+    # =========================================================================
+    status           = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=DRAFT, db_index=True,
+    )
+    submission_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Increments on each instructor submission — tracks revision cycles.",
+    )
+    submitted_by     = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="exams_submitted",
+    )
+    submitted_at     = models.DateTimeField(null=True, blank=True)
+    approved_by      = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="exams_approved",
+    )
+    approved_at      = models.DateTimeField(null=True, blank=True)
+    rejected_by      = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="exams_rejected",
+    )
+    rejected_at      = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    published_by     = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="exams_published",
+    )
+    published_at     = models.DateTimeField(null=True, blank=True)
+    cancelled_by     = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="exams_cancelled",
+    )
+    cancelled_at        = models.DateTimeField(null=True, blank=True)
+    cancellation_reason = models.TextField(blank=True)
+
+    # =========================================================================
+    # STUDENT VISIBILITY WINDOW
+    # ─────────────────────────────────────────────────────────────────────────
+    # Decoupled from approval — published but not yet visible is valid
+    # (e.g. published 2 weeks early; visible_from = exam week).
+    # =========================================================================
+    visible_from  = models.DateTimeField(null=True, blank=True)
+    visible_until = models.DateTimeField(null=True, blank=True)
+
+    # =========================================================================
+    # CLASH DETECTION
+    # =========================================================================
+    clash_group = models.CharField(max_length=80, blank=True, db_index=True)
+    has_clash   = models.BooleanField(default=False)
+    clash_notes = models.TextField(blank=True)
+
+    # =========================================================================
+    # INSTRUCTIONS & NOTES
+    # =========================================================================
+    instructions         = models.TextField(
+        blank=True,
+        help_text="Shown to students on the instruction page during the countdown.",
+    )
+    special_instructions = models.TextField(
+        blank=True,
+        help_text="Shown on the timetable listing (e.g. 'Bring your matric card').",
+    )
+    internal_notes       = models.TextField(
+        blank=True,
+        help_text="Staff-only — never visible to students.",
+    )
+    has_accommodations  = models.BooleanField(default=False)
+    accommodation_notes = models.TextField(blank=True)
+
+    # =========================================================================
+    # STANDARD METADATA
+    # =========================================================================
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="exams_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active  = models.BooleanField(default=True)
+
+    class Meta:
+        ordering            = ["exam_date", "start_time"]
+        verbose_name        = "Exam"
+        verbose_name_plural = "Exams"
+        indexes = [
+            models.Index(fields=["exam_date", "status"]),
+            models.Index(fields=["academic_session", "exam_date"]),
+            models.Index(fields=["course", "academic_session"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course", "academic_session", "exam_type"],
+                condition=models.Q(course__isnull=False),
+                name="unique_exam_course_session_type",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(end_time__gt=models.F("start_time")),
+                name="exam_end_after_start",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"[{self.reference_code}] {self.title} | "
+            f"{self.exam_date} {self.start_time:%H:%M}–{self.end_time:%H:%M}"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.reference_code:
+            year = self.exam_date.year if self.exam_date else timezone.now().year
+            self.reference_code = f"EX-{year}-{secrets.token_hex(3).upper()}"
+        if not self.slug:
+            self.slug = unique_slug(Exam, self.reference_code)
+        super().save(*args, **kwargs)
+
+    # ── Computed datetimes ─────────────────────────────────────────────────────
+
+    @property
+    def exam_start_datetime(self):
+        """Timezone-aware datetime of the exact exam start."""
+        import datetime
+        from django.utils.timezone import make_aware
+        return make_aware(datetime.datetime.combine(self.exam_date, self.start_time))
+
+    @property
+    def exam_end_datetime(self):
+        """Timezone-aware datetime of the exam end."""
+        import datetime
+        from django.utils.timezone import make_aware
+        return make_aware(datetime.datetime.combine(self.exam_date, self.end_time))
+
+    @property
+    def instructions_open_at(self):
+        """
+        When the instruction page unlocks for students.
+        = exam_start_datetime − instruction_window_minutes
+        At this point the student sees the countdown to exam_start_datetime.
+        When it hits zero the backend unlocks questions automatically.
+        """
+        import datetime
+        return self.exam_start_datetime - datetime.timedelta(
+            minutes=self.instruction_window_minutes
+        )
+
+    @property
+    def is_published(self):
+        return self.status == self.PUBLISHED and self.is_active
+
+    @property
+    def is_visible_to_students(self):
+        now = timezone.now()
+        if not self.is_published:
+            return False
+        if self.visible_from and now < self.visible_from:
+            return False
+        if self.visible_until and now > self.visible_until:
+            return False
+        return True
+
+    @property
+    def active_question_count(self):
+        return self.questions.filter(is_active=True).count()
+
+    @property
+    def computed_total_marks(self):
+        from django.db.models import Sum
+        result = self.questions.filter(is_active=True).aggregate(total=Sum("marks"))
+        return result["total"] or 0
+
+
+# =============================================================================
+# TABLE 2 — EXAM QUESTION  (permanent question bank / pool)
+# =============================================================================
+
+class ExamQuestion(models.Model):
+    """
+    A single question in the exam question pool.
+
+    Questions are NEVER deleted when an exam closes — they accumulate as the
+    institution's permanent question bank.
+
+    SECURITY: options stores is_correct per option. The view MUST strip
+    is_correct before sending any question data to the frontend. Grading is
+    always done server-side by reading this model.
+
+    question_type behaviour:
+      mcq           → exactly one correct option in options[]
+      multi_select  → one or more correct options in options[]
+      true_false    → two options: True / False
+      short_answer  → no options; auto-graded via accepted_answers or manual
+      essay         → no options; manual grading only
+    """
+
+    MCQ          = "mcq"
+    MULTI_SELECT = "multi_select"
+    TRUE_FALSE   = "true_false"
+    SHORT_ANSWER = "short_answer"
+    ESSAY        = "essay"
+
+    QUESTION_TYPE_CHOICES = [
+        (MCQ,          "Multiple Choice (single answer)"),
+        (MULTI_SELECT, "Multiple Choice (multiple answers)"),
+        (TRUE_FALSE,   "True / False"),
+        (SHORT_ANSWER, "Short Answer"),
+        (ESSAY,        "Essay / Long Answer"),
+    ]
+
+    EASY   = "easy"
+    MEDIUM = "medium"
+    HARD   = "hard"
+
+    DIFFICULTY_CHOICES = [
+        (EASY,   "Easy"),
+        (MEDIUM, "Medium"),
+        (HARD,   "Hard"),
+    ]
+
+    # =========================================================================
+    # IDENTITY
+    # =========================================================================
+    slug = models.SlugField(unique=True, max_length=220)
+
+    # =========================================================================
+    # POOL MEMBERSHIP
+    # ─────────────────────────────────────────────────────────────────────────
+    # exam is the "home" exam this question was originally created for / imported
+    # into. To reuse across multiple exams without duplication, query by tags or
+    # source_reference when picking for a new exam.
+    # =========================================================================
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name="questions",
+    )
+
+    # =========================================================================
+    # QUESTION CONTENT
+    # =========================================================================
+    question_text = models.TextField()
+    question_type = models.CharField(
+        max_length=20, choices=QUESTION_TYPE_CHOICES, default=MCQ,
+    )
+    difficulty    = models.CharField(
+        max_length=10, choices=DIFFICULTY_CHOICES, default=MEDIUM, db_index=True,
+    )
+    marks         = models.DecimalField(
+        max_digits=6, decimal_places=2, default=1,
+        validators=[MinValueValidator(0)],
+    )
+    image         = models.ImageField(
+        upload_to=upload_path("exam_question_images"),
+        null=True, blank=True,
+        help_text="Optional diagram or figure for the question.",
+    )
+    explanation   = models.TextField(
+        blank=True,
+        help_text="Explanation shown to students after answers are released.",
+    )
+
+    # ── Answer options (MCQ / multi_select / true_false) ──────────────────────
+    # Structure of each item:
+    #   {"id": "opt-<uuid>", "text": "O(log n)", "is_correct": true}
+    #   SECURITY: strip is_correct before sending to frontend.
+    # Leave empty for short_answer / essay.
+    options = models.JSONField(
+        default=list, blank=True,
+        help_text=(
+            'Array of answer options. Each: {"id": "opt-uuid", "text": "...", "is_correct": bool}. '
+            "Empty for short_answer / essay. SECURITY: strip is_correct before sending to frontend."
+        ),
+    )
+
+    # Accepted exact-match strings for short_answer auto-grading.
+    # e.g. ["binary search", "Binary Search"]
+    # Leave empty for manual grading.
+    accepted_answers = models.JSONField(
+        default=list, blank=True,
+        help_text="For short_answer only. Exact-match strings for auto-grading.",
+    )
+
+    # =========================================================================
+    # BANK / POOL METADATA
+    # =========================================================================
+    order            = models.PositiveIntegerField(
+        default=0, db_index=True,
+        help_text="Default display order within the exam (overridden by shuffle).",
+    )
+    tags             = models.JSONField(
+        default=list, blank=True,
+        help_text='e.g. ["chapter-3", "sorting", "complexity"]',
+    )
+    source_reference = models.CharField(
+        max_length=255, blank=True,
+        help_text='e.g. "2019 Past Question Q4" or "Imported via Q-Bank"',
+    )
+    year_first_used  = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Year this question was first used — helps avoid recent repeats.",
+    )
+
+    # ── Import traceability ────────────────────────────────────────────────────
+    imported_from_file = models.CharField(
+        max_length=255, blank=True,
+        help_text="Original filename this question was parsed from, if imported.",
+    )
+    import_row_number  = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Row/paragraph number in import file — for parse-error tracing.",
+    )
+
+    # =========================================================================
+    # STANDARD METADATA
+    # =========================================================================
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="exam_questions_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active  = models.BooleanField(
+        default=True,
+        help_text="Inactive questions are excluded from student draws.",
+    )
+
+    class Meta:
+        ordering            = ["exam", "order", "created_at"]
+        verbose_name        = "Exam Question"
+        verbose_name_plural = "Exam Questions"
+        indexes = [
+            models.Index(fields=["exam", "difficulty", "is_active"]),
+            models.Index(fields=["exam", "order"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"[{self.exam.reference_code}] Q{self.order} "
+            f"({self.get_difficulty_display()}) — {self.question_text[:80]}"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slug(
+                ExamQuestion,
+                f"eq-{self.exam_id}-{secrets.token_hex(4)}",
+            )
+        super().save(*args, **kwargs)
+
+
+# =============================================================================
+# TABLE 3 — STUDENT EXAM RESPONSE
+# =============================================================================
+
+class StudentExamResponse(models.Model):
+    """
+    One row per student per exam. Created server-side the moment a student
+    opens the instruction page.
+
+    At that point the backend:
+      1. Draws N questions from the pool (respects difficulty_mix).
+      2. Shuffles them (if Exam.shuffle_questions = True).
+      3. Shuffles each question's option order (if Exam.shuffle_options = True).
+      4. Writes assigned_question_ids and assigned_options_order to this row.
+      5. Returns ONLY question text + shuffled options (no is_correct) to frontend.
+
+    On submit (student click or auto-submit at exam_end_datetime):
+      1. Frontend sends {question_pk: selected_option_id_or_text} per answer.
+      2. Backend fetches ExamQuestion rows and grades server-side.
+      3. MCQ / multi_select / true_false → auto-graded into question_scores.
+      4. short_answer → auto-graded if accepted_answers set, else pending manual.
+      5. essay → pending manual grading.
+      6. total_score, score_percentage, passed written to this row.
+    """
+
+    NOT_STARTED  = "not_started"
+    INSTRUCTIONS = "instructions"
+    IN_PROGRESS  = "in_progress"
+    SUBMITTED    = "submitted"
+    GRADED       = "graded"
+    ABSENT       = "absent"
+
+    ATTEMPT_STATUS_CHOICES = [
+        (NOT_STARTED,  "Not Started"),
+        (INSTRUCTIONS, "Reading Instructions"),
+        (IN_PROGRESS,  "In Progress"),
+        (SUBMITTED,    "Submitted"),
+        (GRADED,       "Graded"),
+        (ABSENT,       "Absent"),
+    ]
+
+    # =========================================================================
+    # IDENTITY
+    # =========================================================================
+    slug = models.SlugField(unique=True, max_length=220)
+
+    # =========================================================================
+    # RELATIONSHIPS
+    # =========================================================================
+    exam    = models.ForeignKey(
+        Exam, on_delete=models.PROTECT, related_name="student_responses",
+    )
+    student = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="exam_responses",
+    )
+
+    # =========================================================================
+    # SERVER-ASSIGNED QUESTION DRAW
+    # ─────────────────────────────────────────────────────────────────────────
+    # Both fields written ONCE when the instruction page opens. Never changed.
+    #
+    # assigned_question_ids:
+    #   Ordered list of ExamQuestion PKs drawn for this student.
+    #   e.g. [42, 17, 305, 88, ...]
+    #
+    # assigned_options_order:
+    #   Maps each question PK (string key) → shuffled list of option IDs as
+    #   presented to this student. Allows exact reconstruction for audit/review.
+    #   e.g. {"42": ["opt-c", "opt-a", "opt-d", "opt-b"], "17": [...], ...}
+    # =========================================================================
+    assigned_question_ids  = models.JSONField(
+        default=list,
+        help_text="Ordered list of ExamQuestion PKs drawn for this student. Written once.",
+    )
+    assigned_options_order = models.JSONField(
+        default=dict,
+        help_text="Maps question PK → shuffled option ID list as shown to this student. Written once.",
+    )
+
+    # =========================================================================
+    # ANSWERS
+    # ─────────────────────────────────────────────────────────────────────────
+    # Keyed by question PK (string). Updated incrementally via auto-save.
+    #   mcq / true_false  → "opt-uuid-string"
+    #   multi_select      → ["opt-uuid-1", "opt-uuid-2"]
+    #   short_answer      → "the student's typed answer"
+    #   essay             → "the student's long-form answer"
+    # =========================================================================
+    answers = models.JSONField(
+        default=dict,
+        help_text="Student answers keyed by question PK. Updated incrementally by auto-save.",
+    )
+
+    # =========================================================================
+    # GRADING
+    # ─────────────────────────────────────────────────────────────────────────
+    # question_scores written by the grading routine on submit.
+    # e.g. {
+    #   "42": {"marks_awarded": 2,    "max_marks": 2, "is_correct": true},
+    #   "88": {"marks_awarded": null, "max_marks": 5, "pending_manual": true}
+    # }
+    # =========================================================================
+    question_scores      = models.JSONField(
+        default=dict,
+        help_text=(
+            'Per-question grading breakdown. '
+            'Each entry: {"marks_awarded": N|null, "max_marks": N, "is_correct": bool|null}. '
+            "null marks_awarded = pending manual grading."
+        ),
+    )
+    total_score          = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Null until fully graded.",
+    )
+    score_percentage     = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="(total_score / total_marks) × 100. Computed on grading completion.",
+    )
+    passed               = models.BooleanField(
+        null=True,
+        help_text="Null until graded. True if total_score >= Exam.pass_mark.",
+    )
+    overall_feedback     = models.TextField(blank=True)
+    graded_by            = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="exam_responses_graded",
+    )
+    graded_at            = models.DateTimeField(null=True, blank=True)
+    pending_manual_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Questions still awaiting manual grading.",
+    )
+
+    # =========================================================================
+    # STATUS & TIMING
+    # =========================================================================
+    status                 = models.CharField(
+        max_length=20, choices=ATTEMPT_STATUS_CHOICES,
+        default=NOT_STARTED, db_index=True,
+    )
+    instructions_opened_at = models.DateTimeField(null=True, blank=True)
+    exam_started_at        = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When questions were revealed (countdown hit 0).",
+    )
+    last_autosave_at       = models.DateTimeField(null=True, blank=True)
+    submitted_at           = models.DateTimeField(null=True, blank=True)
+    auto_submitted         = models.BooleanField(
+        default=False,
+        help_text="True if submission was triggered by the server timer.",
+    )
+    time_spent_seconds     = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Seconds from exam_started_at to submitted_at.",
+    )
+
+    # =========================================================================
+    # FORENSIC / SECURITY
+    # =========================================================================
+    ip_address        = models.GenericIPAddressField(null=True, blank=True)
+    tab_switch_count  = models.PositiveIntegerField(default=0)
+    invigilator_notes = models.TextField(blank=True)
+
+    # =========================================================================
+    # STANDARD METADATA
+    # =========================================================================
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ["exam", "student"]
+        verbose_name        = "Student Exam Response"
+        verbose_name_plural = "Student Exam Responses"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["exam", "student"],
+                name="unique_student_exam_response",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["exam", "status"]),
+            models.Index(fields=["student", "status"]),
+            models.Index(fields=["exam", "total_score"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student} | {self.exam.reference_code} | "
+            f"{self.get_status_display()} | Score: {self.total_score}"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slug(
+                StudentExamResponse,
+                f"ser-{self.exam_id}-{self.student_id}-{secrets.token_hex(3)}",
+            )
+        super().save(*args, **kwargs)
+
+    @property
+    def questions_answered(self):
+        return len(self.answers) if self.answers else 0
+
+    @property
+    def is_complete(self):
+        return self.status in (self.SUBMITTED, self.GRADED)
+
+    @property
+    def needs_manual_grading(self):
+        return self.pending_manual_count > 0
+
+
+# =============================================================================
+# TABLE 4 — EXAM STATUS LOG  (immutable — uses ImmutableMixin from this file)
+# =============================================================================
+
+class ExamStatusLog(ImmutableMixin, models.Model):
+    """
+    Immutable audit trail of every status change on an Exam.
+
+    Written on every transition:
+      DRAFT → SUBMITTED       (instructor submits)
+      SUBMITTED → APPROVED    (admin approves)
+      SUBMITTED → REJECTED    (admin rejects)
+      APPROVED → PUBLISHED    (instructor/admin publishes)
+      any → CANCELLED
+
+    Uses ImmutableMixin (same SEC-10/SEC-11 pattern as SaleStatusHistory /
+    AuditLog already in this file) — update() and delete() are both blocked.
+    """
+
+    slug        = models.SlugField(unique=True, max_length=220)
+    exam        = models.ForeignKey(
+        Exam, on_delete=models.CASCADE, related_name="status_logs",
+    )
+    from_status = models.CharField(max_length=20, blank=True)
+    to_status   = models.CharField(max_length=20)
+    changed_by  = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True,
+        related_name="exam_status_changes",
+    )
+    note        = models.TextField(
+        blank=True,
+        help_text="Rejection reason, approval comment, cancellation note, etc.",
+    )
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ["-created_at"]
+        verbose_name        = "Exam Status Log"
+        verbose_name_plural = "Exam Status Logs"
+
+    def __str__(self):
+        return (
+            f"{self.exam.reference_code} | "
+            f"{self.from_status} → {self.to_status} "
+            f"by {self.changed_by} @ {self.created_at:%Y-%m-%d %H:%M}"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slug(
+                ExamStatusLog,
+                f"esl-{self.exam_id}-{secrets.token_hex(4)}",
+            )
+        super().save(*args, **kwargs)

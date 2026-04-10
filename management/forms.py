@@ -1502,8 +1502,8 @@ class LMSCourseForm(forms.ModelForm):
             'difficulty_level', 'duration_hours', 'language', 'instructor',
             'instructor_name', 'instructor_bio', 'thumbnail', 'promo_video_url',
             'max_students', 'enrollment_start_date', 'enrollment_end_date',
-            'is_published', 'is_featured', 'has_certificate', 'certificate_template',
-            'meta_description', 'meta_keywords'
+            'is_published', 'is_featured', 'has_certificate', 'certificate_fee', 'certificate_template',
+            'academic_course', 'meta_description', 'meta_keywords'
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -1584,6 +1584,15 @@ class LMSCourseForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'placeholder': 'Certificate template filename'
             }),
+            'academic_course': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'certificate_fee': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+                'placeholder': '0.00',
+                'step': '0.01',
+                'min': '0'
+            }),
             'meta_description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'rows': 2,
@@ -1599,9 +1608,20 @@ class LMSCourseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['category'].empty_label = '— Select Category —'
         self.fields['instructor'].empty_label = '— Select Instructor —'
-        self.fields['instructor'].queryset = User.objects.filter(is_staff=True).order_by('last_name', 'first_name')
+        self.fields['instructor'].queryset = User.objects.filter(
+            profile__role='instructor',
+            is_active=True,
+        ).order_by('last_name', 'first_name')
         self.fields['instructor'].required = False
-        
+        # Display full name in the dropdown instead of username
+        self.fields['instructor'].label_from_instance = lambda u: (
+            u.get_full_name().strip() or u.username
+        )
+        self.fields['academic_course'].empty_label = '— Standalone LMS (no academic link) —'
+        self.fields['category'].required = False
+        self.fields['academic_course'].required = False
+        from eduweb.models import Course as AcademicCourse
+        self.fields['academic_course'].queryset = AcademicCourse.objects.select_related('program__department').order_by('program__department__name', 'code')        
         # Pre-populate JSON fields when editing
         if self.instance.pk:
             objectives = self.instance.learning_objectives

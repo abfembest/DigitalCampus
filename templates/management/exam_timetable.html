@@ -1,0 +1,135 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Timetable — {{ exam.reference_code }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-2 sm:px-0">
+
+    <!-- Breadcrumb -->
+    <nav class="flex text-sm text-gray-500 mb-5" aria-label="Breadcrumb">
+        <a href="{% url 'management:admin_exam_list' %}" class="hover:text-indigo-600 transition-colors">Exams</a>
+        <span class="mx-2">/</span>
+        <a href="{% url 'management:admin_exam_detail' exam.slug %}" class="hover:text-indigo-600 transition-colors">{{ exam.reference_code }}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-800 font-medium">Timetable</span>
+    </nav>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
+
+        <!-- Header -->
+        <div class="mb-6">
+            <h1 class="text-xl font-bold text-gray-900">Update Timetable</h1>
+            <p class="text-sm text-gray-500 mt-1">
+                {{ exam.title }}
+                <span class="font-mono text-xs text-gray-400 ml-1">{{ exam.reference_code }}</span>
+            </p>
+        </div>
+
+        {% if messages %}
+        <div class="mb-5 space-y-2">
+            {% for msg in messages %}
+            <div class="p-3 rounded-lg text-sm
+                        {% if msg.tags == 'error' %}bg-red-50 border border-red-200 text-red-700
+                        {% elif msg.tags == 'success' %}bg-green-50 border border-green-200 text-green-700
+                        {% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}">
+                {{ msg }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Clash warning banner -->
+        {% if exam.has_clash %}
+        <div class="mb-5 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div class="flex items-start gap-2 text-red-700">
+                <i class="fas fa-exclamation-triangle mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-sm font-semibold">Scheduling Clash Detected</p>
+                    {% if exam.clash_notes %}<p class="text-xs mt-1">{{ exam.clash_notes }}</p>{% endif %}
+                    <p class="text-xs mt-1">Update the date/time below to resolve the conflict.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+
+            <!-- Current schedule info -->
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-600 space-y-1">
+                <p><i class="fas fa-info-circle text-indigo-400 mr-1.5"></i><strong>Current:</strong>
+                    {{ exam.exam_date|date:"D, d M Y" }}, {{ exam.start_time|time:"H:i" }}–{{ exam.end_time|time:"H:i" }}
+                    {% if exam.venue %} @ {{ exam.venue }}{% endif %}
+                </p>
+                <p class="text-xs text-gray-400">
+                    Linked to: <strong>{{ exam.course.title }}</strong>
+                    {% if exam.course.academic_course %} ({{ exam.course.academic_course.code }}){% endif %}
+                    {% if exam.department %} — {{ exam.department.name }}{% endif %}
+                </p>
+            </div>
+
+            <!-- Date -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Exam Date <span class="text-red-500">*</span>
+                </label>
+                <input type="date" name="exam_date"
+                       value="{{ exam.exam_date|date:'Y-m-d' }}"
+                       required
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <!-- Start & End time -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Start Time <span class="text-red-500">*</span>
+                    </label>
+                    <input type="time" name="start_time"
+                           value="{{ exam.start_time|time:'H:i' }}"
+                           required
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                        End Time <span class="text-red-500">*</span>
+                    </label>
+                    <input type="time" name="end_time"
+                           value="{{ exam.end_time|time:'H:i' }}"
+                           required
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+
+            <!-- Venue -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Venue / Hall</label>
+                <input type="text" name="venue"
+                       value="{{ exam.venue }}"
+                       placeholder="e.g. LT 1, Hall B, Online"
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <p class="mt-1 text-xs text-gray-400">Leave blank for online / TBD</p>
+            </div>
+
+            <!-- Clash detection notice -->
+            <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-600">
+                <i class="fas fa-shield-alt mr-1"></i>
+                <strong>Conflict check:</strong> The system will automatically detect overlapping exams in the same department on the same date and time window. Save will be blocked if a conflict is found.
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <a href="{% url 'management:admin_exam_detail' exam.slug %}"
+                   class="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="px-5 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    <i class="fas fa-save mr-1.5"></i> Save Timetable
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

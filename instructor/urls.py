@@ -209,5 +209,72 @@ urlpatterns = [
         name='reply_delete',
     ),
 
+    path(
+        'assessments/create/',
+        views.create_assessment,
+        name='create_assessment',
+    ),
+ 
+    # AJAX helpers for the create assessment page
+    path(
+        'assessments/course-details/',
+        views.ajax_course_details,
+        name='ajax_course_details',
+    ),
+    path(
+        'assessments/course-lessons/',
+        views.ajax_course_lessons,
+        name='ajax_course_lessons',
+    ),
+
+    # ------------------------------------------------------------------
+    # EXAM MANAGEMENT
+    # ------------------------------------------------------------------
+    path(
+        'exams/',
+        views.exam_list,
+        name='exam_list',
+    ),
+    path(
+        'exams/<slug:slug>/',
+        views.exam_detail,
+        name='exam_detail',
+    ),
+    path(
+        'exams/<slug:slug>/update/',
+        views.exam_update,
+        name='exam_update',
+    ),
+    path(
+        'exams/<slug:slug>/submit/',
+        views.exam_submit,
+        name='exam_submit',
+    ),
+    path(
+        'exams/<slug:slug>/publish/',
+        views.exam_publish,
+        name='exam_publish',
+    ),
+    path(
+        'exams/<slug:slug>/questions/create/',
+        views.exam_question_create,
+        name='exam_question_create',
+    ),
+    path(
+        'exams/<slug:slug>/questions/<int:question_id>/edit/',
+        views.exam_question_edit,
+        name='exam_question_edit',
+    ),
+    path(
+        'exams/<slug:slug>/questions/<int:question_id>/delete/',
+        views.exam_question_delete,
+        name='exam_question_delete',
+    ),
+    path(
+        'exams/<slug:slug>/questions/import/',
+        views.exam_import_questions,
+        name='exam_import_questions',
+    ),
+
 
 ]

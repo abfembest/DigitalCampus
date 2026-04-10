@@ -64,7 +64,11 @@ from eduweb.models import (
     Transaction,
     UserProfile,
     Message,
-)
+        Exam,
+        ExamQuestion,
+        StudentExamResponse,
+        ExamStatusLog,
+    )
 
 # Forms
 from management.forms import (
@@ -1945,8 +1949,23 @@ def lms_course_create(request):
             return redirect('management:lms_courses_list')
     else:
         form = LMSCourseForm()
-    
-    context = {'form': form}
+
+    # Build instructor data for JS auto-fill (name → instructor_name field)
+    import json as _json
+    instructors_data = {
+        str(u.pk): {
+            'full_name': u.get_full_name().strip() or u.username,
+            'bio': getattr(u, 'profile', None) and u.profile.bio or '',
+        }
+        for u in User.objects.filter(
+            profile__role='instructor', is_active=True
+        ).select_related('profile')
+    }
+
+    context = {
+        'form': form,
+        'instructors_json': _json.dumps(instructors_data),
+    }
     return render(request, 'management/lms_course/create.html', context)
 
 
@@ -1992,10 +2011,23 @@ def lms_course_edit(request, pk):
             return redirect('management:lms_courses_list')
     else:
         form = LMSCourseForm(instance=course)
-    
+
+    # Build instructor data for JS auto-fill
+    import json as _json
+    instructors_data = {
+        str(u.pk): {
+            'full_name': u.get_full_name().strip() or u.username,
+            'bio': getattr(u, 'profile', None) and u.profile.bio or '',
+        }
+        for u in User.objects.filter(
+            profile__role='instructor', is_active=True
+        ).select_related('profile')
+    }
+
     context = {
         'form': form,
         'course': course,
+        'instructors_json': _json.dumps(instructors_data),
     }
     return render(request, 'management/lms_course/edit.html', context)
 
@@ -4866,3 +4898,302 @@ def library_item_toggle_active(request, pk):
             })
         messages.success(request, f'"{item.title}" {state}.')
     return redirect('management:library_items_list')
+
+# =============================================================================
+# EXAM MANAGEMENT — SUPERADMIN VIEWS
+# =============================================================================
+
+def _is_staff(user):
+    return user.is_active and user.is_staff
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+def admin_exam_list(request):
+    STATUS_CHOICES = Exam.STATUS_CHOICES
+    status_filter = request.GET.get('status', '')
+    search = request.GET.get('q', '')
+    session_id = request.GET.get('session', '')
+
+    qs = Exam.objects.select_related('course', 'course__academic_course', 'department', 'academic_session').order_by('-exam_date', '-start_time')
+
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if search:
+        qs = qs.filter(
+            Q(title__icontains=search) |
+            Q(reference_code__icontains=search) |
+            Q(course__title__icontains=search)
+        )
+    if session_id:
+        qs = qs.filter(academic_session_id=session_id)
+
+    status_counts = {
+        s: Exam.objects.filter(status=s).count()
+        for s, _ in STATUS_CHOICES
+    }
+
+    sessions = AcademicSession.objects.order_by('-name')
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'management/exam_list.html', {
+        'page_obj': page_obj,
+        'STATUS_CHOICES': STATUS_CHOICES,
+        'status_filter': status_filter,
+        'search': search,
+        'session_id': session_id,
+        'sessions': sessions,
+        'status_counts': status_counts,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+def admin_exam_detail(request, slug):
+    exam = get_object_or_404(
+        Exam.objects.select_related('course', 'course__academic_course', 'department', 'academic_session', 'instructor', 'submitted_by', 'approved_by', 'rejected_by', 'published_by'),
+        slug=slug
+    )
+    status_logs = exam.status_logs.select_related('changed_by').order_by('-created_at')[:10]
+    return render(request, 'management/exam_detail.html', {
+        'exam': exam,
+        'status_logs': status_logs,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+@require_POST
+def admin_exam_approve(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    if exam.status != Exam.SUBMITTED:
+        messages.error(request, 'Only submitted exams can be approved.')
+        return redirect('management:admin_exam_detail', slug=slug)
+
+    prev = exam.status
+    exam.status = Exam.APPROVED
+    exam.approved_by = request.user
+    exam.approved_at = timezone.now()
+    exam.save(update_fields=['status', 'approved_by', 'approved_at'])
+
+    ExamStatusLog.objects.create(
+        exam=exam,
+        from_status=prev,
+        to_status=Exam.APPROVED,
+        changed_by=request.user,
+        note=request.POST.get('note', ''),
+    )
+
+    if exam.instructor:
+        _notify(
+            user=exam.instructor,
+            title=f'Exam Approved: {exam.reference_code}',
+            message=f'Your exam "{exam.title}" has been approved and is ready to publish.',
+            notif_type='system',
+        )
+
+    messages.success(request, f'Exam {exam.reference_code} approved.')
+    return redirect('management:admin_exam_detail', slug=slug)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+@require_POST
+def admin_exam_reject(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    if exam.status != Exam.SUBMITTED:
+        messages.error(request, 'Only submitted exams can be rejected.')
+        return redirect('management:admin_exam_detail', slug=slug)
+
+    reason = request.POST.get('reason', '').strip()
+    if not reason:
+        messages.error(request, 'A rejection reason is required.')
+        return redirect('management:admin_exam_detail', slug=slug)
+
+    prev = exam.status
+    exam.status = Exam.REJECTED
+    exam.rejected_by = request.user
+    exam.rejected_at = timezone.now()
+    exam.rejection_reason = reason
+    exam.save(update_fields=['status', 'rejected_by', 'rejected_at', 'rejection_reason'])
+
+    ExamStatusLog.objects.create(
+        exam=exam,
+        from_status=prev,
+        to_status=Exam.REJECTED,
+        changed_by=request.user,
+        note=reason,
+    )
+
+    if exam.instructor:
+        _notify(
+            user=exam.instructor,
+            title=f'Exam Rejected: {exam.reference_code}',
+            message=f'Your exam "{exam.title}" was rejected. Reason: {reason}',
+            notif_type='system',
+        )
+
+    messages.warning(request, f'Exam {exam.reference_code} rejected.')
+    return redirect('management:admin_exam_detail', slug=slug)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+@require_POST
+def admin_exam_publish(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    if exam.status != Exam.APPROVED:
+        messages.error(request, 'Only approved exams can be published.')
+        return redirect('management:admin_exam_detail', slug=slug)
+
+    from django.utils.dateparse import parse_datetime
+    visible_from_raw = request.POST.get('visible_from', '').strip()
+    visible_until_raw = request.POST.get('visible_until', '').strip()
+
+    prev = exam.status
+    exam.status = Exam.PUBLISHED
+    exam.published_by = request.user
+    exam.published_at = timezone.now()
+    if visible_from_raw:
+        exam.visible_from = parse_datetime(visible_from_raw) or exam.visible_from
+    if visible_until_raw:
+        exam.visible_until = parse_datetime(visible_until_raw) or exam.visible_until
+    exam.save(update_fields=['status', 'published_by', 'published_at', 'visible_from', 'visible_until'])
+
+    ExamStatusLog.objects.create(
+        exam=exam,
+        from_status=prev,
+        to_status=Exam.PUBLISHED,
+        changed_by=request.user,
+        note=request.POST.get('note', ''),
+    )
+
+    if exam.instructor:
+        _notify(
+            user=exam.instructor,
+            title=f'Exam Published: {exam.reference_code}',
+            message=f'Your exam "{exam.title}" is now published and visible to students.',
+            notif_type='system',
+        )
+
+    messages.success(request, f'Exam {exam.reference_code} published successfully.')
+    return redirect('management:admin_exam_detail', slug=slug)
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+def admin_question_moderation(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    questions = exam.questions.order_by('order', 'created_at')
+
+    if request.method == 'POST':
+        q_id = request.POST.get('question_id')
+        action = request.POST.get('action')
+        question = get_object_or_404(ExamQuestion, pk=q_id, exam=exam)
+        if action == 'activate':
+            question.is_active = True
+            question.save(update_fields=['is_active'])
+            messages.success(request, f'Question #{question.order} activated.')
+        elif action == 'deactivate':
+            question.is_active = False
+            question.save(update_fields=['is_active'])
+            messages.warning(request, f'Question #{question.order} deactivated.')
+        return redirect('management:admin_question_moderation', slug=slug)
+
+    return render(request, 'management/question_moderation.html', {
+        'exam': exam,
+        'questions': questions,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+def admin_exam_timetable_update(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+
+    if request.method == 'POST':
+        from django.utils.dateparse import parse_date, parse_time
+
+        exam_date = parse_date(request.POST.get('exam_date', ''))
+        start_time = parse_time(request.POST.get('start_time', ''))
+        end_time = parse_time(request.POST.get('end_time', ''))
+        venue = request.POST.get('venue', '').strip()
+
+        errors = []
+        if not exam_date:
+            errors.append('Invalid exam date.')
+        if not start_time:
+            errors.append('Invalid start time.')
+        if not end_time:
+            errors.append('Invalid end time.')
+        if start_time and end_time and end_time <= start_time:
+            errors.append('End time must be after start time.')
+
+        # Clash detection: same department, same date, overlapping time window
+        if not errors and exam.department:
+            clash_qs = Exam.objects.filter(
+                department=exam.department,
+                exam_date=exam_date,
+                status__in=[Exam.APPROVED, Exam.PUBLISHED],
+            ).exclude(pk=exam.pk).filter(
+                start_time__lt=end_time,
+                end_time__gt=start_time,
+            )
+            if clash_qs.exists():
+                clash = clash_qs.first()
+                errors.append(
+                    f'Schedule conflict with {clash.reference_code} ({clash.start_time:%H:%M}–{clash.end_time:%H:%M}) '
+                    f'in the same department on this date.'
+                )
+
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+        else:
+            exam.exam_date = exam_date
+            exam.start_time = start_time
+            exam.end_time = end_time
+            exam.venue = venue
+            exam.has_clash = False
+            exam.clash_notes = ''
+            exam.save(update_fields=['exam_date', 'start_time', 'end_time', 'venue', 'has_clash', 'clash_notes'])
+            messages.success(request, 'Timetable updated successfully.')
+            return redirect('management:admin_exam_detail', slug=slug)
+
+    return render(request, 'management/exam_timetable.html', {'exam': exam})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+def admin_exam_responses(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    ATTEMPT_STATUS_CHOICES = StudentExamResponse.ATTEMPT_STATUS_CHOICES
+    status_filter = request.GET.get('status', '')
+
+    qs = exam.student_responses.select_related('student').order_by('-submitted_at', 'student__last_name')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    # Summary stats
+    all_responses = exam.student_responses
+    summary = {
+        'total': all_responses.count(),
+        'in_progress': all_responses.filter(status=StudentExamResponse.IN_PROGRESS).count(),
+        'submitted': all_responses.filter(status=StudentExamResponse.SUBMITTED).count(),
+        'graded': all_responses.filter(status=StudentExamResponse.GRADED).count(),
+        'avg_score': all_responses.filter(score_percentage__isnull=False).aggregate(
+            avg=Avg('score_percentage')
+        )['avg'],
+    }
+
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'management/exam_responses.html', {
+        'exam': exam,
+        'page_obj': page_obj,
+        'summary': summary,
+        'status_filter': status_filter,
+        'ATTEMPT_STATUS_CHOICES': ATTEMPT_STATUS_CHOICES,
+    })

@@ -1,7 +1,118 @@
 {% extends 'management/base.html' %}
 {% load static %}
 
-{% block title %}Create LMS Course - MIU Portal{% endblock %}
+{% block title %}Create LMS Course - MIU Portal<script>
+(function () {
+    // ── Academic-course link: sections to hide when a course is linked ──
+    const HIDE_WHEN_LINKED = ['wrap-category', 'wrap-enrollment', 'wrap-certificate'];
+
+    const academicSelect  = document.getElementById('id_academic_course');
+    const badge           = document.getElementById('academic-linked-badge');
+    const titleInput      = document.getElementById('id_title');
+    const codeInput       = document.getElementById('id_code');
+
+    let savedTitle = titleInput ? titleInput.value : '';
+    let savedCode  = codeInput  ? codeInput.value  : '';
+
+    function applyState() {
+        const linked = academicSelect && academicSelect.value !== '';
+        if (badge) badge.classList.toggle('hidden', !linked);
+        HIDE_WHEN_LINKED.forEach(function (id) {
+            const wrapper = document.getElementById(id);
+            if (!wrapper) return;
+            wrapper.style.display = linked ? 'none' : '';
+            wrapper.querySelectorAll('input, select, textarea').forEach(function (el) {
+                el.disabled = linked;
+            });
+        });
+    }
+
+    function fillFromAcademic() {
+        if (!academicSelect) return;
+        const selectedOption = academicSelect.options[academicSelect.selectedIndex];
+        const linked = academicSelect.value !== '';
+        if (linked) {
+            const optionText   = selectedOption.text.trim();
+            const separatorIdx = optionText.indexOf(' — ');
+            const parsedCode   = separatorIdx !== -1 ? optionText.substring(0, separatorIdx).trim() : '';
+            const parsedTitle  = separatorIdx !== -1 ? optionText.substring(separatorIdx + 3).trim() : optionText;
+            if (titleInput) {
+                titleInput.value    = parsedTitle;
+                titleInput.readOnly = true;
+                titleInput.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+            if (codeInput) {
+                codeInput.value    = parsedCode;
+                codeInput.readOnly = true;
+                codeInput.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+        } else {
+            if (titleInput) {
+                titleInput.value    = savedTitle;
+                titleInput.readOnly = false;
+                titleInput.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+            if (codeInput) {
+                codeInput.value    = savedCode;
+                codeInput.readOnly = false;
+                codeInput.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+        }
+    }
+
+    function onAcademicChange() {
+        if (academicSelect && academicSelect.value !== '') {
+            savedTitle = titleInput ? titleInput.value : '';
+            savedCode  = codeInput  ? codeInput.value  : '';
+        }
+        applyState();
+        fillFromAcademic();
+    }
+
+    if (academicSelect) {
+        academicSelect.addEventListener('change', onAcademicChange);
+        applyState();
+        fillFromAcademic();
+    }
+
+    // ── Instructor auto-fill: populate instructor_name from selected user ──
+    const INSTRUCTORS = {{ instructors_json|safe }};
+    const instructorSelect   = document.getElementById('id_instructor');
+    const instructorNameInput = document.getElementById('id_instructor_name');
+
+    function fillInstructorName() {
+        if (!instructorSelect || !instructorNameInput) return;
+        const pk = instructorSelect.value;
+        if (pk && INSTRUCTORS[pk]) {
+            // Only overwrite if the field is currently empty or was auto-filled
+            if (!instructorNameInput.dataset.manuallyEdited) {
+                instructorNameInput.value = INSTRUCTORS[pk].full_name;
+            }
+        } else {
+            if (!instructorNameInput.dataset.manuallyEdited) {
+                instructorNameInput.value = '';
+            }
+        }
+    }
+
+    if (instructorSelect) {
+        instructorSelect.addEventListener('change', function () {
+            // Reset manual-edit flag on a new selection
+            if (instructorNameInput) delete instructorNameInput.dataset.manuallyEdited;
+            fillInstructorName();
+        });
+        // On page load (create page) — no pre-selection so nothing to fill
+        fillInstructorName();
+    }
+
+    if (instructorNameInput) {
+        instructorNameInput.addEventListener('input', function () {
+            this.dataset.manuallyEdited = '1';
+        });
+    }
+})();
+</script>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-12xl mx-auto space-y-6">
@@ -19,7 +130,28 @@
     <!-- Form -->
     <form method="post" enctype="multipart/form-data" class="bg-white rounded-lg border border-gray-200 overflow-hidden">
         {% csrf_token %}
-        
+
+        {% if form.errors %}
+        <div class="mx-6 mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
+            <div class="flex items-start gap-2">
+                <i class="fas fa-exclamation-circle text-red-500 mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-sm font-semibold text-red-800 mb-1">Please fix the following errors:</p>
+                    <ul class="text-xs text-red-700 space-y-0.5 list-disc list-inside">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="p-8 space-y-8">
             <!-- Basic Information -->
             <div>
@@ -43,12 +175,32 @@
                         {% if form.code.errors %}<p class="mt-1 text-sm text-red-600">{{ form.code.errors.0 }}</p>{% endif %}
                     </div>
                     
-                    <div>
+                    <div id="wrap-category">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Category <span class="text-red-500">*</span>
                         </label>
                         {{ form.category }}
-                        {% if form.category.errors %}<p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>{% endif %}
+                        {% if form.category.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.category.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Academic Course Link -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-indigo-800 mb-1">
+                            <i class="fas fa-university mr-1.5"></i> Link to Academic Course
+                        </label>
+                        <p class="text-xs text-indigo-600 mb-3">
+                            Choose an academic course to link this to the faculty → department → program structure.
+                            Leave blank for a <strong>standalone LMS course</strong>.
+                        </p>
+                        {{ form.academic_course }}
+                        {% if form.academic_course.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.academic_course.errors }}</p>
+                        {% endif %}
+                        <div id="academic-linked-badge" class="hidden mt-2 inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
+                            <i class="fas fa-link"></i> Academic course linked — code and department inherited.
+                        </div>
                     </div>
                     
                     <div>
@@ -137,13 +289,17 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Select Instructor</label>
                         {{ form.instructor }}
                         {% if form.instructor.errors %}<p class="mt-1 text-sm text-red-600">{{ form.instructor.errors.0 }}</p>{% endif %}
+                        <p class="text-xs text-gray-500 mt-1">Only active instructor accounts are listed</p>
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Instructor Name</label>
+                    <div style="display: none;">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Display Name
+                            <span class="ml-1 text-xs font-normal text-gray-400">(auto-filled from selection)</span>
+                        </label>
                         {{ form.instructor_name }}
                         {% if form.instructor_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.instructor_name.errors.0 }}</p>{% endif %}
-                        <p class="text-xs text-gray-500 mt-1">If different from selected user</p>
+                        <p class="text-xs text-gray-500 mt-1">Override if display name differs</p>
                     </div>
                 </div>
                 
@@ -176,8 +332,8 @@
                 </div>
             </div>
 
-            <!-- Enrollment -->
-            <div class="pt-8 border-t border-gray-200">
+            <!-- Enrollment — hidden for academic-linked courses -->
+            <div id="wrap-enrollment" class="pt-8 border-t border-gray-200">
                 <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
                     <i class="fas fa-calendar-alt mr-3 text-primary-600"></i>Enrollment Period
                 </h2>
@@ -196,8 +352,8 @@
                 </div>
             </div>
 
-            <!-- Certificate -->
-            <div class="pt-8 border-t border-gray-200">
+            <!-- Certificate — hidden for academic-linked courses -->
+            <div id="wrap-certificate" class="pt-8 border-t border-gray-200">
                 <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
                     <i class="fas fa-certificate mr-3 text-primary-600"></i>Certificate
                 </h2>
@@ -277,4 +433,115 @@
         </div>
     </form>
 </div>
+<script>
+(function () {
+    // ── Academic-course link: sections to hide when a course is linked ──
+    const HIDE_WHEN_LINKED = ['wrap-category', 'wrap-enrollment', 'wrap-certificate'];
+
+    const academicSelect  = document.getElementById('id_academic_course');
+    const badge           = document.getElementById('academic-linked-badge');
+    const titleInput      = document.getElementById('id_title');
+    const codeInput       = document.getElementById('id_code');
+
+    let savedTitle = titleInput ? titleInput.value : '';
+    let savedCode  = codeInput  ? codeInput.value  : '';
+
+    function applyState() {
+        const linked = academicSelect && academicSelect.value !== '';
+        if (badge) badge.classList.toggle('hidden', !linked);
+        HIDE_WHEN_LINKED.forEach(function (id) {
+            const wrapper = document.getElementById(id);
+            if (!wrapper) return;
+            wrapper.style.display = linked ? 'none' : '';
+            wrapper.querySelectorAll('input, select, textarea').forEach(function (el) {
+                el.disabled = linked;
+            });
+        });
+    }
+
+    function fillFromAcademic() {
+        if (!academicSelect) return;
+        const selectedOption = academicSelect.options[academicSelect.selectedIndex];
+        const linked = academicSelect.value !== '';
+        if (linked) {
+            const optionText   = selectedOption.text.trim();
+            const separatorIdx = optionText.indexOf(' — ');
+            const parsedCode   = separatorIdx !== -1 ? optionText.substring(0, separatorIdx).trim() : '';
+            const parsedTitle  = separatorIdx !== -1 ? optionText.substring(separatorIdx + 3).trim() : optionText;
+            if (titleInput) {
+                titleInput.value    = parsedTitle;
+                titleInput.readOnly = true;
+                titleInput.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+            if (codeInput) {
+                codeInput.value    = parsedCode;
+                codeInput.readOnly = true;
+                codeInput.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+        } else {
+            if (titleInput) {
+                titleInput.value    = savedTitle;
+                titleInput.readOnly = false;
+                titleInput.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+            if (codeInput) {
+                codeInput.value    = savedCode;
+                codeInput.readOnly = false;
+                codeInput.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            }
+        }
+    }
+
+    function onAcademicChange() {
+        if (academicSelect && academicSelect.value !== '') {
+            savedTitle = titleInput ? titleInput.value : '';
+            savedCode  = codeInput  ? codeInput.value  : '';
+        }
+        applyState();
+        fillFromAcademic();
+    }
+
+    if (academicSelect) {
+        academicSelect.addEventListener('change', onAcademicChange);
+        applyState();
+        fillFromAcademic();
+    }
+
+    // ── Instructor auto-fill: populate instructor_name from selected user ──
+    const INSTRUCTORS = {{ instructors_json|safe }};
+    const instructorSelect   = document.getElementById('id_instructor');
+    const instructorNameInput = document.getElementById('id_instructor_name');
+
+    function fillInstructorName() {
+        if (!instructorSelect || !instructorNameInput) return;
+        const pk = instructorSelect.value;
+        if (pk && INSTRUCTORS[pk]) {
+            // Only overwrite if the field is currently empty or was auto-filled
+            if (!instructorNameInput.dataset.manuallyEdited) {
+                instructorNameInput.value = INSTRUCTORS[pk].full_name;
+            }
+        } else {
+            if (!instructorNameInput.dataset.manuallyEdited) {
+                instructorNameInput.value = '';
+            }
+        }
+    }
+
+    if (instructorSelect) {
+        instructorSelect.addEventListener('change', function () {
+            // Reset manual-edit flag on a new selection
+            if (instructorNameInput) delete instructorNameInput.dataset.manuallyEdited;
+            fillInstructorName();
+        });
+        // On page load (create page) — no pre-selection so nothing to fill
+        fillInstructorName();
+    }
+
+    if (instructorNameInput) {
+        instructorNameInput.addEventListener('input', function () {
+            this.dataset.manuallyEdited = '1';
+        });
+    }
+})();
+</script>
 {% endblock %}

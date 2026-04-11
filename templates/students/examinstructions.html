@@ -1,0 +1,20 @@
+<h2>{{ exam.title }}</h2>
+<p>{{ exam.instructions }}</p>
+
+<button id="startBtn" disabled>Start Exam</button>
+
+<script>
+const startTime = new Date("{{ start_time|date:'c' }}");
+
+setInterval(() => {
+    const now = new Date();
+
+    if (now >= startTime) {
+        document.getElementById("startBtn").disabled = false;
+    }
+}, 1000);
+
+document.getElementById("startBtn").onclick = () => {
+    window.location.href = "{% url 'start_exam' exam.slug %}";
+};
+</script>

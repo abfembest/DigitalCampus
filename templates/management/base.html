@@ -907,6 +907,10 @@
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'quiz_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2" aria-hidden="true"></i> Quizzes
                             </a>
+                            <a href="{% url 'students:exam_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'exam_list' %}bg-white/20{% endif %}">
+                                <i class="fas fa-question-circle mr-2" aria-hidden="true"></i>Examinations
+                            </a>
                         </div>
                     </div>
 

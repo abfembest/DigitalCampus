@@ -37,6 +37,7 @@ urlpatterns = [
 
     # ── Quizzes ──────────────────────────────────────────────────────────────
     path('quizzes/', views.quiz_list, name='quiz_list'),
+    path('exam/', views.exam_list, name='exam_list'),
     path(
         'courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/<slug:quiz_slug>/',
         views.quiz_detail, name='quiz_detail',
@@ -89,6 +90,15 @@ urlpatterns = [
     path('notifications/', views.notifications_view, name='notifications_view'),
     path(
         'notifications/<int:notification_id>/read/',
-        views.mark_notification_read, name='mark_notification_read',
-    ),
+        views.mark_notification_read, name='mark_notification_read', ),
+
+
+    ####CBT FOR STUDENT #####
+
+    path('exam_list', views.exam_list, name='exam_list'),
+    path('<slug:slug>/instructions/', views.exam_instructions, name='exam_instructions'),
+    path('<slug:slug>/start/', views.start_exam, name='start_exam'),
+    path('<slug:slug>/data/', views.get_exam_data, name='get_exam_data'),
+    path('<slug:slug>/save/', views.save_answer, name='save_answer'),
+    path('<slug:slug>/submit/', views.submit_exam, name='submit_exam'),
 ]

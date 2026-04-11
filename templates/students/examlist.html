@@ -1,0 +1,15 @@
+{% for item in exams %}
+<div>
+    <h3>{{ item.exam.title }}</h3>
+
+    {% if item.can_read %}
+    <a href="{% url 'exam_instructions' item.exam.slug %}">Read Instructions</a>
+    {% else %}
+    <button disabled>Not Available Yet</button>
+    {% endif %}
+
+    {% if item.can_start %}
+    <a href="{% url 'start_exam' item.exam.slug %}">Start Exam</a>
+    {% endif %}
+</div>
+{% endfor %}

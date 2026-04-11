@@ -1,0 +1,247 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ exam.title }}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        body {
+            background: #f1f5f9;
+        }
+
+        .question-transition {
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        input[type="radio"] {
+            accent-color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body>
+    <form style="display:none;">{% csrf_token %}</form>
+
+    <div class="max-w-6xl mx-auto p-6">
+        <div class="bg-white rounded-xl shadow-lg">
+
+            <!-- HEADER -->
+            <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-lg font-bold">{{ exam.title }}</h2>
+                        <p class="text-sm text-gray-500">
+                            Duration: <span id="durationLabel">00:00</span>
+                        </p>
+                    </div>
+
+                    <div class="bg-red-100 px-4 py-2 rounded">
+                        <span id="timerDisplay" class="font-bold text-red-600">00:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BODY -->
+            <div class="p-6">
+
+                <div class="mb-4">
+                    Question <span id="currentQNumber">1</span> of <span id="totalQuestionsSpan">0</span>
+                </div>
+
+                <div id="questionCard" class="bg-gray-50 p-5 rounded">
+                    <div id="dynamicQuestionArea"></div>
+                </div>
+
+                <!-- NAV -->
+                <div class="flex justify-between mt-6">
+                    <button id="prevBtn" class="bg-gray-200 px-4 py-2 rounded">Prev</button>
+                    <button id="nextBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Next</button>
+                </div>
+
+                <button id="submitExamBtn" class="mt-6 w-full bg-green-600 text-white py-3 rounded">
+                    Submit Exam
+                </button>
+
+                <!-- PAGINATION -->
+                <div id="paginationContainer" class="mt-6 flex gap-2 flex-wrap"></div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let questions = [];
+        let totalQuestions = 0;
+        let userAnswers = [];
+        let currentQuestionIndex = 0;
+        let examSubmitted = false;
+
+        let timeRemaining = 0;
+        let timerInterval = null;
+
+        const FETCH_URL = "{% url 'get_exam_data' exam.slug %}";
+        const SAVE_URL = "{% url 'save_answer' exam.slug %}";
+        const SUBMIT_URL = "{% url 'submit_exam' exam.slug %}";
+
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+
+        // LOAD QUESTIONS
+        async function loadQuestions() {
+            const res = await fetch(FETCH_URL);
+            const data = await res.json();
+
+            questions = data.questions;
+            totalQuestions = questions.length;
+            userAnswers = new Array(totalQuestions).fill(null);
+            timeRemaining = data.duration;
+
+            initUI();
+        }
+
+        // TIMER
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    submitExam();
+                } else {
+                    timeRemaining--;
+                    updateTimer();
+                }
+            }, 1000);
+        }
+
+        function updateTimer() {
+            let m = Math.floor(timeRemaining / 60);
+            let s = timeRemaining % 60;
+            document.getElementById("timerDisplay").innerText =
+                `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // RENDER QUESTION
+        function renderQuestion() {
+            let q = questions[currentQuestionIndex];
+
+            let html = `<h3 class="font-semibold mb-4">${escapeHtml(q.text)}</h3>`;
+
+            q.options.forEach((opt, i) => {
+                let checked = userAnswers[currentQuestionIndex] === opt.id ? "checked" : "";
+                html += `
+            <div class="mb-2">
+                <input type="radio" name="q" value="${opt.id}" ${checked}>
+                ${escapeHtml(opt.text)}
+            </div>`;
+            });
+
+            document.getElementById("dynamicQuestionArea").innerHTML = html;
+            document.getElementById("currentQNumber").innerText = currentQuestionIndex + 1;
+
+            attachEvents();
+        }
+
+        // SAVE ANSWER
+        function attachEvents() {
+            document.querySelectorAll("input[type=radio]").forEach(r => {
+                r.onchange = () => {
+                    let val = r.value;
+                    userAnswers[currentQuestionIndex] = val;
+
+                    fetch(SAVE_URL, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCSRFToken()
+                        },
+                        body: JSON.stringify({
+                            question_id: questions[currentQuestionIndex].id,
+                            answer: val
+                        })
+                    });
+                };
+            });
+        }
+
+        // NAV
+        document.getElementById("nextBtn").onclick = () => {
+            if (currentQuestionIndex < totalQuestions - 1) {
+                currentQuestionIndex++;
+                renderQuestion();
+            }
+        };
+
+        document.getElementById("prevBtn").onclick = () => {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderQuestion();
+            }
+        };
+
+        // PAGINATION
+        function buildPagination() {
+            let container = document.getElementById("paginationContainer");
+            container.innerHTML = "";
+
+            for (let i = 0; i < totalQuestions; i++) {
+                let btn = document.createElement("button");
+                btn.innerText = i + 1;
+                btn.className = "px-2 py-1 bg-gray-200 rounded";
+
+                btn.onclick = () => {
+                    currentQuestionIndex = i;
+                    renderQuestion();
+                };
+
+                container.appendChild(btn);
+            }
+        }
+
+        // SUBMIT
+        async function submitExam() {
+            if (examSubmitted) return;
+
+            examSubmitted = true;
+
+            await fetch(SUBMIT_URL, {
+                method: "POST",
+                headers: { "X-CSRFToken": getCSRFToken() }
+            });
+
+            alert("Exam submitted!");
+        }
+
+        // INIT
+        function initUI() {
+            document.getElementById("totalQuestionsSpan").innerText = totalQuestions;
+
+            buildPagination();
+            renderQuestion();
+            startTimer();
+
+            document.getElementById("submitExamBtn").onclick = submitExam;
+        }
+
+        // SECURITY
+        document.addEventListener("contextmenu", e => e.preventDefault());
+        document.addEventListener("copy", e => e.preventDefault());
+
+        // ESCAPE
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, m => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;'
+            }[m]));
+        }
+
+        loadQuestions();
+    </script>
+
+</body>
+</html>

@@ -15,7 +15,7 @@ from .models import (
     PaymentGateway, Transaction, Quiz, QuizQuestion, QuizAnswer, QuizAttempt, QuizResponse,
     Review, SiteConfig, SiteHistoryMilestone, SubscriptionPlan, Subscription, SupportTicket, TicketReply,
     StaffPayroll, StudyGroup, StudyGroupMember, StudyGroupMessage,
-    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry, Testimonial, FeePayment
+    SystemConfiguration, UserProfile, Vendor, BroadcastMessage, ListOfCountry, Testimonial, FeePayment, Exam, ExamQuestion, ExamStatusLog, StudentExamResponse
 )
 
 
@@ -2038,6 +2038,11 @@ class LibraryItemAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+admin.site.register(Exam)
+admin.site.register(ExamQuestion)
+admin.site.register(ExamStatusLog)
+admin.site.register(StudentExamResponse)
 
 
 # ==================== ADMIN SITE BRANDING ====================

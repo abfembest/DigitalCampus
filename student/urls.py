@@ -93,12 +93,12 @@ urlpatterns = [
         views.mark_notification_read, name='mark_notification_read', ),
 
 
-    ####CBT FOR STUDENT #####
-
-    path('exam_list', views.exam_list, name='exam_list'),
-    path('<slug:slug>/instructions/', views.exam_instructions, name='exam_instructions'),
-    path('<slug:slug>/start/', views.start_exam, name='start_exam'),
-    path('<slug:slug>/data/', views.get_exam_data, name='get_exam_data'),
-    path('<slug:slug>/save/', views.save_answer, name='save_answer'),
-    path('<slug:slug>/submit/', views.submit_exam, name='submit_exam'),
+    # ── CBT Examinations ──────────────────────────────────────────────────────
+    path('exam/', views.exam_list, name='exam_list'),
+    path('exam/<slug:slug>/instructions/', views.exam_instructions, name='exam_instructions'),
+    path('exam/<slug:slug>/start/',        views.start_exam,         name='start_exam'),
+    path('exam/<slug:slug>/data/',         views.get_exam_data,      name='get_exam_data'),
+    path('exam/<slug:slug>/save/',         views.save_answer,        name='save_answer'),
+    path('exam/<slug:slug>/flag-tab-switch/', views.flag_tab_switch, name='flag_tab_switch'),
+    path('exam/<slug:slug>/submit/',       views.submit_exam,        name='submit_exam'),
 ]

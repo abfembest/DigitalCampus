@@ -409,8 +409,11 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Duration (minutes)</label>
-                        <input type="number" name="duration_minutes" value="{{ exam.duration_minutes }}" min="1"
-                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                        <div class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-lock text-gray-300 text-xs"></i>
+                            <span id="computed-duration">{{ exam.duration_minutes }}</span> min
+                            <span class="text-xs text-gray-400 ml-1">(auto-computed from start &amp; end time)</span>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Instruction Window (min before start)</label>
@@ -503,23 +506,27 @@
                 <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
                     <h3 class="text-sm font-semibold text-gray-700">Visibility Window</h3>
                 </div>
+                <div class="px-5 py-4 bg-blue-50 border-b border-blue-100 text-xs text-blue-700 flex items-start gap-2">
+                    <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                    <span>Leave both blank to use automatic defaults: <strong>Visible From</strong> = exam start time, <strong>Visible Until</strong> = exam end time. Only set these to override that behaviour.</span>
+                </div>
                 <div class="px-5 py-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                            Visible From
-                            <span class="text-gray-400 font-normal text-xs">(optional — defaults to publish date)</span>
+                            Visible From Override
+                            <span class="text-gray-400 font-normal text-xs">(optional — leave blank to default to exam start time)</span>
                         </label>
-                        <input type="datetime-local" name="visible_from"
-                               value="{% if exam.visible_from %}{{ exam.visible_from|date:'Y-m-d' }}T{{ exam.visible_from|time:'H:i' }}{% endif %}"
+                        <input type="datetime-local" name="visible_from_override"
+                               value="{% if exam.visible_from_override %}{{ exam.visible_from_override|date:'Y-m-d' }}T{{ exam.visible_from_override|time:'H:i' }}{% endif %}"
                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                            Visible Until
-                            <span class="text-gray-400 font-normal text-xs">(optional)</span>
+                            Visible Until Override
+                            <span class="text-gray-400 font-normal text-xs">(optional — leave blank to default to exam end time)</span>
                         </label>
-                        <input type="datetime-local" name="visible_until"
-                               value="{% if exam.visible_until %}{{ exam.visible_until|date:'Y-m-d' }}T{{ exam.visible_until|time:'H:i' }}{% endif %}"
+                        <input type="datetime-local" name="visible_until_override"
+                               value="{% if exam.visible_until_override %}{{ exam.visible_until_override|date:'Y-m-d' }}T{{ exam.visible_until_override|time:'H:i' }}{% endif %}"
                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
                     </div>
                 </div>
@@ -834,6 +841,22 @@ function switchTab(id) {
     if (tab && document.getElementById('tab-' + tab)) {
         switchTab(tab);
     }
+})();
+
+// Live-update the computed duration display when start/end times change
+(function () {
+    function updateDuration() {
+        const startVal = document.querySelector('input[name="start_time"]')?.value;
+        const endVal   = document.querySelector('input[name="end_time"]')?.value;
+        const display  = document.getElementById('computed-duration');
+        if (!display || !startVal || !endVal) return;
+        const [sh, sm] = startVal.split(':').map(Number);
+        const [eh, em] = endVal.split(':').map(Number);
+        const mins = (eh * 60 + em) - (sh * 60 + sm);
+        display.textContent = mins > 0 ? mins : '—';
+    }
+    document.querySelector('input[name="start_time"]')?.addEventListener('change', updateDuration);
+    document.querySelector('input[name="end_time"]')?.addEventListener('change', updateDuration);
 })();
 </script>
 {% endblock %}

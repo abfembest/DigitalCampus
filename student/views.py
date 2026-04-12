@@ -3078,182 +3078,326 @@ def academic_records(request):
  
     return render(request, 'students/academic_records.html', context)
 
-def exam_listOLD(request):
-    return render(request,'students/exams.html')
+# ══════════════════════════════════════════════════════════════════════════════
+#  EXAM VIEWS  —  drop-in replacements for the exam section in views.py
+#
+#  Changes from previous version:
+#   - exam_instructions: passes standard_rules list + exam_end_iso
+#   - start_exam:        passes exam_end_iso (needed by exams.html timer)
+#   - exam_list:         unchanged (still correct)
+#   - get_exam_data:     unchanged
+#   - save_answer:       unchanged
+#   - flag_tab_switch:   unchanged
+#   - submit_exam:       unchanged
+# ══════════════════════════════════════════════════════════════════════════════
 
+import json
+import random
+
+from django.contrib.auth.decorators import login_required
+from django.http                    import JsonResponse
+from django.shortcuts               import get_object_or_404, redirect, render
+from django.utils                   import timezone
+
+
+# ─── Standard exam rules shown on instructions page ───────────────────────────
+STANDARD_EXAM_RULES = [
+    "Do not refresh or close the browser window during the exam.",
+    "All answers are auto-saved as you select them.",
+    "The timer will automatically submit your answers when time runs out.",
+    "Switching browser tabs is logged and may be reported to your invigilator.",
+    "Ensure you have a stable internet connection before starting.",
+    "Do not communicate with other candidates during the exam.",
+    "The Back button on your browser is disabled once the exam begins.",
+]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  EXAM LIST / TIMETABLE
+# ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
 def exam_list(request):
     now = timezone.now()
 
-    exams = Exam.objects.filter(
-        status=Exam.PUBLISHED,
-        is_active=True
+    exams = (
+        Exam.objects
+        .filter(status=Exam.PUBLISHED, is_active=True)
+        .select_related('course', 'academic_session', 'department')
+        .order_by('exam_date', 'start_time')
     )
 
-    context = []
+    context_items = []
     for exam in exams:
-        context.append({
-            "exam": exam,
-            "can_read": now >= exam.instructions_open_at,
-            "can_start": now >= exam.exam_start_datetime,
+        if now < exam.visible_from:
+            continue
+        if now > exam.visible_until:
+            continue
+
+        instructions_at = exam.instructions_open_at
+        start_dt        = exam.exam_start_datetime
+        end_dt          = exam.exam_end_datetime
+
+        can_read  = now >= instructions_at
+        can_start = now >= start_dt
+        is_live   = start_dt <= now < end_dt
+
+        student_status = 'not_started'
+        response = StudentExamResponse.objects.filter(
+            exam=exam, student=request.user
+        ).first()
+        if response:
+            student_status = response.status
+
+        context_items.append({
+            'exam':                     exam,
+            'can_read':                 can_read,
+            'can_start':                can_start,
+            'is_live':                  is_live,
+            'student_status':           student_status,
+            'instructions_open_at_iso': instructions_at.isoformat(),
+            'exam_start_datetime_iso':  start_dt.isoformat(),
+            'exam_end_datetime_iso':    end_dt.isoformat(),
         })
 
-    return render(request, "students/examlist.html", {"exams": context})
+    return render(request, 'students/examlist.html', {'exams': context_items})
 
-#Instruction page
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  INSTRUCTION PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+
 @login_required
 def exam_instructions(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
+    now  = timezone.now()
 
-    if timezone.now() < exam.instructions_open_at:
-        return redirect("exam_list")
+    if now < exam.instructions_open_at:
+        return redirect('students:exam_list')
 
-    response, created = StudentExamResponse.objects.get_or_create(
+    if now >= exam.exam_end_datetime:
+        return redirect('students:exam_list')
+
+    response, _ = StudentExamResponse.objects.get_or_create(
         exam=exam,
         student=request.user,
-        defaults={"status": StudentExamResponse.INSTRUCTIONS}
+        defaults={'status': StudentExamResponse.INSTRUCTIONS},
     )
+    if response.status == StudentExamResponse.NOT_STARTED:
+        response.status = StudentExamResponse.INSTRUCTIONS
+    if not response.instructions_opened_at:
+        response.instructions_opened_at = now
+    response.save(update_fields=['status', 'instructions_opened_at'])
 
-    response.instructions_opened_at = timezone.now()
-    response.save()
+    secs = max(0, int((exam.exam_start_datetime - now).total_seconds()))
+    h, m, s = min(secs // 3600, 99), (secs % 3600) // 60, secs % 60
 
-    return render(request, "exams/instructions.html", {
-        "exam": exam,
-        "start_time": exam.exam_start_datetime
+    # Pre-render units as (value_str, label) pairs for the template
+    countdown_units = [
+        (str(h).zfill(2), 'hrs'),
+        (str(m).zfill(2), 'min'),
+        (str(s).zfill(2), 'sec'),
+    ]
+
+    return render(request, 'students/examinstructions.html', {
+        'exam':            exam,
+        'exam_start_iso':  exam.exam_start_datetime.isoformat(),
+        'exam_end_iso':    exam.exam_end_datetime.isoformat(),
+        'countdown_units': countdown_units,
+        'standard_rules':  STANDARD_EXAM_RULES,
     })
 
 
-###  START EXAMS 
-import random
+# ─────────────────────────────────────────────────────────────────────────────
+#  START EXAM  (assigns questions, then renders CBT page)
+# ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
 def start_exam(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
+    now  = timezone.now()
 
-    if timezone.now() < exam.exam_start_datetime:
-        return redirect("exam_instructions", slug=slug)
+    if now < exam.exam_start_datetime:
+        return redirect('students:exam_instructions', slug=slug)
+    if now >= exam.exam_end_datetime:
+        return redirect('students:exam_list')
 
-    response = get_object_or_404(
-        StudentExamResponse,
+    response, _ = StudentExamResponse.objects.get_or_create(
         exam=exam,
-        student=request.user
+        student=request.user,
+        defaults={'status': StudentExamResponse.INSTRUCTIONS},
     )
+    if response.status in (StudentExamResponse.SUBMITTED, StudentExamResponse.GRADED):
+        return redirect('students:exam_list')
 
     if not response.assigned_question_ids:
         questions = list(exam.questions.filter(is_active=True))
-
         if exam.shuffle_questions:
             random.shuffle(questions)
-
         if exam.questions_per_student:
             questions = questions[:exam.questions_per_student]
 
-        assigned_ids = []
         options_map = {}
-
         for q in questions:
-            assigned_ids.append(q.id)
-
             opts = q.options.copy()
             if exam.shuffle_options:
                 random.shuffle(opts)
+            options_map[str(q.id)] = [opt['id'] for opt in opts]
 
-            options_map[str(q.id)] = [opt["id"] for opt in opts]
-
-        response.assigned_question_ids = assigned_ids
+        response.assigned_question_ids  = [q.id for q in questions]
         response.assigned_options_order = options_map
+        response.status                 = StudentExamResponse.IN_PROGRESS
+        response.exam_started_at        = now
+        response.save(update_fields=[
+            'assigned_question_ids', 'assigned_options_order',
+            'status', 'exam_started_at',
+        ])
+    elif response.status != StudentExamResponse.IN_PROGRESS:
         response.status = StudentExamResponse.IN_PROGRESS
-        response.exam_started_at = timezone.now()
-        response.save()
+        response.save(update_fields=['status'])
 
-    return render(request, "exams/exam_page.html", {"exam": exam})
-
-
-
-######  FETCH EXAM QUESTIONS 
-
-from django.http import JsonResponse
-
-@login_required
-def get_exam_data(request, slug):
-    exam = get_object_or_404(Exam, slug=slug)
-    response = get_object_or_404(StudentExamResponse, exam=exam, student=request.user)
-
-    questions_data = []
-
-    for qid in response.assigned_question_ids:
-        q = exam.questions.get(id=qid)
-
-        options = []
-        for opt in q.options:
-            if opt["id"] in response.assigned_options_order[str(qid)]:
-                options.append({
-                    "id": opt["id"],
-                    "text": opt["text"]
-                })
-
-        questions_data.append({
-            "id": q.id,
-            "text": q.question_text,
-            "options": options
-        })
-
-    return JsonResponse({
-        "questions": questions_data,
-        "duration": exam.duration_minutes * 60
+    return render(request, 'students/exams.html', {
+        'exam':         exam,
+        'exam_end_iso': exam.exam_end_datetime.isoformat(),
     })
 
 
-#######  AUTO-SAVE ANSWERS
+# ─────────────────────────────────────────────────────────────────────────────
+#  GET EXAM DATA  (JSON — questions + server-authoritative time remaining)
+# ─────────────────────────────────────────────────────────────────────────────
 
-import json
+@login_required
+def get_exam_data(request, slug):
+    exam     = get_object_or_404(Exam, slug=slug)
+    response, _ = StudentExamResponse.objects.get_or_create(
+    exam=exam,
+    student=request.user,
+    defaults={'status': StudentExamResponse.INSTRUCTIONS},
+)
+    questions_data = []
+    for qid in response.assigned_question_ids:
+        try:
+            q = exam.questions.get(id=qid)
+        except Exception:
+            continue
+
+        ordered_ids = response.assigned_options_order.get(str(qid), [])
+        opt_lookup  = {opt['id']: opt for opt in q.options}
+        options     = [
+            {'id': oid, 'text': opt_lookup[oid]['text']}
+            for oid in ordered_ids
+            if oid in opt_lookup
+        ]
+
+        questions_data.append({
+            'id':        q.id,
+            'text':      q.question_text,
+            'options':   options,
+            'marks':     str(q.marks),
+            'image_url': request.build_absolute_uri(q.image.url) if q.image else None,
+        })
+
+    now       = timezone.now()
+    total_sec = exam.duration_minutes * 60
+    wall_secs = max(0, int((exam.exam_end_datetime - now).total_seconds()))
+
+    if response.exam_started_at:
+        elapsed   = int((now - response.exam_started_at).total_seconds())
+        remaining = max(0, total_sec - elapsed)
+    else:
+        remaining = total_sec
+
+    remaining = min(remaining, wall_secs)
+
+    return JsonResponse({
+        'questions':      questions_data,
+        'time_remaining': remaining,
+        'duration':       total_sec,
+        'saved_answers':  response.answers,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  AUTO-SAVE SINGLE ANSWER
+# ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
 def save_answer(request, slug):
-    if request.method == "POST":
-        data = json.loads(request.body)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
 
-        response = StudentExamResponse.objects.get(
-            exam__slug=slug,
-            student=request.user
-        )
+    data     = json.loads(request.body)
+    response = get_object_or_404(StudentExamResponse, exam__slug=slug, student=request.user)
 
-        response.answers[str(data["question_id"])] = data["answer"]
-        response.last_autosave_at = timezone.now()
-        response.save()
+    if response.status not in (
+        StudentExamResponse.INSTRUCTIONS, StudentExamResponse.IN_PROGRESS
+    ):
+        return JsonResponse({'error': 'Exam not in progress'}, status=400)
 
-        return JsonResponse({"status": "saved"})
+    response.answers[str(data['question_id'])] = data['answer']
+    response.last_autosave_at = timezone.now()
+    response.save(update_fields=['answers', 'last_autosave_at'])
+
+    return JsonResponse({'status': 'saved'})
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  FLAG TAB SWITCH (security — silent)
+# ─────────────────────────────────────────────────────────────────────────────
 
-##### SUBMIT AND GRADE SECURELY
+@login_required
+def flag_tab_switch(request, slug):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    try:
+        data     = json.loads(request.body)
+        response = StudentExamResponse.objects.filter(
+            exam__slug=slug, student=request.user
+        ).first()
+        if response:
+            response.tab_switch_count = data.get('count', response.tab_switch_count + 1)
+            response.save(update_fields=['tab_switch_count'])
+    except Exception:
+        pass
+    return JsonResponse({'ok': True})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SUBMIT + AUTO-GRADE
+# ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
 def submit_exam(request, slug):
-    response = StudentExamResponse.objects.get(
-        exam__slug=slug,
-        student=request.user
-    )
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
 
-    exam = response.exam
-    total = 0
+    response = get_object_or_404(StudentExamResponse, exam__slug=slug, student=request.user)
+
+    if response.status in (StudentExamResponse.SUBMITTED, StudentExamResponse.GRADED):
+        return JsonResponse({'status': 'already_submitted'})
+
+    exam  = response.exam
+    total = 0.0
 
     for qid in response.assigned_question_ids:
-        q = exam.questions.get(id=qid)
-        answer = response.answers.get(str(qid))
-
-        correct = [opt["id"] for opt in q.options if opt["is_correct"]]
-
-        if answer in correct:
+        try:
+            q = exam.questions.get(id=qid)
+        except Exception:
+            continue
+        answer  = response.answers.get(str(qid))
+        correct = [opt['id'] for opt in q.options if opt.get('is_correct')]
+        if answer and answer in correct:
             total += float(q.marks)
 
-    response.total_score = total
-    response.status = StudentExamResponse.SUBMITTED
-    response.submitted_at = timezone.now()
-    response.save()
+    now = timezone.now()
+    response.total_score    = total
+    response.status         = StudentExamResponse.SUBMITTED
+    response.submitted_at   = now
+    if response.exam_started_at:
+        response.time_spent_seconds = int((now - response.exam_started_at).total_seconds())
 
-    return JsonResponse({"status": "submitted"})
+    response.save(update_fields=[
+        'total_score', 'status', 'submitted_at', 'time_spent_seconds'
+    ])
 
-
-
+    return JsonResponse({'status': 'submitted', 'score': total})

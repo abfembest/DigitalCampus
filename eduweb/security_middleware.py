@@ -17,6 +17,7 @@ _PASSTHROUGH_PATHS = {
     '/reset-password/',
     '/static/',
     '/media/',
+    '/admin/',
 }
 
 

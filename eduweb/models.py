@@ -4436,8 +4436,9 @@ class Exam(models.Model):
     # =========================================================================
     # TIMETABLE — SCHEDULING
     # ─────────────────────────────────────────────────────────────────────────
-    # instruction_window_minutes: how many minutes before start_time the
-    # instruction page unlocks.  Countdown hits zero → questions auto-unlock.
+    # duration_minutes is a @property computed from start_time/end_time.
+    # instruction_window_minutes defaults to 10 — the instruction page unlocks
+    # that many minutes before start_time. Countdown hits zero → auto-unlock.
     # =========================================================================
     exam_date                  = models.DateField(db_index=True)
     start_time                 = models.TimeField(
@@ -4445,10 +4446,6 @@ class Exam(models.Model):
     )
     end_time                   = models.TimeField(
         help_text="Exam end time. Server fires auto-submit at this time.",
-    )
-    duration_minutes           = models.PositiveIntegerField(
-        default=120,
-        help_text="Total duration in minutes — drives the student-facing timer.",
     )
     instruction_window_minutes = models.PositiveIntegerField(
         default=10,
@@ -4578,11 +4575,25 @@ class Exam(models.Model):
     # =========================================================================
     # STUDENT VISIBILITY WINDOW
     # ─────────────────────────────────────────────────────────────────────────
-    # Decoupled from approval — published but not yet visible is valid
-    # (e.g. published 2 weeks early; visible_from = exam week).
+    # Leave both blank → auto-defaults:
+    #   visible_from  = exam_start_datetime  (students see it when exam opens)
+    #   visible_until = exam_end_datetime    (hidden after exam closes)
+    # Set an override to publish early or keep visible longer.
     # =========================================================================
-    visible_from  = models.DateTimeField(null=True, blank=True)
-    visible_until = models.DateTimeField(null=True, blank=True)
+    visible_from_override  = models.DateTimeField(
+        null=True, blank=True,
+        help_text=(
+            "Optional. Override when students can first see this exam. "
+            "Leave blank to default to exam_start_datetime."
+        ),
+    )
+    visible_until_override = models.DateTimeField(
+        null=True, blank=True,
+        help_text=(
+            "Optional. Override when this exam disappears from student view. "
+            "Leave blank to default to exam_end_datetime."
+        ),
+    )
 
     # =========================================================================
     # CLASH DETECTION
@@ -4647,15 +4658,56 @@ class Exam(models.Model):
             f"{self.exam_date} {self.start_time:%H:%M}–{self.end_time:%H:%M}"
         )
 
+    # ── Validation ────────────────────────────────────────────────────────────
+
+    def clean(self):
+        super().clean()
+        import datetime as dt
+        errors = {}
+
+        # 1. end_time must be after start_time
+        if self.start_time and self.end_time:
+            if self.end_time <= self.start_time:
+                errors['end_time'] = "end_time must be after start_time."
+            else:
+                dur = self.duration_minutes  # computed property — safe here
+                # 2. instruction window must be positive and smaller than exam duration
+                if self.instruction_window_minutes < 1:
+                    errors['instruction_window_minutes'] = (
+                        "instruction_window_minutes must be at least 1."
+                    )
+                elif self.instruction_window_minutes >= dur:
+                    errors['instruction_window_minutes'] = (
+                        f"instruction_window_minutes ({self.instruction_window_minutes}) "
+                        f"must be less than exam duration ({dur} min)."
+                    )
+
+        # 3. pass_mark may not exceed total_marks
+        if self.pass_mark is not None and self.total_marks:
+            if self.pass_mark > self.total_marks:
+                errors['pass_mark'] = "pass_mark cannot exceed total_marks."
+
+        # 4. visible_until_override must be after visible_from_override when both set
+        if self.visible_from_override and self.visible_until_override:
+            if self.visible_until_override <= self.visible_from_override:
+                errors['visible_until_override'] = (
+                    "visible_until_override must be after visible_from_override."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
     def save(self, *args, **kwargs):
         if not self.reference_code:
             year = self.exam_date.year if self.exam_date else timezone.now().year
             self.reference_code = f"EX-{year}-{secrets.token_hex(3).upper()}"
         if not self.slug:
             self.slug = unique_slug(Exam, self.reference_code)
+        # Run full model validation on every save (not just via forms/admin)
+        self.full_clean()
         super().save(*args, **kwargs)
 
-    # ── Computed datetimes ─────────────────────────────────────────────────────
+    # ── Computed datetimes ────────────────────────────────────────────────────
 
     @property
     def exam_start_datetime(self):
@@ -4672,12 +4724,22 @@ class Exam(models.Model):
         return make_aware(datetime.datetime.combine(self.exam_date, self.end_time))
 
     @property
+    def duration_minutes(self) -> int:
+        """
+        Auto-computed from start_time and end_time. Never stored in the DB.
+        The student-facing timer and get_exam_data view both use this.
+        """
+        import datetime
+        start_dt = datetime.datetime.combine(datetime.date.today(), self.start_time)
+        end_dt   = datetime.datetime.combine(datetime.date.today(), self.end_time)
+        return int((end_dt - start_dt).total_seconds() // 60)
+
+    @property
     def instructions_open_at(self):
         """
         When the instruction page unlocks for students.
-        = exam_start_datetime − instruction_window_minutes
-        At this point the student sees the countdown to exam_start_datetime.
-        When it hits zero the backend unlocks questions automatically.
+        = exam_start_datetime − instruction_window_minutes (default 10 min).
+        The countdown reads down to exam_start_datetime; questions auto-unlock at zero.
         """
         import datetime
         return self.exam_start_datetime - datetime.timedelta(
@@ -4685,17 +4747,34 @@ class Exam(models.Model):
         )
 
     @property
+    def visible_from(self):
+        """
+        When students can first see this exam in their list.
+        Uses visible_from_override if set, otherwise defaults to exam_start_datetime.
+        """
+        return self.visible_from_override or self.exam_start_datetime
+
+    @property
+    def visible_until(self):
+        """
+        When this exam disappears from student view.
+        Uses visible_until_override if set, otherwise defaults to exam_end_datetime.
+        """
+        return self.visible_until_override or self.exam_end_datetime
+
+    @property
     def is_published(self):
         return self.status == self.PUBLISHED and self.is_active
 
     @property
     def is_visible_to_students(self):
+        """True only when published, active, and within the visibility window."""
         now = timezone.now()
         if not self.is_published:
             return False
-        if self.visible_from and now < self.visible_from:
+        if now < self.visible_from:
             return False
-        if self.visible_until and now > self.visible_until:
+        if now > self.visible_until:
             return False
         return True
 
@@ -4879,13 +4958,58 @@ class ExamQuestion(models.Model):
             f"({self.get_difficulty_display()}) — {self.question_text[:80]}"
         )
 
+    def clean(self):
+        super().clean()
+        errors = {}
+
+        if self.question_type in (self.MCQ, self.TRUE_FALSE, self.MULTI_SELECT):
+            if not self.options:
+                errors['options'] = (
+                    f"{self.get_question_type_display()} questions require at least one option."
+                )
+            else:
+                correct = [o for o in self.options if o.get("is_correct")]
+                if not correct:
+                    errors['options'] = "At least one option must be marked is_correct."
+                elif self.question_type == self.MCQ and len(correct) != 1:
+                    errors['options'] = "MCQ questions must have exactly one correct option."
+                elif self.question_type == self.TRUE_FALSE:
+                    if len(self.options) != 2:
+                        errors['options'] = "True/False questions must have exactly 2 options."
+                    if len(correct) != 1:
+                        errors['options'] = "True/False questions must have exactly one correct option."
+
+        if self.question_type in (self.SHORT_ANSWER, self.ESSAY) and self.options:
+            errors['options'] = (
+                f"{self.get_question_type_display()} questions must not have options."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = unique_slug(
                 ExamQuestion,
                 f"eq-{self.exam_id}-{secrets.token_hex(4)}",
             )
+        self.full_clean()
         super().save(*args, **kwargs)
+
+    def safe_options_for_student(self, shuffled_order: list = None) -> list:
+        """
+        Returns this question's options stripped of is_correct.
+        Pass the shuffled_order list (of option IDs) from
+        StudentExamResponse.assigned_options_order to preserve per-student shuffle.
+
+        ALWAYS use this method when sending question data to the frontend.
+        Never send raw .options — it contains is_correct flags.
+        """
+        clean_opts = [{"id": o["id"], "text": o["text"]} for o in self.options]
+        if shuffled_order:
+            order_map = {oid: idx for idx, oid in enumerate(shuffled_order)}
+            clean_opts.sort(key=lambda o: order_map.get(o["id"], 9999))
+        return clean_opts
 
 
 # =============================================================================

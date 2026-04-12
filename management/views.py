@@ -1935,7 +1935,7 @@ def lms_course_create(request):
         form = LMSCourseForm(request.POST, request.FILES)
         if form.is_valid():
             course = form.save()
-            
+
             # Create audit log
             AuditLog.objects.create(
                 user=request.user,
@@ -1944,7 +1944,20 @@ def lms_course_create(request):
                 object_id=course.id,
                 description=f'Created LMS course: {course.title}'
             )
-            
+
+            # Notify the assigned instructor
+            if course.instructor and course.instructor != request.user:
+                Notification.objects.create(
+                    user=course.instructor,
+                    notification_type='system',
+                    title=f'Course Assigned: {course.title}',
+                    message=(
+                        f'You have been assigned as instructor for "{course.title}". '
+                        f'You can now add content, lessons, and assessments.'
+                    ),
+                    link=f'/instructor/courses/{course.slug}/manage/',
+                )
+
             messages.success(request, f'LMS course "{course.title}" created successfully.')
             return redirect('management:lms_courses_list')
     else:

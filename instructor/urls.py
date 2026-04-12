@@ -276,5 +276,8 @@ urlpatterns = [
         name='exam_import_questions',
     ),
 
+    path('courses/<slug:slug>/manage/', views.course_manage, name='course_manage'),
+    path('manage/', views.course_manage_default, name='course_manage_default'),
+
 
 ]

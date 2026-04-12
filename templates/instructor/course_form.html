@@ -162,7 +162,7 @@
                     </div>
 
                     <!-- ── Enrollment Settings (hidden when academic-linked) ─── -->
-                    <div id="wrap-enrollment">
+                    {% comment %} <div id="wrap-enrollment">
                         <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Enrollment Settings</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                             <div>
@@ -179,7 +179,7 @@
                                 {{ form.enrollment_end_date }}
                             </div>
                         </div>
-                    </div>
+                    </div> {% endcomment %}
 
                     <!-- ── Settings ──────────────────────────────────────────── -->
                     <div>
@@ -208,7 +208,7 @@
                                 </div>
                             </div>
 
-                            <label class="flex items-center cursor-pointer gap-2">
+                            {% comment %} <label class="flex items-center cursor-pointer gap-2">
                                 {{ form.is_published }}
                                 <span class="text-sm font-medium text-gray-700">Publish Course (make visible to students)</span>
                             </label>
@@ -219,7 +219,9 @@
                                     {{ form.is_featured }}
                                     <span class="text-sm font-medium text-gray-700">Feature this course</span>
                                 </label>
-                            </div>
+                            </div> {% endcomment %}
+
+                            <p class="text-xs text-gray-500 italic">Publishing and featuring are managed by the admin after review.</p>
 
                         </div>
                     </div>
@@ -287,11 +289,11 @@
                        class="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                         <i class="fas fa-bullhorn w-4 sm:w-5 mr-2 sm:mr-3"></i> New Announcement
                     </a>
-                    <hr class="my-1.5 sm:my-2">
+                    {% comment %} <hr class="my-1.5 sm:my-2">
                     <a href="{% url 'instructor:course_delete' course.slug %}"
                        class="flex items-center px-3 sm:px-4 py-2 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
                         <i class="fas fa-trash w-4 sm:w-5 mr-2 sm:mr-3"></i> Delete Course
-                    </a>
+                    </a> {% endcomment %}
                 </div>
             </div>
 

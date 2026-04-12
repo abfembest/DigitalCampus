@@ -894,7 +894,7 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'assignments' in request.path or 'quizzes' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-tasks w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Tasks</span>
+                                <span class="ml-3">Assessment</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
@@ -1063,82 +1063,40 @@
                         </div>
                     </div>
 
-                    <!-- Current Course Context (Only show if viewing a specific course) -->
+                    <!-- Active course chip — shown when a course is in context, hidden otherwise -->
                     {% if course %}
-                    <div class="mb-1">
-                        <div class="py-2 px-4 text-xs uppercase tracking-wider text-white/60 font-semibold mt-4">
-                            Current Course
+                    <div class="mb-1 bg-white/10 rounded-lg px-3 py-2.5 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-white truncate leading-tight">{{ course.title|truncatechars:26 }}</p>
+                            <p class="text-[10px] text-white/60 truncate">{{ course.code }}</p>
                         </div>
-                        <div class="mb-1 bg-white/5 rounded-lg p-3">
-                            <p class="text-sm font-semibold truncate">{{ course.title }}</p>
-                            <p class="text-xs text-white/70 truncate">{{ course.code }}</p>
-                        </div>
-
-                        <!-- Wrap the links in a styled container -->
-                        <div class="bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20 space-y-1">
-                            <a href="{% url 'instructor:course_edit' course.slug %}"
-                               class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-edit w-5 mr-3" aria-hidden="true"></i>
-                                <span>Edit Course</span>
-                            </a>
-
-                            <a href="{% url 'instructor:lesson_list' course.slug %}"
-                               class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-film w-5 mr-3" aria-hidden="true"></i>
-                                <span>Lessons & Content</span>
-                            </a>
-
-                            <a href="{% url 'instructor:students_list' course.slug %}"
-                               class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-user-graduate w-5 mr-3" aria-hidden="true"></i>
-                                <span>Students</span>
-                            </a>
-
-                            <a href="{% url 'instructor:announcement_list' course.slug %}"
-                               class="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
-                                      {% if 'announcements' in request.path %}bg-white/20{% endif %}">
-                                <div class="flex items-center">
-                                    <i class="fas fa-bullhorn w-5 mr-3" aria-hidden="true"></i>
-                                    <span>Announcements</span>
-                                </div>
-                            </a>
-
-                            <a href="{% url 'instructor:discussions' course.slug %}"
-                               class="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
-                                      {% if 'discussions' in request.path %}bg-white/20{% endif %}">
-                                <div class="flex items-center">
-                                    <i class="fas fa-comments w-5 mr-3" aria-hidden="true"></i>
-                                    <span>Discussions</span>
-                                </div>
-                            </a>
-                        </div>
+                        <a href="{% url 'instructor:course_list' %}" title="Switch course"
+                           class="flex-shrink-0 w-6 h-6 rounded bg-white/10 hover:bg-white/25 flex items-center justify-center transition-colors">
+                            <i class="fas fa-exchange-alt text-[10px] text-white/70"></i>
+                        </a>
                     </div>
                     {% endif %}
+
+                    <!-- Manage Course — always clickable, auto-selects first course -->
+                    <a href="{% url 'instructor:course_manage_default' %}"
+                       class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm mb-1
+                              {% if request.resolver_match.url_name == 'course_manage' %}bg-white/20{% endif %}">
+                        <i class="fas fa-th-large w-5 mr-3"></i>
+                        <span>Manage Course</span>
+                    </a>
 
                     <!-- Content Management -->
                     <div class="mb-1">
                         <div class="py-2 px-4 text-xs uppercase tracking-wider text-white/60 font-semibold mt-4">
                             Content
                         </div>
-                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
-                            <div class="flex items-center">
-                                <i class="fas fa-play-circle w-5 mr-3" aria-hidden="true"></i>
-                                <span>Lessons</span>
-                            </div>
-                            <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
-                        </button>
-                        <div id="lessonsMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
-                            {% if course %}
-                            <a href="{% url 'instructor:lesson_create' course.slug %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-plus mr-2 w-4" aria-hidden="true"></i> Add Lesson
-                            </a>
-                            <a href="{% url 'instructor:section_create' course.slug %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm">
-                                <i class="fas fa-folder-plus mr-2 w-4" aria-hidden="true"></i> Add Section
-                            </a>
-                            {% else %}
-                            <span class="block py-2 px-4 text-sm text-white/50">Select a course first</span>
-                            {% endif %}
-                        </div>
+                        <!-- Always clickable — auto-selects first course and opens content tab -->
+                        <a href="{% url 'instructor:course_manage_default' %}?tab=content"
+                           class="flex items-center py-2.5 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
+                                  {% if request.resolver_match.url_name == 'course_manage' and request.GET.tab == 'content' %}bg-white/20{% endif %}">
+                            <i class="fas fa-layer-group w-5 mr-3" aria-hidden="true"></i>
+                            <span>Lessons & Sections</span>
+                        </a>
                     </div>
 
                     <!-- Assessments -->

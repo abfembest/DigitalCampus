@@ -1,5 +1,6 @@
 import json
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Avg, Sum, Q, F
@@ -120,10 +121,197 @@ def course_list(request):
     ).annotate(
         enrollment_count=Count('enrollments')
     ).select_related('category').order_by('-created_at')
-    
+
     return render(request, 'instructor/course_list.html', {
-        'courses': courses
+        'courses': courses,
+        'course': courses.first(),   # sidebar uses this as the default active course
     })
+
+@login_required(login_url='auth')
+@instructor_required
+def course_manage_default(request):
+    """
+    Redirects to course_manage for the first course the instructor owns.
+    Used by sidebar links so no pre-selected course is ever needed.
+    """
+    tab = request.GET.get('tab', 'overview')
+    first_course = LMSCourse.objects.filter(instructor=request.user).order_by('title').first()
+    if first_course:
+        return redirect(f"{reverse('instructor:course_manage', kwargs={'slug': first_course.slug})}?tab={tab}")
+    # No courses yet — send to course list with a helpful message
+    messages.info(request, "Create your first course to get started.")
+    return redirect('instructor:course_list')
+
+
+@login_required(login_url='auth')
+@instructor_required
+def course_manage(request, slug=None):
+    """
+    Single unified page that consolidates:
+      - Overview / Edit Course     (tab: overview)
+      - Content / Lessons+Sections (tab: content)
+      - Assessments: Quiz, Assignment, Exam  (tab: assessments)
+      - Students                   (tab: students)
+      - Announcements              (tab: announcements)
+      - Discussions                (tab: discussions)
+
+    All forms POST to their existing dedicated URLs — this view only
+    serves the GET and passes all the data needed to render every tab.
+    """
+    # Support ?course=<id> switcher from the dropdown on the manage page
+    course_id = request.GET.get('course')
+    if course_id:
+        course = get_object_or_404(LMSCourse, id=course_id, instructor=request.user)
+        return redirect('instructor:course_manage', slug=course.slug)
+
+    course = get_object_or_404(LMSCourse, slug=slug, instructor=request.user)
+    active_tab = request.GET.get('tab', 'overview')
+ 
+    # ── All courses for the switcher dropdown ──────────────────────────────
+    all_courses = LMSCourse.objects.filter(
+        instructor=request.user
+    ).order_by('title')
+ 
+    # ── TAB: overview ─────────────────────────────────────────────────────
+    course_form = CourseForm(instance=course)
+ 
+    stats = {
+        'total_students': course.enrollments.count(),
+        'total_lessons':  course.lessons.count(),
+        'total_sections': course.sections.count(),
+    }
+ 
+    # ── TAB: content ──────────────────────────────────────────────────────
+    sections = course.sections.prefetch_related(
+        'lessons'
+    ).order_by('display_order')
+ 
+    all_lessons  = course.lessons.all()
+    video_count  = all_lessons.filter(lesson_type='video').count()
+    quiz_count   = all_lessons.filter(lesson_type='quiz').count()
+ 
+    # Inline lesson / section forms for modals
+    lesson_form  = LessonForm(course=course)
+    section_form = SectionForm()
+ 
+    # ── TAB: assessments ──────────────────────────────────────────────────
+    quiz_lessons = course.lessons.filter(
+        lesson_type='quiz'
+    ).prefetch_related(
+        'quizzes__questions'
+    ).order_by('display_order')
+ 
+    assignment_lessons = course.lessons.filter(
+        lesson_type='assignment'
+    ).prefetch_related(
+        'assignments__submissions'
+    ).order_by('display_order')
+ 
+    # Exams that belong to this course
+    try:
+        course_exams = Exam.objects.filter(
+            course=course,
+            created_by=request.user
+        ).order_by('-created_at')
+    except Exception:
+        course_exams = Exam.objects.filter(
+            created_by=request.user
+        ).order_by('-created_at')[:10]
+ 
+    # Flat list of quiz-lesson slugs for the legacy "Manage Quizzes" button
+    lessons_for_quiz = list(quiz_lessons)
+ 
+    # Blank forms for modals
+    quiz_form       = QuizForm()
+    assignment_form_modal = AssignmentForm()
+ 
+    # ── TAB: students ─────────────────────────────────────────────────────
+    enrollments = course.enrollments.select_related(
+        'student'
+    ).order_by('-enrolled_at')
+ 
+    enrollments_count           = enrollments.count()
+    active_enrollments_count    = enrollments.filter(status='active').count()
+    completed_enrollments_count = enrollments.filter(status='completed').count()
+    pending_submissions_count   = AssignmentSubmission.objects.filter(
+        assignment__lesson__course=course,
+        status='submitted'
+    ).count()
+ 
+    # Students NOT yet enrolled — for the enrol modal dropdown
+    enrolled_ids = enrollments.values_list('student_id', flat=True)
+    available_students = User.objects.filter(
+        is_active=True
+    ).exclude(
+        id__in=enrolled_ids
+    ).exclude(
+        id=request.user.id
+    ).order_by('first_name', 'last_name')
+ 
+    # ── TAB: announcements ────────────────────────────────────────────────
+    announcements = Announcement.objects.filter(
+        course=course
+    ).order_by('-publish_date')
+ 
+    announcement_form = AnnouncementForm()
+ 
+    # ── TAB: discussions ──────────────────────────────────────────────────
+    discussions_qs = Discussion.objects.filter(
+        course=course
+    ).select_related('author').prefetch_related(
+        'replies'
+    ).order_by('-is_pinned', '-created_at')
+ 
+    discussions_count = discussions_qs.count()
+ 
+    # ── Today's date for enrol-student modal default ───────────────────────
+    from datetime import date
+    today = date.today().isoformat()
+ 
+    context = {
+        # navigation / switcher
+        'course':       course,
+        'all_courses':  all_courses,
+        'active_tab':   active_tab,
+ 
+        # overview
+        'course_form': course_form,
+        'stats':       stats,
+ 
+        # content
+        'sections':     sections,
+        'video_count':  video_count,
+        'quiz_count':   quiz_count,
+        'lesson_form':  lesson_form,
+        'section_form': section_form,
+ 
+        # assessments
+        'quiz_lessons':        quiz_lessons,
+        'assignment_lessons':  assignment_lessons,
+        'course_exams':        course_exams,
+        'lessons_for_quiz':    lessons_for_quiz,
+        'quiz_form':           quiz_form,
+        'assignment_form_modal': assignment_form_modal,
+ 
+        # students
+        'enrollments':                  enrollments,
+        'enrollments_count':            enrollments_count,
+        'active_enrollments_count':     active_enrollments_count,
+        'completed_enrollments_count':  completed_enrollments_count,
+        'pending_submissions_count':    pending_submissions_count,
+        'available_students':           available_students,
+        'today':                        today,
+ 
+        # announcements
+        'announcements':    announcements,
+        'announcement_form': announcement_form,
+ 
+        # discussions
+        'discussions':       discussions_qs,
+        'discussions_count': discussions_count,
+    }
+ 
+    return render(request, 'instructor/course_manage.html', context)
 
 
 @login_required(login_url='auth')
@@ -244,25 +432,8 @@ def course_objectives(request, slug):
 @login_required(login_url='auth')
 @instructor_required
 def course_delete(request, slug):
-    """Delete course using slug"""
-    course = get_object_or_404(
-        LMSCourse,
-        slug=slug,
-        instructor=request.user
-    )
-    
-    if request.method == 'POST':
-        course_title = course.title
-        course.delete()
-        messages.success(
-            request,
-            f'Course "{course_title}" deleted successfully!'
-        )
-        return redirect('instructor:course_list')
-    
-    return render(request, 'instructor/course_confirm_delete.html', {
-        'course': course
-    })
+    """Course deletion is not permitted for instructors."""
+    raise PermissionDenied
 
 
 # ==================== SECTION MANAGEMENT ====================
@@ -2899,8 +3070,8 @@ def exam_update(request, slug):
     exam.show_result_immediately   = 'show_result_immediately' in request.POST
  
     # Numeric fields — guard against empty strings
+    # NOTE: duration_minutes is now a @property (computed from start/end time) — do NOT set it
     for attr, field in (
-        ('duration_minutes', 'duration_minutes'),
         ('instruction_window_minutes', 'instruction_window_minutes'),
         ('questions_per_student', 'questions_per_student'),
         ('pass_mark', 'pass_mark'),
@@ -2924,12 +3095,12 @@ def exam_update(request, slug):
         if raw:
             setattr(exam, attr, raw)
  
-    # Datetime visibility window
+    # Visibility overrides — blank means "use auto-computed default"
     from django.utils.dateparse import parse_datetime
-    vf = request.POST.get('visible_from', '').strip()
-    vu = request.POST.get('visible_until', '').strip()
-    exam.visible_from  = parse_datetime(vf) if vf else None
-    exam.visible_until = parse_datetime(vu) if vu else None
+    vf = request.POST.get('visible_from_override', '').strip()
+    vu = request.POST.get('visible_until_override', '').strip()
+    exam.visible_from_override  = parse_datetime(vf) if vf else None
+    exam.visible_until_override = parse_datetime(vu) if vu else None
  
     try:
         exam.save()
@@ -2937,7 +3108,8 @@ def exam_update(request, slug):
     except Exception as e:
         messages.error(request, f'Could not save changes: {e}')
  
-    return redirect(f"{{% url 'instructor:exam_detail' slug=exam.slug %}}?tab=edit")
+    from django.urls import reverse
+    return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=edit')
  
  
 # ──────────────────────────────────────────────────────────────────────────────
@@ -2956,7 +3128,8 @@ def exam_submit(request, slug):
  
     if exam.active_question_count == 0:
         messages.error(request, 'Please add at least one question before submitting.')
-        return redirect(f"{{% url 'instructor:exam_detail' slug=exam.slug %}}?tab=questions")
+        from django.urls import reverse
+        return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     old_status           = exam.status
     exam.status          = Exam.SUBMITTED
@@ -3013,10 +3186,10 @@ def exam_question_create(request, slug):
             messages.error(request, error)
             return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': None})
         messages.success(request, 'Question added successfully.')
-        # Stay on form unless _save_back requested
+        from django.urls import reverse
         if request.POST.get('_save_back'):
-            return redirect(f"{{% url 'instructor:exam_detail' slug=exam.slug %}}?tab=questions")
-        return redirect('instructor:exam_question_create', slug=exam.slug)
+            return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
+        return redirect(reverse('instructor:exam_question_create', kwargs={'slug': exam.slug}))
  
     return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': None})
  
@@ -3037,7 +3210,8 @@ def exam_question_edit(request, slug, question_id):
             messages.error(request, error)
             return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': question})
         messages.success(request, 'Question updated successfully.')
-        return redirect(f"{{% url 'instructor:exam_detail' slug=exam.slug %}}?tab=questions")
+        from django.urls import reverse
+        return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': question})
  
@@ -3055,7 +3229,8 @@ def exam_question_delete(request, slug, question_id):
     question.is_active = False
     question.save(update_fields=['is_active'])
     messages.success(request, 'Question removed from the active pool.')
-    return redirect(f"{{% url 'instructor:exam_detail' slug=exam.slug %}}?tab=questions")
+    from django.urls import reverse
+    return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
  
 # ──────────────────────────────────────────────────────────────────────────────
@@ -3071,7 +3246,8 @@ def exam_import_questions(request, slug):
  
     if not import_file:
         messages.error(request, 'Please select a file to upload.')
-        return redirect(f"{{% url 'instructor:exam_detail' slug=exam.slug %}}?tab=questions")
+        from django.urls import reverse
+        return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     try:
         _parse_exam_questions_from_file(import_file, exam, request.user)
@@ -3082,7 +3258,8 @@ def exam_import_questions(request, slug):
         exam.save(update_fields=['import_status', 'import_error_log'])
         messages.error(request, f'Import failed: {e}')
  
-    return redirect(f"{{% url 'instructor:exam_detail' slug=exam.slug %}}?tab=questions")
+    from django.urls import reverse
+    return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
  
 # ──────────────────────────────────────────────────────────────────────────────

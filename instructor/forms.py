@@ -17,11 +17,8 @@ class CourseForm(forms.ModelForm):
             'title', 'code', 'category', 'short_description',
             'description', 'difficulty_level', 'duration_hours',
             'language', 'thumbnail', 'promo_video_url',
-            'max_students',
-            'enrollment_start_date', 'enrollment_end_date',
             'academic_course',
-            'has_certificate', 'certificate_fee', 'certificate_template',
-            'is_published', 'is_featured'
+            'has_certificate', 'certificate_template',
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -61,18 +58,18 @@ class CourseForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'https://youtube.com/watch?v=...'
             }),
-            'max_students': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'placeholder': 'Leave blank for unlimited'
-            }),
-            'enrollment_start_date': forms.DateInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'date'
-            }),
-            'enrollment_end_date': forms.DateInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'date'
-            }),
+            # 'max_students': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'placeholder': 'Leave blank for unlimited'
+            # }),
+            # 'enrollment_start_date': forms.DateInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'type': 'date'
+            # }),
+            # 'enrollment_end_date': forms.DateInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'type': 'date'
+            # }),
             'academic_course': forms.Select(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'id': 'id_academic_course',
@@ -83,21 +80,21 @@ class CourseForm(forms.ModelForm):
             'has_certificate': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
-            'certificate_fee': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'step': '0.01',
-                'placeholder': '0.00 — leave as 0 for free certificate'
-            }),
+            # 'certificate_fee': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'step': '0.01',
+            #     'placeholder': '0.00 — leave as 0 for free certificate'
+            # }),
             'certificate_template': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'e.g., default, gold, premium'
             }),
-            'is_published': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
-            }),
-            'is_featured': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
-            }),
+            # 'is_published': forms.CheckboxInput(attrs={
+            #     'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            # }),
+            # 'is_featured': forms.CheckboxInput(attrs={
+            #     'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            # }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -109,8 +106,8 @@ class CourseForm(forms.ModelForm):
         # category is conditionally optional — JS hides it when academic_course is chosen;
         # the form-level required=False prevents server-side validation from blocking the save.
         self.fields['category'].required = False
-        # certificate_fee has a model default of 0.00 — never block submission on it
-        self.fields['certificate_fee'].required = False
+        # # certificate_fee has a model default of 0.00 — never block submission on it
+        # self.fields['certificate_fee'].required = False
 
     def clean(self):
         cleaned = super().clean()
@@ -121,12 +118,12 @@ class CourseForm(forms.ModelForm):
         if not academic_course and not category:
             self.add_error('category', 'Category is required for standalone LMS courses.')
 
-        # certificate_fee: make it optional / zero-out when academic course is linked
-        # (academic programmes handle certification fees themselves)
-        if academic_course:
-            from decimal import Decimal
-            cleaned['certificate_fee'] = Decimal('0.00')
-            self.fields['certificate_fee'].required = False
+        # # certificate_fee: make it optional / zero-out when academic course is linked
+        # # (academic programmes handle certification fees themselves)
+        # if academic_course:
+        #     from decimal import Decimal
+        #     cleaned['certificate_fee'] = Decimal('0.00')
+        #     self.fields['certificate_fee'].required = False
 
         return cleaned
 
@@ -820,7 +817,7 @@ class ExamForm(forms.ModelForm):
             'exam_type', 'mode',
             # schedule
             'exam_date', 'start_time', 'end_time',
-            'duration_minutes', 'instruction_window_minutes',
+            'instruction_window_minutes',
             # venue — only the essentials at creation time
             'venue',
             # pool config
@@ -832,7 +829,7 @@ class ExamForm(forms.ModelForm):
             # student-facing instructions only
             'instructions',
             # visibility
-            'visible_from', 'visible_until',
+            'visible_from_override', 'visible_until_override',
         ]
         widgets = {
             'exam_type': forms.Select(attrs={

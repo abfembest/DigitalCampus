@@ -1,247 +1,692 @@
-﻿{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ exam.title }}</title>
+﻿{% extends 'management/base.html' %}
+{% load static %}
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% block title %}{{ exam.title }} — CBT Exam{% endblock %}
+{% block breadcrumb %}Examinations / CBT{% endblock %}
+{% block breadcrumb_title %}{{ exam.title }}{% endblock %}
 
-    <style>
-        body {
-            background: #f1f5f9;
-        }
+{% block extra_css %}
+<style>
+    /* ── Exam lockdown layout ─────────────────────────────────────────────
+       The base <main> has p-3/p-4/p-6 padding. We break out of it cleanly
+       by using negative margins so the exam fills edge-to-edge within the
+       content column (sidebar is still visible — this is now portal-native).
+    ─────────────────────────────────────────────────────────────────────── */
+    #examShell {
+        display: flex;
+        flex-direction: column;
+        /* Fill remaining viewport height under the portal header */
+        height: calc(100vh - 4rem);   /* 4rem ≈ portal top header height */
+        margin: -0.75rem -0.75rem 0;  /* cancel base p-3 */
+        overflow: hidden;
+    }
+    @media (min-width: 640px)  { #examShell { margin: -1rem -1rem 0; } }
+    @media (min-width: 768px)  { #examShell { margin: -1.5rem -1.5rem 0; } }
 
-        .question-transition {
-            transition: opacity 0.2s ease-in-out;
-        }
+    /* Anti-cheat */
+    #examShell              { -webkit-user-select:none; user-select:none; }
+    #examShell input,
+    #examShell label,
+    #examShell textarea     { -webkit-user-select:auto; user-select:auto; }
 
-        input[type="radio"] {
-            accent-color: #3b82f6;
-        }
-    </style>
-</head>
+    /* ── CSS variable bridge (base already defines these but we alias for
+       the inline accent-color which can't use Tailwind classes) ────────── */
+    :root {
+        --clr-primary:   #4a6bff;
+        --clr-secondary: #6c63ff;
+    }
+    input[type="radio"]    { accent-color: var(--clr-primary); }
+    input[type="checkbox"] { accent-color: var(--clr-primary); }
 
-<body>
-    <form style="display:none;">{% csrf_token %}</form>
+    /* ── Option card ─────────────────────────────────────────────────────── */
+    .opt-label {
+        display:flex; align-items:flex-start; gap:.875rem;
+        padding:1rem 1.125rem; border-radius:.875rem;
+        border:2px solid #e2e8f0; cursor:pointer;
+        transition: border-color .15s, background .15s, box-shadow .15s;
+    }
+    .opt-label:hover { border-color:#93c5fd; background:#eff6ff; }
+    .opt-label.selected {
+        border-color: var(--clr-primary); background:#eff6ff;
+        box-shadow: 0 0 0 3px rgba(74,107,255,.12);
+    }
+    .opt-letter {
+        min-width:2rem; height:2rem; border-radius:50%;
+        background:#e2e8f0; color:#64748b;
+        display:flex; align-items:center; justify-content:center;
+        font-size:.75rem; font-weight:800; flex-shrink:0;
+        transition: background .15s, color .15s;
+    }
+    .opt-label.selected .opt-letter { background: var(--clr-primary); color:#fff; }
 
-    <div class="max-w-6xl mx-auto p-6">
-        <div class="bg-white rounded-xl shadow-lg">
+    /* ── Timer ───────────────────────────────────────────────────────────── */
+    .timer-normal  { color:#1e40af; background:#dbeafe; }
+    .timer-warning { color:#92400e; background:#fef3c7; }
+    .timer-danger  { color:#991b1b; background:#fee2e2; animation: timerPulse 1s infinite; }
+    @keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:.65} }
 
-            <!-- HEADER -->
-            <div class="p-6 border-b">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="text-lg font-bold">{{ exam.title }}</h2>
-                        <p class="text-sm text-gray-500">
-                            Duration: <span id="durationLabel">00:00</span>
-                        </p>
-                    </div>
+    /* ── Q-grid button ───────────────────────────────────────────────────── */
+    .qbtn {
+        width:2.5rem; height:2.5rem; border-radius:.5rem;
+        font-size:.8rem; font-weight:700;
+        border:2px solid #e2e8f0; background:white; color:#64748b;
+        cursor:pointer; display:flex; align-items:center; justify-content:center;
+        transition: all .15s; flex-shrink:0;
+    }
+    .qbtn:hover    { border-color:#93c5fd; background:#eff6ff; }
+    .qbtn.answered { background:var(--clr-primary); border-color:var(--clr-primary); color:white; }
+    .qbtn.current  { border-color:var(--clr-primary); box-shadow:0 0 0 3px rgba(74,107,255,.22); }
+    .qbtn.flagged  { background:#fef3c7; border-color:#f59e0b; color:#92400e; }
 
-                    <div class="bg-red-100 px-4 py-2 rounded">
-                        <span id="timerDisplay" class="font-bold text-red-600">00:00</span>
-                    </div>
+    /* ── Q-grid layout ───────────────────────────────────────────────────── */
+    .q-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(2.5rem,1fr)); gap:.4rem; }
+
+    /* ── Question fade ───────────────────────────────────────────────────── */
+    .q-fade { animation: qFade .2s ease forwards; }
+    @keyframes qFade {
+        from { opacity:0; transform:translateX(6px); }
+        to   { opacity:1; transform:translateX(0); }
+    }
+
+    /* ── Mobile grid panel ───────────────────────────────────────────────── */
+    #mobileGridPanel { transition: transform .3s cubic-bezier(.4,0,.2,1); }
+
+    /* ── Progress bar ────────────────────────────────────────────────────── */
+    #hdrProgressBar { transition: width .3s ease; }
+
+    /* ── Exam top bar blur ───────────────────────────────────────────────── */
+    .exam-topbar { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- CSRF token for fetch calls -->
+<form style="display:none">{% csrf_token %}</form>
+
+<div id="examShell">
+
+    <!-- ═══════════════════════════════════════════════════
+         EXAM TOP BAR
+    ════════════════════════════════════════════════════ -->
+    <header class="exam-topbar bg-white/95 border-b border-gray-200 shadow-sm shrink-0">
+        <div class="flex items-center justify-between gap-3 px-4 sm:px-6 py-3">
+
+            <!-- Left: exam identity -->
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500
+                            flex items-center justify-center shrink-0 shadow">
+                    <i class="fas fa-file-alt text-white text-sm sm:text-base"></i>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-sm sm:text-base font-bold text-gray-900 truncate leading-tight">{{ exam.title }}</h1>
+                    <p class="text-xs text-gray-400 hidden sm:block">
+                        {{ exam.reference_code }} &bull; {{ exam.exam_date|date:"d M Y" }}
+                        &bull; Ends <span class="js-end-12hr" data-iso="{{ exam_end_iso }}">{{ exam.end_time|time:"P" }}</span>
+                    </p>
                 </div>
             </div>
 
-            <!-- BODY -->
-            <div class="p-6">
+            <!-- Centre: progress bar (md+) -->
+            <div class="hidden md:flex flex-col items-center gap-1 w-40 lg:w-64 shrink-0">
+                <div class="flex items-center justify-between w-full text-xs text-gray-400 font-medium">
+                    <span>Q <span id="hdrCurrent">1</span> / <span id="hdrTotal">—</span></span>
+                    <span><span id="answeredCount">0</span> answered</span>
+                </div>
+                <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div id="hdrProgressBar" class="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full" style="width:0%"></div>
+                </div>
+            </div>
 
-                <div class="mb-4">
-                    Question <span id="currentQNumber">1</span> of <span id="totalQuestionsSpan">0</span>
+            <!-- Right: timer + submit -->
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+
+                <!-- Timer box -->
+                <div id="timerBox"
+                     class="timer-normal flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold
+                            text-base sm:text-xl font-mono tabular-nums transition-all duration-300">
+                    <i class="fas fa-clock text-sm opacity-70"></i>
+                    <span id="timerDisplay">--:--</span>
                 </div>
 
-                <div id="questionCard" class="bg-gray-50 p-5 rounded">
-                    <div id="dynamicQuestionArea"></div>
-                </div>
-
-                <!-- NAV -->
-                <div class="flex justify-between mt-6">
-                    <button id="prevBtn" class="bg-gray-200 px-4 py-2 rounded">Prev</button>
-                    <button id="nextBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Next</button>
-                </div>
-
-                <button id="submitExamBtn" class="mt-6 w-full bg-green-600 text-white py-3 rounded">
-                    Submit Exam
+                <!-- Submit (desktop) -->
+                <button id="submitTopBtn"
+                        onclick="confirmSubmit()"
+                        class="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700
+                               text-white text-sm font-bold rounded-xl transition shadow">
+                    <i class="fas fa-paper-plane text-xs"></i> Submit
                 </button>
 
-                <!-- PAGINATION -->
-                <div id="paginationContainer" class="mt-6 flex gap-2 flex-wrap"></div>
-
+                <!-- Mobile Q-grid toggle -->
+                <button onclick="toggleMobileGrid()"
+                        class="sm:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition">
+                    <i class="fas fa-th text-gray-600 text-sm"></i>
+                </button>
             </div>
         </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════
+         MAIN LAYOUT — question area + sidebar
+    ════════════════════════════════════════════════════ -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- Question area -->
+        <main class="flex-1 overflow-y-auto px-4 sm:px-6 py-5 md:py-7">
+
+            <!-- Question card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-7 mb-5 max-w-3xl mx-auto">
+
+                <!-- Q meta row -->
+                <div class="flex items-center justify-between mb-5">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="inline-flex items-center gap-1.5 text-xs font-bold text-primary-600 bg-primary-50 px-3 py-1 rounded-lg">
+                            <i class="fas fa-question-circle"></i>
+                            Question <span id="qNumBadge">1</span>
+                        </span>
+                        <span id="qMarksBadge" class="text-xs text-gray-400 hidden"></span>
+                    </div>
+                    <button onclick="toggleFlag()"
+                            class="flex items-center gap-1.5 text-xs font-semibold transition px-2.5 py-1 rounded-lg hover:bg-gray-50"
+                            id="flagBtn">
+                        <i class="fas fa-flag text-gray-300" id="flagIcon"></i>
+                        <span id="flagText" class="text-gray-400">Flag</span>
+                    </button>
+                </div>
+
+                <!-- Question text -->
+                <div id="questionText"
+                     class="text-gray-800 font-medium text-base sm:text-lg leading-relaxed mb-6 q-fade">
+                </div>
+
+                <!-- Question image (if any) -->
+                <div id="questionImageWrap" class="hidden mb-5">
+                    <img id="questionImage" src="" alt="Question figure"
+                         class="max-w-full rounded-xl border border-gray-200 shadow-sm mx-auto">
+                </div>
+
+                <!-- Options -->
+                <div id="optionsArea" class="space-y-3 q-fade"></div>
+
+            </div>
+
+            <!-- Nav row -->
+            <div class="flex items-center justify-between max-w-3xl mx-auto mb-4 sm:mb-6">
+                <button onclick="navigate(-1)"
+                        class="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-white border border-gray-200
+                               text-gray-600 hover:border-primary-400 hover:text-primary-600 text-sm font-semibold transition shadow-sm">
+                    <i class="fas fa-arrow-left text-xs"></i> Prev
+                </button>
+
+                <div class="text-xs text-gray-400 hidden sm:block tabular-nums">
+                    <span id="answeredCountMid">0</span> / <span id="totalCountMid">0</span> answered
+                </div>
+
+                <button onclick="navigate(1)"
+                        class="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700
+                               text-white text-sm font-bold transition shadow">
+                    Next <i class="fas fa-arrow-right text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Mobile submit -->
+            <div class="sm:hidden max-w-3xl mx-auto">
+                <button onclick="confirmSubmit()"
+                        class="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl
+                               transition shadow flex items-center justify-center gap-2">
+                    <i class="fas fa-paper-plane"></i> Submit Exam
+                </button>
+            </div>
+
+        </main>
+
+        <!-- Right sidebar: question grid (desktop) -->
+        <aside class="hidden lg:flex flex-col w-64 xl:w-72 border-l border-gray-200 bg-white overflow-y-auto p-5 shrink-0">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Questions</h3>
+                <span class="text-xs text-gray-400 tabular-nums">
+                    <span id="sideAnswered">0</span>/<span id="sideTotal">0</span>
+                </span>
+            </div>
+
+            <!-- Legend -->
+            <div class="flex flex-wrap gap-x-3 gap-y-1 mb-4 text-[11px] text-gray-400">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-primary-500 inline-block"></span>Answered</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-amber-200 border border-amber-400 inline-block"></span>Flagged</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-white border border-gray-300 inline-block"></span>Unanswered</span>
+            </div>
+
+            <div id="qGrid" class="q-grid mb-5"></div>
+
+            <div class="mt-auto pt-3 border-t border-gray-100">
+                <div class="text-xs text-gray-500 mb-3 text-center tabular-nums">
+                    <span id="sideAnsweredDetail">0</span> answered &bull;
+                    <span id="sideFlagged">0</span> flagged
+                </div>
+                <button onclick="confirmSubmit()"
+                        class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl
+                               transition text-sm flex items-center justify-center gap-2 shadow">
+                    <i class="fas fa-paper-plane"></i> Submit Exam
+                </button>
+            </div>
+        </aside>
+
     </div>
 
-    <script>
-        let questions = [];
-        let totalQuestions = 0;
-        let userAnswers = [];
-        let currentQuestionIndex = 0;
-        let examSubmitted = false;
+    <!-- Mobile Q-grid panel (slides up from bottom) -->
+    <div id="mobileGridPanel"
+         class="fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 p-4
+                translate-y-full lg:hidden shadow-2xl rounded-t-2xl">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-gray-700">Jump to Question</h3>
+            <button onclick="toggleMobileGrid()" class="text-gray-400 hover:text-gray-600 text-sm">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="qGridMobile" class="q-grid max-h-44 overflow-y-auto"></div>
+    </div>
+    <div id="mobileGridOverlay"
+         class="fixed inset-0 z-39 bg-black/20 hidden lg:hidden"
+         onclick="toggleMobileGrid()"></div>
 
-        let timeRemaining = 0;
-        let timerInterval = null;
+</div>{# /examShell #}
+{% endblock %}
 
-        const FETCH_URL = "{% url 'get_exam_data' exam.slug %}";
-        const SAVE_URL = "{% url 'save_answer' exam.slug %}";
-        const SUBMIT_URL = "{% url 'submit_exam' exam.slug %}";
+{% block extra_js %}
+<script>
+'use strict';
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+let questions      = [];
+let totalQuestions = 0;
+let userAnswers    = {};           // { qId: optionId }
+let flagged        = new Set();
+let currentIdx     = 0;
+let timeRemaining  = 0;
+let timerID        = null;
+let submitted      = false;
 
-        function getCSRFToken() {
-            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+const FETCH_URL    = "{% url 'students:get_exam_data' exam.slug %}";
+const SAVE_URL     = "{% url 'students:save_answer' exam.slug %}";
+const SUBMIT_URL   = "{% url 'students:submit_exam' exam.slug %}";
+const EXAM_LIST    = "{% url 'students:exam_list' %}";
+const EXAM_END_ISO = "{{ exam_end_iso }}";
+
+function csrf() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// ══════════════════════════════════════════════════════════
+//  12-HOUR TIME HELPER
+// ══════════════════════════════════════════════════════════
+function fmt12(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleTimeString([], {hour:'numeric',minute:'2-digit',hour12:true});
+}
+document.querySelectorAll('.js-end-12hr').forEach(el => {
+    if (el.dataset.iso) el.textContent = fmt12(el.dataset.iso);
+});
+
+// ══════════════════════════════════════════════════════════
+//  BOOT — fetch questions from server
+// ══════════════════════════════════════════════════════════
+async function boot() {
+    try {
+        const res  = await fetch(FETCH_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        questions      = data.questions || [];
+        totalQuestions = questions.length;
+        timeRemaining  = data.time_remaining ?? (data.duration ?? 0);
+
+        // Restore saved answers
+        if (data.saved_answers) {
+            Object.assign(userAnswers, data.saved_answers);
         }
 
-        // LOAD QUESTIONS
-        async function loadQuestions() {
-            const res = await fetch(FETCH_URL);
-            const data = await res.json();
+        initUI();
+    } catch(e) {
+        Swal.fire({
+            icon:'error', title:'Connection Error',
+            text:'Could not load exam questions. Please refresh the page.',
+            confirmButtonColor:'#4a6bff'
+        });
+    }
+}
 
-            questions = data.questions;
-            totalQuestions = questions.length;
-            userAnswers = new Array(totalQuestions).fill(null);
-            timeRemaining = data.duration;
+// ══════════════════════════════════════════════════════════
+//  INIT UI
+// ══════════════════════════════════════════════════════════
+function initUI() {
+    document.getElementById('hdrTotal').textContent      = totalQuestions;
+    document.getElementById('totalCountMid').textContent = totalQuestions;
+    document.getElementById('sideTotal').textContent     = totalQuestions;
 
-            initUI();
+    buildGrid();
+    renderQuestion(0);
+    startTimer();
+    updateStats();
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER QUESTION
+// ══════════════════════════════════════════════════════════
+const ALPHA = 'ABCDEFGHIJ';
+
+function renderQuestion(idx) {
+    currentIdx = idx;
+    const q    = questions[idx];
+    if (!q) return;
+
+    // Header counts
+    document.getElementById('qNumBadge').textContent  = idx + 1;
+    document.getElementById('hdrCurrent').textContent = idx + 1;
+    document.getElementById('hdrProgressBar').style.width =
+        ((idx + 1) / totalQuestions * 100) + '%';
+
+    // Marks badge
+    const mb = document.getElementById('qMarksBadge');
+    if (q.marks) {
+        mb.textContent = `${q.marks} mark${q.marks != 1 ? 's' : ''}`;
+        mb.classList.remove('hidden');
+    } else {
+        mb.classList.add('hidden');
+    }
+
+    // Question text (fade)
+    const qt = document.getElementById('questionText');
+    qt.classList.remove('q-fade');
+    void qt.offsetWidth;
+    qt.textContent = q.text;
+    qt.classList.add('q-fade');
+
+    // Options
+    const oa = document.getElementById('optionsArea');
+    oa.classList.remove('q-fade');
+    oa.innerHTML = '';
+
+    if (q.options && q.options.length) {
+        q.options.forEach((opt, i) => {
+            const selected = userAnswers[q.id] === opt.id;
+            const label    = document.createElement('label');
+            label.className = 'opt-label' + (selected ? ' selected' : '');
+
+            const radio = document.createElement('input');
+            radio.type    = 'radio';
+            radio.name    = `q_${q.id}`;
+            radio.value   = opt.id;
+            radio.checked = selected;
+            radio.className = 'sr-only';
+            radio.addEventListener('change', () => selectAnswer(q.id, opt.id));
+
+            const letterEl = document.createElement('span');
+            letterEl.className = 'opt-letter';
+            letterEl.textContent = ALPHA[i];
+
+            const textEl = document.createElement('span');
+            textEl.className = 'text-sm sm:text-base text-gray-700 leading-snug';
+            textEl.textContent = opt.text;
+
+            label.append(radio, letterEl, textEl);
+            oa.appendChild(label);
+        });
+        void oa.offsetWidth;
+        oa.classList.add('q-fade');
+    }
+
+    // Image
+    const imgWrap = document.getElementById('questionImageWrap');
+    if (q.image_url) {
+        document.getElementById('questionImage').src = q.image_url;
+        imgWrap.classList.remove('hidden');
+    } else {
+        imgWrap.classList.add('hidden');
+    }
+
+    // Flag state
+    const isFlagged = flagged.has(q.id);
+    document.getElementById('flagIcon').style.color = isFlagged ? '#f59e0b' : '#d1d5db';
+    document.getElementById('flagText').textContent  = isFlagged ? 'Flagged' : 'Flag';
+    document.getElementById('flagText').style.color  = isFlagged ? '#f59e0b' : '#9ca3af';
+
+    updateGridButtons();
+}
+
+// ══════════════════════════════════════════════════════════
+//  SELECT ANSWER
+// ══════════════════════════════════════════════════════════
+function selectAnswer(qId, optId) {
+    userAnswers[qId] = optId;
+
+    // Update option visuals
+    document.querySelectorAll(`input[name="q_${qId}"]`).forEach(r => {
+        r.closest('.opt-label').classList.toggle('selected', r.value === optId);
+    });
+
+    updateStats();
+    updateGridButtons();
+
+    // Auto-save (fire and forget)
+    fetch(SAVE_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},
+        body: JSON.stringify({question_id: qId, answer: optId})
+    }).catch(() => {});
+}
+
+// ══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════
+function navigate(dir) {
+    const n = currentIdx + dir;
+    if (n >= 0 && n < totalQuestions) renderQuestion(n);
+}
+
+// ══════════════════════════════════════════════════════════
+//  FLAG
+// ══════════════════════════════════════════════════════════
+function toggleFlag() {
+    const qId = questions[currentIdx]?.id;
+    if (!qId) return;
+    flagged.has(qId) ? flagged.delete(qId) : flagged.add(qId);
+    renderQuestion(currentIdx);
+    updateSideFlagged();
+}
+
+// ══════════════════════════════════════════════════════════
+//  Q-GRID
+// ══════════════════════════════════════════════════════════
+function buildGrid() {
+    ['qGrid','qGridMobile'].forEach(id => {
+        const g = document.getElementById(id);
+        if (!g) return;
+        g.innerHTML = '';
+        questions.forEach((q, i) => {
+            const btn = document.createElement('button');
+            btn.className   = 'qbtn';
+            btn.textContent = i + 1;
+            btn.title       = `Q${i+1}: ${q.text.slice(0,50)}`;
+            btn.onclick     = () => { renderQuestion(i); if (id==='qGridMobile') toggleMobileGrid(); };
+            g.appendChild(btn);
+        });
+    });
+}
+
+function updateGridButtons() {
+    ['qGrid','qGridMobile'].forEach(id => {
+        const btns = document.getElementById(id)?.querySelectorAll('.qbtn');
+        if (!btns) return;
+        questions.forEach((q, i) => {
+            const btn = btns[i];
+            if (!btn) return;
+            btn.className = 'qbtn';
+            if (flagged.has(q.id))   btn.classList.add('flagged');
+            else if (userAnswers[q.id]) btn.classList.add('answered');
+            if (i === currentIdx) btn.classList.add('current');
+        });
+    });
+}
+
+function updateSideFlagged() {
+    const el = document.getElementById('sideFlagged');
+    if (el) el.textContent = flagged.size;
+}
+
+// ══════════════════════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════════════════════
+function updateStats() {
+    const n = Object.keys(userAnswers).length;
+    ['answeredCount','answeredCountMid','sideAnswered','sideAnsweredDetail'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = n;
+    });
+    updateSideFlagged();
+}
+
+// ══════════════════════════════════════════════════════════
+//  TIMER
+// ══════════════════════════════════════════════════════════
+function startTimer() {
+    renderTimer();
+    timerID = setInterval(() => {
+        if (timeRemaining <= 0) {
+            clearInterval(timerID);
+            doSubmit(true);
+        } else {
+            timeRemaining--;
+            // Also cap against wall-clock end time for accuracy
+            const wallSecs = Math.max(0, Math.floor((new Date(EXAM_END_ISO) - new Date()) / 1000));
+            if (wallSecs < timeRemaining) timeRemaining = wallSecs;
+            renderTimer();
         }
+    }, 1000);
+}
 
-        // TIMER
-        function startTimer() {
-            timerInterval = setInterval(() => {
-                if (timeRemaining <= 0) {
-                    clearInterval(timerInterval);
-                    submitExam();
-                } else {
-                    timeRemaining--;
-                    updateTimer();
-                }
-            }, 1000);
-        }
+function renderTimer() {
+    const h   = Math.floor(timeRemaining / 3600);
+    const m   = Math.floor((timeRemaining % 3600) / 60);
+    const s   = timeRemaining % 60;
+    const pad = n => String(n).padStart(2,'0');
+    const str = h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 
-        function updateTimer() {
-            let m = Math.floor(timeRemaining / 60);
-            let s = timeRemaining % 60;
-            document.getElementById("timerDisplay").innerText =
-                `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
+    document.getElementById('timerDisplay').textContent = str;
 
-        // RENDER QUESTION
-        function renderQuestion() {
-            let q = questions[currentQuestionIndex];
+    const box = document.getElementById('timerBox');
+    box.className = 'flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-bold text-base sm:text-xl font-mono tabular-nums transition-all duration-300 ';
+    if      (timeRemaining <= 60)  box.className += 'timer-danger';
+    else if (timeRemaining <= 300) box.className += 'timer-warning';
+    else                           box.className += 'timer-normal';
+}
 
-            let html = `<h3 class="font-semibold mb-4">${escapeHtml(q.text)}</h3>`;
+// ══════════════════════════════════════════════════════════
+//  SUBMIT
+// ══════════════════════════════════════════════════════════
+function confirmSubmit() {
+    const answered   = Object.keys(userAnswers).length;
+    const unanswered = totalQuestions - answered;
 
-            q.options.forEach((opt, i) => {
-                let checked = userAnswers[currentQuestionIndex] === opt.id ? "checked" : "";
-                html += `
-            <div class="mb-2">
-                <input type="radio" name="q" value="${opt.id}" ${checked}>
-                ${escapeHtml(opt.text)}
-            </div>`;
-            });
+    Swal.fire({
+        title: '<span style="font-family:Poppins">Submit Exam?</span>',
+        html: unanswered > 0
+            ? `<p style="color:#4b5563">You have <strong style="color:#dc2626">${unanswered} unanswered question${unanswered > 1?'s':''}</strong>.<br><small style="color:#9ca3af">Unanswered questions will score zero.</small></p>`
+            : `<p style="color:#4b5563">All <strong>${totalQuestions}</strong> questions answered. Ready to submit?</p>`,
+        icon: unanswered > 0 ? 'warning' : 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane mr-1"></i> Submit Now',
+        cancelButtonText:  'Keep going',
+        confirmButtonColor: '#16a34a',
+        cancelButtonColor:  '#6b7280',
+        reverseButtons: true,
+        customClass: { popup:'rounded-2xl', confirmButton:'rounded-xl', cancelButton:'rounded-xl' }
+    }).then(r => { if (r.isConfirmed) doSubmit(false); });
+}
 
-            document.getElementById("dynamicQuestionArea").innerHTML = html;
-            document.getElementById("currentQNumber").innerText = currentQuestionIndex + 1;
+async function doSubmit(isAuto) {
+    if (submitted) return;
+    submitted = true;
+    clearInterval(timerID);
 
-            attachEvents();
-        }
+    try {
+        const res = await fetch(SUBMIT_URL, {
+            method:'POST',
+            headers:{'X-CSRFToken':csrf()}
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        // SAVE ANSWER
-        function attachEvents() {
-            document.querySelectorAll("input[type=radio]").forEach(r => {
-                r.onchange = () => {
-                    let val = r.value;
-                    userAnswers[currentQuestionIndex] = val;
+        await Swal.fire({
+            icon: 'success',
+            title: '<span style="font-family:Poppins">' + (isAuto ? "Time's Up!" : 'Submitted!') + '</span>',
+            text: isAuto
+                ? 'Your answers were saved automatically when time ran out.'
+                : 'Your exam has been submitted successfully.',
+            confirmButtonColor: '#4a6bff',
+            confirmButtonText: 'Go to Timetable',
+            customClass: { popup:'rounded-2xl', confirmButton:'rounded-xl' }
+        });
+        window.location.href = EXAM_LIST;
+    } catch(e) {
+        submitted = false;
+        Swal.fire({
+            icon:'error', title:'Submission Failed',
+            text:'Please check your connection and try again.',
+            confirmButtonColor:'#4a6bff'
+        });
+    }
+}
 
-                    fetch(SAVE_URL, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRFToken": getCSRFToken()
-                        },
-                        body: JSON.stringify({
-                            question_id: questions[currentQuestionIndex].id,
-                            answer: val
-                        })
-                    });
-                };
-            });
-        }
+// ══════════════════════════════════════════════════════════
+//  MOBILE GRID PANEL
+// ══════════════════════════════════════════════════════════
+function toggleMobileGrid() {
+    const panel   = document.getElementById('mobileGridPanel');
+    const overlay = document.getElementById('mobileGridOverlay');
+    const isOpen  = !panel.classList.contains('translate-y-full');
+    panel.classList.toggle('translate-y-full', isOpen);
+    overlay.classList.toggle('hidden', isOpen);
+}
 
-        // NAV
-        document.getElementById("nextBtn").onclick = () => {
-            if (currentQuestionIndex < totalQuestions - 1) {
-                currentQuestionIndex++;
-                renderQuestion();
+// ══════════════════════════════════════════════════════════
+//  SECURITY
+// ══════════════════════════════════════════════════════════
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('copy',  e => e.preventDefault());
+document.addEventListener('cut',   e => e.preventDefault());
+
+let tabSwitches = 0;
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) return;
+    tabSwitches++;
+    fetch(SAVE_URL.replace('/save/', '/flag-tab-switch/'), {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},
+        body: JSON.stringify({count: tabSwitches})
+    }).catch(() => {});
+
+    if (tabSwitches <= 3) {
+        setTimeout(() => {
+            if (!document.hidden) {
+                Swal.fire({
+                    toast:true, position:'top-end', icon:'warning',
+                    title:`Tab switch #${tabSwitches} detected and logged`,
+                    showConfirmButton:false, timer:4000, timerProgressBar:true,
+                });
             }
-        };
+        }, 600);
+    }
+});
 
-        document.getElementById("prevBtn").onclick = () => {
-            if (currentQuestionIndex > 0) {
-                currentQuestionIndex--;
-                renderQuestion();
-            }
-        };
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   navigate(-1);
+    if (e.key === 'f' || e.key === 'F') toggleFlag();
+});
 
-        // PAGINATION
-        function buildPagination() {
-            let container = document.getElementById("paginationContainer");
-            container.innerHTML = "";
-
-            for (let i = 0; i < totalQuestions; i++) {
-                let btn = document.createElement("button");
-                btn.innerText = i + 1;
-                btn.className = "px-2 py-1 bg-gray-200 rounded";
-
-                btn.onclick = () => {
-                    currentQuestionIndex = i;
-                    renderQuestion();
-                };
-
-                container.appendChild(btn);
-            }
-        }
-
-        // SUBMIT
-        async function submitExam() {
-            if (examSubmitted) return;
-
-            examSubmitted = true;
-
-            await fetch(SUBMIT_URL, {
-                method: "POST",
-                headers: { "X-CSRFToken": getCSRFToken() }
-            });
-
-            alert("Exam submitted!");
-        }
-
-        // INIT
-        function initUI() {
-            document.getElementById("totalQuestionsSpan").innerText = totalQuestions;
-
-            buildPagination();
-            renderQuestion();
-            startTimer();
-
-            document.getElementById("submitExamBtn").onclick = submitExam;
-        }
-
-        // SECURITY
-        document.addEventListener("contextmenu", e => e.preventDefault());
-        document.addEventListener("copy", e => e.preventDefault());
-
-        // ESCAPE
-        function escapeHtml(str) {
-            return str.replace(/[&<>]/g, m => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;'
-            }[m]));
-        }
-
-        loadQuestions();
-    </script>
-
-</body>
-</html>
+// ══════════════════════════════════════════════════════════
+//  KICK OFF
+// ══════════════════════════════════════════════════════════
+boot();
+</script>
+{% endblock %}

@@ -16,10 +16,18 @@
 
     <!-- Header -->
     <div class="mb-6 sm:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">Create Course Announcement</h1>
-        <p class="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
-            Send an important message to all students enrolled in {{ course.title }}
-        </p>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">Create Course Announcement</h1>
+                <p class="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
+                    Send an important message to all students enrolled in {{ course.title }}
+                </p>
+            </div>
+            <a href="{% url 'instructor:course_manage' course.slug %}"
+               class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-white border-2 border-primary-600 text-primary-600 text-sm font-medium rounded-lg hover:bg-primary-50 transition-all whitespace-nowrap">
+                <i class="fas fa-th-large mr-2"></i>Manage Course
+            </a>
+        </div>
     </div>
 
     <!-- Form Card -->

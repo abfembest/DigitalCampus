@@ -130,8 +130,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # INTERNATIONALIZATION
 # --------------------------------------------------
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+LANGUAGE_CODE = "en-ng"
+TIME_ZONE = "Africa/Lagos"
 USE_I18N = True
 USE_TZ = True
 
@@ -230,9 +230,9 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 
 # settings.py
-CHAT_SESSION_TIMEOUT_MINUTES = 15
+CHAT_SESSION_TIMEOUT_MINUTES = 900
 
 # ── Inactivity session timeout ────────────────────────────────────────────────
 # Minutes of no requests before SessionSecurityMiddleware kills the session.
 # Change this single value to adjust the timeout across the whole platform.
-SESSION_INACTIVITY_TIMEOUT = 15  # minutes
+SESSION_INACTIVITY_TIMEOUT = 900  # minutes

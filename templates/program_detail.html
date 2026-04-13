@@ -432,9 +432,9 @@
                   <span class="{% if course.course_type == 'core' %}text-purple-700 bg-purple-50{% elif course.course_type == 'elective' %}text-green-700 bg-green-50{% else %}text-gray-500 bg-gray-100{% endif %} px-1.5 sm:px-2 py-0.5 rounded-md font-bold uppercase" style="font-size:0.6rem;letter-spacing:0.07em;">
                     {{ course.get_course_type_display }}
                   </span>
-                  {% if course.lecturer %}
+                  {% comment %} {% if course.lecturer %}
                   <span class="text-xs text-gray-400 hidden md:inline">{{ course.lecturer.get_full_name|default:course.lecturer.username }}</span>
-                  {% endif %}
+                  {% endif %} {% endcomment %}
                 </div>
               </div>
             </div>

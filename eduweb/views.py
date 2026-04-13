@@ -761,7 +761,7 @@ def program_detail(request, slug):
         'courses': (
             program.courses
             .filter(is_active=True)
-            .select_related('lecturer')
+            # .select_related('lecturer')
             .order_by('year_of_study', 'semester', 'display_order', 'name')
         ),
         'active_intakes': (

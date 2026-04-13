@@ -800,113 +800,87 @@ def send_decision_email(application):
     
 
 
+def _faculty_ctx(form=None, edit_pk=None):
+    """Shared context for all faculty list views."""
+    qs = Faculty.objects.prefetch_related('departments').order_by('display_order', 'name')
+    return {
+        'faculties':         qs,
+        'form':              form or FacultyForm(),
+        'edit_pk':           edit_pk,
+        'active_count':      qs.filter(is_active=True).count(),
+        'total_departments': Department.objects.count(),
+        'total_programs':    Program.objects.count(),
+    }
+ 
+ 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def faculties_list(request):
-    """List all faculties"""
-    faculties = Faculty.objects.all().order_by('display_order', 'name')
-    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
-    
-    context = {
-        'faculties': faculties,
-        'pending_count': pending_count,
-    }
-    
-    return render(request, 'management/faculty/faculties_list.html', context)
-
-
+    return render(request, 'management/faculties_list.html', _faculty_ctx())
+ 
+ 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def faculty_create(request):
-    """Create a new faculty"""
     if request.method == 'POST':
         form = FacultyForm(request.POST, request.FILES)
         if form.is_valid():
             faculty = form.save()
             messages.success(request, f'Faculty "{faculty.name}" created successfully!')
             return redirect('management:faculties_list')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = FacultyForm()
-    
-    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
-    
-    context = {
-        'form': form,
-        'pending_count': pending_count,
-        'action': 'Create',
-    }
-    
-    return render(request, 'management/faculty/faculty_form.html', context)
-
-
+        messages.error(request, 'Please correct the errors below.')
+        return render(request, 'management/faculties_list.html', _faculty_ctx(form=form))
+    return redirect('management:faculties_list')
+ 
+ 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def faculty_edit(request, pk):
-    """Edit an existing faculty"""
     faculty = get_object_or_404(Faculty, pk=pk)
-    
     if request.method == 'POST':
         form = FacultyForm(request.POST, request.FILES, instance=faculty)
         if form.is_valid():
             faculty = form.save()
             messages.success(request, f'Faculty "{faculty.name}" updated successfully!')
             return redirect('management:faculties_list')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = FacultyForm(instance=faculty)
-    
-    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
-    
-    context = {
-        'form': form,
-        'faculty': faculty,
-        'pending_count': pending_count,
-        'action': 'Edit',
-    }
-    
-    return render(request, 'management/faculty/faculty_form.html', context)
-
-
+        messages.error(request, 'Please correct the errors below.')
+        return render(request, 'management/faculties_list.html', _faculty_ctx(form=form, edit_pk=pk))
+    return redirect('management:faculties_list')
+ 
+ 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def faculty_delete(request, pk):
-    """Delete a faculty"""
     faculty = get_object_or_404(Faculty, pk=pk)
-    
     if request.method == 'POST':
-        faculty_name = faculty.name
+        name = faculty.name
         faculty.delete()
-        messages.success(request, f'Faculty "{faculty_name}" deleted successfully!')
-        return redirect('management:faculties_list')
-    
+        messages.success(request, f'Faculty "{name}" deleted successfully!')
     return redirect('management:faculties_list')
 
 
-def courses(request):
-    """
-    Unified courses management page with tabs for programs and categories
-    """
+# def courses(request):
+#     """
+#     Unified courses management page with tabs for programs and categories
+#     """
     
-    # Get all programs with related data
-    programs = Program.objects.select_related(
-        'department',
-        'department__faculty'
-    ).order_by('display_order', 'name')
+#     # Get all programs with related data
+#     programs = Program.objects.select_related(
+#         'department',
+#         'department__faculty'
+#     ).order_by('display_order', 'name')
     
-    # Get all categories with course counts
-    categories = CourseCategory.objects.annotate(
-        course_count=Count('lms_courses')
-    ).order_by('display_order', 'name')
+#     # Get all categories with course counts
+#     categories = CourseCategory.objects.annotate(
+#         course_count=Count('lms_courses')
+#     ).order_by('display_order', 'name')
     
-    context = {
-        'courses': programs,  # Keep variable name as 'courses' for template compatibility
-        'categories': categories,
-    }
+#     context = {
+#         'courses': programs,  # Keep variable name as 'courses' for template compatibility
+#         'categories': categories,
+#     }
     
-    return render(request, 'management/course/courses.html', context)
+#     return render(request, 'management/course/courses.html', context)
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -2899,73 +2873,101 @@ def program_delete(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def academic_sessions_list(request):
-    sessions = AcademicSession.objects.all()
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'create':
+            form = AcademicSessionForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Academic session created successfully.')
+            else:
+                messages.error(request, 'Error creating session. Check form data.')
+                
+        elif action == 'edit':
+            session_id = request.POST.get('session_id')
+            session = get_object_or_404(AcademicSession, pk=session_id)
+            form = AcademicSessionForm(request.POST, instance=session)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Academic session updated.')
+            else:
+                messages.error(request, 'Error updating session.')
+        
+        return redirect('management:academic_sessions_list')
+
+    # GET logic
+    sessions = AcademicSession.objects.all().order_by('-name')
     current_session = AcademicSession.get_current()
+    form = AcademicSessionForm() # Empty form for the Modal
+    
     return render(request, 'management/academic_sessions_list.html', {
         'sessions': sessions,
         'current_session': current_session,
+        'form': form,
     })
 
-
 @login_required
 @user_passes_test(is_admin)
-def academic_session_create(request):
-    if request.method == 'POST':
-        form = AcademicSessionForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Academic session created.')
-            return redirect('management:academic_sessions_list')
-    else:
-        form = AcademicSessionForm()
-    return render(request, 'management/academic_session_form.html', {'form': form})
-
-
-@login_required
-@user_passes_test(is_admin)
-def academic_session_edit(request, pk):
-    session = get_object_or_404(AcademicSession, pk=pk)
-    if request.method == 'POST':
-        form = AcademicSessionForm(request.POST, instance=session)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Session updated.')
-            return redirect('management:academic_sessions_list')
-    else:
-        form = AcademicSessionForm(instance=session)
-    return render(request, 'management/academic_session_form.html', {'form': form, 'session': session})
-
-
-@login_required
-@user_passes_test(is_admin)
+@require_POST
 def academic_session_set_current(request, pk):
-    if request.method == 'POST':
-        session = get_object_or_404(AcademicSession, pk=pk)
-        # Unset all others
-        AcademicSession.objects.exclude(pk=pk).update(is_current=False)
-        session.is_current = True
-        session.status = 'active'
-        session.save()
-        messages.success(request, f'{session.name} is now the current session.')
+    session = get_object_or_404(AcademicSession, pk=pk)
+    session.set_as_current()
+    messages.success(request, f'{session.name} is now the current session.')
     return redirect('management:academic_sessions_list')
 
-
-@login_required
+@login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
-def academic_session_delete(request, pk):
-    session = get_object_or_404(AcademicSession, pk=pk)
-    
-    if session.is_current:
-        messages.error(request, 'Cannot delete the current active session. Please set another session as current first.')
-        return redirect('management:academic_sessions_list')
-    
+def courses_list(request):
     if request.method == 'POST':
-        session_name = session.name
-        session.delete()
-        messages.success(request, f'Session "{session_name}" deleted successfully.')
-        return redirect('management:academic_sessions_list')
-    
-    return render(request, 'management/academic_session_delete.html', {'session': session})
+        action = request.POST.get('action')
+ 
+        # ── CREATE ──────────────────────────────────────────────────────────
+        if action == 'create':
+            form = CourseForm(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Course created successfully.')
+            else:
+                # Surface first field error so the user knows what went wrong
+                for field, errs in form.errors.items():
+                    messages.error(request, f'{field.replace("_"," ").title()}: {errs[0]}')
+ 
+        # ── EDIT ────────────────────────────────────────────────────────────
+        elif action == 'edit':
+            course_id = request.POST.get('course_id')
+            course    = get_object_or_404(Course, pk=course_id)
+            form      = CourseForm(request.POST, instance=course)
+            if form.is_valid():
+                form.save()
+                messages.success(request, f'Course "{course.code}" updated successfully.')
+            else:
+                for field, errs in form.errors.items():
+                    messages.error(request, f'{field.replace("_"," ").title()}: {errs[0]}')
+ 
+        # ── DELETE ──────────────────────────────────────────────────────────
+        elif action == 'delete':
+            course_id = request.POST.get('course_id')
+            course    = get_object_or_404(Course, pk=course_id)
+            code      = course.code
+            course.delete()
+            messages.success(request, f'Course "{code}" deleted successfully.')
+ 
+        return redirect('management:courses_list')
+ 
+    # ── GET ─────────────────────────────────────────────────────────────────
+    courses = (
+        Course.objects
+        .select_related('program__department__faculty')
+        .order_by('year_of_study', 'semester', 'display_order', 'code')
+    )
+    form = CourseForm()
+ 
+    return render(request, 'management/courses_list.html', {
+        'courses':     courses,
+        'departments': Department.objects.all().order_by('name'),
+        'form':        form,
+    })
 
 
 # ===========================================================================

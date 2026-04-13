@@ -24,7 +24,7 @@ from django.template import Library
 from .models import (
     Faculty, Program, CourseApplication,
     Message, Notification, SupportTicket, ContactMessage,
-    SiteConfig,
+    SiteConfig, AcademicSession
 )
 
 logger = logging.getLogger(__name__)
@@ -225,12 +225,14 @@ def admin_counts(request):
             'unread_contact_count': ContactMessage.objects.filter(
                 is_read=False
             ).count(),
+            'current_session': AcademicSession.get_current(),
         }
     except Exception:
         logger.exception('admin_counts: failed to fetch counts')
         return {
             'open_tickets_count': 0,
             'unread_contact_count': 0,
+            'current_session': None,
         }
 
 

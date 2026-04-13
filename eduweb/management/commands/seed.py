@@ -19,7 +19,8 @@ from eduweb.models import (
     QuizAnswer, QuizAttempt, QuizResponse, Review, SubscriptionPlan,
     Subscription, SystemConfiguration, UserProfile, Vendor, StudyGroup,
     StudyGroupMember, StudyGroupMessage, BroadcastMessage, StaffPayroll,
-    ListOfCountry, FeePayment,
+    ListOfCountry, FeePayment, CourseRegistration, CourseGrade, LibraryItem,
+    Exam, ExamQuestion, StudentExamResponse, ExamStatusLog,
 )
 
 fake = Faker()
@@ -59,6 +60,8 @@ class Command(BaseCommand):
         # ── CLEANUP ──────────────────────────────────────────────────────────
         self.stdout.write("🧹 Clearing existing data...")
         models_to_clear = [
+            ExamStatusLog, StudentExamResponse, ExamQuestion, Exam,
+            CourseGrade, CourseRegistration, LibraryItem,
             AuditLog, Notification, Message, TicketReply, SupportTicket,
             StudentBadge, Badge, QuizResponse, QuizAttempt, QuizAnswer,
             QuizQuestion, Quiz, AssignmentSubmission, Assignment,
@@ -143,21 +146,6 @@ class Command(BaseCommand):
             twitter='https://twitter.com/miu_edu',
             tiktok='https://tiktok.com/@miu.edu',
             linkedin='https://linkedin.com/school/melchisedec-international-university',
-
-            # ── Labelled Emails ───────────────────────────────────────────────
-            email_admissions='admissions@miu.edu',
-            email_info='info@miu.edu',
-            email_international='international@miu.edu',
-
-            # ── Labelled Phone Lines ──────────────────────────────────────────
-            phone_admissions='+1 (555) 123-4567',
-            phone_general='+1 (555) 123-4568',
-            phone_international='+1 (555) 123-4569',
-
-            # ── Office Hours ──────────────────────────────────────────────────
-            office_hours_weekday='Monday - Friday: 8:00 AM - 6:00 PM',
-            office_hours_saturday='Saturday: 9:00 AM - 1:00 PM',
-            office_hours_sunday='Sunday: Closed',
 
             # ── Labelled Emails ───────────────────────────────────────────────
             email_admissions='admissions@miu.edu',
@@ -337,6 +325,9 @@ class Command(BaseCommand):
                 p.email_notifications = random.choice([True, False])
                 p.marketing_emails = random.choice([True, False])
                 p.email_verified = i < 4
+                # academic progression — set after sessions exist; patched below
+                p.year_of_study = 1
+                p.progression_status = 'active'
                 p.save()
                 created.append(u)
             return created
@@ -722,27 +713,45 @@ class Command(BaseCommand):
         self.stdout.write("📅 Creating academic sessions...")
         sessions = []
         session_data = [
-            ('2023/2024', date(2023, 9, 4), date(2024, 1, 19),
-             date(2024, 1, 29), date(2024, 5, 31),
-             date(2023, 8, 28), date(2023, 9, 1), 'closed', False),
-            ('2024/2025', date(2024, 9, 2), date(2025, 1, 17),
-             date(2025, 1, 27), date(2025, 5, 30),
-             date(2024, 8, 26), date(2024, 8, 30), 'active', True),
-            ('2025/2026', date(2025, 9, 1), date(2026, 1, 16),
-             date(2026, 1, 26), date(2026, 5, 29),
-             date(2025, 8, 25), date(2025, 8, 29), 'upcoming', False),
+            {
+                'name': '2023/2024',
+                'term_dates': [
+                    {'term': 'first',  'start': '2023-09-04', 'end': '2024-01-19'},
+                    {'term': 'second', 'start': '2024-01-29', 'end': '2024-05-31'},
+                ],
+                'registration_start': date(2023, 8, 28),
+                'registration_end':   date(2023, 9, 1),
+                'status': 'closed', 'is_current': False,
+            },
+            {
+                'name': '2024/2025',
+                'term_dates': [
+                    {'term': 'first',  'start': '2024-09-02', 'end': '2025-01-17'},
+                    {'term': 'second', 'start': '2025-01-27', 'end': '2025-05-30'},
+                ],
+                'registration_start': date(2024, 8, 26),
+                'registration_end':   date(2024, 8, 30),
+                'status': 'active', 'is_current': True,
+            },
+            {
+                'name': '2025/2026',
+                'term_dates': [
+                    {'term': 'first',  'start': '2025-09-01', 'end': '2026-01-16'},
+                    {'term': 'second', 'start': '2026-01-26', 'end': '2026-05-29'},
+                ],
+                'registration_start': date(2025, 8, 25),
+                'registration_end':   date(2026, 4, 30),  # open now for seeding
+                'status': 'upcoming', 'is_current': False,
+            },
         ]
-        for (name, fs, fe, ss, se, rs, re, status, is_curr) in session_data:
+        for sd in session_data:
             s = AcademicSession.objects.create(
-                name=name,
-                first_semester_start=fs,
-                first_semester_end=fe,
-                second_semester_start=ss,
-                second_semester_end=se,
-                registration_start=rs,
-                registration_end=re,
-                status=status,
-                is_current=is_curr,
+                name=sd['name'],
+                term_dates=sd['term_dates'],
+                registration_start=sd['registration_start'],
+                registration_end=sd['registration_end'],
+                status=sd['status'],
+                is_current=sd['is_current'],
             )
             sessions.append(s)
         current_session = sessions[1]  # 2024/2025
@@ -750,36 +759,157 @@ class Command(BaseCommand):
         # ── 13. ACADEMIC COURSES (units within programs) ──────────────────────
         self.stdout.write("📚 Creating academic courses...")
         ac_raw = [
-            # BSc Software Engineering — programs[0]
-            (programs[0], 'core', 'SE101', 'Introduction to Programming', 1, 'first', 3, 'terminal', 'blue', 'indigo'),
-            (programs[0], 'core', 'SE102', 'Data Structures & Algorithms', 1, 'second', 3, 'layers', 'blue', 'indigo'),
-            (programs[0], 'core', 'SE201', 'Software Design & Architecture', 2, 'first', 4, 'layout', 'blue', 'cyan'),
-            (programs[0], 'elective', 'SE301', 'Cloud Computing & DevOps', 3, 'first', 3, 'cloud', 'sky', 'blue'),
-            (programs[0], 'core', 'SE302', 'Capstone Software Project', 3, 'second', 6, 'rocket', 'indigo', 'violet'),
-            # BSc Artificial Intelligence — programs[2]
-            (programs[2], 'core', 'AI101', 'Foundations of Artificial Intelligence', 1, 'first', 3, 'brain-circuit', 'violet', 'purple'),
-            (programs[2], 'core', 'AI201', 'Machine Learning Fundamentals', 2, 'first', 4, 'cpu', 'purple', 'fuchsia'),
-            (programs[2], 'elective', 'AI301', 'Deep Learning & Neural Networks', 3, 'first', 3, 'network', 'violet', 'indigo'),
-            # BEng Civil Engineering — programs[5]
-            (programs[5], 'core', 'CVE101', 'Structural Analysis I', 1, 'first', 3, 'building', 'orange', 'amber'),
-            (programs[5], 'core', 'CVE201', 'Geotechnical Engineering', 2, 'second', 3, 'mountain', 'orange', 'yellow'),
-            (programs[5], 'elective', 'CVE301', 'Environmental Engineering', 3, 'first', 3, 'leaf', 'green', 'emerald'),
-            # BSc Finance & Accounting — programs[7]
-            (programs[7], 'core', 'FNA101', 'Financial Accounting Principles', 1, 'first', 3, 'book-open', 'green', 'emerald'),
-            (programs[7], 'core', 'FNA201', 'Corporate Finance', 2, 'first', 4, 'trending-up', 'emerald', 'teal'),
-            (programs[7], 'elective', 'FNA301', 'Investment Analysis', 3, 'second', 3, 'bar-chart-2', 'green', 'lime'),
-            # MBA Finance — programs[8]
-            (programs[8], 'core', 'MBA101', 'Managerial Economics', 1, 'first', 4, 'briefcase', 'teal', 'cyan'),
-            (programs[8], 'core', 'MBA201', 'Strategic Financial Management', 1, 'second', 4, 'pie-chart', 'emerald', 'teal'),
-            # BSc Nursing — programs[9]
-            (programs[9], 'core', 'NRS101', 'Anatomy & Physiology', 1, 'first', 4, 'heart-pulse', 'red', 'rose'),
-            (programs[9], 'core', 'NRS201', 'Clinical Nursing Practice', 2, 'first', 5, 'stethoscope', 'rose', 'pink'),
-            # BA English & Creative Writing — programs[10]
-            (programs[10], 'core', 'ECW101', 'Introduction to Literary Theory', 1, 'first', 3, 'book', 'purple', 'violet'),
-            (programs[10], 'elective', 'ECW201', 'Fiction Writing Workshop', 2, 'second', 3, 'pen-line', 'violet', 'purple'),
-            # BA Digital Media & Design — programs[11]
-            (programs[11], 'core', 'DMD101', 'Principles of Graphic Design', 1, 'first', 3, 'image', 'pink', 'rose'),
-            (programs[11], 'core', 'DMD201', 'UX & Interaction Design', 2, 'first', 3, 'mouse-pointer', 'pink', 'fuchsia'),
+            # ══════════════════════════════════════════════════════════════════════
+            # BSc Software Engineering — programs[0]  (3 years)
+            # ══════════════════════════════════════════════════════════════════════
+            # Year 1 — Semester 1
+            (programs[0], 'general',  'SE100', 'Academic Skills & Research Methods',       1, 'first',  2, 'book',            'gray',   'slate'),
+            (programs[0], 'core',     'SE101', 'Introduction to Programming',              1, 'first',  3, 'terminal',        'blue',   'indigo'),
+            (programs[0], 'core',     'SE102', 'Mathematics for Computing I',              1, 'first',  3, 'calculator',      'indigo', 'blue'),
+            # Year 1 — Semester 2
+            (programs[0], 'core',     'SE103', 'Data Structures & Algorithms',             1, 'second', 3, 'layers',          'blue',   'cyan'),
+            (programs[0], 'core',     'SE104', 'Object-Oriented Programming',              1, 'second', 3, 'code-2',          'sky',    'blue'),
+            (programs[0], 'general',  'SE105', 'Communication Skills',                     1, 'second', 2, 'message-square',  'gray',   'zinc'),
+            # Year 2 — Semester 1
+            (programs[0], 'core',     'SE201', 'Software Design & Architecture',           2, 'first',  4, 'layout',          'blue',   'cyan'),
+            (programs[0], 'core',     'SE202', 'Database Systems',                         2, 'first',  3, 'database',        'teal',   'cyan'),
+            (programs[0], 'core',     'SE203', 'Operating Systems',                        2, 'first',  3, 'server',          'gray',   'blue'),
+            # Year 2 — Semester 2
+            (programs[0], 'core',     'SE204', 'Computer Networks',                        2, 'second', 3, 'network',         'sky',    'indigo'),
+            (programs[0], 'core',     'SE205', 'Software Testing & Quality Assurance',     2, 'second', 3, 'check-circle',    'green',  'teal'),
+            (programs[0], 'elective', 'SE206', 'Mobile Application Development',           2, 'second', 3, 'smartphone',      'cyan',   'sky'),
+            # Year 3 — Semester 1
+            (programs[0], 'elective', 'SE301', 'Cloud Computing & DevOps',                 3, 'first',  3, 'cloud',           'sky',    'blue'),
+            (programs[0], 'core',     'SE302', 'Artificial Intelligence Foundations',      3, 'first',  3, 'brain-circuit',   'violet', 'purple'),
+            (programs[0], 'core',     'SE303', 'Cybersecurity Fundamentals',               3, 'first',  3, 'shield',          'red',    'orange'),
+            # Year 3 — Semester 2
+            (programs[0], 'core',     'SE304', 'Capstone Software Project',                3, 'second', 6, 'rocket',          'indigo', 'violet'),
+            (programs[0], 'elective', 'SE305', 'Entrepreneurship & Tech Startups',         3, 'second', 3, 'lightbulb',       'yellow', 'amber'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # MSc Advanced Software Engineering — programs[1]  (1 year)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[1], 'core',     'ASE501', 'Advanced Algorithms & Complexity',        1, 'first',  4, 'cpu',             'indigo', 'blue'),
+            (programs[1], 'core',     'ASE502', 'Distributed Systems & Microservices',     1, 'first',  4, 'share-2',         'sky',    'cyan'),
+            (programs[1], 'core',     'ASE503', 'Machine Learning Engineering',            1, 'second', 4, 'brain',           'purple', 'violet'),
+            (programs[1], 'core',     'ASE504', 'MSc Research Thesis',                     1, 'second', 8, 'file-text',       'gray',   'blue'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # BSc Artificial Intelligence — programs[2]  (3 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[2], 'core',     'AI101', 'Foundations of Artificial Intelligence',   1, 'first',  3, 'brain-circuit',   'violet', 'purple'),
+            (programs[2], 'core',     'AI102', 'Python for AI',                            1, 'first',  3, 'code',            'blue',   'indigo'),
+            (programs[2], 'core',     'AI103', 'Linear Algebra & Calculus for ML',         1, 'second', 3, 'sigma',           'indigo', 'violet'),
+            (programs[2], 'core',     'AI104', 'Probability & Statistics',                 1, 'second', 3, 'bar-chart',       'purple', 'fuchsia'),
+            (programs[2], 'core',     'AI201', 'Machine Learning Fundamentals',            2, 'first',  4, 'cpu',             'purple', 'fuchsia'),
+            (programs[2], 'core',     'AI202', 'Data Engineering & Big Data',              2, 'first',  3, 'database',        'teal',   'cyan'),
+            (programs[2], 'core',     'AI203', 'Natural Language Processing',              2, 'second', 3, 'message-circle',  'fuchsia','pink'),
+            (programs[2], 'core',     'AI204', 'Computer Vision',                          2, 'second', 3, 'eye',             'violet', 'purple'),
+            (programs[2], 'elective', 'AI301', 'Deep Learning & Neural Networks',          3, 'first',  3, 'network',         'violet', 'indigo'),
+            (programs[2], 'elective', 'AI302', 'Reinforcement Learning',                   3, 'first',  3, 'target',          'purple', 'violet'),
+            (programs[2], 'core',     'AI303', 'AI Ethics & Responsible AI',               3, 'second', 3, 'scale',           'gray',   'slate'),
+            (programs[2], 'core',     'AI304', 'AI Capstone Project',                      3, 'second', 6, 'rocket',          'fuchsia','violet'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # BSc Cybersecurity — programs[4]  (3 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[4], 'core',     'CYS101', 'Introduction to Cybersecurity',           1, 'first',  3, 'shield',          'red',    'orange'),
+            (programs[4], 'core',     'CYS102', 'Networking Fundamentals',                 1, 'first',  3, 'network',         'blue',   'sky'),
+            (programs[4], 'core',     'CYS103', 'Operating Systems Security',              1, 'second', 3, 'lock',            'red',    'rose'),
+            (programs[4], 'core',     'CYS104', 'Cryptography & PKI',                      1, 'second', 3, 'key',             'amber',  'yellow'),
+            (programs[4], 'core',     'CYS201', 'Ethical Hacking & Pen Testing',           2, 'first',  4, 'bug',             'red',    'pink'),
+            (programs[4], 'core',     'CYS202', 'Digital Forensics',                       2, 'second', 3, 'search',          'orange', 'amber'),
+            (programs[4], 'elective', 'CYS301', 'Malware Analysis & Reverse Engineering',  3, 'first',  3, 'code-2',          'rose',   'red'),
+            (programs[4], 'core',     'CYS302', 'Security Operations & SIEM',              3, 'second', 3, 'monitor',         'red',    'orange'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # BEng Civil Engineering — programs[5]  (4 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[5], 'core',     'CVE101', 'Structural Analysis I',                   1, 'first',  3, 'building',        'orange', 'amber'),
+            (programs[5], 'core',     'CVE102', 'Engineering Mathematics I',               1, 'first',  3, 'calculator',      'amber',  'yellow'),
+            (programs[5], 'core',     'CVE103', 'Engineering Drawing & CAD',               1, 'second', 3, 'pen-tool',        'orange', 'red'),
+            (programs[5], 'core',     'CVE104', 'Materials Science',                       1, 'second', 3, 'layers',          'amber',  'orange'),
+            (programs[5], 'core',     'CVE201', 'Structural Analysis II',                  2, 'first',  4, 'building-2',      'orange', 'amber'),
+            (programs[5], 'core',     'CVE202', 'Fluid Mechanics',                         2, 'first',  3, 'droplets',        'blue',   'cyan'),
+            (programs[5], 'core',     'CVE203', 'Geotechnical Engineering',                2, 'second', 3, 'mountain',        'orange', 'yellow'),
+            (programs[5], 'core',     'CVE204', 'Transportation Engineering',              2, 'second', 3, 'map',             'amber',  'orange'),
+            (programs[5], 'elective', 'CVE301', 'Environmental Engineering',               3, 'first',  3, 'leaf',            'green',  'emerald'),
+            (programs[5], 'core',     'CVE302', 'Concrete & Steel Design',                 3, 'second', 3, 'hard-hat',        'orange', 'amber'),
+            (programs[5], 'core',     'CVE401', 'Project Management in Civil Eng.',        4, 'first',  3, 'clipboard-list',  'teal',   'cyan'),
+            (programs[5], 'core',     'CVE402', 'BEng Capstone Project',                   4, 'second', 8, 'rocket',          'red',    'orange'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # BEng Electrical Engineering — programs[6]  (4 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[6], 'core',     'EEE101', 'Circuit Theory & Electronics',            1, 'first',  3, 'zap',             'yellow', 'amber'),
+            (programs[6], 'core',     'EEE102', 'Engineering Mathematics I',               1, 'first',  3, 'calculator',      'amber',  'yellow'),
+            (programs[6], 'core',     'EEE103', 'Digital Electronics',                     1, 'second', 3, 'cpu',             'yellow', 'lime'),
+            (programs[6], 'core',     'EEE201', 'Electromagnetics',                        2, 'first',  3, 'magnet',          'amber',  'orange'),
+            (programs[6], 'core',     'EEE202', 'Power Systems I',                         2, 'second', 4, 'bolt',            'yellow', 'amber'),
+            (programs[6], 'core',     'EEE301', 'Control Systems',                         3, 'first',  3, 'sliders',         'orange', 'amber'),
+            (programs[6], 'elective', 'EEE302', 'Renewable Energy Systems',                3, 'second', 3, 'sun',             'green',  'emerald'),
+            (programs[6], 'core',     'EEE401', 'BEng Electrical Capstone Project',        4, 'second', 8, 'rocket',          'yellow', 'amber'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # BSc Finance & Accounting — programs[7]  (3 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[7], 'core',     'FNA101', 'Financial Accounting Principles',         1, 'first',  3, 'book-open',       'green',  'emerald'),
+            (programs[7], 'core',     'FNA102', 'Business Economics',                      1, 'first',  3, 'trending-up',     'emerald','teal'),
+            (programs[7], 'core',     'FNA103', 'Introduction to Finance',                 1, 'second', 3, 'dollar-sign',     'green',  'lime'),
+            (programs[7], 'core',     'FNA104', 'Quantitative Methods',                    1, 'second', 3, 'calculator',      'teal',   'cyan'),
+            (programs[7], 'core',     'FNA201', 'Corporate Finance',                       2, 'first',  4, 'trending-up',     'emerald','teal'),
+            (programs[7], 'core',     'FNA202', 'Management Accounting',                   2, 'first',  3, 'pie-chart',       'green',  'emerald'),
+            (programs[7], 'core',     'FNA203', 'Taxation',                                2, 'second', 3, 'receipt',         'teal',   'green'),
+            (programs[7], 'elective', 'FNA301', 'Investment Analysis',                     3, 'second', 3, 'bar-chart-2',     'green',  'lime'),
+            (programs[7], 'core',     'FNA302', 'Auditing & Assurance',                    3, 'first',  3, 'check-square',    'emerald','teal'),
+            (programs[7], 'core',     'FNA303', 'Financial Reporting & IFRS',              3, 'second', 3, 'file-bar-chart',  'teal',   'green'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # MBA Finance — programs[8]  (1 year — postgraduate)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[8], 'core',     'MBA501', 'Managerial Economics',                    1, 'first',  4, 'briefcase',       'teal',   'cyan'),
+            (programs[8], 'core',     'MBA502', 'Organisational Behaviour',                1, 'first',  4, 'users',           'cyan',   'sky'),
+            (programs[8], 'core',     'MBA503', 'Strategic Financial Management',          1, 'second', 4, 'pie-chart',       'emerald','teal'),
+            (programs[8], 'core',     'MBA504', 'Business Research Methods',              1, 'second', 4, 'search',          'teal',   'emerald'),
+            (programs[8], 'elective', 'MBA505', 'International Business & Trade',          1, 'second', 3, 'globe',           'blue',   'cyan'),
+            (programs[8], 'core',     'MBA506', 'MBA Dissertation',                        1, 'second', 8, 'file-text',       'gray',   'teal'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # BSc Nursing — programs[9]  (3 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[9], 'core',     'NRS101', 'Anatomy & Physiology I',                  1, 'first',  4, 'heart-pulse',     'red',    'rose'),
+            (programs[9], 'core',     'NRS102', 'Foundations of Nursing Practice',         1, 'first',  3, 'stethoscope',     'rose',   'pink'),
+            (programs[9], 'core',     'NRS103', 'Anatomy & Physiology II',                 1, 'second', 4, 'activity',        'red',    'pink'),
+            (programs[9], 'core',     'NRS104', 'Pharmacology I',                          1, 'second', 3, 'pill',            'pink',   'rose'),
+            (programs[9], 'core',     'NRS201', 'Clinical Nursing Practice I',             2, 'first',  5, 'stethoscope',     'rose',   'pink'),
+            (programs[9], 'core',     'NRS202', 'Microbiology & Infection Control',        2, 'first',  3, 'shield-check',    'red',    'rose'),
+            (programs[9], 'core',     'NRS203', 'Mental Health Nursing',                   2, 'second', 3, 'brain',           'purple', 'violet'),
+            (programs[9], 'core',     'NRS204', 'Child & Family Nursing',                  2, 'second', 3, 'baby',            'pink',   'rose'),
+            (programs[9], 'elective', 'NRS301', 'Community & Public Health Nursing',       3, 'first',  3, 'map-pin',         'green',  'teal'),
+            (programs[9], 'core',     'NRS302', 'Clinical Nursing Practice II',            3, 'second', 5, 'heart',           'red',    'rose'),
+            (programs[9], 'core',     'NRS303', 'Evidence-Based Practice & Research',      3, 'second', 4, 'file-text',       'gray',   'red'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # BA English & Creative Writing — programs[10]  (3 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[10], 'core',     'ECW101', 'Introduction to Literary Theory',        1, 'first',  3, 'book',            'purple', 'violet'),
+            (programs[10], 'core',     'ECW102', 'Academic Writing Skills',                1, 'first',  2, 'pen',             'violet', 'purple'),
+            (programs[10], 'core',     'ECW103', 'Poetry: Form & Tradition',               1, 'second', 3, 'feather',         'fuchsia','pink'),
+            (programs[10], 'elective', 'ECW201', 'Fiction Writing Workshop',               2, 'second', 3, 'pen-line',        'violet', 'purple'),
+            (programs[10], 'core',     'ECW202', 'British Literature 1800–Present',        2, 'first',  3, 'library',         'purple', 'indigo'),
+            (programs[10], 'elective', 'ECW301', 'Screenwriting & Drama',                  3, 'first',  3, 'film',            'pink',   'rose'),
+            (programs[10], 'core',     'ECW302', 'Dissertation in English',                3, 'second', 6, 'scroll',          'gray',   'purple'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # BA Digital Media & Design — programs[11]  (3 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[11], 'core',     'DMD101', 'Principles of Graphic Design',           1, 'first',  3, 'image',           'pink',   'rose'),
+            (programs[11], 'core',     'DMD102', 'Typography & Layout',                    1, 'first',  2, 'type',            'rose',   'pink'),
+            (programs[11], 'core',     'DMD103', 'Colour Theory & Visual Communication',   1, 'second', 3, 'palette',         'fuchsia','purple'),
+            (programs[11], 'core',     'DMD201', 'UX & Interaction Design',                2, 'first',  3, 'mouse-pointer',   'pink',   'fuchsia'),
+            (programs[11], 'core',     'DMD202', 'Digital Photography & Video',            2, 'second', 3, 'camera',          'rose',   'pink'),
+            (programs[11], 'elective', 'DMD301', 'Motion Graphics & Animation',            3, 'first',  3, 'play-circle',     'fuchsia','violet'),
+            (programs[11], 'core',     'DMD302', 'Design Capstone Portfolio',              3, 'second', 6, 'layout-grid',     'pink',   'rose'),
         ]
         academic_courses = []
         for (prog, ctype, code, name, year, semester, credits, icon, col1, col2) in ac_raw:
@@ -790,7 +920,6 @@ class Command(BaseCommand):
                 credit_units=credits,
                 year_of_study=year,
                 semester=semester,
-                academic_session=current_session,
                 description=fake.text(max_nb_chars=300),
                 learning_outcomes=[
                     f"Understand core principles of {name}",
@@ -798,7 +927,6 @@ class Command(BaseCommand):
                     "Critically evaluate relevant literature and methods",
                     "Demonstrate competence through assessed coursework",
                 ],
-                lecturer=random.choice(verified_instructors) if verified_instructors else None,
                 icon=icon,
                 color_primary=col1,
                 color_secondary=col2,
@@ -978,6 +1106,50 @@ class Command(BaseCommand):
                     file_size=random.randint(100_000, 5_000_000),
                 )
 
+        # ── 17b. COURSE REGISTRATIONS & GRADES ─────────────────────────────────
+        self.stdout.write("📋 Creating course registrations and grades...")
+        grade_letters = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'D', 'F']
+        grade_scores  = [95,   90,  87,   83,   80,  77,   73,   70,  62,  45]
+
+        # Use the open registration session (2025/2026 has registration_end in the future)
+        open_session = sessions[2]  # 2025/2026 — registration_end = 2026-04-30
+
+        for student in verified_students:
+            # pick 3–6 academic courses at random to register for
+            sample_courses = random.sample(academic_courses, k=min(random.randint(3, 6), len(academic_courses)))
+            for ac in sample_courses:
+                try:
+                    reg = CourseRegistration(
+                        student=student,
+                        course=ac,
+                        session=open_session,
+                        term=ac.semester,
+                        status=random.choice(['approved', 'approved', 'dropped', 'pending']),
+                    )
+                    reg.save(skip_window_check=True)
+                except Exception:
+                    continue  # skip duplicates / prerequisite violations
+                # Create a grade for approved registrations
+                if reg.status == 'approved':
+                    grade_idx = random.randint(0, len(grade_letters) - 1)
+                    CourseGrade.objects.get_or_create(
+                        student=student,
+                        course=ac,
+                        session=open_session,
+                        term=ac.semester,
+                        defaults=dict(
+                            grade=grade_letters[grade_idx],
+                            score=Decimal(str(grade_scores[grade_idx] + random.randint(-4, 4))),
+                            credit_units=ac.credit_units,
+                            is_passed=grade_idx < 8,
+                            recorded_by=random.choice(verified_instructors),
+                        )
+                    )
+        self.stdout.write(self.style.SUCCESS(
+            f"   ✅ {CourseRegistration.objects.count()} registrations, "
+            f"{CourseGrade.objects.count()} grades created"
+        ))
+
         # ── 18. APPLICATION PAYMENTS ─────────────────────────────────────────
         self.stdout.write("💰 Creating application payments...")
         for app in [a for a in applications
@@ -1000,6 +1172,307 @@ class Command(BaseCommand):
                 },
                 failure_reason='',
             )
+
+        # ── 18b. COURSE REGISTRATIONS ────────────────────────────────────────
+        self.stdout.write("📋 Creating course registrations...")
+        for student in verified_students:
+            sample_courses = random.sample(
+                academic_courses, k=min(random.randint(4, 8), len(academic_courses))
+            )
+            for ac in sample_courses:
+                try:
+                    obj = CourseRegistration(
+                        student=student,
+                        course=ac,
+                        session=open_session,
+                        term=ac.semester,
+                        status=random.choice(['pending', 'approved', 'approved', 'dropped']),
+                    )
+                    obj.save(skip_window_check=True)
+                except Exception:
+                    pass  # skip duplicate or validation errors during seeding
+        self.stdout.write(self.style.SUCCESS(
+            f"   ✅ {CourseRegistration.objects.count()} course registrations created"
+        ))
+
+        # ── 18c. COURSE GRADES ────────────────────────────────────────────────
+        self.stdout.write("📊 Creating course grades...")
+        grade_map = [
+            ('A', Decimal('85.00'), True),
+            ('A', Decimal('90.00'), True),
+            ('B', Decimal('75.00'), True),
+            ('B', Decimal('70.00'), True),
+            ('C', Decimal('65.00'), True),
+            ('C', Decimal('60.00'), True),
+            ('D', Decimal('55.00'), True),
+            ('F', Decimal('40.00'), False),
+            ('F', Decimal('30.00'), False),
+        ]
+        approved_regs = list(CourseRegistration.objects.filter(status='approved'))
+        for reg in approved_regs:
+            grade_letter, score, is_passed = random.choice(grade_map)
+            try:
+                CourseGrade.objects.get_or_create(
+                    student=reg.student,
+                    course=reg.course,
+                    session=current_session,
+                    term=reg.term,
+                    defaults=dict(
+                        lms_course=None,
+                        application=None,
+                        score=score + Decimal(str(random.randint(-5, 5))),
+                        grade=grade_letter,
+                        credit_units=reg.course.credit_units,
+                        is_passed=is_passed,
+                        result_status=random.choice(['released', 'released', 'pending', 'withheld']),
+                        recorded_by=random.choice(users['instructors']),
+                    )
+                )
+            except Exception:
+                pass
+        self.stdout.write(self.style.SUCCESS(
+            f"   ✅ {CourseGrade.objects.count()} course grades created"
+        ))
+
+        # ── 18d. LIBRARY ITEMS ────────────────────────────────────────────────
+        self.stdout.write("📚 Creating library items...")
+        admin_user = users['admins'][0]
+        library_raw = [
+            # (title, author, publisher, year, category, subcategory, isbn, description, tags, access, featured)
+            # ── Books: Computer Science ───────────────────────────────────────
+            ('Introduction to Algorithms', 'Cormen, Leiserson, Rivest, Stein',
+             'MIT Press', 2022, 'Books', 'Computer Science Books',
+             '9780262046305',
+             'The definitive reference for algorithms and data structures. Required text for CS students.',
+             'algorithms,data structures,computer science', 'members', True),
+            ('Clean Code: A Handbook of Agile Software Craftsmanship', 'Robert C. Martin',
+             'Prentice Hall', 2008, 'Books', 'Computer Science Books',
+             '9780132350884',
+             'Best practices for writing maintainable, readable code in any language.',
+             'clean code,software engineering,agile', 'members', False),
+            ('Deep Learning', 'Goodfellow, Bengio, Courville',
+             'MIT Press', 2016, 'Books', 'Computer Science Books',
+             '9780262035613',
+             'Comprehensive coverage of deep learning theory and modern neural network architectures.',
+             'deep learning,neural networks,machine learning', 'members', True),
+            ('The Pragmatic Programmer', 'Hunt & Thomas',
+             'Addison-Wesley', 2019, 'Books', 'Computer Science Books',
+             '9780135957059',
+             'Timeless software development wisdom for programmers at every level.',
+             'programming,software development,best practices', 'members', False),
+            ('Python Crash Course', 'Eric Matthes',
+             'No Starch Press', 2023, 'Books', 'Computer Science Books',
+             '9781718502703',
+             'Hands-on project-based introduction to Python programming.',
+             'python,programming,beginner', 'public', False),
+            ('Design Patterns: Elements of Reusable Object-Oriented Software', 'Gang of Four',
+             'Addison-Wesley', 1994, 'Books', 'Computer Science Books',
+             '9780201633610',
+             'The classic reference for software design patterns used throughout the industry.',
+             'design patterns,object oriented,software architecture', 'members', False),
+            ('Computer Networks', 'Andrew Tanenbaum',
+             'Pearson', 2021, 'Books', 'Computer Science Books',
+             '9780137523214',
+             'Comprehensive coverage of computer networking protocols, architectures, and applications.',
+             'networking,TCP/IP,protocols', 'members', False),
+            ('Operating System Concepts', 'Silberschatz, Galvin, Gagne',
+             'Wiley', 2018, 'Books', 'Computer Science Books',
+             '9781119456339',
+             'The standard OS textbook covering processes, memory, storage, and security.',
+             'operating systems,processes,memory management', 'members', False),
+
+            # ── Books: Engineering ─────────────────────────────────────────────
+            ('Structural Analysis', 'Russell C. Hibbeler',
+             'Pearson', 2020, 'Books', 'Engineering Books',
+             '9780134610672',
+             'Comprehensive coverage of structural mechanics for civil and structural engineering.',
+             'structural analysis,civil engineering,statics', 'members', True),
+            ('Fundamentals of Electric Circuits', 'Alexander & Sadiku',
+             'McGraw-Hill', 2020, 'Books', 'Engineering Books',
+             '9780078028229',
+             'Essential textbook for electrical circuit analysis with worked examples.',
+             'electric circuits,electrical engineering,AC DC', 'members', False),
+            ('Engineering Mechanics: Statics', 'R.C. Hibbeler',
+             'Pearson', 2019, 'Books', 'Engineering Books',
+             '9780133918922',
+             'Core mechanics text covering forces, equilibrium, and structural analysis.',
+             'statics,mechanics,engineering', 'members', False),
+            ('Soil Mechanics and Foundations', 'Muni Budhu',
+             'Wiley', 2019, 'Books', 'Engineering Books',
+             '9781119600343',
+             'Comprehensive geotechnical engineering reference for civil engineering students.',
+             'soil mechanics,geotechnical,foundations', 'members', False),
+            ('Thermodynamics: An Engineering Approach', 'Cengel & Boles',
+             'McGraw-Hill', 2019, 'Books', 'Engineering Books',
+             '9780073398174',
+             'Core thermodynamics textbook used in mechanical and chemical engineering programmes.',
+             'thermodynamics,heat transfer,mechanical engineering', 'members', False),
+
+            # ── Books: Business & Finance ──────────────────────────────────────
+            ('Principles of Corporate Finance', 'Brealey, Myers, Allen',
+             'McGraw-Hill', 2022, 'Books', 'Business & Finance Books',
+             '9781260565553',
+             'Authoritative corporate finance text used in MBA programmes worldwide.',
+             'corporate finance,investment,valuation', 'members', True),
+            ('Financial Accounting', 'Weygandt, Kimmel, Kieso',
+             'Wiley', 2022, 'Books', 'Business & Finance Books',
+             '9781119494683',
+             'Core financial accounting text covering IFRS and US GAAP standards.',
+             'financial accounting,IFRS,GAAP', 'members', False),
+            ('Marketing Management', 'Philip Kotler & Kevin Lane Keller',
+             'Pearson', 2016, 'Books', 'Business & Finance Books',
+             '9780134236933',
+             'The leading marketing management textbook with global case studies.',
+             'marketing,brand management,consumer behaviour', 'members', False),
+            ('The Lean Startup', 'Eric Ries',
+             'Crown Business', 2011, 'Books', 'Business & Finance Books',
+             '9780307887894',
+             'Essential reading for entrepreneurs on building and scaling startups efficiently.',
+             'startup,entrepreneurship,lean,agile', 'public', False),
+            ('Competitive Strategy', 'Michael E. Porter',
+             'Free Press', 1980, 'Books', 'Business & Finance Books',
+             '9780684841489',
+             'Foundational text on industry analysis, competitive advantage, and business strategy.',
+             'strategy,competitive advantage,Porter', 'members', False),
+            ('Investment Valuation', 'Aswath Damodaran',
+             'Wiley', 2012, 'Books', 'Business & Finance Books',
+             '9781118011522',
+             'Comprehensive guide to valuing stocks, bonds, firms, and real assets.',
+             'valuation,investment,DCF,financial modeling', 'members', False),
+
+            # ── Books: Health Sciences ──────────────────────────────────────────
+            ('Fundamentals of Nursing', 'Taylor, Lynn, Bartlett',
+             'Lippincott Williams & Wilkins', 2023, 'Books', 'Health Sciences Books',
+             '9781975168155',
+             'Comprehensive nursing foundations text for pre-registration nursing students.',
+             'nursing,clinical practice,patient care', 'members', True),
+            ('Pharmacology for Nurses', 'Michael Patrick Adams',
+             'Pearson', 2022, 'Books', 'Health Sciences Books',
+             '9780136817093',
+             'Core pharmacology reference with drug classifications and nursing implications.',
+             'pharmacology,drugs,nursing,medication', 'members', False),
+            ('Public Health: An Introduction', 'Naidoo & Wills',
+             'Palgrave Macmillan', 2016, 'Books', 'Health Sciences Books',
+             '9780230368941',
+             'Accessible introduction to public health concepts, policy, and practice.',
+             'public health,epidemiology,health policy', 'members', False),
+            ("Gray's Anatomy for Students", 'Drake, Vogl, Mitchell',
+             'Elsevier', 2020, 'Books', 'Health Sciences Books',
+             '9780323393041',
+             'Complete illustrated anatomy reference for health sciences students.',
+             'anatomy,physiology,medical,nursing', 'members', True),
+
+            # ── Books: Arts & Humanities ───────────────────────────────────────
+            ('The Norton Anthology of English Literature', 'Stephen Greenblatt (ed.)',
+             'Norton', 2018, 'Books', 'Arts & Humanities Books',
+             '9780393603071',
+             'Definitive anthology covering English literature from the Middle Ages to the present.',
+             'literature,English,poetry,fiction', 'public', True),
+            ('Thinking with Type', 'Ellen Lupton',
+             'Princeton Architectural Press', 2010, 'Books', 'Arts & Humanities Books',
+             '9781568989693',
+             'Essential guide to typography for graphic designers and visual communicators.',
+             'typography,design,layout,graphic design', 'public', False),
+            ('The Design of Everyday Things', 'Don Norman',
+             'Basic Books', 2013, 'Books', 'Arts & Humanities Books',
+             '9780465050659',
+             'Foundational UX and product design thinking — essential for all design students.',
+             'UX,product design,usability,human factors', 'public', True),
+            ('Ways of Seeing', 'John Berger',
+             'Penguin', 1972, 'Books', 'Arts & Humanities Books',
+             '9780140135152',
+             'Influential essays on art criticism, visual culture, and the politics of looking.',
+             'art criticism,visual culture,aesthetics', 'public', False),
+
+            # ── Periodicals ───────────────────────────────────────────────────
+            ('IEEE Transactions on Neural Networks and Learning Systems', 'IEEE',
+             'IEEE', 2024, 'Periodicals', 'Technology Journals',
+             '',
+             'Peer-reviewed journal publishing research on neural networks and learning algorithms.',
+             'neural networks,machine learning,IEEE', 'members', False),
+            ('Journal of Structural Engineering', 'ASCE',
+             'American Society of Civil Engineers', 2024, 'Periodicals', 'Engineering Journals',
+             '',
+             'Leading journal covering structural analysis, design, and construction technology.',
+             'structural engineering,civil engineering,ASCE', 'members', False),
+            ('Journal of Finance', 'American Finance Association',
+             'Wiley', 2024, 'Periodicals', 'Business Journals',
+             '',
+             'Top-tier academic journal for financial economics research and theory.',
+             'finance,financial economics,investment', 'members', False),
+            ('The Lancet', 'Elsevier',
+             'Elsevier', 2024, 'Periodicals', 'Health Sciences Journals',
+             '',
+             'Prestigious medical journal covering clinical research and global health policy.',
+             'medicine,health,clinical research,Lancet', 'members', False),
+            ('Nature', 'Springer Nature',
+             'Springer Nature', 2024, 'Periodicals', 'Science Journals',
+             '',
+             'Weekly multidisciplinary scientific journal — one of the most cited in the world.',
+             'science,nature,research,peer review', 'members', False),
+            ('Harvard Business Review', 'Harvard Business Publishing',
+             'Harvard Business Publishing', 2024, 'Periodicals', 'Business Journals',
+             '',
+             'Leading management and business strategy publication read by executives worldwide.',
+             'business,management,strategy,HBR', 'members', False),
+
+            # ── References ────────────────────────────────────────────────────
+            ("Oxford Dictionary of English", 'Oxford University Press',
+             'Oxford University Press', 2023, 'References', 'Dictionaries',
+             '9780199571123',
+             'Comprehensive dictionary of the English language with etymology and usage notes.',
+             'dictionary,English,vocabulary,reference', 'public', False),
+            ('APA Publication Manual (7th Edition)', 'American Psychological Association',
+             'American Psychological Association', 2020, 'References', 'Style Guides',
+             '9781433832161',
+             'Official style guide for academic writing in psychology, social sciences, and health.',
+             'APA,citation,academic writing,referencing', 'public', True),
+            ('Chicago Manual of Style (17th Edition)', 'University of Chicago Press',
+             'University of Chicago Press', 2017, 'References', 'Style Guides',
+             '9780226287058',
+             'The authoritative guide to manuscript preparation, editing, and citation.',
+             'Chicago style,citation,editing,publishing', 'public', False),
+            ('IEEE Citation Reference', 'IEEE',
+             'IEEE', 2024, 'References', 'Style Guides',
+             '',
+             'Official IEEE referencing and citation guidelines for technical publications.',
+             'IEEE,citation,referencing,technical writing', 'public', False),
+            ('MIU Academic Regulations Handbook 2024/2025', 'Melchisedec International University',
+             'MIU Press', 2024, 'References', 'Institutional Documents',
+             '',
+             'Complete academic regulations, student rights, assessment policies, and procedures.',
+             'regulations,academic policy,MIU,student handbook', 'members', True),
+            ('OWASP Top 10 Security Risks 2023', 'OWASP Foundation',
+             'OWASP', 2023, 'References', 'Technical References',
+             '',
+             'Industry-standard guide to the most critical web application security vulnerabilities.',
+             'cybersecurity,OWASP,security,web development', 'public', False),
+        ]
+
+        for (title, author, publisher, year, category, subcategory, isbn,
+             desc, tags, access, featured) in library_raw:
+            LibraryItem.objects.create(
+                title=title,
+                author=author,
+                publisher=publisher,
+                year=year,
+                category=category,
+                subcategory=subcategory,
+                isbn=isbn,
+                description=desc,
+                tags=tags,
+                access=access,
+                featured=featured,
+                language='en',
+                allow_download=True,
+                allow_read_online=True,
+                is_active=True,
+                order=0,
+                created_by=admin_user,
+            )
+        self.stdout.write(self.style.SUCCESS(
+            f"   ✅ {LibraryItem.objects.count()} library items created"
+        ))
 
         # ── 19. COURSE CATEGORIES (LMS) ──────────────────────────────────────
         self.stdout.write("🗂️  Creating LMS course categories...")
@@ -1033,36 +1506,105 @@ class Command(BaseCommand):
         # ── 20. LMS COURSES ──────────────────────────────────────────────────
         self.stdout.write("🎥 Creating LMS courses...")
         lms_templates = [
-            ('Complete Python Programming Masterclass', categories[0],
-             'beginner', 45.5,
-             'Master Python from basics to advanced. OOP, data structures, file handling.'),
-            ('Modern Web Development Bootcamp', categories[2],
-             'intermediate', 52.0,
-             'HTML, CSS, JavaScript, and modern frameworks for professional websites.'),
-            ('Data Science & Machine Learning A-Z', categories[1],
-             'intermediate', 68.5,
-             'Comprehensive data science with statistics, Python, ML, and real projects.'),
-            ('Deep Learning & Neural Networks', categories[4],
-             'advanced', 72.0,
-             'Advanced deep learning covering CNNs, RNNs, GANs and modern architectures.'),
-            ('JavaScript: Zero to Hero', categories[0],
-             'beginner', 38.0,
-             'Complete JavaScript for beginners. Fundamentals to interactive web apps.'),
-            ('React – The Complete Guide', categories[2],
-             'intermediate', 48.5,
-             'Comprehensive React with hooks, context, Redux, and advanced patterns.'),
-            ('UI/UX Design Fundamentals', categories[8],
-             'beginner', 32.0,
-             'User interface and user experience design principles and tools.'),
-            ('Business Strategy & Entrepreneurship', categories[9],
-             'intermediate', 41.0,
-             'Business strategy, market analysis, and entrepreneurship fundamentals.'),
-            ('Advanced Python for Data Science', categories[1],
-             'advanced', 55.5,
-             'Advanced Python techniques: pandas, numpy, scikit-learn.'),
-            ('Full Stack Web Development', categories[2],
-             'advanced', 78.0,
-             'Full-stack development: frontend, backend, databases, and deployment.'),
+            # ── Programming & Development ──────────────────────────────────────────
+            ('Complete Python Programming Masterclass', categories[0], 'beginner', 45.5,
+            'Master Python from basics to advanced. OOP, data structures, file handling.'),
+            ('JavaScript: Zero to Hero', categories[0], 'beginner', 38.0,
+            'Complete JavaScript for beginners. Fundamentals to interactive web apps.'),
+            ('Advanced Python for Data Science', categories[1], 'advanced', 55.5,
+            'Advanced Python techniques: pandas, numpy, scikit-learn, and visualisation.'),
+            ('TypeScript Fundamentals', categories[0], 'intermediate', 28.0,
+            'Type-safe JavaScript with TypeScript — interfaces, generics, decorators.'),
+            ('Algorithms & Data Structures in Python', categories[0], 'intermediate', 36.0,
+            'Master sorting, searching, graphs, and dynamic programming with Python.'),
+
+            # ── Web Development ───────────────────────────────────────────────────
+            ('Modern Web Development Bootcamp', categories[2], 'intermediate', 52.0,
+            'HTML, CSS, JavaScript, and modern frameworks for professional websites.'),
+            ('React – The Complete Guide', categories[2], 'intermediate', 48.5,
+            'Comprehensive React with hooks, context, Redux, and advanced patterns.'),
+            ('Full Stack Web Development', categories[2], 'advanced', 78.0,
+            'Full-stack: frontend, backend, databases, deployment, and CI/CD.'),
+            ('Django & REST APIs', categories[2], 'intermediate', 42.0,
+            'Build production-ready REST APIs with Django REST Framework.'),
+            ('Next.js & Server-Side Rendering', categories[2], 'advanced', 35.0,
+            'Modern React with SSR, SSG, API routes, and Vercel deployment.'),
+
+            # ── Data Science & Analytics ──────────────────────────────────────────
+            ('Data Science & Machine Learning A-Z', categories[1], 'intermediate', 68.5,
+            'Comprehensive data science with statistics, Python, ML, and real projects.'),
+            ('SQL for Data Analysis', categories[1], 'beginner', 24.0,
+            'Master SQL for querying, aggregating, and analysing large datasets.'),
+            ('Power BI & Data Visualisation', categories[1], 'beginner', 20.0,
+            'Create stunning dashboards and business intelligence reports with Power BI.'),
+            ('Statistics for Data Science', categories[1], 'intermediate', 32.0,
+            'Probability, hypothesis testing, regression, and Bayesian inference.'),
+            ('Data Engineering with Apache Spark', categories[1], 'advanced', 44.0,
+            'Big data pipelines with PySpark, Kafka, Airflow, and cloud platforms.'),
+
+            # ── Artificial Intelligence ────────────────────────────────────────────
+            ('Deep Learning & Neural Networks', categories[4], 'advanced', 72.0,
+            'Advanced deep learning — CNNs, RNNs, GANs, transformers, and deployment.'),
+            ('Natural Language Processing with Python', categories[4], 'advanced', 50.0,
+            'NLP from tokenisation to BERT, GPT, and large language model fine-tuning.'),
+            ('Computer Vision with OpenCV', categories[4], 'intermediate', 38.0,
+            'Image processing, object detection, and deep learning for vision tasks.'),
+            ('Introduction to Generative AI', categories[4], 'beginner', 18.0,
+            'Understand LLMs, diffusion models, prompt engineering, and AI ethics.'),
+            ('Reinforcement Learning Fundamentals', categories[4], 'advanced', 42.0,
+            'Q-learning, policy gradients, actor-critic, and OpenAI Gym environments.'),
+
+            # ── Mobile Development ─────────────────────────────────────────────────
+            ('Flutter & Dart – Complete App Development', categories[3], 'intermediate', 46.0,
+            'Build cross-platform iOS & Android apps with Flutter and Dart.'),
+            ('React Native Masterclass', categories[3], 'intermediate', 40.0,
+            'Cross-platform mobile apps with React Native, Expo, and native modules.'),
+
+            # ── Cybersecurity ──────────────────────────────────────────────────────
+            ('Ethical Hacking & Penetration Testing', categories[5], 'intermediate', 56.0,
+            'Network penetration testing, vulnerability assessment, and Kali Linux.'),
+            ('CompTIA Security+ Exam Prep', categories[5], 'beginner', 34.0,
+            'Comprehensive Security+ preparation covering all exam domains.'),
+            ('Network Security Fundamentals', categories[5], 'beginner', 28.0,
+            'Firewalls, VPNs, IDS/IPS, and secure network architecture principles.'),
+            ('Digital Forensics & Incident Response', categories[5], 'advanced', 48.0,
+            'Forensic investigation, evidence collection, and DFIR workflows.'),
+
+            # ── Cloud Computing ────────────────────────────────────────────────────
+            ('AWS Cloud Practitioner Essentials', categories[6], 'beginner', 22.0,
+            'Core AWS services, cloud economics, and CLF-C02 exam preparation.'),
+            ('Google Cloud Professional Data Engineer', categories[6], 'advanced', 52.0,
+            'BigQuery, Dataflow, Pub/Sub, and GCP machine learning services.'),
+            ('Azure Fundamentals AZ-900', categories[6], 'beginner', 18.0,
+            'Microsoft Azure core services, pricing, and AZ-900 certification prep.'),
+            ('Kubernetes & Container Orchestration', categories[6], 'advanced', 44.0,
+            'Deploy, scale, and manage containers with Kubernetes and Helm.'),
+
+            # ── DevOps & Infrastructure ────────────────────────────────────────────
+            ('DevOps Engineering Bootcamp', categories[7], 'intermediate', 58.0,
+            'CI/CD pipelines, Docker, Kubernetes, Terraform, and GitOps practices.'),
+            ('Linux System Administration', categories[7], 'intermediate', 36.0,
+            'Shell scripting, system management, networking, and security hardening.'),
+
+            # ── Design & UX ───────────────────────────────────────────────────────
+            ('UI/UX Design Fundamentals', categories[8], 'beginner', 32.0,
+            'User interface and user experience design principles, tools, and process.'),
+            ('Figma Masterclass – UI Design', categories[8], 'beginner', 26.0,
+            'Master Figma for wireframing, prototyping, and design systems.'),
+            ('Brand Identity & Graphic Design', categories[8], 'intermediate', 30.0,
+            'Logo design, colour theory, typography, and brand guidelines.'),
+
+            # ── Business & Marketing ──────────────────────────────────────────────
+            ('Business Strategy & Entrepreneurship', categories[9], 'intermediate', 41.0,
+            'Business strategy, market analysis, competitive positioning, and growth.'),
+            ('Digital Marketing Masterclass', categories[9], 'beginner', 38.0,
+            'SEO, SEM, social media, email marketing, and analytics for growth.'),
+            ('Financial Modelling & Valuation', categories[9], 'intermediate', 46.0,
+            'DCF, LBO, comparable analysis, and Excel-based financial modelling.'),
+            ('Project Management Professional (PMP)', categories[9], 'intermediate', 44.0,
+            'PMBOK, agile, risk management, and PMP exam preparation.'),
+            ('Corporate Finance Fundamentals', categories[9], 'beginner', 28.0,
+            'Capital budgeting, WACC, capital structure, and dividend policy basics.'),
         ]
         lms_courses = []
         instructor_course_map = {}
@@ -1770,6 +2312,504 @@ class Command(BaseCommand):
                     if pstatus == 'paid' else None,
                 )
 
+        # ── 47. LIBRARY ITEMS ─────────────────────────────────────────────────
+        self.stdout.write("📚 Creating library items...")
+        library_raw = [
+            # title, author, item_type, isbn, year, faculty_idx, description
+            ('Introduction to Algorithms', 'Cormen, Leiserson, Rivest, Stein', 'book',
+            '9780262046305', 2022, 0,
+            'The definitive reference for algorithms and data structures. Required text for CS students.'),
+            ('Clean Code: A Handbook of Agile Software Craftsmanship', 'Robert C. Martin', 'book',
+            '9780132350884', 2008, 0,
+            'Best practices for writing maintainable, readable code in any language.'),
+            ('Deep Learning', 'Goodfellow, Bengio, Courville', 'book',
+            '9780262035613', 2016, 0,
+            'Comprehensive coverage of deep learning theory and modern neural network architectures.'),
+            ('The Pragmatic Programmer', 'Hunt & Thomas', 'book',
+            '9780135957059', 2019, 0,
+            'Timeless software development wisdom for programmers at every level.'),
+            ('Python Crash Course', 'Eric Matthes', 'book',
+            '9781718502703', 2023, 0,
+            'Hands-on, project-based introduction to Python programming.'),
+            ('Design Patterns: Elements of Reusable OO Software', 'Gang of Four', 'book',
+            '9780201633610', 1994, 0,
+            'The classic reference for software design patterns used throughout the industry.'),
+            ('Structural Analysis', 'Russell C. Hibbeler', 'book',
+            '9780134610672', 2020, 1,
+            'Comprehensive coverage of structural mechanics for civil and structural engineering.'),
+            ('Fundamentals of Electric Circuits', 'Alexander & Sadiku', 'book',
+            '9780078028229', 2020, 1,
+            'Essential textbook for electrical circuit analysis with worked examples.'),
+            ('Engineering Mechanics: Statics', 'R.C. Hibbeler', 'book',
+            '9780133918922', 2019, 1,
+            'Core mechanics text covering forces, equilibrium, and structural analysis.'),
+            ('Soil Mechanics and Foundations', 'Muni Budhu', 'book',
+            '9781119600343', 2019, 1,
+            'Comprehensive geotechnical engineering reference for civil engineering students.'),
+            ('Principles of Corporate Finance', 'Brealey, Myers, Allen', 'book',
+            '9781260565553', 2022, 2,
+            'Authoritative corporate finance text used in MBA programmes worldwide.'),
+            ('Financial Accounting', 'Weygandt, Kimmel, Kieso', 'book',
+            '9781119494683', 2022, 2,
+            'Core financial accounting text covering IFRS and US GAAP standards.'),
+            ('Marketing Management', 'Philip Kotler & Kevin Lane Keller', 'book',
+            '9780134236933', 2016, 2,
+            'The leading marketing management textbook with global case studies.'),
+            ('The Lean Startup', 'Eric Ries', 'book',
+            '9780307887894', 2011, 2,
+            'Essential reading for entrepreneurs on building and scaling startups efficiently.'),
+            ('Fundamentals of Nursing', 'Taylor, Lynn, Bartlett', 'book',
+            '9781975168155', 2023, 3,
+            'Comprehensive nursing foundations text for pre-registration nursing students.'),
+            ('Pharmacology for Nurses', 'Michael Patrick Adams', 'book',
+            '9780136817093', 2022, 3,
+            'Core pharmacology reference with drug classifications and nursing implications.'),
+            ('Public Health: An Introduction', 'Naidoo & Wills', 'book',
+            '9780230368941', 2016, 3,
+            'Accessible introduction to public health concepts, policy, and practice.'),
+            ('The Norton Anthology of English Literature', 'Stephen Greenblatt (ed.)', 'book',
+            '9780393603071', 2018, 4,
+            'Definitive anthology covering English literature from the Middle Ages to the present.'),
+            ('Thinking with Type', 'Ellen Lupton', 'book',
+            '9781568989693', 2010, 4,
+            'Essential guide to typography for graphic designers and visual communicators.'),
+            ('The Design of Everyday Things', 'Don Norman', 'book',
+            '9780465050659', 2013, 4,
+            'Foundational UX and product design thinking — essential for all design students.'),
+            # E-Journals
+            ('IEEE Transactions on Neural Networks and Learning Systems', 'IEEE', 'journal',
+            '', 2024, 0,
+            'Peer-reviewed journal publishing research on neural networks and learning algorithms.'),
+            ('Journal of Structural Engineering', 'ASCE', 'journal',
+            '', 2024, 1,
+            'Leading journal covering structural analysis, design, and construction technology.'),
+            ('Journal of Finance', 'American Finance Association', 'journal',
+            '', 2024, 2,
+            'Top-tier academic journal for financial economics research and theory.'),
+            ('The Lancet', 'Elsevier', 'journal',
+            '', 2024, 3,
+            'Prestigious medical journal covering clinical research and global health policy.'),
+            # E-Books / Digital Resources
+            ('Python Documentation (Official)', 'Python Software Foundation', 'ebook',
+            '', 2024, 0,
+            'Complete official Python 3 documentation and tutorial library.'),
+            ('MDN Web Docs', 'Mozilla Foundation', 'ebook',
+            '', 2024, 0,
+            'Comprehensive web development reference for HTML, CSS, and JavaScript.'),
+            ('OWASP Top 10 Security Risks', 'OWASP Foundation', 'ebook',
+            '', 2024, 0,
+            'Industry-standard guide to the most critical web application security vulnerabilities.'),
+        ]
+
+        ITYPE_TO_CATEGORY = {
+            'book': 'Books', 'journal': 'Periodicals', 'ebook': 'Other',
+        }
+        ITYPE_TO_SUBCATEGORY = {
+            'book': 'Academic Books', 'journal': 'E-Journals', 'ebook': 'E-Books',
+        }
+        for idx, (title, author, itype, isbn, year, fac_idx, desc) in enumerate(library_raw):
+            LibraryItem.objects.create(
+                title=title,
+                author=author,
+                category=ITYPE_TO_CATEGORY.get(itype, 'Other'),
+                subcategory=ITYPE_TO_SUBCATEGORY.get(itype, 'Other'),
+                isbn=isbn,
+                year=year if year else None,
+                description=desc,
+                access='members',
+                featured=(idx < 5),
+                order=idx,
+                created_by=admin_user,
+                is_active=True,
+            )
+        self.stdout.write(self.style.SUCCESS(f"   ✅ {LibraryItem.objects.count()} library items created"))
+
+        # ── 47. EXAMS, EXAM QUESTIONS, STUDENT RESPONSES, STATUS LOGS ─────────
+        self.stdout.write("📝 Creating exams, questions, responses, and status logs...")
+        import datetime as dt
+        import secrets as _secrets
+
+        # Build one exam per LMS course per instructor, covering different exam types
+        exam_type_pool = [
+            Exam.CA, Exam.MID_SEMESTER, Exam.END_OF_SEMESTER,
+            Exam.SUPPLEMENTARY, Exam.PRACTICAL,
+        ]
+        exam_status_pool = [
+            Exam.DRAFT, Exam.SUBMITTED, Exam.APPROVED, Exam.PUBLISHED, Exam.PUBLISHED,
+        ]
+        created_exams = []
+
+        for idx, lc in enumerate(lms_courses):
+            instructor = lc.instructor or random.choice(users['instructors'])
+            exam_type  = exam_type_pool[idx % len(exam_type_pool)]
+            status     = random.choice(exam_status_pool)
+
+            # Schedule: spread exams over coming 60 days
+            exam_date  = (timezone.now() + timedelta(days=random.randint(5, 60))).date()
+            start_hr   = random.choice([8, 9, 10, 11, 14, 15])
+            start_time = dt.time(start_hr, 0)
+            end_time   = dt.time(start_hr + 2, 0)          # 2-hour exam
+
+            exam = Exam(
+                title=f"{lc.title} — {Exam(exam_type=exam_type).get_exam_type_display()} {exam_date.year}",
+                description=f"Formal {exam_type} examination for {lc.title}.",
+                exam_type=exam_type,
+                mode=random.choice([Exam.ONLINE, Exam.IN_PERSON, Exam.HYBRID]),
+                course=lc,
+                academic_session=current_session,
+                department=lc.academic_course.department if lc.academic_course else None,
+                instructor=instructor,
+                exam_date=exam_date,
+                start_time=start_time,
+                end_time=end_time,
+                instruction_window_minutes=10,
+                venue=random.choice([
+                    'Hall A', 'Hall B', 'Lecture Theatre 1',
+                    'Online (LMS)', 'Computer Lab 1', 'Examination Centre',
+                ]),
+                hall_capacity=random.choice([50, 100, 150, 200]),
+                expected_candidates=random.randint(20, 80),
+                questions_per_student=random.choice([20, 25, 30, 40]),
+                total_marks=Decimal(str(random.choice([50, 60, 80, 100]))),
+                pass_mark=Decimal(str(random.choice([40, 45, 50]))),
+                shuffle_questions=random.choice([True, False]),
+                shuffle_options=random.choice([True, False]),
+                show_result_immediately=lc.academic_course is None,  # True for standalone LMS courses, False for academic session courses
+                instructions=(
+                    "Answer all questions. No electronic devices are permitted. "
+                    "Read each question carefully before answering. "
+                    "Time allowed: 2 hours."
+                ),
+                special_instructions="Please bring your student ID card.",
+                internal_notes=f"Set by {instructor.get_full_name()}. Reviewed by HOD.",
+                has_accommodations=random.random() > 0.85,
+                status=status,
+                created_by=instructor,
+                is_active=True,
+            )
+            # Set approval metadata based on status
+            if status in (Exam.SUBMITTED, Exam.APPROVED, Exam.PUBLISHED):
+                exam.submitted_by = instructor
+                exam.submitted_at = timezone.now() - timedelta(days=random.randint(5, 20))
+                exam.submission_count = 1
+            if status in (Exam.APPROVED, Exam.PUBLISHED):
+                exam.approved_by  = random.choice(users['admins'])
+                exam.approved_at  = timezone.now() - timedelta(days=random.randint(1, 10))
+            if status == Exam.PUBLISHED:
+                exam.published_by = random.choice(users['admins'])
+                exam.published_at = timezone.now() - timedelta(days=random.randint(1, 5))
+
+            # Bypass full_clean during seeding (validation requires saved FKs)
+            # Use update_or_create pattern to avoid slug collisions
+            try:
+                exam.save()
+                created_exams.append(exam)
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"   ⚠ Skipped exam for {lc.title}: {e}"))
+                continue
+
+            # ── STATUS LOGS ───────────────────────────────────────────────────
+            if status == Exam.SUBMITTED:
+                ExamStatusLog(
+                    exam=exam, from_status=Exam.DRAFT, to_status=Exam.SUBMITTED,
+                    changed_by=instructor,
+                    note="Submitted for admin review.",
+                ).save()
+            elif status == Exam.APPROVED:
+                ExamStatusLog(
+                    exam=exam, from_status=Exam.DRAFT, to_status=Exam.SUBMITTED,
+                    changed_by=instructor, note="Initial submission.",
+                ).save()
+                ExamStatusLog(
+                    exam=exam, from_status=Exam.SUBMITTED, to_status=Exam.APPROVED,
+                    changed_by=random.choice(users['admins']),
+                    note="Approved after review. Questions verified.",
+                ).save()
+            elif status == Exam.PUBLISHED:
+                ExamStatusLog(
+                    exam=exam, from_status=Exam.DRAFT, to_status=Exam.SUBMITTED,
+                    changed_by=instructor, note="Initial submission.",
+                ).save()
+                ExamStatusLog(
+                    exam=exam, from_status=Exam.SUBMITTED, to_status=Exam.APPROVED,
+                    changed_by=random.choice(users['admins']),
+                    note="Approved — questions and marking scheme verified.",
+                ).save()
+                ExamStatusLog(
+                    exam=exam, from_status=Exam.APPROVED, to_status=Exam.PUBLISHED,
+                    changed_by=random.choice(users['admins']),
+                    note="Published and visible to eligible students.",
+                ).save()
+
+        self.stdout.write(self.style.SUCCESS(
+            f"   ✅ {Exam.objects.count()} exams created, "
+            f"{ExamStatusLog.objects.count()} status log entries"
+        ))
+
+        # ── EXAM QUESTIONS ─────────────────────────────────────────────────────
+        self.stdout.write("❓ Creating exam questions...")
+
+        def make_mcq_options(correct_index, count=4):
+            """Build a well-formed options list for MCQ questions."""
+            answers = [
+                f"Option {chr(65 + i)}: {fake.sentence(nb_words=random.randint(3, 8))}"
+                for i in range(count)
+            ]
+            return [
+                {
+                    "id":         f"opt-{uuid.uuid4().hex[:8]}",
+                    "text":       answers[i],
+                    "is_correct": (i == correct_index),
+                }
+                for i in range(count)
+            ]
+
+        def make_tf_options(correct_is_true):
+            return [
+                {"id": f"opt-{uuid.uuid4().hex[:8]}", "text": "True",
+                 "is_correct": correct_is_true},
+                {"id": f"opt-{uuid.uuid4().hex[:8]}", "text": "False",
+                 "is_correct": not correct_is_true},
+            ]
+
+        for exam in created_exams:
+            num_questions = random.randint(30, 50)
+            diff_pool = (
+                [ExamQuestion.EASY]   * 10 +
+                [ExamQuestion.MEDIUM] * 15 +
+                [ExamQuestion.HARD]   * 10
+            )
+            qtype_pool = (
+                [ExamQuestion.MCQ]          * 20 +
+                [ExamQuestion.TRUE_FALSE]   * 8  +
+                [ExamQuestion.SHORT_ANSWER] * 5  +
+                [ExamQuestion.MULTI_SELECT] * 5  +
+                [ExamQuestion.ESSAY]        * 2
+            )
+            random.shuffle(diff_pool)
+            random.shuffle(qtype_pool)
+
+            for order in range(min(num_questions, len(diff_pool))):
+                qtype = qtype_pool[order % len(qtype_pool)]
+                diff  = diff_pool[order % len(diff_pool)]
+                marks = Decimal(str(random.choice([1, 1, 2, 2, 3, 5])))
+
+                if qtype == ExamQuestion.MCQ:
+                    options = make_mcq_options(random.randint(0, 3))
+                elif qtype == ExamQuestion.MULTI_SELECT:
+                    # 2 correct out of 4
+                    base = make_mcq_options(0)  # start all false
+                    correct_idxs = random.sample(range(4), 2)
+                    for i, o in enumerate(base):
+                        o["is_correct"] = (i in correct_idxs)
+                    options = base
+                elif qtype == ExamQuestion.TRUE_FALSE:
+                    options = make_tf_options(random.choice([True, False]))
+                else:
+                    options = []
+
+                try:
+                    ExamQuestion.objects.create(
+                        exam=exam,
+                        question_text=fake.sentence() + " Explain your answer in detail.",
+                        question_type=qtype,
+                        difficulty=diff,
+                        marks=marks,
+                        options=options,
+                        accepted_answers=(
+                            [fake.word(), fake.word()]
+                            if qtype == ExamQuestion.SHORT_ANSWER else []
+                        ),
+                        explanation=fake.text(max_nb_chars=120),
+                        order=order,
+                        tags=[fake.word(), fake.word()],
+                        source_reference=f"Past Paper {random.randint(2018, 2024)} Q{order+1}",
+                        year_first_used=random.randint(2018, 2024),
+                        created_by=exam.instructor,
+                        is_active=True,
+                    )
+                except Exception as e:
+                    pass  # skip clean() failures during seeding
+
+        self.stdout.write(self.style.SUCCESS(
+            f"   ✅ {ExamQuestion.objects.count()} exam questions created"
+        ))
+
+        # ── STUDENT EXAM RESPONSES ─────────────────────────────────────────────
+        self.stdout.write("📋 Creating student exam responses...")
+        published_exams = [e for e in created_exams if e.status == Exam.PUBLISHED]
+
+        for exam in published_exams:
+            # Pick enrolled students for this exam's course
+            enrolled_students = list(
+                Enrollment.objects.filter(
+                    course=exam.course, status='active'
+                ).values_list('student', flat=True)
+            )
+            if not enrolled_students:
+                continue
+
+            exam_questions = list(exam.questions.filter(is_active=True))
+            if not exam_questions:
+                continue
+
+            sample_students = random.sample(
+                enrolled_students, k=min(random.randint(3, 8), len(enrolled_students))
+            )
+
+            for student_id in sample_students:
+                try:
+                    student = User.objects.get(id=student_id)
+                except User.DoesNotExist:
+                    continue
+
+                # Draw N questions for this student
+                n_draw = exam.questions_per_student or len(exam_questions)
+                drawn = random.sample(exam_questions, k=min(n_draw, len(exam_questions)))
+                assigned_ids = [q.pk for q in drawn]
+
+                # Shuffle option order per question for this student
+                assigned_options_order = {}
+                for q in drawn:
+                    if q.options:
+                        opt_ids = [o["id"] for o in q.options]
+                        random.shuffle(opt_ids)
+                        assigned_options_order[str(q.pk)] = opt_ids
+
+                # Simulate answers
+                answers = {}
+                for q in drawn:
+                    if q.question_type == ExamQuestion.MCQ:
+                        correct_opts = [o for o in q.options if o.get("is_correct")]
+                        if correct_opts:
+                            # 75% chance of picking correct answer
+                            if random.random() > 0.25:
+                                answers[str(q.pk)] = correct_opts[0]["id"]
+                            else:
+                                answers[str(q.pk)] = random.choice(q.options)["id"]
+                    elif q.question_type == ExamQuestion.TRUE_FALSE:
+                        correct_opts = [o for o in q.options if o.get("is_correct")]
+                        if correct_opts:
+                            answers[str(q.pk)] = (
+                                correct_opts[0]["id"] if random.random() > 0.3
+                                else random.choice(q.options)["id"]
+                            )
+                    elif q.question_type == ExamQuestion.SHORT_ANSWER:
+                        answers[str(q.pk)] = (
+                            random.choice(q.accepted_answers)
+                            if q.accepted_answers and random.random() > 0.3
+                            else fake.sentence(nb_words=4)
+                        )
+                    elif q.question_type == ExamQuestion.ESSAY:
+                        answers[str(q.pk)] = fake.text(max_nb_chars=300)
+                    elif q.question_type == ExamQuestion.MULTI_SELECT:
+                        correct_opts = [o["id"] for o in q.options if o.get("is_correct")]
+                        answers[str(q.pk)] = correct_opts if random.random() > 0.3 else [
+                            random.choice(q.options)["id"]
+                        ]
+
+                # Grade the MCQ/TF/multi-select answers
+                question_scores = {}
+                total_earned   = Decimal("0.00")
+                total_possible = Decimal("0.00")
+                pending_manual = 0
+
+                for q in drawn:
+                    total_possible += q.marks
+                    ans = answers.get(str(q.pk))
+                    if q.question_type in (ExamQuestion.MCQ, ExamQuestion.TRUE_FALSE):
+                        correct_ids = {o["id"] for o in q.options if o.get("is_correct")}
+                        is_correct  = bool(ans and ans in correct_ids)
+                        earned      = q.marks if is_correct else Decimal("0.00")
+                        total_earned += earned
+                        question_scores[str(q.pk)] = {
+                            "marks_awarded": float(earned),
+                            "max_marks":     float(q.marks),
+                            "is_correct":    is_correct,
+                        }
+                    elif q.question_type == ExamQuestion.MULTI_SELECT:
+                        correct_ids = {o["id"] for o in q.options if o.get("is_correct")}
+                        given       = set(ans) if isinstance(ans, list) else set()
+                        is_correct  = given == correct_ids
+                        earned      = q.marks if is_correct else Decimal("0.00")
+                        total_earned += earned
+                        question_scores[str(q.pk)] = {
+                            "marks_awarded": float(earned),
+                            "max_marks":     float(q.marks),
+                            "is_correct":    is_correct,
+                        }
+                    else:
+                        # short_answer / essay — pending manual
+                        pending_manual += 1
+                        question_scores[str(q.pk)] = {
+                            "marks_awarded": None,
+                            "max_marks":     float(q.marks),
+                            "is_correct":    None,
+                            "pending_manual": True,
+                        }
+
+                score_pct = (
+                    (total_earned / total_possible * 100).quantize(Decimal("0.01"))
+                    if total_possible > 0 else Decimal("0.00")
+                )
+                passed = (score_pct >= exam.pass_mark) if exam.pass_mark else None
+
+                response_status = random.choice([
+                    StudentExamResponse.SUBMITTED,
+                    StudentExamResponse.SUBMITTED,
+                    StudentExamResponse.GRADED,
+                    StudentExamResponse.IN_PROGRESS,
+                ])
+
+                try:
+                    StudentExamResponse.objects.create(
+                        exam=exam,
+                        student=student,
+                        assigned_question_ids=assigned_ids,
+                        assigned_options_order=assigned_options_order,
+                        answers=answers,
+                        question_scores=question_scores,
+                        total_score=total_earned if response_status == StudentExamResponse.GRADED else None,
+                        score_percentage=score_pct if response_status == StudentExamResponse.GRADED else None,
+                        passed=passed if response_status == StudentExamResponse.GRADED else None,
+                        overall_feedback=(
+                            fake.text(max_nb_chars=150)
+                            if response_status == StudentExamResponse.GRADED else ''
+                        ),
+                        graded_by=(
+                            exam.instructor
+                            if response_status == StudentExamResponse.GRADED else None
+                        ),
+                        graded_at=(
+                            timezone.now() - timedelta(days=random.randint(1, 5))
+                            if response_status == StudentExamResponse.GRADED else None
+                        ),
+                        pending_manual_count=pending_manual,
+                        status=response_status,
+                        instructions_opened_at=timezone.now() - timedelta(hours=random.randint(1, 48)),
+                        exam_started_at=timezone.now() - timedelta(hours=random.randint(1, 47)),
+                        submitted_at=(
+                            timezone.now() - timedelta(hours=random.randint(1, 46))
+                            if response_status in (
+                                StudentExamResponse.SUBMITTED,
+                                StudentExamResponse.GRADED,
+                            ) else None
+                        ),
+                        auto_submitted=random.random() > 0.8,
+                        time_spent_seconds=random.randint(1800, 7200),
+                        ip_address=fake.ipv4(),
+                        tab_switch_count=random.randint(0, 5),
+                        invigilator_notes=(
+                            fake.sentence() if random.random() > 0.7 else ''
+                        ),
+                    )
+                except Exception as e:
+                    pass  # skip unique constraint violations
+
+        self.stdout.write(self.style.SUCCESS(
+            f"   ✅ {StudentExamResponse.objects.count()} student exam responses created"
+        ))
+
         # ── FINAL: UPDATE COURSE STATISTICS ──────────────────────────────────
         self.stdout.write("📊 Updating course statistics...")
         for lc in lms_courses:
@@ -1782,61 +2822,68 @@ class Command(BaseCommand):
         ))
         self.stdout.write(self.style.SUCCESS("=" * 70))
         rows = [
-            ("SiteConfig", SiteConfig.objects.count()),
-            ("History Milestones",  SiteHistoryMilestone.objects.count()),
-            ("Testimonials",        Testimonial.objects.count()),
-            ("Institution Members", InstitutionMember.objects.count()),
-            ("Countries", ListOfCountry.objects.count()),
-            ("Users", User.objects.count()),
-            ("Vendors", Vendor.objects.count()),
-            ("System Configurations", SystemConfiguration.objects.count()),
-            ("Payment Gateways", PaymentGateway.objects.count()),
-            ("Subscription Plans", SubscriptionPlan.objects.count()),
-            ("Subscriptions", Subscription.objects.count()),
-            ("Faculties", Faculty.objects.count()),
-            ("Departments", Department.objects.count()),
-            ("Programs", Program.objects.count()),
-            ("Academic Sessions", AcademicSession.objects.count()),
-            ("Academic Courses", Course.objects.count()),
-            ("Course Intakes", CourseIntake.objects.count()),
-            ("Required Payments", AllRequiredPayments.objects.count()),
-            ("Applications", CourseApplication.objects.count()),
-            ("Application Documents", ApplicationDocument.objects.count()),
-            ("Application Payments", ApplicationPayment.objects.count()),
-            ("LMS Course Categories", CourseCategory.objects.count()),
-            ("LMS Courses", LMSCourse.objects.count()),
-            ("Lesson Sections", LessonSection.objects.count()),
-            ("Lessons", Lesson.objects.count()),
-            ("Enrollments", Enrollment.objects.count()),
-            ("Lesson Progress", LessonProgress.objects.count()),
-            ("Assignments", Assignment.objects.count()),
-            ("Submissions", AssignmentSubmission.objects.count()),
-            ("Quizzes", Quiz.objects.count()),
-            ("Quiz Questions", QuizQuestion.objects.count()),
-            ("Quiz Attempts", QuizAttempt.objects.count()),
-            ("Reviews", Review.objects.count()),
-            ("Certificates", Certificate.objects.count()),
-            ("Transactions", Transaction.objects.count()),
-            ("Invoices", Invoice.objects.count()),
-            ("Badges", Badge.objects.count()),
-            ("Student Badges", StudentBadge.objects.count()),
-            ("Blog Categories", BlogCategory.objects.count()),
-            ("Blog Posts", BlogPost.objects.count()),
-            ("Discussions", Discussion.objects.count()),
-            ("Discussion Replies", DiscussionReply.objects.count()),
-            ("Study Groups", StudyGroup.objects.count()),
-            ("Study Group Members", StudyGroupMember.objects.count()),
-            ("Study Group Messages", StudyGroupMessage.objects.count()),
-            ("Messages", Message.objects.count()),
-            ("Support Tickets", SupportTicket.objects.count()),
-            ("Ticket Replies", TicketReply.objects.count()),
-            ("Notifications", Notification.objects.count()),
-            ("Announcements", Announcement.objects.count()),
-            ("Contact Messages", ContactMessage.objects.count()),
-            ("Audit Logs", AuditLog.objects.count()),
-            ("Broadcast Messages", BroadcastMessage.objects.count()),
-            ("Staff Payrolls", StaffPayroll.objects.count()),
-            ("Fee Payments", FeePayment.objects.count()),
+            ("SiteConfig",              SiteConfig.objects.count()),
+            ("History Milestones",      SiteHistoryMilestone.objects.count()),
+            ("Testimonials",            Testimonial.objects.count()),
+            ("Institution Members",     InstitutionMember.objects.count()),
+            ("Countries",               ListOfCountry.objects.count()),
+            ("Users",                   User.objects.count()),
+            ("Vendors",                 Vendor.objects.count()),
+            ("System Configurations",   SystemConfiguration.objects.count()),
+            ("Payment Gateways",        PaymentGateway.objects.count()),
+            ("Subscription Plans",      SubscriptionPlan.objects.count()),
+            ("Subscriptions",           Subscription.objects.count()),
+            ("Faculties",               Faculty.objects.count()),
+            ("Departments",             Department.objects.count()),
+            ("Programs",                Program.objects.count()),
+            ("Academic Sessions",       AcademicSession.objects.count()),
+            ("Academic Courses",        Course.objects.count()),
+            ("Course Registrations",    CourseRegistration.objects.count()),
+            ("Course Grades",           CourseGrade.objects.count()),
+            ("Course Intakes",          CourseIntake.objects.count()),
+            ("Required Payments",       AllRequiredPayments.objects.count()),
+            ("Applications",            CourseApplication.objects.count()),
+            ("Application Documents",   ApplicationDocument.objects.count()),
+            ("Application Payments",    ApplicationPayment.objects.count()),
+            ("LMS Course Categories",   CourseCategory.objects.count()),
+            ("LMS Courses",             LMSCourse.objects.count()),
+            ("Lesson Sections",         LessonSection.objects.count()),
+            ("Lessons",                 Lesson.objects.count()),
+            ("Enrollments",             Enrollment.objects.count()),
+            ("Lesson Progress",         LessonProgress.objects.count()),
+            ("Assignments",             Assignment.objects.count()),
+            ("Submissions",             AssignmentSubmission.objects.count()),
+            ("Quizzes",                 Quiz.objects.count()),
+            ("Quiz Questions",          QuizQuestion.objects.count()),
+            ("Quiz Attempts",           QuizAttempt.objects.count()),
+            ("Reviews",                 Review.objects.count()),
+            ("Certificates",            Certificate.objects.count()),
+            ("Transactions",            Transaction.objects.count()),
+            ("Invoices",                Invoice.objects.count()),
+            ("Badges",                  Badge.objects.count()),
+            ("Student Badges",          StudentBadge.objects.count()),
+            ("Blog Categories",         BlogCategory.objects.count()),
+            ("Blog Posts",              BlogPost.objects.count()),
+            ("Discussions",             Discussion.objects.count()),
+            ("Discussion Replies",      DiscussionReply.objects.count()),
+            ("Study Groups",            StudyGroup.objects.count()),
+            ("Study Group Members",     StudyGroupMember.objects.count()),
+            ("Study Group Messages",    StudyGroupMessage.objects.count()),
+            ("Messages",                Message.objects.count()),
+            ("Support Tickets",         SupportTicket.objects.count()),
+            ("Ticket Replies",          TicketReply.objects.count()),
+            ("Notifications",           Notification.objects.count()),
+            ("Announcements",           Announcement.objects.count()),
+            ("Contact Messages",        ContactMessage.objects.count()),
+            ("Audit Logs",              AuditLog.objects.count()),
+            ("Broadcast Messages",      BroadcastMessage.objects.count()),
+            ("Staff Payrolls",          StaffPayroll.objects.count()),
+            ("Fee Payments",            FeePayment.objects.count()),
+            ("Library Items",           LibraryItem.objects.count()),
+            ("Exams",                   Exam.objects.count()),
+            ("Exam Questions",          ExamQuestion.objects.count()),
+            ("Student Exam Responses",  StudentExamResponse.objects.count()),
+            ("Exam Status Logs",        ExamStatusLog.objects.count()),
         ]
         for label, count in rows:
             self.stdout.write(f"   {label:<36} {count}")

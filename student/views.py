@@ -2,12 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Q, Count, Avg, Prefetch, Max, Sum, F
+from django.db.models import Q, Count, Avg, Prefetch, Max, Sum, F, FloatField
 from django.utils import timezone
 from django.core.paginator import Paginator
 from functools import wraps
 from datetime import timedelta
 from decimal import Decimal
+import json
+import random
 
 from eduweb.models import (
     LMSCourse, Enrollment, Lesson, LessonProgress,
@@ -17,7 +19,8 @@ from eduweb.models import (
     Discussion, DiscussionReply, Badge,
     StudentBadge, LessonSection,
     Message, Notification, Review, StudyGroupMessage,
-    FeePayment, CourseGrade, CourseApplication,Exam, StudentExamResponse
+    FeePayment, CourseGrade, CourseApplication, Exam, StudentExamResponse,
+    Course, AcademicSession, CourseRegistration,
 )
 
 from .forms import AssignmentSubmissionForm, SettingsForm, ProfileUpdateForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm, StudentSupportTicketForm
@@ -94,14 +97,11 @@ def _notify(user, notification_type, title, message, link=''):
 @login_required
 @student_required
 def dashboard(request):
-    """
-    Student dashboard with overview of courses, 
-    assignments, and announcements
-    """
+    """Student dashboard — courses, assignments, announcements, academic identity."""
     user = request.user
-    
+
     try:
-        # Get active enrollments with optimized query
+        # Active enrollments — annotate completed lessons in a single query
         enrollments = (
             Enrollment.objects
             .filter(student=user, status='active')
@@ -109,23 +109,21 @@ def dashboard(request):
             .prefetch_related(
                 Prefetch(
                     'course__lessons',
-                    to_attr='all_lessons'
-                )
+                    queryset=Lesson.objects.filter(is_active=True),
+                    to_attr='active_lessons',
+                ),
+                Prefetch(
+                    'lesson_progress',
+                    queryset=LessonProgress.objects.filter(is_completed=True),
+                    to_attr='completed_progress',
+                ),
             )
             .order_by('-last_accessed')[:5]
         )
-        
-        # Add progress data to each enrollment
+
+        # Attach completed count from prefetch — zero extra queries
         for enrollment in enrollments:
-            completed_count = (
-                LessonProgress.objects
-                .filter(
-                    enrollment=enrollment,
-                    is_completed=True
-                )
-                .count()
-            )
-            enrollment.completed_lessons_count = completed_count
+            enrollment.completed_lessons_count = len(enrollment.completed_progress)
         
         # Get pending assignments
         pending_assignments = (
@@ -233,6 +231,68 @@ def dashboard(request):
         outstanding_total = Decimal('0.00')
         outstanding_currency = 'USD'
 
+    # ── Academic identity ─────────────────────────────────────────────────────
+    profile       = getattr(user, 'profile', None)
+    current_session = AcademicSession.get_current()
+    current_term    = current_session.get_current_term() if current_session else None
+
+    department = None
+    faculty    = None
+    if profile and profile.program:
+        department = getattr(profile.program, 'department', None)
+        faculty    = getattr(department, 'faculty', None) if department else None
+
+    registered_credit_total = 0
+    if profile and profile.program and current_session and current_term:
+        from django.db.models import Sum as _Sum
+        registered_credit_total = (
+            CourseRegistration.objects
+            .filter(
+                student=user,
+                session=current_session,
+                status__in=['pending', 'approved'],
+            )
+            .aggregate(total=_Sum('course__credit_units'))['total'] or 0
+        )
+
+    # Unread counts for nav badges — single queries, safe to run always
+    unread_notifications = (
+        Notification.objects.filter(user=user, is_read=False).count()
+    )
+    unread_messages = (
+        Message.objects.filter(recipient=user, is_read=False, parent__isnull=True).count()
+    )
+
+    # Upcoming exams — show on dashboard for awareness
+    now = timezone.now()
+    upcoming_exams = (
+        Exam.objects
+        .filter(
+            status=Exam.PUBLISHED,
+            is_active=True,
+            course__in=Enrollment.objects.filter(
+                student=user, status='active'
+            ).values('course_id'),
+            # Use the actual stored fields instead of the property
+            exam_date__gte=now.date(),                    # exam is today or later
+        )
+        .exclude(
+            # Exclude exams that ended today
+            exam_date=now.date(),
+            end_time__lte=now.time()
+        )
+        .select_related('course')
+        .order_by('exam_date', 'start_time')[:3]
+    )
+
+    # Recent academic grades (released only)
+    recent_grades = (
+        CourseGrade.objects
+        .filter(student=user, result_status='released')
+        .select_related('course', 'session')
+        .order_by('-recorded_at')[:5]
+    )
+
     context = {
         'page_title': 'My Dashboard',
         'enrollments': enrollments,
@@ -245,75 +305,379 @@ def dashboard(request):
         'outstanding_count': outstanding_count,
         'outstanding_total': outstanding_total,
         'outstanding_currency': outstanding_currency,
+        # Academic identity
+        'profile':                  profile,
+        'current_session':          current_session,
+        'current_term':             current_term,
+        'department':               department,
+        'faculty':                  faculty,
+        'registered_credit_total':  registered_credit_total,
+        'registration_open':        getattr(current_session, 'is_registration_open', False),
+        # Nav badges
+        'unread_notifications':     unread_notifications,
+        'unread_messages':          unread_messages,
+        # Dashboard additions
+        'upcoming_exams':           upcoming_exams,
+        'recent_grades':            recent_grades,
     }
-    
+
     return render(request, 'students/dashboard.html', context)
 
 @login_required
 @student_required
 def my_courses(request):
     """
-    Display student's enrolled courses
-    Filter by active or completed status
+    Display student's enrolled LMS courses AND their semester course registration panel.
     """
-    # Get status filter from request
-    status_filter = request.GET.get('status', 'active')
-    
-    # Validate status filter
-    valid_statuses = ['active', 'completed']
-    if status_filter not in valid_statuses:
-        status_filter = 'active'
-    
-    try:
-        # Optimized query with select/prefetch related
-        enrollments = (
-            Enrollment.objects
+    user = request.user
+    profile = getattr(user, 'profile', None)
+
+    current_session = AcademicSession.get_current()
+    current_term = current_session.get_current_term() if current_session else None
+    registration_open = current_session.is_registration_open if current_session else False
+
+    semester_courses = []
+    registered_course_ids = set()
+    registered_courses = []
+    registration_submitted = False
+
+    if profile and profile.program and current_session and current_term:
+        TERM_MAP = {
+            'fall': 'first',
+            'spring': 'second',
+            'summer': 'annual',
+            'third': 'second',
+        }
+        normalised_term = TERM_MAP.get(current_term, current_term)
+
+        semester_courses = list(
+            Course.objects
             .filter(
-                student=request.user,
-                status=status_filter
+                program=profile.program,
+                year_of_study=profile.year_of_study,
+                is_active=True,
             )
-            .select_related(
-                'course',
-                'course__category',
-                'course__instructor'
+            .filter(
+                Q(semester=normalised_term) | Q(semester='annual')
             )
+            .prefetch_related('prerequisites')
+            .order_by('course_type', 'display_order', 'name')
+        )
+
+        existing_regs = CourseRegistration.objects.filter(
+            student=user,
+            session=current_session,
+            term__in=[current_term, normalised_term],
+            status__in=['pending', 'approved'],
+        ).select_related('course')
+
+        registered_course_ids = {r.course_id for r in existing_regs}
+        registered_courses = list(existing_regs)
+        registration_submitted = existing_regs.exists()
+
+        for course in semester_courses:
+            course.is_registered = course.id in registered_course_ids
+            course.is_core = course.course_type == 'core'
+
+        semester_courses_debug = {
+            'program': str(profile.program),
+            'year_of_study': profile.year_of_study,
+            'current_term_raw': current_term,
+            'normalised_term': normalised_term,
+            'count': len(semester_courses),
+        }
+    else:
+        semester_courses_debug = {
+            'profile_exists': bool(profile),
+            'program': str(getattr(profile, 'program', None)) if profile else None,
+            'session': str(current_session),
+            'term': current_term,
+        }
+
+    # LMS Enrollments
+    status_filter = request.GET.get('status', 'all')
+    if status_filter not in ['all', 'active', 'completed']:
+        status_filter = 'all'
+
+    try:
+        enrollment_qs = Enrollment.objects.filter(student=user)
+        if status_filter == 'all':
+            enrollment_qs = enrollment_qs.filter(status__in=['active', 'completed'])
+        else:
+            enrollment_qs = enrollment_qs.filter(status=status_filter)
+
+        enrollments = (
+            enrollment_qs
+            .select_related('course', 'course__category', 'course__instructor')
             .prefetch_related(
-                Prefetch(
-                    'course__lessons',
-                    queryset=Lesson.objects.filter(is_active=True),
-                    to_attr='active_lessons'
-                )
+                Prefetch('course__lessons', queryset=Lesson.objects.filter(is_active=True), to_attr='active_lessons')
             )
             .order_by('-enrolled_at')
         )
-        
-        # Add completed lesson count to each enrollment
+
         for enrollment in enrollments:
-            completed_count = (
-                LessonProgress.objects
-                .filter(
-                    enrollment=enrollment,
-                    is_completed=True
-                )
-                .count()
-            )
-            enrollment.completed_lessons_count = completed_count
-            
-    except Exception as e:
-        messages.error(
-            request,
-            'Error loading courses. Please try again.'
-        )
+            enrollment.completed_lessons_count = LessonProgress.objects.filter(
+                enrollment=enrollment, is_completed=True
+            ).count()
+
+    except Exception:
+        messages.error(request, 'Error loading courses. Please try again.')
         enrollments = []
-    
+
+    registered_credit_total = sum(
+        c.credit_units for c in semester_courses if c.is_registered
+    ) if semester_courses else 0
+
+    # DYNAMIC MAX FROM PROGRAM MODEL
+    max_credits_per_semester = getattr(profile.program, 'max_credits_per_semester', 24) if profile and profile.program else 24
+
+    # Student identity
+    department = None
+    faculty = None
+    if profile and profile.program:
+        department = getattr(profile.program, 'department', None)
+        faculty = getattr(department, 'faculty', None) if department else None
+
     context = {
         'page_title': 'My Courses',
         'enrollments': enrollments,
         'status_filter': status_filter,
+        'current_session': current_session,
+        'current_term': current_term,
+        'registration_open': registration_open,
+        'semester_courses': semester_courses,
+        'registered_course_ids': registered_course_ids,
+        'registered_courses': registered_courses,
+        'registered_credit_total': registered_credit_total,
+        'max_credits_per_semester': max_credits_per_semester,
+        'registration_submitted': registration_submitted,
+        'profile': profile,
+        'department': department,
+        'faculty': faculty,
+        'semester_courses_debug': semester_courses_debug,
     }
-    
+
     return render(request, 'students/my_courses.html', context)
 
+@login_required
+@student_required
+def register_semester_course(request, course_slug):
+    """
+    Add course with dynamic max credit check from Program model.
+    """
+    if request.method != 'POST':
+        return redirect('students:my_courses')
+
+    profile = getattr(request.user, 'profile', None)
+    current_session = AcademicSession.get_current()
+    current_term = current_session.get_current_term() if current_session else None
+
+    if not current_session or not current_term or not profile or not profile.program:
+        messages.error(request, 'Missing session or program information.')
+        return redirect('students:my_courses')
+
+    if not current_session.is_registration_open:
+        messages.error(request, 'Course registration is currently closed.')
+        return redirect('students:my_courses')
+
+    course = get_object_or_404(
+        Course,
+        slug=course_slug,
+        program=profile.program,
+        year_of_study=profile.year_of_study,
+        is_active=True,
+    )
+
+    # Dynamic max from the Program model
+    MAX_CREDITS_PER_SEMESTER = getattr(profile.program, 'max_credits_per_semester', 24)
+
+    normalised_term = current_term.lower().replace(' semester', '').strip() if current_term else current_term
+
+    current_total = CourseRegistration.objects.filter(
+        student=request.user,
+        session=current_session,
+        term__in=[current_term, normalised_term],
+        status__in=['pending', 'approved'],
+    ).exclude(course=course).aggregate(
+        total=Sum('course__credit_units')
+    )['total'] or 0
+
+    if current_total + course.credit_units > MAX_CREDITS_PER_SEMESTER:
+        messages.error(
+            request,
+            f'Cannot add "{course.name}" — it would exceed the maximum '
+            f'of {MAX_CREDITS_PER_SEMESTER} credit units for this semester '
+            f'(you currently have {current_total} CU).'
+        )
+        return redirect('students:my_courses')
+
+    reg, created = CourseRegistration.objects.get_or_create(
+        student=request.user,
+        course=course,
+        session=current_session,
+        term=current_term,
+        defaults={'status': 'pending'},
+    )
+
+    if created:
+        messages.success(request, f'✅ "{course.name}" ({course.credit_units} CU) added.')
+        _notify(
+            user=request.user,
+            notification_type='enrollment',
+            title='Course Added',
+            message=f'You added {course.code} — {course.name} to your {current_term} semester registration.',
+            link='/student/courses/',
+        )
+    elif reg.status == 'dropped':
+        reg.status = 'pending'
+        reg.dropped_at = None
+        reg.save(update_fields=['status', 'dropped_at'])
+        messages.success(request, f'✅ "{course.name}" re-added.')
+    else:
+        messages.info(request, f'You are already registered for "{course.name}".')
+
+    return redirect('students:my_courses')
+
+@login_required
+@student_required
+def drop_semester_course(request, course_slug):
+    """
+    Remove a non-core Course from the student's semester registration.
+    Core courses cannot be dropped.
+    """
+    if request.method != 'POST':
+        return redirect('students:my_courses')
+
+    profile = getattr(request.user, 'profile', None)
+    current_session = AcademicSession.get_current()
+    current_term = current_session.get_current_term() if current_session else None
+
+    if not current_session or not current_term:
+        messages.error(request, 'No active academic session found.')
+        return redirect('students:my_courses')
+
+    if not current_session.is_registration_open:
+        messages.error(request, 'Course registration is currently closed.')
+        return redirect('students:my_courses')
+
+    course = get_object_or_404(Course, slug=course_slug)
+
+    if course.course_type == 'core':
+        messages.error(request, f'"{course.name}" is a core course and cannot be removed.')
+        return redirect('students:my_courses')
+
+    reg = CourseRegistration.objects.filter(
+        student=request.user,
+        course=course,
+        session=current_session,
+        term=current_term,
+        status__in=['pending', 'approved'],
+    ).first()
+
+    if reg:
+        reg.status = 'dropped'
+        reg.dropped_at = timezone.now()
+        reg.save(update_fields=['status', 'dropped_at'])
+        messages.success(request, f'"{course.name}" removed from your semester registration.')
+    else:
+        messages.warning(request, 'Registration record not found.')
+
+    return redirect('students:my_courses')
+
+@login_required
+@student_required
+def register_all_semester_courses(request):
+    """
+    Bulk-confirm the student's current semester selection.
+    Core courses that aren't yet registered get auto-created.
+    Already-dropped electives remain dropped.
+    POST only.
+    """
+    if request.method != 'POST':
+        return redirect('students:my_courses')
+
+    profile = getattr(request.user, 'profile', None)
+    current_session = AcademicSession.get_current()
+    current_term = current_session.get_current_term() if current_session else None
+
+    if not current_session or not current_term:
+        messages.error(request, 'No active academic session found.')
+        return redirect('students:my_courses')
+
+    if not current_session.is_registration_open:
+        messages.error(request, 'Course registration is currently closed.')
+        return redirect('students:my_courses')
+
+    if not profile or not profile.program:
+        messages.error(request, 'No program assigned to your profile.')
+        return redirect('students:my_courses')
+
+    # All semester courses for this student
+    from django.db.models import Q
+    semester_courses = Course.objects.filter(
+        program=profile.program,
+        year_of_study=profile.year_of_study,
+        is_active=True,
+    ).filter(
+        Q(semester=current_term) | Q(semester='annual')
+    )
+
+    created_count = 0
+    for course in semester_courses:
+        # Always ensure core courses are registered; skip dropped electives
+        existing = CourseRegistration.objects.filter(
+            student=request.user,
+            course=course,
+            session=current_session,
+            term=current_term,
+        ).first()
+
+        if existing:
+            if existing.status == 'dropped' and course.course_type == 'core':
+                # Core can never stay dropped — re-activate
+                existing.status = 'pending'
+                existing.dropped_at = None
+                existing.save(update_fields=['status', 'dropped_at'])
+                created_count += 1
+            elif existing.status in ('pending', 'approved'):
+                pass  # already registered, leave it
+            # dropped elective: respect the student's choice
+        else:
+            # Only auto-register core courses; electives must be explicitly added
+            if course.course_type == 'core':
+                CourseRegistration.objects.create(
+                    student=request.user,
+                    course=course,
+                    session=current_session,
+                    term=current_term,
+                    status='pending',
+                )
+                created_count += 1
+
+    # Count total registered after the operation
+    total_registered = CourseRegistration.objects.filter(
+        student=request.user,
+        session=current_session,
+        term=current_term,
+        status__in=['pending', 'approved'],
+    ).count()
+
+    messages.success(
+        request,
+        f'Semester registration confirmed — {total_registered} course(s) registered '
+        f'for {current_term.title()} Semester, {current_session}.'
+    )
+    _notify(
+        user=request.user,
+        notification_type='enrollment',
+        title='Semester Registration Confirmed',
+        message=(
+            f'Your {current_term.title()} Semester registration for {current_session} '
+            f'has been submitted ({total_registered} courses).'
+        ),
+        link='/student/courses/',
+    )
+    return redirect('students:my_courses')
 
 @login_required
 @student_required
@@ -355,12 +719,29 @@ def course_catalog(request):
             .order_by('-is_featured', '-created_at')
         )
         
-        # Get enrolled course IDs
+        # Get enrolled course IDs (LMS enrollments)
         enrolled_course_ids = set(
             Enrollment.objects
-            .filter(student=request.user)
+            .filter(student=request.user, status__in=['active', 'completed'])
             .values_list('course_id', flat=True)
         )
+
+        # Also exclude LMS courses already linked to a semester-registered academic Course
+        current_session = AcademicSession.get_current()
+        current_term = current_session.get_current_term() if current_session else None
+        if current_session and current_term:
+            sem_registered_lms_ids = set(
+                LMSCourse.objects.filter(
+                    academic_course__registrations__student=request.user,
+                    academic_course__registrations__session=current_session,
+                    academic_course__registrations__term=current_term,
+                    academic_course__registrations__status__in=['pending', 'approved'],
+                ).values_list('id', flat=True)
+            )
+            enrolled_course_ids |= sem_registered_lms_ids
+
+        # Exclude already-enrolled/registered courses from catalog
+        courses = courses.exclude(id__in=enrolled_course_ids)
         
         # Get active categories
         categories = (
@@ -511,8 +892,6 @@ def enroll_course(request, course_slug):
     Enroll in a course.
     All LMS courses are free — enrollment is immediate.
     """
-    if request.method != 'POST':
-        return redirect('students:course_catalog')
     
     # Get course by slug
     course = get_object_or_404(
@@ -539,8 +918,8 @@ def enroll_course(request, course_slug):
         Enrollment.objects.create(
             student=request.user,
             course=course,
+            enrolled_by=request.user,
             status='active',
-            enrolled_at=timezone.now()
         )
         messages.success(
             request,
@@ -694,7 +1073,6 @@ def _record_academic_grade(user, enrollment, lms_course):
     quiz_scores = [float(row['best']) for row in quiz_attempts]
 
     # ── Assignment score: graded submissions as percentage of max_score ───
-    from django.db.models import FloatField
     assignment_scores_qs = (
         AssignmentSubmission.objects
         .filter(
@@ -2895,7 +3273,6 @@ def submit_review(request, course_slug):
 
     return redirect('students:course_detail', course_slug=course_slug)
 
-
 # ===========================================================================
 # CREATE STUDY GROUP
 # ===========================================================================
@@ -3091,15 +3468,6 @@ def academic_records(request):
 #   - submit_exam:       unchanged
 # ══════════════════════════════════════════════════════════════════════════════
 
-import json
-import random
-
-from django.contrib.auth.decorators import login_required
-from django.http                    import JsonResponse
-from django.shortcuts               import get_object_or_404, redirect, render
-from django.utils                   import timezone
-
-
 # ─── Standard exam rules shown on instructions page ───────────────────────────
 STANDARD_EXAM_RULES = [
     "Do not refresh or close the browser window during the exam.",
@@ -3117,12 +3485,17 @@ STANDARD_EXAM_RULES = [
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@student_required
 def exam_list(request):
     now = timezone.now()
 
+    enrolled_courses = Enrollment.objects.filter(
+        student=request.user, status='active'
+    ).values_list('course_id', flat=True)
+
     exams = (
         Exam.objects
-        .filter(status=Exam.PUBLISHED, is_active=True)
+        .filter(status=Exam.PUBLISHED, is_active=True, course__in=enrolled_courses)
         .select_related('course', 'academic_session', 'department')
         .order_by('exam_date', 'start_time')
     )
@@ -3322,11 +3695,19 @@ def get_exam_data(request, slug):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@student_required
 def save_answer(request, slug):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
 
-    data     = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    if 'question_id' not in data or 'answer' not in data:
+        return JsonResponse({'error': 'Missing question_id or answer'}, status=400)
+
     response = get_object_or_404(StudentExamResponse, exam__slug=slug, student=request.user)
 
     if response.status not in (
@@ -3346,6 +3727,7 @@ def save_answer(request, slug):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@student_required
 def flag_tab_switch(request, slug):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
@@ -3367,6 +3749,7 @@ def flag_tab_switch(request, slug):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@student_required
 def submit_exam(request, slug):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)

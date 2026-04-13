@@ -283,7 +283,7 @@ class CourseForm(forms.ModelForm):
         model = Course
         fields = [
             'program', 'name', 'code', 'course_type', 'credit_units',
-            'year_of_study', 'semester', 'academic_session', 'lecturer',
+            'year_of_study', 'semester',
             'description', 'learning_outcomes', 'icon', 'color_primary',
             'color_secondary', 'is_active', 'display_order',
         ]
@@ -324,12 +324,12 @@ class CourseForm(forms.ModelForm):
             }),
 
             # ── Session & Instructor ───────────────────────────────────────
-            'academic_session': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }),
-            'lecturer': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }),
+            # 'academic_session': forms.Select(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            # }),
+            # 'lecturer': forms.Select(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            # }),
 
             # ── Content ────────────────────────────────────────────────────
             'description': forms.Textarea(attrs={
@@ -370,13 +370,6 @@ class CourseForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Restrict lecturer dropdown to staff/superusers for cleaner UX
-        self.fields['lecturer'].queryset = User.objects.filter(
-            is_staff=True
-        ).order_by('last_name', 'first_name')
-        self.fields['lecturer'].empty_label = '— Assign Lecturer —'
-        self.fields['academic_session'].empty_label = '— Select Session —'
         self.fields['program'].empty_label = '— Select Program —'
 
         # Pre-populate learning_outcomes_text when editing
@@ -1398,32 +1391,20 @@ class AcademicSessionForm(forms.ModelForm):
         model = AcademicSession
         fields = [
             'name', 'status', 'is_current',
-            'first_semester_start', 'first_semester_end',
-            'second_semester_start', 'second_semester_end',
+            'term_dates', 'override_current_term',
             'registration_start', 'registration_end',
         ]
         widgets = {
-            'first_semester_start': forms.DateInput(attrs={'type': 'date'}),
-            'first_semester_end': forms.DateInput(attrs={'type': 'date'}),
-            'second_semester_start': forms.DateInput(attrs={'type': 'date'}),
-            'second_semester_end': forms.DateInput(attrs={'type': 'date'}),
             'registration_start': forms.DateInput(attrs={'type': 'date'}),
             'registration_end': forms.DateInput(attrs={'type': 'date'}),
         }
 
     def clean(self):
         cleaned = super().clean()
-        sem1_start = cleaned.get('first_semester_start')
-        sem1_end = cleaned.get('first_semester_end')
-        sem2_start = cleaned.get('second_semester_start')
-        sem2_end = cleaned.get('second_semester_end')
-
-        if sem1_start and sem1_end and sem1_start >= sem1_end:
-            raise forms.ValidationError('Semester 1 start must be before end date.')
-        if sem2_start and sem2_end and sem2_start >= sem2_end:
-            raise forms.ValidationError('Semester 2 start must be before end date.')
-        if sem1_end and sem2_start and sem2_start <= sem1_end:
-            raise forms.ValidationError('Semester 2 must start after Semester 1 ends.')
+        reg_start = cleaned.get('registration_start')
+        reg_end = cleaned.get('registration_end')
+        if reg_start and reg_end and reg_start >= reg_end:
+            raise forms.ValidationError('Registration start must be before end date.')
         return cleaned
 
 

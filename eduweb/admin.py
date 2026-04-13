@@ -561,10 +561,10 @@ class CourseGradeAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Grade Record', {
-            'fields': ('student', 'course', 'session', 'application')
+            'fields': ('student', 'course', 'lms_course', 'session', 'term', 'application')
         }),
         ('Grading', {
-            'fields': ('score', 'grade', 'credit_units', 'is_passed')
+            'fields': ('score', 'grade', 'credit_units', 'is_passed', 'result_status')
         }),
         ('Recorded By', {
             'fields': ('recorded_by', 'recorded_at', 'updated_at'),
@@ -753,8 +753,7 @@ class ProgramAdmin(admin.ModelAdmin):
 class AcademicSessionAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'status', 'is_current',
-        'first_semester_start', 'first_semester_end',
-        'second_semester_start', 'second_semester_end',
+        'registration_start', 'registration_end',
     )
     list_filter = ('status', 'is_current')
     search_fields = ('name',)
@@ -765,11 +764,9 @@ class AcademicSessionAdmin(admin.ModelAdmin):
         ('Identity', {
             'fields': ('name', 'status', 'is_current')
         }),
-        ('First Semester', {
-            'fields': ('first_semester_start', 'first_semester_end')
-        }),
-        ('Second Semester', {
-            'fields': ('second_semester_start', 'second_semester_end')
+        ('Term Dates', {
+            'fields': ('term_dates', 'override_current_term'),
+            'description': 'JSON list of term windows: [{"term": "first", "start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}, ...]'
         }),
         ('Registration Window', {
             'fields': ('registration_start', 'registration_end'),
@@ -787,7 +784,7 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'code', 'program', 'course_type',
         'credit_units', 'year_of_study', 'semester',
-        'lecturer', 'is_active', 'display_order'
+        'is_active', 'display_order'
     )
     list_filter = (
         'program__department__faculty',
@@ -797,7 +794,6 @@ class CourseAdmin(admin.ModelAdmin):
         'semester',
         'year_of_study',
         'is_active',
-        'academic_session',
     )
     search_fields = ('name', 'code', 'description')
     prepopulated_fields = {'slug': ('code', 'name')}
@@ -813,9 +809,6 @@ class CourseAdmin(admin.ModelAdmin):
         }),
         ('Academic Structure', {
             'fields': ('course_type', 'credit_units', 'year_of_study', 'semester')
-        }),
-        ('Session & Instructor', {
-            'fields': ('academic_session', 'lecturer')
         }),
         ('Content', {
             'fields': ('description', 'learning_outcomes')
@@ -1345,10 +1338,14 @@ class LMSCourseAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Basic Information', {
-            'fields': ('title', 'slug', 'code', 'category')
+            'fields': ('title', 'slug', 'code', 'category', 'academic_course')
+        }),
+        ('Academic Delivery', {
+            'fields': ('session', 'term', 'lecturer'),
+            'classes': ('collapse',)
         }),
         ('Content', {
-            'fields': ('short_description', 'description', 'learning_objectives', 'prerequisites')
+            'fields': ('description', 'learning_outcomes', 'prerequisites')
         }),
         ('Course Details', {
             'fields': ('difficulty_level', 'duration_hours', 'language')
@@ -1745,21 +1742,20 @@ class SystemConfigurationAdmin(admin.ModelAdmin):
 # ==================== USER PROFILE ====================
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'role', 'faculty', 'department', 'program', 'email_verified', 'phone', 'country', 'created_at')
-    list_filter = ('role', 'faculty', 'department', 'email_verified', 'created_at')
-    search_fields = ('user__username', 'user__email', 'phone', 'country')
-    readonly_fields = ('verification_token', 'created_at', 'updated_at')
+    list_display = ('user', 'role', 'faculty', 'department', 'program', 'year_of_study', 'progression_status', 'email_verified', 'is_logged_in')
+    list_filter = ('role', 'faculty', 'department', 'email_verified', 'progression_status', 'is_logged_in')
+    search_fields = ('user__username', 'user__email', 'phone')
+    readonly_fields = ('verification_token', 'active_session_key', 'created_at', 'updated_at')
 
     fieldsets = (
-        ('User & Role', {
+        ('Identity', {
             'fields': ('user', 'role', 'faculty', 'department', 'program')
         }),
-        ('Personal Information', {
-            'fields': ('bio', 'avatar', 'phone', 'date_of_birth')
+        ('Academic Progression', {
+            'fields': ('year_of_study', 'progression_status', 'admission_session')
         }),
-        ('Address', {
-            'fields': ('address', 'city', 'country'),
-            'classes': ('collapse',)
+        ('Personal Info', {
+            'fields': ('bio', 'avatar', 'phone', 'date_of_birth', 'address', 'city', 'country')
         }),
         ('Social', {
             'fields': ('website', 'linkedin', 'twitter'),
@@ -1768,8 +1764,9 @@ class UserProfileAdmin(admin.ModelAdmin):
         ('Preferences', {
             'fields': ('email_notifications', 'marketing_emails')
         }),
-        ('Verification', {
-            'fields': ('email_verified', 'verification_token', 'is_logged_in', 'active_session_key')
+        ('Verification & Security', {
+            'fields': ('email_verified', 'verification_token', 'is_logged_in', 'active_session_key'),
+            'classes': ('collapse',)
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -1962,7 +1959,7 @@ class StaffPayrollAdmin(admin.ModelAdmin):
             'fields': ('tax_deduction', 'other_deductions', 'net_salary')
         }),
         ('Payment', {
-            'fields': ('payment_status', 'payment_method', 'payment_date', 'bank_name', 'account_number')
+            'fields': ('payment_status', 'payment_method', 'payment_date', 'bank_name', 'account_number', 'currency')
         }),
         ('Attachments', {
             'fields': (
@@ -2039,10 +2036,283 @@ class LibraryItemAdmin(admin.ModelAdmin):
         }),
     )
 
-admin.site.register(Exam)
-admin.site.register(ExamQuestion)
-admin.site.register(ExamStatusLog)
-admin.site.register(StudentExamResponse)
+# ==================== COURSE REGISTRATION ====================
+from .models import CourseRegistration
+
+@admin.register(CourseRegistration)
+class CourseRegistrationAdmin(admin.ModelAdmin):
+    list_display  = ('student', 'course', 'session', 'term', 'status', 'registered_at', 'dropped_at')
+    list_filter   = ('status', 'session', 'term', 'course__program__department__faculty')
+    search_fields = ('student__username', 'student__email', 'course__code', 'course__name')
+    readonly_fields = ('registered_at', 'dropped_at')
+    date_hierarchy  = 'registered_at'
+
+    fieldsets = (
+        ('Registration', {
+            'fields': ('student', 'course', 'session', 'term', 'status')
+        }),
+        ('Timestamps', {
+            'fields': ('registered_at', 'dropped_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# ==================== SITE HISTORY MILESTONES (standalone) ====================
+@admin.register(SiteHistoryMilestone)
+class SiteHistoryMilestoneAdmin(admin.ModelAdmin):
+    list_display  = ('year', 'title', 'site', 'display_order', 'is_active')
+    list_filter   = ('is_active',)
+    search_fields = ('title', 'description')
+    list_editable = ('display_order', 'is_active')
+
+    fieldsets = (
+        ('Milestone', {
+            'fields': ('site', 'year', 'title', 'description')
+        }),
+        ('Display', {
+            'fields': ('display_order', 'is_active')
+        }),
+    )
+
+
+# ==================== EXAMS ====================
+class ExamQuestionInline(admin.TabularInline):
+    model  = ExamQuestion
+    extra  = 0
+    fields = ('question_text', 'question_type', 'difficulty', 'marks', 'order', 'is_active')
+    readonly_fields = ('created_at',)
+    show_change_link = True
+
+
+class ExamStatusLogInline(admin.TabularInline):
+    model   = ExamStatusLog
+    extra   = 0
+    fields  = ('from_status', 'to_status', 'changed_by', 'note', 'created_at')
+    readonly_fields = ('from_status', 'to_status', 'changed_by', 'note', 'created_at')
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Exam)
+class ExamAdmin(admin.ModelAdmin):
+    list_display  = (
+        'reference_code', 'title', 'exam_type', 'mode', 'course',
+        'academic_session', 'exam_date', 'start_time', 'end_time',
+        'status', 'show_result_immediately', 'is_active',
+    )
+    list_filter   = (
+        'status', 'exam_type', 'mode', 'academic_session',
+        'department', 'show_result_immediately', 'is_active', 'exam_date',
+    )
+    search_fields = ('reference_code', 'title', 'instructor__username', 'venue')
+    readonly_fields = (
+        'reference_code', 'slug', 'submission_count',
+        'submitted_at', 'approved_at', 'rejected_at',
+        'published_at', 'cancelled_at', 'created_at', 'updated_at',
+    )
+    date_hierarchy  = 'exam_date'
+    inlines         = [ExamQuestionInline, ExamStatusLogInline]
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('reference_code', 'slug', 'title', 'description', 'exam_type', 'mode', 'is_active')
+        }),
+        ('Relationships', {
+            'fields': ('course', 'academic_session', 'department', 'instructor', 'invigilators')
+        }),
+        ('Schedule', {
+            'fields': ('exam_date', 'start_time', 'end_time', 'instruction_window_minutes')
+        }),
+        ('Venue', {
+            'fields': ('venue', 'hall_capacity', 'expected_candidates', 'eligible_levels'),
+            'classes': ('collapse',)
+        }),
+        ('Question Pool', {
+            'fields': (
+                'questions_per_student', 'difficulty_mix',
+                'shuffle_questions', 'shuffle_options',
+                'total_marks', 'pass_mark',
+                'show_result_immediately', 'show_answers_after',
+            )
+        }),
+        ('Question Import', {
+            'fields': ('question_import_file', 'import_status', 'import_error_log'),
+            'classes': ('collapse',)
+        }),
+        ('Files', {
+            'fields': ('timetable_file', 'seating_plan_file'),
+            'classes': ('collapse',)
+        }),
+        ('Approval Workflow', {
+            'fields': (
+                'status', 'submission_count',
+                'submitted_by', 'submitted_at',
+                'approved_by', 'approved_at',
+                'rejected_by', 'rejected_at', 'rejection_reason',
+                'published_by', 'published_at',
+                'cancelled_by', 'cancelled_at', 'cancellation_reason',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Student Visibility', {
+            'fields': ('visible_from_override', 'visible_until_override'),
+            'classes': ('collapse',)
+        }),
+        ('Clash Detection', {
+            'fields': ('clash_group', 'has_clash', 'clash_notes'),
+            'classes': ('collapse',)
+        }),
+        ('Instructions & Notes', {
+            'fields': (
+                'instructions', 'special_instructions', 'internal_notes',
+                'has_accommodations', 'accommodation_notes',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Audit', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.status in (Exam.PUBLISHED, Exam.APPROVED):
+            return False
+        return super().has_delete_permission(request, obj)
+
+
+@admin.register(ExamQuestion)
+class ExamQuestionAdmin(admin.ModelAdmin):
+    list_display  = (
+        'exam', 'question_type', 'difficulty', 'marks',
+        'order', 'is_active', 'year_first_used', 'source_reference',
+    )
+    list_filter   = ('question_type', 'difficulty', 'is_active', 'exam__academic_session')
+    search_fields = ('question_text', 'source_reference', 'tags', 'exam__reference_code')
+    readonly_fields = ('slug', 'created_at', 'updated_at')
+    list_editable   = ('order', 'is_active')
+
+    fieldsets = (
+        ('Pool Membership', {
+            'fields': ('slug', 'exam', 'is_active', 'order')
+        }),
+        ('Question Content', {
+            'fields': ('question_text', 'question_type', 'difficulty', 'marks', 'image', 'explanation')
+        }),
+        ('Answer Options', {
+            'fields': ('options', 'accepted_answers'),
+            'description': 'For MCQ/multi_select/true_false: fill options JSON. For short_answer: fill accepted_answers. Leave both empty for essay.',
+            'classes': ('collapse',)
+        }),
+        ('Bank Metadata', {
+            'fields': ('tags', 'source_reference', 'year_first_used'),
+            'classes': ('collapse',)
+        }),
+        ('Import Traceability', {
+            'fields': ('imported_from_file', 'import_row_number'),
+            'classes': ('collapse',)
+        }),
+        ('Audit', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(StudentExamResponse)
+class StudentExamResponseAdmin(admin.ModelAdmin):
+    list_display  = (
+        'student', 'exam', 'status', 'total_score', 'score_percentage',
+        'passed', 'auto_submitted', 'pending_manual_count',
+        'tab_switch_count', 'submitted_at',
+    )
+    list_filter   = (
+        'status', 'passed', 'auto_submitted',
+        'exam__academic_session', 'exam__exam_type',
+    )
+    search_fields = ('student__username', 'student__email', 'exam__reference_code', 'ip_address')
+    readonly_fields = (
+        'slug', 'assigned_question_ids', 'assigned_options_order',
+        'answers', 'question_scores', 'total_score', 'score_percentage',
+        'passed', 'graded_at', 'instructions_opened_at', 'exam_started_at',
+        'last_autosave_at', 'submitted_at', 'time_spent_seconds',
+        'tab_switch_count', 'ip_address', 'created_at', 'updated_at',
+    )
+    date_hierarchy  = 'submitted_at'
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('slug', 'exam', 'student', 'status')
+        }),
+        ('Question Draw', {
+            'fields': ('assigned_question_ids', 'assigned_options_order'),
+            'classes': ('collapse',)
+        }),
+        ('Answers', {
+            'fields': ('answers',),
+            'classes': ('collapse',)
+        }),
+        ('Grading', {
+            'fields': (
+                'question_scores', 'total_score', 'score_percentage',
+                'passed', 'pending_manual_count',
+                'overall_feedback', 'graded_by', 'graded_at',
+            )
+        }),
+        ('Timing', {
+            'fields': (
+                'instructions_opened_at', 'exam_started_at',
+                'last_autosave_at', 'submitted_at',
+                'auto_submitted', 'time_spent_seconds',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Security / Forensics', {
+            'fields': ('ip_address', 'tab_switch_count', 'invigilator_notes'),
+            'classes': ('collapse',)
+        }),
+        ('Audit', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return False  # created server-side only
+
+    def has_change_permission(self, request, obj=None):
+        # Allow editing only grading/feedback fields; all response data is readonly above
+        return True
+
+
+@admin.register(ExamStatusLog)
+class ExamStatusLogAdmin(admin.ModelAdmin):
+    list_display  = ('exam', 'from_status', 'to_status', 'changed_by', 'note', 'created_at')
+    list_filter   = ('from_status', 'to_status', 'created_at')
+    search_fields = ('exam__reference_code', 'exam__title', 'changed_by__username', 'note')
+    readonly_fields = ('slug', 'exam', 'from_status', 'to_status', 'changed_by', 'note', 'created_at')
+    date_hierarchy  = 'created_at'
+
+    fieldsets = (
+        ('Transition', {
+            'fields': ('slug', 'exam', 'from_status', 'to_status', 'changed_by', 'note')
+        }),
+        ('Timestamp', {
+            'fields': ('created_at',)
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 # ==================== ADMIN SITE BRANDING ====================

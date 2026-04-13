@@ -38,10 +38,9 @@ urlpatterns = [
 
     # Academic Sessions
     path('academic-sessions/', views.academic_sessions_list, name='academic_sessions_list'),
-    path('academic-sessions/create/', views.academic_session_create, name='academic_session_create'),
-    path('academic-sessions/<int:pk>/edit/', views.academic_session_edit, name='academic_session_edit'),
     path('academic-sessions/<int:pk>/set-current/', views.academic_session_set_current, name='academic_session_set_current'),
-    path('academic-sessions/<int:pk>/delete/', views.academic_session_delete, name='academic_session_delete'),
+
+    path('courses/', views.courses_list, name='courses_list'),
 
     # Intakes
     path('intakes/', views.intakes_list, name='intakes_list'),
@@ -50,7 +49,7 @@ urlpatterns = [
     path('intakes/<int:pk>/delete/', views.intake_delete, name='intake_delete'),
 
     # Courses (academic)
-    path('courses/', views.courses, name='courses'),
+    # path('courses/', views.courses, name='courses'),
     path('courses/create/', views.course_create, name='course_create'),
     path('courses/<int:pk>/', views.course_detail, name='course_detail'),
     path('courses/<int:pk>/edit/', views.course_edit, name='course_edit'),

@@ -148,6 +148,13 @@
     <div id="panelQuiz" class="hidden">
         <form method="post" enctype="multipart/form-data" id="quizForm">
             {% csrf_token %}
+{% if form.errors %}
+<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <p class="text-sm font-semibold text-red-700 mb-1"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
+    {% for field in form %}{% for error in field.errors %}<p class="text-xs text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+    {% for error in form.non_field_errors %}<p class="text-xs text-red-600">• {{ error }}</p>{% endfor %}
+</div>
+{% endif %}
             <input type="hidden" name="assessment_type" value="quiz">
             <input type="hidden" name="course_id"       id="hfCourseIdQuiz">
             <input type="hidden" name="lesson_id"       id="hfLessonIdQuiz">
@@ -226,6 +233,13 @@
     <div id="panelAssignment" class="hidden">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
+{% if form.errors %}
+<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <p class="text-sm font-semibold text-red-700 mb-1"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
+    {% for field in form %}{% for error in field.errors %}<p class="text-xs text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+    {% for error in form.non_field_errors %}<p class="text-xs text-red-600">• {{ error }}</p>{% endfor %}
+</div>
+{% endif %}
             <input type="hidden" name="assessment_type" value="assignment">
             <input type="hidden" name="course_id"       id="hfCourseIdAssign">
             <input type="hidden" name="lesson_id"       id="hfLessonIdAssign">
@@ -309,6 +323,13 @@
 
         <form method="post" enctype="multipart/form-data" id="examForm">
             {% csrf_token %}
+{% if form.errors %}
+<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <p class="text-sm font-semibold text-red-700 mb-1"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
+    {% for field in form %}{% for error in field.errors %}<p class="text-xs text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+    {% for error in form.non_field_errors %}<p class="text-xs text-red-600">• {{ error }}</p>{% endfor %}
+</div>
+{% endif %}
             <input type="hidden" name="assessment_type" value="exam">
             <input type="hidden" name="course_id" id="hfCourseIdExam">
             <input type="hidden" name="exam_questions_data" id="hfExamQuestionsData" value="[]">
@@ -351,10 +372,6 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">End Time *</label>
                         {{ exam_form.end_time }}
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Duration (mins) *</label>
-                        {{ exam_form.duration_minutes }}
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Instruction Window</label>
@@ -462,7 +479,7 @@
                 </div>
             </div>
 
-            <!-- Visibility window -->
+            {% comment %} <!-- Visibility window -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
                 <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-2 pb-2 border-b border-gray-200">Student Visibility Window <span class="text-sm font-normal text-gray-400">(optional)</span></h2>
                 <p class="text-xs text-gray-500 mb-4">Students can only see the exam once published AND within this window. Leave blank to show as soon as it is published.</p>
@@ -476,7 +493,7 @@
                         {{ exam_form.visible_until }}
                     </div>
                 </div>
-            </div>
+            </div> {% endcomment %}
 
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-8">
                 <a href="{% url 'instructor:dashboard' %}" class="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium w-full sm:w-auto text-center">Cancel</a>

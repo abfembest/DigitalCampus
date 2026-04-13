@@ -710,6 +710,13 @@ class AuditLog(models.Model):
         ('access', 'Access'),
         ('export', 'Export'),
         ('permission_change', 'Permission Change'),
+        # ── User Activity (LMS behaviour tracking) ──
+        ('course_access',     'Course Access'),
+        ('assignment_submit', 'Assignment Submitted'),
+        ('exam_start',        'Exam Started'),
+        ('exam_finish',       'Exam Finished'),
+        ('level_progression', 'Level Progression'),
+        ('registration',      'Course Registration'),
     ]
     
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
@@ -730,6 +737,7 @@ class AuditLog(models.Model):
             models.Index(fields=['-timestamp']),
             models.Index(fields=['user', '-timestamp']),
             models.Index(fields=['action']),
+            models.Index(fields=['user', 'action', '-timestamp']),
         ]
     
     def __str__(self):
@@ -1222,6 +1230,11 @@ class Program(models.Model):
         default=120,
         help_text="Total credit units required to complete the program"
     )
+    max_credits_per_semester = models.PositiveIntegerField(
+        default=24,
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
+        help_text="Maximum total credit units a student can register in ONE semester for this program"
+    )
     available_study_modes = models.JSONField(
         default=list,
         blank=True,
@@ -1389,22 +1402,43 @@ class AcademicSession(models.Model):
         help_text="Academic year label (e.g., 2024/2025)"
     )
 
-    # ── Semester 1 ─────────────────────────────────────────────────────────
-    first_semester_start  = models.DateField(help_text="First semester start date")
-    first_semester_end    = models.DateField(help_text="First semester end date")
+    TERM_CHOICES = [
+        ('first',  'First Semester'),
+        ('second', 'Second Semester'),
+        ('third',  'Third Semester / Harmattan'),
+        ('annual', 'Annual'),
+        ('fall',   'Fall'),
+        ('spring', 'Spring'),
+        ('summer', 'Summer'),
+    ]
 
-    # ── Semester 2 ─────────────────────────────────────────────────────────
-    second_semester_start = models.DateField(help_text="Second semester start date")
-    second_semester_end   = models.DateField(help_text="Second semester end date")
+    # ── Semester / Term Date Ranges ────────────────────────────────────────
+    # Store as JSON list so the session can have 2, 3, or custom terms.
+    # Format: [{"term": "first", "start": "2025-09-01", "end": "2026-01-31"}, ...]
+    term_dates = models.JSONField(
+        default=list,
+        help_text=(
+            'List of term windows. Each item: '
+            '{"term": "first|second|third|fall|spring|summer", '
+            '"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}'
+        )
+    )
 
     # ── Registration Windows ───────────────────────────────────────────────
-    registration_start    = models.DateField(
+    registration_start = models.DateField(
         null=True, blank=True,
         help_text="When student course registration opens"
     )
-    registration_end      = models.DateField(
+    registration_end = models.DateField(
         null=True, blank=True,
         help_text="When student course registration closes"
+    )
+
+    # ── Override ────────────────────────────────────────────────────────────
+    override_current_term = models.CharField(
+        max_length=20, choices=TERM_CHOICES,
+        blank=True,
+        help_text="Admin override: force the system to report this term as current"
     )
 
     # ── Status ─────────────────────────────────────────────────────────────
@@ -1436,15 +1470,33 @@ class AcademicSession(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # Ensure only one session is marked as current at a time
         if self.is_current:
             AcademicSession.objects.exclude(pk=self.pk).update(is_current=False)
         super().save(*args, **kwargs)
 
     @classmethod
     def get_current(cls):
-        """Fetch the active session. Use this everywhere instead of hardcoding."""
+        """Fetch the active session."""
         return cls.objects.filter(is_current=True).first()
+
+    def get_current_term(self):
+        if self.override_current_term:
+            return self.override_current_term
+        today = timezone.now().date()
+        for entry in self.term_dates:
+            from datetime import date
+            start = date.fromisoformat(entry['start'])
+            end   = date.fromisoformat(entry['end'])
+            if start <= today <= end:
+                return entry['term']
+        return None
+
+    @property
+    def is_registration_open(self):
+        today = timezone.now().date()
+        if self.registration_start and self.registration_end:
+            return self.registration_start <= today <= self.registration_end
+        return False
 
 class Course(models.Model):
 
@@ -1487,7 +1539,7 @@ class Course(models.Model):
         help_text="Credit units this course carries"
     )
     year_of_study = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(7)],
+        validators=[MinValueValidator(1), MaxValueValidator(8)],
         help_text="Which year of the program this course is taught in (e.g., 1, 2, 3)"
     )
     semester = models.CharField(
@@ -1497,24 +1549,13 @@ class Course(models.Model):
         help_text="Which semester this course runs in"
     )
 
-    # ── Session Link ───────────────────────────────────────────────────────────
-    academic_session = models.ForeignKey(
-        'AcademicSession',
-        on_delete=models.SET_NULL,
-        null=True,
+    # ── Prerequisites ──────────────────────────────────────────────────────────
+    prerequisites = models.ManyToManyField(
+        'self',
+        symmetrical=False,
         blank=True,
-        related_name='courses',
-        help_text="The academic session/year this course offering is tied to"
-    )
-
-    # ── Instructor ─────────────────────────────────────────────────────────────
-    lecturer = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='academic_courses_teaching',
-        help_text="Primary lecturer/instructor for this course"
+        related_name='prerequisite_for',
+        help_text="Courses that must be passed before registering for this one"
     )
 
     # ── Content ────────────────────────────────────────────────────────────────
@@ -1552,7 +1593,7 @@ class Course(models.Model):
             models.Index(fields=['program', 'is_active']),
             models.Index(fields=['year_of_study', 'semester']),
             models.Index(fields=['course_type']),
-            models.Index(fields=['academic_session']),
+            models.Index(fields=['course_type', 'year_of_study']),
         ]
 
     def __str__(self):
@@ -1570,13 +1611,16 @@ class Course(models.Model):
 
     # ── Convenience Properties ─────────────────────────────────────────────────
     @property
+    def level(self):
+        """Nigerian level system: year 1 → 100, year 2 → 200 ... year 8 → 800."""
+        return self.year_of_study * 100
+
+    @property
     def department(self):
-        """Derived from program — no redundant FK needed."""
         return self.program.department
 
     @property
     def faculty(self):
-        """Derived from program → department — no redundant FK needed."""
         return self.program.department.faculty
 
 class AllRequiredPayments(models.Model):
@@ -1612,7 +1656,11 @@ class AllRequiredPayments(models.Model):
     semester = models.CharField(
         max_length=20,
         blank=True,
-        choices=[('first', 'First Semester'), ('second', 'Second Semester'), ('annual', 'Annual')],
+        choices=[
+            ('first', 'First Semester'), ('second', 'Second Semester'),
+            ('third', 'Third Semester'), ('annual', 'Annual'),
+            ('fall', 'Fall'), ('spring', 'Spring'), ('summer', 'Summer'),
+        ],
         default='annual'
     )
 
@@ -2442,7 +2490,33 @@ class LMSCourse(models.Model):
         null=True,
         blank=True,
         related_name='lms_courses',
-        help_text="The academic course unit this LMS content delivers"
+        help_text="The academic course unit this LMS content delivers. Null = standalone LMS course."
+    )
+    session = models.ForeignKey(
+        'AcademicSession',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lms_courses',
+        help_text="Academic session this delivery runs in. Null = self-paced standalone."
+    )
+    term = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[
+            ('first',  'First Semester'), ('second', 'Second Semester'),
+            ('third',  'Third Semester'), ('annual', 'Annual'),
+            ('fall',   'Fall'), ('spring', 'Spring'), ('summer', 'Summer'),
+        ],
+        help_text="Term within the session. Auto-derived from session.get_current_term() if blank."
+    )
+    lecturer = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lms_courses_as_lecturer',
+        help_text="Assigned academic lecturer for this delivery."
     )
     
     # Course Details
@@ -2500,6 +2574,8 @@ class LMSCourse(models.Model):
             models.Index(fields=['slug']),
             models.Index(fields=['is_published', '-created_at']),
             models.Index(fields=['category']),
+            models.Index(fields=['session', 'term']),
+            models.Index(fields=['academic_course', 'session']),
         ]
     
     def __str__(self):
@@ -3134,6 +3210,30 @@ class UserProfile(models.Model):
     faculty = models.ForeignKey(Faculty, on_delete=models.SET_NULL, null=True, blank=True, related_name="faculty_students")
     department = models.ForeignKey("Department", on_delete=models.SET_NULL, null=True, blank=True, related_name='department_students')
     program = models.ForeignKey(Program, on_delete=models.SET_NULL, null=True, blank=True, related_name='program_students')
+
+    # ── Academic Progression (StudentProgram concept — kept in UserProfile) ──────
+    year_of_study = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(8)],
+        help_text="Current year of study. Level = year × 100 (e.g. year 1 = 100L)."
+    )
+    PROGRESSION_STATUS_CHOICES = [
+        ('active',     'Active'),
+        ('probation',  'Probation'),
+        ('repeated',   'Repeating Level'),
+        ('graduated',  'Graduated'),
+        ('withdrawn',  'Withdrawn'),
+    ]
+    progression_status = models.CharField(
+        max_length=20, choices=PROGRESSION_STATUS_CHOICES, default='active'
+    )
+    admission_session = models.ForeignKey(
+        'AcademicSession',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='admitted_students',
+        help_text="Session in which the student was admitted."
+    )
     
     # Personal Information
     bio = models.TextField(blank=True)
@@ -3187,6 +3287,31 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+    @property
+    def current_level(self):
+        """100L, 200L … 800L — computed from year_of_study."""
+        return self.year_of_study * 100
+
+    def get_current_courses(self, session=None, term=None):
+        """
+        Returns Course queryset for this student's program + level + current term.
+        Pass term explicitly or it is derived from session.get_current_term().
+        """
+        session = session or AcademicSession.get_current()
+        if not session or not self.program:
+            return Course.objects.none()
+        current_term = term or session.get_current_term()
+        qs = Course.objects.filter(
+            program=self.program,
+            year_of_study=self.year_of_study,
+            is_active=True,
+        )
+        if current_term and current_term not in ('annual',):
+            qs = qs.filter(
+                models.Q(semester=current_term) | models.Q(semester='annual')
+            )
+        return qs
     
     def generate_verification_token(self):
         self.verification_token = uuid.uuid4()
@@ -4237,34 +4362,119 @@ class LibraryItem(models.Model):
             return []
         return [t.strip() for t in self.tags.split(',') if t.strip()]
 
+# =============================================================================
+# COURSE REGISTRATION — student selects courses each session/term
+# =============================================================================
+class CourseRegistration(models.Model):
+    STATUS_CHOICES = [
+        ('pending',   'Pending'),
+        ('approved',  'Approved'),
+        ('dropped',   'Dropped'),
+    ]
+
+    student  = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_registrations')
+    course   = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='registrations')
+    session  = models.ForeignKey('AcademicSession', on_delete=models.CASCADE, related_name='registrations')
+    term     = models.CharField(max_length=20, help_text="e.g. first, second, fall")
+    status   = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    registered_at = models.DateTimeField(auto_now_add=True)
+    dropped_at    = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [['student', 'course', 'session', 'term']]
+        ordering = ['-registered_at']
+        verbose_name = 'Course Registration'
+        verbose_name_plural = 'Course Registrations'
+        indexes = [
+            models.Index(fields=['student', 'session', 'term']),
+            models.Index(fields=['course', 'session']),
+        ]
+
+    def clean(self, skip_window_check=False):
+        # 1. Block registration outside window (bypass for admin/seed use)
+        if not skip_window_check and not self.session.is_registration_open:
+            raise ValidationError("Course registration is not currently open.")
+        # 2. Block re-registration of a dropped core course
+        if self.course.course_type == 'core' and self.status == 'dropped':
+            raise ValidationError("Core courses cannot be dropped.")
+        # 3. Block duplicate
+        qs = CourseRegistration.objects.filter(
+            student=self.student, course=self.course,
+            session=self.session, term=self.term
+        ).exclude(pk=self.pk)
+        if qs.filter(status__in=['pending', 'approved']).exists():
+            raise ValidationError("Already registered for this course this term.")
+        # 4. Prerequisite check
+        for prereq in self.course.prerequisites.all():
+            passed = CourseGrade.objects.filter(
+                student=self.student, course=prereq, is_passed=True
+            ).exists()
+            if not passed:
+                raise ValidationError(
+                    f"Prerequisite not met: {prereq.code} must be passed first."
+                )
+
+    def save(self, *args, skip_window_check=False, **kwargs):
+        self.clean(skip_window_check=skip_window_check)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.student.username} | {self.course.code} | {self.session} {self.term}"
+
+
 class CourseGrade(models.Model):
     GRADE_CHOICES = [
         ('A', 'A'), ('B', 'B'), ('C', 'C'),
         ('D', 'D'), ('F', 'F'), ('I', 'Incomplete'), ('W', 'Withdrawn'),
     ]
+    RESULT_STATUS_CHOICES = [
+        ('pending',   'Pending'),
+        ('released',  'Released'),
+        ('withheld',  'Withheld'),
+    ]
 
-    student     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_grades')
-    course      = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='student_grades')
-    session     = models.ForeignKey('AcademicSession', on_delete=models.CASCADE, related_name='grades')
-    application = models.ForeignKey('CourseApplication', on_delete=models.SET_NULL, null=True, blank=True, related_name='grades')
+    student      = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_grades')
+    course       = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='student_grades')
+    lms_course   = models.ForeignKey(
+        'LMSCourse', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='student_grades',
+        help_text="The LMS delivery this result is linked to (optional)"
+    )
+    session      = models.ForeignKey('AcademicSession', on_delete=models.CASCADE, related_name='grades')
+    term         = models.CharField(max_length=20, blank=True, help_text="Term this grade belongs to")
+    application  = models.ForeignKey('CourseApplication', on_delete=models.SET_NULL, null=True, blank=True, related_name='grades')
 
-    score       = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    grade       = models.CharField(max_length=2, choices=GRADE_CHOICES, blank=True)
+    score        = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    grade        = models.CharField(max_length=2, choices=GRADE_CHOICES, blank=True)
     credit_units = models.IntegerField(default=3)
-    is_passed   = models.BooleanField(default=False)
+    is_passed    = models.BooleanField(default=False)
+    result_status = models.CharField(max_length=20, choices=RESULT_STATUS_CHOICES, default='pending')
 
-    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='grades_recorded')
-    recorded_at = models.DateTimeField(auto_now_add=True)
-    updated_at  = models.DateTimeField(auto_now=True)
+    recorded_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='grades_recorded')
+    recorded_at  = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = [['student', 'course', 'session']]
+        unique_together = [['student', 'course', 'session', 'term']]
         ordering = ['session', 'course__year_of_study', 'course__semester']
         verbose_name = 'Course Grade'
         verbose_name_plural = 'Course Grades'
+        indexes = [
+            models.Index(fields=['student', 'session']),
+            models.Index(fields=['result_status']),
+        ]
 
     def __str__(self):
         return f"{self.student.username} | {self.course.code} | {self.session} | {self.grade}"
+
+    @property
+    def grade_points(self):
+        """Nigerian 5-point scale."""
+        return {'A': 5, 'B': 4, 'C': 3, 'D': 2, 'F': 0}.get(self.grade, 0)
+
+    @property
+    def weighted_points(self):
+        return self.grade_points * self.credit_units
 
 # =============================================================================
 # EXAM MODULE — append to the bottom of eduweb/models.py

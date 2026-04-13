@@ -10,6 +10,8 @@ urlpatterns = [
     # ── Courses ──────────────────────────────────────────────────────────────
     path('courses/', views.my_courses, name='my_courses'),
     path('courses/catalog/', views.course_catalog, name='course_catalog'),
+    path('courses/semester-register-all/', views.register_all_semester_courses, name='register_all_semester_courses'),
+    path('courses/<slug:course_slug>/semester-register/', views.register_semester_course, name='register_semester_course'),
     path('courses/<slug:course_slug>/', views.course_detail, name='course_detail'),
     path('courses/<slug:course_slug>/enroll/', views.enroll_course, name='enroll_course'),
     path('courses/<slug:course_slug>/review/', views.submit_review, name='submit_review'),  # NEW

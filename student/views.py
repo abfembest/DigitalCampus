@@ -132,8 +132,75 @@ def dashboard(request):
     """Student dashboard — courses, assignments, announcements, academic identity."""
     user = request.user
 
+    # ── Academic identity (needed by multiple sections below) ────────────────
+    profile         = getattr(user, 'profile', None)
+    current_session = AcademicSession.get_current()
+    current_term    = current_session.get_current_term() if current_session else None
+
+    department = None
+    faculty    = None
+    if profile and profile.program:
+        department = getattr(profile.program, 'department', None)
+        faculty    = getattr(department, 'faculty', None) if department else None
+
+    # ── Semester-registered courses (Course model, not LMS Enrollments) ──────
+    # Mirror the logic from my_courses so the dashboard is always consistent.
+    semester_courses        = []
+    registered_course_ids   = set()
+    registered_credit_total = 0
+    registration_submitted  = False
+    registration_finalized  = False
+
+    if profile and profile.program and current_session and current_term:
+        TERM_MAP = {
+            'fall': 'first', 'spring': 'second',
+            'summer': 'annual', 'third': 'second',
+        }
+        normalised_term = TERM_MAP.get(current_term, current_term)
+
+        # All courses offered for this student's program / year / term
+        semester_courses = list(
+            Course.objects
+            .filter(
+                program=profile.program,
+                year_of_study=profile.year_of_study,
+                is_active=True,
+            )
+            .filter(Q(semester=normalised_term) | Q(semester='annual'))
+            .prefetch_related('prerequisites')
+            .order_by('course_type', 'display_order', 'name')
+        )
+
+        existing_regs = CourseRegistration.objects.filter(
+            student=user,
+            session=current_session,
+            term__in=[current_term, normalised_term],
+            status__in=['pending', 'approved'],
+        ).select_related('course')
+
+        registered_course_ids  = {r.course_id for r in existing_regs}
+        registration_submitted = existing_regs.exists()
+        registration_finalized = (
+            registration_submitted
+            and not existing_regs.filter(status='pending').exists()
+        )
+
+        for course in semester_courses:
+            course.is_registered = course.id in registered_course_ids
+            course.is_core       = course.course_type == 'core'
+
+        registered_credit_total = (
+            CourseRegistration.objects
+            .filter(
+                student=user,
+                session=current_session,
+                status__in=['pending', 'approved'],
+            )
+            .aggregate(total=Sum('course__credit_units'))['total'] or 0
+        )
+
     try:
-        # Active enrollments — annotate completed lessons in a single query
+        # ── Active LMS enrollments (last 5 recently accessed) ─────────────────
         enrollments = (
             Enrollment.objects
             .filter(student=user, status='active')
@@ -156,36 +223,36 @@ def dashboard(request):
         # Attach completed count from prefetch — zero extra queries
         for enrollment in enrollments:
             enrollment.completed_lessons_count = len(enrollment.completed_progress)
-        
-        # Get pending assignments
+
+        # ── Pending assignments ───────────────────────────────────────────────
         pending_assignments = (
             Assignment.objects
             .filter(
                 lesson__course__enrollments__student=user,
                 lesson__course__enrollments__status='active',
                 due_date__gte=timezone.now(),
-                is_active=True
+                is_active=True,
             )
             .exclude(
-                Q(submissions__student=user) & 
+                Q(submissions__student=user) &
                 Q(submissions__status__in=['submitted', 'graded'])
             )
             .select_related('lesson__course')
             .distinct()
             .order_by('due_date')[:5]
         )
-        
-        # Get recent announcements
+
+        # ── Recent announcements ──────────────────────────────────────────────
         announcements = (
             Announcement.objects
             .filter(
                 Q(announcement_type='system') |
                 Q(
                     course__enrollments__student=user,
-                    announcement_type='course'
+                    announcement_type='course',
                 ),
                 is_active=True,
-                publish_date__lte=timezone.now()
+                publish_date__lte=timezone.now(),
             )
             .filter(
                 Q(expiry_date__isnull=True) |
@@ -194,100 +261,62 @@ def dashboard(request):
             .distinct()
             .order_by('-priority', '-publish_date')[:5]
         )
-        
-        # ===== NEW: Get admission history =====
-        from eduweb.models import CourseApplication
-        
+
+        # ── Admission / application history ───────────────────────────────────
         admission_history = (
             CourseApplication.objects
-            .filter(
-                Q(user=user) | Q(email=user.email)
-            )
+            .filter(Q(user=user) | Q(email=user.email))
             .select_related('program', 'program__department__faculty', 'intake')
             .order_by('-created_at')[:5]
         )
-        
-        # Calculate statistics
+
+        # ── Summary statistics ────────────────────────────────────────────────
         stats = {
             'total_enrolled': (
-                Enrollment.objects
-                .filter(student=user)
-                .count()
+                Enrollment.objects.filter(student=user).count()
             ),
             'completed_courses': (
-                Enrollment.objects
-                .filter(student=user, status='completed')
-                .count()
+                Enrollment.objects.filter(student=user, status='completed').count()
             ),
             'certificates_earned': (
-                Certificate.objects
-                .filter(student=user)
-                .count()
+                Certificate.objects.filter(student=user).count()
             ),
         }
-        
-    except Exception as e:
-        # Log error in production
+
+    except Exception:
         messages.error(
             request,
-            'An error occurred loading the dashboard. '
-            'Please try again.'
+            'An error occurred loading the dashboard. Please try again.'
         )
-        # Return minimal context
-        enrollments = []
+        enrollments         = []
         pending_assignments = []
-        announcements = []
-        admission_history = []
+        announcements       = []
+        admission_history   = []
         stats = {
-            'total_enrolled': 0,
-            'completed_courses': 0,
+            'total_enrolled':      0,
+            'completed_courses':   0,
             'certificates_earned': 0,
         }
-    
-    # Outstanding fees for the dashboard alert button
+
+    # ── Outstanding fees ──────────────────────────────────────────────────────
     try:
         outstanding_items, _ = _get_outstanding_for_student(user)
-        outstanding_count = len(outstanding_items)
-        outstanding_total = sum(
+        outstanding_count    = len(outstanding_items)
+        outstanding_total    = sum(
             (item['payment']['amount'] if isinstance(item['payment'], dict) else item['payment'].amount)
             for item in outstanding_items
         )
-        # Derive currency from first outstanding item; fall back to USD
         _first = outstanding_items[0]['payment'] if outstanding_items else None
         outstanding_currency = (
             _first.get('currency', 'USD') if isinstance(_first, dict)
             else getattr(_first, 'currency', 'USD')
         ) if _first else 'USD'
     except Exception:
-        outstanding_count = 0
-        outstanding_total = Decimal('0.00')
+        outstanding_count    = 0
+        outstanding_total    = Decimal('0.00')
         outstanding_currency = 'USD'
 
-    # ── Academic identity ─────────────────────────────────────────────────────
-    profile       = getattr(user, 'profile', None)
-    current_session = AcademicSession.get_current()
-    current_term    = current_session.get_current_term() if current_session else None
-
-    department = None
-    faculty    = None
-    if profile and profile.program:
-        department = getattr(profile.program, 'department', None)
-        faculty    = getattr(department, 'faculty', None) if department else None
-
-    registered_credit_total = 0
-    if profile and profile.program and current_session and current_term:
-        from django.db.models import Sum as _Sum
-        registered_credit_total = (
-            CourseRegistration.objects
-            .filter(
-                student=user,
-                session=current_session,
-                status__in=['pending', 'approved'],
-            )
-            .aggregate(total=_Sum('course__credit_units'))['total'] or 0
-        )
-
-    # Unread counts for nav badges — single queries, safe to run always
+    # ── Nav badge counts ──────────────────────────────────────────────────────
     unread_notifications = (
         Notification.objects.filter(user=user, is_read=False).count()
     )
@@ -295,7 +324,7 @@ def dashboard(request):
         Message.objects.filter(recipient=user, is_read=False, parent__isnull=True).count()
     )
 
-    # Upcoming exams — show on dashboard for awareness
+    # ── Upcoming exams ────────────────────────────────────────────────────────
     now = timezone.now()
     upcoming_exams = (
         Exam.objects
@@ -305,19 +334,14 @@ def dashboard(request):
             course__in=Enrollment.objects.filter(
                 student=user, status='active'
             ).values('course_id'),
-            # Use the actual stored fields instead of the property
-            exam_date__gte=now.date(),                    # exam is today or later
+            exam_date__gte=now.date(),
         )
-        .exclude(
-            # Exclude exams that ended today
-            exam_date=now.date(),
-            end_time__lte=now.time()
-        )
+        .exclude(exam_date=now.date(), end_time__lte=now.time())
         .select_related('course')
         .order_by('exam_date', 'start_time')[:3]
     )
 
-    # Recent academic grades (released only)
+    # ── Recent released grades ────────────────────────────────────────────────
     recent_grades = (
         CourseGrade.objects
         .filter(student=user, result_status='released')
@@ -326,29 +350,36 @@ def dashboard(request):
     )
 
     context = {
-        'page_title': 'My Dashboard',
-        'enrollments': enrollments,
-        'pending_assignments': pending_assignments,
-        'announcements': announcements,
-        'admission_history': admission_history,
-        'total_enrolled': stats['total_enrolled'],
-        'completed_courses': stats['completed_courses'],
-        'certificates_earned': stats['certificates_earned'],
-        'outstanding_count': outstanding_count,
-        'outstanding_total': outstanding_total,
-        'outstanding_currency': outstanding_currency,
+        'page_title':               'My Dashboard',
+        # LMS enrolled courses
+        'enrollments':              enrollments,
+        'pending_assignments':      pending_assignments,
+        'announcements':            announcements,
+        'admission_history':        admission_history,
+        'total_enrolled':           stats['total_enrolled'],
+        'completed_courses':        stats['completed_courses'],
+        'certificates_earned':      stats['certificates_earned'],
+        # Fees
+        'outstanding_count':        outstanding_count,
+        'outstanding_total':        outstanding_total,
+        'outstanding_currency':     outstanding_currency,
         # Academic identity
         'profile':                  profile,
         'current_session':          current_session,
         'current_term':             current_term,
         'department':               department,
         'faculty':                  faculty,
+        # Semester-registered courses (Course model)
+        'semester_courses':         semester_courses,
+        'registered_course_ids':    registered_course_ids,
         'registered_credit_total':  registered_credit_total,
+        'registration_submitted':   registration_submitted,
+        'registration_finalized':   registration_finalized,
         'registration_open':        getattr(current_session, 'is_registration_open', False),
         # Nav badges
         'unread_notifications':     unread_notifications,
         'unread_messages':          unread_messages,
-        # Dashboard additions
+        # Exams & grades
         'upcoming_exams':           upcoming_exams,
         'recent_grades':            recent_grades,
     }
@@ -3704,10 +3735,12 @@ def academic_records(request):
             sem_credits  = sum(g.credit_units for g in grades_list if g.is_passed)
 
             semester_blocks.append({
-                'label':   sem_label,
-                'grades':  grades_list,
-                'gpa':     sem_gpa,
-                'credits': sem_credits,
+                'label':          sem_label,
+                'grades':         grades_list,
+                'gpa':            sem_gpa,
+                'credits':        sem_credits,
+                'total_cu':       sem_units,
+                'total_weighted': round(sem_weighted, 0),
             })
             sess_total_weighted += sem_weighted
             sess_total_units    += sem_units

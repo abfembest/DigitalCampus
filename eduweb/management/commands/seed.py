@@ -654,11 +654,17 @@ class Command(BaseCommand):
         programs = []
         for (dept, name, code, degree, dur, cred, app_fee, tuit, max_stu, feat, order) in prog_raw:
             base_name = name.split()[-1]
+            # Real-world semester credit limits by level:
+            # Undergraduate: 15–21 units/semester | Postgraduate/PhD: 12–18
+            _sem_cap = 18 if degree in ('undergraduate',) else (
+                15 if degree in ('masters', 'postgraduate') else 12
+            )
             p = Program.objects.create(
                 department=dept, name=name, code=code,
                 degree_level=degree, duration_years=dur,
                 credits_required=cred, application_fee=app_fee,
                 tuition_fee=tuit, max_students=max_stu,
+                max_credits_per_semester=_sem_cap,
                 is_featured=feat, is_active=True, display_order=order,
                 tagline=f"Shape your future with {name}",
                 overview=fake.text(max_nb_chars=200),
@@ -712,6 +718,16 @@ class Command(BaseCommand):
         # ── 12. ACADEMIC SESSIONS ────────────────────────────────────────────
         self.stdout.write("📅 Creating academic sessions...")
         sessions = []
+        # ── Term-name resolver ────────────────────────────────────────────────
+        # Reads the `term_dates` JSON on an AcademicSession and returns the
+        # ordered list of term names regardless of naming convention.
+        #   first/second  →  ['first', 'second']
+        #   autumn/spring →  ['autumn', 'spring']
+        #   fall/spring/summer → ['fall', 'spring', 'summer']
+        def get_term_names(session_obj):
+            """Return sorted term name strings from a session's term_dates JSON."""
+            return [t['term'] for t in (session_obj.term_dates or [])]
+
         session_data = [
             {
                 'name': '2023/2024',
@@ -743,6 +759,17 @@ class Command(BaseCommand):
                 'registration_end':   date(2026, 4, 30),  # open now for seeding
                 'status': 'upcoming', 'is_current': False,
             },
+            # ── NEW: 2026/2027 — second year of a student's 2-session program ──
+            {
+                'name': '2026/2027',
+                'term_dates': [
+                    {'term': 'first',  'start': '2026-09-07', 'end': '2027-01-15'},
+                    {'term': 'second', 'start': '2027-01-25', 'end': '2027-05-28'},
+                ],
+                'registration_start': date(2026, 8, 24),
+                'registration_end':   date(2027, 4, 30),
+                'status': 'upcoming', 'is_current': False,
+            },
         ]
         for sd in session_data:
             s = AcademicSession.objects.create(
@@ -754,7 +781,10 @@ class Command(BaseCommand):
                 is_current=sd['is_current'],
             )
             sessions.append(s)
-        current_session = sessions[1]  # 2024/2025
+        current_session = sessions[1]   # 2024/2025  (used by general seeding)
+        session_y1      = sessions[2]   # 2025/2026  (student's Year 1 & 2)
+        session_y2      = sessions[3]   # 2026/2027  (student's Year 3 & beyond)
+        open_session    = session_y1    # keep alias used by rest of seed
 
         # ── 13. ACADEMIC COURSES (units within programs) ──────────────────────
         self.stdout.write("📚 Creating academic courses...")
@@ -1113,6 +1143,8 @@ class Command(BaseCommand):
             (programs[10], 'elective', 'ECW108', 'Short Fiction Workshop',                    1, 'second', 3, 'pen-line',       'violet', 'purple'),
             (programs[10], 'elective', 'ECW109', 'American Literature',                       1, 'second', 3, 'book',           'blue',   'sky'),
             (programs[10], 'general',  'ECW110', 'Communication & Presentation Skills',       1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            (programs[10], 'elective', 'ecw111', 'introduction to drama studies',             1, 'second', 3, 'film',           'pink',   'rose'),
+            (programs[10], 'elective', 'ecw112', 'digital reading & media literacy',          1, 'second', 3, 'monitor',        'sky',    'blue'),
             # Year 2 — Semester 1
             (programs[10], 'core',     'ECW202', 'British Literature 1800–Present',           2, 'first',  3, 'library',        'purple', 'indigo'),
             (programs[10], 'elective', 'ECW203', 'Postcolonial Literature',                   2, 'first',  3, 'globe',          'amber',  'yellow'),
@@ -1123,6 +1155,8 @@ class Command(BaseCommand):
             (programs[10], 'elective', 'ECW206', 'Digital Storytelling & Content Creation',   2, 'second', 3, 'video',          'blue',   'indigo'),
             (programs[10], 'elective', 'ECW207', 'Publishing & the Literary Industry',        2, 'second', 3, 'book-marked',    'teal',   'cyan'),
             (programs[10], 'general',  'ECW208', 'Editing & Proofreading',                    2, 'second', 2, 'check-square',   'green',  'emerald'),
+            (programs[10], 'elective', 'ecw209', 'satire & irony in literature',              2, 'second', 3, 'pen',            'amber',  'yellow'),
+            (programs[10], 'elective', 'ecw210', 'translation studies',                       2, 'second', 3, 'globe',          'teal',   'emerald'),
             # Year 3 — Semester 1
             (programs[10], 'elective', 'ECW301', 'Screenwriting & Drama',                     3, 'first',  3, 'film',           'pink',   'rose'),
             (programs[10], 'elective', 'ECW303', 'Gothic & Horror Fiction',                   3, 'first',  3, 'moon',           'gray',   'slate'),
@@ -1147,6 +1181,8 @@ class Command(BaseCommand):
             (programs[11], 'elective', 'DMD108', 'Web Design Fundamentals (HTML/CSS)',        1, 'second', 3, 'globe',          'blue',   'sky'),
             (programs[11], 'elective', 'DMD109', 'Brand Identity Basics',                     1, 'second', 3, 'star',           'pink',   'fuchsia'),
             (programs[11], 'general',  'DMD110', 'Communication & Presentation Skills',       1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            (programs[11], 'elective', 'DMD111', 'Print Design & Editorial Layout',           1, 'second', 3, 'layout',         'orange', 'amber'),
+            (programs[11], 'elective', 'DMD112', 'Infographics & Data Visualisation',         1, 'second', 3, 'bar-chart',      'teal',   'cyan'),
             # Year 2 — Semester 1
             (programs[11], 'core',     'DMD201', 'UX & Interaction Design',                   2, 'first',  3, 'mouse-pointer',  'pink',   'fuchsia'),
             (programs[11], 'elective', 'DMD203', 'UI Design & Prototyping (Figma)',           2, 'first',  3, 'layout',         'violet', 'purple'),
@@ -1364,15 +1400,21 @@ class Command(BaseCommand):
 
         # ── 17b. COURSE REGISTRATIONS & GRADES ─────────────────────────────────
         self.stdout.write("📋 Creating course registrations and grades...")
-        grade_letters = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'D', 'F']
-        grade_scores  = [95,   90,  87,   83,   80,  77,   73,   70,  62,  45]
+        grade_letters = ['A', 'A', 'A', 'B', 'B', 'B', 'C', 'C', 'D', 'F']
+        grade_scores  = [95,  90,  87,  83,  80,  77,  73,  70,  62,  45]
 
         # Use the open registration session (2025/2026 has registration_end in the future)
         open_session = sessions[2]  # 2025/2026 — registration_end = 2026-04-30
 
         for student in verified_students:
-            # pick 3–6 academic courses at random to register for
-            sample_courses = random.sample(academic_courses, k=min(random.randint(3, 6), len(academic_courses)))
+            # pick courses from the student's own program; fall back to all courses
+            student_program = student.profile.program
+            if student_program:
+                own_courses = [c for c in academic_courses if c.program == student_program]
+            else:
+                own_courses = academic_courses
+            pool = own_courses if own_courses else academic_courses
+            sample_courses = random.sample(pool, k=min(random.randint(5, 8), len(pool)))
             for ac in sample_courses:
                 try:
                     reg = CourseRegistration(
@@ -1405,6 +1447,208 @@ class Command(BaseCommand):
             f"   ✅ {CourseRegistration.objects.count()} registrations, "
             f"{CourseGrade.objects.count()} grades created"
         ))
+
+        # ── FULL PROGRAM GPA SEEDING for 'student' and 'student2' ──────────────
+        # Each student gets registrations + grades for ALL courses in their program,
+        # split across 2 sessions (4 semesters total):
+        #   session_y1 (2025/2026) → program years where year_of_study is in first half
+        #   session_y2 (2026/2027) → remaining program years
+        #
+        # Term detection is generic — reads the session's term_dates JSON keys
+        # so it works for first/second AND autumn/winter/spring/summer conventions.
+        #
+        # Credit load per semester is capped at program.max_credits_per_semester
+        # (undergrad=18, masters=15, phd=12) — we register up to that cap and
+        # mark the rest 'dropped' so the DB stays clean.
+        #
+        # Nigerian 5-point grading: A=5, B=4, C=3, D=2, F=0
+        self.stdout.write("🎓 Seeding full program GPA for 'student' and 'student2'...")
+
+        full_gpa_grade_pool = [
+            ('A', Decimal('88.00'), True,  5),
+            ('A', Decimal('92.00'), True,  5),
+            ('A', Decimal('85.00'), True,  5),
+            ('B', Decimal('78.00'), True,  4),
+            ('B', Decimal('74.00'), True,  4),
+            ('B', Decimal('71.00'), True,  4),
+            ('C', Decimal('67.00'), True,  3),
+            ('C', Decimal('63.00'), True,  3),
+            ('D', Decimal('55.00'), True,  2),
+            ('F', Decimal('38.00'), False, 0),
+        ]
+
+        # ── helpers ───────────────────────────────────────────────────────────
+        def session_terms(sess):
+            """Return ordered list of term-name strings from a session's JSON."""
+            return [t['term'] for t in (sess.term_dates or [])]
+
+        def semester_to_term(semester_value, term_names):
+            """
+            Map a Course.semester value ('first'/'second' or 'autumn'/'spring' etc.)
+            to a term string that exists in the session.
+            Strategy:
+              1. Exact match — use as-is if it appears in term_names.
+              2. Positional fallback — 'first'/'1'/'autumn'/'fall' → term_names[0];
+                 'second'/'2'/'spring'/'winter' → term_names[1], etc.
+            """
+            if semester_value in term_names:
+                return semester_value
+            # Positional mapping buckets (index 0 = first half, index 1 = second half)
+            _buckets = [
+                {'first', '1', 'autumn', 'fall', 'semester1', 'sem1'},
+                {'second', '2', 'spring', 'winter', 'semester2', 'sem2'},
+                {'third', '3', 'summer', 'semester3', 'sem3'},
+            ]
+            for idx, bucket in enumerate(_buckets):
+                if semester_value.lower() in bucket and idx < len(term_names):
+                    return term_names[idx]
+            return term_names[0]  # safe default
+
+        gpa_target_usernames = ['student', 'student2']
+
+        for username in gpa_target_usernames:
+            try:
+                target_user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                continue
+
+            target_profile = target_user.profile
+            target_program = target_profile.program
+            if not target_program:
+                self.stdout.write(self.style.WARNING(
+                    f"   ⚠ {username} has no program assigned — skipping full GPA seed"
+                ))
+                continue
+
+            max_cap = target_program.max_credits_per_semester or 18
+            all_prog_courses = [c for c in academic_courses if c.program == target_program]
+            if not all_prog_courses:
+                continue
+
+            # ── Split program years across 2 sessions ─────────────────────────
+            # For a 3-year UG: years 1–2 → session_y1, year 3 → session_y2
+            # For a 4-year UG: years 1–2 → session_y1, years 3–4 → session_y2
+            # For a 1-year PG: semester 'first' → session_y1, 'second' → session_y2
+            all_years = sorted(set(c.year_of_study for c in all_prog_courses))
+            split_idx = max(1, len(all_years) // 2)
+            years_s1  = set(all_years[:split_idx])      # → session_y1
+            years_s2  = set(all_years[split_idx:]) or {all_years[-1]}  # → session_y2
+
+            # For 1-year programs the two years are the same; split on semester instead
+            if len(all_years) == 1:
+                years_s1 = {all_years[0]}
+                years_s2 = {all_years[0]}
+
+            terms_y1 = session_terms(session_y1)   # ['first', 'second']
+            terms_y2 = session_terms(session_y2)   # ['first', 'second']
+
+            self.stdout.write(
+                f"   → {username} | program: {target_program.code} | "
+                f"courses: {len(all_prog_courses)} | cap/sem: {max_cap}"
+            )
+
+            total_weighted = Decimal('0.00')
+            total_units    = 0
+            sem_unit_tracker = {}   # (session_id, term) → units registered so far
+
+            # Sort courses: year asc, semester, then by pk for determinism
+            sem_order = {'first': 0, 'second': 1, 'autumn': 0, 'spring': 1,
+                         'fall': 0, 'winter': 1, 'summer': 2}
+            sorted_courses = sorted(
+                all_prog_courses,
+                key=lambda c: (c.year_of_study, sem_order.get(c.semester, 99), c.pk)
+            )
+
+            for ac in sorted_courses:
+                # Choose which session this course belongs to
+                if len(all_years) == 1:
+                    # 1-year program: first-half semesters → session_y1, rest → session_y2
+                    _first_half_terms = {'first', 'autumn', 'fall', '1'}
+                    use_session = session_y1 if ac.semester.lower() in _first_half_terms else session_y2
+                    use_terms   = terms_y1   if use_session is session_y1 else terms_y2
+                else:
+                    use_session = session_y1 if ac.year_of_study in years_s1 else session_y2
+                    use_terms   = terms_y1   if use_session is session_y1 else terms_y2
+
+                term_name  = semester_to_term(ac.semester, use_terms)
+                slot_key   = (use_session.id, term_name)
+
+                # Enforce per-semester credit cap
+                already_registered = sem_unit_tracker.get(slot_key, 0)
+                if already_registered + ac.credit_units > max_cap:
+                    # Register as dropped so the record exists but doesn't count
+                    try:
+                        CourseRegistration.objects.get_or_create(
+                            student=target_user,
+                            course=ac,
+                            session=use_session,
+                            term=term_name,
+                            defaults={'status': 'dropped'},
+                        )
+                    except Exception:
+                        pass
+                    continue  # don't grade over-cap courses
+
+                sem_unit_tracker[slot_key] = already_registered + ac.credit_units
+
+                g_letter, g_score, g_passed, g_points = random.choice(full_gpa_grade_pool)
+
+                # Register (approved)
+                try:
+                    reg, _ = CourseRegistration.objects.get_or_create(
+                        student=target_user,
+                        course=ac,
+                        session=use_session,
+                        term=term_name,
+                        defaults={'status': 'approved'},
+                    )
+                    if reg.status != 'approved':
+                        reg.status = 'approved'
+                        reg.save(skip_clean=True, skip_window_check=True)
+                except Exception:
+                    continue
+
+                # Grade
+                try:
+                    grade_obj, created = CourseGrade.objects.get_or_create(
+                        student=target_user,
+                        course=ac,
+                        session=use_session,
+                        term=term_name,
+                        defaults=dict(
+                            grade=g_letter,
+                            score=g_score,
+                            credit_units=ac.credit_units,
+                            is_passed=g_passed,
+                            result_status='released',
+                            recorded_by=random.choice(verified_instructors),
+                        )
+                    )
+                    if not created:
+                        grade_obj.grade         = g_letter
+                        grade_obj.score         = g_score
+                        grade_obj.credit_units  = ac.credit_units
+                        grade_obj.is_passed     = g_passed
+                        grade_obj.result_status = 'released'
+                        grade_obj.save()
+                except Exception:
+                    continue
+
+                total_weighted += Decimal(str(g_points)) * ac.credit_units
+                total_units    += ac.credit_units
+
+            cgpa = (total_weighted / total_units).quantize(Decimal('0.01')) if total_units else Decimal('0.00')
+
+            # Per-semester breakdown for clarity
+            for (sid, tname), units in sorted(sem_unit_tracker.items()):
+                sess_name = session_y1.name if sid == session_y1.id else session_y2.name
+                self.stdout.write(
+                    f"      {sess_name} / {tname}: {units} units registered"
+                )
+            self.stdout.write(self.style.SUCCESS(
+                f"   ✅ {username}: {total_units} total units | CGPA: {cgpa}/5.00 "
+                f"| Sessions: {session_y1.name} + {session_y2.name}"
+            ))
 
         # ── 18. APPLICATION PAYMENTS ─────────────────────────────────────────
         self.stdout.write("💰 Creating application payments...")

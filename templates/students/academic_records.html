@@ -362,18 +362,13 @@
                                         Semester Totals
                                     </td>
                                     <td class="px-4 py-2.5 text-center text-blue-800">
-                                        {% with total_cu=0 %}
-                                        {% for g in sem.grades %}{% if g.grade and g.grade != 'W' %}{{ g.credit_units|add:0 }}{% endif %}{% endfor %}
-                                        {% endwith %}
-                                        {{ sem.grades|length }} course{{ sem.grades|length|pluralize }}
+                                        {{ sem.total_cu }} {{ sem.grades|length }} course{{ sem.grades|length|pluralize }}
                                     </td>
                                     <td class="px-4 py-2.5 text-center text-blue-600">&mdash;</td>
                                     <td class="px-4 py-2.5 text-center text-blue-600">&mdash;</td>
                                     <td class="px-4 py-2.5 text-center text-blue-600">&mdash;</td>
                                     <td class="px-4 py-2.5 text-center text-blue-800 font-bold">
-                                        {% with wt=0 %}
-                                        {% for g in sem.grades %}{% if g.grade %}{{ g.weighted_points }}{% endif %}{% endfor %}
-                                        {% endwith %}
+                                        {{ sem.total_weighted }}
                                     </td>
                                     <td class="px-4 py-2.5 text-center">
                                         <span class="inline-block px-3 py-0.5 rounded-full bg-blue-200 text-blue-900 text-xs font-bold">

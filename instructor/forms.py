@@ -14,7 +14,7 @@ class CourseForm(forms.ModelForm):
     class Meta:
         model = LMSCourse
         fields = [
-            'title', 'code', 'category', 'short_description',
+            'title', 'code', 'short_description',
             'description', 'difficulty_level', 'duration_hours',
             'language', 'thumbnail', 'promo_video_url',
             'academic_course',
@@ -29,9 +29,9 @@ class CourseForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'e.g., CS101 (auto-generated if blank)'
             }),
-            'category': forms.Select(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
-            }),
+            # 'category': forms.Select(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            # }),
             'short_description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 3,

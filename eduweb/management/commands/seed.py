@@ -758,158 +758,414 @@ class Command(BaseCommand):
 
         # ── 13. ACADEMIC COURSES (units within programs) ──────────────────────
         self.stdout.write("📚 Creating academic courses...")
+        # Format: (program, course_type, code, name, year, semester, credits, icon, color_primary, color_secondary)
+        # Each program has enough courses per level/semester to exceed max unit requirements.
+        # Students can pick from core, elective, and general options — plenty of variety per slot.
         ac_raw = [
             # ══════════════════════════════════════════════════════════════════════
             # BSc Software Engineering — programs[0]  (3 years)
             # ══════════════════════════════════════════════════════════════════════
             # Year 1 — Semester 1
-            (programs[0], 'general',  'SE100', 'Academic Skills & Research Methods',       1, 'first',  2, 'book',            'gray',   'slate'),
-            (programs[0], 'core',     'SE101', 'Introduction to Programming',              1, 'first',  3, 'terminal',        'blue',   'indigo'),
-            (programs[0], 'core',     'SE102', 'Mathematics for Computing I',              1, 'first',  3, 'calculator',      'indigo', 'blue'),
+            (programs[0], 'general',  'SE100',  'Academic Skills & Research Methods',         1, 'first',  2, 'book',           'gray',   'slate'),
+            (programs[0], 'core',     'SE101',  'Introduction to Programming',                1, 'first',  3, 'terminal',       'blue',   'indigo'),
+            (programs[0], 'core',     'SE102',  'Mathematics for Computing I',                1, 'first',  3, 'calculator',     'indigo', 'blue'),
+            (programs[0], 'elective', 'SE106',  'Introduction to Web Technologies',           1, 'first',  3, 'globe',          'cyan',   'sky'),
+            (programs[0], 'elective', 'SE107',  'Logic & Discrete Mathematics',               1, 'first',  3, 'sigma',          'violet', 'indigo'),
+            (programs[0], 'general',  'SE108',  'Study Skills & Critical Thinking',           1, 'first',  2, 'lightbulb',      'amber',  'yellow'),
             # Year 1 — Semester 2
-            (programs[0], 'core',     'SE103', 'Data Structures & Algorithms',             1, 'second', 3, 'layers',          'blue',   'cyan'),
-            (programs[0], 'core',     'SE104', 'Object-Oriented Programming',              1, 'second', 3, 'code-2',          'sky',    'blue'),
-            (programs[0], 'general',  'SE105', 'Communication Skills',                     1, 'second', 2, 'message-square',  'gray',   'zinc'),
+            (programs[0], 'core',     'SE103',  'Data Structures & Algorithms',               1, 'second', 3, 'layers',         'blue',   'cyan'),
+            (programs[0], 'core',     'SE104',  'Object-Oriented Programming',                1, 'second', 3, 'code-2',         'sky',    'blue'),
+            (programs[0], 'general',  'SE105',  'Communication Skills',                       1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            (programs[0], 'elective', 'SE109',  'Linux & Command Line Fundamentals',          1, 'second', 3, 'terminal',       'gray',   'slate'),
+            (programs[0], 'elective', 'SE110',  'Version Control & Collaboration (Git)',      1, 'second', 2, 'git-branch',     'orange', 'amber'),
+            (programs[0], 'general',  'SE111',  'Professional Ethics in Computing',           1, 'second', 2, 'scale',          'teal',   'cyan'),
             # Year 2 — Semester 1
-            (programs[0], 'core',     'SE201', 'Software Design & Architecture',           2, 'first',  4, 'layout',          'blue',   'cyan'),
-            (programs[0], 'core',     'SE202', 'Database Systems',                         2, 'first',  3, 'database',        'teal',   'cyan'),
-            (programs[0], 'core',     'SE203', 'Operating Systems',                        2, 'first',  3, 'server',          'gray',   'blue'),
+            (programs[0], 'core',     'SE201',  'Software Design & Architecture',             2, 'first',  4, 'layout',         'blue',   'cyan'),
+            (programs[0], 'core',     'SE202',  'Database Systems',                           2, 'first',  3, 'database',       'teal',   'cyan'),
+            (programs[0], 'core',     'SE203',  'Operating Systems',                          2, 'first',  3, 'server',         'gray',   'blue'),
+            (programs[0], 'elective', 'SE207',  'Human-Computer Interaction',                 2, 'first',  3, 'mouse-pointer',  'pink',   'rose'),
+            (programs[0], 'elective', 'SE208',  'Agile & Scrum Methodologies',                2, 'first',  3, 'repeat',         'green',  'emerald'),
+            (programs[0], 'elective', 'SE209',  'Scripting & Automation (Python)',            2, 'first',  3, 'code',           'yellow', 'amber'),
             # Year 2 — Semester 2
-            (programs[0], 'core',     'SE204', 'Computer Networks',                        2, 'second', 3, 'network',         'sky',    'indigo'),
-            (programs[0], 'core',     'SE205', 'Software Testing & Quality Assurance',     2, 'second', 3, 'check-circle',    'green',  'teal'),
-            (programs[0], 'elective', 'SE206', 'Mobile Application Development',           2, 'second', 3, 'smartphone',      'cyan',   'sky'),
+            (programs[0], 'core',     'SE204',  'Computer Networks',                          2, 'second', 3, 'network',        'sky',    'indigo'),
+            (programs[0], 'core',     'SE205',  'Software Testing & Quality Assurance',       2, 'second', 3, 'check-circle',   'green',  'teal'),
+            (programs[0], 'elective', 'SE206',  'Mobile Application Development',             2, 'second', 3, 'smartphone',     'cyan',   'sky'),
+            (programs[0], 'elective', 'SE210',  'API Design & RESTful Services',              2, 'second', 3, 'plug',           'indigo', 'blue'),
+            (programs[0], 'elective', 'SE211',  'Game Development Fundamentals',              2, 'second', 3, 'gamepad-2',      'purple', 'violet'),
+            (programs[0], 'general',  'SE212',  'Project Management Essentials',              2, 'second', 2, 'clipboard-list', 'teal',   'green'),
             # Year 3 — Semester 1
-            (programs[0], 'elective', 'SE301', 'Cloud Computing & DevOps',                 3, 'first',  3, 'cloud',           'sky',    'blue'),
-            (programs[0], 'core',     'SE302', 'Artificial Intelligence Foundations',      3, 'first',  3, 'brain-circuit',   'violet', 'purple'),
-            (programs[0], 'core',     'SE303', 'Cybersecurity Fundamentals',               3, 'first',  3, 'shield',          'red',    'orange'),
+            (programs[0], 'elective', 'SE301',  'Cloud Computing & DevOps',                   3, 'first',  3, 'cloud',          'sky',    'blue'),
+            (programs[0], 'core',     'SE302',  'Artificial Intelligence Foundations',        3, 'first',  3, 'brain-circuit',  'violet', 'purple'),
+            (programs[0], 'core',     'SE303',  'Cybersecurity Fundamentals',                 3, 'first',  3, 'shield',         'red',    'orange'),
+            (programs[0], 'elective', 'SE306',  'Microservices & Container Orchestration',    3, 'first',  3, 'boxes',          'teal',   'cyan'),
+            (programs[0], 'elective', 'SE307',  'Machine Learning for Developers',            3, 'first',  3, 'cpu',            'purple', 'fuchsia'),
+            (programs[0], 'elective', 'SE308',  'Blockchain & Distributed Ledger Tech',       3, 'first',  3, 'link',           'amber',  'yellow'),
             # Year 3 — Semester 2
-            (programs[0], 'core',     'SE304', 'Capstone Software Project',                3, 'second', 6, 'rocket',          'indigo', 'violet'),
-            (programs[0], 'elective', 'SE305', 'Entrepreneurship & Tech Startups',         3, 'second', 3, 'lightbulb',       'yellow', 'amber'),
+            (programs[0], 'core',     'SE304',  'Capstone Software Project',                  3, 'second', 6, 'rocket',         'indigo', 'violet'),
+            (programs[0], 'elective', 'SE305',  'Entrepreneurship & Tech Startups',           3, 'second', 3, 'lightbulb',      'yellow', 'amber'),
+            (programs[0], 'elective', 'SE309',  'Advanced Web Development (Full Stack)',       3, 'second', 3, 'layout-grid',    'blue',   'sky'),
+            (programs[0], 'elective', 'SE310',  'IoT & Embedded Systems',                     3, 'second', 3, 'wifi',           'green',  'teal'),
+            (programs[0], 'general',  'SE311',  'Professional Practice & Career Skills',      3, 'second', 2, 'briefcase',      'gray',   'zinc'),
 
             # ══════════════════════════════════════════════════════════════════════
             # MSc Advanced Software Engineering — programs[1]  (1 year)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[1], 'core',     'ASE501', 'Advanced Algorithms & Complexity',        1, 'first',  4, 'cpu',             'indigo', 'blue'),
-            (programs[1], 'core',     'ASE502', 'Distributed Systems & Microservices',     1, 'first',  4, 'share-2',         'sky',    'cyan'),
-            (programs[1], 'core',     'ASE503', 'Machine Learning Engineering',            1, 'second', 4, 'brain',           'purple', 'violet'),
-            (programs[1], 'core',     'ASE504', 'MSc Research Thesis',                     1, 'second', 8, 'file-text',       'gray',   'blue'),
+            (programs[1], 'core',     'ASE501', 'Advanced Algorithms & Complexity',           1, 'first',  4, 'cpu',            'indigo', 'blue'),
+            (programs[1], 'core',     'ASE502', 'Distributed Systems & Microservices',        1, 'first',  4, 'share-2',        'sky',    'cyan'),
+            (programs[1], 'elective', 'ASE505', 'Cloud-Native Architecture',                  1, 'first',  4, 'cloud',          'blue',   'sky'),
+            (programs[1], 'elective', 'ASE506', 'Security Engineering',                       1, 'first',  4, 'shield',         'red',    'orange'),
+            (programs[1], 'elective', 'ASE507', 'Advanced Database Engineering',              1, 'first',  4, 'database',       'teal',   'cyan'),
+            (programs[1], 'core',     'ASE503', 'Machine Learning Engineering',               1, 'second', 4, 'brain',          'purple', 'violet'),
+            (programs[1], 'core',     'ASE504', 'MSc Research Thesis',                        1, 'second', 8, 'file-text',      'gray',   'blue'),
+            (programs[1], 'elective', 'ASE508', 'DevOps & Platform Engineering',              1, 'second', 4, 'server',         'gray',   'slate'),
+            (programs[1], 'elective', 'ASE509', 'Software Leadership & Team Dynamics',        1, 'second', 4, 'users',          'green',  'emerald'),
+            (programs[1], 'elective', 'ASE510', 'Emerging Technologies Seminar',              1, 'second', 3, 'zap',            'amber',  'yellow'),
 
             # ══════════════════════════════════════════════════════════════════════
             # BSc Artificial Intelligence — programs[2]  (3 years)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[2], 'core',     'AI101', 'Foundations of Artificial Intelligence',   1, 'first',  3, 'brain-circuit',   'violet', 'purple'),
-            (programs[2], 'core',     'AI102', 'Python for AI',                            1, 'first',  3, 'code',            'blue',   'indigo'),
-            (programs[2], 'core',     'AI103', 'Linear Algebra & Calculus for ML',         1, 'second', 3, 'sigma',           'indigo', 'violet'),
-            (programs[2], 'core',     'AI104', 'Probability & Statistics',                 1, 'second', 3, 'bar-chart',       'purple', 'fuchsia'),
-            (programs[2], 'core',     'AI201', 'Machine Learning Fundamentals',            2, 'first',  4, 'cpu',             'purple', 'fuchsia'),
-            (programs[2], 'core',     'AI202', 'Data Engineering & Big Data',              2, 'first',  3, 'database',        'teal',   'cyan'),
-            (programs[2], 'core',     'AI203', 'Natural Language Processing',              2, 'second', 3, 'message-circle',  'fuchsia','pink'),
-            (programs[2], 'core',     'AI204', 'Computer Vision',                          2, 'second', 3, 'eye',             'violet', 'purple'),
-            (programs[2], 'elective', 'AI301', 'Deep Learning & Neural Networks',          3, 'first',  3, 'network',         'violet', 'indigo'),
-            (programs[2], 'elective', 'AI302', 'Reinforcement Learning',                   3, 'first',  3, 'target',          'purple', 'violet'),
-            (programs[2], 'core',     'AI303', 'AI Ethics & Responsible AI',               3, 'second', 3, 'scale',           'gray',   'slate'),
-            (programs[2], 'core',     'AI304', 'AI Capstone Project',                      3, 'second', 6, 'rocket',          'fuchsia','violet'),
+            # Year 1 — Semester 1
+            (programs[2], 'core',     'AI101',  'Foundations of Artificial Intelligence',     1, 'first',  3, 'brain-circuit',  'violet', 'purple'),
+            (programs[2], 'core',     'AI102',  'Python for AI',                              1, 'first',  3, 'code',           'blue',   'indigo'),
+            (programs[2], 'general',  'AI105',  'Academic & Research Skills',                 1, 'first',  2, 'book',           'gray',   'slate'),
+            (programs[2], 'elective', 'AI106',  'Introduction to Data Science',               1, 'first',  3, 'bar-chart',      'teal',   'cyan'),
+            (programs[2], 'elective', 'AI107',  'Logic & Reasoning for AI',                   1, 'first',  3, 'sigma',          'indigo', 'violet'),
+            # Year 1 — Semester 2
+            (programs[2], 'core',     'AI103',  'Linear Algebra & Calculus for ML',           1, 'second', 3, 'sigma',          'indigo', 'violet'),
+            (programs[2], 'core',     'AI104',  'Probability & Statistics',                   1, 'second', 3, 'bar-chart',      'purple', 'fuchsia'),
+            (programs[2], 'elective', 'AI108',  'Databases for AI Applications',              1, 'second', 3, 'database',       'teal',   'cyan'),
+            (programs[2], 'elective', 'AI109',  'Ethics in Technology',                       1, 'second', 2, 'scale',          'gray',   'slate'),
+            (programs[2], 'general',  'AI110',  'Communication & Presentation Skills',        1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            # Year 2 — Semester 1
+            (programs[2], 'core',     'AI201',  'Machine Learning Fundamentals',              2, 'first',  4, 'cpu',            'purple', 'fuchsia'),
+            (programs[2], 'core',     'AI202',  'Data Engineering & Big Data',                2, 'first',  3, 'database',       'teal',   'cyan'),
+            (programs[2], 'elective', 'AI205',  'Time Series Analysis',                       2, 'first',  3, 'trending-up',    'blue',   'indigo'),
+            (programs[2], 'elective', 'AI206',  'Recommender Systems',                        2, 'first',  3, 'star',           'amber',  'yellow'),
+            (programs[2], 'elective', 'AI207',  'Cloud Platforms for AI',                     2, 'first',  3, 'cloud',          'sky',    'blue'),
+            # Year 2 — Semester 2
+            (programs[2], 'core',     'AI203',  'Natural Language Processing',                2, 'second', 3, 'message-circle', 'fuchsia','pink'),
+            (programs[2], 'core',     'AI204',  'Computer Vision',                            2, 'second', 3, 'eye',            'violet', 'purple'),
+            (programs[2], 'elective', 'AI208',  'Explainable AI & Model Interpretability',    2, 'second', 3, 'search',         'orange', 'amber'),
+            (programs[2], 'elective', 'AI209',  'Robotics & Autonomous Systems',              2, 'second', 3, 'cpu',            'blue',   'sky'),
+            (programs[2], 'elective', 'AI210',  'Advanced Statistical Modelling',             2, 'second', 3, 'activity',       'purple', 'violet'),
+            # Year 3 — Semester 1
+            (programs[2], 'elective', 'AI301',  'Deep Learning & Neural Networks',            3, 'first',  3, 'network',        'violet', 'indigo'),
+            (programs[2], 'elective', 'AI302',  'Reinforcement Learning',                     3, 'first',  3, 'target',         'purple', 'violet'),
+            (programs[2], 'elective', 'AI305',  'Generative AI & Large Language Models',      3, 'first',  3, 'sparkles',       'fuchsia','pink'),
+            (programs[2], 'elective', 'AI306',  'AI for Healthcare',                          3, 'first',  3, 'heart-pulse',    'red',    'rose'),
+            (programs[2], 'elective', 'AI307',  'Edge AI & Embedded Intelligence',            3, 'first',  3, 'wifi',           'green',  'teal'),
+            # Year 3 — Semester 2
+            (programs[2], 'core',     'AI303',  'AI Ethics & Responsible AI',                 3, 'second', 3, 'scale',          'gray',   'slate'),
+            (programs[2], 'core',     'AI304',  'AI Capstone Project',                        3, 'second', 6, 'rocket',         'fuchsia','violet'),
+            (programs[2], 'elective', 'AI308',  'AI Product Development',                     3, 'second', 3, 'package',        'blue',   'indigo'),
+            (programs[2], 'elective', 'AI309',  'Federated Learning & Privacy-Preserving AI', 3, 'second', 3, 'lock',           'teal',   'cyan'),
+
+            # ══════════════════════════════════════════════════════════════════════
+            # PhD Artificial Intelligence — programs[3]  (4 years)
+            # ══════════════════════════════════════════════════════════════════════
+            (programs[3], 'core',     'PHD701', 'Doctoral Research Methodology',              1, 'first',  6, 'file-text',      'gray',   'slate'),
+            (programs[3], 'core',     'PHD702', 'Advanced Machine Learning Theory',           1, 'first',  6, 'brain',          'purple', 'violet'),
+            (programs[3], 'elective', 'PHD703', 'Research Seminar Series I',                  1, 'second', 4, 'mic',            'blue',   'indigo'),
+            (programs[3], 'elective', 'PHD704', 'Advanced Deep Learning',                     1, 'second', 6, 'network',        'violet', 'indigo'),
+            (programs[3], 'core',     'PHD705', 'PhD Thesis (Year 1 Progress)',               1, 'second', 8, 'scroll',         'gray',   'blue'),
+            (programs[3], 'core',     'PHD801', 'PhD Thesis (Year 2 Research)',               2, 'first',  12,'scroll',         'gray',   'blue'),
+            (programs[3], 'elective', 'PHD802', 'Research Seminar Series II',                 2, 'second', 4, 'mic',            'blue',   'sky'),
+            (programs[3], 'core',     'PHD901', 'PhD Thesis (Year 3 Writing)',                3, 'first',  12,'scroll',         'gray',   'blue'),
+            (programs[3], 'elective', 'PHD902', 'Academic Publication & Dissemination',       3, 'second', 4, 'book-open',      'green',  'teal'),
+            (programs[3], 'core',     'PHD001', 'PhD Thesis Submission & Viva',               4, 'second', 12,'award',          'gold',   'amber'),
 
             # ══════════════════════════════════════════════════════════════════════
             # BSc Cybersecurity — programs[4]  (3 years)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[4], 'core',     'CYS101', 'Introduction to Cybersecurity',           1, 'first',  3, 'shield',          'red',    'orange'),
-            (programs[4], 'core',     'CYS102', 'Networking Fundamentals',                 1, 'first',  3, 'network',         'blue',   'sky'),
-            (programs[4], 'core',     'CYS103', 'Operating Systems Security',              1, 'second', 3, 'lock',            'red',    'rose'),
-            (programs[4], 'core',     'CYS104', 'Cryptography & PKI',                      1, 'second', 3, 'key',             'amber',  'yellow'),
-            (programs[4], 'core',     'CYS201', 'Ethical Hacking & Pen Testing',           2, 'first',  4, 'bug',             'red',    'pink'),
-            (programs[4], 'core',     'CYS202', 'Digital Forensics',                       2, 'second', 3, 'search',          'orange', 'amber'),
-            (programs[4], 'elective', 'CYS301', 'Malware Analysis & Reverse Engineering',  3, 'first',  3, 'code-2',          'rose',   'red'),
-            (programs[4], 'core',     'CYS302', 'Security Operations & SIEM',              3, 'second', 3, 'monitor',         'red',    'orange'),
+            # Year 1 — Semester 1
+            (programs[4], 'core',     'CYS101', 'Introduction to Cybersecurity',              1, 'first',  3, 'shield',         'red',    'orange'),
+            (programs[4], 'core',     'CYS102', 'Networking Fundamentals',                    1, 'first',  3, 'network',        'blue',   'sky'),
+            (programs[4], 'general',  'CYS105', 'Academic Skills & Professional Ethics',      1, 'first',  2, 'book',           'gray',   'slate'),
+            (programs[4], 'elective', 'CYS106', 'Introduction to Programming for Security',   1, 'first',  3, 'code',           'indigo', 'blue'),
+            (programs[4], 'elective', 'CYS107', 'Computer Architecture & Organisation',       1, 'first',  3, 'cpu',            'amber',  'yellow'),
+            # Year 1 — Semester 2
+            (programs[4], 'core',     'CYS103', 'Operating Systems Security',                 1, 'second', 3, 'lock',           'red',    'rose'),
+            (programs[4], 'core',     'CYS104', 'Cryptography & PKI',                         1, 'second', 3, 'key',            'amber',  'yellow'),
+            (programs[4], 'elective', 'CYS108', 'Linux Security Administration',              1, 'second', 3, 'terminal',       'gray',   'slate'),
+            (programs[4], 'elective', 'CYS109', 'Security Scripting with Python',             1, 'second', 3, 'code-2',         'blue',   'indigo'),
+            (programs[4], 'general',  'CYS110', 'Communication Skills for IT',                1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            # Year 2 — Semester 1
+            (programs[4], 'core',     'CYS201', 'Ethical Hacking & Pen Testing',              2, 'first',  4, 'bug',            'red',    'pink'),
+            (programs[4], 'elective', 'CYS203', 'Cloud Security Fundamentals',                2, 'first',  3, 'cloud',          'sky',    'blue'),
+            (programs[4], 'elective', 'CYS204', 'Web Application Security',                   2, 'first',  3, 'globe',          'orange', 'red'),
+            (programs[4], 'elective', 'CYS205', 'Vulnerability Assessment & Management',      2, 'first',  3, 'search',         'red',    'orange'),
+            (programs[4], 'elective', 'CYS206', 'Identity & Access Management',               2, 'first',  3, 'user-check',     'teal',   'cyan'),
+            # Year 2 — Semester 2
+            (programs[4], 'core',     'CYS202', 'Digital Forensics',                          2, 'second', 3, 'search',         'orange', 'amber'),
+            (programs[4], 'elective', 'CYS207', 'Incident Response & Threat Intelligence',    2, 'second', 3, 'alert-triangle', 'red',    'rose'),
+            (programs[4], 'elective', 'CYS208', 'Network Intrusion Detection',                2, 'second', 3, 'wifi-off',       'rose',   'red'),
+            (programs[4], 'elective', 'CYS209', 'Secure Software Development',                2, 'second', 3, 'code-2',         'indigo', 'violet'),
+            (programs[4], 'general',  'CYS210', 'Project Management for Security Teams',      2, 'second', 2, 'clipboard-list', 'teal',   'green'),
+            # Year 3 — Semester 1
+            (programs[4], 'elective', 'CYS301', 'Malware Analysis & Reverse Engineering',     3, 'first',  3, 'code-2',         'rose',   'red'),
+            (programs[4], 'elective', 'CYS303', 'Red Team Operations',                        3, 'first',  3, 'target',         'red',    'pink'),
+            (programs[4], 'elective', 'CYS304', 'IoT Security',                               3, 'first',  3, 'wifi',           'amber',  'orange'),
+            (programs[4], 'elective', 'CYS305', 'Governance, Risk & Compliance (GRC)',        3, 'first',  3, 'scale',          'blue',   'indigo'),
+            (programs[4], 'elective', 'CYS306', 'Mobile & Endpoint Security',                 3, 'first',  3, 'smartphone',     'violet', 'purple'),
+            # Year 3 — Semester 2
+            (programs[4], 'core',     'CYS302', 'Security Operations & SIEM',                 3, 'second', 3, 'monitor',        'red',    'orange'),
+            (programs[4], 'elective', 'CYS307', 'Cyber Law & Policy',                         3, 'second', 3, 'file-text',      'gray',   'blue'),
+            (programs[4], 'elective', 'CYS308', 'Capstone: Security Assessment Project',      3, 'second', 6, 'rocket',         'red',    'rose'),
 
             # ══════════════════════════════════════════════════════════════════════
             # BEng Civil Engineering — programs[5]  (4 years)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[5], 'core',     'CVE101', 'Structural Analysis I',                   1, 'first',  3, 'building',        'orange', 'amber'),
-            (programs[5], 'core',     'CVE102', 'Engineering Mathematics I',               1, 'first',  3, 'calculator',      'amber',  'yellow'),
-            (programs[5], 'core',     'CVE103', 'Engineering Drawing & CAD',               1, 'second', 3, 'pen-tool',        'orange', 'red'),
-            (programs[5], 'core',     'CVE104', 'Materials Science',                       1, 'second', 3, 'layers',          'amber',  'orange'),
-            (programs[5], 'core',     'CVE201', 'Structural Analysis II',                  2, 'first',  4, 'building-2',      'orange', 'amber'),
-            (programs[5], 'core',     'CVE202', 'Fluid Mechanics',                         2, 'first',  3, 'droplets',        'blue',   'cyan'),
-            (programs[5], 'core',     'CVE203', 'Geotechnical Engineering',                2, 'second', 3, 'mountain',        'orange', 'yellow'),
-            (programs[5], 'core',     'CVE204', 'Transportation Engineering',              2, 'second', 3, 'map',             'amber',  'orange'),
-            (programs[5], 'elective', 'CVE301', 'Environmental Engineering',               3, 'first',  3, 'leaf',            'green',  'emerald'),
-            (programs[5], 'core',     'CVE302', 'Concrete & Steel Design',                 3, 'second', 3, 'hard-hat',        'orange', 'amber'),
-            (programs[5], 'core',     'CVE401', 'Project Management in Civil Eng.',        4, 'first',  3, 'clipboard-list',  'teal',   'cyan'),
-            (programs[5], 'core',     'CVE402', 'BEng Capstone Project',                   4, 'second', 8, 'rocket',          'red',    'orange'),
+            # Year 1 — Semester 1
+            (programs[5], 'core',     'CVE101', 'Structural Analysis I',                      1, 'first',  3, 'building',       'orange', 'amber'),
+            (programs[5], 'core',     'CVE102', 'Engineering Mathematics I',                  1, 'first',  3, 'calculator',     'amber',  'yellow'),
+            (programs[5], 'general',  'CVE105', 'Engineering Drawing & Visualisation',        1, 'first',  2, 'pen-tool',       'gray',   'slate'),
+            (programs[5], 'elective', 'CVE106', 'Introduction to Environmental Science',      1, 'first',  3, 'leaf',           'green',  'emerald'),
+            (programs[5], 'elective', 'CVE107', 'Engineering Surveying',                      1, 'first',  3, 'map',            'teal',   'cyan'),
+            # Year 1 — Semester 2
+            (programs[5], 'core',     'CVE103', 'Engineering Drawing & CAD',                  1, 'second', 3, 'pen-tool',       'orange', 'red'),
+            (programs[5], 'core',     'CVE104', 'Materials Science',                          1, 'second', 3, 'layers',         'amber',  'orange'),
+            (programs[5], 'elective', 'CVE108', 'Engineering Mathematics II',                 1, 'second', 3, 'calculator',     'indigo', 'blue'),
+            (programs[5], 'elective', 'CVE109', 'Soil Mechanics Introduction',                1, 'second', 3, 'mountain',       'brown',  'amber'),
+            (programs[5], 'general',  'CVE110', 'Communication & Report Writing',             1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            # Year 2 — Semester 1
+            (programs[5], 'core',     'CVE201', 'Structural Analysis II',                     2, 'first',  4, 'building-2',     'orange', 'amber'),
+            (programs[5], 'core',     'CVE202', 'Fluid Mechanics',                            2, 'first',  3, 'droplets',       'blue',   'cyan'),
+            (programs[5], 'elective', 'CVE205', 'Highway & Pavement Engineering',             2, 'first',  3, 'map',            'gray',   'slate'),
+            (programs[5], 'elective', 'CVE206', 'Construction Technology',                    2, 'first',  3, 'hard-hat',       'amber',  'orange'),
+            (programs[5], 'elective', 'CVE207', 'Engineering Hydrology',                      2, 'first',  3, 'droplets',       'sky',    'blue'),
+            # Year 2 — Semester 2
+            (programs[5], 'core',     'CVE203', 'Geotechnical Engineering',                   2, 'second', 3, 'mountain',       'orange', 'yellow'),
+            (programs[5], 'core',     'CVE204', 'Transportation Engineering',                 2, 'second', 3, 'map',            'amber',  'orange'),
+            (programs[5], 'elective', 'CVE208', 'Bridge Engineering',                         2, 'second', 3, 'building',       'orange', 'red'),
+            (programs[5], 'elective', 'CVE209', 'Water Supply & Sanitation Engineering',      2, 'second', 3, 'droplets',       'blue',   'teal'),
+            (programs[5], 'general',  'CVE210', 'Engineering Management & Economics',         2, 'second', 2, 'trending-up',    'green',  'emerald'),
+            # Year 3 — Semester 1
+            (programs[5], 'elective', 'CVE301', 'Environmental Engineering',                  3, 'first',  3, 'leaf',           'green',  'emerald'),
+            (programs[5], 'elective', 'CVE303', 'Foundation Engineering',                     3, 'first',  3, 'layers',         'amber',  'yellow'),
+            (programs[5], 'elective', 'CVE304', 'Earthquake Engineering',                     3, 'first',  3, 'activity',       'red',    'orange'),
+            (programs[5], 'elective', 'CVE305', 'Offshore & Marine Structures',               3, 'first',  3, 'anchor',         'blue',   'sky'),
+            (programs[5], 'elective', 'CVE306', 'Urban Planning & Infrastructure',            3, 'first',  3, 'map-pin',        'teal',   'cyan'),
+            # Year 3 — Semester 2
+            (programs[5], 'core',     'CVE302', 'Concrete & Steel Design',                    3, 'second', 3, 'hard-hat',       'orange', 'amber'),
+            (programs[5], 'elective', 'CVE307', 'Finite Element Methods',                     3, 'second', 3, 'grid',           'indigo', 'blue'),
+            (programs[5], 'elective', 'CVE308', 'Waste Management Engineering',               3, 'second', 3, 'trash-2',        'green',  'teal'),
+            # Year 4 — Semester 1
+            (programs[5], 'core',     'CVE401', 'Project Management in Civil Eng.',           4, 'first',  3, 'clipboard-list', 'teal',   'cyan'),
+            (programs[5], 'elective', 'CVE403', 'BIM & Digital Construction',                 4, 'first',  3, 'layout-grid',    'blue',   'indigo'),
+            (programs[5], 'elective', 'CVE404', 'Smart Infrastructure & IoT',                 4, 'first',  3, 'wifi',           'sky',    'blue'),
+            (programs[5], 'elective', 'CVE405', 'Risk Assessment & Safety Engineering',       4, 'first',  3, 'alert-triangle', 'red',    'orange'),
+            # Year 4 — Semester 2
+            (programs[5], 'core',     'CVE402', 'BEng Capstone Project',                      4, 'second', 8, 'rocket',         'red',    'orange'),
+            (programs[5], 'elective', 'CVE406', 'Sustainable Construction',                   4, 'second', 3, 'leaf',           'green',  'emerald'),
+            (programs[5], 'elective', 'CVE407', 'Advanced Structural Design',                 4, 'second', 3, 'building-2',     'orange', 'amber'),
 
             # ══════════════════════════════════════════════════════════════════════
             # BEng Electrical Engineering — programs[6]  (4 years)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[6], 'core',     'EEE101', 'Circuit Theory & Electronics',            1, 'first',  3, 'zap',             'yellow', 'amber'),
-            (programs[6], 'core',     'EEE102', 'Engineering Mathematics I',               1, 'first',  3, 'calculator',      'amber',  'yellow'),
-            (programs[6], 'core',     'EEE103', 'Digital Electronics',                     1, 'second', 3, 'cpu',             'yellow', 'lime'),
-            (programs[6], 'core',     'EEE201', 'Electromagnetics',                        2, 'first',  3, 'magnet',          'amber',  'orange'),
-            (programs[6], 'core',     'EEE202', 'Power Systems I',                         2, 'second', 4, 'bolt',            'yellow', 'amber'),
-            (programs[6], 'core',     'EEE301', 'Control Systems',                         3, 'first',  3, 'sliders',         'orange', 'amber'),
-            (programs[6], 'elective', 'EEE302', 'Renewable Energy Systems',                3, 'second', 3, 'sun',             'green',  'emerald'),
-            (programs[6], 'core',     'EEE401', 'BEng Electrical Capstone Project',        4, 'second', 8, 'rocket',          'yellow', 'amber'),
+            # Year 1 — Semester 1
+            (programs[6], 'core',     'EEE101', 'Circuit Theory & Electronics',               1, 'first',  3, 'zap',            'yellow', 'amber'),
+            (programs[6], 'core',     'EEE102', 'Engineering Mathematics I',                  1, 'first',  3, 'calculator',     'amber',  'yellow'),
+            (programs[6], 'general',  'EEE105', 'Engineering Drawing & Design',               1, 'first',  2, 'pen-tool',       'gray',   'slate'),
+            (programs[6], 'elective', 'EEE106', 'Introduction to Programming (C)',            1, 'first',  3, 'code',           'blue',   'indigo'),
+            (programs[6], 'elective', 'EEE107', 'Engineering Physics',                        1, 'first',  3, 'activity',       'purple', 'violet'),
+            # Year 1 — Semester 2
+            (programs[6], 'core',     'EEE103', 'Digital Electronics',                        1, 'second', 3, 'cpu',            'yellow', 'lime'),
+            (programs[6], 'elective', 'EEE108', 'Engineering Mathematics II',                 1, 'second', 3, 'sigma',          'indigo', 'blue'),
+            (programs[6], 'elective', 'EEE109', 'Introduction to Signals & Systems',          1, 'second', 3, 'activity',       'teal',   'cyan'),
+            (programs[6], 'general',  'EEE110', 'Communication & Technical Writing',          1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            (programs[6], 'elective', 'EEE111', 'Computer Architecture for Engineers',        1, 'second', 3, 'server',         'gray',   'blue'),
+            # Year 2 — Semester 1
+            (programs[6], 'core',     'EEE201', 'Electromagnetics',                           2, 'first',  3, 'magnet',         'amber',  'orange'),
+            (programs[6], 'elective', 'EEE203', 'Analogue Electronics',                       2, 'first',  3, 'zap',            'yellow', 'lime'),
+            (programs[6], 'elective', 'EEE204', 'Microprocessors & Embedded Systems',         2, 'first',  4, 'cpu',            'blue',   'indigo'),
+            (programs[6], 'elective', 'EEE205', 'Signals & Systems',                          2, 'first',  3, 'activity',       'teal',   'cyan'),
+            (programs[6], 'elective', 'EEE206', 'Electrical Machines I',                      2, 'first',  3, 'settings',       'orange', 'amber'),
+            # Year 2 — Semester 2
+            (programs[6], 'core',     'EEE202', 'Power Systems I',                            2, 'second', 4, 'bolt',           'yellow', 'amber'),
+            (programs[6], 'elective', 'EEE207', 'Telecommunications I',                       2, 'second', 3, 'radio',          'sky',    'blue'),
+            (programs[6], 'elective', 'EEE208', 'Digital Signal Processing',                  2, 'second', 3, 'bar-chart',      'purple', 'violet'),
+            (programs[6], 'elective', 'EEE209', 'Instrumentation & Measurements',             2, 'second', 3, 'gauge',          'teal',   'green'),
+            (programs[6], 'general',  'EEE210', 'Engineering Economics & Management',         2, 'second', 2, 'trending-up',    'green',  'emerald'),
+            # Year 3 — Semester 1
+            (programs[6], 'core',     'EEE301', 'Control Systems',                            3, 'first',  3, 'sliders',        'orange', 'amber'),
+            (programs[6], 'elective', 'EEE303', 'Power Electronics',                          3, 'first',  3, 'zap',            'amber',  'yellow'),
+            (programs[6], 'elective', 'EEE304', 'High Voltage Engineering',                   3, 'first',  3, 'bolt',           'red',    'orange'),
+            (programs[6], 'elective', 'EEE305', 'VLSI Design',                                3, 'first',  3, 'layers',         'indigo', 'violet'),
+            (programs[6], 'elective', 'EEE306', 'Wireless Communications',                    3, 'first',  3, 'wifi',           'sky',    'cyan'),
+            # Year 3 — Semester 2
+            (programs[6], 'elective', 'EEE302', 'Renewable Energy Systems',                   3, 'second', 3, 'sun',            'green',  'emerald'),
+            (programs[6], 'elective', 'EEE307', 'Smart Grid Technology',                      3, 'second', 3, 'network',        'teal',   'cyan'),
+            (programs[6], 'elective', 'EEE308', 'Robotics & Automation',                      3, 'second', 3, 'cpu',            'blue',   'indigo'),
+            # Year 4 — Semester 1
+            (programs[6], 'elective', 'EEE401', 'Advanced Power Systems',                     4, 'first',  3, 'bolt',           'yellow', 'lime'),
+            (programs[6], 'elective', 'EEE402', 'Satellite & Space Communications',           4, 'first',  3, 'radio',          'violet', 'purple'),
+            (programs[6], 'elective', 'EEE403', 'AI for Electrical Engineering',              4, 'first',  3, 'brain',          'purple', 'fuchsia'),
+            (programs[6], 'elective', 'EEE404', 'Electric Vehicles & Charging Infrastructure',4, 'first',  3, 'car',            'green',  'teal'),
+            # Year 4 — Semester 2
+            (programs[6], 'core',     'EEE400', 'BEng Electrical Capstone Project',           4, 'second', 8, 'rocket',         'yellow', 'amber'),
+            (programs[6], 'elective', 'EEE405', 'Energy Storage Systems',                     4, 'second', 3, 'battery-charging','green', 'emerald'),
+            (programs[6], 'elective', 'EEE406', 'Advanced Control & Optimisation',            4, 'second', 3, 'sliders',        'orange', 'red'),
 
             # ══════════════════════════════════════════════════════════════════════
             # BSc Finance & Accounting — programs[7]  (3 years)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[7], 'core',     'FNA101', 'Financial Accounting Principles',         1, 'first',  3, 'book-open',       'green',  'emerald'),
-            (programs[7], 'core',     'FNA102', 'Business Economics',                      1, 'first',  3, 'trending-up',     'emerald','teal'),
-            (programs[7], 'core',     'FNA103', 'Introduction to Finance',                 1, 'second', 3, 'dollar-sign',     'green',  'lime'),
-            (programs[7], 'core',     'FNA104', 'Quantitative Methods',                    1, 'second', 3, 'calculator',      'teal',   'cyan'),
-            (programs[7], 'core',     'FNA201', 'Corporate Finance',                       2, 'first',  4, 'trending-up',     'emerald','teal'),
-            (programs[7], 'core',     'FNA202', 'Management Accounting',                   2, 'first',  3, 'pie-chart',       'green',  'emerald'),
-            (programs[7], 'core',     'FNA203', 'Taxation',                                2, 'second', 3, 'receipt',         'teal',   'green'),
-            (programs[7], 'elective', 'FNA301', 'Investment Analysis',                     3, 'second', 3, 'bar-chart-2',     'green',  'lime'),
-            (programs[7], 'core',     'FNA302', 'Auditing & Assurance',                    3, 'first',  3, 'check-square',    'emerald','teal'),
-            (programs[7], 'core',     'FNA303', 'Financial Reporting & IFRS',              3, 'second', 3, 'file-bar-chart',  'teal',   'green'),
+            # Year 1 — Semester 1
+            (programs[7], 'core',     'FNA101', 'Financial Accounting Principles',            1, 'first',  3, 'book-open',      'green',  'emerald'),
+            (programs[7], 'core',     'FNA102', 'Business Economics',                         1, 'first',  3, 'trending-up',    'emerald','teal'),
+            (programs[7], 'general',  'FNA105', 'Academic & Study Skills',                    1, 'first',  2, 'book',           'gray',   'slate'),
+            (programs[7], 'elective', 'FNA106', 'Business Law & Regulation',                  1, 'first',  3, 'scale',          'blue',   'indigo'),
+            (programs[7], 'elective', 'FNA107', 'Microsoft Excel for Finance',                1, 'first',  2, 'table',          'green',  'lime'),
+            # Year 1 — Semester 2
+            (programs[7], 'core',     'FNA103', 'Introduction to Finance',                    1, 'second', 3, 'dollar-sign',    'green',  'lime'),
+            (programs[7], 'core',     'FNA104', 'Quantitative Methods',                       1, 'second', 3, 'calculator',     'teal',   'cyan'),
+            (programs[7], 'elective', 'FNA108', 'Principles of Marketing',                    1, 'second', 3, 'megaphone',      'orange', 'amber'),
+            (programs[7], 'elective', 'FNA109', 'Introduction to Macroeconomics',             1, 'second', 3, 'trending-up',    'blue',   'sky'),
+            (programs[7], 'general',  'FNA110', 'Communication & Business Writing',           1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            # Year 2 — Semester 1
+            (programs[7], 'core',     'FNA201', 'Corporate Finance',                          2, 'first',  4, 'trending-up',    'emerald','teal'),
+            (programs[7], 'core',     'FNA202', 'Management Accounting',                      2, 'first',  3, 'pie-chart',      'green',  'emerald'),
+            (programs[7], 'elective', 'FNA205', 'Financial Econometrics',                     2, 'first',  3, 'activity',       'indigo', 'blue'),
+            (programs[7], 'elective', 'FNA206', 'International Finance',                      2, 'first',  3, 'globe',          'sky',    'blue'),
+            (programs[7], 'elective', 'FNA207', 'Banking & Financial Institutions',           2, 'first',  3, 'landmark',       'teal',   'green'),
+            # Year 2 — Semester 2
+            (programs[7], 'core',     'FNA203', 'Taxation',                                   2, 'second', 3, 'receipt',        'teal',   'green'),
+            (programs[7], 'elective', 'FNA208', 'Financial Risk Management',                  2, 'second', 3, 'alert-triangle', 'red',    'orange'),
+            (programs[7], 'elective', 'FNA209', 'Mergers, Acquisitions & Valuations',         2, 'second', 3, 'git-merge',      'purple', 'violet'),
+            (programs[7], 'elective', 'FNA210', 'Public Sector Finance',                      2, 'second', 3, 'landmark',       'blue',   'indigo'),
+            (programs[7], 'general',  'FNA211', 'Entrepreneurship & New Ventures',            2, 'second', 2, 'lightbulb',      'amber',  'yellow'),
+            # Year 3 — Semester 1
+            (programs[7], 'core',     'FNA302', 'Auditing & Assurance',                       3, 'first',  3, 'check-square',   'emerald','teal'),
+            (programs[7], 'elective', 'FNA304', 'Derivatives & Financial Engineering',        3, 'first',  3, 'trending-up',    'violet', 'purple'),
+            (programs[7], 'elective', 'FNA305', 'Corporate Governance & Ethics',              3, 'first',  3, 'scale',          'gray',   'slate'),
+            (programs[7], 'elective', 'FNA306', 'FinTech & Digital Finance',                  3, 'first',  3, 'smartphone',     'blue',   'indigo'),
+            (programs[7], 'elective', 'FNA307', 'Portfolio Management',                       3, 'first',  3, 'bar-chart-2',    'green',  'teal'),
+            # Year 3 — Semester 2
+            (programs[7], 'elective', 'FNA301', 'Investment Analysis',                        3, 'second', 3, 'bar-chart-2',    'green',  'lime'),
+            (programs[7], 'core',     'FNA303', 'Financial Reporting & IFRS',                 3, 'second', 3, 'file-bar-chart', 'teal',   'green'),
+            (programs[7], 'elective', 'FNA308', 'Advanced Taxation',                          3, 'second', 3, 'receipt',        'amber',  'orange'),
+            (programs[7], 'elective', 'FNA309', 'Capstone: Finance Research Project',         3, 'second', 6, 'rocket',         'green',  'emerald'),
 
             # ══════════════════════════════════════════════════════════════════════
             # MBA Finance — programs[8]  (1 year — postgraduate)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[8], 'core',     'MBA501', 'Managerial Economics',                    1, 'first',  4, 'briefcase',       'teal',   'cyan'),
-            (programs[8], 'core',     'MBA502', 'Organisational Behaviour',                1, 'first',  4, 'users',           'cyan',   'sky'),
-            (programs[8], 'core',     'MBA503', 'Strategic Financial Management',          1, 'second', 4, 'pie-chart',       'emerald','teal'),
-            (programs[8], 'core',     'MBA504', 'Business Research Methods',              1, 'second', 4, 'search',          'teal',   'emerald'),
-            (programs[8], 'elective', 'MBA505', 'International Business & Trade',          1, 'second', 3, 'globe',           'blue',   'cyan'),
-            (programs[8], 'core',     'MBA506', 'MBA Dissertation',                        1, 'second', 8, 'file-text',       'gray',   'teal'),
+            (programs[8], 'core',     'MBA501', 'Managerial Economics',                       1, 'first',  4, 'briefcase',      'teal',   'cyan'),
+            (programs[8], 'core',     'MBA502', 'Organisational Behaviour',                   1, 'first',  4, 'users',          'cyan',   'sky'),
+            (programs[8], 'elective', 'MBA507', 'Leadership & Strategic Management',          1, 'first',  4, 'award',          'blue',   'indigo'),
+            (programs[8], 'elective', 'MBA508', 'Operations Management',                      1, 'first',  4, 'settings',       'gray',   'slate'),
+            (programs[8], 'elective', 'MBA509', 'Marketing Management',                       1, 'first',  3, 'megaphone',      'orange', 'amber'),
+            (programs[8], 'core',     'MBA503', 'Strategic Financial Management',             1, 'second', 4, 'pie-chart',      'emerald','teal'),
+            (programs[8], 'core',     'MBA504', 'Business Research Methods',                  1, 'second', 4, 'search',         'teal',   'emerald'),
+            (programs[8], 'elective', 'MBA505', 'International Business & Trade',             1, 'second', 3, 'globe',          'blue',   'cyan'),
+            (programs[8], 'core',     'MBA506', 'MBA Dissertation',                           1, 'second', 8, 'file-text',      'gray',   'teal'),
+            (programs[8], 'elective', 'MBA510', 'Corporate Social Responsibility',            1, 'second', 3, 'heart',          'green',  'emerald'),
+            (programs[8], 'elective', 'MBA511', 'Digital Transformation in Business',         1, 'second', 3, 'zap',            'violet', 'purple'),
 
             # ══════════════════════════════════════════════════════════════════════
             # BSc Nursing — programs[9]  (3 years)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[9], 'core',     'NRS101', 'Anatomy & Physiology I',                  1, 'first',  4, 'heart-pulse',     'red',    'rose'),
-            (programs[9], 'core',     'NRS102', 'Foundations of Nursing Practice',         1, 'first',  3, 'stethoscope',     'rose',   'pink'),
-            (programs[9], 'core',     'NRS103', 'Anatomy & Physiology II',                 1, 'second', 4, 'activity',        'red',    'pink'),
-            (programs[9], 'core',     'NRS104', 'Pharmacology I',                          1, 'second', 3, 'pill',            'pink',   'rose'),
-            (programs[9], 'core',     'NRS201', 'Clinical Nursing Practice I',             2, 'first',  5, 'stethoscope',     'rose',   'pink'),
-            (programs[9], 'core',     'NRS202', 'Microbiology & Infection Control',        2, 'first',  3, 'shield-check',    'red',    'rose'),
-            (programs[9], 'core',     'NRS203', 'Mental Health Nursing',                   2, 'second', 3, 'brain',           'purple', 'violet'),
-            (programs[9], 'core',     'NRS204', 'Child & Family Nursing',                  2, 'second', 3, 'baby',            'pink',   'rose'),
-            (programs[9], 'elective', 'NRS301', 'Community & Public Health Nursing',       3, 'first',  3, 'map-pin',         'green',  'teal'),
-            (programs[9], 'core',     'NRS302', 'Clinical Nursing Practice II',            3, 'second', 5, 'heart',           'red',    'rose'),
-            (programs[9], 'core',     'NRS303', 'Evidence-Based Practice & Research',      3, 'second', 4, 'file-text',       'gray',   'red'),
+            # Year 1 — Semester 1
+            (programs[9], 'core',     'NRS101', 'Anatomy & Physiology I',                     1, 'first',  4, 'heart-pulse',    'red',    'rose'),
+            (programs[9], 'core',     'NRS102', 'Foundations of Nursing Practice',            1, 'first',  3, 'stethoscope',    'rose',   'pink'),
+            (programs[9], 'general',  'NRS105', 'Academic & Study Skills for Nurses',         1, 'first',  2, 'book',           'gray',   'slate'),
+            (programs[9], 'elective', 'NRS106', 'Introduction to Psychology',                 1, 'first',  3, 'brain',          'purple', 'violet'),
+            (programs[9], 'elective', 'NRS107', 'Healthcare Ethics & Law',                    1, 'first',  3, 'scale',          'blue',   'indigo'),
+            # Year 1 — Semester 2
+            (programs[9], 'core',     'NRS103', 'Anatomy & Physiology II',                    1, 'second', 4, 'activity',       'red',    'pink'),
+            (programs[9], 'core',     'NRS104', 'Pharmacology I',                             1, 'second', 3, 'pill',           'pink',   'rose'),
+            (programs[9], 'elective', 'NRS108', 'Nutrition & Dietetics',                      1, 'second', 3, 'apple',          'green',  'teal'),
+            (programs[9], 'elective', 'NRS109', 'Medical Terminology',                        1, 'second', 2, 'book-open',      'gray',   'zinc'),
+            (programs[9], 'general',  'NRS110', 'Communication Skills in Healthcare',         1, 'second', 2, 'message-square', 'gray',   'slate'),
+            # Year 2 — Semester 1
+            (programs[9], 'core',     'NRS201', 'Clinical Nursing Practice I',                2, 'first',  5, 'stethoscope',    'rose',   'pink'),
+            (programs[9], 'core',     'NRS202', 'Microbiology & Infection Control',           2, 'first',  3, 'shield-check',   'red',    'rose'),
+            (programs[9], 'elective', 'NRS205', 'Palliative & End-of-Life Care',              2, 'first',  3, 'heart',          'purple', 'violet'),
+            (programs[9], 'elective', 'NRS206', 'Surgical Nursing',                           2, 'first',  3, 'activity',       'blue',   'sky'),
+            (programs[9], 'elective', 'NRS207', 'Pharmacology II',                            2, 'first',  3, 'pill',           'pink',   'fuchsia'),
+            # Year 2 — Semester 2
+            (programs[9], 'core',     'NRS203', 'Mental Health Nursing',                      2, 'second', 3, 'brain',          'purple', 'violet'),
+            (programs[9], 'core',     'NRS204', 'Child & Family Nursing',                     2, 'second', 3, 'baby',           'pink',   'rose'),
+            (programs[9], 'elective', 'NRS208', 'Gerontological Nursing',                     2, 'second', 3, 'user',           'amber',  'yellow'),
+            (programs[9], 'elective', 'NRS209', 'Critical Care Nursing',                      2, 'second', 3, 'heart-pulse',    'red',    'orange'),
+            (programs[9], 'general',  'NRS210', 'Leadership & Management in Nursing',         2, 'second', 2, 'users',          'teal',   'cyan'),
+            # Year 3 — Semester 1
+            (programs[9], 'elective', 'NRS301', 'Community & Public Health Nursing',          3, 'first',  3, 'map-pin',        'green',  'teal'),
+            (programs[9], 'elective', 'NRS304', 'Midwifery Fundamentals',                     3, 'first',  3, 'baby',           'pink',   'rose'),
+            (programs[9], 'elective', 'NRS305', 'Oncology Nursing',                           3, 'first',  3, 'shield',         'purple', 'violet'),
+            (programs[9], 'elective', 'NRS306', 'Neuroscience & Neurological Nursing',        3, 'first',  3, 'brain',          'indigo', 'violet'),
+            (programs[9], 'elective', 'NRS307', 'Telemedicine & Digital Health',              3, 'first',  3, 'smartphone',     'blue',   'sky'),
+            # Year 3 — Semester 2
+            (programs[9], 'core',     'NRS302', 'Clinical Nursing Practice II',               3, 'second', 5, 'heart',          'red',    'rose'),
+            (programs[9], 'core',     'NRS303', 'Evidence-Based Practice & Research',         3, 'second', 4, 'file-text',      'gray',   'red'),
+            (programs[9], 'elective', 'NRS308', 'Nursing Dissertation',                       3, 'second', 6, 'scroll',         'gray',   'rose'),
+            (programs[9], 'elective', 'NRS309', 'Advanced Clinical Assessment',               3, 'second', 3, 'stethoscope',    'rose',   'red'),
 
             # ══════════════════════════════════════════════════════════════════════
             # BA English & Creative Writing — programs[10]  (3 years)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[10], 'core',     'ECW101', 'Introduction to Literary Theory',        1, 'first',  3, 'book',            'purple', 'violet'),
-            (programs[10], 'core',     'ECW102', 'Academic Writing Skills',                1, 'first',  2, 'pen',             'violet', 'purple'),
-            (programs[10], 'core',     'ECW103', 'Poetry: Form & Tradition',               1, 'second', 3, 'feather',         'fuchsia','pink'),
-            (programs[10], 'elective', 'ECW201', 'Fiction Writing Workshop',               2, 'second', 3, 'pen-line',        'violet', 'purple'),
-            (programs[10], 'core',     'ECW202', 'British Literature 1800–Present',        2, 'first',  3, 'library',         'purple', 'indigo'),
-            (programs[10], 'elective', 'ECW301', 'Screenwriting & Drama',                  3, 'first',  3, 'film',            'pink',   'rose'),
-            (programs[10], 'core',     'ECW302', 'Dissertation in English',                3, 'second', 6, 'scroll',          'gray',   'purple'),
+            # Year 1 — Semester 1
+            (programs[10], 'core',     'ECW101', 'Introduction to Literary Theory',           1, 'first',  3, 'book',           'purple', 'violet'),
+            (programs[10], 'core',     'ECW102', 'Academic Writing Skills',                   1, 'first',  2, 'pen',            'violet', 'purple'),
+            (programs[10], 'general',  'ECW105', 'Research & Study Skills',                   1, 'first',  2, 'book-open',      'gray',   'slate'),
+            (programs[10], 'elective', 'ECW106', 'World Literature Survey',                   1, 'first',  3, 'globe',          'indigo', 'blue'),
+            (programs[10], 'elective', 'ECW107', 'Introduction to Linguistics',               1, 'first',  3, 'message-circle', 'fuchsia','pink'),
+            # Year 1 — Semester 2
+            (programs[10], 'core',     'ECW103', 'Poetry: Form & Tradition',                  1, 'second', 3, 'feather',        'fuchsia','pink'),
+            (programs[10], 'elective', 'ECW108', 'Short Fiction Workshop',                    1, 'second', 3, 'pen-line',       'violet', 'purple'),
+            (programs[10], 'elective', 'ECW109', 'American Literature',                       1, 'second', 3, 'book',           'blue',   'sky'),
+            (programs[10], 'general',  'ECW110', 'Communication & Presentation Skills',       1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            # Year 2 — Semester 1
+            (programs[10], 'core',     'ECW202', 'British Literature 1800–Present',           2, 'first',  3, 'library',        'purple', 'indigo'),
+            (programs[10], 'elective', 'ECW203', 'Postcolonial Literature',                   2, 'first',  3, 'globe',          'amber',  'yellow'),
+            (programs[10], 'elective', 'ECW204', 'Journalism & Non-Fiction Writing',          2, 'first',  3, 'newspaper',      'gray',   'slate'),
+            (programs[10], 'elective', 'ECW205', 'Drama & Performance Text',                  2, 'first',  3, 'film',           'rose',   'pink'),
+            # Year 2 — Semester 2
+            (programs[10], 'elective', 'ECW201', 'Fiction Writing Workshop',                  2, 'second', 3, 'pen-line',       'violet', 'purple'),
+            (programs[10], 'elective', 'ECW206', 'Digital Storytelling & Content Creation',   2, 'second', 3, 'video',          'blue',   'indigo'),
+            (programs[10], 'elective', 'ECW207', 'Publishing & the Literary Industry',        2, 'second', 3, 'book-marked',    'teal',   'cyan'),
+            (programs[10], 'general',  'ECW208', 'Editing & Proofreading',                    2, 'second', 2, 'check-square',   'green',  'emerald'),
+            # Year 3 — Semester 1
+            (programs[10], 'elective', 'ECW301', 'Screenwriting & Drama',                     3, 'first',  3, 'film',           'pink',   'rose'),
+            (programs[10], 'elective', 'ECW303', 'Gothic & Horror Fiction',                   3, 'first',  3, 'moon',           'gray',   'slate'),
+            (programs[10], 'elective', 'ECW304', 'Travel Writing & Memoir',                   3, 'first',  3, 'map',            'amber',  'orange'),
+            (programs[10], 'elective', 'ECW305', 'Contemporary Poetry Writing',               3, 'first',  3, 'feather',        'purple', 'fuchsia'),
+            # Year 3 — Semester 2
+            (programs[10], 'core',     'ECW302', 'Dissertation in English',                   3, 'second', 6, 'scroll',         'gray',   'purple'),
+            (programs[10], 'elective', 'ECW306', 'Children\'s Literature & Writing',          3, 'second', 3, 'book-open',      'pink',   'rose'),
+            (programs[10], 'elective', 'ECW307', 'Advanced Novel Writing',                    3, 'second', 3, 'pen',            'violet', 'indigo'),
 
             # ══════════════════════════════════════════════════════════════════════
             # BA Digital Media & Design — programs[11]  (3 years)
             # ══════════════════════════════════════════════════════════════════════
-            (programs[11], 'core',     'DMD101', 'Principles of Graphic Design',           1, 'first',  3, 'image',           'pink',   'rose'),
-            (programs[11], 'core',     'DMD102', 'Typography & Layout',                    1, 'first',  2, 'type',            'rose',   'pink'),
-            (programs[11], 'core',     'DMD103', 'Colour Theory & Visual Communication',   1, 'second', 3, 'palette',         'fuchsia','purple'),
-            (programs[11], 'core',     'DMD201', 'UX & Interaction Design',                2, 'first',  3, 'mouse-pointer',   'pink',   'fuchsia'),
-            (programs[11], 'core',     'DMD202', 'Digital Photography & Video',            2, 'second', 3, 'camera',          'rose',   'pink'),
-            (programs[11], 'elective', 'DMD301', 'Motion Graphics & Animation',            3, 'first',  3, 'play-circle',     'fuchsia','violet'),
-            (programs[11], 'core',     'DMD302', 'Design Capstone Portfolio',              3, 'second', 6, 'layout-grid',     'pink',   'rose'),
+            # Year 1 — Semester 1
+            (programs[11], 'core',     'DMD101', 'Principles of Graphic Design',              1, 'first',  3, 'image',          'pink',   'rose'),
+            (programs[11], 'core',     'DMD102', 'Typography & Layout',                       1, 'first',  2, 'type',           'rose',   'pink'),
+            (programs[11], 'general',  'DMD105', 'Art History & Visual Culture',              1, 'first',  2, 'book',           'gray',   'slate'),
+            (programs[11], 'elective', 'DMD106', 'Introduction to Digital Tools (Adobe)',     1, 'first',  3, 'layers',         'orange', 'red'),
+            (programs[11], 'elective', 'DMD107', 'Photography for Beginners',                 1, 'first',  3, 'camera',         'amber',  'yellow'),
+            # Year 1 — Semester 2
+            (programs[11], 'core',     'DMD103', 'Colour Theory & Visual Communication',      1, 'second', 3, 'palette',        'fuchsia','purple'),
+            (programs[11], 'elective', 'DMD108', 'Web Design Fundamentals (HTML/CSS)',        1, 'second', 3, 'globe',          'blue',   'sky'),
+            (programs[11], 'elective', 'DMD109', 'Brand Identity Basics',                     1, 'second', 3, 'star',           'pink',   'fuchsia'),
+            (programs[11], 'general',  'DMD110', 'Communication & Presentation Skills',       1, 'second', 2, 'message-square', 'gray',   'zinc'),
+            # Year 2 — Semester 1
+            (programs[11], 'core',     'DMD201', 'UX & Interaction Design',                   2, 'first',  3, 'mouse-pointer',  'pink',   'fuchsia'),
+            (programs[11], 'elective', 'DMD203', 'UI Design & Prototyping (Figma)',           2, 'first',  3, 'layout',         'violet', 'purple'),
+            (programs[11], 'elective', 'DMD204', 'Social Media Content & Strategy',           2, 'first',  3, 'instagram',      'rose',   'pink'),
+            (programs[11], 'elective', 'DMD205', '3D Modelling & Visualisation',              2, 'first',  3, 'box',            'blue',   'indigo'),
+            # Year 2 — Semester 2
+            (programs[11], 'core',     'DMD202', 'Digital Photography & Video',               2, 'second', 3, 'camera',         'rose',   'pink'),
+            (programs[11], 'elective', 'DMD206', 'Video Editing & Post-Production',           2, 'second', 3, 'film',           'gray',   'slate'),
+            (programs[11], 'elective', 'DMD207', 'Illustration & Digital Art',                2, 'second', 3, 'image',          'fuchsia','violet'),
+            (programs[11], 'general',  'DMD208', 'Project Management for Creatives',          2, 'second', 2, 'clipboard-list', 'teal',   'cyan'),
+            # Year 3 — Semester 1
+            (programs[11], 'elective', 'DMD301', 'Motion Graphics & Animation',               3, 'first',  3, 'play-circle',    'fuchsia','violet'),
+            (programs[11], 'elective', 'DMD303', 'Augmented & Virtual Reality Design',        3, 'first',  3, 'glasses',        'purple', 'indigo'),
+            (programs[11], 'elective', 'DMD304', 'Game Art & Asset Design',                   3, 'first',  3, 'gamepad-2',      'blue',   'violet'),
+            (programs[11], 'elective', 'DMD305', 'Advertising & Campaign Design',             3, 'first',  3, 'megaphone',      'orange', 'amber'),
+            # Year 3 — Semester 2
+            (programs[11], 'core',     'DMD302', 'Design Capstone Portfolio',                 3, 'second', 6, 'layout-grid',    'pink',   'rose'),
+            (programs[11], 'elective', 'DMD306', 'Advanced Typography & Publication Design',  3, 'second', 3, 'type',           'violet', 'purple'),
+            (programs[11], 'elective', 'DMD307', 'Freelancing & Creative Business',           3, 'second', 3, 'briefcase',      'teal',   'green'),
         ]
         academic_courses = []
         for (prog, ctype, code, name, year, semester, credits, icon, col1, col2) in ac_raw:
@@ -1173,27 +1429,7 @@ class Command(BaseCommand):
                 failure_reason='',
             )
 
-        # ── 18b. COURSE REGISTRATIONS ────────────────────────────────────────
-        self.stdout.write("📋 Creating course registrations...")
-        for student in verified_students:
-            sample_courses = random.sample(
-                academic_courses, k=min(random.randint(4, 8), len(academic_courses))
-            )
-            for ac in sample_courses:
-                try:
-                    obj = CourseRegistration(
-                        student=student,
-                        course=ac,
-                        session=open_session,
-                        term=ac.semester,
-                        status=random.choice(['pending', 'approved', 'approved', 'dropped']),
-                    )
-                    obj.save(skip_window_check=True)
-                except Exception:
-                    pass  # skip duplicate or validation errors during seeding
-        self.stdout.write(self.style.SUCCESS(
-            f"   ✅ {CourseRegistration.objects.count()} course registrations created"
-        ))
+        # (duplicate course registration block removed — registrations handled in section 17b above)
 
         # ── 18c. COURSE GRADES ────────────────────────────────────────────────
         self.stdout.write("📊 Creating course grades...")
@@ -1212,13 +1448,19 @@ class Command(BaseCommand):
         for reg in approved_regs:
             grade_letter, score, is_passed = random.choice(grade_map)
             try:
+                # Find the LMS course linked to this academic course + session
+                linked_lms = next(
+                    (lc for lc in lms_courses
+                        if lc.academic_course_id == reg.course_id and lc.session_id == current_session.id),
+                    None
+                )
                 CourseGrade.objects.get_or_create(
                     student=reg.student,
                     course=reg.course,
                     session=current_session,
                     term=reg.term,
                     defaults=dict(
-                        lms_course=None,
+                        lms_course=linked_lms,
                         application=None,
                         score=score + Decimal(str(random.randint(-5, 5))),
                         grade=grade_letter,
@@ -1474,175 +1716,69 @@ class Command(BaseCommand):
             f"   ✅ {LibraryItem.objects.count()} library items created"
         ))
 
-        # ── 19. COURSE CATEGORIES (LMS) ──────────────────────────────────────
-        self.stdout.write("🗂️  Creating LMS course categories...")
-        cat_raw = [
-            ('Programming & Development', 'code', 'blue'),
-            ('Data Science & Analytics', 'bar-chart', 'green'),
-            ('Web Development', 'globe', 'purple'),
-            ('Mobile Development', 'smartphone', 'cyan'),
-            ('Artificial Intelligence', 'brain', 'pink'),
-            ('Cybersecurity', 'shield', 'red'),
-            ('Cloud Computing', 'cloud', 'sky'),
-            ('DevOps & Infrastructure', 'server', 'gray'),
-            ('Design & UX', 'palette', 'orange'),
-            ('Business & Marketing', 'trending-up', 'emerald'),
-        ]
-        categories = []
-        for idx, (name, icon, color) in enumerate(cat_raw):
-            categories.append(CourseCategory.objects.create(
-                name=name, description=fake.text(max_nb_chars=200),
-                icon=icon, color=color, display_order=idx, is_active=True,
-            ))
-        # Sub-categories
-        for cat in categories[:3]:
-            CourseCategory.objects.create(
-                name=f"Advanced {cat.name}", parent=cat,
-                description=fake.text(max_nb_chars=150),
-                icon=cat.icon, color=cat.color,
-                display_order=99, is_active=True,
-            )
-
-        # ── 20. LMS COURSES ──────────────────────────────────────────────────
-        self.stdout.write("🎥 Creating LMS courses...")
-        lms_templates = [
-            # ── Programming & Development ──────────────────────────────────────────
-            ('Complete Python Programming Masterclass', categories[0], 'beginner', 45.5,
-            'Master Python from basics to advanced. OOP, data structures, file handling.'),
-            ('JavaScript: Zero to Hero', categories[0], 'beginner', 38.0,
-            'Complete JavaScript for beginners. Fundamentals to interactive web apps.'),
-            ('Advanced Python for Data Science', categories[1], 'advanced', 55.5,
-            'Advanced Python techniques: pandas, numpy, scikit-learn, and visualisation.'),
-            ('TypeScript Fundamentals', categories[0], 'intermediate', 28.0,
-            'Type-safe JavaScript with TypeScript — interfaces, generics, decorators.'),
-            ('Algorithms & Data Structures in Python', categories[0], 'intermediate', 36.0,
-            'Master sorting, searching, graphs, and dynamic programming with Python.'),
-
-            # ── Web Development ───────────────────────────────────────────────────
-            ('Modern Web Development Bootcamp', categories[2], 'intermediate', 52.0,
-            'HTML, CSS, JavaScript, and modern frameworks for professional websites.'),
-            ('React – The Complete Guide', categories[2], 'intermediate', 48.5,
-            'Comprehensive React with hooks, context, Redux, and advanced patterns.'),
-            ('Full Stack Web Development', categories[2], 'advanced', 78.0,
-            'Full-stack: frontend, backend, databases, deployment, and CI/CD.'),
-            ('Django & REST APIs', categories[2], 'intermediate', 42.0,
-            'Build production-ready REST APIs with Django REST Framework.'),
-            ('Next.js & Server-Side Rendering', categories[2], 'advanced', 35.0,
-            'Modern React with SSR, SSG, API routes, and Vercel deployment.'),
-
-            # ── Data Science & Analytics ──────────────────────────────────────────
-            ('Data Science & Machine Learning A-Z', categories[1], 'intermediate', 68.5,
-            'Comprehensive data science with statistics, Python, ML, and real projects.'),
-            ('SQL for Data Analysis', categories[1], 'beginner', 24.0,
-            'Master SQL for querying, aggregating, and analysing large datasets.'),
-            ('Power BI & Data Visualisation', categories[1], 'beginner', 20.0,
-            'Create stunning dashboards and business intelligence reports with Power BI.'),
-            ('Statistics for Data Science', categories[1], 'intermediate', 32.0,
-            'Probability, hypothesis testing, regression, and Bayesian inference.'),
-            ('Data Engineering with Apache Spark', categories[1], 'advanced', 44.0,
-            'Big data pipelines with PySpark, Kafka, Airflow, and cloud platforms.'),
-
-            # ── Artificial Intelligence ────────────────────────────────────────────
-            ('Deep Learning & Neural Networks', categories[4], 'advanced', 72.0,
-            'Advanced deep learning — CNNs, RNNs, GANs, transformers, and deployment.'),
-            ('Natural Language Processing with Python', categories[4], 'advanced', 50.0,
-            'NLP from tokenisation to BERT, GPT, and large language model fine-tuning.'),
-            ('Computer Vision with OpenCV', categories[4], 'intermediate', 38.0,
-            'Image processing, object detection, and deep learning for vision tasks.'),
-            ('Introduction to Generative AI', categories[4], 'beginner', 18.0,
-            'Understand LLMs, diffusion models, prompt engineering, and AI ethics.'),
-            ('Reinforcement Learning Fundamentals', categories[4], 'advanced', 42.0,
-            'Q-learning, policy gradients, actor-critic, and OpenAI Gym environments.'),
-
-            # ── Mobile Development ─────────────────────────────────────────────────
-            ('Flutter & Dart – Complete App Development', categories[3], 'intermediate', 46.0,
-            'Build cross-platform iOS & Android apps with Flutter and Dart.'),
-            ('React Native Masterclass', categories[3], 'intermediate', 40.0,
-            'Cross-platform mobile apps with React Native, Expo, and native modules.'),
-
-            # ── Cybersecurity ──────────────────────────────────────────────────────
-            ('Ethical Hacking & Penetration Testing', categories[5], 'intermediate', 56.0,
-            'Network penetration testing, vulnerability assessment, and Kali Linux.'),
-            ('CompTIA Security+ Exam Prep', categories[5], 'beginner', 34.0,
-            'Comprehensive Security+ preparation covering all exam domains.'),
-            ('Network Security Fundamentals', categories[5], 'beginner', 28.0,
-            'Firewalls, VPNs, IDS/IPS, and secure network architecture principles.'),
-            ('Digital Forensics & Incident Response', categories[5], 'advanced', 48.0,
-            'Forensic investigation, evidence collection, and DFIR workflows.'),
-
-            # ── Cloud Computing ────────────────────────────────────────────────────
-            ('AWS Cloud Practitioner Essentials', categories[6], 'beginner', 22.0,
-            'Core AWS services, cloud economics, and CLF-C02 exam preparation.'),
-            ('Google Cloud Professional Data Engineer', categories[6], 'advanced', 52.0,
-            'BigQuery, Dataflow, Pub/Sub, and GCP machine learning services.'),
-            ('Azure Fundamentals AZ-900', categories[6], 'beginner', 18.0,
-            'Microsoft Azure core services, pricing, and AZ-900 certification prep.'),
-            ('Kubernetes & Container Orchestration', categories[6], 'advanced', 44.0,
-            'Deploy, scale, and manage containers with Kubernetes and Helm.'),
-
-            # ── DevOps & Infrastructure ────────────────────────────────────────────
-            ('DevOps Engineering Bootcamp', categories[7], 'intermediate', 58.0,
-            'CI/CD pipelines, Docker, Kubernetes, Terraform, and GitOps practices.'),
-            ('Linux System Administration', categories[7], 'intermediate', 36.0,
-            'Shell scripting, system management, networking, and security hardening.'),
-
-            # ── Design & UX ───────────────────────────────────────────────────────
-            ('UI/UX Design Fundamentals', categories[8], 'beginner', 32.0,
-            'User interface and user experience design principles, tools, and process.'),
-            ('Figma Masterclass – UI Design', categories[8], 'beginner', 26.0,
-            'Master Figma for wireframing, prototyping, and design systems.'),
-            ('Brand Identity & Graphic Design', categories[8], 'intermediate', 30.0,
-            'Logo design, colour theory, typography, and brand guidelines.'),
-
-            # ── Business & Marketing ──────────────────────────────────────────────
-            ('Business Strategy & Entrepreneurship', categories[9], 'intermediate', 41.0,
-            'Business strategy, market analysis, competitive positioning, and growth.'),
-            ('Digital Marketing Masterclass', categories[9], 'beginner', 38.0,
-            'SEO, SEM, social media, email marketing, and analytics for growth.'),
-            ('Financial Modelling & Valuation', categories[9], 'intermediate', 46.0,
-            'DCF, LBO, comparable analysis, and Excel-based financial modelling.'),
-            ('Project Management Professional (PMP)', categories[9], 'intermediate', 44.0,
-            'PMBOK, agile, risk management, and PMP exam preparation.'),
-            ('Corporate Finance Fundamentals', categories[9], 'beginner', 28.0,
-            'Capital budgeting, WACC, capital structure, and dividend policy basics.'),
-        ]
+        # ── 19/20. LMS COURSES — one delivery per academic Course per session ──────
+        # Every LMSCourse is tied to an academic Course. No standalone LMS courses.
+        # No categories — the academic course → program → department provides all context.
+        self.stdout.write("🎥 Creating LMS courses (linked to academic courses)...")
         lms_courses = []
         instructor_course_map = {}
-        for idx, (title, cat, diff, dur, desc) in enumerate(lms_templates):
+        diff_by_year = {1: 'beginner', 2: 'intermediate', 3: 'advanced', 4: 'advanced'}
+
+        for idx, ac in enumerate(academic_courses):
             instructor = users['instructors'][idx % len(users['instructors'])]
-            lc = LMSCourse.objects.create(
-                title=title,
-                code=f"LMS{idx + 1:03d}",
-                category=cat,
-                short_description=desc[:500],
-                description='\n\n'.join([fake.text(max_nb_chars=400) for _ in range(4)]),
-                learning_objectives=[
-                    f"Understand core concepts of {title.split()[0]}",
-                    "Apply skills to practical projects",
-                    "Write clean, maintainable code/work",
-                    "Build a portfolio project from scratch",
-                ],
-                prerequisites=['Basic computer knowledge'] if diff == 'beginner'
-                else ['Completion of beginner course', 'Programming fundamentals'],
-                difficulty_level=diff,
-                duration_hours=Decimal(str(dur)),
-                language='English',
-                instructor=instructor,
-                instructor_name=instructor.get_full_name(),
-                instructor_bio=fake.text(max_nb_chars=300),
-                promo_video_url='https://www.youtube.com/watch?v=-mJFZp84TIY',
-                max_students=random.choice([50, 100, 200, None]),
-                enrollment_start_date=date(2025, 1, 1),
-                enrollment_end_date=date(2025, 12, 31),
-                is_published=True,
-                is_featured=random.random() > 0.6,
-                has_certificate=True,
-                certificate_template=f"template_{random.choice(['gold', 'silver', 'standard'])}",
-                meta_description=desc[:160],
-                meta_keywords=f"{title}, {diff}, online course, {cat.name}",
+            diff = diff_by_year.get(ac.year_of_study, 'intermediate')
+            dur = Decimal(str(round(ac.credit_units * 8.5, 1)))  # ~8.5 hrs per credit unit
+            desc = (
+                f"Comprehensive LMS delivery of {ac.name}. Covers all syllabus topics "
+                f"through video lectures, practical exercises, and assessments aligned to "
+                f"{ac.program.name} Year {ac.year_of_study}."
             )
-            lms_courses.append(lc)
-            instructor_course_map.setdefault(instructor, []).append(lc)
+            for sess in sessions:
+                session_terms = [t['term'] for t in sess.term_dates]
+                if ac.semester not in session_terms:
+                    continue  # only create for sessions that include this semester
+                lc = LMSCourse.objects.create(
+                    title=f"{ac.name} [{sess.name}]",
+                    code=f"{ac.code}-{sess.name.replace('/', '-')}",
+                    academic_course=ac,
+                    session=sess,
+                    term=ac.semester,
+                    lecturer=instructor,
+                    short_description=desc[:500],
+                    description='\n\n'.join([fake.text(max_nb_chars=400) for _ in range(3)]),
+                    learning_objectives=[
+                        f"Understand core principles of {ac.name}",
+                        "Apply theoretical knowledge to practical scenarios",
+                        "Demonstrate competence through assessed coursework",
+                        "Critically evaluate relevant literature and methods",
+                    ],
+                    prerequisites=(
+                        ['No prior knowledge required'] if diff == 'beginner'
+                        else [f"Completion of Year {ac.year_of_study - 1} courses"]
+                    ),
+                    difficulty_level=diff,
+                    duration_hours=dur,
+                    language='English',
+                    instructor=instructor,
+                    instructor_name=instructor.get_full_name(),
+                    instructor_bio=fake.text(max_nb_chars=300),
+                    promo_video_url='https://www.youtube.com/watch?v=-mJFZp84TIY',
+                    max_students=random.choice([50, 100, 200, None]),
+                    enrollment_start_date=date(2025, 1, 1),
+                    enrollment_end_date=date(2026, 12, 31),
+                    is_published=True,
+                    is_featured=random.random() > 0.7,
+                    has_certificate=True,
+                    certificate_template=f"template_{random.choice(['gold', 'silver', 'standard'])}",
+                    meta_description=desc[:160],
+                    meta_keywords=f"{ac.name}, {ac.code}, {ac.program.name}, {ac.program.department.name}",
+                )
+                lms_courses.append(lc)
+                instructor_course_map.setdefault(instructor, []).append(lc)
+
+        self.stdout.write(self.style.SUCCESS(
+            f"   ✅ {LMSCourse.objects.count()} LMS courses created (all linked to academic courses)"
+        ))
 
         # ── 21. LESSON SECTIONS & LESSONS ────────────────────────────────────
         self.stdout.write("📹 Creating lesson sections and lessons...")
@@ -2172,8 +2308,9 @@ class Command(BaseCommand):
 
         # ── 42. ANNOUNCEMENTS ─────────────────────────────────────────────────
         self.stdout.write("📢 Creating announcements...")
+        categories = list(CourseCategory.objects.all())
         for creator in users['admins'] + users['instructors']:
-            ann_type = random.choice(['system', 'course', 'category'])
+            ann_type = random.choice(['system', 'course'])
             Announcement.objects.create(
                 title=fake.sentence(),
                 content=fake.text(max_nb_chars=600),
@@ -2845,7 +2982,7 @@ class Command(BaseCommand):
             ("Applications",            CourseApplication.objects.count()),
             ("Application Documents",   ApplicationDocument.objects.count()),
             ("Application Payments",    ApplicationPayment.objects.count()),
-            ("LMS Course Categories",   CourseCategory.objects.count()),
+            
             ("LMS Courses",             LMSCourse.objects.count()),
             ("Lesson Sections",         LessonSection.objects.count()),
             ("Lessons",                 Lesson.objects.count()),

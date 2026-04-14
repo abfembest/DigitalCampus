@@ -68,9 +68,14 @@ that match your learning goals.
                                    focus:ring-2 focus:ring-primary-500 focus:border-transparent
                                    bg-white transition-colors cursor-pointer">
                         <option value="">All Levels</option>
-                        <option value="beginner"     {% if difficulty == 'beginner' %}selected{% endif %}>Beginner</option>
-                        <option value="intermediate" {% if difficulty == 'intermediate' %}selected{% endif %}>Intermediate</option>
-                        <option value="advanced"     {% if difficulty == 'advanced' %}selected{% endif %}>Advanced</option>
+                        <option value="1" {% if difficulty == '1' %}selected{% endif %}>100 Level</option>
+                        <option value="2" {% if difficulty == '2' %}selected{% endif %}>200 Level</option>
+                        <option value="3" {% if difficulty == '3' %}selected{% endif %}>300 Level</option>
+                        <option value="4" {% if difficulty == '4' %}selected{% endif %}>400 Level</option>
+                        <option value="5" {% if difficulty == '5' %}selected{% endif %}>500 Level</option>
+                        <option value="6" {% if difficulty == '6' %}selected{% endif %}>600 Level</option>
+                        <option value="7" {% if difficulty == '7' %}selected{% endif %}>700 Level</option>
+                        <option value="8" {% if difficulty == '8' %}selected{% endif %}>800 Level</option>
                     </select>
                 </div>
             </div>
@@ -120,11 +125,16 @@ that match your learning goals.
                 <!-- TOP-LEFT: Difficulty badge — no overlap with enrolled check on right -->
                 {% if course.difficulty_level %}
                 <span class="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-xs font-bold shadow
-                    {% if course.difficulty_level == 'beginner' %}bg-green-500 text-white
-                    {% elif course.difficulty_level == 'intermediate' %}bg-orange-400 text-white
-                    {% elif course.difficulty_level == 'advanced' %}bg-red-500 text-white
+                    {% if course.difficulty_level == '1' %}bg-blue-500 text-white
+                    {% elif course.difficulty_level == '2' %}bg-green-500 text-white
+                    {% elif course.difficulty_level == '3' %}bg-yellow-500 text-white
+                    {% elif course.difficulty_level == '4' %}bg-orange-500 text-white
+                    {% elif course.difficulty_level == '5' %}bg-red-500 text-white
+                    {% elif course.difficulty_level == '6' %}bg-purple-500 text-white
+                    {% elif course.difficulty_level == '7' %}bg-pink-500 text-white
+                    {% elif course.difficulty_level == '8' %}bg-gray-500 text-white
                     {% else %}bg-gray-500 text-white{% endif %}">
-                    {{ course.difficulty_level|capfirst }}
+                    {{ course.get_difficulty_level_display }}
                 </span>
                 {% endif %}
 

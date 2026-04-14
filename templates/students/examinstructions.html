@@ -7,329 +7,255 @@
 
 {% block extra_css %}
 <style>
-    @keyframes fadeSlideIn {
-        from { opacity:0; transform:translateY(14px); }
-        to   { opacity:1; transform:translateY(0); }
-    }
-    .animate-fadein { animation: fadeSlideIn 0.45s ease forwards; }
+    @keyframes fadeSlideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .anim-in { animation: fadeSlideIn .3s ease forwards; }
 
-    /* Countdown digit boxes */
     .cd-box {
-        font-variant-numeric: tabular-nums;
-        font-feature-settings: "tnum";
-        transition: transform .15s ease;
-        overflow: hidden;
-        word-break: keep-all;
+        font-variant-numeric:tabular-nums; font-feature-settings:"tnum";
+        transition:transform .15s ease; overflow:hidden; word-break:keep-all; line-height:1;
     }
-    .cd-box.tick { transform: scale(1.06); }
+    .cd-box.tick { transform:scale(1.1); }
 
-    @keyframes pulseGlow {
-        0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.35); }
-        50%      { box-shadow: 0 0 0 12px rgba(245,158,11,0); }
-    }
-    .pulse-amber { animation: pulseGlow 2s infinite; }
+    @keyframes glowAmber { 0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.25)} 50%{box-shadow:0 0 0 8px rgba(245,158,11,0)} }
+    @keyframes glowGreen  { 0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.25)}  50%{box-shadow:0 0 0 8px rgba(22,163,74,0)} }
+    .pulse-amber { animation:glowAmber 2s infinite; }
+    .pulse-green { animation:glowGreen 1.4s infinite; }
 
-    @keyframes pulseGlowGreen {
-        0%,100% { box-shadow: 0 0 0 0 rgba(22,163,74,.4); }
-        50%      { box-shadow: 0 0 0 14px rgba(22,163,74,0); }
+    .stat-chip {
+        display:flex; flex-direction:column; gap:.1rem;
+        background:#f8fafc; border:1px solid #e2e8f0; border-radius:.6rem;
+        padding:.45rem .65rem;
     }
-    .pulse-green { animation: pulseGlowGreen 1.4s infinite; }
+    .stat-chip .lbl { font-size:.6rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#94a3b8; }
+    .stat-chip .val { font-size:.82rem; font-weight:800; color:#1e293b; line-height:1.2; }
+    .stat-chip .sub { font-size:.6rem; color:#94a3b8; }
 
-    .info-box {
-        display:flex; align-items:center; gap:.6rem;
-        background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem;
-        padding:.75rem 1rem; font-size:.875rem;
-    }
-    .info-box i { color: var(--color-primary-500,#4a6bff); flex-shrink:0; }
+    .rule-item { display:flex; align-items:flex-start; gap:.5rem; padding:.3rem 0; border-bottom:1px solid #fde68a; }
+    .rule-item:last-child { border-bottom:none; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="w-full max-w-full">
-<div class="max-w-3xl mx-auto animate-fadein">
+<div class="w-full max-w-full anim-in">
 
-    <!-- Breadcrumb -->
-    <nav class="text-xs text-gray-400 mb-6 flex items-center gap-2 flex-wrap">
-        <a href="{% url 'students:exam_list' %}" class="hover:text-primary-600 transition flex items-center gap-1">
-            <i class="fas fa-calendar-check"></i> Exam Timetable
+    <!-- ── Breadcrumb ── -->
+    <nav class="text-xs text-gray-400 mb-2 flex items-center gap-1.5 flex-wrap">
+        <a href="{% url 'students:exam_list' %}" class="hover:text-primary-600 transition flex items-center gap-1 font-medium">
+            <i class="fas fa-calendar-check text-[10px]"></i> Timetable
         </a>
-        <i class="fas fa-chevron-right text-gray-300 text-[10px]"></i>
+        <i class="fas fa-chevron-right text-gray-300 text-[9px]"></i>
         <span class="text-gray-600 font-semibold truncate max-w-xs">{{ exam.title }}</span>
     </nav>
 
-    <!-- ── Exam header card ── -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-5">
-        <!-- Colour strip -->
-        <div class="h-2 bg-gradient-to-r from-primary-500 to-secondary-500"></div>
+    <!-- ══════════════════════════════════════════════════════════════════
+         TOP BAND — exam identity + countdown + stats ALL IN ONE ROW
+    ══════════════════════════════════════════════════════════════════════ -->
+    <div id="topBand" class="bg-white rounded-xl border-2 border-yellow-200 shadow-sm overflow-hidden mb-3 pulse-amber transition-all duration-500">
+        <div class="h-1 bg-gradient-to-r from-primary-500 to-secondary-500"></div>
 
-        <div class="p-6 sm:p-8">
-            <!-- Title row -->
-            <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
-                <div>
-                    <p class="text-xs text-primary-500 font-bold uppercase tracking-widest mb-1">{{ exam.reference_code }}</p>
-                    <h1 class="text-xl sm:text-2xl font-bold text-gray-900 font-heading leading-snug">{{ exam.title }}</h1>
-                    <p class="text-sm text-gray-500 mt-1">{{ exam.get_exam_type_display }}</p>
+        <div class="p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center gap-3">
+
+            <!-- LEFT: title + meta -->
+            <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+                    <span class="text-[10px] text-primary-500 font-bold uppercase tracking-widest">{{ exam.reference_code }}</span>
+                    <span class="text-gray-200 text-xs">|</span>
+                    <span class="text-[10px] text-gray-400 uppercase tracking-wide">{{ exam.get_exam_type_display }}</span>
+                    {% if exam.course %}<span class="text-gray-200 text-xs">|</span><span class="text-[10px] text-secondary-500 font-semibold truncate max-w-[160px]">{{ exam.course }}</span>{% endif %}
                 </div>
-                <span class="px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold uppercase tracking-wider shrink-0 self-start">
-                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1 align-middle animate-ping" style="animation-duration:1.5s"></span>
-                    Reading Instructions
+                <h1 class="text-sm sm:text-base font-bold text-gray-900 font-heading leading-snug truncate">{{ exam.title }}</h1>
+                {% if exam.description %}<p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ exam.description }}</p>{% endif %}
+
+                <!-- Stat chips — inline with title on large screens -->
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                    <div class="stat-chip">
+                        <span class="lbl"><i class="fas fa-calendar-day mr-0.5"></i>Date</span>
+                        <span class="val">{{ exam.exam_date|date:"d M Y" }}</span>
+                        <span class="sub">{{ exam.exam_date|date:"l" }}</span>
+                    </div>
+                    <div class="stat-chip">
+                        <span class="lbl"><i class="fas fa-play-circle mr-0.5"></i>Start</span>
+                        <span class="val js-start-12hr" data-iso="{{ exam_start_iso }}">{{ exam.start_time|time:"P" }}</span>
+                        <span class="sub">Ends <span class="js-end-12hr" data-iso="{{ exam_end_iso }}">{{ exam.end_time|time:"P" }}</span></span>
+                    </div>
+                    <div class="stat-chip">
+                        <span class="lbl"><i class="fas fa-hourglass-half mr-0.5"></i>Duration</span>
+                        <span class="val">{{ exam.duration_minutes }} mins</span>
+                        <span class="sub">From start time</span>
+                    </div>
+                    <div class="stat-chip">
+                        <span class="lbl"><i class="fas fa-list-ol mr-0.5"></i>Questions</span>
+                        <span class="val">{{ exam.active_question_count }}</span>
+                        <span class="sub">{% if exam.total_marks %}{{ exam.total_marks }}m{% endif %}{% if exam.pass_mark %} &bull; Pass {{ exam.pass_mark }}%{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: countdown timer block -->
+            <div id="countdownCard" class="shrink-0 flex flex-col items-center justify-center bg-gray-50 rounded-xl border border-yellow-200 px-4 py-3 min-w-[200px] transition-all duration-500">
+                <p class="text-[10px] text-gray-400 font-semibold mb-1.5 flex items-center gap-1 uppercase tracking-widest">
+                    <i class="fas fa-stopwatch text-yellow-500 text-[10px]" id="cdIcon"></i>
+                    <span id="cdLabelText">Exam starts in</span>
+                </p>
+                <!-- Digit row -->
+                <div class="flex items-end gap-1.5 mb-1">
+                    <div class="flex flex-col items-center gap-0.5">
+                        <div id="cd-hrs" class="cd-box bg-gradient-to-br from-primary-500 to-secondary-500 text-white font-extrabold rounded-lg flex items-center justify-center tabular-nums shadow text-xl w-10 h-10">{{ countdown_units.0.0 }}</div>
+                        <span class="text-[8px] text-gray-400 uppercase tracking-widest font-bold">Hrs</span>
+                    </div>
+                    <span class="text-lg font-bold text-gray-300 pb-4 select-none">:</span>
+                    <div class="flex flex-col items-center gap-0.5">
+                        <div id="cd-min" class="cd-box bg-gradient-to-br from-primary-500 to-secondary-500 text-white font-extrabold rounded-lg flex items-center justify-center tabular-nums shadow text-xl w-10 h-10">{{ countdown_units.1.0 }}</div>
+                        <span class="text-[8px] text-gray-400 uppercase tracking-widest font-bold">Min</span>
+                    </div>
+                    <span class="text-lg font-bold text-gray-300 pb-4 select-none">:</span>
+                    <div class="flex flex-col items-center gap-0.5">
+                        <div id="cd-sec" class="cd-box bg-gradient-to-br from-primary-500 to-secondary-500 text-white font-extrabold rounded-lg flex items-center justify-center tabular-nums shadow text-xl w-10 h-10">{{ countdown_units.2.0 }}</div>
+                        <span class="text-[8px] text-gray-400 uppercase tracking-widest font-bold">Sec</span>
+                    </div>
+                </div>
+                <p class="text-[10px] text-gray-400 text-center" id="cdSub">
+                    <strong class="text-gray-600 js-start-12hr-hero" data-iso="{{ exam_start_iso }}">{{ exam.start_time|time:"P" }}</strong>
+                    · <strong class="text-gray-600">{{ exam.exam_date|date:"D, d M Y" }}</strong>
+                </p>
+                <!-- Start button (hidden until live) -->
+                <div id="startBtnWrap" class="hidden mt-2 text-center">
+                    <a href="{% url 'students:start_exam' exam.slug %}"
+                       class="inline-flex items-center gap-1.5 px-5 py-2 bg-green-600 hover:bg-green-700
+                              text-white font-bold rounded-xl shadow-lg pulse-green transition text-sm">
+                        <i class="fas fa-play-circle"></i> Start Exam Now
+                    </a>
+                    <p class="text-[10px] text-gray-400 mt-1" id="autoRedirectMsg"></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         BOTTOM SECTION — instructions + rules + checklist in 3 columns
+    ══════════════════════════════════════════════════════════════════════ -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-3">
+
+        <!-- Instructions -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-3">
+            <h2 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-md bg-primary-50 flex items-center justify-center shrink-0">
+                    <i class="fas fa-info-circle text-primary-600 text-[9px]"></i>
                 </span>
-            </div>
+                Exam Instructions
+            </h2>
+            {% if exam.instructions %}
+            <div class="text-xs text-gray-700 leading-relaxed">{{ exam.instructions|linebreaks }}</div>
+            {% else %}
+            <p class="text-xs text-gray-400 italic">No specific instructions. Follow standard exam conduct rules.</p>
+            {% endif %}
 
-            <!-- Stats grid -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div class="info-box flex-col items-start gap-0.5">
-                    <span class="text-xs text-gray-400 font-medium uppercase tracking-wider">Date</span>
-                    <span class="font-bold text-gray-800 text-base">{{ exam.exam_date|date:"d M Y" }}</span>
-                </div>
-                <div class="info-box flex-col items-start gap-0.5">
-                    <span class="text-xs text-gray-400 font-medium uppercase tracking-wider">Start Time</span>
-                    <span class="font-bold text-gray-800 text-base js-start-12hr"
-                          data-iso="{{ exam_start_iso }}">{{ exam.start_time|time:"P" }}</span>
-                </div>
-                <div class="info-box flex-col items-start gap-0.5">
-                    <span class="text-xs text-gray-400 font-medium uppercase tracking-wider">Duration</span>
-                    <span class="font-bold text-gray-800 text-base">{{ exam.duration_minutes }} mins</span>
-                </div>
-                <div class="info-box flex-col items-start gap-0.5">
-                    <span class="text-xs text-gray-400 font-medium uppercase tracking-wider">Questions</span>
-                    <span class="font-bold text-gray-800 text-base">{{ exam.active_question_count }}</span>
-                </div>
+            <!-- Academic integrity inline -->
+            <div class="mt-3 flex items-start gap-2 bg-red-50 border border-red-100 rounded-lg p-2">
+                <i class="fas fa-shield-alt text-red-400 mt-0.5 shrink-0 text-xs"></i>
+                <p class="text-[10px] text-red-700 leading-relaxed">By starting, you confirm independent and honest completion per the institution's academic integrity policy.</p>
             </div>
         </div>
+
+        <!-- Rules & Conduct -->
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+            <h2 class="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <i class="fas fa-exclamation-triangle text-amber-500 text-[9px]"></i> Rules &amp; Conduct
+            </h2>
+            {% for rule in standard_rules %}
+            <div class="rule-item">
+                <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-700 text-[8px] font-bold shrink-0 mt-0.5">{{ forloop.counter }}</span>
+                <span class="text-xs text-amber-800 leading-snug">{{ rule }}</span>
+            </div>
+            {% empty %}
+            <div class="rule-item"><span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-700 text-[8px] font-bold shrink-0 mt-0.5">1</span><span class="text-xs text-amber-800 leading-snug">Do not refresh or close the browser during the exam.</span></div>
+            <div class="rule-item"><span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-700 text-[8px] font-bold shrink-0 mt-0.5">2</span><span class="text-xs text-amber-800 leading-snug">All answers are auto-saved as you select them.</span></div>
+            <div class="rule-item"><span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-700 text-[8px] font-bold shrink-0 mt-0.5">3</span><span class="text-xs text-amber-800 leading-snug">Timer auto-submits when time expires.</span></div>
+            <div class="rule-item"><span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-700 text-[8px] font-bold shrink-0 mt-0.5">4</span><span class="text-xs text-amber-800 leading-snug">Tab switching is logged; multiple violations auto-submit your exam.</span></div>
+            <div class="rule-item"><span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-700 text-[8px] font-bold shrink-0 mt-0.5">5</span><span class="text-xs text-amber-800 leading-snug">Right-click, copy, and paste are disabled.</span></div>
+            <div class="rule-item"><span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-700 text-[8px] font-bold shrink-0 mt-0.5">6</span><span class="text-xs text-amber-800 leading-snug">Ensure stable internet and a charged device before starting.</span></div>
+            <div class="rule-item"><span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200 text-amber-700 text-[8px] font-bold shrink-0 mt-0.5">7</span><span class="text-xs text-amber-800 leading-snug">Do not communicate with other candidates.</span></div>
+            {% endfor %}
+        </div>
+
+        <!-- Pre-exam checklist -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 md:col-span-2 xl:col-span-1">
+            <h2 class="text-[10px] font-bold text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <i class="fas fa-clipboard-check text-blue-500 text-[9px]"></i> Pre-Exam Checklist
+            </h2>
+            {% for check in pre_exam_checklist %}
+            <div class="flex items-center gap-2 py-1 border-b border-blue-100 last:border-0">
+                <i class="fas fa-check-circle text-blue-400 shrink-0 text-xs"></i>
+                <span class="text-xs text-blue-800">{{ check }}</span>
+            </div>
+            {% empty %}
+            <div class="flex items-center gap-2 py-1 border-b border-blue-100"><i class="fas fa-check-circle text-blue-400 shrink-0 text-xs"></i><span class="text-xs text-blue-800">Stable internet connection is active.</span></div>
+            <div class="flex items-center gap-2 py-1 border-b border-blue-100"><i class="fas fa-check-circle text-blue-400 shrink-0 text-xs"></i><span class="text-xs text-blue-800">Using Chrome, Firefox, or Edge browser.</span></div>
+            <div class="flex items-center gap-2 py-1 border-b border-blue-100"><i class="fas fa-check-circle text-blue-400 shrink-0 text-xs"></i><span class="text-xs text-blue-800">Device is charged or plugged in.</span></div>
+            <div class="flex items-center gap-2 py-1"><i class="fas fa-check-circle text-blue-400 shrink-0 text-xs"></i><span class="text-xs text-blue-800">All other browser tabs are closed.</span></div>
+            {% endfor %}
+        </div>
+
     </div>
 
-    <!-- ── Countdown card ── -->
-    <div id="countdownCard"
-         class="bg-white rounded-2xl border-2 border-yellow-200 shadow-sm p-6 sm:p-8 mb-5 text-center pulse-amber transition-all duration-500">
-
-        <p class="text-sm text-gray-500 font-semibold mb-5 flex items-center justify-center gap-2" id="cdLabel">
-            <i class="fas fa-stopwatch text-yellow-500 text-base"></i>
-            <span id="cdLabelText">Exam starts in</span>
-        </p>
-
-        <!-- Big digits -->
-        <div class="flex items-center justify-center gap-3 sm:gap-5 mb-4">
-            <!-- Hours -->
-            <div class="flex flex-col items-center gap-1.5">
-                <div id="cd-hrs"
-                     class="cd-box bg-gradient-to-br from-primary-500 to-secondary-500 text-white font-bold rounded-xl
-                            flex items-center justify-center tabular-nums
-                            text-4xl sm:text-6xl w-20 sm:w-28 h-20 sm:h-28 shadow-lg">
-                    {{ countdown_units.0.0 }}
-                </div>
-                <span class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Hrs</span>
-            </div>
-
-            <span class="text-4xl sm:text-5xl font-bold text-gray-200 mb-5">:</span>
-
-            <!-- Minutes -->
-            <div class="flex flex-col items-center gap-1.5">
-                <div id="cd-min"
-                     class="cd-box bg-gradient-to-br from-primary-500 to-secondary-500 text-white font-bold rounded-xl
-                            flex items-center justify-center tabular-nums
-                            text-4xl sm:text-6xl w-20 sm:w-28 h-20 sm:h-28 shadow-lg">
-                    {{ countdown_units.1.0 }}
-                </div>
-                <span class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Min</span>
-            </div>
-
-            <span class="text-4xl sm:text-5xl font-bold text-gray-200 mb-5">:</span>
-
-            <!-- Seconds -->
-            <div class="flex flex-col items-center gap-1.5">
-                <div id="cd-sec"
-                     class="cd-box bg-gradient-to-br from-primary-500 to-secondary-500 text-white font-bold rounded-xl
-                            flex items-center justify-center tabular-nums
-                            text-4xl sm:text-6xl w-20 sm:w-28 h-20 sm:h-28 shadow-lg">
-                    {{ countdown_units.2.0 }}
-                </div>
-                <span class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Sec</span>
-            </div>
-        </div>
-
-        <p class="text-sm text-gray-400 mb-2" id="cdSub">
-            Exam begins at
-            <strong class="text-gray-700 js-start-12hr-hero" data-iso="{{ exam_start_iso }}">
-                {{ exam.start_time|time:"P" }}
-            </strong>
-            on <strong class="text-gray-700">{{ exam.exam_date|date:"D, d M Y" }}</strong>
-        </p>
-
-        <!-- Start button (hidden until T=0) -->
-        <div id="startBtnWrap" class="hidden mt-6">
-            <a href="{% url 'students:start_exam' exam.slug %}"
-               class="inline-flex items-center gap-3 px-10 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-xl pulse-green transition text-lg">
-                <i class="fas fa-play-circle text-xl"></i> Start Exam Now
-            </a>
-            <p class="text-sm text-gray-400 mt-3">The exam is now live — click above to begin.</p>
-            <p class="text-xs text-gray-400 mt-1" id="autoRedirectMsg"></p>
-        </div>
-    </div>
-
-    <!-- ── Instructions card ── -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 mb-5">
-        <h2 class="text-base sm:text-lg font-bold text-gray-800 mb-5 flex items-center gap-2.5">
-            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary-50 text-primary-600">
-                <i class="fas fa-info-circle"></i>
-            </span>
-            Exam Instructions
-        </h2>
-
-        {% if exam.instructions %}
-        <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed">
-            {{ exam.instructions|linebreaks }}
-        </div>
-        {% else %}
-        <p class="text-gray-400 italic text-sm">No specific instructions provided. Follow standard exam conduct rules.</p>
-        {% endif %}
-
-        <!-- Standard rules -->
-        <div class="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-5">
-            <p class="text-xs font-bold text-amber-800 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <i class="fas fa-exclamation-triangle"></i> General Rules &amp; Conduct
-            </p>
-            <ul class="space-y-2">
-                {% for rule in standard_rules %}
-                <li class="flex items-start gap-2.5 text-sm text-amber-700">
-                    <i class="fas fa-circle text-[6px] text-amber-500 mt-1.5 shrink-0"></i>
-                    {{ rule }}
-                </li>
-                {% empty %}
-                <li class="flex items-start gap-2.5 text-sm text-amber-700">
-                    <i class="fas fa-circle text-[6px] text-amber-500 mt-1.5 shrink-0"></i>
-                    Do not refresh or close the browser window during the exam.
-                </li>
-                <li class="flex items-start gap-2.5 text-sm text-amber-700">
-                    <i class="fas fa-circle text-[6px] text-amber-500 mt-1.5 shrink-0"></i>
-                    All answers are auto-saved as you select them.
-                </li>
-                <li class="flex items-start gap-2.5 text-sm text-amber-700">
-                    <i class="fas fa-circle text-[6px] text-amber-500 mt-1.5 shrink-0"></i>
-                    The timer will automatically submit your answers when time runs out.
-                </li>
-                <li class="flex items-start gap-2.5 text-sm text-amber-700">
-                    <i class="fas fa-circle text-[6px] text-amber-500 mt-1.5 shrink-0"></i>
-                    Switching browser tabs is logged and may be reported to your invigilator.
-                </li>
-                <li class="flex items-start gap-2.5 text-sm text-amber-700">
-                    <i class="fas fa-circle text-[6px] text-amber-500 mt-1.5 shrink-0"></i>
-                    Ensure you have a stable internet connection before starting.
-                </li>
-                <li class="flex items-start gap-2.5 text-sm text-amber-700">
-                    <i class="fas fa-circle text-[6px] text-amber-500 mt-1.5 shrink-0"></i>
-                    Do not communicate with other candidates during the exam.
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-
-    <!-- Back -->
-    <div class="text-center pb-4">
+    <!-- Back link -->
+    <div class="text-center pb-3">
         <a href="{% url 'students:exam_list' %}"
-           class="text-sm text-gray-400 hover:text-primary-600 transition inline-flex items-center gap-1.5">
-            <i class="fas fa-arrow-left text-xs"></i> Back to Timetable
+           class="text-xs text-gray-400 hover:text-primary-600 transition inline-flex items-center gap-1 font-medium">
+            <i class="fas fa-arrow-left text-[10px]"></i> Back to Timetable
         </a>
     </div>
 
-</div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// ── 12-hour time conversion ───────────────────────────────────────────────
-function fmt12(iso) {
-    return new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit', hour12:true});
-}
-document.querySelectorAll('.js-start-12hr, .js-start-12hr-hero').forEach(el => {
-    const iso = el.dataset.iso;
-    if (iso) el.textContent = fmt12(iso);
-});
+'use strict';
+function fmt12(iso){ return iso?new Date(iso).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true}):''; }
+document.querySelectorAll('.js-start-12hr,.js-start-12hr-hero,.js-end-12hr').forEach(el=>{ if(el.dataset.iso) el.textContent=fmt12(el.dataset.iso); });
 
-// ── Countdown logic ───────────────────────────────────────────────────────
-const examStartTime = new Date("{{ exam_start_iso }}");
-const startUrl      = "{% url 'students:start_exam' exam.slug %}";
+const examStart = new Date("{{ exam_start_iso }}");
+const startUrl  = "{% url 'students:start_exam' exam.slug %}";
 const pad = n => String(n).padStart(2,'0');
+let liveFired=false, rcd=5, tid;
 
-let redirectCountdown = 5;
-let liveFired = false;
-let timerID;
-
-function updateCountdown() {
-    const now  = new Date();
-    const diff = Math.floor((examStartTime - now) / 1000);
-
-    // ── Still counting down ──────────────────────────────────────────────
-    if (diff > 0) {
-        // Cap hours at 99 to prevent box overflow on large instruction windows
-        const h = Math.min(Math.floor(diff / 3600), 99);
-        const m = Math.floor((diff % 3600) / 60);
-        const s = diff % 60;
-
-        const boxes = [
-            {id:'cd-hrs', val:pad(h)},
-            {id:'cd-min', val:pad(m)},
-            {id:'cd-sec', val:pad(s)},
-        ];
-
-        boxes.forEach(({id,val}) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            if (el.textContent.trim() !== val) {
-                el.classList.add('tick');
-                setTimeout(() => el.classList.remove('tick'), 150);
-                el.textContent = val;
-            }
+function upd(){
+    const now=new Date(), diff=Math.max(0,Math.floor((examStart-now)/1000));
+    if(diff>0){
+        const h=Math.min(Math.floor(diff/3600),99), m=Math.floor((diff%3600)/60), s=diff%60;
+        [{id:'cd-hrs',v:pad(h)},{id:'cd-min',v:pad(m)},{id:'cd-sec',v:pad(s)}].forEach(({id,v})=>{
+            const el=document.getElementById(id); if(!el) return;
+            if(el.textContent.trim()!==v){ el.classList.add('tick'); setTimeout(()=>el.classList.remove('tick'),150); el.textContent=v; }
         });
         return;
     }
-
-    // ── T = 0: exam is live ───────────────────────────────────────────────
-    if (!liveFired) {
-        liveFired = true;
-        clearInterval(timerID);
-
-        // Update card styling
-        const card = document.getElementById('countdownCard');
-        card.classList.remove('border-yellow-200','pulse-amber');
-        card.classList.add('border-green-300','pulse-green');
-
-        // Update label
-        document.getElementById('cdLabelText').textContent = 'The exam is now live!';
-        document.querySelector('#cdLabel i').className = 'fas fa-play-circle text-green-500 text-base';
-        document.getElementById('cdSub').classList.add('hidden');
-
-        // Set all boxes to 00 with green gradient
-        ['cd-hrs','cd-min','cd-sec'].forEach(id => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.textContent = '00';
+    if(!liveFired){
+        liveFired=true; clearInterval(tid);
+        // Top band → green
+        const band=document.getElementById('topBand');
+        band.classList.remove('border-yellow-200','pulse-amber');
+        band.classList.add('border-green-300','pulse-green');
+        const card=document.getElementById('countdownCard');
+        card.classList.remove('border-yellow-200');
+        card.classList.add('border-green-200','bg-green-50');
+        const lt=document.getElementById('cdLabelText'), li=document.getElementById('cdIcon');
+        if(lt) lt.textContent='Exam is live!';
+        if(li) li.className='fas fa-play-circle text-green-500';
+        const cs=document.getElementById('cdSub'); if(cs) cs.classList.add('hidden');
+        ['cd-hrs','cd-min','cd-sec'].forEach(id=>{
+            const el=document.getElementById(id); if(!el) return;
+            el.textContent='00';
             el.classList.remove('from-primary-500','to-secondary-500');
             el.classList.add('from-green-500','to-emerald-600');
         });
-
-        // Show start button
-        document.getElementById('startBtnWrap').classList.remove('hidden');
-
-        // Auto-redirect countdown (5 → 4 → 3 → 2 → 1 → redirect)
-        const msgEl = document.getElementById('autoRedirectMsg');
-        if (msgEl) msgEl.textContent = `Auto-redirecting in ${redirectCountdown}…`;
-        const tick = setInterval(() => {
-            redirectCountdown--;
-            if (msgEl) msgEl.textContent = redirectCountdown > 0
-                ? `Auto-redirecting in ${redirectCountdown}…`
-                : 'Redirecting…';
-            if (redirectCountdown <= 0) {
-                clearInterval(tick);
-                window.location.href = startUrl;
-            }
-        }, 1000);
+        const w=document.getElementById('startBtnWrap'); if(w) w.classList.remove('hidden');
+        const me=document.getElementById('autoRedirectMsg');
+        if(me) me.textContent=`Auto-redirecting in ${rcd}…`;
+        const t=setInterval(()=>{ rcd--; if(me) me.textContent=rcd>0?`Auto-redirecting in ${rcd}…`:'Redirecting…'; if(rcd<=0){clearInterval(t);window.location.href=startUrl;} },1000);
     }
 }
-
-updateCountdown();
-timerID = setInterval(updateCountdown, 1000);
+upd(); tid=setInterval(upd,1000);
 </script>
 {% endblock %}

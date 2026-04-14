@@ -1321,11 +1321,11 @@ class LessonProgressAdmin(admin.ModelAdmin):
 @admin.register(LMSCourse)
 class LMSCourseAdmin(admin.ModelAdmin):
     list_display = (
-        'title', 'code', 'category', 'instructor_name', 'difficulty_level',
+        'title', 'code', 'instructor_name', 'difficulty_level',
         'is_published', 'is_featured', 'total_enrollments', 'average_rating'
     )
     list_filter = (
-        'category', 'difficulty_level', 'is_published',
+        'difficulty_level', 'is_published',
         'is_featured', 'language', 'created_at'
     )
     search_fields = ('title', 'code', 'description', 'instructor_name')
@@ -1338,14 +1338,14 @@ class LMSCourseAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Basic Information', {
-            'fields': ('title', 'slug', 'code', 'category', 'academic_course')
+            'fields': ('title', 'slug', 'code', 'academic_course')
         }),
         ('Academic Delivery', {
             'fields': ('session', 'term', 'lecturer'),
             'classes': ('collapse',)
         }),
         ('Content', {
-            'fields': ('description', 'learning_outcomes', 'prerequisites')
+            'fields': ('description', 'learning_objectives', 'prerequisites')
         }),
         ('Course Details', {
             'fields': ('difficulty_level', 'duration_hours', 'language')

@@ -2466,17 +2466,22 @@ class LessonProgress(models.Model):
 # ==================== LMS COURSES ====================
 class LMSCourse(models.Model):
     """Learning Management System courses (actual learning content)"""
-    DIFFICULTY_CHOICES = [
-        ('beginner', 'Beginner'),
-        ('intermediate', 'Intermediate'),
-        ('advanced', 'Advanced'),
+    LEVEL_CHOICES = [
+        ('1', '100 Level'),
+        ('2', '200 Level'),
+        ('3', '300 Level'),
+        ('4', '400 Level'),
+        ('5', '500 Level'),
+        ('6', '600 Level'),
+        ('7', '700 Level'),
+        ('8', '800 Level'),
     ]
     
     # Basic Information
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True)
     code = models.CharField(max_length=20, unique=True, blank=True)
-    category = models.ForeignKey(CourseCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='lms_courses')
+    # category = models.ForeignKey(CourseCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='lms_courses')
     
     # Content
     short_description = models.TextField(max_length=500)
@@ -2520,7 +2525,7 @@ class LMSCourse(models.Model):
     )
     
     # Course Details
-    difficulty_level = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='beginner')
+    difficulty_level = models.CharField(max_length=5, choices=LEVEL_CHOICES, default='1', verbose_name='Level')
     duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Estimated duration in hours")
     language = models.CharField(max_length=50, default='English')
     
@@ -2573,7 +2578,7 @@ class LMSCourse(models.Model):
         indexes = [
             models.Index(fields=['slug']),
             models.Index(fields=['is_published', '-created_at']),
-            models.Index(fields=['category']),
+            # models.Index(fields=['category']),
             models.Index(fields=['session', 'term']),
             models.Index(fields=['academic_course', 'session']),
         ]
@@ -4414,8 +4419,9 @@ class CourseRegistration(models.Model):
                     f"Prerequisite not met: {prereq.code} must be passed first."
                 )
 
-    def save(self, *args, skip_window_check=False, **kwargs):
-        self.clean(skip_window_check=skip_window_check)
+    def save(self, *args, skip_window_check=False, skip_clean=False, **kwargs):
+        if not skip_clean:
+            self.clean(skip_window_check=skip_window_check)
         super().save(*args, **kwargs)
 
     def __str__(self):

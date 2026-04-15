@@ -9,7 +9,7 @@ urlpatterns = [
     
     # Course Management
     path('courses/', views.course_list, name='course_list'),
-    path('courses/create/', views.course_create, name='course_create'),
+    # path('courses/create/', views.course_create, name='course_create'),
     path('courses/<slug:slug>/edit/', views.course_edit, name='course_edit'),
     path('courses/<slug:slug>/objectives/', views.course_objectives, name='course_objectives'),
     path('courses/<slug:slug>/delete/', views.course_delete, name='course_delete'),

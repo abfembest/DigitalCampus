@@ -393,8 +393,6 @@ def user_logout(request):
     if user.is_authenticated:
         try:
             profile = user.profile
-            if profile.active_session_key:
-                Session.objects.filter(session_key=profile.active_session_key).delete()
             profile.is_logged_in = False
             profile.active_session_key = ''
             profile.save(update_fields=['is_logged_in', 'active_session_key'])

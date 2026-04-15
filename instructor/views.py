@@ -71,7 +71,7 @@ def dashboard(request):
         instructor=request.user
     ).annotate(
         enrollments_count=Count('enrollments')
-    ).select_related('category').prefetch_related('enrollments')[:5]
+    ).prefetch_related('enrollments')[:5]
     
     # Statistics
     total_courses = LMSCourse.objects.filter(
@@ -120,7 +120,7 @@ def course_list(request):
         instructor=request.user
     ).annotate(
         enrollment_count=Count('enrollments')
-    ).select_related('category').order_by('-created_at')
+    ).order_by('-created_at')
 
     return render(request, 'instructor/course_list.html', {
         'courses': courses,
@@ -139,7 +139,7 @@ def course_manage_default(request):
     if first_course:
         return redirect(f"{reverse('instructor:course_manage', kwargs={'slug': first_course.slug})}?tab={tab}")
     # No courses yet — send to course list with a helpful message
-    messages.info(request, "Create your first course to get started.")
+    messages.info(request, "No courses have been assigned to you yet. Please contact the administration.")
     return redirect('instructor:course_list')
 
 
@@ -317,31 +317,9 @@ def course_manage(request, slug=None):
 @login_required(login_url='auth')
 @instructor_required
 def course_create(request):
-    """Create new course"""
-    if request.method == 'POST':
-        form = CourseForm(request.POST, request.FILES)
-        if form.is_valid():
-            course = form.save(commit=False)
-            course.instructor = request.user
-            course.save()
-            messages.success(
-                request,
-                f'Course "{course.title}" created successfully!'
-            )
-            return redirect('instructor:course_edit', slug=course.slug)
-        else:
-            # Surface every field error so the instructor sees what is wrong
-            for field, errs in form.errors.items():
-                label = form.fields[field].label if field in form.fields else field
-                for err in errs:
-                    messages.error(request, f'{label}: {err}')
-    else:
-        form = CourseForm()
-    
-    return render(request, 'instructor/course_form.html', {
-        'form': form,
-        'course': None
-    })
+    """Course creation is reserved for admins only."""
+    messages.error(request, "Courses are created and assigned by the administration. Contact an admin to have a course assigned to you.")
+    return redirect('instructor:course_list')
 
 
 @login_required(login_url='auth')

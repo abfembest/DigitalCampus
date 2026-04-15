@@ -102,21 +102,17 @@ class CourseForm(forms.ModelForm):
         # code is optional — auto-generated in save() if left blank
         self.fields['code'].required = False
         # Give the academic_course dropdown a clear "standalone" empty option
-        self.fields['academic_course'].empty_label = '— Standalone LMS course (no academic link) —'
+        self.fields['academic_course'].empty_label = '— Choose Course —'
         # category is conditionally optional — JS hides it when academic_course is chosen;
         # the form-level required=False prevents server-side validation from blocking the save.
-        self.fields['category'].required = False
+        # category field removed — LMSCourse uses academic_course instead
         # # certificate_fee has a model default of 0.00 — never block submission on it
         # self.fields['certificate_fee'].required = False
 
     def clean(self):
         cleaned = super().clean()
         academic_course = cleaned.get('academic_course')
-        category        = cleaned.get('category')
-
-        # Only enforce category for standalone courses
-        if not academic_course and not category:
-            self.add_error('category', 'Category is required for standalone LMS courses.')
+        # category field removed — no validation needed
 
         # # certificate_fee: make it optional / zero-out when academic course is linked
         # # (academic programmes handle certification fees themselves)

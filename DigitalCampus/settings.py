@@ -177,7 +177,7 @@ CONTACT_EMAIL = config("CONTACT_EMAIL", default="admin@miu.edu")
 # AUTH & SESSION
 # --------------------------------------------------
 
-LOGIN_URL = "eduweb:auth_page"
+LOGIN_URL = "/auth/"
 LOGIN_REDIRECT_URL = "eduweb:apply"
 LOGOUT_REDIRECT_URL = "eduweb:index"
 

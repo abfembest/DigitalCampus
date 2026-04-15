@@ -192,10 +192,10 @@ input[type="file"].fm-file { font-size: .8rem; }
                     style="background:#1e3a8a; color:#fff;">{{ c.title|truncatechars:38 }}</option>
             {% endfor %}
         </select>
-        <a href="{% url 'instructor:course_create' %}"
+        {% comment %} <a href="{% url 'instructor:course_create' %}"
            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-primary-700 text-xs font-semibold rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
             <i class="fas fa-plus"></i> New Course
-        </a>
+        </a> {% endcomment %}
     </div>
 </div>
 

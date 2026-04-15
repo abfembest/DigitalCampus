@@ -40,6 +40,7 @@
             <form method="post" enctype="multipart/form-data" class="bg-white rounded-xl shadow-sm border border-gray-200">
                 {% csrf_token %}
 
+                <!-- Error Summary -->
                 {% if form.errors %}
                 <div class="mx-4 mt-4 sm:mx-6 sm:mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
                     <div class="flex items-start gap-2">
@@ -63,172 +64,195 @@
 
                 <div class="p-4 sm:p-6 space-y-5 sm:space-y-6">
 
-                    <!-- ── Course Type selector ──────────────────────────────── -->
-                    <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
-                        <label class="block text-sm font-semibold text-indigo-800 mb-1">
-                            <i class="fas fa-university mr-1.5"></i> Link to Academic Course
-                        </label>
-                        <p class="text-xs text-indigo-600 mb-3">
-                            Choose an academic course to link this to the faculty → department → program structure.
-                            Leave blank for a <strong>standalone LMS course</strong>.
-                        </p>
-                        {{ form.academic_course }}
-                        {% if form.academic_course.errors %}
-                            <p class="mt-1 text-xs text-red-600">{{ form.academic_course.errors }}</p>
-                        {% endif %}
-                        <!-- Shown by JS once a value is selected -->
-                        <div id="academic-linked-badge" class="hidden mt-2 inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
-                            <i class="fas fa-link"></i> Academic course linked — code and department inherited.
+                    <!-- ══════════════════════════════════════════════════════════
+                         SECTION 1 — Academic Course Link (REQUIRED)
+                    ══════════════════════════════════════════════════════════ -->
+                    <div>
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
+                            <i class="fas fa-university text-indigo-500 mr-2"></i> Academic Course Link
+                        </h2>
+
+                        <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-4 space-y-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-indigo-800 mb-1">
+                                    Academic Course <span class="text-red-500">*</span>
+                                </label>
+                                <p class="text-xs text-indigo-600 mb-2">
+                                    Select the academic course this LMS content delivers.
+                                    The <strong>title</strong> and <strong>code</strong> will be filled automatically.
+                                </p>
+                                {{ form.academic_course }}
+                                {% if form.academic_course.errors %}
+                                    <p class="mt-1 text-xs text-red-600">{{ form.academic_course.errors }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Linked confirmation badge (shown by JS) -->
+                            <div id="academic-linked-badge"
+                                 class="hidden items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+                                <i class="fas fa-link flex-shrink-0"></i>
+                                <span>Academic course linked — title and code have been filled in automatically.</span>
+                            </div>
+
+                            <!-- Inherited info row (shown by JS) -->
+                            <div id="academic-info-row" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                                <div class="bg-white rounded-lg border border-indigo-100 px-3 py-2">
+                                    <p class="text-xs text-indigo-500 font-medium uppercase tracking-wide mb-0.5">Faculty</p>
+                                    <p id="info-faculty" class="text-sm font-semibold text-gray-800 truncate">—</p>
+                                </div>
+                                <div class="bg-white rounded-lg border border-indigo-100 px-3 py-2">
+                                    <p class="text-xs text-indigo-500 font-medium uppercase tracking-wide mb-0.5">Department</p>
+                                    <p id="info-department" class="text-sm font-semibold text-gray-800 truncate">—</p>
+                                </div>
+                                <div class="bg-white rounded-lg border border-indigo-100 px-3 py-2">
+                                    <p class="text-xs text-indigo-500 font-medium uppercase tracking-wide mb-0.5">Program</p>
+                                    <p id="info-program" class="text-sm font-semibold text-gray-800 truncate">—</p>
+                                </div>
+                                <div class="bg-white rounded-lg border border-indigo-100 px-3 py-2">
+                                    <p class="text-xs text-indigo-500 font-medium uppercase tracking-wide mb-0.5">Credit Units</p>
+                                    <p id="info-credits" class="text-sm font-semibold text-gray-800">—</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- ── Basic Information ─────────────────────────────────── -->
+                    <!-- ══════════════════════════════════════════════════════════
+                         SECTION 2 — Basic Information
+                    ══════════════════════════════════════════════════════════ -->
                     <div>
-                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Basic Information</h2>
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
+                            <i class="fas fa-info-circle text-primary-500 mr-2"></i> Basic Information
+                        </h2>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 
+                            <!-- Title — auto-filled from academic course, still editable -->
                             <div class="sm:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Course Title *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Course Title <span class="text-red-500">*</span>
+                                </label>
                                 {{ form.title }}
+                                <p id="title-hint" class="mt-1 text-xs text-gray-500 hidden">
+                                    <i class="fas fa-magic mr-1 text-indigo-400"></i>Auto-filled from the academic course — you may edit if needed.
+                                </p>
                                 {% if form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ form.title.errors }}</p>{% endif %}
                             </div>
 
+                            <!-- Code — auto-filled from academic course -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Course Code</label>
                                 {{ form.code }}
-                                <p class="mt-1 text-xs text-gray-500">Auto-generated if left blank</p>
+                                <p class="mt-1 text-xs text-gray-500">Auto-filled from the academic course or generated if blank</p>
                                 {% if form.code.errors %}<p class="mt-1 text-xs text-red-600">{{ form.code.errors }}</p>{% endif %}
                             </div>
 
-                            <!-- Hidden when academic course is selected -->
-                            <div id="wrap-category">
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Category *</label>
-                                {{ form.category }}
-                                {% if form.category.errors %}<p class="mt-1 text-xs text-red-600">{{ form.category.errors }}</p>{% endif %}
-                            </div>
-
+                            <!-- Level (difficulty_level uses LEVEL_CHOICES 100–800) -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Difficulty Level</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Course Level</label>
                                 {{ form.difficulty_level }}
+                                {% if form.difficulty_level.errors %}<p class="mt-1 text-xs text-red-600">{{ form.difficulty_level.errors }}</p>{% endif %}
                             </div>
 
+                            <!-- Duration -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Duration (Hours)</label>
                                 {{ form.duration_hours }}
+                                <p class="mt-1 text-xs text-gray-500">Estimated total hours of content</p>
+                                {% if form.duration_hours.errors %}<p class="mt-1 text-xs text-red-600">{{ form.duration_hours.errors }}</p>{% endif %}
                             </div>
 
-                            <div class="sm:col-span-2">
+                            <!-- Language -->
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Language</label>
                                 {{ form.language }}
+                                {% if form.language.errors %}<p class="mt-1 text-xs text-red-600">{{ form.language.errors }}</p>{% endif %}
                             </div>
 
+                            <!-- Short Description -->
                             <div class="sm:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Short Description *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Short Description <span class="text-red-500">*</span>
+                                </label>
                                 {{ form.short_description }}
-                                <p class="mt-1 text-xs text-gray-500">Max 500 characters — appears in course listings</p>
+                                <p class="mt-1 text-xs text-gray-500">Max 500 characters — appears in course listings and search results</p>
                                 {% if form.short_description.errors %}<p class="mt-1 text-xs text-red-600">{{ form.short_description.errors }}</p>{% endif %}
                             </div>
 
+                            <!-- Full Description -->
                             <div class="sm:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Description *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                                    Full Description <span class="text-red-500">*</span>
+                                </label>
                                 {{ form.description }}
+                                <p class="mt-1 text-xs text-gray-500">Detailed overview shown on the course page</p>
                                 {% if form.description.errors %}<p class="mt-1 text-xs text-red-600">{{ form.description.errors }}</p>{% endif %}
                             </div>
 
                         </div>
                     </div>
 
-                    <!-- ── Media ─────────────────────────────────────────────── -->
+                    <!-- ══════════════════════════════════════════════════════════
+                         SECTION 3 — Media
+                    ══════════════════════════════════════════════════════════ -->
                     <div>
-                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Media</h2>
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
+                            <i class="fas fa-photo-video text-primary-500 mr-2"></i> Media
+                        </h2>
                         <div class="space-y-3 sm:space-y-4">
+
+                            <!-- Thumbnail -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Course Thumbnail</label>
                                 {{ form.thumbnail }}
                                 {% if course.thumbnail %}
-                                <div class="mt-2">
+                                <div class="mt-2 flex items-center gap-3">
                                     <img src="{{ course.thumbnail.url }}" alt="Current thumbnail"
                                          class="w-36 sm:w-48 h-24 sm:h-32 object-cover rounded-lg border border-gray-200">
+                                    <p class="text-xs text-gray-500">Current thumbnail — upload a new file to replace it</p>
                                 </div>
                                 {% endif %}
-                                <p class="mt-1 text-xs text-gray-500">Recommended: 1280×720px (16:9)</p>
+                                <p class="mt-1 text-xs text-gray-500">Recommended: 1280×720 px (16:9). JPG or PNG.</p>
                             </div>
+
+                            <!-- Promo Video -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Promo Video URL</label>
                                 {{ form.promo_video_url }}
-                                <p class="mt-1 text-xs text-gray-500">YouTube or Vimeo URL</p>
+                                <p class="mt-1 text-xs text-gray-500">YouTube or Vimeo URL (optional)</p>
+                                {% if form.promo_video_url.errors %}<p class="mt-1 text-xs text-red-600">{{ form.promo_video_url.errors }}</p>{% endif %}
                             </div>
+
                         </div>
                     </div>
 
-                    <!-- ── Enrollment Settings (hidden when academic-linked) ─── -->
-                    {% comment %} <div id="wrap-enrollment">
-                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Enrollment Settings</h2>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Max Students</label>
-                                {{ form.max_students }}
-                                <p class="mt-1 text-xs text-gray-500">Leave blank for unlimited</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Enrollment Start</label>
-                                {{ form.enrollment_start_date }}
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Enrollment End</label>
-                                {{ form.enrollment_end_date }}
-                            </div>
-                        </div>
-                    </div> {% endcomment %}
-
-                    <!-- ── Settings ──────────────────────────────────────────── -->
-                    <div>
-                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">Settings</h2>
-                        <div class="space-y-2 sm:space-y-3">
-
-                            <!-- Certificate (hidden when academic-linked) -->
-                            <div id="wrap-certificate">
-                                <label class="flex items-center cursor-pointer gap-2">
-                                    {{ form.has_certificate }}
-                                    <span class="text-sm font-medium text-gray-700">Offer Certificate upon completion</span>
-                                </label>
-                                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Fee</label>
-                                        {{ form.certificate_fee }}
-                                        <p class="mt-1 text-xs text-gray-500">Set to 0 for a free certificate</p>
-                                        {% if form.certificate_fee.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_fee.errors }}</p>{% endif %}
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Template</label>
-                                        {{ form.certificate_template }}
-                                        <p class="mt-1 text-xs text-gray-500">Template name/identifier to use</p>
-                                        {% if form.certificate_template.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_template.errors }}</p>{% endif %}
-                                    </div>
+                    <!-- ══════════════════════════════════════════════════════════
+                         SECTION 4 — Certificate Settings
+                    ══════════════════════════════════════════════════════════ -->
+                    <div id="wrap-certificate">
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 pb-2 border-b border-gray-200">
+                            <i class="fas fa-certificate text-yellow-500 mr-2"></i> Certificate Settings
+                        </h2>
+                        <div class="space-y-3">
+                            <label class="flex items-center cursor-pointer gap-2">
+                                {{ form.has_certificate }}
+                                <span class="text-sm font-medium text-gray-700">Offer Certificate upon completion</span>
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Certificate Template</label>
+                                    {{ form.certificate_template }}
+                                    <p class="mt-1 text-xs text-gray-500">Template name/identifier (e.g., default, gold, premium)</p>
+                                    {% if form.certificate_template.errors %}<p class="mt-1 text-xs text-red-600">{{ form.certificate_template.errors }}</p>{% endif %}
                                 </div>
                             </div>
-
-                            {% comment %} <label class="flex items-center cursor-pointer gap-2">
-                                {{ form.is_published }}
-                                <span class="text-sm font-medium text-gray-700">Publish Course (make visible to students)</span>
-                            </label>
-
-                            <!-- Featured (hidden when academic-linked) -->
-                            <div id="wrap-featured">
-                                <label class="flex items-center cursor-pointer gap-2">
-                                    {{ form.is_featured }}
-                                    <span class="text-sm font-medium text-gray-700">Feature this course</span>
-                                </label>
-                            </div> {% endcomment %}
-
-                            <p class="text-xs text-gray-500 italic">Publishing and featuring are managed by the admin after review.</p>
-
+                            <p class="text-xs text-gray-500 italic mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>Certificate fees are managed at the programme level for academic courses.
+                            </p>
                         </div>
                     </div>
 
-                </div><!-- /p-4 -->
+                </div><!-- /p-4 sm:p-6 -->
 
-                <!-- Form Actions -->
+                <!-- ── Form Actions ─────────────────────────────────────────── -->
                 <div class="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
                     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
                         <a href="{% url 'instructor:course_list' %}"
@@ -254,64 +278,116 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════ Sidebar -->
-        <div class="lg:col-span-1 order-1 lg:order-2">
+        <div class="lg:col-span-1 order-1 lg:order-2 space-y-4 sm:space-y-6">
+
             {% if course %}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
-                <h3 class="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Course Statistics</h3>
+            <!-- Statistics card -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h3 class="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">
+                    <i class="fas fa-chart-bar text-primary-500 mr-2"></i> Course Statistics
+                </h3>
                 <div class="space-y-3">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
                         <span class="text-xs sm:text-sm text-gray-600">Students Enrolled</span>
                         <span class="font-bold text-gray-900 text-sm sm:text-base">{{ stats.total_students }}</span>
                     </div>
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
                         <span class="text-xs sm:text-sm text-gray-600">Total Lessons</span>
                         <span class="font-bold text-gray-900 text-sm sm:text-base">{{ stats.total_lessons }}</span>
                     </div>
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between py-2">
                         <span class="text-xs sm:text-sm text-gray-600">Sections</span>
                         <span class="font-bold text-gray-900 text-sm sm:text-base">{{ stats.total_sections }}</span>
                     </div>
                 </div>
             </div>
 
+            <!-- Current academic link info -->
+            {% if course.academic_course %}
+            <div class="bg-indigo-50 rounded-xl border border-indigo-200 p-4 sm:p-5">
+                <h3 class="font-semibold text-indigo-900 mb-3 text-sm sm:text-base">
+                    <i class="fas fa-university mr-2"></i> Academic Link
+                </h3>
+                <div class="space-y-2 text-xs sm:text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-indigo-600">Course</span>
+                        <span class="font-semibold text-indigo-900">{{ course.academic_course }}</span>
+                    </div>
+                    {% if course.academic_course.program %}
+                    <div class="flex justify-between">
+                        <span class="text-indigo-600">Program</span>
+                        <span class="font-semibold text-indigo-900">{{ course.academic_course.program.code }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-                <h3 class="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Quick Actions</h3>
+                <h3 class="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">
+                    <i class="fas fa-bolt text-yellow-500 mr-2"></i> Quick Actions
+                </h3>
                 <div class="space-y-1.5 sm:space-y-2">
                     <a href="{% url 'instructor:lesson_list' course.slug %}"
                        class="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                        <i class="fas fa-play-circle w-4 sm:w-5 mr-2 sm:mr-3"></i> Manage Lessons
+                        <i class="fas fa-play-circle w-4 sm:w-5 mr-2 sm:mr-3 text-primary-500"></i> Manage Lessons
                     </a>
                     <a href="{% url 'instructor:students_list' course.slug %}"
                        class="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                        <i class="fas fa-users w-4 sm:w-5 mr-2 sm:mr-3"></i> View Students
+                        <i class="fas fa-users w-4 sm:w-5 mr-2 sm:mr-3 text-blue-500"></i> View Students
                     </a>
                     <a href="{% url 'instructor:announcement_create' course.slug %}"
                        class="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                        <i class="fas fa-bullhorn w-4 sm:w-5 mr-2 sm:mr-3"></i> New Announcement
+                        <i class="fas fa-bullhorn w-4 sm:w-5 mr-2 sm:mr-3 text-orange-500"></i> New Announcement
                     </a>
-                    {% comment %} <hr class="my-1.5 sm:my-2">
-                    <a href="{% url 'instructor:course_delete' course.slug %}"
-                       class="flex items-center px-3 sm:px-4 py-2 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
-                        <i class="fas fa-trash w-4 sm:w-5 mr-2 sm:mr-3"></i> Delete Course
-                    </a> {% endcomment %}
+                    <a href="{% url 'instructor:course_objectives' course.slug %}"
+                       class="flex items-center px-3 sm:px-4 py-2 text-sm text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-list-check w-4 sm:w-5 mr-2 sm:mr-3 text-green-500"></i> Edit Objectives
+                    </a>
                 </div>
             </div>
 
             {% else %}
+            <!-- Tips card for create mode -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
                 <h3 class="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">
                     <i class="fas fa-lightbulb text-yellow-500 mr-2"></i> Tips
                 </h3>
                 <ul class="space-y-2 text-xs sm:text-sm text-gray-600">
-                    <li class="flex items-start gap-2"><i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i><span>Use a clear, descriptive title</span></li>
-                    <li class="flex items-start gap-2"><i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i><span>Write detailed learning objectives</span></li>
-                    <li class="flex items-start gap-2"><i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i><span>Add a professional thumbnail</span></li>
-                    <li class="flex items-start gap-2"><i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i><span>Set appropriate pricing</span></li>
-                    <li class="flex items-start gap-2"><i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i><span>Structure content logically</span></li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i>
+                        <span>Always select the academic course first — it fills the title and code for you</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i>
+                        <span>Write a clear short description (max 500 chars) for listings</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i>
+                        <span>Add a 1280×720 thumbnail for a professional look</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i>
+                        <span>You can add lessons and objectives after saving</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-500 mt-0.5 flex-shrink-0"></i>
+                        <span>Publishing is managed by admin after review</span>
+                    </li>
                 </ul>
             </div>
+
+            <!-- Required fields legend -->
+            <div class="bg-amber-50 rounded-xl border border-amber-200 p-4">
+                <p class="text-xs text-amber-700">
+                    <i class="fas fa-asterisk text-red-500 mr-1 text-xs"></i>
+                    Fields marked with <span class="text-red-500 font-bold">*</span> are required.
+                </p>
+            </div>
             {% endif %}
-        </div>
+
+        </div><!-- /sidebar -->
 
     </div>
 </div>
@@ -320,7 +396,8 @@
     input[type="text"], input[type="number"], input[type="email"],
     input[type="url"], input[type="date"], textarea, select {
         @apply w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg
-               focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-sm;
+               focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+               transition-colors text-sm;
     }
     input[type="checkbox"] {
         @apply w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500;
@@ -331,111 +408,130 @@
                file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700
                hover:file:bg-primary-100;
     }
+    /* Locked (read-only) field style */
+    input[readonly] {
+        background-color: #f9fafb;
+        color: #6b7280;
+        cursor: not-allowed;
+    }
 </style>
 
 <script>
 (function () {
-    /* IDs of wrappers that are irrelevant when an academic course is linked.
-       They are hidden AND their inputs disabled so they don't submit stale values. */
-    const HIDE_WHEN_LINKED = ['wrap-category', 'wrap-enrollment', 'wrap-certificate', 'wrap-featured'];
-    // These fields inside a hidden wrapper must submit a safe fallback value
-    // instead of being disabled, so the server always receives something valid.
-    const ZERO_WHEN_LINKED = ['id_certificate_fee'];
+    'use strict';
 
     const academicSelect = document.getElementById('id_academic_course');
+    const titleInput     = document.getElementById('id_title');
+    const codeInput      = document.getElementById('id_code');
     const badge          = document.getElementById('academic-linked-badge');
+    const infoRow        = document.getElementById('academic-info-row');
+    const titleHint      = document.getElementById('title-hint');
 
-    function applyState() {
-        const linked = academicSelect && academicSelect.value !== '';
+    // Info cells populated from AJAX
+    const infoFaculty    = document.getElementById('info-faculty');
+    const infoDept       = document.getElementById('info-department');
+    const infoProgram    = document.getElementById('info-program');
+    const infoCredits    = document.getElementById('info-credits');
 
-        // Toggle the "linked" confirmation badge
-        if (badge) badge.classList.toggle('hidden', !linked);
-
-        HIDE_WHEN_LINKED.forEach(function (id) {
-            const wrapper = document.getElementById(id);
-            if (!wrapper) return;
-
-            wrapper.style.display = linked ? 'none' : '';
-
-            // Disable every input/select/textarea inside so they are excluded
-            // from form submission and browser validation when hidden.
-            wrapper.querySelectorAll('input, select, textarea').forEach(function (el) {
-                el.disabled = linked;
-            });
-        });
-
-        // For numeric fields that must still POST a value (not disabled),
-        // zero them out when academic course is linked so the server gets 0.00.
-        ZERO_WHEN_LINKED.forEach(function (fieldId) {
-            const el = document.getElementById(fieldId);
-            if (!el) return;
-            if (linked) {
-                el.disabled = false;   // must submit
-                el.value    = '0';
-            }
-        });
-    }
-
-    const titleInput = document.getElementById('id_title');
-    const codeInput  = document.getElementById('id_code');
-
-    // Store the instructor's own typed values so we can restore on deselect
+    // Snapshot of instructor's own typed values so we can restore on deselect
     let savedTitle = titleInput ? titleInput.value : '';
     let savedCode  = codeInput  ? codeInput.value  : '';
 
-    function fillFromAcademic() {
+    // ── Lock / unlock title + code ─────────────────────────────────────────
+    function lockField(el, value) {
+        if (!el) return;
+        el.value    = value;
+        el.readOnly = true;
+        el.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+    }
+
+    function unlockField(el, savedValue) {
+        if (!el) return;
+        el.value    = savedValue;
+        el.readOnly = false;
+        el.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+    }
+
+    // ── Fill from the <option> text (no-AJAX fallback) ─────────────────────
+    // Option __str__ format expected: "COURSE101 — Course Name"
+    function fillFromOptionText(optionText) {
+        const sep   = optionText.indexOf(' — ');
+        const code  = sep !== -1 ? optionText.substring(0, sep).trim() : '';
+        const title = sep !== -1 ? optionText.substring(sep + 3).trim() : optionText.trim();
+        lockField(titleInput, title);
+        lockField(codeInput,  code);
+    }
+
+    // ── Try to fetch extra info via AJAX (gracefully degrades) ────────────
+    function fetchCourseDetails(courseId) {
+        if (!courseId) return;
+        const url = '{% url "instructor:ajax_course_details" %}?course_id=' + courseId;
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (!data) return;
+                // Override title/code with server values if provided
+                if (data.title) lockField(titleInput, data.title);
+                if (data.code)  lockField(codeInput,  data.code);
+                // Populate info row
+                if (infoFaculty)  infoFaculty.textContent  = data.faculty     || '—';
+                if (infoDept)     infoDept.textContent     = data.department  || '—';
+                if (infoProgram)  infoProgram.textContent  = data.program     || '—';
+                if (infoCredits)  infoCredits.textContent  = data.credit_units != null ? data.credit_units : '—';
+                if (infoRow)      infoRow.classList.remove('hidden'), infoRow.classList.add('grid');
+            })
+            .catch(function () {
+                // AJAX unavailable — info row stays hidden; title/code already set from option text
+            });
+    }
+
+    // ── Main state function ────────────────────────────────────────────────
+    function applyState() {
         if (!academicSelect) return;
-        const selectedOption = academicSelect.options[academicSelect.selectedIndex];
         const linked = academicSelect.value !== '';
 
+        // Show/hide badge
+        if (badge) {
+            badge.classList.toggle('hidden', !linked);
+            if (linked) badge.classList.add('flex');
+            else        badge.classList.remove('flex');
+        }
+
+        // Show/hide title hint
+        if (titleHint) titleHint.classList.toggle('hidden', !linked);
+
         if (linked) {
-            // Parse "CODE — Name" straight from the option text — no AJAX needed
-            // __str__ format is:  "DMD101 — Principles of Graphic Design"
-            const optionText = selectedOption.text.trim();
-            const separatorIdx = optionText.indexOf(' — ');
-
-            const parsedCode  = separatorIdx !== -1 ? optionText.substring(0, separatorIdx).trim() : '';
-            const parsedTitle = separatorIdx !== -1 ? optionText.substring(separatorIdx + 3).trim() : optionText;
-
-            if (titleInput) {
-                titleInput.value    = parsedTitle;
-                titleInput.readOnly = true;
-                titleInput.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
-            }
-            if (codeInput) {
-                codeInput.value    = parsedCode;
-                codeInput.readOnly = true;
-                codeInput.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
-            }
+            const selectedOption = academicSelect.options[academicSelect.selectedIndex];
+            fillFromOptionText(selectedOption.text);
+            fetchCourseDetails(academicSelect.value);
         } else {
-            // Switching back to standalone — restore saved values and unlock
-            if (titleInput) {
-                titleInput.value    = savedTitle;
-                titleInput.readOnly = false;
-                titleInput.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+            // Restore free-typed values and unlock
+            unlockField(titleInput, savedTitle);
+            unlockField(codeInput,  savedCode);
+            if (infoRow) {
+                infoRow.classList.add('hidden');
+                infoRow.classList.remove('grid');
             }
-            if (codeInput) {
-                codeInput.value    = savedCode;
-                codeInput.readOnly = false;
-                codeInput.classList.remove('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
-            }
+            // Reset info cells
+            [infoFaculty, infoDept, infoProgram, infoCredits].forEach(function (el) {
+                if (el) el.textContent = '—';
+            });
         }
     }
 
-    function onAcademicChange() {
-        // Snapshot current free-typed values BEFORE we overwrite (only when switching TO linked)
-        if (academicSelect && academicSelect.value !== '') {
-            savedTitle = titleInput ? titleInput.value : '';
-            savedCode  = codeInput  ? codeInput.value  : '';
-        }
-        applyState();
-        fillFromAcademic();
-    }
-
+    // ── Event wiring ───────────────────────────────────────────────────────
     if (academicSelect) {
-        academicSelect.addEventListener('change', onAcademicChange);
-        applyState();           // hide/show wrappers on page load
-        fillFromAcademic();     // fill & lock fields if already linked (edit mode)
+        academicSelect.addEventListener('change', function () {
+            // Snapshot free-typed values only when switching TO unlinked state
+            if (academicSelect.value === '') {
+                savedTitle = titleInput ? titleInput.value : '';
+                savedCode  = codeInput  ? codeInput.value  : '';
+            }
+            applyState();
+        });
+
+        // Run immediately on page load (handles edit mode where course is already linked)
+        applyState();
     }
 })();
 </script>

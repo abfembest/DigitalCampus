@@ -13,10 +13,10 @@
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">My Courses</h1>
                 <p class="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Manage all your courses</p>
             </div>
-            <a href="{% url 'instructor:course_create' %}"
+            {% comment %} <a href="{% url 'instructor:course_create' %}"
                class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white text-sm sm:text-base font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all whitespace-nowrap">
                 <i class="fas fa-plus-circle mr-2"></i> Create New Course
-            </a>
+            </a> {% endcomment %}
         </div>
     </div>
 
@@ -125,10 +125,10 @@
             <p class="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 Create your first course to start teaching and sharing knowledge with students.
             </p>
-            <a href="{% url 'instructor:course_create' %}"
+            {% comment %} <a href="{% url 'instructor:course_create' %}"
                class="inline-flex items-center px-5 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white text-sm sm:text-base font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
                 <i class="fas fa-plus-circle mr-2"></i> Create Your First Course
-            </a>
+            </a> {% endcomment %}
         </div>
     </div>
     {% endif %}

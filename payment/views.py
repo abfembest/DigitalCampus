@@ -226,6 +226,9 @@ def transaction_reports(request):
         context,
     )
 
+def required_payments_list(request):
+    return render(request, 'finance/required_payments.html')
+
 
 # ==================== INVOICES ====================
 

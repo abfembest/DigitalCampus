@@ -1775,142 +1775,109 @@ def notification_config(request):
 #     return render(request, 'management/course/list.html', context)
 
 
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def course_category_create(request):
-    """Create new course category"""
-    if request.method == 'POST':
-        form = CourseCategoryForm(request.POST)
-        if form.is_valid():
-            category = form.save()
+# @login_required(login_url='eduweb:auth_page')
+# @user_passes_test(is_admin)
+# def course_category_create(request):
+#     """Create new course category"""
+#     if request.method == 'POST':
+#         form = CourseCategoryForm(request.POST)
+#         if form.is_valid():
+#             category = form.save()
             
-            # Create audit log
-            AuditLog.objects.create(
-                user=request.user,
-                action='create',
-                model_name='CourseCategory',
-                object_id=category.id,
-                description=f'Created course category: {category.name}'
-            )
+#             # Create audit log
+#             AuditLog.objects.create(
+#                 user=request.user,
+#                 action='create',
+#                 model_name='CourseCategory',
+#                 object_id=category.id,
+#                 description=f'Created course category: {category.name}'
+#             )
             
-            messages.success(request, f'Category "{category.name}" created successfully.')
-            return redirect('management:course_categories_list')
-    else:
-        form = CourseCategoryForm()
+#             messages.success(request, f'Category "{category.name}" created successfully.')
+#             return redirect('management:course_categories_list')
+#     else:
+#         form = CourseCategoryForm()
     
-    return render(request, 'management/course/create.html', {'form': form})
+#     return render(request, 'management/course/create.html', {'form': form})
 
 
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def course_category_edit(request, pk):
-    """Edit course category"""
-    category = get_object_or_404(CourseCategory, pk=pk)
+# @login_required(login_url='eduweb:auth_page')
+# @user_passes_test(is_admin)
+# def course_category_edit(request, pk):
+#     """Edit course category"""
+#     category = get_object_or_404(CourseCategory, pk=pk)
     
-    if request.method == 'POST':
-        form = CourseCategoryForm(request.POST, instance=category)
-        if form.is_valid():
-            category = form.save()
+#     if request.method == 'POST':
+#         form = CourseCategoryForm(request.POST, instance=category)
+#         if form.is_valid():
+#             category = form.save()
             
-            # Create audit log
-            AuditLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='CourseCategory',
-                object_id=category.id,
-                description=f'Updated course category: {category.name}'
-            )
+#             # Create audit log
+#             AuditLog.objects.create(
+#                 user=request.user,
+#                 action='update',
+#                 model_name='CourseCategory',
+#                 object_id=category.id,
+#                 description=f'Updated course category: {category.name}'
+#             )
             
-            messages.success(request, f'Category "{category.name}" updated successfully.')
-            return redirect('management:course_categories_list')
-    else:
-        form = CourseCategoryForm(instance=category)
+#             messages.success(request, f'Category "{category.name}" updated successfully.')
+#             return redirect('management:course_categories_list')
+#     else:
+#         form = CourseCategoryForm(instance=category)
     
-    return render(request, 'management/course/edit.html', {
-        'form': form,
-        'category': category
-    })
+#     return render(request, 'management/course/edit.html', {
+#         'form': form,
+#         'category': category
+#     })
 
 
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def course_category_delete(request, pk):
-    """Delete course category"""
-    category = get_object_or_404(CourseCategory, pk=pk)
+# @login_required(login_url='eduweb:auth_page')
+# @user_passes_test(is_admin)
+# def course_category_delete(request, pk):
+#     """Delete course category"""
+#     category = get_object_or_404(CourseCategory, pk=pk)
     
-    # Check if category has courses
-    course_count = category.lmscourse_set.count()
+#     # Check if category has courses
+#     course_count = category.lmscourse_set.count()
     
-    if request.method == 'POST':
-        category_name = category.name
+#     if request.method == 'POST':
+#         category_name = category.name
         
-        # Create audit log before deletion
-        AuditLog.objects.create(
-            user=request.user,
-            action='delete',
-            model_name='CourseCategory',
-            object_id=category.id,
-            description=f'Deleted course category: {category_name}'
-        )
+#         # Create audit log before deletion
+#         AuditLog.objects.create(
+#             user=request.user,
+#             action='delete',
+#             model_name='CourseCategory',
+#             object_id=category.id,
+#             description=f'Deleted course category: {category_name}'
+#         )
         
-        category.delete()
-        messages.success(request, f'Category "{category_name}" deleted successfully.')
-        return redirect('management:course_categories_list')
+#         category.delete()
+#         messages.success(request, f'Category "{category_name}" deleted successfully.')
+#         return redirect('management:course_categories_list')
     
-    return render(request, 'management/course/delete.html', {
-        'category': category,
-        'course_count': course_count
-    })
+#     return render(request, 'management/course/delete.html', {
+#         'category': category,
+#         'course_count': course_count
+#     })
 
 
-# ==================== LMS COURSE VIEWS ====================
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def lms_courses_list(request):
-    """List all LMS courses with filtering"""
-    courses = LMSCourse.objects.select_related('category', 'instructor').order_by('-created_at')
-    
-    # Filtering
-    category_id = request.GET.get('category')
-    if category_id:
-        courses = courses.filter(category_id=category_id)
-    
-    difficulty = request.GET.get('difficulty')
-    if difficulty:
-        courses = courses.filter(difficulty_level=difficulty)
-    
-    published_filter = request.GET.get('published')
-    if published_filter == 'published':
-        courses = courses.filter(is_published=True)
-    elif published_filter == 'draft':
-        courses = courses.filter(is_published=False)
-    
-    categories = CourseCategory.objects.filter(is_active=True).order_by('name')
-    stats = {
-        'total': LMSCourse.objects.count(),
-        'published': LMSCourse.objects.filter(is_published=True).count(),
-        'draft': LMSCourse.objects.filter(is_published=False).count(),
-        'featured': LMSCourse.objects.filter(is_featured=True).count(),
-    }
-    
-    context = {
-        'courses': courses,
-        'categories': categories,
-        'stats': stats,
-    }
-    return render(request, 'management/lms_course/list.html', context)
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def lms_course_create(request):
-    """Create new LMS course"""
+    """
+    Single-page hub: list + inline create form.
+    Handles both normal GET (page load) and POST (form submit from modal).
+    """
+    import json as _json
+    from eduweb.models import AcademicSession, Program
+ 
+    # ── POST: create ──────────────────────────────────────────────────────────
     if request.method == 'POST':
-        form = LMSCourseForm(request.POST, request.FILES)
-        if form.is_valid():
-            course = form.save()
-
-            # Create audit log
+        create_form = LMSCourseForm(request.POST, request.FILES)
+        if create_form.is_valid():
+            course = create_form.save()
             AuditLog.objects.create(
                 user=request.user,
                 action='create',
@@ -1918,8 +1885,6 @@ def lms_course_create(request):
                 object_id=course.id,
                 description=f'Created LMS course: {course.title}'
             )
-
-            # Notify the assigned instructor
             if course.instructor and course.instructor != request.user:
                 Notification.objects.create(
                     user=course.instructor,
@@ -1931,44 +1896,101 @@ def lms_course_create(request):
                     ),
                     link=f'/instructor/courses/{course.slug}/manage/',
                 )
-
             messages.success(request, f'LMS course "{course.title}" created successfully.')
             return redirect('management:lms_courses_list')
+        # Form has errors — fall through; template will re-open the create modal
     else:
-        form = LMSCourseForm()
-
-    # Build instructor data for JS auto-fill (name → instructor_name field)
-    import json as _json
-    instructors_data = {
-        str(u.pk): {
-            'full_name': u.get_full_name().strip() or u.username,
-            'bio': getattr(u, 'profile', None) and u.profile.bio or '',
-        }
-        for u in User.objects.filter(
-            profile__role='instructor', is_active=True
-        ).select_related('profile')
+        create_form = LMSCourseForm()
+ 
+    # ── Query ─────────────────────────────────────────────────────────────────
+    courses = LMSCourse.objects.select_related(
+        'instructor', 'academic_course__program__department', 'session'
+    ).prefetch_related('enrollments').order_by('-created_at')
+ 
+    program_id = request.GET.get('program')
+    if program_id:
+        courses = courses.filter(academic_course__program_id=program_id)
+ 
+    session_id = request.GET.get('session')
+    if session_id:
+        courses = courses.filter(session_id=session_id)
+ 
+    published_filter = request.GET.get('published')
+    if published_filter == 'published':
+        courses = courses.filter(is_published=True)
+    elif published_filter == 'draft':
+        courses = courses.filter(is_published=False)
+ 
+    stats = {
+        'total':     LMSCourse.objects.count(),
+        'published': LMSCourse.objects.filter(is_published=True).count(),
+        'draft':     LMSCourse.objects.filter(is_published=False).count(),
+        'featured':  LMSCourse.objects.filter(is_featured=True).count(),
     }
-
+ 
     context = {
-        'form': form,
-        'instructors_json': _json.dumps(instructors_data),
+        'courses':     courses,
+        'create_form': create_form,
+        'programs':    Program.objects.order_by('name'),
+        'sessions':    AcademicSession.objects.order_by('-name'),
+        'stats':       stats,
     }
-    return render(request, 'management/lms_course/create.html', context)
-
-
+    return render(request, 'management/lms_course/list.html', context)
+ 
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def lms_course_create(request):
+    """
+    Handles POST from the create modal form (action="{% url 'management:lms_course_create' %}").
+    On success → redirect to list. On failure → redirect to list (form errors shown via modal).
+    """
+    import json as _json
+    if request.method == 'POST':
+        form = LMSCourseForm(request.POST, request.FILES)
+        if form.is_valid():
+            course = form.save()
+            AuditLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='LMSCourse',
+                object_id=course.id,
+                description=f'Created LMS course: {course.title}'
+            )
+            if course.instructor and course.instructor != request.user:
+                Notification.objects.create(
+                    user=course.instructor,
+                    notification_type='system',
+                    title=f'Course Assigned: {course.title}',
+                    message=(
+                        f'You have been assigned as instructor for "{course.title}". '
+                        f'You can now add content, lessons, and assessments.'
+                    ),
+                    link=f'/instructor/courses/{course.slug}/manage/',
+                )
+            messages.success(request, f'LMS course "{course.title}" created successfully.')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    return redirect('management:lms_courses_list')
+ 
+ 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def lms_course_edit(request, pk):
-    """Edit LMS course"""
+    """
+    Handles both:
+    - GET  ?_modal=1  → return full HTML page (modal fetches it, strips the <form>)
+    - GET  (normal)   → full-page edit (fallback if JS fails)
+    - POST            → save; on success redirect to list; on failure re-render
+    """
+    import json as _json
     course = get_object_or_404(LMSCourse, pk=pk)
-    
+ 
     if request.method == 'POST':
         form = LMSCourseForm(request.POST, request.FILES, instance=course)
         if form.is_valid():
             was_published = course.is_published
             course = form.save()
-
-            # Create audit log
             AuditLog.objects.create(
                 user=request.user,
                 action='update',
@@ -1976,10 +1998,8 @@ def lms_course_edit(request, pk):
                 object_id=course.id,
                 description=f'Updated LMS course: {course.title}'
             )
-
             messages.success(request, f'LMS course "{course.title}" updated successfully.')
-
-            # Notify enrolled students if the course was just published
+ 
             if not was_published and course.is_published:
                 enrolled_students = User.objects.filter(
                     enrollments__course=course,
@@ -1990,17 +2010,14 @@ def lms_course_edit(request, pk):
                     _notify(
                         user=student,
                         title=f'Course Now Available: {course.title}',
-                        message=f'The course "{course.title}" you are enrolled in has been published and is now available.',
+                        message=f'The course "{course.title}" you are enrolled in has been published.',
                         notif_type='enrollment',
                         link=f'/courses/{course.slug}/',
                     )
-
             return redirect('management:lms_courses_list')
     else:
         form = LMSCourseForm(instance=course)
-
-    # Build instructor data for JS auto-fill
-    import json as _json
+ 
     instructors_data = {
         str(u.pk): {
             'full_name': u.get_full_name().strip() or u.username,
@@ -2010,57 +2027,96 @@ def lms_course_edit(request, pk):
             profile__role='instructor', is_active=True
         ).select_related('profile')
     }
-
+ 
     context = {
-        'form': form,
-        'course': course,
+        'form':             form,
+        'course':           course,
         'instructors_json': _json.dumps(instructors_data),
     }
     return render(request, 'management/lms_course/edit.html', context)
-
-
+ 
+ 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def lms_course_detail(request, pk):
-    """View LMS course details"""
-    course = get_object_or_404(LMSCourse, pk=pk)
-    enrollments = course.enrollments.count()
-    
+    """
+    GET ?_modal=1  (AJAX from list page) → returns JSON for detail modal
+    GET (normal)   → full detail page (fallback)
+    """
+    course = get_object_or_404(
+        LMSCourse.objects.select_related(
+            'instructor', 'academic_course__program__department', 'session'
+        ),
+        pk=pk
+    )
+    enrollments_count = course.enrollments.count()
+ 
+    # ── AJAX / modal path: return JSON ───────────────────────────────────────
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('_modal'):
+        ac = course.academic_course
+        data = {
+            'pk':                   course.pk,
+            'title':                course.title,
+            'code':                 course.code or '',
+            'description':          course.description or '',
+            'short_description':    course.short_description or '',
+            'difficulty_level_display': course.get_difficulty_level_display(),
+            'duration_hours':       str(course.duration_hours),
+            'language':             course.language or 'English',
+            'is_published':         course.is_published,
+            'is_featured':          course.is_featured,
+            'has_certificate':      course.has_certificate,
+            'instructor_name':      course.instructor_name or (course.instructor.get_full_name() if course.instructor else ''),
+            'instructor_bio':       course.instructor_bio or '',
+            'enrollments':          enrollments_count,
+            'max_students':         course.max_students,
+            'enrollment_start_date': course.enrollment_start_date.strftime('%b %d, %Y') if course.enrollment_start_date else '',
+            'enrollment_end_date':   course.enrollment_end_date.strftime('%b %d, %Y') if course.enrollment_end_date else '',
+            'created_at':           course.created_at.strftime('%b %d, %Y %H:%M'),
+            'session':              course.session.name if course.session else '',
+            'term':                 course.term or '',
+            # Academic course info
+            'academic_course':      ac.pk if ac else None,
+            'academic_course_code': ac.code if ac else '',
+            'academic_course_name': ac.name if ac else '',
+            'academic_course_program': (
+                f"{ac.program.name} — {ac.program.department.name}" if ac and ac.program else ''
+            ),
+        }
+        return JsonResponse(data)
+ 
+    # ── Normal full-page path ─────────────────────────────────────────────────
     context = {
-        'course': course,
-        'enrollments': enrollments,
+        'course':      course,
+        'enrollments': enrollments_count,
     }
     return render(request, 'management/lms_course/detail.html', context)
-
-
+ 
+ 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def lms_course_delete(request, pk):
-    """Delete LMS course"""
+    """
+    POST → delete and redirect to list.
+    GET  → redirects to list (delete is handled via modal POST only).
+    """
     course = get_object_or_404(LMSCourse, pk=pk)
-    enrollment_count = course.enrollments.count()
-    
+ 
     if request.method == 'POST':
         course_title = course.title
-        
-        # Create audit log before deletion
-        AuditLog.objects.create(
-            user=request.user,
-            action='delete',
-            model_name='LMSCourse',
-            object_id=course.id,
-            description=f'Deleted LMS course: {course_title}'
-        )
-        
-        course.delete()
-        messages.success(request, f'LMS course "{course_title}" deleted successfully.')
+        # AuditLog.objects.create(
+        #     user=request.user,
+        #     action='delete',
+        #     model_name='LMSCourse',
+        #     object_id=course.id,
+        #     description=f'Deleted LMS course: {course_title}'
+        # )
+        # # course.delete()
+        # messages.success(request, f'LMS course "{course_title}" deleted successfully.')
         return redirect('management:lms_courses_list')
-    
-    context = {
-        'course': course,
-        'enrollment_count': enrollment_count,
-    }
-    return render(request, 'management/lms_course/delete.html', context)
+ 
+    # GET request on delete URL → just go back to list (modal handles the UI)
+    return redirect('management:lms_courses_list')
 
 
 # ==================== AUDIT LOG VIEWS ====================

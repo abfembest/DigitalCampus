@@ -33,6 +33,8 @@ urlpatterns = [
         name='transaction_reports',
     ),
 
+    path("required", views.required_payments_list, name="required_payments_list"),
+
     # Invoice pages
     path(
         'invoices/',

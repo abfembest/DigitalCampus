@@ -1587,7 +1587,7 @@ class LMSCourseForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].empty_label = '— Select Category —'
+        # self.fields['category'].empty_label = '— Select Category —'
         self.fields['instructor'].empty_label = '— Select Instructor —'
         self.fields['instructor'].queryset = User.objects.filter(
             profile__role='instructor',
@@ -1599,7 +1599,7 @@ class LMSCourseForm(forms.ModelForm):
             u.get_full_name().strip() or u.username
         )
         self.fields['academic_course'].empty_label = '— Standalone LMS (no academic link) —'
-        self.fields['category'].required = False
+        # self.fields['category'].required = False
         self.fields['academic_course'].required = False
         from eduweb.models import Course as AcademicCourse
         self.fields['academic_course'].queryset = AcademicCourse.objects.select_related('program__department').order_by('program__department__name', 'code')        

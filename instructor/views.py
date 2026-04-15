@@ -63,7 +63,7 @@ def _notify_instructor(instructor, title, message, notif_type='system', link='')
         pass
 
 # ==================== DASHBOARD ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def dashboard(request):
     """Instructor dashboard with comprehensive statistics"""
@@ -112,7 +112,7 @@ def dashboard(request):
 
 
 # ==================== COURSE MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_list(request):
     """List all instructor courses with statistics"""
@@ -126,7 +126,7 @@ def course_list(request):
         'courses': courses,
     })
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_manage_default(request):
     """
@@ -142,7 +142,7 @@ def course_manage_default(request):
     return redirect('instructor:course_list')
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_manage(request, slug=None):
     """
@@ -312,7 +312,7 @@ def course_manage(request, slug=None):
     return render(request, 'instructor/course_manage.html', context)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_create(request):
     """Course creation is reserved for admins only."""
@@ -320,7 +320,7 @@ def course_create(request):
     return redirect('instructor:course_list')
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_edit(request, slug):
     """Edit course using slug"""
@@ -364,7 +364,7 @@ def course_edit(request, slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_objectives(request, slug):
     """Manage course objectives using slug"""
@@ -409,7 +409,7 @@ def course_objectives(request, slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_delete(request, slug):
     """Course deletion is not permitted for instructors."""
@@ -417,7 +417,7 @@ def course_delete(request, slug):
 
 
 # ==================== SECTION MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def section_create(request, course_slug):
     """Create section using course slug"""
@@ -447,7 +447,7 @@ def section_create(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def section_edit(request, course_slug, section_id):
     """Edit section using course slug"""
@@ -481,7 +481,7 @@ def section_edit(request, course_slug, section_id):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def section_delete(request, course_slug, section_id):
     """Delete section using course slug"""
@@ -503,7 +503,7 @@ def section_delete(request, course_slug, section_id):
 
 
 # ==================== LESSON MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def lesson_list(request, course_slug):
     """List lessons using course slug"""
@@ -532,7 +532,7 @@ def lesson_list(request, course_slug):
     return render(request, 'instructor/lesson_list.html', context)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def lesson_create(request, course_slug):
     """Create lesson using course slug"""
@@ -576,7 +576,7 @@ def lesson_create(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def lesson_edit(request, course_slug, lesson_slug):
     """Edit lesson using course slug"""
@@ -615,7 +615,7 @@ def lesson_edit(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def lesson_delete(request, course_slug, lesson_slug):
     """Delete lesson using course slug"""
@@ -637,7 +637,7 @@ def lesson_delete(request, course_slug, lesson_slug):
 
 
 # ==================== QUIZ MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_list(request, course_slug, lesson_slug):
     """List quizzes using slugs"""
@@ -663,7 +663,7 @@ def quiz_list(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_create(request, course_slug, lesson_slug):
     """Create quiz using slugs"""
@@ -714,7 +714,7 @@ def quiz_create(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     """Edit quiz using slugs"""
@@ -756,7 +756,7 @@ def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
     """Manage quiz questions using slugs"""
@@ -789,7 +789,7 @@ def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
 
 
 # ==================== QUESTION MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def question_create(request, course_slug, lesson_slug, quiz_slug):
     """Create question using slugs"""
@@ -842,7 +842,7 @@ def question_create(request, course_slug, lesson_slug, quiz_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
     """Manage question answers using slugs"""
@@ -897,7 +897,7 @@ def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
 
 # ==================== ASSIGNMENT MANAGEMENT ====================
 # ==================== ASSIGNMENT MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def assignment_list(request, course_slug, lesson_slug):
     """List assignments using slugs"""
@@ -921,7 +921,7 @@ def assignment_list(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def assignment_create(request, course_slug, lesson_slug):
     """Create assignment using slugs"""
@@ -972,7 +972,7 @@ def assignment_create(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     """Edit assignment using slugs"""
@@ -1017,7 +1017,7 @@ def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def assignment_submissions(request, course_slug, assignment_slug):
     """View submissions using slugs"""
@@ -1050,7 +1050,7 @@ def assignment_submissions(request, course_slug, assignment_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def grade_submission(request, course_slug, submission_id):
     """Grade submission using course slug and submission ID"""
@@ -1107,7 +1107,7 @@ def grade_submission(request, course_slug, submission_id):
 
 
 # ==================== STUDENT MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def students_list(request, course_slug):
     """List students using course slug"""
@@ -1127,7 +1127,7 @@ def students_list(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def student_progress(request, course_slug, student_id):
     """View student progress using course slug"""
@@ -1153,7 +1153,7 @@ def student_progress(request, course_slug, student_id):
         'lesson_progress': lesson_progress,
     })
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def enroll_student(request, course_slug):
     """Manually enroll a student in a course"""
@@ -1226,7 +1226,7 @@ def enroll_student(request, course_slug):
     return redirect('instructor:students_list', course_slug=course.slug)
 
 # ==================== ANNOUNCEMENTS ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def announcement_create(request, course_slug):
     """Create announcement using course slug"""
@@ -1275,7 +1275,7 @@ def announcement_create(request, course_slug):
     })
 
 # ==================== ASSESSMENT OVERVIEW VIEWS ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def all_quizzes(request):
     """View all quizzes across all instructor's courses"""
@@ -1293,7 +1293,7 @@ def all_quizzes(request):
     return render(request, 'instructor/all_quizzes.html', context)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def all_assignments(request):
     """View all assignments across all instructor's courses"""
@@ -1310,7 +1310,7 @@ def all_assignments(request):
     }
     return render(request, 'instructor/all_assignments.html', context)
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, answer_id):
@@ -1330,7 +1330,7 @@ def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, ans
                     quiz_slug=quiz.slug, 
                     question_id=question.id)
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
@@ -1348,7 +1348,7 @@ def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
                     lesson_slug=lesson.slug, 
                     quiz_slug=quiz.slug)
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_statistics(request):
     """
@@ -1421,7 +1421,7 @@ def course_statistics(request):
     )
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def student_analytics_progress(request):
     """
@@ -1488,7 +1488,7 @@ def student_analytics_progress(request):
     )
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def reviews_ratings(request):
     """
@@ -1580,7 +1580,7 @@ def reviews_ratings(request):
         context
     )
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def resources(request):
     """
@@ -1685,7 +1685,7 @@ def resources(request):
     return render(request, 'instructor/resources.html', context)
 
 # ==================== PROFILE VIEW ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def instructor_profile(request):
     """View and edit instructor profile"""
@@ -1751,7 +1751,7 @@ def instructor_profile(request):
 
 
 # ==================== SETTINGS VIEW ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def instructor_settings(request):
     """Manage instructor account settings"""
@@ -1806,7 +1806,7 @@ def instructor_settings(request):
 
 
 # ==================== HELP & SUPPORT VIEW ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def help_support(request):
     """Help and support page with FAQs and ticket submission"""
@@ -1956,7 +1956,7 @@ Role: Instructor
 # 1.  ANNOUNCEMENT LIST / EDIT / DELETE
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def announcement_list(request, course_slug):
     """List all announcements for a course."""
@@ -1973,7 +1973,7 @@ def announcement_list(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def announcement_edit(request, course_slug, announcement_slug):
     """Edit an existing announcement."""
@@ -2004,7 +2004,7 @@ def announcement_edit(request, course_slug, announcement_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def announcement_delete(request, course_slug, announcement_slug):
     """Delete an announcement (POST only)."""
@@ -2021,7 +2021,7 @@ def announcement_delete(request, course_slug, announcement_slug):
 # 2.  QUIZ RESULTS — QuizAttempt + QuizResponse
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_results(request, course_slug, lesson_slug, quiz_slug):
     """Show all student attempts for a quiz."""
@@ -2053,7 +2053,7 @@ def quiz_results(request, course_slug, lesson_slug, quiz_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id):
     """Detailed breakdown of a single student's quiz attempt."""
@@ -2084,7 +2084,7 @@ def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id
 # 3.  MESSAGES — Inbox / Sent / Thread / Compose / Reply
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def messages_inbox(request):
     """Show received messages (most recent per thread)."""
@@ -2101,7 +2101,7 @@ def messages_inbox(request):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def messages_sent(request):
     """Show sent messages."""
@@ -2116,7 +2116,7 @@ def messages_sent(request):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def message_thread(request, message_id):
     """Display a full conversation thread."""
@@ -2150,7 +2150,7 @@ def message_thread(request, message_id):
 # INSTRUCTOR NOTIFICATIONS
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def instructor_notifications(request):
     """Show all notifications for the logged-in instructor."""
@@ -2180,7 +2180,7 @@ def instructor_notifications(request):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def instructor_notification_read(request, notif_id):
     """Mark a single instructor notification as read (AJAX)."""
@@ -2192,7 +2192,7 @@ def instructor_notification_read(request, notif_id):
     return JsonResponse({'success': True})
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def message_compose(request):
     """Compose and send a new message."""
@@ -2246,7 +2246,7 @@ def message_compose(request):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def message_reply(request, message_id):
     """Post a reply to an existing thread (POST only)."""
@@ -2282,7 +2282,7 @@ def message_reply(request, message_id):
     return redirect('instructor:message_thread', message_id=root.id)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def messages_mark_all_read(request):
     """Mark all inbox messages as read."""
@@ -2297,7 +2297,7 @@ def messages_mark_all_read(request):
 # 4.  DISCUSSIONS — List / Detail / Reply / Pin / Lock / Delete
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussions(request, course_slug):
     """List all discussion threads for a course."""
@@ -2312,7 +2312,7 @@ def discussions(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_detail(request, course_slug, discussion_slug):
     """View a single discussion thread and its replies."""
@@ -2332,7 +2332,7 @@ def discussion_detail(request, course_slug, discussion_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_reply(request, course_slug, discussion_slug):
     """Instructor posts a reply to a discussion (POST only)."""
@@ -2364,7 +2364,7 @@ def discussion_reply(request, course_slug, discussion_slug):
                     course_slug=course.slug, discussion_slug=discussion.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_toggle_pin(request, course_slug, discussion_slug):
     """Toggle pinned status (POST only)."""
@@ -2380,7 +2380,7 @@ def discussion_toggle_pin(request, course_slug, discussion_slug):
     return redirect('instructor:discussions', course_slug=course.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_toggle_lock(request, course_slug, discussion_slug):
     """Toggle locked status (POST only)."""
@@ -2396,7 +2396,7 @@ def discussion_toggle_lock(request, course_slug, discussion_slug):
     return redirect('instructor:discussions', course_slug=course.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_delete(request, course_slug, discussion_slug):
     """Delete a discussion and all replies (POST only)."""
@@ -2410,7 +2410,7 @@ def discussion_delete(request, course_slug, discussion_slug):
     return redirect('instructor:discussions', course_slug=course.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
     """Mark / unmark a reply as the solution (POST only)."""
@@ -2436,7 +2436,7 @@ def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
                     course_slug=course.slug, discussion_slug=discussion.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def reply_delete(request, course_slug, discussion_slug, reply_id):
     """Delete a specific reply (POST only)."""
@@ -2459,7 +2459,7 @@ from django.http import JsonResponse
 # AJAX: return course details (code, academic session) for a given course pk
 # Used by the Create Assessment page to auto-populate locked fields.
 # ─────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def ajax_course_details(request):
     """
@@ -2681,7 +2681,7 @@ def _parse_exam_questions_from_file(upload_file, exam, user):
 # ─────────────────────────────────────────────────────────────────────────────
 # UNIFIED CREATE ASSESSMENT  (quiz / assignment / exam — all on one page)
 # ─────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def create_assessment(request):
     """
@@ -2914,7 +2914,7 @@ def create_assessment(request):
 # ─────────────────────────────────────────────────────────────────────────────
 # AJAX: lessons for a given course (needed to pick lesson on quiz/assignment)
 # ─────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def ajax_course_lessons(request):
     """
@@ -2940,7 +2940,7 @@ import uuid as _uuid
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM LIST
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def exam_list(request):
     """List all exams created by this instructor with filtering & search."""
@@ -2982,7 +2982,7 @@ def exam_list(request):
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM DETAIL  (overview / edit / questions / results tabs)
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def exam_detail(request, slug):
     """Single exam — tabbed view: overview, edit, questions, results."""
@@ -3018,7 +3018,7 @@ def exam_detail(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM UPDATE  (POST from the Edit Details tab)
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def exam_update(request, slug):
     """Handle POST from the Edit Details tab on exam_detail."""
@@ -3098,7 +3098,7 @@ def exam_update(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM SUBMIT  (draft / rejected → submitted)
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def exam_submit(request, slug):
@@ -3131,7 +3131,7 @@ def exam_submit(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM PUBLISH  (approved → published)
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def exam_publish(request, slug):
@@ -3157,7 +3157,7 @@ def exam_publish(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM QUESTION: CREATE
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def exam_question_create(request, slug):
     """Add a new question to the exam question pool."""
@@ -3184,7 +3184,7 @@ def exam_question_create(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM QUESTION: EDIT
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def exam_question_edit(request, slug, question_id):
     """Edit an existing exam question."""
@@ -3210,7 +3210,7 @@ def exam_question_edit(request, slug, question_id):
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM QUESTION: DELETE
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def exam_question_delete(request, slug, question_id):
@@ -3232,7 +3232,7 @@ def exam_question_delete(request, slug, question_id):
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM QUESTION IMPORT  (docx / xlsx → ExamQuestion rows)
 # ──────────────────────────────────────────────────────────────────────────────
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def exam_import_questions(request, slug):

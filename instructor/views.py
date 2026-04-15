@@ -124,7 +124,6 @@ def course_list(request):
 
     return render(request, 'instructor/course_list.html', {
         'courses': courses,
-        'course': courses.first(),   # sidebar uses this as the default active course
     })
 
 @login_required(login_url='auth')
@@ -238,14 +237,13 @@ def course_manage(request, slug=None):
         status='submitted'
     ).count()
  
-    # Students NOT yet enrolled — for the enrol modal dropdown
+    # Students NOT yet enrolled — only users with role='student'
     enrolled_ids = enrollments.values_list('student_id', flat=True)
     available_students = User.objects.filter(
-        is_active=True
+        is_active=True,
+        profile__role='student'
     ).exclude(
         id__in=enrolled_ids
-    ).exclude(
-        id=request.user.id
     ).order_by('first_name', 'last_name')
  
     # ── TAB: announcements ────────────────────────────────────────────────
@@ -344,6 +342,10 @@ def course_edit(request, slug):
                 request,
                 f'Course "{course.title}" updated successfully!'
             )
+            # If the POST came from the manage page, go back there
+            next_url = request.POST.get('next') or request.META.get('HTTP_REFERER', '')
+            if 'manage' in next_url:
+                return redirect(f"{reverse('instructor:course_manage', kwargs={'slug': course.slug})}?tab=overview")
             return redirect('instructor:course_edit', slug=course.slug)
     else:
         form = CourseForm(instance=course)
@@ -1167,7 +1169,7 @@ def enroll_student(request, course_slug):
         send_welcome = request.POST.get('send_welcome_email') == 'on'
         
         try:
-            student = User.objects.get(id=student_id)
+            student = User.objects.get(id=student_id, profile__role='student', is_active=True)
             
             # Check if already enrolled
             if Enrollment.objects.filter(
@@ -1582,51 +1584,48 @@ def reviews_ratings(request):
 @instructor_required
 def resources(request):
     """
-    Pool and display all resources from courses
+    Pool and display all resources from courses assigned to this instructor
+    that already have content (lessons) created for them.
+    Supports tab-based pagination via ?videos_page=, ?docs_page=, ?assignments_page=
     """
-    # Get all courses for this instructor
+    import re
+
+    ITEMS_PER_PAGE = 10
+
+    # Only courses assigned to this instructor that have at least one lesson
     instructor_courses = LMSCourse.objects.filter(
         instructor=request.user
     ).prefetch_related(
         'lessons',
         'lessons__assignments'
+    ).annotate(
+        lesson_count=Count('lessons')
+    ).filter(
+        lesson_count__gt=0          # only courses with content created
     )
-    
-    # Pool resources from lessons
-    lesson_videos = []
-    lesson_docs = []
-
-    import re
 
     def extract_youtube_url(raw):
-        """
-        Accepts either a plain URL or an iframe embed snippet and always
-        returns a clean https://www.youtube.com/watch?v=... URL, or None.
-        """
-        # Already a plain URL — return as-is
         if raw.strip().startswith('http'):
-            # Normalise embed URLs → watch URLs
             raw = raw.strip()
             match = re.search(r'youtube\.com/embed/([a-zA-Z0-9_-]+)', raw)
             if match:
                 return f'https://www.youtube.com/watch?v={match.group(1)}'
-            return raw  # e.g. already a watch URL or youtu.be link
-
-        # It's an iframe snippet — pull the src attribute
+            return raw
         match = re.search(r'src=["\']([^"\']+)["\']', raw)
         if match:
             src = match.group(1)
-            # Convert embed URL → watch URL
             vid_match = re.search(r'youtube\.com/embed/([a-zA-Z0-9_-]+)', src)
             if vid_match:
                 return f'https://www.youtube.com/watch?v={vid_match.group(1)}'
-            return src  # fallback: return the src as-is
-
+            return src
         return None
+
+    lesson_videos = []
+    lesson_docs = []
+    assignment_files = []
 
     for course in instructor_courses:
         for lesson in course.lessons.all():
-            # Videos
             if lesson.video_url:
                 clean_url = extract_youtube_url(lesson.video_url)
                 if clean_url:
@@ -1635,10 +1634,8 @@ def resources(request):
                         'lesson': lesson,
                         'url': clean_url,
                         'type': 'video',
-                        'uploaded': lesson.created_at
+                        'uploaded': lesson.created_at,
                     })
-            
-            # Documents
             if lesson.file:
                 lesson_docs.append({
                     'course': course,
@@ -1646,13 +1643,8 @@ def resources(request):
                     'file': lesson.file,
                     'name': lesson.file.name.split('/')[-1],
                     'type': 'document',
-                    'uploaded': lesson.created_at
+                    'uploaded': lesson.created_at,
                 })
-    
-    # Pool assignment files
-    assignment_files = []
-    for course in instructor_courses:
-        for lesson in course.lessons.all():
             for assignment in lesson.assignments.all():
                 if assignment.attachment:
                     assignment_files.append({
@@ -1662,25 +1654,34 @@ def resources(request):
                         'file': assignment.attachment,
                         'name': assignment.attachment.name.split('/')[-1],
                         'type': 'assignment',
-                        'uploaded': assignment.created_at
+                        'uploaded': assignment.created_at,
                     })
-    
-    # Statistics
+
+    # ── Pagination per tab ────────────────────────────────────────────────
+    def paginate(items, page_param):
+        paginator = Paginator(items, ITEMS_PER_PAGE)
+        page_num  = request.GET.get(page_param, 1)
+        return paginator.get_page(page_num)
+
+    videos_page      = paginate(lesson_videos,     'videos_page')
+    docs_page        = paginate(lesson_docs,        'docs_page')
+    assignments_page = paginate(assignment_files,   'assignments_page')
+
     stats = {
-        'total_videos': len(lesson_videos),
-        'total_docs': len(lesson_docs),
+        'total_videos':      len(lesson_videos),
+        'total_docs':        len(lesson_docs),
         'total_assignments': len(assignment_files),
-        'total_courses': instructor_courses.count(),
+        'total_courses':     instructor_courses.count(),
     }
-    
+
     context = {
-        'lesson_videos': lesson_videos,
-        'lesson_docs': lesson_docs,
-        'assignment_files': assignment_files,
-        'stats': stats,
-        'courses': instructor_courses,
+        'lesson_videos':     videos_page,
+        'lesson_docs':       docs_page,
+        'assignment_files':  assignments_page,
+        'stats':             stats,
+        'courses':           instructor_courses,
     }
-    
+
     return render(request, 'instructor/resources.html', context)
 
 # ==================== PROFILE VIEW ====================
@@ -3026,8 +3027,12 @@ def exam_update(request, slug):
     if request.method != 'POST':
         return redirect('instructor:exam_detail', slug=exam.slug)
  
-    # If published or submitted, revert to draft
-    if exam.status in (Exam.PUBLISHED, Exam.SUBMITTED, Exam.APPROVED):
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'A published exam can no longer be edited.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+
+    # If submitted or approved, revert to draft
+    if exam.status in (Exam.SUBMITTED, Exam.APPROVED):
         old_status   = exam.status
         exam.status  = Exam.DRAFT
         _write_exam_log(exam, from_status=old_status, to_status=Exam.DRAFT,
@@ -3157,6 +3162,10 @@ def exam_publish(request, slug):
 def exam_question_create(request, slug):
     """Add a new question to the exam question pool."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
+
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'Cannot modify questions for a published exam.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
  
     if request.method == 'POST':
         error = _save_exam_question(request, exam, question=None)
@@ -3181,6 +3190,10 @@ def exam_question_edit(request, slug, question_id):
     """Edit an existing exam question."""
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
     question = get_object_or_404(ExamQuestion, pk=question_id, exam=exam)
+
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'Cannot modify questions for a published exam.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
  
     if request.method == 'POST':
         error = _save_exam_question(request, exam, question=question)
@@ -3203,6 +3216,11 @@ def exam_question_edit(request, slug, question_id):
 def exam_question_delete(request, slug, question_id):
     """Soft-delete (deactivate) an exam question."""
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
+
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'Cannot modify questions for a published exam.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+
     question = get_object_or_404(ExamQuestion, pk=question_id, exam=exam)
     question.is_active = False
     question.save(update_fields=['is_active'])
@@ -3220,6 +3238,11 @@ def exam_question_delete(request, slug, question_id):
 def exam_import_questions(request, slug):
     """Accept a .docx or .xlsx upload and parse questions into the DB."""
     exam        = get_object_or_404(Exam, slug=slug, instructor=request.user)
+
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'Cannot import questions for a published exam.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+
     import_file = request.FILES.get('question_import_file')
  
     if not import_file:

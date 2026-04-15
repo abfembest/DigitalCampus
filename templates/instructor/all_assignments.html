@@ -4,68 +4,177 @@
 {% block content %}
 <div class="px-2 sm:px-0">
 
-    <div class="mb-6 sm:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">All Assignments</h1>
-        <p class="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Manage all assignments across your courses</p>
+    <div class="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">All Assignments</h1>
+            <p class="text-sm sm:text-base text-gray-600 mt-1">Manage all assignments across your courses</p>
+        </div>
     </div>
 
     {% if assignments %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-        {% for assignment in assignments %}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 
-            <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-4 sm:p-6 border-b border-blue-200">
-                <div class="flex items-start justify-between gap-3 mb-2 sm:mb-3">
-                    <div class="flex-1 min-w-0">
-                        <h3 class="font-bold text-base sm:text-lg text-gray-900 mb-1 truncate">{{ assignment.title }}</h3>
-                        <p class="text-xs sm:text-sm text-gray-600 truncate">
-                            <i class="fas fa-book-open mr-1"></i>{{ assignment.lesson.title }}
-                        </p>
-                        <p class="text-xs text-gray-500 mt-0.5 truncate">
-                            <i class="fas fa-graduation-cap mr-1"></i>{{ assignment.lesson.course.title }}
-                        </p>
-                    </div>
-                    <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if assignment.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                        {% if assignment.is_active %}Active{% else %}Inactive{% endif %}
-                    </span>
-                </div>
+        <!-- Table Controls -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <!-- Search -->
+            <div class="relative w-full sm:w-72">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <i class="fas fa-search text-xs"></i>
+                </span>
+                <input
+                    id="asgn-search"
+                    type="text"
+                    placeholder="Search assignments…"
+                    class="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    oninput="filterAsgnTable()"
+                />
             </div>
-
-            <div class="p-4 sm:p-6 flex flex-col flex-1">
-                <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
-                    <div>
-                        <p class="text-xs text-gray-600">Max Score</p>
-                        <p class="text-lg sm:text-xl font-bold text-gray-900">{{ assignment.max_score }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-600">Passing Score</p>
-                        <p class="text-lg sm:text-xl font-bold text-gray-900">{{ assignment.passing_score }}</p>
-                    </div>
-                    <div class="col-span-2">
-                        <p class="text-xs text-gray-600">Due Date</p>
-                        <p class="text-xs sm:text-sm font-semibold text-gray-900">{{ assignment.due_date|date:"M d, Y H:i" }}</p>
-                        {% if assignment.is_overdue %}
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-800 mt-1">
-                            <i class="fas fa-exclamation-circle mr-1"></i> Overdue
-                        </span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="space-y-1.5 sm:space-y-2 mt-auto">
-                    <a href="{% url 'instructor:assignment_submissions' assignment.lesson.course.slug assignment.slug %}"
-                       class="block w-full text-center px-3 sm:px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition text-xs sm:text-sm font-medium">
-                        <i class="fas fa-clipboard-check mr-1.5"></i> View Submissions
-                    </a>
-                    <a href="{% url 'instructor:assignment_edit' assignment.lesson.course.slug assignment.lesson.slug assignment.slug %}"
-                       class="block w-full text-center px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-xs sm:text-sm font-medium">
-                        <i class="fas fa-edit mr-1.5"></i> Edit Assignment
-                    </a>
-                </div>
-            </div>
-
+            <!-- Row count -->
+            <p id="asgn-count" class="text-xs text-gray-500 whitespace-nowrap">
+                Showing <span id="asgn-visible">{{ assignments|length }}</span> of {{ assignments|length }} assignments
+            </p>
         </div>
-        {% endfor %}
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm" id="asgn-table">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group"
+                            onclick="sortAsgnTable(0, this)">
+                            <span class="flex items-center gap-1">
+                                Assignment Title
+                                <span class="sort-icon text-gray-300 group-hover:text-gray-500 transition-colors"><i class="fas fa-sort"></i></span>
+                            </span>
+                        </th>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group"
+                            onclick="sortAsgnTable(1, this)">
+                            <span class="flex items-center gap-1">
+                                Lesson
+                                <span class="sort-icon text-gray-300 group-hover:text-gray-500 transition-colors"><i class="fas fa-sort"></i></span>
+                            </span>
+                        </th>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group hidden sm:table-cell"
+                            onclick="sortAsgnTable(2, this)">
+                            <span class="flex items-center gap-1">
+                                Course
+                                <span class="sort-icon text-gray-300 group-hover:text-gray-500 transition-colors"><i class="fas fa-sort"></i></span>
+                            </span>
+                        </th>
+                        <th class="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group hidden md:table-cell"
+                            onclick="sortAsgnTable(3, this)">
+                            <span class="flex items-center justify-center gap-1">
+                                Max Score
+                                <span class="sort-icon text-gray-300 group-hover:text-gray-500 transition-colors"><i class="fas fa-sort"></i></span>
+                            </span>
+                        </th>
+                        <th class="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group hidden md:table-cell"
+                            onclick="sortAsgnTable(4, this)">
+                            <span class="flex items-center justify-center gap-1">
+                                Pass Score
+                                <span class="sort-icon text-gray-300 group-hover:text-gray-500 transition-colors"><i class="fas fa-sort"></i></span>
+                            </span>
+                        </th>
+                        <th class="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group"
+                            onclick="sortAsgnTable(5, this)">
+                            <span class="flex items-center gap-1">
+                                Due Date
+                                <span class="sort-icon text-gray-300 group-hover:text-gray-500 transition-colors"><i class="fas fa-sort"></i></span>
+                            </span>
+                        </th>
+                        <th class="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group"
+                            onclick="sortAsgnTable(6, this)">
+                            <span class="flex items-center justify-center gap-1">
+                                Status
+                                <span class="sort-icon text-gray-300 group-hover:text-gray-500 transition-colors"><i class="fas fa-sort"></i></span>
+                            </span>
+                        </th>
+                        <th class="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100" id="asgn-tbody">
+                    {% for assignment in assignments %}
+                    <tr class="hover:bg-blue-50 transition-colors duration-100 asgn-row">
+                        <!-- Title -->
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 max-w-[180px]">
+                            <span class="block truncate" title="{{ assignment.title }}">{{ assignment.title }}</span>
+                        </td>
+                        <!-- Lesson -->
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-gray-600 max-w-[160px]">
+                            <span class="block truncate" title="{{ assignment.lesson.title }}">{{ assignment.lesson.title }}</span>
+                        </td>
+                        <!-- Course -->
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-gray-500 max-w-[160px] hidden sm:table-cell">
+                            <span class="block truncate" title="{{ assignment.lesson.course.title }}">{{ assignment.lesson.course.title }}</span>
+                        </td>
+                        <!-- Max score -->
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-center hidden md:table-cell">
+                            <span class="inline-flex items-center justify-center w-10 h-8 rounded-lg bg-blue-100 text-blue-800 font-bold text-sm">
+                                {{ assignment.max_score }}
+                            </span>
+                        </td>
+                        <!-- Passing score -->
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-center hidden md:table-cell">
+                            <span class="text-gray-700 font-semibold">{{ assignment.passing_score }}</span>
+                        </td>
+                        <!-- Due date -->
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-gray-600">
+                            <span class="block text-xs sm:text-sm whitespace-nowrap">{{ assignment.due_date|date:"M d, Y" }}</span>
+                            <span class="block text-xs text-gray-400">{{ assignment.due_date|date:"H:i" }}</span>
+                            {% if assignment.is_overdue %}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 mt-0.5">
+                                <i class="fas fa-exclamation-circle mr-1 text-xs"></i>Overdue
+                            </span>
+                            {% endif %}
+                        </td>
+                        <!-- Status -->
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if assignment.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                {% if assignment.is_active %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>Active
+                                {% else %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1.5"></span>Inactive
+                                {% endif %}
+                            </span>
+                        </td>
+                        <!-- Actions -->
+                        <td class="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="{% url 'instructor:assignment_submissions' assignment.lesson.course.slug assignment.slug %}"
+                                   title="View Submissions"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition text-xs font-medium whitespace-nowrap">
+                                    <i class="fas fa-clipboard-check text-xs"></i>
+                                    <span class="hidden sm:inline">Submissions</span>
+                                </a>
+                                <a href="{% url 'instructor:assignment_edit' assignment.lesson.course.slug assignment.lesson.slug assignment.slug %}"
+                                   title="Edit Assignment"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-xs font-medium whitespace-nowrap">
+                                    <i class="fas fa-edit text-xs"></i>
+                                    <span class="hidden sm:inline">Edit</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty search state -->
+        <div id="asgn-empty-search" class="hidden text-center py-12 text-gray-500">
+            <i class="fas fa-search text-3xl text-gray-300 mb-3 block"></i>
+            <p class="font-medium text-gray-700">No assignments match your search</p>
+            <p class="text-sm mt-1">Try a different keyword</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-4 sm:px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+            <span>Total: {{ assignments|length }} assignment{{ assignments|length|pluralize }}</span>
+            <span class="text-gray-400">Click column headers to sort</span>
+        </div>
     </div>
 
     {% else %}
@@ -85,4 +194,64 @@
     {% endif %}
 
 </div>
+
+<script>
+(function () {
+    let asgnSortCol = -1;
+    let asgnSortAsc = true;
+
+    window.filterAsgnTable = function () {
+        const q = document.getElementById('asgn-search').value.toLowerCase();
+        const rows = document.querySelectorAll('#asgn-tbody .asgn-row');
+        let visible = 0;
+        rows.forEach(row => {
+            const match = row.textContent.toLowerCase().includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        document.getElementById('asgn-visible').textContent = visible;
+        document.getElementById('asgn-empty-search').classList.toggle('hidden', visible > 0);
+    };
+
+    window.sortAsgnTable = function (colIdx, th) {
+        const tbody = document.getElementById('asgn-tbody');
+        const rows = Array.from(tbody.querySelectorAll('.asgn-row'));
+
+        if (asgnSortCol === colIdx) {
+            asgnSortAsc = !asgnSortAsc;
+        } else {
+            asgnSortCol = colIdx;
+            asgnSortAsc = true;
+        }
+
+        // Reset all icons
+        document.querySelectorAll('#asgn-table thead .sort-icon').forEach(el => {
+            el.innerHTML = '<i class="fas fa-sort"></i>';
+            el.classList.remove('text-primary-600');
+            el.classList.add('text-gray-300');
+        });
+        const icon = th.querySelector('.sort-icon');
+        icon.innerHTML = asgnSortAsc
+            ? '<i class="fas fa-sort-up"></i>'
+            : '<i class="fas fa-sort-down"></i>';
+        icon.classList.add('text-primary-600');
+        icon.classList.remove('text-gray-300');
+
+        rows.sort((a, b) => {
+            const cellA = a.cells[colIdx]?.textContent.trim() ?? '';
+            const cellB = b.cells[colIdx]?.textContent.trim() ?? '';
+            const numA = parseFloat(cellA);
+            const numB = parseFloat(cellB);
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return asgnSortAsc ? numA - numB : numB - numA;
+            }
+            return asgnSortAsc
+                ? cellA.localeCompare(cellB)
+                : cellB.localeCompare(cellA);
+        });
+
+        rows.forEach(r => tbody.appendChild(r));
+    };
+})();
+</script>
 {% endblock %}

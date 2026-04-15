@@ -125,6 +125,29 @@
                 <p class="text-gray-500 text-sm sm:text-base">No videos uploaded yet</p>
             </div>
             {% endif %}
+
+            {% if lesson_videos.paginator.num_pages > 1 %}
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                <p class="text-xs text-gray-500">
+                    Page {{ lesson_videos.number }} of {{ lesson_videos.paginator.num_pages }}
+                    &mdash; {{ lesson_videos.paginator.count }} video{{ lesson_videos.paginator.count|pluralize }}
+                </p>
+                <div class="flex gap-2">
+                    {% if lesson_videos.has_previous %}
+                    <a href="?videos_page={{ lesson_videos.previous_page_number }}"
+                       class="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+                        &larr; Prev
+                    </a>
+                    {% endif %}
+                    {% if lesson_videos.has_next %}
+                    <a href="?videos_page={{ lesson_videos.next_page_number }}"
+                       class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        Next &rarr;
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Documents Tab -->
@@ -162,6 +185,29 @@
             <div class="text-center py-10 sm:py-12">
                 <i class="fas fa-file-alt text-gray-300 text-4xl sm:text-5xl mb-3 sm:mb-4 block"></i>
                 <p class="text-gray-500 text-sm sm:text-base">No documents uploaded yet</p>
+            </div>
+            {% endif %}
+
+            {% if lesson_docs.paginator.num_pages > 1 %}
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                <p class="text-xs text-gray-500">
+                    Page {{ lesson_docs.number }} of {{ lesson_docs.paginator.num_pages }}
+                    &mdash; {{ lesson_docs.paginator.count }} document{{ lesson_docs.paginator.count|pluralize }}
+                </p>
+                <div class="flex gap-2">
+                    {% if lesson_docs.has_previous %}
+                    <a href="?docs_page={{ lesson_docs.previous_page_number }}"
+                       class="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+                        &larr; Prev
+                    </a>
+                    {% endif %}
+                    {% if lesson_docs.has_next %}
+                    <a href="?docs_page={{ lesson_docs.next_page_number }}"
+                       class="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        Next &rarr;
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
         </div>
@@ -204,6 +250,29 @@
             <div class="text-center py-10 sm:py-12">
                 <i class="fas fa-tasks text-gray-300 text-4xl sm:text-5xl mb-3 sm:mb-4 block"></i>
                 <p class="text-gray-500 text-sm sm:text-base">No assignment files uploaded yet</p>
+            </div>
+            {% endif %}
+
+            {% if assignment_files.paginator.num_pages > 1 %}
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                <p class="text-xs text-gray-500">
+                    Page {{ assignment_files.number }} of {{ assignment_files.paginator.num_pages }}
+                    &mdash; {{ assignment_files.paginator.count }} file{{ assignment_files.paginator.count|pluralize }}
+                </p>
+                <div class="flex gap-2">
+                    {% if assignment_files.has_previous %}
+                    <a href="?assignments_page={{ assignment_files.previous_page_number }}"
+                       class="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+                        &larr; Prev
+                    </a>
+                    {% endif %}
+                    {% if assignment_files.has_next %}
+                    <a href="?assignments_page={{ assignment_files.next_page_number }}"
+                       class="px-3 py-1.5 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                        Next &rarr;
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
         </div>

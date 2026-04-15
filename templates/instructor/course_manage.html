@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <style>
-/* Form input base style */
+/* ── Form inputs ───────────────────────────────────────────── */
 .fm-input {
     width: 100%;
     padding: .5rem .875rem;
@@ -15,32 +15,28 @@
     outline: none;
     transition: border-color .2s, box-shadow .2s;
     background: #fff;
+    color: #111827;
 }
 .fm-input:focus {
     border-color: #4a6bff;
-    box-shadow: 0 0 0 3px rgba(74, 107, 255, .1);
+    box-shadow: 0 0 0 3px rgba(74,107,255,.1);
 }
-textarea.fm-input { min-height: 80px; resize: vertical; }
-input[type="checkbox"].fm-check {
-    width: 1rem; height: 1rem;
-    accent-color: #4a6bff; cursor: pointer;
-}
-input[type="file"].fm-file { font-size: .8rem; }
+textarea.fm-input  { min-height: 80px; resize: vertical; }
+input[type="checkbox"].fm-check { width:1rem; height:1rem; accent-color:#4a6bff; cursor:pointer; }
+input[type="file"].fm-file      { font-size:.8rem; }
 
-/* Course-switcher bar */
+/* ── Switcher bar ──────────────────────────────────────────── */
 .switcher-bar {
-    background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
-    border-radius: .75rem .75rem 0 0;
+    background: linear-gradient(135deg,#1e3a8a 0%,#3730a3 100%);
 }
 
-/* Tab strip */
+/* ── Tab strip ─────────────────────────────────────────────── */
 .tab-strip {
-    background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+    background: linear-gradient(135deg,#1e3a8a 0%,#3730a3 100%);
     overflow-x: auto;
     scrollbar-width: none;
 }
-.tab-strip::-webkit-scrollbar { display: none; }
-
+.tab-strip::-webkit-scrollbar { display:none; }
 .tab-btn {
     display: inline-flex;
     align-items: center;
@@ -49,25 +45,25 @@ input[type="file"].fm-file { font-size: .8rem; }
     border-radius: .5rem .5rem 0 0;
     font-size: .75rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, .65);
-    border: none;
+    color: rgba(255,255,255,.65);
     background: transparent;
+    border: none;
     cursor: pointer;
     transition: color .2s, background .2s;
     white-space: nowrap;
     flex-shrink: 0;
 }
-.tab-btn:hover { color: #fff; background: rgba(255, 255, 255, .1); }
-.tab-btn.active { color: #1e3a8a !important; background: #fff; }
+.tab-btn:hover  { color:#fff; background:rgba(255,255,255,.1); }
+.tab-btn.active { color:#1e3a8a !important; background:#fff; }
 
-/* Tab panes */
-.tab-pane { display: none; }
-.tab-pane.active { display: block; }
+/* ── Tab panes ─────────────────────────────────────────────── */
+.tab-pane        { display:none; }
+.tab-pane.active { display:block; }
 
-/* Section card accent */
-.section-card { border-left: 4px solid #4a6bff; }
+/* ── Section accent ────────────────────────────────────────── */
+.section-card { border-left:4px solid #4a6bff; }
 
-/* Assessment sub-tabs */
+/* ── Assessment sub-tabs ───────────────────────────────────── */
 .qtab-btn {
     display: inline-flex;
     align-items: center;
@@ -82,15 +78,15 @@ input[type="file"].fm-file { font-size: .8rem; }
     cursor: pointer;
     transition: all .15s;
 }
-.qtab-btn.active { background: #4a6bff; color: #fff; border-color: #4a6bff; }
-.qtab-pane { display: none; }
-.qtab-pane.active { display: block; }
+.qtab-btn.active  { background:#4a6bff; color:#fff; border-color:#4a6bff; }
+.qtab-pane        { display:none; }
+.qtab-pane.active { display:block; }
 
-/* Modal overlay */
+/* ── Modal ──────────────────────────────────────────────────── */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, .5);
+    background: rgba(0,0,0,.5);
     z-index: 1000;
     display: none;
     align-items: center;
@@ -98,7 +94,7 @@ input[type="file"].fm-file { font-size: .8rem; }
     padding: 1rem;
     overflow-y: auto;
 }
-.modal-overlay.open { display: flex; }
+.modal-overlay.open { display:flex; }
 .modal-box {
     background: #fff;
     border-radius: 1rem;
@@ -106,17 +102,17 @@ input[type="file"].fm-file { font-size: .8rem; }
     max-width: 680px;
     max-height: 92vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
     animation: modalIn .18s ease;
     margin: auto;
 }
-.modal-box-sm { max-width: 480px; }
+.modal-box-sm { max-width:480px; }
 @keyframes modalIn {
-    from { opacity: 0; transform: scale(.97) translateY(8px); }
-    to { opacity: 1; transform: none; }
+    from { opacity:0; transform:scale(.97) translateY(8px); }
+    to   { opacity:1; transform:none; }
 }
 
-/* Stat card */
+/* ── Stat card ──────────────────────────────────────────────── */
 .stat-card {
     background: #fff;
     border-radius: .75rem;
@@ -125,82 +121,103 @@ input[type="file"].fm-file { font-size: .8rem; }
     text-align: center;
 }
 
-/* DataTables tweaks */
+/* ── DataTables tweaks ──────────────────────────────────────── */
 .dataTables_wrapper .dataTables_filter input,
 .dataTables_wrapper .dataTables_length select {
-    border: 1px solid #D1D5DB;
-    border-radius: .5rem;
-    padding: .4rem .75rem;
-    font-size: .875rem;
-    outline: none;
+    border:1px solid #D1D5DB; border-radius:.5rem;
+    padding:.4rem .75rem; font-size:.875rem; outline:none;
 }
 .dataTables_wrapper .dataTables_paginate .paginate_button {
-    padding: .35rem .6rem;
-    margin: 0 .1rem;
-    border: 1px solid #D1D5DB;
-    border-radius: .5rem;
-    font-size: .78rem;
-    font-weight: 500;
-    color: #374151 !important;
-    background: #fff !important;
-    cursor: pointer;
+    padding:.35rem .6rem; margin:0 .1rem;
+    border:1px solid #D1D5DB; border-radius:.5rem;
+    font-size:.78rem; font-weight:500;
+    color:#374151 !important; background:#fff !important; cursor:pointer;
 }
 .dataTables_wrapper .dataTables_paginate .paginate_button.current,
 .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
-    background: #4a6bff !important;
-    border-color: #4a6bff !important;
-    color: #fff !important;
+    background:#4a6bff !important; border-color:#4a6bff !important; color:#fff !important;
 }
 
-/* Answer row for question modal */
+/* ── Answer row ─────────────────────────────────────────────── */
 .answer-row {
-    display: flex;
-    align-items: center;
-    gap: .65rem;
-    padding: .5rem .65rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: .45rem;
+    display:flex; align-items:center; gap:.65rem;
+    padding:.5rem .65rem;
+    background:#f9fafb; border:1px solid #e5e7eb; border-radius:.45rem;
 }
 
-/* Status badge helpers */
-.badge { display: inline-flex; align-items: center; padding: .15rem .55rem; border-radius: 9999px; font-size: .68rem; font-weight: 600; }
+/* ── Badge helper ───────────────────────────────────────────── */
+.badge {
+    display:inline-flex; align-items:center;
+    padding:.15rem .55rem; border-radius:9999px;
+    font-size:.68rem; font-weight:600;
+}
+
+/* ── Course switcher select ─────────────────────────────────── */
+#courseSwitcher {
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: .5rem;
+    padding: .4rem .75rem;
+    font-size: .8rem;
+    font-weight: 500;
+    outline: none;
+    min-width: 220px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right .65rem center;
+    padding-right: 2rem;
+}
+#courseSwitcher option { background:#1e3a8a; color:#fff; }
+#courseSwitcher:focus  { box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Course Switcher Bar -->
-<div class="switcher-bar px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm">
-    <div class="flex items-center gap-2.5 flex-1 min-w-0">
-        <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+<div class="switcher-bar rounded-t-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm">
+
+    {# Current course identity #}
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-inner">
             <i class="fas fa-book-open text-white text-lg"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-white/60 text-xs">Managing course</p>
-            <p class="text-white font-bold text-lg truncate">{{ course.title }}</p>
+            <p class="text-white/60 text-xs font-medium">Managing course</p>
+            <p class="text-white font-bold text-base sm:text-lg truncate leading-tight">{{ course.title }}</p>
+            {% if course.code %}<p class="text-white/50 text-xs font-mono mt-0.5">{{ course.code }}</p>{% endif %}
         </div>
     </div>
-    <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
-        <label class="text-white/60 text-xs whitespace-nowrap hidden sm:inline">Switch:</label>
-        <select id="courseSwitcher"
-                class="text-lg rounded-lg border-0 text-white px-3 py-1.5 outline-none cursor-pointer"
-                style="background: rgba(255,255,255,.18); min-width: 160px;">
-            {% for c in all_courses %}
-            <option value="{{ c.slug }}"
-                    {% if c.slug == course.slug %}selected{% endif %}
-                    style="background:#1e3a8a; color:#fff;">{{ c.title|truncatechars:38 }}</option>
-            {% endfor %}
-        </select>
-        {% comment %} <a href="{% url 'instructor:course_create' %}"
-           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-primary-700 text-xs font-semibold rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
-            <i class="fas fa-plus"></i> New Course
-        </a> {% endcomment %}
+
+    {# Switcher + quick status badges #}
+    <div class="flex flex-wrap items-center gap-3 flex-shrink-0">
+        {% if course.is_published %}
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-green-400/20 text-green-200 rounded-full border border-green-400/30">
+            <span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span>Published
+        </span>
+        {% else %}
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-white/10 text-white/60 rounded-full border border-white/20">
+            <span class="w-1.5 h-1.5 bg-white/40 rounded-full"></span>Draft
+        </span>
+        {% endif %}
+
+        <div class="flex items-center gap-2">
+            <label class="text-white/50 text-xs whitespace-nowrap hidden sm:block">Switch course:</label>
+            <select id="courseSwitcher" title="Switch course">
+                {% for c in all_courses %}
+                <option value="{{ c.slug }}" {% if c.slug == course.slug %}selected{% endif %}>
+                    {% if c.code %}{{ c.code }} — {% endif %}{{ c.title|truncatechars:40 }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
 </div>
 
-<!-- Tab Strip -->
-<div class="tab-strip px-2 shadow-sm">
+<div class="tab-strip px-2">
     <div class="flex gap-0.5 min-w-max">
         <button class="tab-btn {% if active_tab == 'overview' %}active{% endif %}" data-tab="overview">
             <i class="fas fa-home text-xs"></i><span>Overview</span>
@@ -225,15 +242,13 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Main Content Card -->
 <div class="bg-white rounded-b-xl shadow-sm border border-gray-200 border-t-0 p-4 sm:p-6">
 
-<!-- Inline form error banner — shown when course edit POST fails -->
 {% if course_form.errors %}
 <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
     <i class="fas fa-exclamation-circle text-red-500 flex-shrink-0 mt-0.5"></i>
     <div>
-        <p class="text-lg font-semibold text-red-700 mb-1">Please fix the following errors:</p>
+        <p class="text-sm font-semibold text-red-700 mb-1">Please fix the following errors:</p>
         {% for field in course_form %}
             {% for error in field.errors %}
             <p class="text-xs text-red-600">• {{ field.label }}: {{ error }}</p>
@@ -246,228 +261,240 @@ input[type="file"].fm-file { font-size: .8rem; }
 </div>
 {% endif %}
 
-<!-- ===================== OVERVIEW TAB ===================== -->
 <div class="tab-pane {% if active_tab == 'overview' %}active{% endif %}" id="tab-overview">
 
-    <!-- Stats row -->
-    <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <div class="stat-card">
-            <p class="text-2xl sm:text-3xl font-bold text-primary-600">{{ stats.total_students }}</p>
-            <p class="text-xs text-gray-500 mt-0.5">Students</p>
+    {# Stats row #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div class="stat-card bg-blue-50 border-blue-100">
+            <p class="text-2xl font-bold text-blue-700">{{ stats.total_students }}</p>
+            <p class="text-xs text-blue-500 mt-0.5 font-medium">Students</p>
         </div>
-        <div class="stat-card">
-            <p class="text-2xl sm:text-3xl font-bold text-green-600">{{ stats.total_lessons }}</p>
-            <p class="text-xs text-gray-500 mt-0.5">Lessons</p>
+        <div class="stat-card bg-green-50 border-green-100">
+            <p class="text-2xl font-bold text-green-700">{{ stats.total_lessons }}</p>
+            <p class="text-xs text-green-500 mt-0.5 font-medium">Lessons</p>
         </div>
-        <div class="stat-card">
-            <p class="text-2xl sm:text-3xl font-bold text-purple-600">{{ stats.total_sections }}</p>
-            <p class="text-xs text-gray-500 mt-0.5">Sections</p>
+        <div class="stat-card bg-purple-50 border-purple-100">
+            <p class="text-2xl font-bold text-purple-700">{{ stats.total_sections }}</p>
+            <p class="text-xs text-purple-500 mt-0.5 font-medium">Sections</p>
+        </div>
+        <div class="stat-card bg-orange-50 border-orange-100">
+            <p class="text-2xl font-bold text-orange-700">{{ quiz_count|default:0 }}</p>
+            <p class="text-xs text-orange-500 mt-0.5 font-medium">Quizzes</p>
         </div>
     </div>
 
-    <!-- Course edit form — mirrors course_form.html field structure -->
-    <form method="post" action="{% url 'instructor:course_edit' course.slug %}" enctype="multipart/form-data" id="manageCourseForm">
-        {% csrf_token %}
-        <div class="mb-4 pb-3 border-b border-gray-200 flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
-                <i class="fas fa-edit text-primary-600 text-xs"></i>
-            </div>
-            <h2 class="text-lg font-bold text-gray-900">Course Details</h2>
-        </div>
+    {# Two-column layout: course info card + quick actions #}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        <!-- Academic Link -->
-        <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3 mb-4">
-            <label class="block text-xs font-semibold text-indigo-800 mb-1">
-                <i class="fas fa-university mr-1"></i> Link to Academic Course
-            </label>
-            <p class="text-xs text-indigo-600 mb-2">Leave blank for a <strong>standalone LMS course</strong>.</p>
-            {{ course_form.academic_course }}
-            {% if course_form.academic_course.errors %}<p class="mt-1 text-xs text-red-600">{{ course_form.academic_course.errors.0 }}</p>{% endif %}
-            <div id="mc-academic-linked-badge" class="hidden mt-2 inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
-                <i class="fas fa-link"></i> Academic course linked — code and title inherited.
-            </div>
-        </div>
+        {# Left: course snapshot #}
+        <div class="lg:col-span-2 space-y-4">
 
-        <!-- Basic Info -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Course Title <span class="text-red-500">*</span></label>
-                {{ course_form.title }}
-                {% if course_form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ course_form.title.errors.0 }}</p>{% endif %}
+            {# Meta info grid #}
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <p class="text-xs text-gray-400 font-medium mb-0.5">Difficulty</p>
+                    <p class="text-sm font-semibold text-gray-800 capitalize">{{ course.get_difficulty_level_display|default:"—" }}</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <p class="text-xs text-gray-400 font-medium mb-0.5">Duration</p>
+                    <p class="text-sm font-semibold text-gray-800">{{ course.duration_hours|default:"—" }} hrs</p>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <p class="text-xs text-gray-400 font-medium mb-0.5">Language</p>
+                    <p class="text-sm font-semibold text-gray-800">{{ course.language|default:"—" }}</p>
+                </div>
+                {% if course.promo_video_url %}
+                <div class="bg-purple-50 rounded-xl p-3 border border-purple-100 sm:col-span-3">
+                    <p class="text-xs text-purple-400 font-medium mb-0.5">Promo Video</p>
+                    <a href="{{ course.promo_video_url }}" target="_blank"
+                       class="text-xs text-purple-700 font-medium hover:underline truncate block">
+                        <i class="fas fa-play-circle mr-1"></i>{{ course.promo_video_url|truncatechars:55 }}
+                    </a>
+                </div>
+                {% endif %}
             </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Course Code</label>
-                {{ course_form.code }}
-                {% if course_form.code.errors %}<p class="mt-1 text-xs text-red-600">{{ course_form.code.errors.0 }}</p>{% endif %}
-            </div>
-            <div id="mc-wrap-category">
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
-                {{ course_form.category }}
-                {% if course_form.category.errors %}<p class="mt-1 text-xs text-red-600">{{ course_form.category.errors.0 }}</p>{% endif %}
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Difficulty Level</label>
-                {{ course_form.difficulty_level }}
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Duration (Hours)</label>
-                {{ course_form.duration_hours }}
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Language</label>
-                {{ course_form.language }}
-            </div>
-            <div class="sm:col-span-2">
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Short Description <span class="text-red-500">*</span></label>
-                {{ course_form.short_description }}
-                {% if course_form.short_description.errors %}<p class="mt-1 text-xs text-red-600">{{ course_form.short_description.errors.0 }}</p>{% endif %}
-            </div>
-            <div class="sm:col-span-2">
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Full Description <span class="text-red-500">*</span></label>
-                {{ course_form.description }}
-                {% if course_form.description.errors %}<p class="mt-1 text-xs text-red-600">{{ course_form.description.errors.0 }}</p>{% endif %}
-            </div>
-        </div>
 
-        <!-- Media -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 pt-3 border-t border-gray-100">
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Thumbnail</label>
-                {{ course_form.thumbnail }}
-                {% if course.thumbnail %}<img src="{{ course.thumbnail.url }}" class="mt-1.5 w-24 h-16 object-cover rounded-lg border border-gray-200">{% endif %}
+            {# Description #}
+            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Short Description</p>
+                <p class="text-sm text-gray-700 leading-relaxed">{{ course.short_description|default:"—" }}</p>
             </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Promo Video URL</label>
-                {{ course_form.promo_video_url }}
-            </div>
-        </div>
 
-        {% comment %} <!-- Enrollment Settings (hidden when academic-linked) -->
-        <div id="mc-wrap-enrollment" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 pt-3 border-t border-gray-100">
-            {% comment %} <div>
-                <p class="text-xs font-bold text-gray-600 uppercase tracking-wide">Enrollment Settings</p>
-            </div> {% endcomment 
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Max Students</label>
-                {{ course_form.max_students }}
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Enroll Start</label>
-                {{ course_form.enrollment_start_date }}
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Enroll End</label>
-                {{ course_form.enrollment_end_date }}
-            </div>
-        </div> {% endcomment %}
-
-        <!-- Settings -->
-        <div class="space-y-2 mb-4 pt-3 border-t border-gray-100">
-            <p class="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Settings</p>
-            <div id="mc-wrap-certificate" class="space-y-2">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    {{ course_form.has_certificate }}
-                    <span class="text-xs font-medium text-gray-700">Offer Certificate upon completion</span>
-                </label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Certificate Fee</label>
-                        {{ course_form.certificate_fee }}
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Certificate Template</label>
-                        {{ course_form.certificate_template }}
-                    </div>
+            {# Certificate #}
+            {% if course.has_certificate %}
+            <div class="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-3">
+                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-certificate text-green-600"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-green-800">Certificate Offered</p>
+                    {% if course.certificate_template %}
+                    <p class="text-xs text-green-600">Template: {{ course.certificate_template }}</p>
+                    {% endif %}
                 </div>
             </div>
-            {% comment %} <label class="flex items-center gap-2 cursor-pointer">
-                {{ course_form.is_published }}
-                <span class="text-xs font-medium text-gray-700">Publish Course</span>
-            </label>
-            <div id="mc-wrap-featured">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    {{ course_form.is_featured }}
-                    <span class="text-xs font-medium text-gray-700">Feature this course</span>
-                </label>
+            {% endif %}
+
+            {# Publishing note #}
+            <div class="flex items-start gap-2 text-xs text-gray-400 italic">
+                <i class="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
+                <span>Publishing and featuring are managed by the admin after review.</span>
             </div>
         </div>
 
-        <div class="mt-5 pt-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <button type="button" onclick="openDeleteCourseModal()"
-                    class="inline-flex items-center gap-1.5 text-xs text-red-600 hover:text-red-800 transition-colors font-medium">
-                <i class="fas fa-trash"></i> Delete this course
+        {# Right: Quick actions + thumbnail #}
+        <div class="space-y-3">
+
+            {# Thumbnail / Hero — shown below quick actions #}
+            <div class="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 relative">
+                {% if course.thumbnail %}
+                <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}"
+                     class="w-full h-100 object-cover rounded-xl">
+                {% else %}
+                <div class="w-full h-44 flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 text-indigo-300 rounded-xl">
+                    <i class="fas fa-image text-4xl"></i>
+                    <p class="text-xs mt-2 text-indigo-300">No thumbnail uploaded</p>
+                </div>
+                {% endif %}
+                {% if course.is_featured %}
+                <div class="absolute top-3 right-3">
+                    <span class="badge bg-yellow-400 text-yellow-900"><i class="fas fa-star mr-1"></i>Featured</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide pt-1">Quick Actions</h3>
+
+            <a href="{% url 'instructor:course_edit' course.slug %}"
+               class="flex items-center gap-3 w-full p-3.5 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group">
+                <div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
+                    <i class="fas fa-edit text-blue-600 text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800">Edit Course Details</p>
+                    <p class="text-xs text-gray-400">Title, description, settings</p>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-blue-400 text-xs transition-colors"></i>
+            </a>
+
+            <a href="{% url 'instructor:course_objectives' course.slug %}"
+               class="flex items-center gap-3 w-full p-3.5 bg-white border border-gray-200 rounded-xl hover:border-purple-300 hover:bg-purple-50 transition-all group">
+                <div class="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 transition-colors">
+                    <i class="fas fa-list-check text-purple-600 text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800">Objectives</p>
+                    <p class="text-xs text-gray-400">Learning outcomes</p>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-purple-400 text-xs transition-colors"></i>
+            </a>
+
+            <button onclick="activateTab('content')"
+                    class="flex items-center gap-3 w-full p-3.5 bg-white border border-gray-200 rounded-xl hover:border-green-300 hover:bg-green-50 transition-all group text-left">
+                <div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
+                    <i class="fas fa-layer-group text-green-600 text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800">Manage Content</p>
+                    <p class="text-xs text-gray-400">Sections & lessons</p>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-green-400 text-xs transition-colors"></i>
             </button>
-            <div class="flex flex-wrap items-center gap-2"> {% endcomment %}
-            <p class="text-xs text-gray-500 italic">Publishing and featuring are managed by the admin after review.</p>
-        </div>
 
-        <div class="mt-5 pt-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-2">
-                <a href="{% url 'instructor:course_objectives' course.slug %}"
-                   class="px-4 py-2 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                    <i class="fas fa-list-check mr-1"></i>Objectives
-                </a>
-                <button type="submit"
-                        class="px-5 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm transition-all">
-                    <i class="fas fa-save mr-1"></i>Save Changes
-                </button>
+            <button onclick="activateTab('students')"
+                    class="flex items-center gap-3 w-full p-3.5 bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50 transition-all group text-left">
+                <div class="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-200 transition-colors">
+                    <i class="fas fa-user-graduate text-indigo-600 text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800">Students</p>
+                    <p class="text-xs text-gray-400">{{ enrollments_count }} enrolled</p>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-indigo-400 text-xs transition-colors"></i>
+            </button>
+
+            <a href="{% url 'instructor:analytics_course_stats' %}"
+               class="flex items-center gap-3 w-full p-3.5 bg-white border border-gray-200 rounded-xl hover:border-orange-300 hover:bg-orange-50 transition-all group">
+                <div class="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-200 transition-colors">
+                    <i class="fas fa-chart-bar text-orange-600 text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800">Analytics</p>
+                    <p class="text-xs text-gray-400">Detailed statistics</p>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-orange-400 text-xs transition-colors"></i>
+            </a>
+
+            {# Course completion rate #}
+            {% if enrollments_count %}
+            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 mt-2">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-xs font-bold text-gray-600">Completion Rate</p>
+                    <p class="text-xs font-bold text-blue-600">
+                        {% widthratio completed_enrollments_count enrollments_count 100 %}%
+                    </p>
+                </div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all"
+                         style="width:{% widthratio completed_enrollments_count enrollments_count 100 %}%"></div>
+                </div>
+                <p class="text-xs text-gray-400 mt-1.5">{{ completed_enrollments_count }} of {{ enrollments_count }} students completed</p>
             </div>
+            {% endif %}
         </div>
-    </form>
+    </div>
 </div>
 
-<!-- ===================== CONTENT TAB ===================== -->
 <div class="tab-pane {% if active_tab == 'content' %}active{% endif %}" id="tab-content">
 
-    <!-- Content stats -->
+    {# Content stats #}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <div class="stat-card bg-blue-50 border-blue-100">
             <p class="text-xl font-bold text-blue-900">{{ sections.count }}</p>
-            <p class="text-xs text-blue-600 mt-0.5">Sections</p>
+            <p class="text-xs text-blue-600 mt-0.5 font-medium">Sections</p>
         </div>
         <div class="stat-card bg-green-50 border-green-100">
             <p class="text-xl font-bold text-green-900">{{ course.lessons.count }}</p>
-            <p class="text-xs text-green-600 mt-0.5">Lessons</p>
+            <p class="text-xs text-green-600 mt-0.5 font-medium">Lessons</p>
         </div>
         <div class="stat-card bg-purple-50 border-purple-100">
             <p class="text-xl font-bold text-purple-900">{{ video_count }}</p>
-            <p class="text-xs text-purple-600 mt-0.5">Videos</p>
+            <p class="text-xs text-purple-600 mt-0.5 font-medium">Videos</p>
         </div>
         <div class="stat-card bg-orange-50 border-orange-100">
             <p class="text-xl font-bold text-orange-900">{{ quiz_count }}</p>
-            <p class="text-xs text-orange-600 mt-0.5">Quizzes</p>
+            <p class="text-xs text-orange-600 mt-0.5 font-medium">Quizzes</p>
         </div>
     </div>
 
-    <!-- Action buttons -->
+    {# Action bar #}
     <div class="flex flex-wrap gap-2 mb-5">
         <button onclick="openModal('modal-add-lesson')"
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm transition-all">
-            <i class="fas fa-plus-circle"></i> Add Lesson
+            <i class="fas fa-plus-circle"></i>Add Lesson
         </button>
         <button onclick="openModal('modal-add-section')"
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-white border-2 border-primary-600 text-primary-700 text-xs font-semibold rounded-lg hover:bg-primary-50 transition-all">
-            <i class="fas fa-folder-plus"></i> Add Section
+            <i class="fas fa-folder-plus"></i>Add Section
         </button>
         <button onclick="showTips()"
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold rounded-lg hover:bg-blue-100 transition-all">
-            <i class="fas fa-lightbulb"></i> Tips
+            <i class="fas fa-lightbulb"></i>Tips
         </button>
     </div>
 
-    <!-- Sections & Lessons -->
+    {# Sections + Lessons #}
     {% if sections %}
     <div class="space-y-4">
         {% for section in sections %}
         <div class="section-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <!-- Section header -->
             <div class="bg-gradient-to-r from-primary-50 to-blue-50 border-b border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <div class="bg-primary-600 text-white p-2 rounded-lg flex-shrink-0">
-                        <i class="fas fa-folder text-lg"></i>
+                        <i class="fas fa-folder text-sm"></i>
                     </div>
                     <div class="min-w-0">
-                        <h3 class="font-bold text-gray-900 text-lg truncate">{{ section.title }}</h3>
+                        <h3 class="font-bold text-gray-900 text-sm truncate">{{ section.title }}</h3>
                         {% if section.description %}<p class="text-xs text-gray-500 truncate">{{ section.description }}</p>{% endif %}
                         <p class="text-xs text-gray-400 mt-0.5">
                             <i class="fas fa-list-ul mr-1"></i>{{ section.lessons.count }} lesson{{ section.lessons.count|pluralize }}
@@ -475,17 +502,16 @@ input[type="file"].fm-file { font-size: .8rem; }
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
-                    <button onclick="openEditSectionModal({{ section.id }}, '{{ section.title|escapejs }}', '{{ section.description|default:''|escapejs }}', {{ section.display_order|default:0 }})"
+                    <button onclick="openEditSectionModal({{ section.id }},'{{ section.title|escapejs }}','{{ section.description|default:''|escapejs }}',{{ section.display_order|default:0 }})"
                             class="inline-flex items-center px-3 py-1.5 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 text-xs font-medium transition-colors">
                         <i class="fas fa-edit mr-1"></i>Edit
                     </button>
-                    <button onclick="confirmDeleteSection({{ section.id }}, '{{ section.title|escapejs }}')"
+                    <button onclick="confirmDeleteSection({{ section.id }},'{{ section.title|escapejs }}')"
                             class="inline-flex items-center px-3 py-1.5 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 text-xs font-medium transition-colors">
                         <i class="fas fa-trash mr-1"></i>Delete
                     </button>
                 </div>
             </div>
-            <!-- Lessons in section -->
             {% if section.lessons.all %}
             <div class="divide-y divide-gray-100">
                 {% for lesson in section.lessons.all %}
@@ -500,7 +526,7 @@ input[type="file"].fm-file { font-size: .8rem; }
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <p class="font-semibold text-gray-900 text-lg truncate">{{ lesson.title }}</p>
+                            <p class="font-semibold text-gray-900 text-sm truncate">{{ lesson.title }}</p>
                             {% if lesson.is_preview %}<span class="badge bg-green-100 text-green-700">Free Preview</span>{% endif %}
                         </div>
                         <div class="flex flex-wrap gap-2 mt-0.5">
@@ -514,7 +540,7 @@ input[type="file"].fm-file { font-size: .8rem; }
                            class="inline-flex items-center px-2.5 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs font-medium transition-colors">
                             <i class="fas fa-edit mr-1"></i>Edit
                         </a>
-                        <button onclick="confirmDeleteLesson('{{ lesson.slug }}', '{{ lesson.title|escapejs }}')"
+                        <button onclick="confirmDeleteLesson('{{ lesson.slug }}','{{ lesson.title|escapejs }}')"
                                 class="inline-flex items-center px-2.5 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-xs font-medium transition-colors">
                             <i class="fas fa-trash mr-1"></i>Delete
                         </button>
@@ -523,10 +549,10 @@ input[type="file"].fm-file { font-size: .8rem; }
                 {% endfor %}
             </div>
             {% else %}
-            <div class="px-4 py-4 text-center">
-                <p class="text-xs text-gray-400">No lessons in this section yet.</p>
+            <div class="px-4 py-5 text-center">
+                <p class="text-xs text-gray-400 mb-2">No lessons in this section yet.</p>
                 <button onclick="openModal('modal-add-lesson')"
-                        class="mt-2 inline-flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-700 text-xs rounded-lg hover:bg-primary-100 transition-colors font-medium">
+                        class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-700 text-xs rounded-lg hover:bg-primary-100 transition-colors font-medium">
                     <i class="fas fa-plus text-xs"></i>Add Lesson
                 </button>
             </div>
@@ -535,49 +561,44 @@ input[type="file"].fm-file { font-size: .8rem; }
         {% endfor %}
     </div>
     {% else %}
-    <!-- No sections empty state -->
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-8 sm:p-12 text-center">
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-10 text-center">
         <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-folder-open text-3xl text-blue-500"></i>
         </div>
         <h3 class="text-base font-bold text-gray-900 mb-2">No Sections Yet</h3>
-        <p class="text-lg text-gray-500 mb-5 max-w-sm mx-auto">Create sections first to organise your lessons into logical modules.</p>
-        <div class="flex flex-wrap justify-center gap-3">
-            <button onclick="openModal('modal-add-section')"
-                    class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm transition-all">
-                <i class="fas fa-folder-plus mr-1.5"></i>Create First Section
-            </button>
-        </div>
+        <p class="text-sm text-gray-500 mb-5 max-w-sm mx-auto">Create sections first to organise your lessons into logical modules.</p>
+        <button onclick="openModal('modal-add-section')"
+                class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm transition-all">
+            <i class="fas fa-folder-plus mr-1.5"></i>Create First Section
+        </button>
     </div>
     {% endif %}
 </div>
 
-<!-- ===================== ASSESSMENTS TAB ===================== -->
 <div class="tab-pane {% if active_tab == 'assessments' %}active{% endif %}" id="tab-assessments">
 
-    <!-- Assessment sub-tabs -->
     <div class="flex flex-wrap gap-1.5 mb-5">
         <button class="qtab-btn active" data-qtab="quizzes">
-            <i class="fas fa-question-circle text-xs"></i> Quizzes ({{ quiz_lessons.count }})
+            <i class="fas fa-question-circle text-xs"></i>Quizzes ({{ quiz_lessons.count }})
         </button>
         <button class="qtab-btn" data-qtab="assignments">
-            <i class="fas fa-tasks text-xs"></i> Assignments ({{ assignment_lessons.count }})
+            <i class="fas fa-tasks text-xs"></i>Assignments ({{ assignment_lessons.count }})
         </button>
         <button class="qtab-btn" data-qtab="exams">
-            <i class="fas fa-file-alt text-xs"></i> Exams ({{ course_exams.count }})
+            <i class="fas fa-file-alt text-xs"></i>Exams ({{ course_exams.count }})
         </button>
     </div>
 
-    <!-- Quizzes sub-tab -->
+    {# ── Quizzes sub-tab ── #}
     <div class="qtab-pane active" id="qtab-quizzes">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-md bg-yellow-100 text-yellow-700 inline-flex items-center justify-center text-xs"><i class="fas fa-question-circle"></i></span>
                 Quiz Lessons
             </h3>
             <button onclick="openModal('modal-add-lesson'); setLessonType('quiz')"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500 text-white text-xs font-semibold rounded-lg hover:bg-yellow-600 shadow-sm transition-all">
-                <i class="fas fa-plus"></i> New Quiz Lesson
+                <i class="fas fa-plus"></i>New Quiz Lesson
             </button>
         </div>
         {% if quiz_lessons %}
@@ -586,7 +607,7 @@ input[type="file"].fm-file { font-size: .8rem; }
             <div class="bg-white rounded-xl border border-yellow-200 shadow-sm overflow-hidden">
                 <div class="bg-yellow-50 border-b border-yellow-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                        <p class="font-bold text-gray-900 text-lg">{{ lesson.title }}</p>
+                        <p class="font-bold text-gray-900 text-sm">{{ lesson.title }}</p>
                         <p class="text-xs text-gray-500 mt-0.5">{{ lesson.quizzes.count }} quiz{{ lesson.quizzes.count|pluralize:"zes" }}</p>
                     </div>
                     <button onclick="openCreateQuizModal('{{ lesson.slug }}','{{ lesson.title|escapejs }}')"
@@ -599,16 +620,13 @@ input[type="file"].fm-file { font-size: .8rem; }
                     {% for quiz in lesson.quizzes.all %}
                     <div class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 hover:bg-gray-50 transition-colors">
                         <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-gray-900 text-lg truncate">{{ quiz.title }}</p>
+                            <p class="font-semibold text-gray-900 text-sm truncate">{{ quiz.title }}</p>
                             <div class="flex flex-wrap gap-2 mt-0.5">
                                 <span class="text-xs text-gray-400">{{ quiz.questions.count }} question{{ quiz.questions.count|pluralize }}</span>
                                 <span class="text-xs text-gray-400">Pass: {{ quiz.passing_score }}%</span>
                                 {% if quiz.time_limit_minutes %}<span class="text-xs text-gray-400">{{ quiz.time_limit_minutes }}min</span>{% endif %}
-                                {% if quiz.is_active %}
-                                <span class="badge bg-green-100 text-green-700">Active</span>
-                                {% else %}
-                                <span class="badge bg-gray-100 text-gray-500">Inactive</span>
-                                {% endif %}
+                                {% if quiz.is_active %}<span class="badge bg-green-100 text-green-700">Active</span>
+                                {% else %}<span class="badge bg-gray-100 text-gray-500">Inactive</span>{% endif %}
                             </div>
                         </div>
                         <div class="flex flex-wrap items-center gap-1.5 flex-shrink-0">
@@ -635,8 +653,8 @@ input[type="file"].fm-file { font-size: .8rem; }
             {% endfor %}
         </div>
         {% else %}
-        <div class="p-6 sm:p-8 bg-yellow-50 border border-yellow-200 rounded-xl text-center">
-            <p class="text-lg text-yellow-700 mb-1 font-medium">No quiz-type lessons found.</p>
+        <div class="p-8 bg-yellow-50 border border-yellow-200 rounded-xl text-center">
+            <p class="text-sm text-yellow-700 mb-1 font-medium">No quiz-type lessons found.</p>
             <p class="text-xs text-yellow-600 mb-4">Create a lesson with type "Quiz" first, then add quizzes to it.</p>
             <button onclick="openModal('modal-add-lesson'); setLessonType('quiz')"
                     class="inline-flex items-center px-4 py-2 bg-yellow-500 text-white text-xs font-semibold rounded-lg hover:bg-yellow-600 transition-all">
@@ -646,16 +664,16 @@ input[type="file"].fm-file { font-size: .8rem; }
         {% endif %}
     </div>
 
-    <!-- Assignments sub-tab -->
+    {# ── Assignments sub-tab ── #}
     <div class="qtab-pane" id="qtab-assignments">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-md bg-orange-100 text-orange-700 inline-flex items-center justify-center text-xs"><i class="fas fa-tasks"></i></span>
                 Assignment Lessons
             </h3>
             <button onclick="openModal('modal-add-lesson'); setLessonType('assignment')"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-xs font-semibold rounded-lg hover:bg-orange-600 shadow-sm transition-all">
-                <i class="fas fa-plus"></i> New Assignment Lesson
+                <i class="fas fa-plus"></i>New Assignment Lesson
             </button>
         </div>
         {% if assignment_lessons %}
@@ -664,7 +682,7 @@ input[type="file"].fm-file { font-size: .8rem; }
             <div class="bg-white rounded-xl border border-orange-200 shadow-sm overflow-hidden">
                 <div class="bg-orange-50 border-b border-orange-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                        <p class="font-bold text-gray-900 text-lg">{{ lesson.title }}</p>
+                        <p class="font-bold text-gray-900 text-sm">{{ lesson.title }}</p>
                         <p class="text-xs text-gray-500 mt-0.5">{{ lesson.assignments.count }} assignment{{ lesson.assignments.count|pluralize }}</p>
                     </div>
                     <button onclick="openCreateAssignmentModal('{{ lesson.slug }}','{{ lesson.title|escapejs }}')"
@@ -677,7 +695,7 @@ input[type="file"].fm-file { font-size: .8rem; }
                     {% for assignment in lesson.assignments.all %}
                     <div class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 hover:bg-gray-50 transition-colors">
                         <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-gray-900 text-lg truncate">{{ assignment.title }}</p>
+                            <p class="font-semibold text-gray-900 text-sm truncate">{{ assignment.title }}</p>
                             <div class="flex flex-wrap gap-2 mt-0.5">
                                 <span class="text-xs text-gray-400">Max: {{ assignment.max_score }} pts</span>
                                 {% if assignment.due_date %}<span class="text-xs text-gray-400">Due: {{ assignment.due_date|date:"M d, Y" }}</span>{% endif %}
@@ -704,8 +722,8 @@ input[type="file"].fm-file { font-size: .8rem; }
             {% endfor %}
         </div>
         {% else %}
-        <div class="p-6 sm:p-8 bg-orange-50 border border-orange-200 rounded-xl text-center">
-            <p class="text-lg text-orange-700 mb-1 font-medium">No assignment-type lessons found.</p>
+        <div class="p-8 bg-orange-50 border border-orange-200 rounded-xl text-center">
+            <p class="text-sm text-orange-700 mb-1 font-medium">No assignment-type lessons found.</p>
             <p class="text-xs text-orange-600 mb-4">Create a lesson with type "Assignment" first.</p>
             <button onclick="openModal('modal-add-lesson'); setLessonType('assignment')"
                     class="inline-flex items-center px-4 py-2 bg-orange-500 text-white text-xs font-semibold rounded-lg hover:bg-orange-600 transition-all">
@@ -715,32 +733,26 @@ input[type="file"].fm-file { font-size: .8rem; }
         {% endif %}
     </div>
 
-    <!-- Exams sub-tab -->
+    {# ── Exams sub-tab ── #}
     <div class="qtab-pane" id="qtab-exams">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 inline-flex items-center justify-center text-xs"><i class="fas fa-file-alt"></i></span>
                 Course Exams
             </h3>
             <a href="{% url 'instructor:create_assessment' %}?type=exam&course={{ course.slug }}"
                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 shadow-sm transition-all">
-                <i class="fas fa-plus"></i> New Exam
+                <i class="fas fa-plus"></i>New Exam
             </a>
         </div>
         {% if course_exams %}
         <div class="space-y-2">
-            {% for exam in course_exams %}
-            {% with s=exam.status %}
+            {% for exam in course_exams %}{% with s=exam.status %}
             <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-white border border-indigo-200 rounded-xl hover:shadow-sm transition-shadow">
                 <div class="flex-1 min-w-0">
-                    <p class="font-bold text-gray-900 text-lg truncate">{{ exam.title }}</p>
+                    <p class="font-bold text-gray-900 text-sm truncate">{{ exam.title }}</p>
                     <div class="flex flex-wrap items-center gap-2 mt-1">
-                        <span class="badge
-                            {% if s == 'published' %}bg-green-100 text-green-700
-                            {% elif s == 'approved' %}bg-blue-100 text-blue-700
-                            {% elif s == 'submitted' %}bg-yellow-100 text-yellow-700
-                            {% elif s == 'rejected' %}bg-red-100 text-red-700
-                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                        <span class="badge {% if s == 'published' %}bg-green-100 text-green-700{% elif s == 'approved' %}bg-blue-100 text-blue-700{% elif s == 'submitted' %}bg-yellow-100 text-yellow-700{% elif s == 'rejected' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">
                             {{ exam.get_status_display }}
                         </span>
                         <span class="text-xs text-gray-400">{{ exam.questions.count }} question{{ exam.questions.count|pluralize }}</span>
@@ -752,12 +764,11 @@ input[type="file"].fm-file { font-size: .8rem; }
                     <i class="fas fa-edit mr-1"></i>Manage
                 </a>
             </div>
-            {% endwith %}
-            {% endfor %}
+            {% endwith %}{% endfor %}
         </div>
         {% else %}
-        <div class="p-6 sm:p-8 bg-indigo-50 border border-indigo-200 rounded-xl text-center">
-            <p class="text-lg text-indigo-700 mb-1 font-medium">No exams yet for this course.</p>
+        <div class="p-8 bg-indigo-50 border border-indigo-200 rounded-xl text-center">
+            <p class="text-sm text-indigo-700 mb-1 font-medium">No exams yet for this course.</p>
             <p class="text-xs text-indigo-600 mb-4">Create formal exams to assess student knowledge.</p>
             <a href="{% url 'instructor:create_assessment' %}?type=exam&course={{ course.slug }}"
                class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-all">
@@ -768,40 +779,38 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- ===================== STUDENTS TAB ===================== -->
 <div class="tab-pane {% if active_tab == 'students' %}active{% endif %}" id="tab-students">
 
-    <!-- Student stats -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <div class="stat-card bg-blue-50 border-blue-100">
             <p class="text-xl font-bold text-blue-900">{{ enrollments_count }}</p>
-            <p class="text-xs text-blue-600 mt-0.5">Total</p>
+            <p class="text-xs text-blue-600 mt-0.5 font-medium">Total</p>
         </div>
         <div class="stat-card bg-green-50 border-green-100">
             <p class="text-xl font-bold text-green-900">{{ active_enrollments_count }}</p>
-            <p class="text-xs text-green-600 mt-0.5">Active</p>
+            <p class="text-xs text-green-600 mt-0.5 font-medium">Active</p>
         </div>
         <div class="stat-card bg-purple-50 border-purple-100">
             <p class="text-xl font-bold text-purple-900">{{ completed_enrollments_count }}</p>
-            <p class="text-xs text-purple-600 mt-0.5">Completed</p>
+            <p class="text-xs text-purple-600 mt-0.5 font-medium">Completed</p>
         </div>
         <div class="stat-card bg-orange-50 border-orange-100">
             <p class="text-xl font-bold text-orange-900">{{ pending_submissions_count }}</p>
-            <p class="text-xs text-orange-600 mt-0.5">Pending Subs</p>
+            <p class="text-xs text-orange-600 mt-0.5 font-medium">Pending Subs</p>
         </div>
     </div>
 
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h3 class="text-lg font-bold text-gray-800">Enrolled Students</h3>
+        <h3 class="text-sm font-bold text-gray-800">Enrolled Students</h3>
         <button onclick="openModal('modal-enroll')"
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm transition-all self-start sm:self-auto">
-            <i class="fas fa-user-plus"></i> Enrol Student
+            <i class="fas fa-user-plus"></i>Enrol Student
         </button>
     </div>
 
     {% if enrollments %}
     <div class="overflow-x-auto rounded-xl border border-gray-200">
-        <table id="studentsTable" class="w-full text-lg text-left" style="min-width: 600px;">
+        <table id="studentsTable" class="w-full text-left" style="min-width:600px;">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
                     <th class="px-4 py-3 text-xs font-semibold text-gray-600 whitespace-nowrap">Student</th>
@@ -827,17 +836,14 @@ input[type="file"].fm-file { font-size: .8rem; }
                     <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{{ enrollment.enrolled_at|date:"M d, Y" }}</td>
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-2">
-                            <div class="flex-1 bg-gray-200 rounded-full h-1.5" style="min-width: 60px;">
+                            <div class="flex-1 bg-gray-200 rounded-full h-1.5" style="min-width:60px;">
                                 <div class="bg-primary-600 h-1.5 rounded-full" style="width:{{ enrollment.progress_percentage|default:0 }}%"></div>
                             </div>
                             <span class="text-xs font-medium text-gray-700 whitespace-nowrap">{{ enrollment.progress_percentage|default:0|floatformat:0 }}%</span>
                         </div>
                     </td>
                     <td class="px-4 py-3">
-                        <span class="badge
-                            {% if enrollment.status == 'active' %}bg-green-100 text-green-700
-                            {% elif enrollment.status == 'completed' %}bg-blue-100 text-blue-700
-                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                        <span class="badge {% if enrollment.status == 'active' %}bg-green-100 text-green-700{% elif enrollment.status == 'completed' %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-600{% endif %}">
                             {{ enrollment.get_status_display|default:enrollment.status|capfirst }}
                         </span>
                     </td>
@@ -853,27 +859,26 @@ input[type="file"].fm-file { font-size: .8rem; }
         </table>
     </div>
     {% else %}
-    <div class="bg-white rounded-xl border border-gray-200 p-10 sm:p-16 text-center">
+    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-user-graduate text-3xl text-gray-400"></i>
         </div>
         <h3 class="text-base font-bold text-gray-900 mb-2">No Students Yet</h3>
-        <p class="text-lg text-gray-500 mb-5 max-w-xs mx-auto">Publish your course or manually enrol a student to get started.</p>
+        <p class="text-sm text-gray-500 mb-5 max-w-xs mx-auto">Publish your course or manually enrol a student to get started.</p>
         <button onclick="openModal('modal-enroll')"
-                class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-lg font-medium rounded-lg hover:bg-primary-700 shadow-sm transition-all">
+                class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 shadow-sm transition-all">
             <i class="fas fa-user-plus mr-2"></i>Enrol Student
         </button>
     </div>
     {% endif %}
 </div>
 
-<!-- ===================== ANNOUNCEMENTS TAB ===================== -->
 <div class="tab-pane {% if active_tab == 'announcements' %}active{% endif %}" id="tab-announcements">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-        <h3 class="text-lg font-bold text-gray-800">Course Announcements</h3>
+        <h3 class="text-sm font-bold text-gray-800">Course Announcements</h3>
         <button onclick="openModal('modal-announcement')"
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm transition-all self-start sm:self-auto">
-            <i class="fas fa-plus"></i> New Announcement
+            <i class="fas fa-plus"></i>New Announcement
         </button>
     </div>
     {% if announcements %}
@@ -882,13 +887,12 @@ input[type="file"].fm-file { font-size: .8rem; }
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
             <div class="h-1 w-full {% if a.priority == 'urgent' %}bg-red-500{% elif a.priority == 'high' %}bg-orange-400{% elif a.priority == 'normal' %}bg-primary-500{% else %}bg-gray-300{% endif %}"></div>
             <div class="p-4 flex flex-col sm:flex-row sm:items-start gap-3">
-                <div class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center
-                    {% if a.priority == 'urgent' %}bg-red-100{% elif a.priority == 'high' %}bg-orange-100{% else %}bg-blue-100{% endif %}">
-                    <i class="fas fa-bullhorn text-lg {% if a.priority == 'urgent' %}text-red-600{% elif a.priority == 'high' %}text-orange-500{% else %}text-blue-600{% endif %}"></i>
+                <div class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center {% if a.priority == 'urgent' %}bg-red-100{% elif a.priority == 'high' %}bg-orange-100{% else %}bg-blue-100{% endif %}">
+                    <i class="fas fa-bullhorn text-sm {% if a.priority == 'urgent' %}text-red-600{% elif a.priority == 'high' %}text-orange-500{% else %}text-blue-600{% endif %}"></i>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex flex-wrap items-center gap-1.5 mb-1">
-                        <h4 class="font-bold text-gray-900 text-lg">{{ a.title }}</h4>
+                        <h4 class="font-bold text-gray-900 text-sm">{{ a.title }}</h4>
                         {% if a.priority == 'urgent' %}<span class="badge bg-red-100 text-red-700">Urgent</span>
                         {% elif a.priority == 'high' %}<span class="badge bg-orange-100 text-orange-700">High</span>
                         {% else %}<span class="badge bg-blue-100 text-blue-700">Normal</span>{% endif %}
@@ -912,24 +916,23 @@ input[type="file"].fm-file { font-size: .8rem; }
         {% endfor %}
     </div>
     {% else %}
-    <div class="bg-white rounded-xl border border-gray-200 p-10 sm:p-16 text-center">
+    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
         <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-bullhorn text-3xl text-primary-500"></i>
         </div>
         <h3 class="text-base font-bold text-gray-900 mb-2">No Announcements Yet</h3>
-        <p class="text-lg text-gray-500 mb-5 max-w-xs mx-auto">Keep students informed by creating your first announcement.</p>
+        <p class="text-sm text-gray-500 mb-5 max-w-xs mx-auto">Keep students informed by creating your first announcement.</p>
         <button onclick="openModal('modal-announcement')"
-                class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-lg font-medium rounded-lg hover:bg-primary-700 shadow-sm transition-all">
+                class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 shadow-sm transition-all">
             <i class="fas fa-plus mr-2"></i>Create Announcement
         </button>
     </div>
     {% endif %}
 </div>
 
-<!-- ===================== DISCUSSIONS TAB ===================== -->
 <div class="tab-pane {% if active_tab == 'discussions' %}active{% endif %}" id="tab-discussions">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-        <h3 class="text-lg font-bold text-gray-800">Discussion Forum</h3>
+        <h3 class="text-sm font-bold text-gray-800">Discussion Forum</h3>
         <span class="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg font-medium self-start sm:self-auto">
             {{ discussions_count }} thread{{ discussions_count|pluralize }}
         </span>
@@ -950,7 +953,7 @@ input[type="file"].fm-file { font-size: .8rem; }
                                 {% if d.is_locked %}<span class="badge bg-orange-100 text-orange-700"><i class="fas fa-lock mr-1"></i>Locked</span>{% endif %}
                             </div>
                             <a href="{% url 'instructor:discussion_detail' course.slug d.slug %}"
-                               class="text-lg font-bold text-gray-900 hover:text-primary-600 transition-colors block mb-1 truncate">{{ d.title }}</a>
+                               class="text-sm font-bold text-gray-900 hover:text-primary-600 transition-colors block mb-1 truncate">{{ d.title }}</a>
                             <p class="text-xs text-gray-500 line-clamp-1 mb-1.5">{{ d.content|truncatewords:15 }}</p>
                             <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
                                 <span><i class="fas fa-user mr-1"></i>{{ d.author.get_full_name }}</span>
@@ -961,14 +964,12 @@ input[type="file"].fm-file { font-size: .8rem; }
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-1.5 flex-shrink-0">
-                        <form method="post" action="{% url 'instructor:discussion_toggle_pin' course.slug d.slug %}">
-                            {% csrf_token %}
+                        <form method="post" action="{% url 'instructor:discussion_toggle_pin' course.slug d.slug %}">{% csrf_token %}
                             <button type="submit" class="px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors {% if d.is_pinned %}bg-primary-100 text-primary-700 hover:bg-primary-200{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                                 <i class="fas fa-thumbtack mr-1"></i>{% if d.is_pinned %}Unpin{% else %}Pin{% endif %}
                             </button>
                         </form>
-                        <form method="post" action="{% url 'instructor:discussion_toggle_lock' course.slug d.slug %}">
-                            {% csrf_token %}
+                        <form method="post" action="{% url 'instructor:discussion_toggle_lock' course.slug d.slug %}">{% csrf_token %}
                             <button type="submit" class="px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors {% if d.is_locked %}bg-orange-100 text-orange-700 hover:bg-orange-200{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
                                 <i class="fas fa-{% if d.is_locked %}unlock{% else %}lock{% endif %} mr-1"></i>{% if d.is_locked %}Unlock{% else %}Lock{% endif %}
                             </button>
@@ -984,36 +985,30 @@ input[type="file"].fm-file { font-size: .8rem; }
         {% endfor %}
     </div>
     {% else %}
-    <div class="bg-white rounded-xl border border-gray-200 p-10 sm:p-16 text-center">
+    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
         <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-comments text-3xl text-blue-500"></i>
         </div>
         <h3 class="text-base font-bold text-gray-900 mb-2">No Discussions Yet</h3>
-        <p class="text-lg text-gray-500 max-w-sm mx-auto">When students start discussions, they'll appear here. You can pin and lock threads.</p>
+        <p class="text-sm text-gray-500 max-w-sm mx-auto">When students start discussions, they'll appear here. You can pin and lock threads.</p>
     </div>
     {% endif %}
 </div>
 
-</div><!-- /main card -->
+</div>{# /main card #}
 
-
-<!-- ============================================================ -->
-<!--  MODALS                                                       -->
-<!-- ============================================================ -->
-
-<!-- Add Lesson Modal -->
+{# ── Add Lesson ── #}
 <div class="modal-overlay" id="modal-add-lesson">
     <div class="modal-box">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-plus-circle text-primary-600 text-lg"></i>
+                    <i class="fas fa-plus-circle text-primary-600 text-sm"></i>
                 </div>
                 <h2 class="font-bold text-gray-900 text-base">Add New Lesson</h2>
             </div>
-            <button onclick="closeModal('modal-add-lesson')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-add-lesson')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <form method="post" action="{% url 'instructor:lesson_create' course.slug %}" enctype="multipart/form-data" class="p-5 space-y-4">
@@ -1030,9 +1025,7 @@ input[type="file"].fm-file { font-size: .8rem; }
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Section <span class="text-red-500">*</span></label>
                     {{ lesson_form.section }}
-                    {% if not sections %}
-                    <p class="mt-1 text-xs text-orange-600"><i class="fas fa-exclamation-triangle mr-1"></i>Create a section first.</p>
-                    {% endif %}
+                    {% if not sections %}<p class="mt-1 text-xs text-orange-600"><i class="fas fa-exclamation-triangle mr-1"></i>Create a section first.</p>{% endif %}
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Display Order</label>
@@ -1049,7 +1042,6 @@ input[type="file"].fm-file { font-size: .8rem; }
                     {{ lesson_form.description }}
                 </div>
             </div>
-            <!-- Video fields (shown conditionally) -->
             <div id="modal-video-fields" class="hidden space-y-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
                 <p class="text-xs font-bold text-purple-800"><i class="fas fa-video mr-1"></i>Video Content</p>
                 <div>
@@ -1073,19 +1065,18 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Add Section Modal -->
+{# ── Add Section ── #}
 <div class="modal-overlay" id="modal-add-section">
     <div class="modal-box modal-box-sm">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-folder-plus text-blue-600 text-lg"></i>
+                    <i class="fas fa-folder-plus text-blue-600 text-sm"></i>
                 </div>
                 <h2 class="font-bold text-gray-900 text-base">Add New Section</h2>
             </div>
-            <button onclick="closeModal('modal-add-section')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-add-section')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <form method="post" action="{% url 'instructor:section_create' course.slug %}" class="p-5 space-y-4">
@@ -1114,19 +1105,18 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Edit Section Modal -->
+{# ── Edit Section ── #}
 <div class="modal-overlay" id="modal-edit-section">
     <div class="modal-box modal-box-sm">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-folder text-primary-600 text-lg"></i>
+                    <i class="fas fa-folder text-primary-600 text-sm"></i>
                 </div>
                 <h2 class="font-bold text-gray-900 text-base">Edit Section</h2>
             </div>
-            <button onclick="closeModal('modal-edit-section')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-edit-section')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <form id="editSectionForm" method="post" class="p-5 space-y-4">
@@ -1155,34 +1145,42 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Enrol Student Modal -->
+{# ── Enrol Student ── #}
 <div class="modal-overlay" id="modal-enroll">
     <div class="modal-box modal-box-sm">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-user-plus text-green-600 text-lg"></i>
+                    <i class="fas fa-user-plus text-green-600 text-sm"></i>
                 </div>
                 <h2 class="font-bold text-gray-900 text-base">Enrol Student</h2>
             </div>
-            <button onclick="closeModal('modal-enroll')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-enroll')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <form method="post" action="{% url 'instructor:enroll_student' course.slug %}" class="p-5 space-y-4">
             {% csrf_token %}
             <div>
                 <label class="block text-xs font-semibold text-gray-700 mb-1">Student <span class="text-red-500">*</span></label>
-                <select name="student_id" class="fm-input" required>
-                    <option value="">— Select a student —</option>
+                <input list="studentDatalist" id="studentSearch" name="student_name_search"
+                       class="fm-input" placeholder="Type name or email to search…" autocomplete="off">
+                <datalist id="studentDatalist">
                     {% for student in available_students %}
-                    <option value="{{ student.id }}">{{ student.get_full_name }} ({{ student.email }})</option>
+                    <option data-id="{{ student.id }}" value="{{ student.get_full_name }} ({{ student.email }})"></option>
                     {% endfor %}
-                </select>
-                {% if not available_students %}
-                <p class="mt-1 text-xs text-orange-600"><i class="fas fa-info-circle mr-1"></i>All students are already enrolled.</p>
-                {% endif %}
+                </datalist>
+                <input type="hidden" name="student_id" id="selectedStudentId" required>
+                {% if not available_students %}<p class="mt-1 text-xs text-orange-600"><i class="fas fa-info-circle mr-1"></i>All students are already enrolled.</p>{% endif %}
+                <script>
+                document.getElementById('studentSearch').addEventListener('change',function(){
+                    const val=this.value.trim();
+                    const opts=document.querySelectorAll('#studentDatalist option');
+                    let found=false;
+                    for(const opt of opts){if(opt.value===val){document.getElementById('selectedStudentId').value=opt.getAttribute('data-id');found=true;break;}}
+                    if(!found)document.getElementById('selectedStudentId').value='';
+                });
+                </script>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-gray-700 mb-1">Enrolment Date</label>
@@ -1204,19 +1202,18 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Announcement Modal -->
+{# ── Announcement ── #}
 <div class="modal-overlay" id="modal-announcement">
     <div class="modal-box">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-bullhorn text-blue-600 text-lg"></i>
+                    <i class="fas fa-bullhorn text-blue-600 text-sm"></i>
                 </div>
                 <h2 class="font-bold text-gray-900 text-base">Create Announcement</h2>
             </div>
-            <button onclick="closeModal('modal-announcement')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-announcement')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <form method="post" action="{% url 'instructor:announcement_create' course.slug %}" class="p-5 space-y-4">
@@ -1257,22 +1254,21 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Create Quiz Modal -->
+{# ── Create Quiz ── #}
 <div class="modal-overlay" id="modal-create-quiz">
     <div class="modal-box">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-question-circle text-yellow-600 text-lg"></i>
+                    <i class="fas fa-question-circle text-yellow-600 text-sm"></i>
                 </div>
                 <div>
                     <h2 class="font-bold text-gray-900 text-base">Create Quiz</h2>
                     <p class="text-xs text-gray-500">Lesson: <span id="createQuizLessonName" class="font-medium text-gray-700"></span></p>
                 </div>
             </div>
-            <button onclick="closeModal('modal-create-quiz')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-create-quiz')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <form id="createQuizForm" method="post" class="p-5 space-y-4">
@@ -1325,19 +1321,18 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Edit Quiz Modal -->
+{# ── Edit Quiz ── #}
 <div class="modal-overlay" id="modal-edit-quiz">
     <div class="modal-box modal-box-sm">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-cog text-yellow-600 text-lg"></i>
+                    <i class="fas fa-cog text-yellow-600 text-sm"></i>
                 </div>
                 <h2 class="font-bold text-gray-900 text-base">Edit Quiz Settings</h2>
             </div>
-            <button onclick="closeModal('modal-edit-quiz')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-edit-quiz')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <form id="editQuizForm" method="post" class="p-5 space-y-4">
@@ -1376,25 +1371,23 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Manage Questions Modal -->
+{# ── Manage Questions ── #}
 <div class="modal-overlay" id="modal-manage-questions">
-    <div class="modal-box" style="max-width: 720px;">
+    <div class="modal-box" style="max-width:720px;">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-list text-primary-600 text-lg"></i>
+                    <i class="fas fa-list text-primary-600 text-sm"></i>
                 </div>
                 <div>
                     <h2 class="font-bold text-gray-900 text-base">Manage Questions</h2>
                     <p class="text-xs text-gray-500">Quiz: <span id="manageQuestionsQuizName" class="font-medium text-gray-700"></span></p>
                 </div>
             </div>
-            <button onclick="closeModal('modal-manage-questions')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-manage-questions')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
-        <!-- Quick add question panel -->
         <div class="px-5 pt-4 pb-2 border-b border-gray-100">
             <div class="flex items-center justify-between mb-3">
                 <p class="text-xs font-semibold text-gray-700">Quick Add Question</p>
@@ -1445,13 +1438,12 @@ input[type="file"].fm-file { font-size: .8rem; }
                                 </label>
                             </div>
                         </div>
-                        <button type="button" onclick="addAnswerRow()"
-                                class="text-xs text-primary-600 hover:text-primary-800 font-medium">
+                        <button type="button" onclick="addAnswerRow()" class="text-xs text-primary-600 hover:text-primary-800 font-medium">
                             <i class="fas fa-plus mr-1"></i>Add another option
                         </button>
                     </div>
                     <div class="flex items-center justify-end gap-2 pt-2">
-                        <button type="button" onclick="document.getElementById('addQuestionPanel').classList.add('hidden'); document.getElementById('btnOpenAddQuestion').innerHTML = '<i class=\'fas fa-plus\'></i>Add Question';"
+                        <button type="button" onclick="document.getElementById('addQuestionPanel').classList.add('hidden');document.getElementById('btnOpenAddQuestion').innerHTML='<i class=\'fas fa-plus\'></i> Add Question';"
                                 class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
                         <button type="submit"
                                 class="px-4 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm transition-all">
@@ -1461,29 +1453,27 @@ input[type="file"].fm-file { font-size: .8rem; }
                 </form>
             </div>
         </div>
-        <!-- Questions list area -->
         <div id="questionsListContainer" class="p-5 max-h-64 overflow-y-auto">
             <p class="text-xs text-gray-400 text-center py-4">Select a quiz to see its questions.</p>
         </div>
     </div>
 </div>
 
-<!-- Create Assignment Modal -->
+{# ── Create Assignment ── #}
 <div class="modal-overlay" id="modal-create-assignment">
     <div class="modal-box">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-tasks text-orange-600 text-lg"></i>
+                    <i class="fas fa-tasks text-orange-600 text-sm"></i>
                 </div>
                 <div>
                     <h2 class="font-bold text-gray-900 text-base">Create Assignment</h2>
                     <p class="text-xs text-gray-500">Lesson: <span id="createAssignmentLessonName" class="font-medium text-gray-700"></span></p>
                 </div>
             </div>
-            <button onclick="closeModal('modal-create-assignment')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-create-assignment')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <form id="createAssignmentForm" method="post" enctype="multipart/form-data" class="p-5 space-y-4">
@@ -1546,80 +1536,34 @@ input[type="file"].fm-file { font-size: .8rem; }
     </div>
 </div>
 
-<!-- Edit Assignment Modal (redirect to full editor) -->
+{# ── Edit Assignment (redirect) ── #}
 <div class="modal-overlay" id="modal-edit-assignment">
     <div class="modal-box modal-box-sm">
         <div class="flex items-center justify-between p-5 border-b border-gray-200">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-tasks text-orange-600 text-lg"></i>
+                    <i class="fas fa-tasks text-orange-600 text-sm"></i>
                 </div>
                 <h2 class="font-bold text-gray-900 text-base">Edit Assignment</h2>
             </div>
-            <button onclick="closeModal('modal-edit-assignment')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
+            <button onclick="closeModal('modal-edit-assignment')" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+                <i class="fas fa-times text-sm"></i>
             </button>
         </div>
         <div class="p-8 text-center">
             <div class="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-external-link-alt text-orange-500 text-xl"></i>
             </div>
-            <p class="text-lg text-gray-600 mb-5">To edit full assignment details, use the dedicated editor page.</p>
+            <p class="text-sm text-gray-600 mb-5">To edit full assignment details, use the dedicated editor page.</p>
             <a id="editAssignmentLink" href="#"
-               class="inline-flex items-center px-5 py-2.5 bg-orange-500 text-white text-lg font-semibold rounded-lg hover:bg-orange-600 shadow-sm transition-all">
+               class="inline-flex items-center px-5 py-2.5 bg-orange-500 text-white text-sm font-semibold rounded-lg hover:bg-orange-600 shadow-sm transition-all">
                 <i class="fas fa-edit mr-2"></i>Open Assignment Editor
             </a>
         </div>
     </div>
 </div>
 
-{% comment %} <!-- Delete Course Modal -->
-<div class="modal-overlay" id="modal-delete-course">
-    <div class="modal-box modal-box-sm">
-        <div class="flex items-center justify-between p-5 border-b border-gray-200">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle text-red-600 text-lg"></i>
-                </div>
-                <h2 class="font-bold text-gray-900 text-base">Delete Course</h2>
-            </div>
-            <button onclick="closeModal('modal-delete-course')"
-                    class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
-                <i class="fas fa-times text-lg"></i>
-            </button>
-        </div>
-        <div class="p-5 space-y-4">
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                <i class="fas fa-exclamation-circle text-red-500 flex-shrink-0 mt-0.5"></i>
-                <div>
-                    <p class="text-lg font-semibold text-red-800 mb-1">This action cannot be undone.</p>
-                    <p class="text-xs text-red-700">Deleting <strong>{{ course.title }}</strong> will permanently remove all lessons, sections, quizzes, assignments, and student enrollments associated with it.</p>
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Type <code class="bg-gray-100 px-1.5 py-0.5 rounded text-red-700 font-mono">{{ course.title }}</code> to confirm
-                </label>
-                <input type="text" id="deleteCourseConfirmInput" class="fm-input" placeholder="Type the course title…"
-                       oninput="document.getElementById('btnConfirmDeleteCourse').disabled = this.value !== '{{ course.title|escapejs }}';">
-            </div>
-            <form id="deleteCourseForm" method="POST" action="{% url 'instructor:course_delete' course.slug %}">
-                {% csrf_token %}
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-2 pt-2 border-t border-gray-200">
-                    <button type="button" onclick="closeModal('modal-delete-course')"
-                            class="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center">Cancel</button>
-                    <button type="submit" id="btnConfirmDeleteCourse" disabled
-                            class="px-5 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed text-center">
-                        <i class="fas fa-trash mr-1"></i>Delete Permanently
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div> {% endcomment %}
-
-<!-- Hidden delete forms -->
+{# Hidden delete forms #}
 <form id="deleteForm" method="POST" class="hidden">{% csrf_token %}</form>
 <form id="deleteSectionForm" method="POST" class="hidden">{% csrf_token %}</form>
 <form id="deleteLessonForm" method="POST" class="hidden">{% csrf_token %}</form>
@@ -1629,17 +1573,22 @@ input[type="file"].fm-file { font-size: .8rem; }
 
 {% block extra_js %}
 <script>
-// Apply fm-input class to all Django-rendered form widgets inside modals and overview tab
-(function() {
-    const selectors = 'input[type=text], input[type=number], input[type=date], input[type=datetime-local], input[type=url], input[type=email], textarea, select';
-    document.querySelectorAll('.modal-box ' + selectors + ', #tab-overview ' + selectors).forEach(el => {
-        if (!el.classList.contains('fm-check') && !el.classList.contains('fm-file') && !el.classList.contains('fm-input')) {
+// ── Apply fm-input to Django-rendered widgets ──────────────────────────
+(function(){
+    const sel = 'input[type=text],input[type=number],input[type=date],input[type=datetime-local],input[type=url],input[type=email],textarea,select';
+    document.querySelectorAll('.modal-box ' + sel + ',#tab-overview ' + sel).forEach(el => {
+        if(!el.classList.contains('fm-check') && !el.classList.contains('fm-file') && !el.classList.contains('fm-input'))
             el.classList.add('fm-input');
-        }
     });
 })();
 
-// TAB SWITCHING
+// ── Course switcher ────────────────────────────────────────────────────
+document.getElementById('courseSwitcher').addEventListener('change', function(){
+    const tab = new URLSearchParams(window.location.search).get('tab') || 'overview';
+    window.location.href = "{% url 'instructor:course_manage' 'SLUG' %}".replace('SLUG', this.value) + '?tab=' + tab;
+});
+
+// ── Tab switching ──────────────────────────────────────────────────────
 const tabBtns  = document.querySelectorAll('.tab-btn');
 const tabPanes = document.querySelectorAll('.tab-pane');
 
@@ -1652,66 +1601,48 @@ function activateTab(name) {
 }
 tabBtns.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
 
-// ASSESSMENT SUB-TABS
+// ── Assessment sub-tabs ────────────────────────────────────────────────
 const qtabBtns  = document.querySelectorAll('.qtab-btn');
 const qtabPanes = document.querySelectorAll('.qtab-pane');
-
 function activateQTab(name) {
     qtabBtns.forEach(b  => b.classList.toggle('active', b.dataset.qtab === name));
     qtabPanes.forEach(p => p.classList.toggle('active', p.id === 'qtab-' + name));
 }
 qtabBtns.forEach(btn => btn.addEventListener('click', () => activateQTab(btn.dataset.qtab)));
 
-// COURSE SWITCHER
-document.getElementById('courseSwitcher').addEventListener('change', function() {
-    const tab = new URLSearchParams(window.location.search).get('tab') || 'overview';
-    window.location.href = "{% url 'instructor:course_manage' 'SLUG' %}".replace('SLUG', this.value) + '?tab=' + tab;
-});
-
-// MODAL HELPERS
-function openModal(id)  {
-    document.getElementById(id).classList.add('open');
-    document.body.style.overflow = 'hidden';
-}
-function closeModal(id) {
-    document.getElementById(id).classList.remove('open');
-    document.body.style.overflow = '';
-}
+// ── Modal helpers ──────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
 document.querySelectorAll('.modal-overlay').forEach(m => {
-    m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
+    m.addEventListener('click', e => { if(e.target === m) closeModal(m.id); });
 });
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
-    }
+    if(e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
 });
 
-// LESSON TYPE → show video fields
+// ── Lesson type → show video fields ───────────────────────────────────
 const modalLessonType = document.querySelector('#modal-add-lesson [name="lesson_type"]');
-if (modalLessonType) {
-    modalLessonType.addEventListener('change', function() {
+if(modalLessonType){
+    modalLessonType.addEventListener('change', function(){
         document.getElementById('modal-video-fields').classList.toggle('hidden', this.value !== 'video');
     });
 }
-function setLessonType(type) {
-    if (modalLessonType) {
-        modalLessonType.value = type;
-        modalLessonType.dispatchEvent(new Event('change'));
-    }
+function setLessonType(type){
+    if(modalLessonType){ modalLessonType.value=type; modalLessonType.dispatchEvent(new Event('change')); }
 }
 
-// EDIT SECTION MODAL
-function openEditSectionModal(id, title, description, order) {
+// ── Edit Section ───────────────────────────────────────────────────────
+function openEditSectionModal(id, title, description, order){
     document.getElementById('editSectionTitle').value = title;
     document.getElementById('editSectionDesc').value  = description;
     document.getElementById('editSectionOrder').value = order;
     document.getElementById('editSectionForm').action =
-        "{% url 'instructor:section_edit' course.slug 0 %}".replace('/0/', `/${id}/`);
+        "{% url 'instructor:section_edit' course.slug 0 %}".replace('/0/',`/${id}/`);
     openModal('modal-edit-section');
 }
 
-// CREATE QUIZ MODAL
-function openCreateQuizModal(lessonSlug, lessonName) {
+// ── Create Quiz ────────────────────────────────────────────────────────
+function openCreateQuizModal(lessonSlug, lessonName){
     document.getElementById('createQuizLessonName').textContent = lessonName;
     document.getElementById('createQuizForm').action =
         "{% url 'instructor:quiz_create' course.slug 'LESSON' %}".replace('LESSON', lessonSlug);
@@ -1719,8 +1650,8 @@ function openCreateQuizModal(lessonSlug, lessonName) {
     openModal('modal-create-quiz');
 }
 
-// EDIT QUIZ MODAL
-function openEditQuizModal(lessonSlug, quizSlug, quizTitle, passScore, maxAttempts, timeLimit, displayOrder) {
+// ── Edit Quiz ──────────────────────────────────────────────────────────
+function openEditQuizModal(lessonSlug, quizSlug, quizTitle, passScore, maxAttempts, timeLimit, displayOrder){
     document.getElementById('editQuizTitle').value    = quizTitle;
     document.getElementById('editQuizPass').value     = passScore;
     document.getElementById('editQuizAttempts').value = maxAttempts;
@@ -1732,56 +1663,43 @@ function openEditQuizModal(lessonSlug, quizSlug, quizTitle, passScore, maxAttemp
     openModal('modal-edit-quiz');
 }
 
-// MANAGE QUESTIONS MODAL
-let _currentLessonSlug = '';
-let _currentQuizSlug   = '';
-
-function openManageQuestionsModal(lessonSlug, quizSlug, quizName) {
+// ── Manage Questions ───────────────────────────────────────────────────
+let _currentLessonSlug = '', _currentQuizSlug = '';
+function openManageQuestionsModal(lessonSlug, quizSlug, quizName){
     _currentLessonSlug = lessonSlug;
     _currentQuizSlug   = quizSlug;
     document.getElementById('manageQuestionsQuizName').textContent = quizName;
     document.getElementById('addQuestionPanel').classList.add('hidden');
-    document.getElementById('btnOpenAddQuestion').innerHTML = '<i class="fas fa-plus mr-1"></i>Add Question';
-
+    document.getElementById('btnOpenAddQuestion').innerHTML = '<i class="fas fa-plus"></i> Add Question';
     document.getElementById('addQuestionForm').action =
         "{% url 'instructor:question_create' course.slug 'LESSON' 'QUIZ' %}"
             .replace('LESSON', lessonSlug).replace('QUIZ', quizSlug);
-
-    // Load questions (link to dedicated page)
     const container = document.getElementById('questionsListContainer');
     const link = "{% url 'instructor:quiz_questions' course.slug 'LESSON' 'QUIZ' %}"
         .replace('LESSON', lessonSlug).replace('QUIZ', quizSlug);
     container.innerHTML = `
         <div class="text-center py-6">
-            <p class="text-xs text-gray-500 mb-3">Manage all questions for this quiz on the dedicated page.</p>
-            <a href="${link}"
-               class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 transition-all">
+            <p class="text-xs text-gray-500 mb-3">Manage all questions on the dedicated page.</p>
+            <a href="${link}" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 transition-all">
                 <i class="fas fa-external-link-alt mr-1.5"></i>Open Questions Manager
             </a>
         </div>`;
-
     openModal('modal-manage-questions');
 }
-
-// Toggle add-question panel
-document.getElementById('btnOpenAddQuestion').addEventListener('click', function() {
+document.getElementById('btnOpenAddQuestion').addEventListener('click', function(){
     const panel = document.getElementById('addQuestionPanel');
     panel.classList.toggle('hidden');
     this.innerHTML = panel.classList.contains('hidden')
-        ? '<i class="fas fa-plus mr-1"></i>Add Question'
-        : '<i class="fas fa-times mr-1"></i>Cancel';
+        ? '<i class="fas fa-plus"></i> Add Question'
+        : '<i class="fas fa-times"></i> Cancel';
 });
-
-// Question type hint (multiple choice shows answers block)
-function toggleNewQTypeHint() {
+function toggleNewQTypeHint(){
     const val = document.getElementById('newQType').value;
     document.getElementById('newQAnswerBlock').classList.toggle('hidden', val !== 'multiple_choice');
 }
 document.getElementById('newQType').addEventListener('change', toggleNewQTypeHint);
-
-// Add answer row for multiple choice
 let answerRowCount = 2;
-function addAnswerRow() {
+function addAnswerRow(){
     const container = document.getElementById('newQAnswerRows');
     const row = document.createElement('div');
     row.className = 'answer-row';
@@ -1789,7 +1707,7 @@ function addAnswerRow() {
     row.innerHTML = `
         <input type="text" name="answers[]" class="fm-input flex-1" placeholder="Answer ${letter}">
         <label class="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap">
-            <input type="radio" name="correct_answer" value="${answerRowCount}" class="fm-check"> Correct
+            <input type="radio" name="correct_answer" value="${answerRowCount}" class="fm-check">Correct
         </label>
         <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 text-xs ml-1 flex-shrink-0">
             <i class="fas fa-times"></i>
@@ -1798,8 +1716,8 @@ function addAnswerRow() {
     answerRowCount++;
 }
 
-// CREATE ASSIGNMENT MODAL
-function openCreateAssignmentModal(lessonSlug, lessonName) {
+// ── Create Assignment ──────────────────────────────────────────────────
+function openCreateAssignmentModal(lessonSlug, lessonName){
     document.getElementById('createAssignmentLessonName').textContent = lessonName;
     document.getElementById('createAssignmentForm').action =
         "{% url 'instructor:assignment_create' course.slug 'LESSON' %}".replace('LESSON', lessonSlug);
@@ -1807,113 +1725,87 @@ function openCreateAssignmentModal(lessonSlug, lessonName) {
     openModal('modal-create-assignment');
 }
 
-// EDIT ASSIGNMENT MODAL
-function openEditAssignmentModal(lessonSlug, assignmentSlug, assignmentTitle) {
+// ── Edit Assignment ────────────────────────────────────────────────────
+function openEditAssignmentModal(lessonSlug, assignmentSlug, assignmentTitle){
     document.getElementById('editAssignmentLink').href =
         "{% url 'instructor:assignment_edit' course.slug 'LESSON' 'ASSIGN' %}"
             .replace('LESSON', lessonSlug).replace('ASSIGN', assignmentSlug);
     openModal('modal-edit-assignment');
 }
 
-// DELETE CONFIRMATIONS
-function confirmDeleteSection(id, title) {
+// ── Delete confirmations ───────────────────────────────────────────────
+function confirmDeleteSection(id, title){
     Swal.fire({
-        title: 'Delete Section?',
-        html: `Delete <strong>"${title}"</strong> and all its lessons?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
-        customClass: { popup: 'rounded-xl' }
-    }).then(r => {
-        if (r.isConfirmed) {
-            const f = document.getElementById('deleteSectionForm');
-            f.action = "{% url 'instructor:section_delete' course.slug 0 %}".replace('/0/', `/${id}/`);
-            f.classList.remove('hidden');
-            f.submit();
+        title:'Delete Section?',
+        html:`Delete <strong>"${title}"</strong> and all its lessons?`,
+        icon:'warning', showCancelButton:true,
+        confirmButtonColor:'#dc2626', cancelButtonColor:'#6b7280',
+        confirmButtonText:'Yes, delete', cancelButtonText:'Cancel',
+        customClass:{popup:'rounded-xl'}
+    }).then(r=>{
+        if(r.isConfirmed){
+            const f=document.getElementById('deleteSectionForm');
+            f.action="{% url 'instructor:section_delete' course.slug 0 %}".replace('/0/',`/${id}/`);
+            f.classList.remove('hidden'); f.submit();
+        }
+    });
+}
+function confirmDeleteLesson(slug, title){
+    Swal.fire({
+        title:'Delete Lesson?',
+        html:`Delete <strong>"${title}"</strong>? This cannot be undone.`,
+        icon:'warning', showCancelButton:true,
+        confirmButtonColor:'#dc2626', cancelButtonColor:'#6b7280',
+        confirmButtonText:'Yes, delete', cancelButtonText:'Cancel',
+        customClass:{popup:'rounded-xl'}
+    }).then(r=>{
+        if(r.isConfirmed){
+            const f=document.getElementById('deleteLessonForm');
+            f.action="{% url 'instructor:lesson_delete' course.slug 'placeholder' %}".replace('placeholder', slug);
+            f.classList.remove('hidden'); f.submit();
+        }
+    });
+}
+function confirmDeleteAnnouncement(url, title){
+    Swal.fire({
+        title:'Delete Announcement?',
+        html:`Delete <strong>"${title}"</strong>? Students will no longer see it.`,
+        icon:'warning', showCancelButton:true,
+        confirmButtonColor:'#dc2626', cancelButtonColor:'#6b7280',
+        confirmButtonText:'Yes, delete', cancelButtonText:'Cancel',
+        customClass:{popup:'rounded-xl'}
+    }).then(r=>{
+        if(r.isConfirmed){
+            const f=document.getElementById('deleteForm');
+            f.action=url; f.classList.remove('hidden'); f.submit();
         }
     });
 }
 
-function confirmDeleteLesson(slug, title) {
-    Swal.fire({
-        title: 'Delete Lesson?',
-        html: `Delete <strong>"${title}"</strong>? This cannot be undone.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
-        customClass: { popup: 'rounded-xl' }
-    }).then(r => {
-        if (r.isConfirmed) {
-            const f = document.getElementById('deleteLessonForm');
-            f.action = "{% url 'instructor:lesson_delete' course.slug 'placeholder' %}".replace('placeholder', slug);
-            f.classList.remove('hidden');
-            f.submit();
-        }
-    });
-}
-
-function confirmDeleteAnnouncement(url, title) {
-    Swal.fire({
-        title: 'Delete Announcement?',
-        html: `Delete <strong>"${title}"</strong>? Students will no longer see it.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: 'Yes, delete',
-        cancelButtonText: 'Cancel',
-        customClass: { popup: 'rounded-xl' }
-    }).then(r => {
-        if (r.isConfirmed) {
-            const f = document.getElementById('deleteForm');
-            f.action = url;
-            f.classList.remove('hidden');
-            f.submit();
-        }
-    });
-}
-
-// OPEN DELETE COURSE MODAL
-function openDeleteCourseModal() {
-    document.getElementById('deleteCourseConfirmInput').value = '';
-    document.getElementById('btnConfirmDeleteCourse').disabled = true;
-    openModal('modal-delete-course');
-}
-
-// DataTable for students
-$(document).ready(function() {
-    if ($('#studentsTable tbody tr').length > 0) {
+// ── DataTable for students ─────────────────────────────────────────────
+$(document).ready(function(){
+    if($('#studentsTable tbody tr').length>0){
         $('#studentsTable').DataTable({
-            pageLength: 15,
-            dom: 'frtip',
-            language: { search: '', searchPlaceholder: 'Search students…' },
-            order: [[2, 'desc']],
-            responsive: true
+            pageLength:15, dom:'frtip',
+            language:{search:'', searchPlaceholder:'Search students…'},
+            order:[[2,'desc']], responsive:true
         });
     }
 });
 
-// Content tips modal
-function showTips() {
+// ── Content tips ───────────────────────────────────────────────────────
+function showTips(){
     Swal.fire({
-        title: '<i class="fas fa-lightbulb text-blue-600 mr-2"></i>Course Content Tips',
-        html: `<div class="text-left space-y-3 px-2">
-            <div class="flex gap-3 items-start"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i><p class="text-lg text-gray-700"><strong>Use sections:</strong> Group related lessons for a logical learning path.</p></div>
-            <div class="flex gap-3 items-start"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i><p class="text-lg text-gray-700"><strong>Mix content types:</strong> Combine videos, text, quizzes, and assignments.</p></div>
-            <div class="flex gap-3 items-start"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i><p class="text-lg text-gray-700"><strong>Enable previews:</strong> Let students see intro lessons to boost enrolment.</p></div>
-            <div class="flex gap-3 items-start"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i><p class="text-lg text-gray-700"><strong>Display order:</strong> Use lower numbers to position items at the top.</p></div>
+        title:'<i class="fas fa-lightbulb text-blue-600 mr-2"></i>Course Content Tips',
+        html:`<div class="text-left space-y-3 px-2">
+            <div class="flex gap-3 items-start"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i><p class="text-sm text-gray-700"><strong>Use sections:</strong> Group related lessons for a logical learning path.</p></div>
+            <div class="flex gap-3 items-start"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i><p class="text-sm text-gray-700"><strong>Mix content types:</strong> Combine videos, text, quizzes, and assignments.</p></div>
+            <div class="flex gap-3 items-start"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i><p class="text-sm text-gray-700"><strong>Enable previews:</strong> Let students see intro lessons to boost enrolment.</p></div>
+            <div class="flex gap-3 items-start"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i><p class="text-sm text-gray-700"><strong>Display order:</strong> Use lower numbers to position items at the top.</p></div>
         </div>`,
-        icon: null,
-        confirmButtonText: 'Got it!',
-        confirmButtonColor: '#4a6bff',
-        width: '520px',
-        customClass: { popup: 'rounded-xl' }
+        icon:null, confirmButtonText:'Got it!',
+        confirmButtonColor:'#4a6bff', width:'520px',
+        customClass:{popup:'rounded-xl'}
     });
 }
 </script>

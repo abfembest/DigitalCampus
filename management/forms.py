@@ -1480,11 +1480,14 @@ class LMSCourseForm(forms.ModelForm):
         model = LMSCourse
         fields = [
             'title', 'code', 'short_description', 'description',
-            'difficulty_level', 'duration_hours', 'language', 'instructor',
-            'instructor_name', 'instructor_bio', 'thumbnail', 'promo_video_url',
+            'difficulty_level', 'duration_hours', 'language',
+            'academic_course', 'session', 'term',
+            'instructor', 'instructor_name', 'instructor_bio',
+            'thumbnail', 'promo_video_url',
             'max_students', 'enrollment_start_date', 'enrollment_end_date',
-            'is_published', 'is_featured', 'has_certificate', 'certificate_fee', 'certificate_template',
-            'academic_course', 'meta_description', 'meta_keywords'
+            'is_published', 'is_featured',
+            'has_certificate', 'certificate_fee', 'certificate_template',
+            'meta_description', 'meta_keywords',
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -1568,6 +1571,12 @@ class LMSCourseForm(forms.ModelForm):
             'academic_course': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
+            'session': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
+            'term': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
+            }),
             'certificate_fee': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'placeholder': '0.00',
@@ -1598,11 +1607,26 @@ class LMSCourseForm(forms.ModelForm):
         self.fields['instructor'].label_from_instance = lambda u: (
             u.get_full_name().strip() or u.username
         )
-        self.fields['academic_course'].empty_label = '— Standalone LMS (no academic link) —'
-        # self.fields['category'].required = False
-        self.fields['academic_course'].required = False
+        self.fields['academic_course'].empty_label = '— Select Academic Course —'
+        # NOTE: academic_course is REQUIRED — all LMS courses must be tied to
+        # the academic catalogue per MIU policy (no standalone LMS courses).
+        self.fields['academic_course'].required = True
         from eduweb.models import Course as AcademicCourse
-        self.fields['academic_course'].queryset = AcademicCourse.objects.select_related('program__department').order_by('program__department__name', 'code')        
+        self.fields['academic_course'].queryset = (
+            AcademicCourse.objects
+            .select_related('program__department__faculty')
+            .only(
+                'id', 'code', 'name', 'year_of_study', 'semester',
+                'program__id', 'program__name',
+                'program__department__id', 'program__department__name',
+                'program__department__faculty__id', 'program__department__faculty__name',
+            )
+            .order_by('program__department__faculty__name', 'program__department__name', 'program__name', 'year_of_study', 'semester', 'code')
+        )
+        self.fields['academic_course'].label_from_instance = lambda c: (
+            f"{c.code} — {c.name}  "
+            f"({c.program.name} · {c.get_semester_display()} Yr{c.year_of_study})"
+        )        
         # Pre-populate JSON fields when editing
         if self.instance.pk:
             objectives = self.instance.learning_objectives

@@ -721,7 +721,7 @@
                                 <span class="text-gray-400">{{ payment.created_at|timesince }} ago</span>
                             </td>
                             <td class="px-3 sm:px-4 py-3">
-                                <a href="{% url 'finance:payment_detail' payment.payment_reference %}"
+                                <a href="{% url 'payments:payment_detail' payment.payment_reference %}"
                                    class="text-indigo-600 hover:text-indigo-700 text-xs font-medium
                                           transition-colors whitespace-nowrap">
                                     View <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
@@ -831,7 +831,7 @@
                                 <span class="text-gray-400">{{ payment.created_at|timesince }} ago</span>
                             </td>
                             <td class="px-3 sm:px-4 py-3">
-                                <a href="{% url 'finance:payment_detail' payment.payment_reference %}"
+                                <a href="{% url 'payments:payment_detail' payment.payment_reference %}"
                                    class="text-indigo-600 hover:text-indigo-700 text-xs font-medium
                                           transition-colors whitespace-nowrap">
                                     View <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>

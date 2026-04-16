@@ -1,175 +1,1015 @@
 {% extends 'management/base.html' %}
 {% load static %}
 
-{% block title %}LMS Courses - MIU Portal{% endblock %}
+{% block title %}LMS Courses — MIU Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-12xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">LMS Courses</h1>
-            <p class="text-gray-600 mt-1">Manage learning management system courses</p>
-        </div>
-        <a href="{% url 'management:lms_course_create' %}" class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-            <i class="fas fa-plus mr-2"></i>New LMS Course
+<div class="max-w-full mx-auto space-y-5">
+
+  {# ═══════════════════════════════════════════════════════════ HEADER #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-heading">LMS Courses</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Manage LMS delivery for academic courses — sessions, instructors &amp; content</p>
+    </div>
+    <button onclick="openCreateModal()"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700
+                   text-white text-sm font-semibold rounded-lg shadow transition-all whitespace-nowrap">
+      <i class="fas fa-plus"></i> New LMS Course
+    </button>
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════ STAT CARDS #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div class="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 flex items-center gap-4">
+      <div class="w-10 h-10 sm:w-12 sm:h-12 bg-primary-100 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-book text-primary-600 text-lg"></i>
+      </div>
+      <div><p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Total</p>
+        <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p></div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 flex items-center gap-4">
+      <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-check-circle text-green-600 text-lg"></i>
+      </div>
+      <div><p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Published</p>
+        <p class="text-2xl font-bold text-green-600">{{ stats.published }}</p></div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 flex items-center gap-4">
+      <div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-file-alt text-yellow-600 text-lg"></i>
+      </div>
+      <div><p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Draft</p>
+        <p class="text-2xl font-bold text-yellow-600">{{ stats.draft }}</p></div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 flex items-center gap-4">
+      <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-star text-blue-500 text-lg"></i>
+      </div>
+      <div><p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Featured</p>
+        <p class="text-2xl font-bold text-blue-600">{{ stats.featured }}</p></div>
+    </div>
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════ FILTERS #}
+  <div class="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+    <form method="get" class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[140px]">
+        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Program</label>
+        <select name="program"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+          <option value="">All Programs</option>
+          {% for p in programs %}
+            <option value="{{ p.id }}" {% if request.GET.program == p.id|stringformat:"s" %}selected{% endif %}>
+              {{ p.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex-1 min-w-[140px]">
+        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Session</label>
+        <select name="session"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+          <option value="">All Sessions</option>
+          {% for s in sessions %}
+            <option value="{{ s.id }}" {% if request.GET.session == s.id|stringformat:"s" %}selected{% endif %}>
+              {{ s.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Term</label>
+        <select name="term"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+          <option value="">All Terms</option>
+          <option value="first"  {% if request.GET.term == 'first'  %}selected{% endif %}>First Semester</option>
+          <option value="second" {% if request.GET.term == 'second' %}selected{% endif %}>Second Semester</option>
+          <option value="fall"   {% if request.GET.term == 'fall'   %}selected{% endif %}>Fall</option>
+          <option value="spring" {% if request.GET.term == 'spring' %}selected{% endif %}>Spring</option>
+        </select>
+      </div>
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Status</label>
+        <select name="published"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+          <option value="">All Status</option>
+          <option value="published" {% if request.GET.published == 'published' %}selected{% endif %}>Published</option>
+          <option value="draft"     {% if request.GET.published == 'draft'     %}selected{% endif %}>Draft</option>
+        </select>
+      </div>
+      <div class="flex gap-2">
+        <button type="submit"
+                class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-all">
+          <i class="fas fa-filter mr-1"></i> Filter
+        </button>
+        <a href="{% url 'management:lms_courses_list' %}"
+           class="px-4 py-2 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-semibold rounded-lg transition-all">
+          <i class="fas fa-times"></i>
         </a>
+      </div>
+    </form>
+  </div>
+
+  {# ═══════════════════════════════════════════════════════════ TABLE #}
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table id="lmsCoursesTable" class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Course</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Academic Course</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden md:table-cell">Program</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell">Session / Term</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden sm:table-cell">Instructor</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">Enrollments</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Status</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for course in courses %}
+          <tr class="hover:bg-gray-50 transition-colors" data-pk="{{ course.pk }}">
+            {# Title + code #}
+            <td class="px-4 py-3">
+              <div>
+                <p class="font-semibold text-gray-900 leading-tight">{{ course.title|truncatechars:40 }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ course.code|default:"—" }}</p>
+              </div>
+            </td>
+            {# Academic course #}
+            <td class="px-4 py-3">
+              {% if course.academic_course %}
+              <div>
+                <span class="inline-block font-mono text-xs bg-primary-50 text-primary-700 border border-primary-200 rounded px-1.5 py-0.5">
+                  {{ course.academic_course.code }}
+                </span>
+                <p class="text-xs text-gray-500 mt-0.5 max-w-[160px] truncate" title="{{ course.academic_course.name }}">
+                  {{ course.academic_course.name }}
+                </p>
+              </div>
+              {% else %}
+              <span class="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-0.5">Standalone</span>
+              {% endif %}
+            </td>
+            {# Program — hidden on mobile #}
+            <td class="px-4 py-3 hidden md:table-cell">
+              {% if course.academic_course and course.academic_course.program %}
+              <p class="text-xs text-gray-700 font-medium max-w-[160px] truncate" title="{{ course.academic_course.program.name }}">
+                {{ course.academic_course.program.name }}
+              </p>
+              <p class="text-xs text-gray-400">{{ course.academic_course.program.department.name|truncatechars:25 }}</p>
+              {% else %}<span class="text-gray-400">—</span>{% endif %}
+            </td>
+            {# Session / Term — hidden on tablet #}
+            <td class="px-4 py-3 hidden lg:table-cell">
+              {% if course.session %}
+              <p class="text-xs font-medium text-gray-700">{{ course.session.name }}</p>
+              <p class="text-xs text-gray-400 capitalize">{{ course.get_term_display|default:course.term|default:"—" }}</p>
+              {% else %}<span class="text-gray-400 text-xs">—</span>{% endif %}
+            </td>
+            {# Instructor — hidden on small screens #}
+            <td class="px-4 py-3 hidden sm:table-cell">
+              <span class="text-xs text-gray-700">
+                {{ course.instructor_name|default:course.instructor.get_full_name|default:"Unassigned" }}
+              </span>
+            </td>
+            {# Enrollments — hidden on large screens only #}
+            <td class="px-4 py-3 hidden xl:table-cell text-center">
+              <span class="inline-block text-xs font-bold text-primary-700 bg-primary-50 border border-primary-200 rounded-full px-2.5 py-0.5 min-w-[28px] text-center">
+                {{ course.total_enrollments }}
+              </span>
+            </td>
+            {# Status #}
+            <td class="px-4 py-3">
+              <div class="flex flex-wrap items-center gap-1">
+                {% if course.is_published %}
+                  <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full font-medium">
+                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Published
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">
+                    <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span> Draft
+                  </span>
+                {% endif %}
+                {% if course.is_featured %}
+                  <span class="text-yellow-500 text-xs" title="Featured"><i class="fas fa-star"></i></span>
+                {% endif %}
+                {% if course.has_certificate %}
+                  <span class="text-amber-600 text-xs" title="Certificate"><i class="fas fa-certificate"></i></span>
+                {% endif %}
+              </div>
+            </td>
+            {# Actions #}
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="openDetailModal({{ course.pk }})"
+                        class="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all" title="View details">
+                  <i class="fas fa-eye text-xs"></i>
+                </button>
+                <button onclick="openEditModal({{ course.pk }})"
+                        class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Edit">
+                  <i class="fas fa-edit text-xs"></i>
+                </button>
+                <button onclick="openDeleteModal({{ course.pk }}, '{{ course.title|escapejs }}', {{ course.total_enrollments }}, {{ course.lesson_count }})"
+                        class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete">
+                  <i class="fas fa-trash text-xs"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="px-6 py-16 text-center">
+              <div class="flex flex-col items-center gap-3 text-gray-400">
+                <i class="fas fa-book-open text-4xl opacity-30"></i>
+                <p class="font-medium">No LMS courses found</p>
+                <p class="text-sm">Try adjusting your filters or create a new LMS course.</p>
+                <button onclick="openCreateModal()"
+                        class="mt-2 px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">
+                  <i class="fas fa-plus mr-1"></i> Create First Course
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>{# end max-w #}
+
+<div id="createModal" class="hidden fixed inset-0 z-50" aria-modal="true" role="dialog">
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50" onclick="closeModal('createModal')"></div>
+    <div class="relative bg-white w-full max-w-3xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+
+    {# Header #}
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-primary-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-plus text-primary-600"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 font-heading">New LMS Course</h2>
+          <p class="text-xs text-gray-500">Link to an academic course &amp; configure delivery</p>
+        </div>
+      </div>
+      <button onclick="closeModal('createModal')"
+              class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
 
-    <!-- Statistics -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white p-6 rounded-lg border border-gray-200">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm">Total Courses</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
-                </div>
-                <i class="fas fa-book text-3xl text-primary-100"></i>
-            </div>
-        </div>
-        <div class="bg-white p-6 rounded-lg border border-gray-200">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm">Published</p>
-                    <p class="text-2xl font-bold text-green-600">{{ stats.published }}</p>
-                </div>
-                <i class="fas fa-check-circle text-3xl text-green-100"></i>
-            </div>
-        </div>
-        <div class="bg-white p-6 rounded-lg border border-gray-200">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm">Draft</p>
-                    <p class="text-2xl font-bold text-yellow-600">{{ stats.draft }}</p>
-                </div>
-                <i class="fas fa-file-alt text-3xl text-yellow-100"></i>
-            </div>
-        </div>
-        <div class="bg-white p-6 rounded-lg border border-gray-200">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm">Featured</p>
-                    <p class="text-2xl font-bold text-blue-600">{{ stats.featured }}</p>
-                </div>
-                <i class="fas fa-star text-3xl text-blue-100"></i>
-            </div>
-        </div>
-    </div>
+    {# Form #}
+    <form method="post" action="{% url 'management:lms_course_create' %}" enctype="multipart/form-data"
+          id="createForm" class="divide-y divide-gray-100">
+      {% csrf_token %}
 
-    <!-- Filters -->
-    <div class="bg-white p-6 rounded-lg border border-gray-200 space-y-4">
-        <h3 class="font-semibold text-gray-900 mb-4">Filters</h3>
-        <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {% csrf_token %}
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                <select name="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white">
-                    <option value="">All Categories</option>
-                    {% for category in categories %}
-                    <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
-                        {{ category.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
-                <select name="difficulty" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white">
-                    <option value="">All Levels</option>
-                    <option value="beginner" {% if request.GET.difficulty == 'beginner' %}selected{% endif %}>Beginner</option>
-                    <option value="intermediate" {% if request.GET.difficulty == 'intermediate' %}selected{% endif %}>Intermediate</option>
-                    <option value="advanced" {% if request.GET.difficulty == 'advanced' %}selected{% endif %}>Advanced</option>
-                </select>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select name="published" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white">
-                    <option value="">All Status</option>
-                    <option value="published" {% if request.GET.published == 'published' %}selected{% endif %}>Published</option>
-                    <option value="draft" {% if request.GET.published == 'draft' %}selected{% endif %}>Draft</option>
-                </select>
-            </div>
-            
-            <button type="submit" class="col-span-full md:col-span-1 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                Apply Filters
-            </button>
-        </form>
-    </div>
+      {# Re-open modal if errors #}
+      {% if create_form.errors %}
+      <script>document.addEventListener('DOMContentLoaded',()=>openCreateModal());</script>
+      {% endif %}
 
-    <!-- Courses Table -->
-    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <table class="w-full">
-            <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Course</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Category</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Instructor</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Duration</th>
-                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th class="px-6 py-3 text-right text-sm font-semibold text-gray-900">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for course in courses %}
-                <tr class="border-b border-gray-200 hover:bg-gray-50">
-                    <td class="px-6 py-4">
-                        <div>
-                            <p class="font-medium text-gray-900">{{ course.title }}</p>
-                            <p class="text-sm text-gray-600">{{ course.code }}</p>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        {% if course.category %}
-                        <span class="inline-block px-3 py-1 bg-{{ course.category.color }}-100 text-{{ course.category.color }}-800 rounded-full text-sm">
-                            {{ course.category.name }}
-                        </span>
-                        {% else %}
-                        <span class="text-gray-500">—</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-700">
-                        {{ course.instructor_name|default:course.instructor.get_full_name|default:"Unassigned" }}
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-700">{{ course.duration_hours }} hrs</td>
-                    <td class="px-6 py-4">
-                        <div class="flex items-center gap-2">
-                            {% if course.is_published %}
-                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Published</span>
-                            {% else %}
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">Draft</span>
-                            {% endif %}
-                            {% if course.is_featured %}
-                            <i class="fas fa-star text-yellow-500"></i>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                        <div class="flex justify-end gap-3">
-                            <a href="{% url 'management:lms_course_detail' course.pk %}" class="text-blue-600 hover:text-blue-800" title="View">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="{% url 'management:lms_course_edit' course.pk %}" class="text-blue-600 hover:text-blue-800" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <a href="{% url 'management:lms_course_delete' course.pk %}" class="text-red-600 hover:text-red-800" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                        <i class="fas fa-book text-4xl mb-3 opacity-50 block"></i>
-                        <p>No LMS courses found</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+      {# Section 1: Academic Link #}
+      <div class="px-6 py-5 space-y-4">
+        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">1</span>
+          Academic Course Link <span class="text-red-500">*</span>
+        </h3>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Academic Course
+            <span class="text-red-500">*</span>
+          </label>
+          {{ create_form.academic_course }}
+          {% if create_form.academic_course.errors %}
+            <p class="text-xs text-red-600 mt-1">{{ create_form.academic_course.errors.0 }}</p>
+          {% endif %}
+          <p class="text-xs text-gray-400 mt-1">Selecting a course will auto-fill the title and code from the catalogue.</p>
+          <div id="create-academic-linked-badge"
+               class="hidden mt-2 inline-flex items-center gap-1.5 text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg px-3 py-1.5">
+            <i class="fas fa-link"></i> Linked to academic catalogue
+          </div>
+        </div>
+      </div>
+
+      {# Section 2: Identity #}
+      <div class="px-6 py-5 space-y-4">
+        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">2</span>
+          Course Identity
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Title <span class="text-red-500">*</span></label>
+            {{ create_form.title }}
+            {% if create_form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ create_form.title.errors.0 }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Course Code</label>
+            {{ create_form.code }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Language</label>
+            {{ create_form.language }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Level</label>
+            {{ create_form.difficulty_level }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Duration (hours)</label>
+            {{ create_form.duration_hours }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Short Description</label>
+          {{ create_form.short_description }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Full Description</label>
+          {{ create_form.description }}
+        </div>
+      </div>
+
+      {# Section 3: Session / Term #}
+      <div class="px-6 py-5 space-y-4">
+        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">3</span>
+          Session &amp; Term
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Academic Session</label>
+            {{ create_form.session }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Term</label>
+            {{ create_form.term }}
+          </div>
+        </div>
+      </div>
+
+      {# Section 4: Instructor #}
+      <div class="px-6 py-5 space-y-4">
+        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">4</span>
+          Instructor
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Instructor (User)</label>
+            {{ create_form.instructor }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Instructor Display Name</label>
+            {{ create_form.instructor_name }}
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Instructor Bio</label>
+            {{ create_form.instructor_bio }}
+          </div>
+        </div>
+      </div>
+
+      {# Section 5: Enrollment #}
+      <div id="create-wrap-enrollment" class="px-6 py-5 space-y-4">
+        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">5</span>
+          Enrollment Settings
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Max Students</label>
+            {{ create_form.max_students }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Enrollment Start</label>
+            {{ create_form.enrollment_start_date }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Enrollment End</label>
+            {{ create_form.enrollment_end_date }}
+          </div>
+        </div>
+      </div>
+
+      {# Section 6: Content helpers #}
+      <div class="px-6 py-5 space-y-4">
+        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">6</span>
+          Content &amp; Learning
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Learning Objectives <span class="font-normal text-gray-400">(one per line)</span></label>
+            {{ create_form.learning_objectives_text }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Prerequisites <span class="font-normal text-gray-400">(one per line)</span></label>
+            {{ create_form.prerequisites_text }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Promo Video URL</label>
+          {{ create_form.promo_video_url }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Thumbnail</label>
+          {{ create_form.thumbnail }}
+        </div>
+      </div>
+
+      {# Section 7: Certificate #}
+      <div id="create-wrap-certificate" class="px-6 py-5 space-y-4">
+        <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">7</span>
+          Certificate
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+          <div class="flex items-center gap-3">
+            {{ create_form.has_certificate }}
+            <label class="text-sm text-gray-700 font-medium cursor-pointer">Issue Certificate</label>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Certificate Fee ($)</label>
+            {{ create_form.certificate_fee }}
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Template Name</label>
+            {{ create_form.certificate_template }}
+          </div>
+        </div>
+      </div>
+
+      {# Section 8: Publish flags #}
+      <div class="px-6 py-5">
+        <div class="flex flex-wrap gap-6">
+          <label class="flex items-center gap-3 cursor-pointer">
+            {{ create_form.is_published }}
+            <div>
+              <p class="text-sm font-medium text-gray-800">Publish immediately</p>
+              <p class="text-xs text-gray-400">Make visible to students now</p>
+            </div>
+          </label>
+          <label class="flex items-center gap-3 cursor-pointer">
+            {{ create_form.is_featured }}
+            <div>
+              <p class="text-sm font-medium text-gray-800">Featured course</p>
+              <p class="text-xs text-gray-400">Highlight in listings</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {# Footer actions #}
+      <div class="flex justify-between items-center px-6 py-4 bg-gray-50 rounded-b-2xl">
+        <button type="button" onclick="closeModal('createModal')"
+                class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">
+          Cancel
+        </button>
+        <button type="submit"
+                class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg shadow transition-all">
+          <i class="fas fa-plus mr-2"></i> Create Course
+        </button>
+      </div>
+    </form>
     </div>
+  </div>
 </div>
+
+<div id="editModal" class="hidden fixed inset-0 z-50" aria-modal="true" role="dialog">
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50" onclick="closeModal('editModal')"></div>
+    <div class="relative bg-white w-full max-w-3xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-edit text-blue-600"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 font-heading">Edit LMS Course</h2>
+          <p class="text-xs text-gray-500" id="editModalSubtitle">Loading…</p>
+        </div>
+      </div>
+      <button onclick="closeModal('editModal')"
+              class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    {# Loading skeleton #}
+    <div id="editModalLoading" class="px-6 py-16 text-center">
+      <div class="inline-flex flex-col items-center gap-3 text-gray-400">
+        <i class="fas fa-spinner fa-spin text-2xl text-primary-500"></i>
+        <p class="text-sm">Loading course details…</p>
+      </div>
+    </div>
+
+    {# Form container — filled by AJAX #}
+    <div id="editModalFormContainer" class="hidden"></div>
+    </div>
+  </div>
+</div>
+
+<div id="detailModal" class="hidden fixed inset-0 z-50" aria-modal="true" role="dialog">
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50" onclick="closeModal('detailModal')"></div>
+    <div class="relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-eye text-indigo-600"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 font-heading" id="detailTitle">Course Detail</h2>
+          <p class="text-xs text-gray-500" id="detailCode"></p>
+        </div>
+      </div>
+      <button onclick="closeModal('detailModal')"
+              class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div id="detailModalLoading" class="px-6 py-12 text-center text-gray-400">
+      <i class="fas fa-spinner fa-spin text-2xl text-primary-500"></i>
+      <p class="text-sm mt-2">Loading…</p>
+    </div>
+
+    <div id="detailModalBody" class="hidden px-6 py-5 space-y-5">
+      {# Academic link banner #}
+      <div id="detailAcademicBanner"
+           class="rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 flex flex-wrap gap-4 text-sm">
+        <div><span class="text-xs text-primary-500 font-semibold uppercase block">Academic Code</span>
+          <span class="font-bold text-primary-800 font-mono" id="detailAcCode">—</span></div>
+        <div><span class="text-xs text-primary-500 font-semibold uppercase block">Course Name</span>
+          <span class="font-medium text-primary-900" id="detailAcName">—</span></div>
+        <div><span class="text-xs text-primary-500 font-semibold uppercase block">Program</span>
+          <span class="text-primary-700" id="detailAcProgram">—</span></div>
+      </div>
+
+      {# Key facts grid #}
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+          <p class="text-xs text-gray-500 uppercase font-semibold mb-0.5">Level</p>
+          <p class="font-semibold text-gray-800 text-sm" id="detailLevel">—</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+          <p class="text-xs text-gray-500 uppercase font-semibold mb-0.5">Duration</p>
+          <p class="font-semibold text-gray-800 text-sm" id="detailDuration">—</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+          <p class="text-xs text-gray-500 uppercase font-semibold mb-0.5">Language</p>
+          <p class="font-semibold text-gray-800 text-sm" id="detailLanguage">—</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+          <p class="text-xs text-gray-500 uppercase font-semibold mb-0.5">Session</p>
+          <p class="font-semibold text-gray-800 text-sm" id="detailSession">—</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+          <p class="text-xs text-gray-500 uppercase font-semibold mb-0.5">Term</p>
+          <p class="font-semibold text-gray-800 text-sm capitalize" id="detailTerm">—</p>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+          <p class="text-xs text-gray-500 uppercase font-semibold mb-0.5">Enrollments</p>
+          <p class="font-bold text-primary-700 text-lg" id="detailEnrollments">0</p>
+        </div>
+      </div>
+
+      {# Status badges #}
+      <div class="flex flex-wrap gap-2" id="detailStatusBadges"></div>
+
+      {# Description #}
+      <div id="detailDescriptionWrap">
+        <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Description</p>
+        <p class="text-sm text-gray-700 leading-relaxed" id="detailDescription">—</p>
+      </div>
+
+      {# Instructor #}
+      <div class="bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+        <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Instructor</p>
+        <p class="text-sm font-semibold text-gray-800" id="detailInstructor">—</p>
+        <p class="text-xs text-gray-500 mt-1" id="detailInstructorBio"></p>
+      </div>
+
+      {# Enrollment dates #}
+      <div class="grid grid-cols-2 gap-3" id="detailDatesWrap">
+        <div><p class="text-xs text-gray-500 font-semibold mb-0.5">Enrollment Start</p>
+          <p class="text-sm text-gray-700" id="detailEnrollStart">—</p></div>
+        <div><p class="text-xs text-gray-500 font-semibold mb-0.5">Enrollment End</p>
+          <p class="text-sm text-gray-700" id="detailEnrollEnd">—</p></div>
+        <div><p class="text-xs text-gray-500 font-semibold mb-0.5">Max Students</p>
+          <p class="text-sm text-gray-700" id="detailMaxStudents">—</p></div>
+        <div><p class="text-xs text-gray-500 font-semibold mb-0.5">Created</p>
+          <p class="text-sm text-gray-700" id="detailCreated">—</p></div>
+      </div>
+    </div>
+
+    <div class="flex justify-between items-center px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+      <button onclick="closeModal('detailModal')"
+              class="px-5 py-2 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">
+        Close
+      </button>
+      <button id="detailEditBtn" onclick=""
+              class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all">
+        <i class="fas fa-edit mr-1.5"></i> Edit
+      </button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div id="deleteModal" class="hidden fixed inset-0 z-50" aria-modal="true" role="dialog">
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50" onclick="closeModal('deleteModal')"></div>
+    <div class="relative bg-white w-full max-w-md rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
+
+    <div class="px-6 pt-6 pb-4">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-trash text-red-600 text-lg"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 font-heading">Delete LMS Course?</h2>
+          <p class="text-sm text-gray-500 mt-0.5">This action <strong class="text-red-600">cannot be undone</strong>.</p>
+        </div>
+      </div>
+
+      {# Course info summary #}
+      <div class="mt-4 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+        <p class="text-xs text-gray-500 uppercase font-semibold mb-1">Course</p>
+        <p class="font-semibold text-gray-800 text-sm" id="deleteCourseName">—</p>
+      </div>
+
+      {# Block warning — shown when course has content #}
+      <div id="deleteBlockedWarning"
+           class="hidden mt-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl px-4 py-3">
+        <div class="flex items-start gap-2">
+          <i class="fas fa-ban text-red-500 mt-0.5 flex-shrink-0"></i>
+          <div>
+            <p class="text-sm font-bold text-red-800">Cannot delete — course has active content</p>
+            <p class="text-xs text-red-700 mt-1" id="deleteBlockedReason"></p>
+            <p class="text-xs text-red-600 mt-1">Remove all lessons and enrollments first, then try again.</p>
+          </div>
+        </div>
+      </div>
+
+      {# Soft warning — shown when course has enrollments but no lessons #}
+      <div id="deleteEnrollmentWarning"
+           class="hidden mt-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-xl px-4 py-3">
+        <div class="flex items-start gap-2">
+          <i class="fas fa-exclamation-triangle text-yellow-600 mt-0.5 flex-shrink-0"></i>
+          <div>
+            <p class="text-sm font-bold text-yellow-800">Active enrollments will be removed</p>
+            <p class="text-xs text-yellow-700 mt-1" id="deleteEnrollmentCount"></p>
+          </div>
+        </div>
+      </div>
+
+      {# Confirm checkbox — only shown when deletion is allowed #}
+      <div id="deleteConfirmSection" class="hidden mt-4">
+        <label class="flex items-start gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all">
+          <input type="checkbox" id="deleteConfirmCheck"
+                 class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500 mt-0.5 flex-shrink-0">
+          <span class="text-sm text-gray-700">
+            I understand that this will <strong>permanently delete</strong> this LMS course and all its data.
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <form id="deleteForm" method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="confirm" value="1">
+      <div class="flex justify-between items-center px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+        <button type="button" onclick="closeModal('deleteModal')"
+                class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">
+          Cancel
+        </button>
+        <button type="submit" id="deleteSubmitBtn" disabled
+                class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-all
+                       disabled:opacity-40 disabled:cursor-not-allowed">
+          <i class="fas fa-trash mr-2"></i> Confirm Delete
+        </button>
+      </div>
+    </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CSRF helper
+// ─────────────────────────────────────────────────────────────────────────────
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|;) *' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+const CSRF_TOKEN = getCookie('csrftoken');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL UTILITIES
+// ─────────────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+function handleModalBackdropClick(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['createModal', 'editModal', 'detailModal', 'deleteModal'].forEach(closeModal);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CREATE MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function openCreateModal() {
+  openModal('createModal');
+  // Wire academic course auto-fill
+  const acSel   = document.querySelector('#createModal #id_academic_course');
+  const badge   = document.getElementById('create-academic-linked-badge');
+  const titleIn = document.querySelector('#createModal #id_title');
+  const codeIn  = document.querySelector('#createModal #id_code');
+
+  function applyLinked() {
+    const linked = acSel && acSel.value !== '';
+    if (badge) badge.classList.toggle('hidden', !linked);
+    if (linked && acSel) {
+      const txt = acSel.options[acSel.selectedIndex].text.trim();
+      const sep = txt.indexOf(' \u2014 ');
+      const parsedCode  = sep !== -1 ? txt.substring(0, sep).trim() : '';
+      const parsedTitle = sep !== -1 ? txt.substring(sep + 3).trim() : txt;
+      if (titleIn) { titleIn.value = parsedTitle; titleIn.readOnly = true; titleIn.classList.add('bg-gray-50','cursor-not-allowed'); }
+      if (codeIn)  { codeIn.value  = parsedCode;  codeIn.readOnly  = true; codeIn.classList.add('bg-gray-50','cursor-not-allowed'); }
+    } else {
+      if (titleIn) { titleIn.readOnly = false; titleIn.classList.remove('bg-gray-50','cursor-not-allowed'); }
+      if (codeIn)  { codeIn.readOnly  = false; codeIn.classList.remove('bg-gray-50','cursor-not-allowed'); }
+    }
+  }
+  if (acSel) { acSel.addEventListener('change', applyLinked); applyLinked(); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DETAIL MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function openDetailModal(pk) {
+  openModal('detailModal');
+  document.getElementById('detailModalLoading').classList.remove('hidden');
+  document.getElementById('detailModalBody').classList.add('hidden');
+
+  fetch(`/management/lms-courses/${pk}/?_modal=1`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(r => r.json())
+  .then(d => {
+    // Header
+    document.getElementById('detailTitle').textContent = d.title || '—';
+    document.getElementById('detailCode').textContent  = d.code  || '';
+
+    // Academic banner
+    document.getElementById('detailAcCode').textContent    = d.academic_course_code || '—';
+    document.getElementById('detailAcName').textContent    = d.academic_course_name || '—';
+    document.getElementById('detailAcProgram').textContent = d.academic_course_program || '—';
+    if (!d.academic_course) {
+      document.getElementById('detailAcademicBanner').classList.add('hidden');
+    } else {
+      document.getElementById('detailAcademicBanner').classList.remove('hidden');
+    }
+
+    // Facts
+    document.getElementById('detailLevel').textContent       = d.difficulty_level_display || '—';
+    document.getElementById('detailDuration').textContent    = d.duration_hours ? d.duration_hours + ' hrs' : '—';
+    document.getElementById('detailLanguage').textContent    = d.language || '—';
+    document.getElementById('detailSession').textContent     = d.session  || '—';
+    document.getElementById('detailTerm').textContent        = d.term     || '—';
+    document.getElementById('detailEnrollments').textContent = d.enrollments ?? 0;
+
+    // Status badges
+    const badgeEl = document.getElementById('detailStatusBadges');
+    badgeEl.innerHTML = '';
+    if (d.is_published) {
+      badgeEl.innerHTML += `<span class="inline-flex items-center gap-1.5 text-xs bg-green-100 text-green-800 border border-green-200 rounded-full px-3 py-1 font-semibold">
+        <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Published</span>`;
+    } else {
+      badgeEl.innerHTML += `<span class="inline-flex items-center gap-1.5 text-xs bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-full px-3 py-1 font-semibold">
+        <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span> Draft</span>`;
+    }
+    if (d.is_featured) {
+      badgeEl.innerHTML += `<span class="inline-flex items-center gap-1.5 text-xs bg-blue-100 text-blue-800 border border-blue-200 rounded-full px-3 py-1 font-semibold">
+        <i class="fas fa-star text-yellow-500"></i> Featured</span>`;
+    }
+    if (d.has_certificate) {
+      badgeEl.innerHTML += `<span class="inline-flex items-center gap-1.5 text-xs bg-amber-100 text-amber-800 border border-amber-200 rounded-full px-3 py-1 font-semibold">
+        <i class="fas fa-certificate"></i> Certificate</span>`;
+    }
+
+    // Description
+    document.getElementById('detailDescription').textContent = d.description || '—';
+
+    // Instructor
+    document.getElementById('detailInstructor').textContent    = d.instructor_name || '—';
+    document.getElementById('detailInstructorBio').textContent = d.instructor_bio  || '';
+
+    // Dates
+    document.getElementById('detailEnrollStart').textContent  = d.enrollment_start_date || '—';
+    document.getElementById('detailEnrollEnd').textContent    = d.enrollment_end_date   || '—';
+    document.getElementById('detailMaxStudents').textContent  = d.max_students ? d.max_students + ' students' : 'Unlimited';
+    document.getElementById('detailCreated').textContent      = d.created_at || '—';
+
+    // Edit button
+    document.getElementById('detailEditBtn').onclick = () => {
+      closeModal('detailModal');
+      openEditModal(pk);
+    };
+
+    document.getElementById('detailModalLoading').classList.add('hidden');
+    document.getElementById('detailModalBody').classList.remove('hidden');
+  })
+  .catch(() => {
+    document.getElementById('detailModalLoading').innerHTML =
+      '<p class="text-red-500 text-sm">Failed to load course details.</p>';
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EDIT MODAL  (loads full form HTML via AJAX)
+// ─────────────────────────────────────────────────────────────────────────────
+function openEditModal(pk) {
+  openModal('editModal');
+  const loading   = document.getElementById('editModalLoading');
+  const container = document.getElementById('editModalFormContainer');
+  const subtitle  = document.getElementById('editModalSubtitle');
+
+  loading.classList.remove('hidden');
+  container.classList.add('hidden');
+  container.innerHTML = '';
+  subtitle.textContent = 'Loading…';
+
+  fetch(`/management/lms-courses/${pk}/edit/?_modal=1`)
+    .then(r => r.text())
+    .then(html => {
+      // Parse the returned page — extract everything inside #editFormContent
+      const parser = new DOMParser();
+      const doc    = parser.parseFromString(html, 'text/html');
+
+      // The edit view returns the full edit page; we extract the <form> from it
+      const remoteForm = doc.querySelector('form[data-lms-edit-form]') ||
+                         doc.querySelector('form[method="post"]');
+      const titleEl    = doc.querySelector('#editFormTitle');
+
+      if (remoteForm) {
+        container.innerHTML = remoteForm.outerHTML;
+        subtitle.textContent = titleEl ? titleEl.textContent : `Editing course #${pk}`;
+        // Re-wire academic course JS inside the injected form
+        wireLMSFormJS('editModal');
+      } else {
+        // Fallback: redirect to full page
+        window.location.href = `/management/lms-courses/${pk}/edit/`;
+        return;
+      }
+      loading.classList.add('hidden');
+      container.classList.remove('hidden');
+    })
+    .catch(() => {
+      window.location.href = `/management/lms-courses/${pk}/edit/`;
+    });
+}
+
+// Wire up academic-course auto-fill and instructor auto-fill inside a modal
+function wireLMSFormJS(modalId) {
+  const scope  = document.getElementById(modalId);
+  const acSel  = scope.querySelector('[id$="id_academic_course"], [name="academic_course"]');
+  const badge  = scope.querySelector('[id$="academic-linked-badge"]');
+  const titleI = scope.querySelector('[name="title"]');
+  const codeI  = scope.querySelector('[name="code"]');
+
+  function applyLinked() {
+    const linked = acSel && acSel.value !== '';
+    if (badge) badge.classList.toggle('hidden', !linked);
+    if (linked && acSel) {
+      const txt = acSel.options[acSel.selectedIndex].text.trim();
+      const sep = txt.indexOf(' \u2014 ');
+      if (titleI) { titleI.value = sep !== -1 ? txt.substring(sep+3).trim() : txt; titleI.readOnly = true; titleI.classList.add('bg-gray-50','cursor-not-allowed'); }
+      if (codeI)  { codeI.value  = sep !== -1 ? txt.substring(0,sep).trim()   : ''; codeI.readOnly  = true; codeI.classList.add('bg-gray-50','cursor-not-allowed'); }
+    } else {
+      if (titleI) { titleI.readOnly = false; titleI.classList.remove('bg-gray-50','cursor-not-allowed'); }
+      if (codeI)  { codeI.readOnly  = false; codeI.classList.remove('bg-gray-50','cursor-not-allowed'); }
+    }
+  }
+  if (acSel) { acSel.addEventListener('change', applyLinked); applyLinked(); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function openDeleteModal(pk, title, enrollments, lessons) {
+  openModal('deleteModal');
+
+  document.getElementById('deleteCourseName').textContent = title;
+  document.getElementById('deleteBlockedWarning').classList.add('hidden');
+  document.getElementById('deleteEnrollmentWarning').classList.add('hidden');
+  document.getElementById('deleteConfirmSection').classList.add('hidden');
+  document.getElementById('deleteConfirmCheck').checked = false;
+  document.getElementById('deleteSubmitBtn').disabled = true;
+
+  const deleteUrl = `/management/lms-courses/${pk}/delete/`;
+  document.getElementById('deleteForm').action = deleteUrl;
+
+  const hasLessons     = parseInt(lessons, 10) > 0;
+  const hasEnrollments = parseInt(enrollments, 10) > 0;
+
+  if (hasLessons) {
+    // Hard block — cannot delete if it has lessons
+    const reasons = [];
+    if (hasLessons)     reasons.push(`${lessons} lesson${lessons != 1 ? 's' : ''}`);
+    if (hasEnrollments) reasons.push(`${enrollments} enrollment${enrollments != 1 ? 's' : ''}`);
+    document.getElementById('deleteBlockedReason').textContent =
+      'This course contains: ' + reasons.join(' and ') + '.';
+    document.getElementById('deleteBlockedWarning').classList.remove('hidden');
+    document.getElementById('deleteSubmitBtn').disabled = true;
+    return;
+  }
+
+  if (hasEnrollments) {
+    // Soft warning — can still delete but warn
+    document.getElementById('deleteEnrollmentCount').textContent =
+      `${enrollments} student${enrollments != 1 ? 's' : ''} will lose their enrollment records.`;
+    document.getElementById('deleteEnrollmentWarning').classList.remove('hidden');
+  }
+
+  // Show confirm checkbox
+  document.getElementById('deleteConfirmSection').classList.remove('hidden');
+  document.getElementById('deleteConfirmCheck').addEventListener('change', function() {
+    document.getElementById('deleteSubmitBtn').disabled = !this.checked;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DATATABLES  (progressive enhancement — table still works without it)
+// ─────────────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof $.fn.DataTable === 'undefined') return;
+
+  $('#lmsCoursesTable').DataTable({
+    pageLength: 25,
+    lengthMenu: [[10, 25, 50, 100, -1], ['10', '25', '50', '100', 'All']],
+    order: [[0, 'asc']],
+    language: {
+      search:         '<i class="fas fa-search text-gray-400 mr-1"></i>',
+      searchPlaceholder: 'Search courses…',
+      lengthMenu:     'Show _MENU_ entries',
+      info:           'Showing _START_ – _END_ of _TOTAL_ courses',
+      infoEmpty:      'No courses',
+      emptyTable:     'No courses match the selected filters',
+      paginate: {
+        first: '<i class="fas fa-angle-double-left"></i>',
+        last:  '<i class="fas fa-angle-double-right"></i>',
+        next:  '<i class="fas fa-angle-right"></i>',
+        previous: '<i class="fas fa-angle-left"></i>',
+      }
+    },
+    dom: '<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3"lf>t<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-t border-gray-100"ip>',
+    // Don't re-sort the Actions column
+    columnDefs: [{ orderable: false, targets: 7 }],
+    drawCallback: function () {
+      // Tailwind styling for DataTables UI elements
+      const wrapper = document.getElementById('lmsCoursesTable_wrapper');
+      if (!wrapper) return;
+      wrapper.querySelectorAll('.dataTables_paginate .paginate_button').forEach(btn => {
+        btn.classList.add('px-3', 'py-1.5', 'rounded-lg', 'text-sm', 'font-medium', 'cursor-pointer', 'transition-all');
+        if (btn.classList.contains('current')) {
+          btn.classList.add('bg-primary-600', 'text-white');
+        } else if (!btn.classList.contains('disabled')) {
+          btn.classList.add('text-gray-600', 'hover:bg-gray-100');
+        } else {
+          btn.classList.add('text-gray-300', 'cursor-default');
+        }
+      });
+      const info = wrapper.querySelector('.dataTables_info');
+      if (info) info.classList.add('text-xs', 'text-gray-500');
+      const len = wrapper.querySelector('.dataTables_length select');
+      if (len) len.classList.add('border', 'border-gray-300', 'rounded-lg', 'px-2', 'py-1', 'text-sm', 'bg-white', 'focus:ring-2', 'focus:ring-primary-500');
+      const search = wrapper.querySelector('.dataTables_filter input');
+      if (search) search.classList.add('border', 'border-gray-300', 'rounded-lg', 'px-3', 'py-1.5', 'text-sm', 'focus:ring-2', 'focus:ring-primary-500', 'focus:border-primary-500', 'ml-2');
+    }
+  });
+});
+</script>
 {% endblock %}

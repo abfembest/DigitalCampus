@@ -265,8 +265,13 @@
           </label>
           <p class="text-xs text-gray-400 mb-1.5">
             Force the system to report a specific term as current — ignores the date ranges above.
-            Leave blank for automatic detection.
+            Leave blank for automatic detection from the semester date ranges.
           </p>
+          <div id="autoTermHint" class="hidden mb-2 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded px-3 py-1.5">
+            <i class="fas fa-magic mr-1"></i>
+            Auto-detected term: <strong id="autoTermValue">—</strong>
+            <span class="text-gray-400 ml-1">(based on today's date vs the date ranges above)</span>
+          </div>
           <select name="override_current_term" id="modal_override_term"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white transition">
             <option value="">— Auto-detect from dates —</option>
@@ -470,6 +475,31 @@
         addTermRow('first', '', '');
       } else {
         terms.forEach(t => addTermRow(t.term || 'first', t.start || '', t.end || ''));
+      }
+
+      // Show auto-detected term hint based on today vs term_dates
+      const hintBox   = document.getElementById('autoTermHint');
+      const hintVal   = document.getElementById('autoTermValue');
+      const today     = new Date().toISOString().slice(0, 10);
+      const overrideVal = btn.getAttribute('data-override') || '';
+      let detected = null;
+      for (const t of terms) {
+        if (t.start && t.end && today >= t.start && today <= t.end) {
+          detected = t.term;
+          break;
+        }
+      }
+      if (hintBox && hintVal) {
+        if (overrideVal) {
+          hintBox.classList.remove('hidden');
+          hintVal.textContent = overrideVal + ' (override active)';
+        } else if (detected) {
+          hintBox.classList.remove('hidden');
+          hintVal.textContent = detected;
+        } else {
+          hintBox.classList.add('hidden');
+          hintVal.textContent = '—';
+        }
       }
     }
 

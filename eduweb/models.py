@@ -1471,7 +1471,11 @@ class AcademicSession(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_current:
+            # Unmark all other sessions as current
             AcademicSession.objects.exclude(pk=self.pk).update(is_current=False)
+            # Ensure this session is active when marked current
+            if not self.status or self.status == 'upcoming':
+                self.status = 'active'
         super().save(*args, **kwargs)
 
     @classmethod
@@ -1737,6 +1741,21 @@ class CourseIntake(models.Model):
         verbose_name_plural = 'Course Intakes'
         unique_together = [['program', 'intake_period', 'year']]
     
+    @property
+    def accepted_count(self):
+        """number of approved applications for this intake."""
+        return self.applications.filter(status='approved').count()
+
+    @property
+    def remaining_slots(self):
+        """available slots minus accepted applicants."""
+        return max(0, self.available_slots - self.accepted_count)
+
+    @property
+    def is_full(self):
+        """true when no slots remain."""
+        return self.accepted_count >= self.available_slots
+
     def __str__(self):
         return f"{self.program.name} - {self.intake_period.title()} {self.year}"
 

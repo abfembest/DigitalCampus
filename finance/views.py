@@ -40,6 +40,7 @@ def is_finance_manager(user):
 def finance_dashboard(request):
     """Finance dashboard — analytics and summary across all modules"""
 
+    # ── Date range resolution ─────────────────────────────────────────────
     range_form = DateRangeForm(request.GET or None)
     end_date = timezone.now()
     start_date = end_date - timedelta(days=30)
@@ -74,6 +75,10 @@ def finance_dashboard(request):
                 day=1, hour=0, minute=0, second=0, microsecond=0
             )
             start_date = (end_date - timedelta(days=1)).replace(day=1)
+        elif range_type == 'this_year':
+            start_date = timezone.now().replace(
+                month=1, day=1, hour=0, minute=0, second=0, microsecond=0
+            )
         elif range_type == 'custom':
             if range_form.cleaned_data.get('start_date'):
                 start_date = timezone.make_aware(
@@ -90,10 +95,14 @@ def finance_dashboard(request):
                     )
                 )
 
+    today = timezone.now().date()
+
+    # ── Application payments in range ─────────────────────────────────────
     payments = ApplicationPayment.objects.filter(
         created_at__range=[start_date, end_date]
     )
 
+    # ── Revenue KPIs ──────────────────────────────────────────────────────
     total_revenue = (
         payments.filter(status='success')
         .aggregate(Sum('amount'))['amount__sum']
@@ -110,6 +119,11 @@ def finance_dashboard(request):
         or Decimal('0.00')
     )
 
+    # Application vs fee revenue split (all successful app payments = app_revenue;
+    # fee_revenue comes from FeePayment if available, else zero)
+    app_revenue = total_revenue  # ApplicationPayment is the app revenue source
+
+    # ── Transaction counts ────────────────────────────────────────────────
     total_transactions = payments.count()
     successful_transactions = payments.filter(status='success').count()
     failed_transactions = payments.filter(status='failed').count()
@@ -120,6 +134,7 @@ def finance_dashboard(request):
         else 0
     )
 
+    # ── Payment methods breakdown ─────────────────────────────────────────
     payment_methods = (
         payments.filter(status='success')
         .values('payment_method')
@@ -127,7 +142,7 @@ def finance_dashboard(request):
         .order_by('-total')
     )
 
-    # Daily revenue for chart
+    # ── Daily revenue for line chart ──────────────────────────────────────
     daily_revenue = []
     current = start_date
     while current <= end_date:
@@ -142,6 +157,7 @@ def finance_dashboard(request):
         })
         current += timedelta(days=1)
 
+    # ── Top programs by revenue ───────────────────────────────────────────
     top_courses = (
         CourseApplication.objects.filter(
             payment__status='success',
@@ -152,39 +168,120 @@ def finance_dashboard(request):
         .order_by('-revenue')[:5]
     )
 
-    active_subscriptions = Subscription.objects.filter(
-        status='active'
-    ).count()
-
-    active_subs = Subscription.objects.filter(
+    # ── Subscriptions ─────────────────────────────────────────────────────
+    active_subscriptions = Subscription.objects.filter(status='active').count()
+    active_subs_in_range = Subscription.objects.filter(
         status='active',
         start_date__range=[start_date, end_date],
     )
-    subscription_revenue = sum(sub.plan.price for sub in active_subs)
+    subscription_revenue = sum(sub.plan.price for sub in active_subs_in_range)
 
-    recent_transactions = (
-        payments.select_related('application__user', 'application__program')
+    # ── Fee payments (FeePayment model — guarded import) ──────────────────
+    fee_revenue = Decimal('0.00')
+    recent_fee_payments = []
+    try:
+        from eduweb.models import FeePayment
+        fee_qs = FeePayment.objects.filter(
+            created_at__range=[start_date, end_date]
+        )
+        fee_revenue = (
+            fee_qs.filter(status='success')
+            .aggregate(Sum('amount'))['amount__sum']
+            or Decimal('0.00')
+        )
+        recent_fee_payments = (
+            fee_qs.select_related('user', 'fee')
+            .order_by('-created_at')[:15]
+        )
+    except (ImportError, Exception):
+        pass  # FeePayment model not available — degrade gracefully
+
+    # ── Required / outstanding payments (AllRequiredPayments model) ───────
+    required_payments_count = 0
+    required_payments_total = Decimal('0.00')
+    overdue_required_count = 0
+    all_required_payments = []
+    try:
+        from eduweb.models import AllRequiredPayments
+        req_qs = AllRequiredPayments.objects.filter(
+            is_active=True
+        ).select_related('program', 'course', 'academic_session')
+
+        required_payments_count = req_qs.count()
+        required_payments_total = (
+            req_qs.aggregate(Sum('amount'))['amount__sum']
+            or Decimal('0.00')
+        )
+        overdue_required_count = req_qs.filter(
+            due_date__lt=today
+        ).count()
+        all_required_payments = req_qs.order_by('due_date')
+    except (ImportError, Exception):
+        pass  # Model not available — degrade gracefully
+
+    # ── Recent application payments ───────────────────────────────────────
+    recent_app_payments = (
+        ApplicationPayment.objects.select_related(
+            'application__user',
+            'application__program',
+        )
         .filter(application__isnull=False)
-        .order_by('-created_at')[:10]
+        .order_by('-created_at')[:15]
     )
 
+    # ── Currency symbol from system config ────────────────────────────────
+    currency_symbol = '$'
+    try:
+        from eduweb.models import SystemConfig
+        cfg = SystemConfig.objects.first()
+        if cfg and hasattr(cfg, 'currency_symbol') and cfg.currency_symbol:
+            currency_symbol = cfg.currency_symbol
+    except (ImportError, Exception):
+        pass
+
     context = {
+        # Date range
         'range_form': range_form,
         'start_date': start_date,
         'end_date': end_date,
+        'today': today,
+
+        # Currency
+        'currency_symbol': currency_symbol,
+
+        # Revenue KPIs
         'total_revenue': total_revenue,
+        'app_revenue': app_revenue,
+        'fee_revenue': fee_revenue,
         'pending_revenue': pending_revenue,
         'refunded_amount': refunded_amount,
+        'subscription_revenue': subscription_revenue,
+
+        # Transaction KPIs
         'total_transactions': total_transactions,
         'successful_transactions': successful_transactions,
         'failed_transactions': failed_transactions,
         'success_rate': success_rate,
+
+        # Charts
         'payment_methods': payment_methods,
         'daily_revenue': json.dumps(daily_revenue),
+
+        # Top programs
         'top_courses': top_courses,
+
+        # Subscriptions
         'active_subscriptions': active_subscriptions,
-        'subscription_revenue': subscription_revenue,
-        'recent_transactions': recent_transactions,
+
+        # Required payments
+        'required_payments_count': required_payments_count,
+        'required_payments_total': required_payments_total,
+        'overdue_required_count': overdue_required_count,
+        'all_required_payments': all_required_payments,
+
+        # Recent transactions tables
+        'recent_app_payments': recent_app_payments,
+        'recent_fee_payments': recent_fee_payments,
     }
 
     return render(request, 'finance/dashboard.html', context)

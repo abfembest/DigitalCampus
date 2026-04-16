@@ -116,7 +116,7 @@
           Comprehensive financial analytics with advanced filtering and export
         </p>
       </div>
-      <a href="{% url 'finance:payment_management' %}"
+      <a href="{% url 'payments:payment_management' %}"
          class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-white
                 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50
                 transition-colors font-medium shadow-sm self-start flex-shrink-0
@@ -325,7 +325,7 @@
 
               {# Reference #}
               <td>
-                <a href="{% url 'finance:payment_detail' payment.payment_reference %}"
+                <a href="{% url 'payments:payment_detail' payment.payment_reference %}"
                    class="text-blue-600 hover:text-blue-700 font-mono text-xs
                           font-semibold focus:outline-none focus:underline">
                   {{ payment.payment_reference }}
@@ -430,7 +430,7 @@
               {# Actions #}
               <td>
                 <div class="flex items-center gap-2 whitespace-nowrap">
-                  <a href="{% url 'finance:payment_detail' payment.payment_reference %}"
+                  <a href="{% url 'payments:payment_detail' payment.payment_reference %}"
                      class="text-blue-600 hover:text-blue-800 text-xs font-medium
                             focus:outline-none focus:underline"
                      title="View detail"

@@ -8,14 +8,9 @@ urlpatterns = [
     # Dashboard
     path('', views.finance_dashboard, name='dashboard'),
 
-    # Payments — list
-    path('payments/', views.payment_management, name='payment_management'),
-
-    path(
-        'payments/<str:payment_reference>/',
-        views.payment_detail,
-        name='payment_detail',
-    ),
+    # Payments — delegated to the payments app
+    # All payment URLs are now under payments/ namespace
+    path('payments/', include('payment.urls', namespace='payment')),
 
     # Subscriptions
     path(
@@ -41,31 +36,5 @@ urlpatterns = [
         '<int:attachment_number>/delete/',
         views.payroll_attachment_delete,
         name='payroll_attachment_delete',
-    ),
-
-    path(
-        'required-payments/',
-        views.required_payments_list,
-        name='required_payments_list',
-    ),
-    path(
-        'required-payments/create/',
-        views.required_payment_create,
-        name='required_payment_create',
-    ),
-    path(
-        'required-payments/<int:pk>/update/',
-        views.required_payment_update,
-        name='required_payment_update',
-    ),
-    path(
-        'required-payments/<int:pk>/delete/',
-        views.required_payment_delete,
-        name='required_payment_delete',
-    ),
-    path(
-        'required-payments/<int:pk>/toggle/',
-        views.required_payment_toggle,
-        name='required_payment_toggle',
     ),
 ]

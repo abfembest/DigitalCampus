@@ -4882,7 +4882,7 @@ class Exam(models.Model):
                 name="unique_exam_course_session_type",
             ),
             models.CheckConstraint(
-                condition=models.Q(end_time__gt=models.F("start_time")),
+                check=models.Q(end_time__gt=models.F("start_time")),
                 name="exam_end_after_start",
             ),
         ]

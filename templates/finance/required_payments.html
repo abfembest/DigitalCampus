@@ -760,7 +760,7 @@
             title.textContent      = 'New Required Payment';
             subtitle.textContent   = 'Create a new fee obligation';
             submitText.textContent = 'Create Payment';
-            form.action = "{% url 'finance:required_payment_create' %}";
+            form.action = "{ url 'finance:required_payment_create' %}";
             document.getElementById('fieldIsActive').checked = true;
 
         } else if (mode === 'edit' && pk) {
@@ -770,7 +770,7 @@
             title.textContent      = 'Edit Required Payment';
             subtitle.textContent   = 'Update payment details';
             submitText.textContent = 'Update Payment';
-            form.action = "{% url 'finance:required_payment_update' pk=0 %}".replace('/0/', '/' + pk + '/');
+            form.action = "{ url 'finance:required_payment_update' pk=0 %}".replace('/0/', '/' + pk + '/');
 
             /* Purpose */
             document.getElementById('fieldPurpose').value = row.dataset.purpose;

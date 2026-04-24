@@ -2,12 +2,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Q, Count, Avg, Prefetch, Max, Sum, F
+from django.db.models import Q, Count, Avg, Prefetch, Max, Sum, F, FloatField
 from django.utils import timezone
 from django.core.paginator import Paginator
 from functools import wraps
 from datetime import timedelta
 from decimal import Decimal
+from django.db import models
+import json
+import random
 
 from eduweb.models import (
     LMSCourse, Enrollment, Lesson, LessonProgress,
@@ -17,7 +20,8 @@ from eduweb.models import (
     Discussion, DiscussionReply, Badge,
     StudentBadge, LessonSection,
     Message, Notification, Review, StudyGroupMessage,
-    FeePayment, CourseGrade, CourseApplication,
+    FeePayment, CourseGrade, CourseApplication, Exam, StudentExamResponse,
+    Course, AcademicSession, CourseRegistration,
 )
 
 from .forms import AssignmentSubmissionForm, SettingsForm, ProfileUpdateForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm, StudentSupportTicketForm
@@ -91,71 +95,164 @@ def _notify(user, notification_type, title, message, link=''):
     except Exception:
         pass
 
+def _get_eligible_exams(user):
+    """
+    Returns published Exam queryset for exams the student is eligible to see.
+    Rules:
+      1. Exam must be PUBLISHED
+      2. Exam.course (LMSCourse) must belong to current academic session
+      3. Exam.course.term must match the current term of that session
+      4. Student must have an ACTIVE enrollment in that LMSCourse
+    """
+    current_session = AcademicSession.get_current()
+    if not current_session:
+        return Exam.objects.none()
+
+    current_term = current_session.get_current_term()
+
+    qs = Exam.objects.filter(
+        status=Exam.PUBLISHED,
+        course__session=current_session,          # LMSCourse.session
+        course__enrollments__student=user,        # Enrollment.student
+        course__enrollments__status='active',     # Enrollment.status
+    ).select_related('course', 'academic_session').distinct()
+
+    # If the session has a current term, also filter by it
+    # (blank term on LMSCourse means it matches any term — don't exclude those)
+    if current_term:
+        qs = qs.filter(
+            models.Q(course__term=current_term) | models.Q(course__term='')
+        )
+
+    return qs
+
 @login_required
 @student_required
 def dashboard(request):
-    """
-    Student dashboard with overview of courses, 
-    assignments, and announcements
-    """
+    """Student dashboard — courses, assignments, announcements, academic identity."""
     user = request.user
-    
+
+    # ── Academic identity (needed by multiple sections below) ────────────────
+    profile         = getattr(user, 'profile', None)
+    current_session = AcademicSession.get_current()
+    current_term    = current_session.get_current_term() if current_session else None
+
+    department = None
+    faculty    = None
+    if profile and profile.program:
+        department = getattr(profile.program, 'department', None)
+        faculty    = getattr(department, 'faculty', None) if department else None
+
+    # ── Semester-registered courses (Course model, not LMS Enrollments) ──────
+    # Mirror the logic from my_courses so the dashboard is always consistent.
+    semester_courses        = []
+    registered_course_ids   = set()
+    registered_credit_total = 0
+    registration_submitted  = False
+    registration_finalized  = False
+
+    if profile and profile.program and current_session and current_term:
+        TERM_MAP = {
+            'fall': 'first', 'spring': 'second',
+            'summer': 'annual', 'third': 'second',
+        }
+        normalised_term = TERM_MAP.get(current_term, current_term)
+
+        # All courses offered for this student's program / year / term
+        semester_courses = list(
+            Course.objects
+            .filter(
+                program=profile.program,
+                year_of_study=profile.year_of_study,
+                is_active=True,
+            )
+            .filter(Q(semester=normalised_term) | Q(semester='annual'))
+            .prefetch_related('prerequisites')
+            .order_by('course_type', 'display_order', 'name')
+        )
+
+        existing_regs = CourseRegistration.objects.filter(
+            student=user,
+            session=current_session,
+            term__in=[current_term, normalised_term],
+            status__in=['pending', 'approved'],
+        ).select_related('course')
+
+        registered_course_ids  = {r.course_id for r in existing_regs}
+        registration_submitted = existing_regs.exists()
+        registration_finalized = (
+            registration_submitted
+            and not existing_regs.filter(status='pending').exists()
+        )
+
+        for course in semester_courses:
+            course.is_registered = course.id in registered_course_ids
+            course.is_core       = course.course_type == 'core'
+
+        registered_credit_total = (
+            CourseRegistration.objects
+            .filter(
+                student=user,
+                session=current_session,
+                status__in=['pending', 'approved'],
+            )
+            .aggregate(total=Sum('course__credit_units'))['total'] or 0
+        )
+
     try:
-        # Get active enrollments with optimized query
+        # ── Active LMS enrollments (last 5 recently accessed) ─────────────────
         enrollments = (
             Enrollment.objects
             .filter(student=user, status='active')
-            .select_related('course', 'course__category')
+            .select_related('course')
             .prefetch_related(
                 Prefetch(
                     'course__lessons',
-                    to_attr='all_lessons'
-                )
+                    queryset=Lesson.objects.filter(is_active=True),
+                    to_attr='active_lessons',
+                ),
+                Prefetch(
+                    'lesson_progress',
+                    queryset=LessonProgress.objects.filter(is_completed=True),
+                    to_attr='completed_progress',
+                ),
             )
             .order_by('-last_accessed')[:5]
         )
-        
-        # Add progress data to each enrollment
+
+        # Attach completed count from prefetch — zero extra queries
         for enrollment in enrollments:
-            completed_count = (
-                LessonProgress.objects
-                .filter(
-                    enrollment=enrollment,
-                    is_completed=True
-                )
-                .count()
-            )
-            enrollment.completed_lessons_count = completed_count
-        
-        # Get pending assignments
+            enrollment.completed_lessons_count = len(enrollment.completed_progress)
+
+        # ── Pending assignments ───────────────────────────────────────────────
         pending_assignments = (
             Assignment.objects
             .filter(
                 lesson__course__enrollments__student=user,
                 lesson__course__enrollments__status='active',
                 due_date__gte=timezone.now(),
-                is_active=True
+                is_active=True,
             )
             .exclude(
-                Q(submissions__student=user) & 
+                Q(submissions__student=user) &
                 Q(submissions__status__in=['submitted', 'graded'])
             )
             .select_related('lesson__course')
             .distinct()
             .order_by('due_date')[:5]
         )
-        
-        # Get recent announcements
+
+        # ── Recent announcements ──────────────────────────────────────────────
         announcements = (
             Announcement.objects
             .filter(
                 Q(announcement_type='system') |
                 Q(
                     course__enrollments__student=user,
-                    announcement_type='course'
+                    announcement_type='course',
                 ),
                 is_active=True,
-                publish_date__lte=timezone.now()
+                publish_date__lte=timezone.now(),
             )
             .filter(
                 Q(expiry_date__isnull=True) |
@@ -164,156 +261,651 @@ def dashboard(request):
             .distinct()
             .order_by('-priority', '-publish_date')[:5]
         )
-        
-        # ===== NEW: Get admission history =====
-        from eduweb.models import CourseApplication
-        
+
+        # ── Admission / application history ───────────────────────────────────
         admission_history = (
             CourseApplication.objects
-            .filter(
-                Q(user=user) | Q(email=user.email)
-            )
+            .filter(Q(user=user) | Q(email=user.email))
             .select_related('program', 'program__department__faculty', 'intake')
             .order_by('-created_at')[:5]
         )
-        
-        # Calculate statistics
+
+        # ── Summary statistics ────────────────────────────────────────────────
         stats = {
             'total_enrolled': (
-                Enrollment.objects
-                .filter(student=user)
-                .count()
+                Enrollment.objects.filter(student=user).count()
             ),
             'completed_courses': (
-                Enrollment.objects
-                .filter(student=user, status='completed')
-                .count()
+                Enrollment.objects.filter(student=user, status='completed').count()
             ),
             'certificates_earned': (
-                Certificate.objects
-                .filter(student=user)
-                .count()
+                Certificate.objects.filter(student=user).count()
             ),
         }
-        
-    except Exception as e:
-        # Log error in production
+
+    except Exception:
         messages.error(
             request,
-            'An error occurred loading the dashboard. '
-            'Please try again.'
+            'An error occurred loading the dashboard. Please try again.'
         )
-        # Return minimal context
-        enrollments = []
+        enrollments         = []
         pending_assignments = []
-        announcements = []
-        admission_history = []
+        announcements       = []
+        admission_history   = []
         stats = {
-            'total_enrolled': 0,
-            'completed_courses': 0,
+            'total_enrolled':      0,
+            'completed_courses':   0,
             'certificates_earned': 0,
         }
-    
-    # Outstanding fees for the dashboard alert button
+
+    # ── Outstanding fees ──────────────────────────────────────────────────────
     try:
         outstanding_items, _ = _get_outstanding_for_student(user)
-        outstanding_count = len(outstanding_items)
-        outstanding_total = sum(
+        outstanding_count    = len(outstanding_items)
+        outstanding_total    = sum(
             (item['payment']['amount'] if isinstance(item['payment'], dict) else item['payment'].amount)
             for item in outstanding_items
         )
-        # Derive currency from first outstanding item; fall back to USD
         _first = outstanding_items[0]['payment'] if outstanding_items else None
         outstanding_currency = (
             _first.get('currency', 'USD') if isinstance(_first, dict)
             else getattr(_first, 'currency', 'USD')
         ) if _first else 'USD'
     except Exception:
-        outstanding_count = 0
-        outstanding_total = Decimal('0.00')
+        outstanding_count    = 0
+        outstanding_total    = Decimal('0.00')
         outstanding_currency = 'USD'
 
+    # ── Nav badge counts ──────────────────────────────────────────────────────
+    unread_notifications = (
+        Notification.objects.filter(user=user, is_read=False).count()
+    )
+    unread_messages = (
+        Message.objects.filter(recipient=user, is_read=False, parent__isnull=True).count()
+    )
+
+    # ── Upcoming exams ────────────────────────────────────────────────────────
+    now = timezone.now()
+    upcoming_exams = (
+        Exam.objects
+        .filter(
+            status=Exam.PUBLISHED,
+            is_active=True,
+            course__in=Enrollment.objects.filter(
+                student=user, status='active'
+            ).values('course_id'),
+            exam_date__gte=now.date(),
+        )
+        .exclude(exam_date=now.date(), end_time__lte=now.time())
+        .select_related('course')
+        .order_by('exam_date', 'start_time')[:3]
+    )
+
+    # ── Recent released grades ────────────────────────────────────────────────
+    recent_grades = (
+        CourseGrade.objects
+        .filter(student=user, result_status='released')
+        .select_related('course', 'session')
+        .order_by('-recorded_at')[:5]
+    )
+
     context = {
-        'page_title': 'My Dashboard',
-        'enrollments': enrollments,
-        'pending_assignments': pending_assignments,
-        'announcements': announcements,
-        'admission_history': admission_history,
-        'total_enrolled': stats['total_enrolled'],
-        'completed_courses': stats['completed_courses'],
-        'certificates_earned': stats['certificates_earned'],
-        'outstanding_count': outstanding_count,
-        'outstanding_total': outstanding_total,
-        'outstanding_currency': outstanding_currency,
+        'page_title':               'My Dashboard',
+        # LMS enrolled courses
+        'enrollments':              enrollments,
+        'pending_assignments':      pending_assignments,
+        'announcements':            announcements,
+        'admission_history':        admission_history,
+        'total_enrolled':           stats['total_enrolled'],
+        'completed_courses':        stats['completed_courses'],
+        'certificates_earned':      stats['certificates_earned'],
+        # Fees
+        'outstanding_count':        outstanding_count,
+        'outstanding_total':        outstanding_total,
+        'outstanding_currency':     outstanding_currency,
+        # Academic identity
+        'profile':                  profile,
+        'current_session':          current_session,
+        'current_term':             current_term,
+        'department':               department,
+        'faculty':                  faculty,
+        # Semester-registered courses (Course model)
+        'semester_courses':         semester_courses,
+        'registered_course_ids':    registered_course_ids,
+        'registered_credit_total':  registered_credit_total,
+        'registration_submitted':   registration_submitted,
+        'registration_finalized':   registration_finalized,
+        'registration_open':        getattr(current_session, 'is_registration_open', False),
+        # Nav badges
+        'unread_notifications':     unread_notifications,
+        'unread_messages':          unread_messages,
+        # Exams & grades
+        'upcoming_exams':           upcoming_exams,
+        'recent_grades':            recent_grades,
     }
-    
+
     return render(request, 'students/dashboard.html', context)
 
 @login_required
 @student_required
 def my_courses(request):
     """
-    Display student's enrolled courses
-    Filter by active or completed status
+    Semester registration panel + enrolled LMS courses.
+    - Student picks session & term manually (defaults to current).
+    - All courses for their program/year/term load automatically.
+    - Credit counter enforces program max from backend.
+    - Finalize & Enroll only enabled when core credits are all selected
+      and total does not exceed program max_credits_per_semester.
+    - LMS course cards only appear after successful enrollment.
     """
-    # Get status filter from request
-    status_filter = request.GET.get('status', 'active')
-    
-    # Validate status filter
-    valid_statuses = ['active', 'completed']
-    if status_filter not in valid_statuses:
-        status_filter = 'active'
-    
-    try:
-        # Optimized query with select/prefetch related
-        enrollments = (
-            Enrollment.objects
+    user = request.user
+    profile = getattr(user, 'profile', None)
+
+    # ── Session / Term selector ────────────────────────────────────────────
+    all_sessions = AcademicSession.objects.order_by('-name')
+    current_session = AcademicSession.get_current()
+
+    selected_session_id = request.GET.get('session_id', '').strip()
+    selected_term       = request.GET.get('term', '').strip()
+
+    if selected_session_id:
+        try:
+            selected_session = AcademicSession.objects.get(pk=selected_session_id)
+        except AcademicSession.DoesNotExist:
+            selected_session = current_session
+    else:
+        selected_session = current_session
+
+    if not selected_term and selected_session:
+        selected_term = selected_session.get_current_term() or ''
+
+    # Check if the selected term is currently active within this session's term_dates
+    def _term_is_active(session, term):
+        """Returns True if today falls within the term window in session.term_dates."""
+        if not session or not term or not session.term_dates:
+            return False
+        from datetime import date as _date
+        today = timezone.now().date()
+        TERM_MAP = {'fall': 'first', 'spring': 'second', 'summer': 'annual', 'third': 'second'}
+        normalised = TERM_MAP.get(term, term)
+        for entry in session.term_dates:
+            if entry.get('term') in (term, normalised):
+                try:
+                    start = _date.fromisoformat(entry['start'])
+                    end   = _date.fromisoformat(entry['end'])
+                    if start <= today <= end:
+                        return True
+                except (KeyError, ValueError):
+                    pass
+        return False
+
+    selected_term_is_active = _term_is_active(selected_session, selected_term)
+
+    registration_open = (
+        selected_session is not None
+        and selected_session.status != 'closed'
+        and selected_session.is_registration_open
+        and selected_term_is_active
+    )
+
+    # ── Semester courses ───────────────────────────────────────────────────
+    semester_courses        = []
+    registered_course_ids   = set()
+    registered_courses      = []
+    registration_submitted  = False
+    registration_finalized  = False
+    registered_credit_total = 0
+    core_credit_total       = 0
+    semester_courses_debug  = {}
+
+    # Pull max from Program model — never hardcoded
+    max_credits_per_semester = (
+        profile.program.max_credits_per_semester
+        if profile and profile.program
+        else 24
+    )
+
+    if profile and profile.program and selected_session and selected_term:
+        TERM_MAP = {
+            'fall': 'first', 'spring': 'second',
+            'summer': 'annual', 'third': 'second',
+        }
+        normalised_term = TERM_MAP.get(selected_term, selected_term)
+
+        semester_courses = list(
+            Course.objects
             .filter(
-                student=request.user,
-                status=status_filter
+                program=profile.program,
+                year_of_study=profile.year_of_study,
+                is_active=True,
             )
-            .select_related(
-                'course',
-                'course__category',
-                'course__instructor'
-            )
+            .filter(Q(semester=normalised_term) | Q(semester='annual'))
+            .prefetch_related('prerequisites')
+            .order_by('course_type', 'display_order', 'name')
+        )
+
+        existing_regs = CourseRegistration.objects.filter(
+            student=user,
+            session=selected_session,
+            term__in=[selected_term, normalised_term],
+            status__in=['pending', 'approved'],
+        ).select_related('course')
+
+        registered_course_ids  = {r.course_id for r in existing_regs}
+        registered_courses     = list(existing_regs)
+        registration_submitted = existing_regs.exists()
+        # True when ALL existing registrations for this term are approved (finalized)
+        registration_finalized = (
+            registration_submitted
+            and not existing_regs.filter(status='pending').exists()
+        )
+
+        for course in semester_courses:
+            course.is_registered = course.id in registered_course_ids
+            course.is_core       = course.course_type == 'core'
+            if course.course_type == 'core':
+                core_credit_total += course.credit_units
+
+        registered_credit_total = sum(
+            c.credit_units for c in semester_courses if c.is_registered
+        )
+
+        semester_courses_debug = {
+            'program': str(profile.program),
+            'year_of_study': profile.year_of_study,
+            'term': selected_term,
+            'normalised_term': normalised_term,
+            'max_cu': max_credits_per_semester,
+            'core_cu': core_credit_total,
+            'count': len(semester_courses),
+        }
+    else:
+        semester_courses_debug = {
+            'profile_exists': bool(profile),
+            'program': str(getattr(profile, 'program', None)) if profile else None,
+            'session': str(selected_session),
+            'term': selected_term,
+        }
+
+    # Finalize allowed only when all core courses are selected and max not exceeded
+    can_finalize = (
+        registered_credit_total >= core_credit_total
+        and registered_credit_total <= max_credits_per_semester
+        and registered_credit_total > 0
+    )
+
+    # ── LMS Enrollments — only show courses for selected session ──────────
+    status_filter = request.GET.get('status', 'active')
+    if status_filter not in ['active', 'completed']:
+        status_filter = 'active'
+
+    try:
+        # Only show enrollments for sessions where the student has approved registrations
+        approved_session_ids = CourseRegistration.objects.filter(
+            student=user, status='approved'
+        ).values_list('session_id', flat=True).distinct()
+
+        enrollment_qs = Enrollment.objects.filter(student=user)
+        if selected_session:
+            # Normalise term for matching (fall→first, spring→second, etc.)
+            _TERM_MAP = {'fall': 'first', 'spring': 'second', 'summer': 'annual', 'third': 'second'}
+            _norm_term = _TERM_MAP.get(selected_term, selected_term) if selected_term else None
+
+            session_term_filter = Q(course__session=selected_session) & Q(course__session__in=approved_session_ids)
+            if _norm_term:
+                # Match courses whose LMS term equals either the raw or normalised term,
+                # OR courses with no term set (blank/null = session-wide)
+                session_term_filter &= (
+                    Q(course__term=selected_term) |
+                    Q(course__term=_norm_term) |
+                    Q(course__term='') |
+                    Q(course__term__isnull=True)
+                )
+            enrollment_qs = enrollment_qs.filter(session_term_filter)
+        if status_filter == 'all':
+            enrollment_qs = enrollment_qs.filter(status__in=['active', 'completed'])
+        else:
+            enrollment_qs = enrollment_qs.filter(status=status_filter)
+
+        enrollments = (
+            enrollment_qs
+            .select_related('course', 'course__instructor')
             .prefetch_related(
                 Prefetch(
                     'course__lessons',
                     queryset=Lesson.objects.filter(is_active=True),
-                    to_attr='active_lessons'
+                    to_attr='active_lessons',
                 )
             )
             .order_by('-enrolled_at')
         )
-        
-        # Add completed lesson count to each enrollment
+
         for enrollment in enrollments:
-            completed_count = (
-                LessonProgress.objects
-                .filter(
-                    enrollment=enrollment,
-                    is_completed=True
-                )
-                .count()
-            )
-            enrollment.completed_lessons_count = completed_count
-            
-    except Exception as e:
-        messages.error(
-            request,
-            'Error loading courses. Please try again.'
-        )
+            enrollment.completed_lessons_count = LessonProgress.objects.filter(
+                enrollment=enrollment, is_completed=True
+            ).count()
+
+    except Exception:
+        messages.error(request, 'Error loading your enrolled courses. Please try again.')
         enrollments = []
-    
+
+    # ── Academic identity ──────────────────────────────────────────────────
+    department = faculty = None
+    if profile and profile.program:
+        department = getattr(profile.program, 'department', None)
+        faculty    = getattr(department, 'faculty', None) if department else None
+
+    term_choices = AcademicSession.TERM_CHOICES
+
     context = {
-        'page_title': 'My Courses',
-        'enrollments': enrollments,
-        'status_filter': status_filter,
+        'page_title':               'My Courses',
+        'all_sessions':             all_sessions,
+        'selected_session':         selected_session,
+        'selected_term':            selected_term,
+        'term_choices':             term_choices,
+        'registration_open':        registration_open,
+        'selected_term_is_active':  selected_term_is_active,
+        'semester_courses':         semester_courses,
+        'registered_course_ids':    registered_course_ids,
+        'registered_courses':       registered_courses,
+        'registered_credit_total':  registered_credit_total,
+        'max_credits_per_semester': max_credits_per_semester,
+        'core_credit_total':        core_credit_total,
+        'can_finalize':             can_finalize,
+        'registration_submitted':   registration_submitted,
+        'registration_finalized':   registration_finalized,
+        'enrollments':              enrollments,
+        'status_filter':            status_filter,
+        'profile':                  profile,
+        'department':               department,
+        'faculty':                  faculty,
+        'semester_courses_debug':   semester_courses_debug,
     }
-    
+
     return render(request, 'students/my_courses.html', context)
 
+@login_required
+@student_required
+def register_semester_course(request, course_slug):
+    """
+    Add course with dynamic max credit check from Program model.
+    """
+    if request.method != 'POST':
+        return redirect('students:my_courses')
+
+    profile = getattr(request.user, 'profile', None)
+    session_id = request.POST.get('session_id')
+    term_override = request.POST.get('term_override', '').strip()
+    try:
+        current_session = AcademicSession.objects.get(pk=session_id) if session_id else AcademicSession.get_current()
+    except AcademicSession.DoesNotExist:
+        current_session = AcademicSession.get_current()
+    current_term = term_override or (current_session.get_current_term() if current_session else None)
+
+    if not current_session or not current_term or not profile or not profile.program:
+        messages.error(request, 'Missing session or program information.')
+        return redirect('students:my_courses')
+
+    if current_session.status == 'closed':
+        messages.error(request, f'The session "{current_session}" has ended. No changes are allowed.')
+        return redirect('students:my_courses')
+
+    if not current_session.is_registration_open:
+        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration window: {current_session.registration_start} – {current_session.registration_end}.')
+        return redirect('students:my_courses')
+
+    course = get_object_or_404(
+        Course,
+        slug=course_slug,
+        program=profile.program,
+        year_of_study=profile.year_of_study,
+        is_active=True,
+    )
+
+    # Dynamic max from the Program model
+    MAX_CREDITS_PER_SEMESTER = getattr(profile.program, 'max_credits_per_semester', 24)
+
+    normalised_term = current_term.lower().replace(' semester', '').strip() if current_term else current_term
+
+    current_total = CourseRegistration.objects.filter(
+        student=request.user,
+        session=current_session,
+        term__in=[current_term, normalised_term],
+        status__in=['pending', 'approved'],
+    ).exclude(course=course).aggregate(
+        total=Sum('course__credit_units')
+    )['total'] or 0
+
+    if current_total + course.credit_units > MAX_CREDITS_PER_SEMESTER:
+        messages.error(
+            request,
+            f'Cannot add "{course.name}" — it would exceed the maximum '
+            f'of {MAX_CREDITS_PER_SEMESTER} credit units for this semester '
+            f'(you currently have {current_total} CU).'
+        )
+        return redirect('students:my_courses')
+
+    reg, created = CourseRegistration.objects.get_or_create(
+        student=request.user,
+        course=course,
+        session=current_session,
+        term=current_term,
+        defaults={'status': 'pending'},
+    )
+
+    if created:
+        messages.success(request, f'✅ "{course.name}" ({course.credit_units} CU) added.')
+        _notify(
+            user=request.user,
+            notification_type='enrollment',
+            title='Course Added',
+            message=f'You added {course.code} — {course.name} to your {current_term} semester registration.',
+            link='/student/courses/',
+        )
+    elif reg.status == 'dropped':
+        reg.status = 'pending'
+        reg.dropped_at = None
+        reg.save(update_fields=['status', 'dropped_at'])
+        messages.success(request, f'✅ "{course.name}" re-added.')
+    else:
+        messages.info(request, f'You are already registered for "{course.name}".')
+
+    from django.urls import reverse
+    return redirect(f"{reverse('students:my_courses')}?session_id={current_session.pk}&term={current_term}")
+
+@login_required
+@student_required
+def drop_semester_course(request, course_slug):
+    """
+    Remove a non-core Course from the student's semester registration.
+    Core courses cannot be dropped.
+    """
+    if request.method != 'POST':
+        return redirect('students:my_courses')
+
+    profile = getattr(request.user, 'profile', None)
+    session_id    = request.POST.get('session_id', '').strip()
+    term_override = request.POST.get('term_override', '').strip()
+
+    try:
+        current_session = AcademicSession.objects.get(pk=session_id) if session_id else AcademicSession.get_current()
+    except AcademicSession.DoesNotExist:
+        current_session = AcademicSession.get_current()
+
+    current_term = term_override or (current_session.get_current_term() if current_session else None)
+
+    if not current_session or not current_term:
+        messages.error(request, 'No active academic session found.')
+        return redirect('students:my_courses')
+
+    if current_session.status == 'closed':
+        messages.error(request, f'The session "{current_session}" has ended. No changes are allowed.')
+        return redirect('students:my_courses')
+
+    if not current_session.is_registration_open:
+        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration window: {current_session.registration_start} – {current_session.registration_end}.')
+        return redirect('students:my_courses')
+
+    course = get_object_or_404(Course, slug=course_slug)
+
+    if course.course_type == 'core':
+        messages.error(request, f'"{course.name}" is a core course and cannot be removed.')
+        return redirect('students:my_courses')
+
+    reg = CourseRegistration.objects.filter(
+        student=request.user,
+        course=course,
+        session=current_session,
+        term=current_term,
+        status__in=['pending', 'approved'],
+    ).first()
+
+    if reg:
+        reg.status = 'dropped'
+        reg.dropped_at = timezone.now()
+        reg.save(update_fields=['status', 'dropped_at'], skip_clean=True)
+        messages.success(request, f'"{course.name}" removed from your semester registration.')
+    else:
+        messages.warning(request, 'Registration record not found.')
+
+    from django.urls import reverse
+    return redirect(f"{reverse('students:my_courses')}?session_id={current_session.pk}&term={current_term}")
+
+@login_required
+@student_required
+def register_all_semester_courses(request):
+    """
+    Finalize semester registration AND auto-enroll student into
+    the linked LMSCourse for every registered academic Course.
+    """
+    if request.method != 'POST':
+        return redirect('students:my_courses')
+
+    profile = getattr(request.user, 'profile', None)
+
+    session_id    = request.POST.get('session_id', '').strip()
+    term_override = request.POST.get('term_override', '').strip()
+
+    try:
+        current_session = AcademicSession.objects.get(pk=session_id) if session_id else AcademicSession.get_current()
+    except AcademicSession.DoesNotExist:
+        current_session = AcademicSession.get_current()
+
+    current_term = term_override or (current_session.get_current_term() if current_session else None)
+
+    if not current_session or not current_term:
+        messages.error(request, 'No active academic session found.')
+        return redirect('students:my_courses')
+
+    if current_session.status == 'closed':
+        messages.error(request, f'The session "{current_session}" has ended. No changes are allowed.')
+        return redirect('students:my_courses')
+
+    if not current_session.is_registration_open:
+        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration window: {current_session.registration_start} – {current_session.registration_end}.')
+        return redirect('students:my_courses')
+
+    if not profile or not profile.program:
+        messages.error(request, 'No program assigned to your profile.')
+        return redirect('students:my_courses')
+
+    TERM_MAP = {
+        'fall': 'first', 'spring': 'second',
+        'summer': 'annual', 'third': 'second',
+    }
+    normalised_term = TERM_MAP.get(current_term, current_term)
+
+    MAX_CU = profile.program.max_credits_per_semester
+
+    # Get all pending/approved registrations for this session/term
+    registered_regs = CourseRegistration.objects.filter(
+        student=request.user,
+        session=current_session,
+        term__in=[current_term, normalised_term],
+        status__in=['pending', 'approved'],
+    ).select_related('course')
+
+    # Validate: check credit total doesn't exceed max
+    total_cu = sum(r.course.credit_units for r in registered_regs)
+    if total_cu > MAX_CU:
+        messages.error(
+            request,
+            f'Your selected courses total {total_cu} CU which exceeds the '
+            f'maximum of {MAX_CU} CU for this semester. Please remove some courses first.'
+        )
+        from django.urls import reverse
+        return redirect(f"{reverse('students:my_courses')}?session_id={current_session.pk}&term={current_term}")
+
+    # Validate: ensure all core courses for this term are selected
+    core_courses = Course.objects.filter(
+        program=profile.program,
+        year_of_study=profile.year_of_study,
+        course_type='core',
+        is_active=True,
+    ).filter(Q(semester=normalised_term) | Q(semester='annual'))
+
+    registered_course_ids = {r.course_id for r in registered_regs}
+    missing_core = [c.name for c in core_courses if c.id not in registered_course_ids]
+
+    if missing_core:
+        messages.error(
+            request,
+            f'You must include all core courses before finalizing. '
+            f'Missing: {", ".join(missing_core)}.'
+        )
+        from django.urls import reverse
+        return redirect(f"{reverse('students:my_courses')}?session_id={current_session.pk}&term={current_term}")
+
+    if total_cu == 0:
+        messages.error(request, 'You have not selected any courses yet.')
+        from django.urls import reverse
+        return redirect(f"{reverse('students:my_courses')}?session_id={current_session.pk}&term={current_term}")
+
+    # ── Auto-enroll into linked LMS courses ───────────────────────────────
+    enrolled_count = 0
+    for reg in registered_regs:
+        # Find LMS courses linked to this academic course + session
+        lms_courses = LMSCourse.objects.filter(
+            academic_course=reg.course,
+            session=current_session,
+            is_published=True,
+        )
+        for lms_course in lms_courses:
+            _, created = Enrollment.objects.get_or_create(
+                student=request.user,
+                course=lms_course,
+                defaults={
+                    'enrolled_by': request.user,
+                    'status': 'active',
+                },
+            )
+            if created:
+                enrolled_count += 1
+
+    # Flip all pending registrations to approved
+    registered_regs.filter(status='pending').update(status='approved')
+
+    total_registered = registered_regs.count()
+
+    messages.success(
+        request,
+        f'✅ Registration finalized — {total_registered} course(s) registered '
+        f'and {enrolled_count} LMS course(s) enrolled for '
+        f'{current_term.title()} Semester, {current_session}.'
+    )
+    _notify(
+        user=request.user,
+        notification_type='enrollment',
+        title='Semester Registration Confirmed',
+        message=(
+            f'Your {current_term.title()} Semester registration for {current_session} '
+            f'is complete. {total_registered} courses registered, {enrolled_count} enrolled.'
+        ),
+        link='/student/courses/',
+    )
+
+    from django.urls import reverse
+    return redirect(f"{reverse('students:my_courses')}?session_id={current_session.pk}&term={current_term}")
 
 @login_required
 @student_required
@@ -331,10 +923,6 @@ def course_catalog(request):
         # Start with published courses only
         courses = LMSCourse.objects.filter(is_published=True)
         
-        # Apply category filter
-        if category_slug:
-            courses = courses.filter(category__slug=category_slug)
-        
         # Apply search filter
         if search_query:
             courses = courses.filter(
@@ -345,22 +933,39 @@ def course_catalog(request):
             )
         
         # Apply difficulty filter
-        if difficulty and difficulty in dict(LMSCourse.DIFFICULTY_CHOICES):
+        if difficulty and difficulty in dict(LMSCourse.LEVEL_CHOICES):
             courses = courses.filter(difficulty_level=difficulty)
         
         # Optimize query with select_related
         courses = (
             courses
-            .select_related('category', 'instructor')
+            .select_related('instructor')
             .order_by('-is_featured', '-created_at')
         )
         
-        # Get enrolled course IDs
+        # Get enrolled course IDs (LMS enrollments)
         enrolled_course_ids = set(
             Enrollment.objects
-            .filter(student=request.user)
+            .filter(student=request.user, status__in=['active', 'completed'])
             .values_list('course_id', flat=True)
         )
+
+        # Also exclude LMS courses already linked to a semester-registered academic Course
+        current_session = AcademicSession.get_current()
+        current_term = current_session.get_current_term() if current_session else None
+        if current_session and current_term:
+            sem_registered_lms_ids = set(
+                LMSCourse.objects.filter(
+                    academic_course__registrations__student=request.user,
+                    academic_course__registrations__session=current_session,
+                    academic_course__registrations__term=current_term,
+                    academic_course__registrations__status__in=['pending', 'approved'],
+                ).values_list('id', flat=True)
+            )
+            enrolled_course_ids |= sem_registered_lms_ids
+
+        # Exclude already-enrolled/registered courses from catalog
+        courses = courses.exclude(id__in=enrolled_course_ids)
         
         # Get active categories
         categories = (
@@ -410,7 +1015,7 @@ def course_detail(request, course_slug):
         # Fetch course with related data in single query
         course = get_object_or_404(
             LMSCourse.objects
-            .select_related('instructor', 'category')
+            .select_related('instructor')
             .prefetch_related(
                 Prefetch(
                     'sections',
@@ -485,12 +1090,56 @@ def course_detail(request, course_slug):
                 student=request.user
             ).first()
 
+        # ── Enrollment eligibility check ──────────────────────────────────
+        # Student can only enroll if they have an approved CourseRegistration
+        # for the academic course linked to this LMS course in its session/term.
+        can_enroll = False
+        enroll_blocked_reason = ''
+
+        if enrollment:
+            # Already enrolled — no need to check further
+            can_enroll = True
+        elif course.academic_course and course.session:
+            # Check for an approved registration for this academic course + session + term
+            _TERM_MAP = {'fall': 'first', 'spring': 'second', 'summer': 'annual', 'third': 'second'}
+            lms_term = course.term or ''
+            lms_term_norm = _TERM_MAP.get(lms_term, lms_term)
+
+            term_filter = Q(term=lms_term) | Q(term=lms_term_norm) if lms_term else Q()
+
+            approved_reg = CourseRegistration.objects.filter(
+                student=request.user,
+                course=course.academic_course,
+                session=course.session,
+                status='approved',
+            ).filter(term_filter).first()
+
+            if approved_reg:
+                # Also check session is not closed and registration window is valid
+                if course.session.status == 'closed':
+                    can_enroll = False
+                    enroll_blocked_reason = 'This course belongs to a session that has ended.'
+                else:
+                    can_enroll = True
+            else:
+                can_enroll = False
+                enroll_blocked_reason = (
+                    'You have not registered for this course in your semester registration. '
+                    'Go to My Courses, select the correct session and semester, add this course, '
+                    'then finalize your registration to gain access.'
+                )
+        else:
+            # Standalone LMS course with no academic course link — open enrollment
+            can_enroll = True
+
         context = {
             'page_title': course.title,
             'course': course,
             'enrollment': enrollment,
             'sections': sections,
             'existing_review': existing_review,
+            'can_enroll': can_enroll,
+            'enroll_blocked_reason': enroll_blocked_reason,
         }
         
         return render(request, 'students/course_detail.html', context)
@@ -511,8 +1160,6 @@ def enroll_course(request, course_slug):
     Enroll in a course.
     All LMS courses are free — enrollment is immediate.
     """
-    if request.method != 'POST':
-        return redirect('students:course_catalog')
     
     # Get course by slug
     course = get_object_or_404(
@@ -533,14 +1180,41 @@ def enroll_course(request, course_slug):
             'You are already enrolled in this course.'
         )
         return redirect('students:course_detail', course_slug=course_slug)
-    
-    # All courses are free — enroll directly
+
+    # ── Registration gate: only enroll if student has an approved registration ──
+    if course.academic_course and course.session:
+        _TERM_MAP = {'fall': 'first', 'spring': 'second', 'summer': 'annual', 'third': 'second'}
+        lms_term = course.term or ''
+        lms_term_norm = _TERM_MAP.get(lms_term, lms_term)
+        term_filter = Q(term=lms_term) | Q(term=lms_term_norm) if lms_term else Q()
+
+        approved_reg = CourseRegistration.objects.filter(
+            student=request.user,
+            course=course.academic_course,
+            session=course.session,
+            status='approved',
+        ).filter(term_filter).first()
+
+        if not approved_reg:
+            messages.error(
+                request,
+                'You cannot enroll in this course directly. Please register for it through '
+                'your semester course registration (My Courses), finalize your registration, '
+                'and you will be enrolled automatically.'
+            )
+            return redirect('students:course_detail', course_slug=course_slug)
+
+        if course.session.status == 'closed':
+            messages.error(request, 'Enrollment is closed — this course belongs to a past session.')
+            return redirect('students:course_detail', course_slug=course_slug)
+
+    # Enroll directly (standalone LMS course or registration confirmed above)
     try:
         Enrollment.objects.create(
             student=request.user,
             course=course,
+            enrolled_by=request.user,
             status='active',
-            enrolled_at=timezone.now()
         )
         messages.success(
             request,
@@ -694,7 +1368,6 @@ def _record_academic_grade(user, enrollment, lms_course):
     quiz_scores = [float(row['best']) for row in quiz_attempts]
 
     # ── Assignment score: graded submissions as percentage of max_score ───
-    from django.db.models import FloatField
     assignment_scores_qs = (
         AssignmentSubmission.objects
         .filter(
@@ -914,7 +1587,6 @@ def assignments(request):
             )
             .select_related(
                 'lesson__course',
-                'lesson__course__category',
             )
             .prefetch_related(
                 Prefetch(
@@ -1206,7 +1878,6 @@ def quiz_list(request):
     ).select_related(
         'lesson',
         'lesson__course',
-        'lesson__course__category'
     ).prefetch_related(
         'questions'
     ).order_by('-created_at')
@@ -1283,7 +1954,6 @@ def quiz_detail(request, course_slug, lesson_slug, quiz_slug):
         Quiz.objects.select_related(
             'lesson',
             'lesson__course',
-            'lesson__course__category'
         ).prefetch_related('questions'),
         slug=quiz_slug,
         lesson__slug=lesson_slug,
@@ -2895,7 +3565,6 @@ def submit_review(request, course_slug):
 
     return redirect('students:course_detail', course_slug=course_slug)
 
-
 # ===========================================================================
 # CREATE STUDY GROUP
 # ===========================================================================
@@ -2942,138 +3611,517 @@ def create_study_group(request):
 @login_required
 @student_required
 def academic_records(request):
-    """
-    Student academic records page.
- 
-    Surfaces:
-    • Program info + admission metadata (from CourseApplication)
-    • Program requirements breakdown — core vs elective, credits needed vs earned
-    • Graduation progress bar
-    • Academic history grouped by session/year with letter grades & GPA
-    • Links to transcript export request and certificate
-    """
-    from eduweb.models import Course, AcademicSession
- 
     user = request.user
- 
-    # ── 1. Application / Admission info ─────────────────────────────────────
+
+    # ── Transcript request (POST, once only) ─────────────────────────────────
+    if request.method == 'POST' and request.POST.get('action') == 'request_transcript':
+        application_qs = CourseApplication.objects.filter(user=user, status='approved')
+        if application_qs.exists():
+            app = application_qs.order_by('-created_at').first()
+            if not app.transcript_requested:
+                app.transcript_requested = True
+                app.save(update_fields=['transcript_requested'])
+                messages.success(request, 'Your transcript request has been submitted successfully.')
+            else:
+                messages.info(request, 'You have already requested your transcript.')
+        else:
+            messages.error(request, 'No approved application found for your account.')
+        return redirect('students:academic_records')
+
+    # ── 1. Application / Admission info ──────────────────────────────────────
     application = (
         CourseApplication.objects
         .filter(user=user, status='approved')
-        .select_related(
-            'program',
-            'program__department__faculty',
-            'intake',
-        )
+        .select_related('program', 'program__department__faculty', 'intake')
         .order_by('-created_at')
         .first()
     )
- 
     program = application.program if application else None
- 
-    # ── 2. Program requirements (all academic Course rows) ───────────────────
+
+    # ── 2. Program requirements ───────────────────────────────────────────────
     program_courses = []
     if program:
         program_courses = list(
             Course.objects
             .filter(program=program, is_active=True)
-            .select_related('academic_session')
+            .select_related('program')
             .order_by('year_of_study', 'semester', 'display_order')
         )
- 
     core_courses     = [c for c in program_courses if c.course_type == 'core']
     elective_courses = [c for c in program_courses if c.course_type == 'elective']
     other_courses    = [c for c in program_courses if c.course_type not in ('core', 'elective')]
- 
     total_credits_required = program.credits_required if program else 0
- 
-    # ── 3. Student's grade records ───────────────────────────────────────────
+
+    # ── 3. All grade records ──────────────────────────────────────────────────
     academic_grades = list(
         CourseGrade.objects
         .filter(student=user)
-        .select_related('course', 'course__program', 'session')
+        .select_related(
+            'course', 'course__program',
+            'session',
+            'lms_course', 'lms_course__session', 'lms_course__academic_course',
+        )
         .order_by('session__name', 'course__year_of_study', 'course__semester')
     )
- 
-    # Map course_id → grade for quick lookup in requirements table
-    graded_course_ids = {g.course_id: g for g in academic_grades}
- 
-    # Annotate each program course with the student's grade (if any)
+
+    graded_map = {g.course_id: g for g in academic_grades if g.course_id}
     for course in program_courses:
-        course.student_grade = graded_course_ids.get(course.id)
- 
-    # ── 4. Credits earned (passed only) ─────────────────────────────────────
-    credits_earned = sum(
-        g.credit_units for g in academic_grades if g.is_passed
-    )
+        course.student_grade = graded_map.get(course.id)
+
+    # ── 4. Credits ────────────────────────────────────────────────────────────
+    credits_earned    = sum(g.credit_units for g in academic_grades if g.is_passed)
     credits_remaining = max(0, total_credits_required - credits_earned)
-    graduation_pct = (
+    graduation_pct    = (
         round(credits_earned / total_credits_required * 100, 1)
         if total_credits_required > 0 else 0
     )
- 
-    # ── 5. GPA calculation (4.0 scale) ───────────────────────────────────────
-    GRADE_POINTS = {'A': 4.0, 'B': 3.0, 'C': 2.0, 'D': 1.0, 'F': 0.0, 'I': 0.0, 'W': 0.0}
-    weighted_sum   = sum(GRADE_POINTS.get(g.grade, 0) * g.credit_units for g in academic_grades if g.grade)
-    total_gpa_units = sum(g.credit_units for g in academic_grades if g.grade and g.grade not in ('W',))
+
+    # ── 5. Cumulative GPA — Nigerian 5-point scale ────────────────────────────
+    GRADE_POINTS = {'A': 5.0, 'B': 4.0, 'C': 3.0, 'D': 2.0, 'F': 0.0, 'I': 0.0, 'W': 0.0}
+    weighted_sum    = sum(GRADE_POINTS.get(g.grade, 0) * g.credit_units for g in academic_grades if g.grade)
+    total_gpa_units = sum(g.credit_units for g in academic_grades if g.grade and g.grade != 'W')
     gpa = round(weighted_sum / total_gpa_units, 2) if total_gpa_units > 0 else None
- 
-    # ── 6. Group grades by session for the history table ────────────────────
-    sessions_dict = {}
+
+    if gpa is None:       gpa_class = None
+    elif gpa >= 4.5:      gpa_class = 'First Class'
+    elif gpa >= 3.5:      gpa_class = 'Second Class Upper'
+    elif gpa >= 2.4:      gpa_class = 'Second Class Lower'
+    elif gpa >= 1.5:      gpa_class = 'Third Class'
+    else:                 gpa_class = 'Pass'
+
+    # ── 6. Group grades: session → semester ───────────────────────────────────
+    sessions_raw = {}
     for g in academic_grades:
-        key = g.session.name if g.session else 'Unassigned'
-        sessions_dict.setdefault(key, []).append(g)
- 
-    # Per-session GPA
+        # Session key — fall back to lms_course.session if direct session null
+        if g.session:
+            sess_key = g.session.name
+        elif g.lms_course and g.lms_course.session:
+            sess_key = g.lms_course.session.name
+        else:
+            sess_key = 'Unassigned'
+
+        # Semester key — fall back through lms_course.term then g.term
+        if g.course:
+            sem_key = g.course.get_semester_display()
+        elif g.lms_course and g.lms_course.term:
+            sem_key = g.lms_course.get_term_display()
+        else:
+            sem_key = g.term or 'Unknown'
+
+        # Resolve display name for the course
+        if g.lms_course:
+            g.display_name = g.lms_course.title
+            g.display_code = g.lms_course.code or (g.course.code if g.course else '')
+        elif g.course:
+            g.display_name = g.course.name
+            g.display_code = g.course.code
+        else:
+            g.display_name = 'Unknown Course'
+            g.display_code = ''
+
+        sessions_raw.setdefault(sess_key, {}).setdefault(sem_key, []).append(g)
+
     session_summaries = []
-    for session_name, grades_list in sessions_dict.items():
-        sess_weighted = sum(GRADE_POINTS.get(g.grade, 0) * g.credit_units for g in grades_list if g.grade)
-        sess_units    = sum(g.credit_units for g in grades_list if g.grade and g.grade not in ('W',))
-        sess_gpa      = round(sess_weighted / sess_units, 2) if sess_units > 0 else None
+    for sess_name, semesters in sorted(sessions_raw.items(), reverse=True):
+        semester_blocks = []
+        sess_total_weighted = 0.0
+        sess_total_units    = 0
+        sess_credits_earned = 0
+
+        for sem_label, grades_list in semesters.items():
+            sem_weighted = sum(GRADE_POINTS.get(g.grade, 0) * g.credit_units for g in grades_list if g.grade)
+            sem_units    = sum(g.credit_units for g in grades_list if g.grade and g.grade != 'W')
+            sem_gpa      = round(sem_weighted / sem_units, 2) if sem_units > 0 else None
+            sem_credits  = sum(g.credit_units for g in grades_list if g.is_passed)
+
+            semester_blocks.append({
+                'label':          sem_label,
+                'grades':         grades_list,
+                'gpa':            sem_gpa,
+                'credits':        sem_credits,
+                'total_cu':       sem_units,
+                'total_weighted': round(sem_weighted, 0),
+            })
+            sess_total_weighted += sem_weighted
+            sess_total_units    += sem_units
+            sess_credits_earned += sem_credits
+
+        sess_gpa = round(sess_total_weighted / sess_total_units, 2) if sess_total_units > 0 else None
         session_summaries.append({
-            'name': session_name,
-            'grades': grades_list,
-            'gpa': sess_gpa,
-            'credits': sum(g.credit_units for g in grades_list if g.is_passed),
+            'name':      sess_name,
+            'semesters': semester_blocks,
+            'gpa':       sess_gpa,
+            'credits':   sess_credits_earned,
         })
- 
-    # ── 7. Enrollment summary (LMS courses, for completeness) ────────────────
+
+    # ── 7. Current session banner ─────────────────────────────────────────────
+    current_session = AcademicSession.get_current()
+
+    # ── 8. LMS enrollments ────────────────────────────────────────────────────
     lms_enrollments = (
         Enrollment.objects
         .filter(student=user)
-        .select_related('course')
+        .select_related('course', 'course__session')
         .order_by('-enrolled_at')
     )
- 
-    # ── 8. Certificates ──────────────────────────────────────────────────────
+
+    # ── 9. Certificates ───────────────────────────────────────────────────────
     certificates = (
         Certificate.objects
         .filter(student=user)
         .select_related('course', 'program')
         .order_by('-issued_date')
     )
- 
+
     context = {
-        'page_title': 'Academic Records',
-        'application': application,
-        'program': program,
-        # Requirements
-        'program_courses': program_courses,
-        'core_courses': core_courses,
-        'elective_courses': elective_courses,
-        'other_courses': other_courses,
-        # Progress
-        'total_credits_required': total_credits_required,
-        'credits_earned': credits_earned,
-        'credits_remaining': credits_remaining,
-        'graduation_pct': graduation_pct,
-        # Grades
-        'academic_grades': academic_grades,
-        'session_summaries': session_summaries,
-        'gpa': gpa,
-        # Misc
-        'lms_enrollments': lms_enrollments,
-        'certificates': certificates,
+        'page_title':              'Academic Records',
+        'application':             application,
+        'program':                 program,
+        'current_session':         current_session,
+        'program_courses':         program_courses,
+        'core_courses':            core_courses,
+        'elective_courses':        elective_courses,
+        'other_courses':           other_courses,
+        'total_credits_required':  total_credits_required,
+        'credits_earned':          credits_earned,
+        'credits_remaining':       credits_remaining,
+        'graduation_pct':          graduation_pct,
+        'academic_grades':         academic_grades,
+        'session_summaries':       session_summaries,
+        'gpa':                     gpa,
+        'gpa_class':               gpa_class,
+        'lms_enrollments':         lms_enrollments,
+        'certificates':            certificates,
     }
- 
     return render(request, 'students/academic_records.html', context)
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  EXAM VIEWS  —  drop-in replacements for the exam section in views.py
+#
+#  Changes from previous version:
+#   - exam_instructions: passes standard_rules list + exam_end_iso
+#   - start_exam:        passes exam_end_iso (needed by exams.html timer)
+#   - exam_list:         unchanged (still correct)
+#   - get_exam_data:     unchanged
+#   - save_answer:       unchanged
+#   - flag_tab_switch:   unchanged
+#   - submit_exam:       unchanged
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ─── Standard exam rules shown on instructions page ───────────────────────────
+STANDARD_EXAM_RULES = [
+    "Do not refresh or close the browser window during the exam.",
+    "All answers are auto-saved as you select them.",
+    "The timer will automatically submit your answers when time runs out.",
+    "Switching browser tabs is logged and may be reported to your invigilator.",
+    "Ensure you have a stable internet connection before starting.",
+    "Do not communicate with other candidates during the exam.",
+    "The Back button on your browser is disabled once the exam begins.",
+]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  EXAM LIST / TIMETABLE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+@student_required
+def exam_list(request):
+    now = timezone.now()
+
+    enrolled_courses = Enrollment.objects.filter(
+        student=request.user, status='active'
+    ).values_list('course_id', flat=True)
+
+    exams = (
+        Exam.objects
+        .filter(status=Exam.PUBLISHED, is_active=True, course__in=enrolled_courses)
+        .select_related('course', 'academic_session', 'department')
+        .order_by('exam_date', 'start_time')
+    )
+
+    context_items = []
+    for exam in exams:
+        # Show from instructions_open_at (before exam start), hide after exam ends
+        if now < exam.instructions_open_at:
+            continue
+        if now > exam.visible_until:
+            continue
+
+        instructions_at = exam.instructions_open_at
+        start_dt        = exam.exam_start_datetime
+        end_dt          = exam.exam_end_datetime
+
+        can_read  = now >= instructions_at
+        can_start = now >= start_dt
+        is_live   = start_dt <= now < end_dt
+
+        student_status = 'not_started'
+        response = StudentExamResponse.objects.filter(
+            exam=exam, student=request.user
+        ).first()
+        if response:
+            student_status = response.status
+
+        context_items.append({
+            'exam':                     exam,
+            'can_read':                 can_read,
+            'can_start':                can_start,
+            'is_live':                  is_live,
+            'student_status':           student_status,
+            'instructions_open_at_iso': instructions_at.isoformat(),
+            'exam_start_datetime_iso':  start_dt.isoformat(),
+            'exam_end_datetime_iso':    end_dt.isoformat(),
+        })
+
+    return render(request, 'students/examlist.html', {'exams': context_items})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  INSTRUCTION PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+def exam_instructions(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    now  = timezone.now()
+
+    if now < exam.instructions_open_at:
+        return redirect('students:exam_list')
+
+    if now >= exam.exam_end_datetime:
+        return redirect('students:exam_list')
+
+    response, _ = StudentExamResponse.objects.get_or_create(
+        exam=exam,
+        student=request.user,
+        defaults={'status': StudentExamResponse.INSTRUCTIONS},
+    )
+    if response.status == StudentExamResponse.NOT_STARTED:
+        response.status = StudentExamResponse.INSTRUCTIONS
+    if not response.instructions_opened_at:
+        response.instructions_opened_at = now
+    response.save(update_fields=['status', 'instructions_opened_at'])
+
+    secs = max(0, int((exam.exam_start_datetime - now).total_seconds()))
+    h, m, s = min(secs // 3600, 99), (secs % 3600) // 60, secs % 60
+
+    # Pre-render units as (value_str, label) pairs for the template
+    countdown_units = [
+        (str(h).zfill(2), 'hrs'),
+        (str(m).zfill(2), 'min'),
+        (str(s).zfill(2), 'sec'),
+    ]
+
+    return render(request, 'students/examinstructions.html', {
+        'exam':            exam,
+        'exam_start_iso':  exam.exam_start_datetime.isoformat(),
+        'exam_end_iso':    exam.exam_end_datetime.isoformat(),
+        'countdown_units': countdown_units,
+        'standard_rules':  STANDARD_EXAM_RULES,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  START EXAM  (assigns questions, then renders CBT page)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+def start_exam(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    now  = timezone.now()
+
+    if now < exam.exam_start_datetime:
+        return redirect('students:exam_instructions', slug=slug)
+    if now >= exam.exam_end_datetime:
+        return redirect('students:exam_list')
+
+    response, _ = StudentExamResponse.objects.get_or_create(
+        exam=exam,
+        student=request.user,
+        defaults={'status': StudentExamResponse.INSTRUCTIONS},
+    )
+    if response.status in (StudentExamResponse.SUBMITTED, StudentExamResponse.GRADED):
+        return redirect('students:exam_list')
+
+    if not response.assigned_question_ids:
+        questions = list(exam.questions.filter(is_active=True))
+        if exam.shuffle_questions:
+            random.shuffle(questions)
+        if exam.questions_per_student:
+            questions = questions[:exam.questions_per_student]
+
+        options_map = {}
+        for q in questions:
+            opts = q.options.copy()
+            if exam.shuffle_options:
+                random.shuffle(opts)
+            options_map[str(q.id)] = [opt['id'] for opt in opts]
+
+        response.assigned_question_ids  = [q.id for q in questions]
+        response.assigned_options_order = options_map
+        response.status                 = StudentExamResponse.IN_PROGRESS
+        response.exam_started_at        = now
+        response.save(update_fields=[
+            'assigned_question_ids', 'assigned_options_order',
+            'status', 'exam_started_at',
+        ])
+    elif response.status != StudentExamResponse.IN_PROGRESS:
+        response.status = StudentExamResponse.IN_PROGRESS
+        response.save(update_fields=['status'])
+
+    return render(request, 'students/exams.html', {
+        'exam':         exam,
+        'exam_end_iso': exam.exam_end_datetime.isoformat(),
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  GET EXAM DATA  (JSON — questions + server-authoritative time remaining)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+def get_exam_data(request, slug):
+    exam     = get_object_or_404(Exam, slug=slug)
+    response, _ = StudentExamResponse.objects.get_or_create(
+    exam=exam,
+    student=request.user,
+    defaults={'status': StudentExamResponse.INSTRUCTIONS},
+)
+    questions_data = []
+    for qid in response.assigned_question_ids:
+        try:
+            q = exam.questions.get(id=qid)
+        except Exception:
+            continue
+
+        ordered_ids = response.assigned_options_order.get(str(qid), [])
+        opt_lookup  = {opt['id']: opt for opt in q.options}
+        options     = [
+            {'id': oid, 'text': opt_lookup[oid]['text']}
+            for oid in ordered_ids
+            if oid in opt_lookup
+        ]
+
+        questions_data.append({
+            'id':        q.id,
+            'text':      q.question_text,
+            'options':   options,
+            'marks':     str(q.marks),
+            'image_url': request.build_absolute_uri(q.image.url) if q.image else None,
+        })
+
+    now       = timezone.now()
+    total_sec = exam.duration_minutes * 60
+    wall_secs = max(0, int((exam.exam_end_datetime - now).total_seconds()))
+
+    if response.exam_started_at:
+        elapsed   = int((now - response.exam_started_at).total_seconds())
+        remaining = max(0, total_sec - elapsed)
+    else:
+        remaining = total_sec
+
+    remaining = min(remaining, wall_secs)
+
+    return JsonResponse({
+        'questions':      questions_data,
+        'time_remaining': remaining,
+        'duration':       total_sec,
+        'saved_answers':  response.answers,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  AUTO-SAVE SINGLE ANSWER
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+@student_required
+def save_answer(request, slug):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    if 'question_id' not in data or 'answer' not in data:
+        return JsonResponse({'error': 'Missing question_id or answer'}, status=400)
+
+    response = get_object_or_404(StudentExamResponse, exam__slug=slug, student=request.user)
+
+    if response.status not in (
+        StudentExamResponse.INSTRUCTIONS, StudentExamResponse.IN_PROGRESS
+    ):
+        return JsonResponse({'error': 'Exam not in progress'}, status=400)
+
+    response.answers[str(data['question_id'])] = data['answer']
+    response.last_autosave_at = timezone.now()
+    response.save(update_fields=['answers', 'last_autosave_at'])
+
+    return JsonResponse({'status': 'saved'})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  FLAG TAB SWITCH (security — silent)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+@student_required
+def flag_tab_switch(request, slug):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    try:
+        data     = json.loads(request.body)
+        response = StudentExamResponse.objects.filter(
+            exam__slug=slug, student=request.user
+        ).first()
+        if response:
+            response.tab_switch_count = data.get('count', response.tab_switch_count + 1)
+            response.save(update_fields=['tab_switch_count'])
+    except Exception:
+        pass
+    return JsonResponse({'ok': True})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SUBMIT + AUTO-GRADE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required
+@student_required
+def submit_exam(request, slug):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    response = get_object_or_404(StudentExamResponse, exam__slug=slug, student=request.user)
+
+    if response.status in (StudentExamResponse.SUBMITTED, StudentExamResponse.GRADED):
+        return JsonResponse({'status': 'already_submitted'})
+
+    exam  = response.exam
+    total = 0.0
+
+    for qid in response.assigned_question_ids:
+        try:
+            q = exam.questions.get(id=qid)
+        except Exception:
+            continue
+        answer  = response.answers.get(str(qid))
+        correct = [opt['id'] for opt in q.options if opt.get('is_correct')]
+        if answer and answer in correct:
+            total += float(q.marks)
+
+    now = timezone.now()
+    response.total_score    = total
+    response.status         = StudentExamResponse.SUBMITTED
+    response.submitted_at   = now
+    if response.exam_started_at:
+        response.time_spent_seconds = int((now - response.exam_started_at).total_seconds())
+
+    response.save(update_fields=[
+        'total_score', 'status', 'submitted_at', 'time_spent_seconds'
+    ])
+
+    return JsonResponse({'status': 'submitted', 'score': total})

@@ -38,10 +38,9 @@ urlpatterns = [
 
     # Academic Sessions
     path('academic-sessions/', views.academic_sessions_list, name='academic_sessions_list'),
-    path('academic-sessions/create/', views.academic_session_create, name='academic_session_create'),
-    path('academic-sessions/<int:pk>/edit/', views.academic_session_edit, name='academic_session_edit'),
     path('academic-sessions/<int:pk>/set-current/', views.academic_session_set_current, name='academic_session_set_current'),
-    path('academic-sessions/<int:pk>/delete/', views.academic_session_delete, name='academic_session_delete'),
+
+    path('courses/', views.courses_list, name='courses_list'),
 
     # Intakes
     path('intakes/', views.intakes_list, name='intakes_list'),
@@ -50,17 +49,17 @@ urlpatterns = [
     path('intakes/<int:pk>/delete/', views.intake_delete, name='intake_delete'),
 
     # Courses (academic)
-    path('courses/', views.courses, name='courses'),
-    path('courses/create/', views.course_create, name='course_create'),
-    path('courses/<int:pk>/', views.course_detail, name='course_detail'),
-    path('courses/<int:pk>/edit/', views.course_edit, name='course_edit'),
-    path('courses/<int:pk>/delete/', views.course_delete, name='course_delete'),
+    # path('courses/', views.courses, name='courses'),
+    # path('courses/create/', views.course_create, name='course_create'),
+    # path('courses/<int:pk>/', views.course_detail, name='course_detail'),
+    # path('courses/<int:pk>/edit/', views.course_edit, name='course_edit'),
+    # path('courses/<int:pk>/delete/', views.course_delete, name='course_delete'),
 
     # Course categories
     path('categories/', views.course_categories_list, name='course_categories_list'),
-    path('categories/create/', views.course_category_create, name='course_category_create'),
-    path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
-    path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
+    # path('categories/create/', views.course_category_create, name='course_category_create'),
+    # path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
+    # path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
 
     # LMS Courses
     path('lms-courses/', views.lms_courses_list, name='lms_courses_list'),
@@ -218,6 +217,16 @@ urlpatterns = [
     path('site-config/members/create/', views.institution_member_create, name='institution_member_create'),
     path('site-config/members/<int:pk>/edit/', views.institution_member_edit, name='institution_member_edit'),
     path('site-config/members/<int:pk>/delete/', views.institution_member_delete, name='institution_member_delete'),
+
+    # ── Exams (Superadmin) ────────────────────────────────────────────────────
+    path('exams/', views.admin_exam_list, name='admin_exam_list'),
+    path('exams/<slug:slug>/', views.admin_exam_detail, name='admin_exam_detail'),
+    path('exams/<slug:slug>/approve/', views.admin_exam_approve, name='admin_exam_approve'),
+    path('exams/<slug:slug>/reject/', views.admin_exam_reject, name='admin_exam_reject'),
+    path('exams/<slug:slug>/publish/', views.admin_exam_publish, name='admin_exam_publish'),
+    path('exams/<slug:slug>/questions/', views.admin_question_moderation, name='admin_question_moderation'),
+    path('exams/<slug:slug>/timetable/', views.admin_exam_timetable_update, name='admin_exam_timetable_update'),
+    path('exams/<slug:slug>/responses/', views.admin_exam_responses, name='admin_exam_responses'),
 
     # ── Library ──────────────────────────────────────────────────────────────
     path('library/',                             views.library_items_list,         name='library_items_list'),

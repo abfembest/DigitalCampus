@@ -1,0 +1,279 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Responses — {{ exam.reference_code }}{% endblock %}
+{% block breadcrumb %}Exam Management / {{ exam.reference_code }} / Responses{% endblock %}
+{% block breadcrumb_title %}{{ exam.reference_code }} — Responses{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-full space-y-6">
+
+    <!-- ── Breadcrumb ── -->
+    <nav class="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
+        <a href="{% url 'management:admin_exam_list' %}"
+           class="hover:text-primary-600 transition-colors flex items-center gap-1">
+            <i class="fas fa-file-alt"></i> Exam Management
+        </a>
+        <i class="fas fa-chevron-right text-gray-300 text-[9px]"></i>
+        <a href="{% url 'management:admin_exam_detail' exam.slug %}"
+           class="hover:text-primary-600 transition-colors font-medium text-gray-600">
+            {{ exam.reference_code }}
+        </a>
+        <i class="fas fa-chevron-right text-gray-300 text-[9px]"></i>
+        <span class="text-gray-700 font-semibold">Student Responses</span>
+    </nav>
+
+    <!-- ── Page Header ── -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-heading flex items-center gap-3">
+                <span class="inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl
+                             bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow shrink-0">
+                    <i class="fas fa-users text-base sm:text-lg"></i>
+                </span>
+                Student Responses
+            </h1>
+            <p class="text-sm text-gray-500 mt-1 ml-14 line-clamp-1">{{ exam.title }}</p>
+        </div>
+        <a href="{% url 'management:admin_exam_detail' exam.slug %}"
+           class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium
+                  border border-gray-300 bg-white text-gray-700 hover:bg-gray-50
+                  rounded-xl transition-colors self-start sm:self-center shrink-0">
+            <i class="fas fa-arrow-left text-xs text-gray-400"></i> Back to Exam
+        </a>
+    </div>
+
+    <!-- ── Summary Cards ── -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 text-center">
+            <div class="text-2xl sm:text-3xl font-bold text-gray-800">{{ summary.total|default:"0" }}</div>
+            <div class="text-xs text-gray-400 font-medium mt-1 uppercase tracking-wide">Total</div>
+        </div>
+        <div class="bg-blue-50 rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5 text-center">
+            <div class="text-2xl sm:text-3xl font-bold text-blue-700">{{ summary.in_progress|default:"0" }}</div>
+            <div class="text-xs text-blue-500 font-medium mt-1 uppercase tracking-wide">In Progress</div>
+        </div>
+        <div class="bg-primary-50 rounded-2xl border border-primary-100 shadow-sm p-4 sm:p-5 text-center">
+            <div class="text-2xl sm:text-3xl font-bold text-primary-700">{{ summary.submitted|default:"0" }}</div>
+            <div class="text-xs text-primary-500 font-medium mt-1 uppercase tracking-wide">Submitted</div>
+        </div>
+        <div class="bg-green-50 rounded-2xl border border-green-100 shadow-sm p-4 sm:p-5 text-center">
+            <div class="text-2xl sm:text-3xl font-bold text-green-700">{{ summary.graded|default:"0" }}</div>
+            <div class="text-xs text-green-500 font-medium mt-1 uppercase tracking-wide">Graded</div>
+        </div>
+        <div class="bg-gray-50 rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 text-center col-span-2 sm:col-span-1">
+            <div class="text-2xl sm:text-3xl font-bold text-gray-700">
+                {% if summary.avg_score %}{{ summary.avg_score|floatformat:1 }}%{% else %}—{% endif %}
+            </div>
+            <div class="text-xs text-gray-400 font-medium mt-1 uppercase tracking-wide">Avg Score</div>
+        </div>
+    </div>
+
+    <!-- ── Filters ── -->
+    <form method="get" class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div class="flex items-center gap-2 text-sm text-gray-600 font-medium shrink-0">
+            <i class="fas fa-filter text-gray-400"></i> Filter by status:
+        </div>
+        <select name="status" onchange="this.form.submit()"
+                class="px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm bg-white
+                       focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition sm:w-52">
+            <option value="">All Statuses</option>
+            {% for val, label in ATTEMPT_STATUS_CHOICES %}
+            <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% if status_filter %}
+        <a href="?"
+           class="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold
+                  border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors">
+            <i class="fas fa-times text-[10px]"></i> Clear
+        </a>
+        {% endif %}
+    </form>
+
+    <!-- ── Responses Table ── -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200">
+                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-xs uppercase tracking-wider">
+                            Student
+                        </th>
+                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-xs uppercase tracking-wider hidden sm:table-cell">
+                            Status
+                        </th>
+                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-xs uppercase tracking-wider hidden md:table-cell">
+                            Started
+                        </th>
+                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-xs uppercase tracking-wider hidden md:table-cell">
+                            Submitted
+                        </th>
+                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-xs uppercase tracking-wider hidden lg:table-cell">
+                            Answered
+                        </th>
+                        <th class="text-right px-5 py-3.5 font-semibold text-gray-500 text-xs uppercase tracking-wider">
+                            Score
+                        </th>
+                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-xs uppercase tracking-wider hidden xl:table-cell">
+                            Flags
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for r in page_obj %}
+                    <tr class="hover:bg-gray-50/50 transition-colors group">
+
+                        <!-- Student -->
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500
+                                            flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                    {{ r.student.first_name|first|upper }}{{ r.student.last_name|first|upper }}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-semibold text-gray-900 text-sm leading-tight truncate">{{ r.student.get_full_name|default:r.student.username }}</div>
+                                    <div class="text-xs text-gray-400 truncate">{{ r.student.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Status -->
+                        <td class="px-5 py-4 hidden sm:table-cell">
+                            <div class="flex flex-col gap-1">
+                                {% if r.status == 'not_started' %}
+                                <span class="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full font-medium w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Not Started
+                                </span>
+                                {% elif r.status == 'instructions' %}
+                                <span class="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full font-medium w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>Instructions
+                                </span>
+                                {% elif r.status == 'in_progress' %}
+                                <span class="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full font-semibold w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span>In Progress
+                                </span>
+                                {% elif r.status == 'submitted' %}
+                                <span class="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-100 text-primary-700 rounded-full font-medium w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-primary-500"></span>Submitted
+                                </span>
+                                {% elif r.status == 'graded' %}
+                                <span class="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-green-100 text-green-700 rounded-full font-medium w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Graded
+                                </span>
+                                {% elif r.status == 'absent' %}
+                                <span class="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-red-100 text-red-600 rounded-full font-medium w-fit">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Absent
+                                </span>
+                                {% endif %}
+                                {% if r.auto_submitted %}
+                                <span class="inline-flex items-center gap-1 text-[10px] text-gray-400 w-fit" title="Auto-submitted by server timer">
+                                    <i class="fas fa-robot text-gray-300"></i> Auto-submit
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Started -->
+                        <td class="px-5 py-4 hidden md:table-cell">
+                            <span class="text-xs text-gray-600 tabular-nums">
+                                {{ r.exam_started_at|date:"d M · H:i"|default:"—" }}
+                            </span>
+                        </td>
+
+                        <!-- Submitted -->
+                        <td class="px-5 py-4 hidden md:table-cell">
+                            <div class="text-xs text-gray-600 tabular-nums">{{ r.submitted_at|date:"d M · H:i"|default:"—" }}</div>
+                            {% if r.time_spent_seconds %}
+                            <div class="text-[11px] text-gray-400 mt-0.5">
+                                {{ r.time_spent_seconds|floatformat:0 }}s spent
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Answered -->
+                        <td class="px-5 py-4 text-center hidden lg:table-cell">
+                            <div class="inline-flex flex-col items-center gap-0.5">
+                                <span class="text-sm font-bold text-gray-700">{{ r.questions_answered }}</span>
+                                <span class="text-[11px] text-gray-400">/ {{ r.assigned_question_ids|length }}</span>
+                            </div>
+                        </td>
+
+                        <!-- Score -->
+                        <td class="px-5 py-4 text-right">
+                            {% if r.score_percentage is not None %}
+                            <div class="font-bold text-sm {% if r.passed %}text-green-600{% elif r.passed == False %}text-red-600{% else %}text-gray-700{% endif %}">
+                                {{ r.score_percentage|floatformat:1 }}%
+                            </div>
+                            <div class="text-[11px] text-gray-400 mt-0.5 tabular-nums">
+                                {{ r.total_score }} / {{ exam.computed_total_marks }}
+                            </div>
+                            {% else %}
+                            <span class="text-xs text-gray-300">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Flags -->
+                        <td class="px-5 py-4 text-center hidden xl:table-cell">
+                            {% if r.tab_switch_count > 0 %}
+                            <span class="inline-flex items-center gap-1.5 text-xs text-amber-700
+                                         bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full font-semibold"
+                                  title="Tab switches detected">
+                                <i class="fas fa-exclamation-triangle text-[10px]"></i>
+                                {{ r.tab_switch_count }}
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-gray-200">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-5 py-16 text-center">
+                            <div class="flex flex-col items-center gap-3">
+                                <div class="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center">
+                                    <i class="fas fa-users text-2xl text-gray-300"></i>
+                                </div>
+                                <p class="text-gray-500 font-semibold">No responses found</p>
+                                <p class="text-gray-400 text-xs">No students have opened this exam yet.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-5 py-3.5 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p class="text-xs text-gray-500">
+                Page <span class="font-semibold text-gray-700">{{ page_obj.number }}</span>
+                of <span class="font-semibold text-gray-700">{{ page_obj.paginator.num_pages }}</span>
+            </p>
+            <div class="flex gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                   class="px-3.5 py-2 text-xs font-semibold border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700">
+                    <i class="fas fa-chevron-left mr-1 text-[10px]"></i> Prev
+                </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                   class="px-3.5 py-2 text-xs font-semibold bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                    Next <i class="fas fa-chevron-right ml-1 text-[10px]"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Security notice -->
+    <p class="text-xs text-gray-400 text-center flex items-center justify-center gap-1.5">
+        <i class="fas fa-lock text-gray-300"></i>
+        Read-only view. Correct answers are never exposed here — all grading is server-side.
+    </p>
+
+</div>
+{% endblock %}

@@ -1,5 +1,6 @@
 import json
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Avg, Sum, Q, F
@@ -18,12 +19,12 @@ from django.http import JsonResponse
 from eduweb.models import (
     LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
     QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
-    Announcement, Review, Notification, Course, CourseGrade
+    Announcement, Review, Notification, Course, CourseGrade, ExamQuestion
 )
 from .forms import (
     CourseForm, CourseObjectivesForm, LessonForm, SectionForm,
     QuizForm, QuizQuestionForm, QuizAnswerForm, AssignmentForm,
-    AnnouncementForm, InstructorProfileForm, InstructorSettingsForm, PasswordChangeForm, SupportTicketForm
+    AnnouncementForm, InstructorProfileForm, InstructorSettingsForm, PasswordChangeForm, SupportTicketForm, ExamForm
 )
 from eduweb.decorators import instructor_required
 
@@ -31,7 +32,7 @@ from eduweb.models import (
     LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
     QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
     Announcement, Review, Notification,
-    QuizAttempt, QuizResponse, Message, Discussion, DiscussionReply
+    QuizAttempt, QuizResponse, Message, Discussion, DiscussionReply, Exam
 )
 
 # ── Notification helper ────────────────────────────────────────────────────
@@ -62,7 +63,7 @@ def _notify_instructor(instructor, title, message, notif_type='system', link='')
         pass
 
 # ==================== DASHBOARD ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def dashboard(request):
     """Instructor dashboard with comprehensive statistics"""
@@ -70,7 +71,7 @@ def dashboard(request):
         instructor=request.user
     ).annotate(
         enrollments_count=Count('enrollments')
-    ).select_related('category').prefetch_related('enrollments')[:5]
+    ).prefetch_related('enrollments')[:5]
     
     # Statistics
     total_courses = LMSCourse.objects.filter(
@@ -111,7 +112,7 @@ def dashboard(request):
 
 
 # ==================== COURSE MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_list(request):
     """List all instructor courses with statistics"""
@@ -119,38 +120,207 @@ def course_list(request):
         instructor=request.user
     ).annotate(
         enrollment_count=Count('enrollments')
-    ).select_related('category').order_by('-created_at')
-    
+    ).order_by('-created_at')
+
     return render(request, 'instructor/course_list.html', {
-        'courses': courses
+        'courses': courses,
     })
 
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def course_manage_default(request):
+    """
+    Redirects to course_manage for the first course the instructor owns.
+    Used by sidebar links so no pre-selected course is ever needed.
+    """
+    tab = request.GET.get('tab', 'overview')
+    first_course = LMSCourse.objects.filter(instructor=request.user).order_by('title').first()
+    if first_course:
+        return redirect(f"{reverse('instructor:course_manage', kwargs={'slug': first_course.slug})}?tab={tab}")
+    # No courses yet — send to course list with a helpful message
+    messages.info(request, "No courses have been assigned to you yet. Please contact the administration.")
+    return redirect('instructor:course_list')
 
-@login_required(login_url='auth')
+
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def course_manage(request, slug=None):
+    """
+    Single unified page that consolidates:
+      - Overview / Edit Course     (tab: overview)
+      - Content / Lessons+Sections (tab: content)
+      - Assessments: Quiz, Assignment, Exam  (tab: assessments)
+      - Students                   (tab: students)
+      - Announcements              (tab: announcements)
+      - Discussions                (tab: discussions)
+
+    All forms POST to their existing dedicated URLs — this view only
+    serves the GET and passes all the data needed to render every tab.
+    """
+    # Support ?course=<id> switcher from the dropdown on the manage page
+    course_id = request.GET.get('course')
+    if course_id:
+        course = get_object_or_404(LMSCourse, id=course_id, instructor=request.user)
+        return redirect('instructor:course_manage', slug=course.slug)
+
+    course = get_object_or_404(LMSCourse, slug=slug, instructor=request.user)
+    active_tab = request.GET.get('tab', 'overview')
+ 
+    # ── All courses for the switcher dropdown ──────────────────────────────
+    all_courses = LMSCourse.objects.filter(
+        instructor=request.user
+    ).order_by('title')
+ 
+    # ── TAB: overview ─────────────────────────────────────────────────────
+    course_form = CourseForm(instance=course)
+ 
+    stats = {
+        'total_students': course.enrollments.count(),
+        'total_lessons':  course.lessons.count(),
+        'total_sections': course.sections.count(),
+    }
+ 
+    # ── TAB: content ──────────────────────────────────────────────────────
+    sections = course.sections.prefetch_related(
+        'lessons'
+    ).order_by('display_order')
+ 
+    all_lessons  = course.lessons.all()
+    video_count  = all_lessons.filter(lesson_type='video').count()
+    quiz_count   = all_lessons.filter(lesson_type='quiz').count()
+ 
+    # Inline lesson / section forms for modals
+    lesson_form  = LessonForm(course=course)
+    section_form = SectionForm()
+ 
+    # ── TAB: assessments ──────────────────────────────────────────────────
+    quiz_lessons = course.lessons.filter(
+        lesson_type='quiz'
+    ).prefetch_related(
+        'quizzes__questions'
+    ).order_by('display_order')
+ 
+    assignment_lessons = course.lessons.filter(
+        lesson_type='assignment'
+    ).prefetch_related(
+        'assignments__submissions'
+    ).order_by('display_order')
+ 
+    # Exams that belong to this course
+    try:
+        course_exams = Exam.objects.filter(
+            course=course,
+            created_by=request.user
+        ).order_by('-created_at')
+    except Exception:
+        course_exams = Exam.objects.filter(
+            created_by=request.user
+        ).order_by('-created_at')[:10]
+ 
+    # Flat list of quiz-lesson slugs for the legacy "Manage Quizzes" button
+    lessons_for_quiz = list(quiz_lessons)
+ 
+    # Blank forms for modals
+    quiz_form       = QuizForm()
+    assignment_form_modal = AssignmentForm()
+ 
+    # ── TAB: students ─────────────────────────────────────────────────────
+    enrollments = course.enrollments.select_related(
+        'student'
+    ).order_by('-enrolled_at')
+ 
+    enrollments_count           = enrollments.count()
+    active_enrollments_count    = enrollments.filter(status='active').count()
+    completed_enrollments_count = enrollments.filter(status='completed').count()
+    pending_submissions_count   = AssignmentSubmission.objects.filter(
+        assignment__lesson__course=course,
+        status='submitted'
+    ).count()
+ 
+    # Students NOT yet enrolled — only users with role='student'
+    enrolled_ids = enrollments.values_list('student_id', flat=True)
+    available_students = User.objects.filter(
+        is_active=True,
+        profile__role='student'
+    ).exclude(
+        id__in=enrolled_ids
+    ).order_by('first_name', 'last_name')
+ 
+    # ── TAB: announcements ────────────────────────────────────────────────
+    announcements = Announcement.objects.filter(
+        course=course
+    ).order_by('-publish_date')
+ 
+    announcement_form = AnnouncementForm()
+ 
+    # ── TAB: discussions ──────────────────────────────────────────────────
+    discussions_qs = Discussion.objects.filter(
+        course=course
+    ).select_related('author').prefetch_related(
+        'replies'
+    ).order_by('-is_pinned', '-created_at')
+ 
+    discussions_count = discussions_qs.count()
+ 
+    # ── Today's date for enrol-student modal default ───────────────────────
+    from datetime import date
+    today = date.today().isoformat()
+ 
+    context = {
+        # navigation / switcher
+        'course':       course,
+        'all_courses':  all_courses,
+        'active_tab':   active_tab,
+ 
+        # overview
+        'course_form': course_form,
+        'stats':       stats,
+ 
+        # content
+        'sections':     sections,
+        'video_count':  video_count,
+        'quiz_count':   quiz_count,
+        'lesson_form':  lesson_form,
+        'section_form': section_form,
+ 
+        # assessments
+        'quiz_lessons':        quiz_lessons,
+        'assignment_lessons':  assignment_lessons,
+        'course_exams':        course_exams,
+        'lessons_for_quiz':    lessons_for_quiz,
+        'quiz_form':           quiz_form,
+        'assignment_form_modal': assignment_form_modal,
+ 
+        # students
+        'enrollments':                  enrollments,
+        'enrollments_count':            enrollments_count,
+        'active_enrollments_count':     active_enrollments_count,
+        'completed_enrollments_count':  completed_enrollments_count,
+        'pending_submissions_count':    pending_submissions_count,
+        'available_students':           available_students,
+        'today':                        today,
+ 
+        # announcements
+        'announcements':    announcements,
+        'announcement_form': announcement_form,
+ 
+        # discussions
+        'discussions':       discussions_qs,
+        'discussions_count': discussions_count,
+    }
+ 
+    return render(request, 'instructor/course_manage.html', context)
+
+
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_create(request):
-    """Create new course"""
-    if request.method == 'POST':
-        form = CourseForm(request.POST, request.FILES)
-        if form.is_valid():
-            course = form.save(commit=False)
-            course.instructor = request.user
-            course.save()
-            messages.success(
-                request,
-                f'Course "{course.title}" created successfully!'
-            )
-            return redirect('instructor:course_edit', slug=course.slug)
-    else:
-        form = CourseForm()
-    
-    return render(request, 'instructor/course_form.html', {
-        'form': form,
-        'course': None
-    })
+    """Course creation is reserved for admins only."""
+    messages.error(request, "Courses are created and assigned by the administration. Contact an admin to have a course assigned to you.")
+    return redirect('instructor:course_list')
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_edit(request, slug):
     """Edit course using slug"""
@@ -172,6 +342,10 @@ def course_edit(request, slug):
                 request,
                 f'Course "{course.title}" updated successfully!'
             )
+            # If the POST came from the manage page, go back there
+            next_url = request.POST.get('next') or request.META.get('HTTP_REFERER', '')
+            if 'manage' in next_url:
+                return redirect(f"{reverse('instructor:course_manage', kwargs={'slug': course.slug})}?tab=overview")
             return redirect('instructor:course_edit', slug=course.slug)
     else:
         form = CourseForm(instance=course)
@@ -190,7 +364,7 @@ def course_edit(request, slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_objectives(request, slug):
     """Manage course objectives using slug"""
@@ -235,32 +409,15 @@ def course_objectives(request, slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_delete(request, slug):
-    """Delete course using slug"""
-    course = get_object_or_404(
-        LMSCourse,
-        slug=slug,
-        instructor=request.user
-    )
-    
-    if request.method == 'POST':
-        course_title = course.title
-        course.delete()
-        messages.success(
-            request,
-            f'Course "{course_title}" deleted successfully!'
-        )
-        return redirect('instructor:course_list')
-    
-    return render(request, 'instructor/course_confirm_delete.html', {
-        'course': course
-    })
+    """Course deletion is not permitted for instructors."""
+    raise PermissionDenied
 
 
 # ==================== SECTION MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def section_create(request, course_slug):
     """Create section using course slug"""
@@ -290,7 +447,7 @@ def section_create(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def section_edit(request, course_slug, section_id):
     """Edit section using course slug"""
@@ -324,7 +481,7 @@ def section_edit(request, course_slug, section_id):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def section_delete(request, course_slug, section_id):
     """Delete section using course slug"""
@@ -346,7 +503,7 @@ def section_delete(request, course_slug, section_id):
 
 
 # ==================== LESSON MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def lesson_list(request, course_slug):
     """List lessons using course slug"""
@@ -375,7 +532,7 @@ def lesson_list(request, course_slug):
     return render(request, 'instructor/lesson_list.html', context)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def lesson_create(request, course_slug):
     """Create lesson using course slug"""
@@ -419,7 +576,7 @@ def lesson_create(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def lesson_edit(request, course_slug, lesson_slug):
     """Edit lesson using course slug"""
@@ -458,7 +615,7 @@ def lesson_edit(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def lesson_delete(request, course_slug, lesson_slug):
     """Delete lesson using course slug"""
@@ -480,7 +637,7 @@ def lesson_delete(request, course_slug, lesson_slug):
 
 
 # ==================== QUIZ MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_list(request, course_slug, lesson_slug):
     """List quizzes using slugs"""
@@ -506,7 +663,7 @@ def quiz_list(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_create(request, course_slug, lesson_slug):
     """Create quiz using slugs"""
@@ -557,7 +714,7 @@ def quiz_create(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     """Edit quiz using slugs"""
@@ -599,7 +756,7 @@ def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
     """Manage quiz questions using slugs"""
@@ -632,7 +789,7 @@ def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
 
 
 # ==================== QUESTION MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def question_create(request, course_slug, lesson_slug, quiz_slug):
     """Create question using slugs"""
@@ -685,7 +842,7 @@ def question_create(request, course_slug, lesson_slug, quiz_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
     """Manage question answers using slugs"""
@@ -740,7 +897,7 @@ def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
 
 # ==================== ASSIGNMENT MANAGEMENT ====================
 # ==================== ASSIGNMENT MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def assignment_list(request, course_slug, lesson_slug):
     """List assignments using slugs"""
@@ -764,7 +921,7 @@ def assignment_list(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def assignment_create(request, course_slug, lesson_slug):
     """Create assignment using slugs"""
@@ -815,7 +972,7 @@ def assignment_create(request, course_slug, lesson_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     """Edit assignment using slugs"""
@@ -860,7 +1017,7 @@ def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def assignment_submissions(request, course_slug, assignment_slug):
     """View submissions using slugs"""
@@ -893,7 +1050,7 @@ def assignment_submissions(request, course_slug, assignment_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def grade_submission(request, course_slug, submission_id):
     """Grade submission using course slug and submission ID"""
@@ -950,7 +1107,7 @@ def grade_submission(request, course_slug, submission_id):
 
 
 # ==================== STUDENT MANAGEMENT ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def students_list(request, course_slug):
     """List students using course slug"""
@@ -970,7 +1127,7 @@ def students_list(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def student_progress(request, course_slug, student_id):
     """View student progress using course slug"""
@@ -996,7 +1153,7 @@ def student_progress(request, course_slug, student_id):
         'lesson_progress': lesson_progress,
     })
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def enroll_student(request, course_slug):
     """Manually enroll a student in a course"""
@@ -1012,7 +1169,7 @@ def enroll_student(request, course_slug):
         send_welcome = request.POST.get('send_welcome_email') == 'on'
         
         try:
-            student = User.objects.get(id=student_id)
+            student = User.objects.get(id=student_id, profile__role='student', is_active=True)
             
             # Check if already enrolled
             if Enrollment.objects.filter(
@@ -1069,7 +1226,7 @@ def enroll_student(request, course_slug):
     return redirect('instructor:students_list', course_slug=course.slug)
 
 # ==================== ANNOUNCEMENTS ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def announcement_create(request, course_slug):
     """Create announcement using course slug"""
@@ -1118,7 +1275,7 @@ def announcement_create(request, course_slug):
     })
 
 # ==================== ASSESSMENT OVERVIEW VIEWS ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def all_quizzes(request):
     """View all quizzes across all instructor's courses"""
@@ -1136,7 +1293,7 @@ def all_quizzes(request):
     return render(request, 'instructor/all_quizzes.html', context)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def all_assignments(request):
     """View all assignments across all instructor's courses"""
@@ -1153,7 +1310,7 @@ def all_assignments(request):
     }
     return render(request, 'instructor/all_assignments.html', context)
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, answer_id):
@@ -1173,7 +1330,7 @@ def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, ans
                     quiz_slug=quiz.slug, 
                     question_id=question.id)
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
@@ -1191,7 +1348,7 @@ def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
                     lesson_slug=lesson.slug, 
                     quiz_slug=quiz.slug)
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def course_statistics(request):
     """
@@ -1264,7 +1421,7 @@ def course_statistics(request):
     )
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def student_analytics_progress(request):
     """
@@ -1331,7 +1488,7 @@ def student_analytics_progress(request):
     )
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def reviews_ratings(request):
     """
@@ -1423,55 +1580,52 @@ def reviews_ratings(request):
         context
     )
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def resources(request):
     """
-    Pool and display all resources from courses
+    Pool and display all resources from courses assigned to this instructor
+    that already have content (lessons) created for them.
+    Supports tab-based pagination via ?videos_page=, ?docs_page=, ?assignments_page=
     """
-    # Get all courses for this instructor
+    import re
+
+    ITEMS_PER_PAGE = 10
+
+    # Only courses assigned to this instructor that have at least one lesson
     instructor_courses = LMSCourse.objects.filter(
         instructor=request.user
     ).prefetch_related(
         'lessons',
         'lessons__assignments'
+    ).annotate(
+        lesson_count=Count('lessons')
+    ).filter(
+        lesson_count__gt=0          # only courses with content created
     )
-    
-    # Pool resources from lessons
-    lesson_videos = []
-    lesson_docs = []
-
-    import re
 
     def extract_youtube_url(raw):
-        """
-        Accepts either a plain URL or an iframe embed snippet and always
-        returns a clean https://www.youtube.com/watch?v=... URL, or None.
-        """
-        # Already a plain URL — return as-is
         if raw.strip().startswith('http'):
-            # Normalise embed URLs → watch URLs
             raw = raw.strip()
             match = re.search(r'youtube\.com/embed/([a-zA-Z0-9_-]+)', raw)
             if match:
                 return f'https://www.youtube.com/watch?v={match.group(1)}'
-            return raw  # e.g. already a watch URL or youtu.be link
-
-        # It's an iframe snippet — pull the src attribute
+            return raw
         match = re.search(r'src=["\']([^"\']+)["\']', raw)
         if match:
             src = match.group(1)
-            # Convert embed URL → watch URL
             vid_match = re.search(r'youtube\.com/embed/([a-zA-Z0-9_-]+)', src)
             if vid_match:
                 return f'https://www.youtube.com/watch?v={vid_match.group(1)}'
-            return src  # fallback: return the src as-is
-
+            return src
         return None
+
+    lesson_videos = []
+    lesson_docs = []
+    assignment_files = []
 
     for course in instructor_courses:
         for lesson in course.lessons.all():
-            # Videos
             if lesson.video_url:
                 clean_url = extract_youtube_url(lesson.video_url)
                 if clean_url:
@@ -1480,10 +1634,8 @@ def resources(request):
                         'lesson': lesson,
                         'url': clean_url,
                         'type': 'video',
-                        'uploaded': lesson.created_at
+                        'uploaded': lesson.created_at,
                     })
-            
-            # Documents
             if lesson.file:
                 lesson_docs.append({
                     'course': course,
@@ -1491,13 +1643,8 @@ def resources(request):
                     'file': lesson.file,
                     'name': lesson.file.name.split('/')[-1],
                     'type': 'document',
-                    'uploaded': lesson.created_at
+                    'uploaded': lesson.created_at,
                 })
-    
-    # Pool assignment files
-    assignment_files = []
-    for course in instructor_courses:
-        for lesson in course.lessons.all():
             for assignment in lesson.assignments.all():
                 if assignment.attachment:
                     assignment_files.append({
@@ -1507,29 +1654,38 @@ def resources(request):
                         'file': assignment.attachment,
                         'name': assignment.attachment.name.split('/')[-1],
                         'type': 'assignment',
-                        'uploaded': assignment.created_at
+                        'uploaded': assignment.created_at,
                     })
-    
-    # Statistics
+
+    # ── Pagination per tab ────────────────────────────────────────────────
+    def paginate(items, page_param):
+        paginator = Paginator(items, ITEMS_PER_PAGE)
+        page_num  = request.GET.get(page_param, 1)
+        return paginator.get_page(page_num)
+
+    videos_page      = paginate(lesson_videos,     'videos_page')
+    docs_page        = paginate(lesson_docs,        'docs_page')
+    assignments_page = paginate(assignment_files,   'assignments_page')
+
     stats = {
-        'total_videos': len(lesson_videos),
-        'total_docs': len(lesson_docs),
+        'total_videos':      len(lesson_videos),
+        'total_docs':        len(lesson_docs),
         'total_assignments': len(assignment_files),
-        'total_courses': instructor_courses.count(),
+        'total_courses':     instructor_courses.count(),
     }
-    
+
     context = {
-        'lesson_videos': lesson_videos,
-        'lesson_docs': lesson_docs,
-        'assignment_files': assignment_files,
-        'stats': stats,
-        'courses': instructor_courses,
+        'lesson_videos':     videos_page,
+        'lesson_docs':       docs_page,
+        'assignment_files':  assignments_page,
+        'stats':             stats,
+        'courses':           instructor_courses,
     }
-    
+
     return render(request, 'instructor/resources.html', context)
 
 # ==================== PROFILE VIEW ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def instructor_profile(request):
     """View and edit instructor profile"""
@@ -1595,7 +1751,7 @@ def instructor_profile(request):
 
 
 # ==================== SETTINGS VIEW ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def instructor_settings(request):
     """Manage instructor account settings"""
@@ -1650,7 +1806,7 @@ def instructor_settings(request):
 
 
 # ==================== HELP & SUPPORT VIEW ====================
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def help_support(request):
     """Help and support page with FAQs and ticket submission"""
@@ -1800,7 +1956,7 @@ Role: Instructor
 # 1.  ANNOUNCEMENT LIST / EDIT / DELETE
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def announcement_list(request, course_slug):
     """List all announcements for a course."""
@@ -1817,7 +1973,7 @@ def announcement_list(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def announcement_edit(request, course_slug, announcement_slug):
     """Edit an existing announcement."""
@@ -1848,7 +2004,7 @@ def announcement_edit(request, course_slug, announcement_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def announcement_delete(request, course_slug, announcement_slug):
     """Delete an announcement (POST only)."""
@@ -1865,7 +2021,7 @@ def announcement_delete(request, course_slug, announcement_slug):
 # 2.  QUIZ RESULTS — QuizAttempt + QuizResponse
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_results(request, course_slug, lesson_slug, quiz_slug):
     """Show all student attempts for a quiz."""
@@ -1897,7 +2053,7 @@ def quiz_results(request, course_slug, lesson_slug, quiz_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id):
     """Detailed breakdown of a single student's quiz attempt."""
@@ -1928,7 +2084,7 @@ def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id
 # 3.  MESSAGES — Inbox / Sent / Thread / Compose / Reply
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def messages_inbox(request):
     """Show received messages (most recent per thread)."""
@@ -1945,7 +2101,7 @@ def messages_inbox(request):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def messages_sent(request):
     """Show sent messages."""
@@ -1960,7 +2116,7 @@ def messages_sent(request):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def message_thread(request, message_id):
     """Display a full conversation thread."""
@@ -1994,7 +2150,7 @@ def message_thread(request, message_id):
 # INSTRUCTOR NOTIFICATIONS
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def instructor_notifications(request):
     """Show all notifications for the logged-in instructor."""
@@ -2024,7 +2180,7 @@ def instructor_notifications(request):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def instructor_notification_read(request, notif_id):
     """Mark a single instructor notification as read (AJAX)."""
@@ -2036,7 +2192,7 @@ def instructor_notification_read(request, notif_id):
     return JsonResponse({'success': True})
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def message_compose(request):
     """Compose and send a new message."""
@@ -2090,7 +2246,7 @@ def message_compose(request):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def message_reply(request, message_id):
     """Post a reply to an existing thread (POST only)."""
@@ -2126,7 +2282,7 @@ def message_reply(request, message_id):
     return redirect('instructor:message_thread', message_id=root.id)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def messages_mark_all_read(request):
     """Mark all inbox messages as read."""
@@ -2141,7 +2297,7 @@ def messages_mark_all_read(request):
 # 4.  DISCUSSIONS — List / Detail / Reply / Pin / Lock / Delete
 # ============================================================
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussions(request, course_slug):
     """List all discussion threads for a course."""
@@ -2156,7 +2312,7 @@ def discussions(request, course_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_detail(request, course_slug, discussion_slug):
     """View a single discussion thread and its replies."""
@@ -2176,7 +2332,7 @@ def discussion_detail(request, course_slug, discussion_slug):
     })
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_reply(request, course_slug, discussion_slug):
     """Instructor posts a reply to a discussion (POST only)."""
@@ -2208,7 +2364,7 @@ def discussion_reply(request, course_slug, discussion_slug):
                     course_slug=course.slug, discussion_slug=discussion.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_toggle_pin(request, course_slug, discussion_slug):
     """Toggle pinned status (POST only)."""
@@ -2224,7 +2380,7 @@ def discussion_toggle_pin(request, course_slug, discussion_slug):
     return redirect('instructor:discussions', course_slug=course.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_toggle_lock(request, course_slug, discussion_slug):
     """Toggle locked status (POST only)."""
@@ -2240,7 +2396,7 @@ def discussion_toggle_lock(request, course_slug, discussion_slug):
     return redirect('instructor:discussions', course_slug=course.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def discussion_delete(request, course_slug, discussion_slug):
     """Delete a discussion and all replies (POST only)."""
@@ -2254,7 +2410,7 @@ def discussion_delete(request, course_slug, discussion_slug):
     return redirect('instructor:discussions', course_slug=course.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
     """Mark / unmark a reply as the solution (POST only)."""
@@ -2280,7 +2436,7 @@ def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
                     course_slug=course.slug, discussion_slug=discussion.slug)
 
 
-@login_required(login_url='auth')
+@login_required(login_url='eduweb:auth_page')
 @instructor_required
 def reply_delete(request, course_slug, discussion_slug, reply_id):
     """Delete a specific reply (POST only)."""
@@ -2294,3 +2450,1047 @@ def reply_delete(request, course_slug, discussion_slug, reply_id):
 
     return redirect('instructor:discussion_detail',
                     course_slug=course.slug, discussion_slug=discussion.slug)
+
+# ── JSON helper ───────────────────────────────────────────────────────────────
+from django.http import JsonResponse
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# AJAX: return course details (code, academic session) for a given course pk
+# Used by the Create Assessment page to auto-populate locked fields.
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def ajax_course_details(request):
+    """
+    GET /instructor/assessments/course-details/?course_id=<pk>
+    Returns JSON {code, academic_session_id, academic_session_name}
+    for the instructor's own course only.
+    """
+    course_id = request.GET.get('course_id')
+    if not course_id:
+        return JsonResponse({'error': 'No course_id provided'}, status=400)
+ 
+    course = get_object_or_404(
+        LMSCourse, pk=course_id, instructor=request.user
+    )
+ 
+    session_id   = None
+    session_name = '—'
+    # LMSCourse has an optional FK to AcademicSession via academic_course → Course → session
+    # Try to get the session through the chain that exists in your model
+    try:
+        # If LMSCourse has a direct academic_session FK:
+        if hasattr(course, 'academic_session') and course.academic_session:
+            session_id   = course.academic_session.pk
+            session_name = str(course.academic_session)
+        # Fallback: through academic_course (the Course model)
+        elif hasattr(course, 'academic_course') and course.academic_course:
+            ac = course.academic_course
+            if hasattr(ac, 'academic_session') and ac.academic_session:
+                session_id   = ac.academic_session.pk
+                session_name = str(ac.academic_session)
+    except Exception:
+        pass
+ 
+    return JsonResponse({
+        'code':                  course.code or '',
+        'title':                 course.title,
+        'academic_session_id':   session_id,
+        'academic_session_name': session_name,
+        # Always True — ALL LMS courses (standalone or academic-linked) can create exams.
+        'is_linked':             True,
+        'has_academic_course':   bool(getattr(course, 'academic_course', None)),
+        # Explicit flag: exam creation is ALWAYS allowed regardless of academic linkage
+        'exam_allowed':          True,
+    })
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# FILE IMPORT HELPER — parses .docx / .xlsx into ExamQuestion rows
+# ─────────────────────────────────────────────────────────────────────────────
+def _parse_exam_questions_from_file(upload_file, exam, user):
+    """
+    Parse a .docx or .xlsx upload into ExamQuestion rows for the given exam.
+
+    DOCX FORMAT (one question per paragraph block, separated by blank lines):
+        Q: What is 2+2?
+        A: 3
+        A: *4       ← asterisk marks correct answer
+        A: 5
+        EXPLANATION: Basic arithmetic.
+        DIFFICULTY: easy
+        MARKS: 1
+
+    XLSX FORMAT (one question per row):
+        Column A: question_text
+        Column B: option_1
+        Column C: option_2
+        Column D: option_3
+        Column E: option_4
+        Column F: correct_option   (1-based index, e.g. 2 means option_2 is correct)
+        Column G: difficulty       (easy/medium/hard — optional, default medium)
+        Column H: marks            (number — optional, default 1)
+        Column I: explanation      (optional)
+
+    Silently skips rows/blocks that cannot be parsed.
+    Updates exam.import_status to 'done' or 'failed'.
+    """
+    import uuid as _uuid
+    from eduweb.models import ExamQuestion
+
+    filename = upload_file.name.lower()
+    questions_created = 0
+
+    try:
+        if filename.endswith('.xlsx') or filename.endswith('.xls'):
+            import openpyxl
+            wb = openpyxl.load_workbook(upload_file, read_only=True, data_only=True)
+            ws = wb.active
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if not row or not row[0]:
+                    continue
+                q_text = str(row[0]).strip()
+                if not q_text:
+                    continue
+
+                raw_options = [str(row[i]).strip() for i in range(1, 5) if len(row) > i and row[i]]
+                try:
+                    correct_idx = int(row[5]) - 1 if len(row) > 5 and row[5] else 0
+                except (ValueError, TypeError):
+                    correct_idx = 0
+
+                difficulty = str(row[6]).strip().lower() if len(row) > 6 and row[6] else 'medium'
+                if difficulty not in ('easy', 'medium', 'hard'):
+                    difficulty = 'medium'
+
+                try:
+                    marks = float(row[7]) if len(row) > 7 and row[7] else 1
+                except (ValueError, TypeError):
+                    marks = 1
+
+                explanation = str(row[8]).strip() if len(row) > 8 and row[8] else ''
+
+                options = [
+                    {
+                        'id':         f'opt-{_uuid.uuid4().hex[:8]}',
+                        'text':       opt,
+                        'is_correct': (i == correct_idx),
+                    }
+                    for i, opt in enumerate(raw_options)
+                ]
+
+                ExamQuestion.objects.create(
+                    exam          = exam,
+                    question_text = q_text,
+                    question_type = 'mcq' if raw_options else 'short_answer',
+                    difficulty    = difficulty,
+                    marks         = marks,
+                    options       = options,
+                    explanation   = explanation,
+                    order         = questions_created,
+                    created_by    = user,
+                    imported_from_file = upload_file.name,
+                    import_row_number  = questions_created + 2,
+                )
+                questions_created += 1
+
+        elif filename.endswith('.docx'):
+            import docx as _docx
+            doc = _docx.Document(upload_file)
+            block = {}
+            options = []
+            order = 0
+
+            def _flush(block, options, order):
+                q_text = block.get('question_text', '').strip()
+                if not q_text:
+                    return order
+                opts = [
+                    {
+                        'id':         f'opt-{_uuid.uuid4().hex[:8]}',
+                        'text':       o['text'],
+                        'is_correct': o['is_correct'],
+                    }
+                    for o in options
+                ]
+                difficulty = block.get('difficulty', 'medium').lower()
+                if difficulty not in ('easy', 'medium', 'hard'):
+                    difficulty = 'medium'
+                try:
+                    marks = float(block.get('marks', 1))
+                except (ValueError, TypeError):
+                    marks = 1
+                ExamQuestion.objects.create(
+                    exam          = exam,
+                    question_text = q_text,
+                    question_type = 'mcq' if opts else 'short_answer',
+                    difficulty    = difficulty,
+                    marks         = marks,
+                    options       = opts,
+                    explanation   = block.get('explanation', ''),
+                    order         = order,
+                    created_by    = user,
+                    imported_from_file = upload_file.name,
+                    import_row_number  = order + 1,
+                )
+                return order + 1
+
+            for para in doc.paragraphs:
+                line = para.text.strip()
+                if not line:
+                    # blank line = end of question block
+                    if block:
+                        order = _flush(block, options, order)
+                        block = {}
+                        options = []
+                    continue
+                upper = line.upper()
+                if upper.startswith('Q:'):
+                    if block:
+                        order = _flush(block, options, order)
+                        block = {}
+                        options = []
+                    block['question_text'] = line[2:].strip()
+                elif upper.startswith('A:'):
+                    raw = line[2:].strip()
+                    if raw.startswith('*'):
+                        options.append({'text': raw[1:].strip(), 'is_correct': True})
+                    else:
+                        options.append({'text': raw, 'is_correct': False})
+                elif upper.startswith('EXPLANATION:'):
+                    block['explanation'] = line[len('EXPLANATION:'):].strip()
+                elif upper.startswith('DIFFICULTY:'):
+                    block['difficulty'] = line[len('DIFFICULTY:'):].strip()
+                elif upper.startswith('MARKS:'):
+                    block['marks'] = line[len('MARKS:'):].strip()
+
+            # flush last block
+            if block:
+                _flush(block, options, order)
+
+        exam.import_status = 'done'
+        exam.save(update_fields=['import_status'])
+
+    except Exception as exc:
+        exam.import_status = 'failed'
+        exam.import_error_log = str(exc)
+        exam.save(update_fields=['import_status', 'import_error_log'])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UNIFIED CREATE ASSESSMENT  (quiz / assignment / exam — all on one page)
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def create_assessment(request):
+    """
+    Unified page that lets an instructor create a Quiz, Assignment, or Exam.
+ 
+    Flow:
+      1. Instructor picks assessment type (quiz | assignment | exam).
+      2. Instructor picks one of their LMS courses — AJAX fills code + session.
+      3. The right form panel slides in.
+         • Quiz    → QuizForm  + repeating QuizQuestion+QuizAnswer blocks (JS)
+         • Assignment → AssignmentForm
+         • Exam    → ExamForm  (submitted DRAFT, goes to admin for approval)
+      4. On POST the view creates the right objects and redirects.
+ 
+    For Quiz, the questions are submitted as a formset-like JSON payload in
+    hidden fields (questions_data) so the instructor can add/remove them
+    dynamically without a page reload, leveraging the existing jQuery on the page.
+    """
+    instructor_courses = LMSCourse.objects.filter(
+        instructor=request.user
+    ).select_related('academic_course').order_by('title')
+ 
+    # ── POST handling ─────────────────────────────────────────────────────────
+    if request.method == 'POST':
+        assessment_type = request.POST.get('assessment_type', '')
+        course_id       = request.POST.get('course_id', '')
+        course          = get_object_or_404(
+            LMSCourse, pk=course_id, instructor=request.user
+        )
+ 
+        # ── QUIZ ──────────────────────────────────────────────────────────────
+        if assessment_type == 'quiz':
+            lesson_id = request.POST.get('lesson_id', '')
+            lesson    = get_object_or_404(Lesson, pk=lesson_id, course=course)
+
+            quiz_form = QuizForm(request.POST)
+            if quiz_form.is_valid():
+                quiz        = quiz_form.save(commit=False)
+                quiz.lesson = lesson
+                quiz.save()
+
+                import json as _json
+                questions_raw = request.POST.get('questions_data', '[]')
+                try:
+                    questions_list = _json.loads(questions_raw)
+                except ValueError:
+                    questions_list = []
+
+                for q_data in questions_list:
+                    q = QuizQuestion.objects.create(
+                        quiz          = quiz,
+                        question_type = q_data.get('question_type', 'mcq'),
+                        question_text = q_data.get('question_text', ''),
+                        explanation   = q_data.get('explanation', ''),
+                        points        = q_data.get('points', 1),
+                        display_order = q_data.get('display_order', 0),
+                    )
+                    for a_data in q_data.get('answers', []):
+                        QuizAnswer.objects.create(
+                            question      = q,
+                            answer_text   = a_data.get('answer_text', ''),
+                            is_correct    = a_data.get('is_correct', False),
+                            display_order = a_data.get('display_order', 0),
+                        )
+
+                messages.success(request, f'Quiz "{quiz.title}" created successfully!')
+                return redirect('instructor:quiz_questions', course.slug, lesson.slug, quiz.slug)
+            else:
+                # Surface field-level errors in the message
+                error_detail = '; '.join(
+                    f"{field}: {', '.join(errs)}"
+                    for field, errs in quiz_form.errors.items()
+                )
+                messages.error(request, f'Please fix the quiz form errors: {error_detail}')
+                context = {
+                    'instructor_courses': instructor_courses,
+                    'quiz_form':          quiz_form,           # bound — shows errors
+                    'assign_form':        AssignmentForm(),
+                    'exam_form':          ExamForm(),
+                    'question_form':      QuizQuestionForm(),
+                    'answer_form':        QuizAnswerForm(),
+                    'active_tab':         'quiz',
+                    'post_course_id':     course_id,
+                    'post_lesson_id':     lesson_id,
+                }
+                return render(request, 'instructor/create_assessment.html', context)
+
+        # ── ASSIGNMENT ────────────────────────────────────────────────────────
+        elif assessment_type == 'assignment':
+            lesson_id  = request.POST.get('lesson_id', '')
+            lesson     = get_object_or_404(Lesson, pk=lesson_id, course=course)
+
+            assign_form = AssignmentForm(request.POST, request.FILES)
+            if assign_form.is_valid():
+                assignment        = assign_form.save(commit=False)
+                assignment.lesson = lesson
+                assignment.save()
+                messages.success(request, f'Assignment "{assignment.title}" created successfully!')
+                return redirect('instructor:assignment_list', course.slug, lesson.slug)
+            else:
+                error_detail = '; '.join(
+                    f"{field}: {', '.join(errs)}"
+                    for field, errs in assign_form.errors.items()
+                )
+                messages.error(request, f'Please fix the assignment form errors: {error_detail}')
+                context = {
+                    'instructor_courses': instructor_courses,
+                    'quiz_form':          QuizForm(),
+                    'assign_form':        assign_form,         # bound — shows errors
+                    'exam_form':          ExamForm(),
+                    'question_form':      QuizQuestionForm(),
+                    'answer_form':        QuizAnswerForm(),
+                    'active_tab':         'assignment',
+                    'post_course_id':     course_id,
+                    'post_lesson_id':     lesson_id,
+                }
+                return render(request, 'instructor/create_assessment.html', context)
+
+        # ── EXAM ──────────────────────────────────────────────────────────────
+        elif assessment_type == 'exam':
+            exam_form = ExamForm(request.POST, request.FILES)
+            if exam_form.is_valid():
+                exam            = exam_form.save(commit=False)
+                exam.instructor = request.user
+                if hasattr(exam, 'created_by'):
+                    exam.created_by = request.user
+                exam.status     = 'draft'
+
+                # Link the LMS course's underlying academic Course object (optional)
+                lms_course      = course  # LMSCourse instance
+                academic_course = getattr(lms_course, 'academic_course', None)
+                if academic_course:
+                    exam.course = academic_course
+                    # Denorm department if available
+                    try:
+                        if hasattr(academic_course, 'department') and academic_course.department:
+                            exam.department = academic_course.department
+                    except Exception:
+                        pass
+                    # Resolve academic_session through the academic course
+                    try:
+                        if getattr(academic_course, 'academic_session', None):
+                            exam.academic_session = academic_course.academic_session
+                    except Exception:
+                        pass
+                # If no academic course linked, exam.course stays None (now allowed by model)
+
+                exam.save()
+
+                # ── Save manually entered exam questions from JSON ─────────────
+                import json as _json
+                from eduweb.models import ExamQuestion
+                eq_raw = request.POST.get('exam_questions_data', '[]')
+                try:
+                    eq_list = _json.loads(eq_raw)
+                except (ValueError, TypeError):
+                    eq_list = []
+
+                for idx, eq_data in enumerate(eq_list):
+                    q_text = (eq_data.get('question_text') or '').strip()
+                    if not q_text:
+                        continue
+                    import uuid as _uuid
+                    raw_options = eq_data.get('options', [])
+                    options_with_ids = []
+                    for opt in raw_options:
+                        options_with_ids.append({
+                            'id':         f'opt-{_uuid.uuid4().hex[:8]}',
+                            'text':       opt.get('text', ''),
+                            'is_correct': bool(opt.get('is_correct', False)),
+                        })
+                    ExamQuestion.objects.create(
+                        exam          = exam,
+                        question_text = q_text,
+                        question_type = eq_data.get('question_type', 'mcq'),
+                        difficulty    = eq_data.get('difficulty', 'medium'),
+                        marks         = eq_data.get('marks', 1),
+                        options       = options_with_ids,
+                        explanation   = eq_data.get('explanation', ''),
+                        order         = idx,
+                        created_by    = request.user,
+                    )
+
+                # ── Parse uploaded question file (docx / xlsx) ────────────────
+                import_file = request.FILES.get('question_import_file')
+                if import_file:
+                    _parse_exam_questions_from_file(import_file, exam, request.user)
+
+                messages.success(
+                    request,
+                    f'Exam "{exam.title}" saved as DRAFT and submitted for admin approval.'
+                )
+                return redirect('instructor:dashboard')
+            else:
+                error_detail = '; '.join(
+                    f"{field}: {', '.join(errs)}"
+                    for field, errs in exam_form.errors.items()
+                )
+                messages.error(request, f'Please fix the exam form errors: {error_detail}')
+                context = {
+                    'instructor_courses': instructor_courses,
+                    'quiz_form':          QuizForm(),
+                    'assign_form':        AssignmentForm(),
+                    'exam_form':          exam_form,           # bound — shows errors
+                    'question_form':      QuizQuestionForm(),
+                    'answer_form':        QuizAnswerForm(),
+                    'active_tab':         'exam',
+                    'post_course_id':     course_id,
+                }
+                return render(request, 'instructor/create_assessment.html', context)
+
+    # ── GET ───────────────────────────────────────────────────────────────────
+    # Support ?type=quiz|assignment|exam from dashboard quick-action buttons
+    active_tab = request.GET.get('type', '')
+    if active_tab not in ('quiz', 'assignment', 'exam'):
+        active_tab = ''
+
+    context = {
+        'instructor_courses': instructor_courses,
+        'quiz_form':          QuizForm(),
+        'assign_form':        AssignmentForm(),
+        'exam_form':          ExamForm(),
+        'question_form':      QuizQuestionForm(),
+        'answer_form':        QuizAnswerForm(),
+        'active_tab':         active_tab,
+    }
+    return render(request, 'instructor/create_assessment.html', context)
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# AJAX: lessons for a given course (needed to pick lesson on quiz/assignment)
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def ajax_course_lessons(request):
+    """
+    GET /instructor/assessments/course-lessons/?course_id=<pk>
+    Returns JSON list of lessons for the instructor's course.
+    """
+    course_id = request.GET.get('course_id')
+    if not course_id:
+        return JsonResponse({'lessons': []})
+ 
+    course  = get_object_or_404(LMSCourse, pk=course_id, instructor=request.user)
+    lessons = list(
+        Lesson.objects.filter(course=course)
+        .values('id', 'title')
+        .order_by('display_order', 'title')
+    )
+    return JsonResponse({'lessons': lessons})
+
+import json as _json
+import uuid as _uuid
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM LIST
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def exam_list(request):
+    """List all exams created by this instructor with filtering & search."""
+    qs = Exam.objects.filter(instructor=request.user).order_by('-created_at')
+ 
+    active_status = request.GET.get('status', 'all')
+    search        = request.GET.get('q', '').strip()
+ 
+    if active_status and active_status != 'all':
+        qs = qs.filter(status=active_status)
+    if search:
+        qs = qs.filter(title__icontains=search)
+ 
+    # Counts for stat cards
+    base_qs        = Exam.objects.filter(instructor=request.user)
+    stat_total     = base_qs.count()
+    stat_draft     = base_qs.filter(status=Exam.DRAFT).count()
+    stat_submitted = base_qs.filter(status=Exam.SUBMITTED).count()
+    stat_approved  = base_qs.filter(status=Exam.APPROVED).count()
+    stat_rejected  = base_qs.filter(status=Exam.REJECTED).count()
+    stat_published = base_qs.filter(status=Exam.PUBLISHED).count()
+ 
+    paginator = Paginator(qs, 12)
+    exams     = paginator.get_page(request.GET.get('page'))
+ 
+    return render(request, 'instructor/exam_list.html', {
+        'exams':         exams,
+        'active_status': active_status,
+        'search':        search,
+        'stat_total':    stat_total,
+        'stat_draft':    stat_draft,
+        'stat_submitted': stat_submitted,
+        'stat_approved': stat_approved,
+        'stat_rejected': stat_rejected,
+        'stat_published': stat_published,
+    })
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM DETAIL  (overview / edit / questions / results tabs)
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def exam_detail(request, slug):
+    """Single exam — tabbed view: overview, edit, questions, results."""
+    exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
+ 
+    questions    = exam.questions.filter(is_active=True).order_by('order', 'created_at')
+    status_logs  = exam.status_logs.all().order_by('-created_at')[:10]
+ 
+    # Results stats (only meaningful when published)
+    responses        = exam.student_responses.all()
+    submitted_resp   = responses.filter(status__in=['submitted', 'graded'])
+    graded_resp      = responses.filter(status='graded')
+    avg_score        = graded_resp.aggregate(avg=Avg('score_percentage'))['avg']
+    avg_score_str    = f"{avg_score:.1f}" if avg_score is not None else None
+ 
+    response_stats = {
+        'total':     responses.count(),
+        'submitted': submitted_resp.count(),
+        'graded':    graded_resp.count(),
+        'avg_score': avg_score_str,
+    }
+    student_responses = responses.select_related('student').order_by('-submitted_at')[:50]
+ 
+    return render(request, 'instructor/exam_detail.html', {
+        'exam':              exam,
+        'questions':         questions,
+        'status_logs':       status_logs,
+        'response_stats':    response_stats,
+        'student_responses': student_responses,
+    })
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM UPDATE  (POST from the Edit Details tab)
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def exam_update(request, slug):
+    """Handle POST from the Edit Details tab on exam_detail."""
+    exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
+ 
+    if request.method != 'POST':
+        return redirect('instructor:exam_detail', slug=exam.slug)
+ 
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'A published exam can no longer be edited.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+
+    # If submitted or approved, revert to draft
+    if exam.status in (Exam.SUBMITTED, Exam.APPROVED):
+        old_status   = exam.status
+        exam.status  = Exam.DRAFT
+        _write_exam_log(exam, from_status=old_status, to_status=Exam.DRAFT,
+                        changed_by=request.user,
+                        note="Reverted to draft by instructor edit.")
+ 
+    # Update fields from POST
+    exam.title                     = request.POST.get('title', exam.title).strip()
+    exam.exam_type                 = request.POST.get('exam_type', exam.exam_type)
+    exam.mode                      = request.POST.get('mode', exam.mode)
+    exam.description               = request.POST.get('description', exam.description)
+    exam.instructions              = request.POST.get('instructions', exam.instructions)
+    exam.special_instructions      = request.POST.get('special_instructions', exam.special_instructions)
+    exam.internal_notes            = request.POST.get('internal_notes', exam.internal_notes)
+    exam.venue                     = request.POST.get('venue', exam.venue)
+    exam.shuffle_questions         = 'shuffle_questions' in request.POST
+    exam.shuffle_options           = 'shuffle_options' in request.POST
+    exam.show_result_immediately   = 'show_result_immediately' in request.POST
+ 
+    # Numeric fields — guard against empty strings
+    # NOTE: duration_minutes is now a @property (computed from start/end time) — do NOT set it
+    for attr, field in (
+        ('instruction_window_minutes', 'instruction_window_minutes'),
+        ('questions_per_student', 'questions_per_student'),
+        ('pass_mark', 'pass_mark'),
+    ):
+        raw = request.POST.get(field, '').strip()
+        if raw:
+            try:
+                setattr(exam, attr, int(raw) if attr != 'pass_mark' else float(raw))
+            except ValueError:
+                pass
+        elif attr in ('questions_per_student', 'pass_mark'):
+            setattr(exam, attr, None)
+ 
+    # Date / time fields
+    for attr, field in (
+        ('exam_date', 'exam_date'),
+        ('start_time', 'start_time'),
+        ('end_time', 'end_time'),
+    ):
+        raw = request.POST.get(field, '').strip()
+        if raw:
+            setattr(exam, attr, raw)
+ 
+    # Visibility overrides — blank means "use auto-computed default"
+    from django.utils.dateparse import parse_datetime
+    vf = request.POST.get('visible_from_override', '').strip()
+    vu = request.POST.get('visible_until_override', '').strip()
+    exam.visible_from_override  = parse_datetime(vf) if vf else None
+    exam.visible_until_override = parse_datetime(vu) if vu else None
+ 
+    try:
+        exam.save()
+        messages.success(request, f'Exam "{exam.title}" updated successfully.')
+    except Exception as e:
+        messages.error(request, f'Could not save changes: {e}')
+ 
+    from django.urls import reverse
+    return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=edit')
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM SUBMIT  (draft / rejected → submitted)
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+@require_POST
+def exam_submit(request, slug):
+    """Submit an exam for admin approval."""
+    exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
+ 
+    if exam.status not in (Exam.DRAFT, Exam.REJECTED):
+        messages.error(request, 'Only draft or rejected exams can be submitted.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+ 
+    if exam.active_question_count == 0:
+        messages.error(request, 'Please add at least one question before submitting.')
+        from django.urls import reverse
+        return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
+ 
+    old_status           = exam.status
+    exam.status          = Exam.SUBMITTED
+    exam.submitted_by    = request.user
+    exam.submitted_at    = timezone.now()
+    exam.submission_count += 1
+    exam.save(update_fields=['status', 'submitted_by', 'submitted_at', 'submission_count'])
+ 
+    _write_exam_log(exam, from_status=old_status, to_status=Exam.SUBMITTED,
+                    changed_by=request.user)
+ 
+    messages.success(request, f'"{exam.title}" submitted for admin approval.')
+    return redirect('instructor:exam_detail', slug=exam.slug)
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM PUBLISH  (approved → published)
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+@require_POST
+def exam_publish(request, slug):
+    """Publish an approved exam so students can see it."""
+    exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
+ 
+    if exam.status != Exam.APPROVED:
+        messages.error(request, 'Only approved exams can be published.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+ 
+    exam.status       = Exam.PUBLISHED
+    exam.published_by = request.user
+    exam.published_at = timezone.now()
+    exam.save(update_fields=['status', 'published_by', 'published_at'])
+ 
+    _write_exam_log(exam, from_status=Exam.APPROVED, to_status=Exam.PUBLISHED,
+                    changed_by=request.user)
+ 
+    messages.success(request, f'"{exam.title}" is now published and visible to students.')
+    return redirect('instructor:exam_detail', slug=exam.slug)
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM QUESTION: CREATE
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def exam_question_create(request, slug):
+    """Add a new question to the exam question pool."""
+    exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
+
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'Cannot modify questions for a published exam.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+ 
+    if request.method == 'POST':
+        error = _save_exam_question(request, exam, question=None)
+        if error:
+            messages.error(request, error)
+            return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': None})
+        messages.success(request, 'Question added successfully.')
+        from django.urls import reverse
+        if request.POST.get('_save_back'):
+            return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
+        return redirect(reverse('instructor:exam_question_create', kwargs={'slug': exam.slug}))
+ 
+    return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': None})
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM QUESTION: EDIT
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def exam_question_edit(request, slug, question_id):
+    """Edit an existing exam question."""
+    exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
+    question = get_object_or_404(ExamQuestion, pk=question_id, exam=exam)
+
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'Cannot modify questions for a published exam.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+ 
+    if request.method == 'POST':
+        error = _save_exam_question(request, exam, question=question)
+        if error:
+            messages.error(request, error)
+            return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': question})
+        messages.success(request, 'Question updated successfully.')
+        from django.urls import reverse
+        return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
+ 
+    return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': question})
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM QUESTION: DELETE
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+@require_POST
+def exam_question_delete(request, slug, question_id):
+    """Soft-delete (deactivate) an exam question."""
+    exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
+
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'Cannot modify questions for a published exam.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+
+    question = get_object_or_404(ExamQuestion, pk=question_id, exam=exam)
+    question.is_active = False
+    question.save(update_fields=['is_active'])
+    messages.success(request, 'Question removed from the active pool.')
+    from django.urls import reverse
+    return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM QUESTION IMPORT  (docx / xlsx → ExamQuestion rows)
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+@require_POST
+def exam_import_questions(request, slug):
+    """Accept a .docx or .xlsx upload and parse questions into the DB."""
+    exam        = get_object_or_404(Exam, slug=slug, instructor=request.user)
+
+    if exam.status == Exam.PUBLISHED:
+        messages.error(request, 'Cannot import questions for a published exam.')
+        return redirect('instructor:exam_detail', slug=exam.slug)
+
+    import_file = request.FILES.get('question_import_file')
+ 
+    if not import_file:
+        messages.error(request, 'Please select a file to upload.')
+        from django.urls import reverse
+        return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
+ 
+    try:
+        _parse_exam_questions_from_file(import_file, exam, request.user)
+        messages.success(request, 'Questions imported successfully.')
+    except Exception as e:
+        exam.import_status    = Exam.IMPORT_FAILED
+        exam.import_error_log = str(e)
+        exam.save(update_fields=['import_status', 'import_error_log'])
+        messages.error(request, f'Import failed: {e}')
+ 
+    from django.urls import reverse
+    return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
+ 
+ 
+# ──────────────────────────────────────────────────────────────────────────────
+# PRIVATE HELPERS
+# ──────────────────────────────────────────────────────────────────────────────
+ 
+def _write_exam_log(exam, from_status, to_status, changed_by, note=''):
+    """Write an immutable ExamStatusLog entry."""
+    from eduweb.models import ExamStatusLog
+    try:
+        ExamStatusLog.objects.create(
+            exam        = exam,
+            from_status = from_status,
+            to_status   = to_status,
+            changed_by  = changed_by,
+            note        = note,
+        )
+    except Exception:
+        pass  # Never crash the main action
+ 
+ 
+def _save_exam_question(request, exam, question=None):
+    """
+    Parse POST data and create or update an ExamQuestion.
+    Returns an error string on failure, or None on success.
+    """
+    q_type   = request.POST.get('question_type', 'mcq')
+    q_text   = (request.POST.get('question_text') or '').strip()
+    if not q_text:
+        return 'Question text is required.'
+ 
+    difficulty = request.POST.get('difficulty', 'medium')
+    marks_raw  = request.POST.get('marks', '1').strip()
+    order_raw  = request.POST.get('order', '0').strip()
+    explanation      = request.POST.get('explanation', '').strip()
+    source_reference = request.POST.get('source_reference', '').strip()
+    is_active        = 'is_active' in request.POST
+ 
+    try:
+        marks = float(marks_raw)
+    except ValueError:
+        marks = 1.0
+    try:
+        order = int(order_raw)
+    except ValueError:
+        order = 0
+ 
+    # Build options list
+    options = []
+    if q_type == 'true_false':
+        correct_val = request.POST.get('tf_correct', 'true')
+        options = [
+            {'id': f'opt-{_uuid.uuid4().hex[:8]}', 'text': 'True',  'is_correct': correct_val == 'true'},
+            {'id': f'opt-{_uuid.uuid4().hex[:8]}', 'text': 'False', 'is_correct': correct_val == 'false'},
+        ]
+    elif q_type in ('mcq', 'multi_select'):
+        options_count_raw = request.POST.get('options_count', '0').strip()
+        try:
+            options_count = int(options_count_raw)
+        except ValueError:
+            options_count = 0
+ 
+        correct_option_idx = request.POST.get('correct_option', '')  # single for mcq
+ 
+        for i in range(options_count):
+            text = (request.POST.get(f'option_text_{i}') or '').strip()
+            if not text:
+                continue
+            # Try to keep existing option IDs intact
+            opt_id = (request.POST.get(f'option_id_{i}') or '').strip()
+            if not opt_id:
+                opt_id = f'opt-{_uuid.uuid4().hex[:8]}'
+ 
+            if q_type == 'multi_select':
+                is_correct = f'option_correct_{i}' in request.POST
+            else:
+                is_correct = str(i) == correct_option_idx
+ 
+            options.append({'id': opt_id, 'text': text, 'is_correct': is_correct})
+ 
+        if not options:
+            return 'Please add at least 2 answer options.'
+ 
+    # Accepted answers for short_answer
+    accepted_answers = []
+    if q_type == 'short_answer':
+        raw_accepted = request.POST.get('accepted_answers', '').strip()
+        if raw_accepted:
+            accepted_answers = [ln.strip() for ln in raw_accepted.splitlines() if ln.strip()]
+ 
+    # Year first used
+    yr_raw = request.POST.get('year_first_used', '').strip()
+    year_first_used = None
+    if yr_raw:
+        try:
+            year_first_used = int(yr_raw)
+        except ValueError:
+            pass
+ 
+    # Handle image
+    image_file  = request.FILES.get('image')
+    clear_image = 'clear_image' in request.POST
+ 
+    if question is None:
+        # Create
+        q = ExamQuestion(
+            exam          = exam,
+            question_text = q_text,
+            question_type = q_type,
+            difficulty    = difficulty,
+            marks         = marks,
+            order         = order,
+            options       = options,
+            accepted_answers = accepted_answers,
+            explanation   = explanation,
+            source_reference = source_reference,
+            year_first_used  = year_first_used,
+            is_active     = is_active,
+            created_by    = request.user,
+        )
+        if image_file:
+            q.image = image_file
+        q.save()
+    else:
+        # Update
+        question.question_text   = q_text
+        question.question_type   = q_type
+        question.difficulty      = difficulty
+        question.marks           = marks
+        question.order           = order
+        question.options         = options
+        question.accepted_answers = accepted_answers
+        question.explanation     = explanation
+        question.source_reference = source_reference
+        question.year_first_used  = year_first_used
+        question.is_active       = is_active
+        if clear_image and question.image:
+            question.image.delete(save=False)
+            question.image = None
+        if image_file:
+            question.image = image_file
+        question.save()
+ 
+    return None  # success
+ 
+ 
+def _parse_exam_questions_from_file(import_file, exam, user):
+    """
+    Parse uploaded .docx or .xlsx file into ExamQuestion rows.
+    This is a minimal implementation — extend as needed.
+    """
+    import os
+    name = import_file.name.lower()
+ 
+    exam.import_status    = Exam.IMPORT_PROCESSING
+    exam.import_error_log = ''
+    exam.save(update_fields=['import_status', 'import_error_log'])
+ 
+    errors = []
+    created = 0
+ 
+    try:
+        if name.endswith('.xlsx'):
+            try:
+                import openpyxl
+            except ImportError:
+                raise RuntimeError('openpyxl is not installed. Run: pip install openpyxl')
+            wb = openpyxl.load_workbook(import_file, read_only=True)
+            ws = wb.active
+            rows = list(ws.iter_rows(min_row=2, values_only=True))
+            for idx, row in enumerate(rows, start=2):
+                if not row or not row[0]:
+                    continue
+                q_text = str(row[0]).strip()
+                if not q_text:
+                    continue
+                q_type = str(row[1]).strip().lower() if len(row) > 1 and row[1] else 'mcq'
+                marks  = float(row[2]) if len(row) > 2 and row[2] else 1.0
+                diff   = str(row[3]).strip().lower() if len(row) > 3 and row[3] else 'medium'
+                # Options in columns E–J (index 4–9), correct answer column K (index 10)
+                raw_opts = [str(row[i]).strip() for i in range(4, 9) if i < len(row) and row[i]]
+                correct_idx_raw = str(row[10]).strip() if len(row) > 10 and row[10] else '0'
+                try:
+                    correct_idx = int(correct_idx_raw) - 1  # 1-based → 0-based
+                except ValueError:
+                    correct_idx = 0
+                options = [
+                    {
+                        'id': f'opt-{_uuid.uuid4().hex[:8]}',
+                        'text': opt,
+                        'is_correct': i == correct_idx,
+                    }
+                    for i, opt in enumerate(raw_opts)
+                ]
+                ExamQuestion.objects.create(
+                    exam=exam, question_text=q_text, question_type=q_type,
+                    difficulty=diff, marks=marks, options=options,
+                    order=idx, created_by=user, imported_from_file=import_file.name,
+                    import_row_number=idx,
+                )
+                created += 1
+ 
+        elif name.endswith('.docx'):
+            try:
+                import docx as python_docx
+            except ImportError:
+                raise RuntimeError('python-docx is not installed. Run: pip install python-docx')
+            from io import BytesIO
+            doc = python_docx.Document(BytesIO(import_file.read()))
+            order = 0
+            for para in doc.paragraphs:
+                text = para.text.strip()
+                if not text:
+                    continue
+                ExamQuestion.objects.create(
+                    exam=exam, question_text=text, question_type='essay',
+                    difficulty='medium', marks=1, options=[],
+                    order=order, created_by=user, imported_from_file=import_file.name,
+                    import_row_number=order,
+                )
+                order += 1
+                created += 1
+        else:
+            raise RuntimeError(f'Unsupported file type: {name}')
+ 
+    except Exception as e:
+        exam.import_status    = Exam.IMPORT_FAILED
+        exam.import_error_log = str(e)
+        exam.save(update_fields=['import_status', 'import_error_log'])
+        raise
+ 
+    exam.import_status = Exam.IMPORT_DONE
+    exam.save(update_fields=['import_status', 'import_error_log'])

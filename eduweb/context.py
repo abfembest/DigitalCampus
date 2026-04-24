@@ -24,7 +24,7 @@ from django.template import Library
 from .models import (
     Faculty, Program, CourseApplication,
     Message, Notification, SupportTicket, ContactMessage,
-    SiteConfig,
+    SiteConfig, AcademicSession
 )
 
 logger = logging.getLogger(__name__)
@@ -130,9 +130,9 @@ def navigation_data(request):
 def student_counts(request):
     """
     Inject unread notification count and nav bell notifications for ALL
-    authenticated roles. Also injects unread_messages_count for students.
-    Renamed body but keeps the same context variable names so base.html
-    works unchanged for every role.
+    authenticated roles. Also injects unread_messages_count for students,
+    and current_session / current_term / registration_open for the student
+    academic status bar in base.html.
     """
     if not request.user.is_authenticated:
         return {}
@@ -158,6 +158,12 @@ def student_counts(request):
                 is_read=False,
                 parent__isnull=True,
             ).count()
+
+            # Academic status bar data — session, term, registration window
+            cs = AcademicSession.get_current()
+            result['current_session']   = cs
+            result['current_term']      = cs.get_current_term() if cs else None
+            result['registration_open'] = cs.is_registration_open if cs else False
 
         return result
 
@@ -218,6 +224,7 @@ def admin_counts(request):
         return {}
 
     try:
+        cs = AcademicSession.get_current()
         return {
             'open_tickets_count': SupportTicket.objects.filter(
                 status__in=['open', 'in_progress']
@@ -225,12 +232,18 @@ def admin_counts(request):
             'unread_contact_count': ContactMessage.objects.filter(
                 is_read=False
             ).count(),
+            'current_session': cs,
+            'current_term': cs.get_current_term() if cs else None,
+            'registration_open': cs.is_registration_open if cs else False,
         }
     except Exception:
         logger.exception('admin_counts: failed to fetch counts')
         return {
             'open_tickets_count': 0,
             'unread_contact_count': 0,
+            'current_session': None,
+            'current_term': None,
+            'registration_open': False,
         }
 
 

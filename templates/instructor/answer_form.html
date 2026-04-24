@@ -17,8 +17,16 @@
 
     <!-- Header -->
     <div class="mb-6 sm:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">Manage Answers</h1>
-        <p class="text-sm sm:text-base text-gray-600 mt-1">{{ question.question_text|truncatewords:15 }}</p>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">Manage Answers</h1>
+                <p class="text-sm sm:text-base text-gray-600 mt-1">{{ question.question_text|truncatewords:15 }}</p>
+            </div>
+            <a href="{% url 'instructor:course_manage_default' %}"
+               class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-white border-2 border-primary-600 text-primary-600 text-sm font-medium rounded-lg hover:bg-primary-50 transition-all whitespace-nowrap">
+                <i class="fas fa-th-large mr-2"></i>Manage Course
+            </a>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">

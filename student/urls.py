@@ -10,6 +10,9 @@ urlpatterns = [
     # ── Courses ──────────────────────────────────────────────────────────────
     path('courses/', views.my_courses, name='my_courses'),
     path('courses/catalog/', views.course_catalog, name='course_catalog'),
+    path('courses/semester-register-all/', views.register_all_semester_courses, name='register_all_semester_courses'),
+    path('courses/<slug:course_slug>/semester-register/', views.register_semester_course, name='register_semester_course'),
+    path('courses/<slug:course_slug>/semester-drop/', views.drop_semester_course, name='drop_semester_course'),
     path('courses/<slug:course_slug>/', views.course_detail, name='course_detail'),
     path('courses/<slug:course_slug>/enroll/', views.enroll_course, name='enroll_course'),
     path('courses/<slug:course_slug>/review/', views.submit_review, name='submit_review'),  # NEW
@@ -37,6 +40,7 @@ urlpatterns = [
 
     # ── Quizzes ──────────────────────────────────────────────────────────────
     path('quizzes/', views.quiz_list, name='quiz_list'),
+    path('exam/', views.exam_list, name='exam_list'),
     path(
         'courses/<slug:course_slug>/lessons/<slug:lesson_slug>/quizzes/<slug:quiz_slug>/',
         views.quiz_detail, name='quiz_detail',
@@ -89,6 +93,15 @@ urlpatterns = [
     path('notifications/', views.notifications_view, name='notifications_view'),
     path(
         'notifications/<int:notification_id>/read/',
-        views.mark_notification_read, name='mark_notification_read',
-    ),
+        views.mark_notification_read, name='mark_notification_read', ),
+
+
+    # ── CBT Examinations ──────────────────────────────────────────────────────
+    path('exam/', views.exam_list, name='exam_list'),
+    path('exam/<slug:slug>/instructions/', views.exam_instructions, name='exam_instructions'),
+    path('exam/<slug:slug>/start/',        views.start_exam,         name='start_exam'),
+    path('exam/<slug:slug>/data/',         views.get_exam_data,      name='get_exam_data'),
+    path('exam/<slug:slug>/save/',         views.save_answer,        name='save_answer'),
+    path('exam/<slug:slug>/flag-tab-switch/', views.flag_tab_switch, name='flag_tab_switch'),
+    path('exam/<slug:slug>/submit/',       views.submit_exam,        name='submit_exam'),
 ]

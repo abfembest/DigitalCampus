@@ -17,12 +17,20 @@
 
     <!-- Header -->
     <div class="mb-6 sm:mb-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">
-            {% if lesson %}Edit Lesson{% else %}Create New Lesson{% endif %}
-        </h1>
-        <p class="text-sm sm:text-base text-gray-600 mt-1">
-            {% if lesson %}Update lesson information and content{% else %}Add a new lesson to your course{% endif %}
-        </p>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">
+                    {% if lesson %}Edit Lesson{% else %}Create New Lesson{% endif %}
+                </h1>
+                <p class="text-sm sm:text-base text-gray-600 mt-1">
+                    {% if lesson %}Update lesson information and content{% else %}Add a new lesson to your course{% endif %}
+                </p>
+            </div>
+            <a href="{% url 'instructor:course_manage' course.slug %}"
+               class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-white border-2 border-primary-600 text-primary-600 text-sm font-medium rounded-lg hover:bg-primary-50 transition-all whitespace-nowrap">
+                <i class="fas fa-th-large mr-2"></i>Manage Course
+            </a>
+        </div>
     </div>
 
     <!-- Main Form -->
@@ -50,9 +58,10 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Section (Optional)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Section *</label>
                             {{ form.section }}
-                            <p class="mt-1 text-xs sm:text-sm text-gray-500">Organize lessons into sections</p>
+                            <p class="mt-1 text-xs sm:text-sm text-gray-500">Lessons must belong to a section — <a href="{% url 'instructor:section_create' course.slug %}" class="text-primary-600 hover:underline">create a section first</a> if none exist.</p>
+                            {% if form.section.errors %}<p class="mt-1 text-xs sm:text-sm text-red-600">{{ form.section.errors }}</p>{% endif %}
                         </div>
 
                         <div>

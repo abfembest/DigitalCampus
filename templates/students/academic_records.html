@@ -1,732 +1,653 @@
 {% extends "management/base.html" %}
-{% load static humanize %}
+{% load static %}
 
-{% block title %}{{ page_title }} - {{ site_config.school_short_name }} Student Portal{% endblock %}
-
+{% block title %}Academic Records — MIU Portal{% endblock %}
+{% block breadcrumb_title %}Academic Records{% endblock %}
 {% block breadcrumb %}Academic Records{% endblock %}
 
-{% block meta_description %}
-View your academic records, program requirements, course grades, GPA and graduation progress.
+{% block extra_css %}
+<style>
+    /* ── Grade badge colours ── */
+    .grade-A  { background:#dcfce7; color:#166534; }
+    .grade-B  { background:#dbeafe; color:#1e40af; }
+    .grade-C  { background:#fef9c3; color:#854d0e; }
+    .grade-D  { background:#ffedd5; color:#9a3412; }
+    .grade-F  { background:#fee2e2; color:#991b1b; }
+    .grade-I,
+    .grade-W  { background:#f3f4f6; color:#6b7280; }
+
+    /* ── Transcript watermark (print only) ── */
+    @media print {
+        .no-print { display:none !important; }
+        .print-only { display:block !important; }
+        body { background:#fff !important; }
+        .transcript-watermark {
+            position:fixed; top:40%; left:50%;
+            transform:translate(-50%,-50%) rotate(-30deg);
+            font-size:6rem; font-weight:900; opacity:.04;
+            color:#000; pointer-events:none; z-index:9999;
+            white-space:nowrap;
+        }
+    }
+    .print-only { display:none; }
+
+    /* ── Sticky session header ── */
+    .session-header-sticky {
+        position:sticky; top:0; z-index:10;
+        background:linear-gradient(135deg,#1e40af,#4a6bff);
+    }
+
+    /* ── GPA ring ── */
+    .gpa-ring { position:relative; width:120px; height:120px; }
+    .gpa-ring svg { transform:rotate(-90deg); }
+    .gpa-ring .gpa-text {
+        position:absolute; inset:0;
+        display:flex; flex-direction:column;
+        align-items:center; justify-content:center;
+    }
+
+    /* ── Progress bar ── */
+    .prog-bar-inner {
+        transition: width 1s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ── Hover row ── */
+    .grade-row:hover { background:#f8fafc; }
+
+    /* ── Timeline dot ── */
+    .timeline-dot {
+        width:12px; height:12px; border-radius:50%;
+        background:#4a6bff; border:2px solid #fff;
+        box-shadow:0 0 0 3px #bfdbfe;
+        flex-shrink:0; margin-top:4px;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-12xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6">
+<div class="p-4 sm:p-6 lg:p-8 space-y-8">
 
-    {# ── Page Header ── #}
-    <header class="mb-4 sm:mb-6 lg:mb-8">
-        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
-            <div>
-                <h1 class="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
-                    Academic Records
-                </h1>
-                <p class="text-xs sm:text-sm md:text-base text-gray-600 mt-1 sm:mt-2">
-                    Your full academic history, program requirements &amp; graduation progress
-                </p>
-            </div>
-            <div class="flex-shrink-0 self-start sm:self-center flex items-center gap-2">
-                {% if application and application.transcript_issued %}
-                <a href="#"
-                   class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5
-                          bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-semibold
-                          rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
-                    <i class="fas fa-file-download"></i>
-                    <span>Download Transcript</span>
-                </a>
-                {% elif application %}
-                <button onclick="requestTranscript()"
-                   class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5
-                          bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold
-                          rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Request Transcript</span>
-                </button>
+    {# ══════════════════════════════════════════════════════════ #}
+    {# TRANSCRIPT WATERMARK (print)                              #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="transcript-watermark print-only">OFFICIAL TRANSCRIPT</div>
+
+    {# ══════════════════════════════════════════════════════════ #}
+    {# PAGE HEADER                                               #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 font-heading">Academic Records</h1>
+            <p class="text-sm text-gray-500 mt-0.5">
+                {% if program %}{{ program.name }} &mdash; {{ program.department.name }}{% else %}No programme assigned{% endif %}
+                {% if current_session %}
+                &bull; <span class="text-primary-600 font-medium">{{ current_session.name }}</span>
                 {% endif %}
-                <a href="{% url 'students:grades' %}"
-                   class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5
-                          bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs sm:text-sm font-semibold
-                          rounded-xl transition-all duration-200">
-                    <i class="fas fa-chart-bar"></i>
-                    <span class="hidden sm:inline">View Grades</span>
-                </a>
-            </div>
+            </p>
         </div>
-    </header>
-
-    {% if not application %}
-    {# ── No application found ── #}
-    <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 sm:p-8 text-center">
-        <div class="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="fas fa-graduation-cap text-yellow-600 text-2xl"></i>
+        <div class="flex flex-wrap gap-2 no-print">
+            <button onclick="window.print()"
+                    class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition">
+                <i class="fas fa-print text-xs"></i> Print / Save PDF
+            </button>
+            {% if application %}
+                {% if not application.transcript_requested %}
+                <form method="post" id="transcriptForm" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="request_transcript">
+                    <button type="button" onclick="confirmTranscriptRequest()"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition shadow-sm">
+                        <i class="fas fa-file-alt text-xs"></i> Request Transcript
+                    </button>
+                </form>
+                {% else %}
+                <span class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
+                    {% if application.transcript_issued %}bg-green-100 text-green-700{% else %}bg-amber-100 text-amber-700{% endif %}">
+                    <i class="fas {% if application.transcript_issued %}fa-check-circle{% else %}fa-clock{% endif %} text-xs"></i>
+                    {% if application.transcript_issued %}Transcript Issued{% else %}Transcript Requested{% endif %}
+                    {% if application.transcript_issued_at %}&nbsp;&bull;&nbsp;{{ application.transcript_issued_at|date:"M j, Y" }}{% endif %}
+                </span>
+                {% endif %}
+            {% endif %}
         </div>
-        <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-2">No Program Found</h3>
-        <p class="text-sm text-gray-500 max-w-md mx-auto">
-            Your academic records will appear here once your application has been approved and you are enrolled in a program.
-        </p>
     </div>
 
-    {% else %}
-
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    {# SECTION 1 — Admission & Program Summary                                #}
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 mb-5 sm:mb-6 lg:mb-8">
-
-        {# Program card #}
-        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-5 lg:p-6">
-            <div class="flex items-start gap-3 sm:gap-4">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-university text-blue-600 text-base sm:text-lg"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide mb-0.5">
-                        Enrolled Program
-                    </p>
-                    <h2 class="text-sm sm:text-base md:text-lg font-bold text-gray-900 leading-snug truncate">
-                        {{ program.name }}
-                    </h2>
-                    <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
-                        {{ program.department.faculty.name }}
-                        <span class="mx-1 text-gray-300">·</span>
-                        {{ program.department.name }}
-                    </p>
-                </div>
-                <span class="flex-shrink-0 inline-flex items-center px-2 py-1 rounded-lg
-                             text-[10px] sm:text-xs font-semibold
-                             {% if application.is_graduated %}bg-green-100 text-green-700
-                             {% else %}bg-blue-100 text-blue-700{% endif %}">
-                    {% if application.is_graduated %}Graduated{% else %}Active{% endif %}
-                </span>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-gray-100">
-                <div>
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Code</p>
-                    <p class="text-xs sm:text-sm font-semibold text-gray-800 mt-0.5">{{ program.code }}</p>
-                </div>
-                <div>
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Level</p>
-                    <p class="text-xs sm:text-sm font-semibold text-gray-800 mt-0.5 capitalize">{{ program.degree_level }}</p>
-                </div>
-                <div>
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Duration</p>
-                    <p class="text-xs sm:text-sm font-semibold text-gray-800 mt-0.5">{{ program.duration_years }} yr{{ program.duration_years|pluralize }}</p>
-                </div>
-                <div>
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Intake</p>
-                    <p class="text-xs sm:text-sm font-semibold text-gray-800 mt-0.5">{{ application.intake.name|default:"—" }}</p>
-                </div>
-                {% if application.admission_number %}
-                <div>
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Admission No.</p>
-                    <p class="text-xs sm:text-sm font-semibold text-gray-800 mt-0.5 font-mono">{{ application.admission_number }}</p>
-                </div>
-                {% endif %}
-                <div>
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Study Mode</p>
-                    <p class="text-xs sm:text-sm font-semibold text-gray-800 mt-0.5 capitalize">{{ application.study_mode|cut:"_" }}</p>
-                </div>
-                {% if application.admission_accepted_at %}
-                <div>
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Admitted</p>
-                    <p class="text-xs sm:text-sm font-semibold text-gray-800 mt-0.5">{{ application.admission_accepted_at|date:"M j, Y" }}</p>
-                </div>
-                {% endif %}
-                {% if application.is_graduated and application.graduated_at %}
-                <div>
-                    <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide">Graduated</p>
-                    <p class="text-xs sm:text-sm font-semibold text-gray-800 mt-0.5">{{ application.graduated_at|date:"M j, Y" }}</p>
-                </div>
-                {% endif %}
-            </div>
+    {# ══════════════════════════════════════════════════════════ #}
+    {# DJANGO MESSAGES                                           #}
+    {# ══════════════════════════════════════════════════════════ #}
+    {% if messages %}
+    <div class="space-y-2 no-print">
+        {% for msg in messages %}
+        <div class="flex items-start gap-3 p-4 rounded-xl border
+            {% if msg.tags == 'success' %}bg-green-50 border-green-200 text-green-800
+            {% elif msg.tags == 'error' %}bg-red-50 border-red-200 text-red-800
+            {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+            <i class="fas {% if msg.tags == 'success' %}fa-check-circle{% elif msg.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} mt-0.5 flex-shrink-0"></i>
+            <span class="text-sm">{{ msg }}</span>
         </div>
-
-        {# GPA + Credits #}
-        <div class="flex flex-col gap-3 sm:gap-4">
-
-            {# GPA Card #}
-            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-sm p-4 sm:p-5 text-white flex-1">
-                <p class="text-xs font-semibold text-blue-200 uppercase tracking-wide mb-1">Cumulative GPA</p>
-                <p class="text-4xl sm:text-5xl font-black leading-none mb-1">
-                    {% if gpa %}{{ gpa }}{% else %}—{% endif %}
-                </p>
-                <p class="text-xs text-blue-200">out of 4.00 scale</p>
-                {% if gpa %}
-                <div class="mt-3 bg-white/20 rounded-full h-2">
-                    <div class="bg-white rounded-full h-2" style="width: {{ gpa|floatformat:0 }}0%"></div>
-                </div>
-                <p class="text-[10px] text-blue-200 mt-1">
-                    {% if gpa >= 3.7 %}First Class
-                    {% elif gpa >= 3.3 %}Second Class Upper
-                    {% elif gpa >= 3.0 %}Second Class Lower
-                    {% elif gpa >= 2.0 %}Third Class
-                    {% else %}Below Passing{% endif %}
-                </p>
-                {% endif %}
-            </div>
-
-            {# Credits Card #}
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-5 flex-1">
-                <p class="text-[10px] sm:text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Credit Progress</p>
-                <div class="flex items-end gap-1 mb-2">
-                    <span class="text-2xl sm:text-3xl font-black text-gray-900">{{ credits_earned }}</span>
-                    <span class="text-sm text-gray-400 mb-1">/ {{ total_credits_required }} credits</span>
-                </div>
-                <div class="w-full bg-gray-100 rounded-full h-2.5 mb-2">
-                    <div class="bg-green-500 h-2.5 rounded-full transition-all duration-500"
-                         style="width: {{ graduation_pct }}%"></div>
-                </div>
-                <div class="flex justify-between text-[10px] sm:text-xs text-gray-500">
-                    <span>{{ graduation_pct }}% complete</span>
-                    <span>{{ credits_remaining }} remaining</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    {# SECTION 2 — Graduation Progress                                        #}
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-5 lg:p-6 mb-5 sm:mb-6 lg:mb-8">
-
-        <div class="flex items-center justify-between mb-4 sm:mb-5">
-            <div class="flex items-center gap-2 sm:gap-3">
-                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-graduation-cap text-green-600 text-sm"></i>
-                </div>
-                <div>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-900">Graduation Progress</h2>
-                    <p class="text-[10px] sm:text-xs text-gray-500">Requirements completed toward your degree</p>
-                </div>
-            </div>
-            {% if application.is_graduated %}
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 text-xs font-semibold rounded-xl">
-                <i class="fas fa-check-circle"></i> Completed
-            </span>
-            {% endif %}
-        </div>
-
-        {# Big progress bar #}
-        <div class="relative w-full bg-gray-100 rounded-full h-4 sm:h-5 mb-3 overflow-hidden">
-            <div class="h-full rounded-full transition-all duration-700
-                        {% if graduation_pct >= 100 %}bg-green-500
-                        {% elif graduation_pct >= 70 %}bg-blue-500
-                        {% elif graduation_pct >= 40 %}bg-yellow-400
-                        {% else %}bg-red-400{% endif %}"
-                 style="width: {{ graduation_pct }}%">
-            </div>
-            {% if graduation_pct > 10 %}
-            <span class="absolute inset-0 flex items-center justify-center text-[10px] sm:text-xs font-bold text-white">
-                {{ graduation_pct }}%
-            </span>
-            {% endif %}
-        </div>
-
-        {# Stats row #}
-        <div class="grid grid-cols-3 gap-2 sm:gap-4 mt-4 sm:mt-5">
-            <div class="text-center p-2 sm:p-3 bg-gray-50 rounded-xl">
-                <p class="text-lg sm:text-2xl font-black text-gray-900">{{ credits_earned }}</p>
-                <p class="text-[10px] sm:text-xs text-gray-500 mt-0.5">Credits Earned</p>
-            </div>
-            <div class="text-center p-2 sm:p-3 bg-gray-50 rounded-xl">
-                <p class="text-lg sm:text-2xl font-black text-gray-900">{{ credits_remaining }}</p>
-                <p class="text-[10px] sm:text-xs text-gray-500 mt-0.5">Credits Remaining</p>
-            </div>
-            <div class="text-center p-2 sm:p-3 bg-gray-50 rounded-xl">
-                <p class="text-lg sm:text-2xl font-black text-gray-900">{{ total_credits_required }}</p>
-                <p class="text-[10px] sm:text-xs text-gray-500 mt-0.5">Total Required</p>
-            </div>
-        </div>
-    </section>
-
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    {# SECTION 3 — Program Requirements Table                                 #}
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    {% if program_courses %}
-    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-5 sm:mb-6 lg:mb-8 overflow-hidden">
-
-        <div class="px-4 sm:px-5 lg:px-6 py-4 sm:py-5 border-b border-gray-100">
-            <div class="flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center gap-2 sm:gap-3">
-                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-list-check text-purple-600 text-sm"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-sm sm:text-base font-bold text-gray-900">Program Requirements</h2>
-                        <p class="text-[10px] sm:text-xs text-gray-500">All courses needed for your degree</p>
-                    </div>
-                </div>
-                {# Filter tabs #}
-                <div class="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5 text-xs sm:text-sm">
-                    <button onclick="filterRequirements('all')" id="tab-all"
-                            class="req-tab px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all bg-white text-gray-800 shadow-sm">
-                        All
-                    </button>
-                    <button onclick="filterRequirements('core')" id="tab-core"
-                            class="req-tab px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all text-gray-500 hover:text-gray-700">
-                        Core
-                    </button>
-                    <button onclick="filterRequirements('elective')" id="tab-elective"
-                            class="req-tab px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all text-gray-500 hover:text-gray-700">
-                        Elective
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        {# Mobile cards — shown on xs/sm #}
-        <div class="block sm:hidden divide-y divide-gray-100" id="req-cards">
-            {% for course in program_courses %}
-            <div class="req-row p-4 {% if course.student_grade %}{% if course.student_grade.is_passed %}bg-green-50/40{% else %}bg-red-50/40{% endif %}{% endif %}"
-                 data-type="{{ course.course_type }}">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5 mb-0.5">
-                            <span class="text-[10px] font-mono text-gray-400">{{ course.code }}</span>
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold
-                                         {% if course.course_type == 'core' %}bg-blue-100 text-blue-700
-                                         {% elif course.course_type == 'elective' %}bg-purple-100 text-purple-700
-                                         {% else %}bg-gray-100 text-gray-600{% endif %}">
-                                {{ course.get_course_type_display }}
-                            </span>
-                        </div>
-                        <p class="text-xs font-semibold text-gray-900 leading-snug">{{ course.name }}</p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">
-                            Year {{ course.year_of_study }} · {{ course.get_semester_display }} · {{ course.credit_units }} cr
-                        </p>
-                    </div>
-                    <div class="flex-shrink-0 text-right">
-                        {% if course.student_grade %}
-                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-black
-                                         {% if course.student_grade.is_passed %}bg-green-100 text-green-700
-                                         {% else %}bg-red-100 text-red-700{% endif %}">
-                                {{ course.student_grade.grade }}
-                            </span>
-                            <p class="text-[10px] text-gray-400 mt-0.5">{{ course.student_grade.score|floatformat:0 }}%</p>
-                        {% else %}
-                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-semibold bg-gray-100 text-gray-400">
-                                —
-                            </span>
-                            <p class="text-[10px] text-gray-400 mt-0.5">Pending</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        {# Desktop table — hidden on xs/sm #}
-        <div class="hidden sm:block overflow-x-auto">
-            <table class="w-full text-sm" id="req-table">
-                <thead>
-                    <tr class="bg-gray-50 border-b border-gray-100">
-                        <th class="text-left px-4 sm:px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Code</th>
-                        <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Course Name</th>
-                        <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
-                        <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Year</th>
-                        <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Semester</th>
-                        <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Credits</th>
-                        <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Grade</th>
-                        <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50" id="req-tbody">
-                    {% for course in program_courses %}
-                    <tr class="req-row hover:bg-gray-50/70 transition-colors
-                                {% if course.student_grade %}{% if course.student_grade.is_passed %}bg-green-50/30{% else %}bg-red-50/20{% endif %}{% endif %}"
-                        data-type="{{ course.course_type }}">
-                        <td class="px-4 sm:px-6 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">{{ course.code }}</td>
-                        <td class="px-3 py-3 max-w-xs">
-                            <p class="font-medium text-gray-900 text-sm">{{ course.name }}</p>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold
-                                         {% if course.course_type == 'core' %}bg-blue-100 text-blue-700
-                                         {% elif course.course_type == 'elective' %}bg-purple-100 text-purple-700
-                                         {% else %}bg-gray-100 text-gray-600{% endif %}">
-                                {{ course.get_course_type_display }}
-                            </span>
-                        </td>
-                        <td class="px-3 py-3 text-center text-sm text-gray-600">{{ course.year_of_study }}</td>
-                        <td class="px-3 py-3 text-center text-sm text-gray-600 whitespace-nowrap">{{ course.get_semester_display }}</td>
-                        <td class="px-3 py-3 text-center font-semibold text-gray-800">{{ course.credit_units }}</td>
-                        <td class="px-3 py-3 text-center">
-                            {% if course.student_grade %}
-                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-black
-                                         {% if course.student_grade.is_passed %}bg-green-100 text-green-700
-                                         {% else %}bg-red-100 text-red-700{% endif %}">
-                                {{ course.student_grade.grade }}
-                            </span>
-                            {% else %}
-                            <span class="text-gray-300 text-sm font-medium">—</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                            {% if course.student_grade %}
-                                {% if course.student_grade.is_passed %}
-                                <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-lg">
-                                    <i class="fas fa-check text-[10px]"></i> Passed
-                                </span>
-                                {% else %}
-                                <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-lg">
-                                    <i class="fas fa-times text-[10px]"></i> Failed
-                                </span>
-                                {% endif %}
-                            {% else %}
-                            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs font-semibold rounded-lg">
-                                <i class="fas fa-clock text-[10px]"></i> Pending
-                            </span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {# Summary footer #}
-        <div class="px-4 sm:px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
-            <span><span class="font-semibold text-gray-800">{{ core_courses|length }}</span> Core</span>
-            <span class="text-gray-300">·</span>
-            <span><span class="font-semibold text-gray-800">{{ elective_courses|length }}</span> Elective</span>
-            <span class="text-gray-300">·</span>
-            <span><span class="font-semibold text-gray-800">{{ program_courses|length }}</span> Total</span>
-            <span class="sm:ml-auto text-right"><span class="font-semibold text-green-700">{{ credits_earned }}</span> / {{ total_credits_required }} credits earned</span>
-        </div>
-    </section>
+        {% endfor %}
+    </div>
     {% endif %}
 
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    {# SECTION 4 — Academic History (grades grouped by session)               #}
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    <section class="mb-5 sm:mb-6 lg:mb-8">
-        <div class="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-history text-indigo-600 text-sm"></i>
+    {# ══════════════════════════════════════════════════════════ #}
+    {# TOP STATS ROW                                             #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+        {# CGPA Card #}
+        <div class="col-span-2 lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
+            <div class="gpa-ring flex-shrink-0">
+                {% with gpa_pct=gpa|default:0 %}
+                {% widthratio gpa_pct|default:0 5 100 as ring_pct %}
+                <svg viewBox="0 0 120 120" width="120" height="120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="#4a6bff" stroke-width="10"
+                            stroke-dasharray="314"
+                            stroke-dashoffset="{{ ring_pct|default:314 }}"
+                            stroke-linecap="round"/>
+                </svg>
+                {% endwith %}
+                <div class="gpa-text">
+                    <span class="text-2xl font-bold text-gray-900">{% if gpa %}{{ gpa }}{% else %}—{% endif %}</span>
+                    <span class="text-[10px] font-medium text-gray-500 uppercase tracking-wide">CGPA</span>
+                </div>
             </div>
             <div>
-                <h2 class="text-sm sm:text-base font-bold text-gray-900">Academic History</h2>
-                <p class="text-[10px] sm:text-xs text-gray-500">All courses taken, grades and credits by session</p>
+                <p class="text-sm font-semibold text-gray-700">Cumulative GPA</p>
+                {% if gpa_class %}
+                <p class="text-xs mt-1 font-medium
+                    {% if gpa_class == 'First Class' %}text-green-600
+                    {% elif gpa_class == 'Second Class Upper' %}text-blue-600
+                    {% elif gpa_class == 'Second Class Lower' %}text-amber-600
+                    {% else %}text-gray-500{% endif %}">
+                    {{ gpa_class }}
+                </p>
+                {% else %}
+                <p class="text-xs text-gray-400 mt-1">No grades yet</p>
+                {% endif %}
+                <p class="text-[11px] text-gray-400 mt-1">5-point scale (Nigerian)</p>
             </div>
+        </div>
+
+        {# Credits Earned #}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Credits Earned</span>
+                <span class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                    <i class="fas fa-award text-green-600 text-xs"></i>
+                </span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ credits_earned }}</p>
+            <p class="text-xs text-gray-400 mt-1">of {{ total_credits_required }} required</p>
+            {% if total_credits_required > 0 %}
+            <div class="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div class="prog-bar-inner h-full bg-green-500 rounded-full" style="width:{{ graduation_pct }}%"></div>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-1">{{ graduation_pct }}% complete</p>
+            {% endif %}
+        </div>
+
+        {# Credits Remaining #}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Remaining</span>
+                <span class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                    <i class="fas fa-hourglass-half text-amber-600 text-xs"></i>
+                </span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ credits_remaining }}</p>
+            <p class="text-xs text-gray-400 mt-1">credits to graduate</p>
+        </div>
+
+        {# Courses Taken #}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Courses Taken</span>
+                <span class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <i class="fas fa-book text-blue-600 text-xs"></i>
+                </span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ academic_grades|length }}</p>
+            <p class="text-xs text-gray-400 mt-1">
+                {{ academic_grades|length }} graded
+                &bull; {{ lms_enrollments|length }} enrolled
+            </p>
+        </div>
+    </div>
+
+    {# ══════════════════════════════════════════════════════════ #}
+    {# MAIN TRANSCRIPT TABLE — by session / semester             #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-semibold text-gray-900 font-heading">
+                    <i class="fas fa-graduation-cap text-primary-500 mr-2"></i>Academic Transcript
+                </h2>
+                <p class="text-xs text-gray-400 mt-0.5">All sessions &amp; semesters — Nigerian 5-point GPA scale</p>
+            </div>
+            {% if application and application.transcript_issued %}
+            <span class="no-print inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                <i class="fas fa-certificate text-[10px]"></i> Official Transcript Issued
+            </span>
+            {% endif %}
         </div>
 
         {% if session_summaries %}
-            {% for sess in session_summaries %}
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 mb-3 sm:mb-4 overflow-hidden">
-                {# Session header #}
-                <div class="flex items-center justify-between px-4 sm:px-5 lg:px-6 py-3 sm:py-4
-                            bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-                    <div class="flex items-center gap-2 sm:gap-3">
-                        <div class="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-calendar-alt text-indigo-500 text-xs"></i>
-                        </div>
+        <div class="divide-y divide-gray-100">
+
+            {% for session in session_summaries %}
+            <div class="session-block">
+
+                {# ── Session Header ── #}
+                <div class="session-header-sticky px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div class="flex items-center gap-3">
+                        <div class="timeline-dot"></div>
                         <div>
-                            <p class="text-xs sm:text-sm font-bold text-gray-900">{{ sess.name }}</p>
-                            <p class="text-[10px] sm:text-xs text-gray-500">
-                                {{ sess.grades|length }} course{{ sess.grades|length|pluralize }}
-                                &nbsp;·&nbsp;
-                                {{ sess.credits }} credit{{ sess.credits|pluralize }} earned
+                            <h3 class="text-sm font-bold text-white">{{ session.name }}</h3>
+                            <p class="text-[11px] text-blue-200">
+                                {{ session.semesters|length }} semester{{ session.semesters|length|pluralize }}
+                                &bull; {{ session.credits }} credit{{ session.credits|pluralize }} earned
                             </p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        {% if sess.gpa is not None %}
-                        <p class="text-base sm:text-lg font-black
-                                  {% if sess.gpa >= 3.5 %}text-green-600
-                                  {% elif sess.gpa >= 2.5 %}text-blue-600
-                                  {% elif sess.gpa >= 1.5 %}text-yellow-600
-                                  {% else %}text-red-600{% endif %}">
-                            {{ sess.gpa }}
-                        </p>
-                        <p class="text-[10px] text-gray-400 leading-none">Session GPA</p>
-                        {% endif %}
+                    <div class="flex items-center gap-6 ml-7 sm:ml-0">
+                        <div class="text-right">
+                            <p class="text-[10px] text-blue-200 uppercase tracking-wide">Session GPA</p>
+                            <p class="text-lg font-bold text-white">
+                                {% if session.gpa %}{{ session.gpa }}{% else %}&mdash;{% endif %}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                {# Grades — mobile cards #}
-                <div class="block sm:hidden divide-y divide-gray-50">
-                    {% for g in sess.grades %}
-                    <div class="flex items-center justify-between px-4 py-3
-                                {% if g.is_passed %}bg-green-50/30{% elif g.grade %}bg-red-50/20{% endif %}">
-                        <div class="flex-1 min-w-0 mr-3">
-                            <p class="text-xs font-semibold text-gray-900 truncate">{{ g.course.name }}</p>
-                            <p class="text-[10px] text-gray-400 mt-0.5">
-                                {{ g.course.code }}
-                                {% if g.score is not None %}&nbsp;·&nbsp;{{ g.score|floatformat:1 }}%{% endif %}
-                                &nbsp;·&nbsp;{{ g.credit_units }} cr
-                            </p>
+                {# ── Semester blocks inside this session ── #}
+                {% for sem in session.semesters %}
+                <div class="px-4 sm:px-6 py-4">
+
+                    {# Semester sub-header #}
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-primary-400 flex-shrink-0"></span>
+                            <h4 class="text-sm font-semibold text-gray-700">{{ sem.label }}</h4>
                         </div>
-                        <div class="flex items-center gap-1.5">
-                            {% if g.grade %}
-                            <span class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-sm font-black
-                                         {% if g.is_passed %}bg-green-100 text-green-700
-                                         {% else %}bg-red-100 text-red-700{% endif %}">
-                                {{ g.grade }}
+                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                            <span>{{ sem.credits }} CU earned</span>
+                            <span class="font-semibold text-primary-700">
+                                Semester GPA: {% if sem.gpa %}{{ sem.gpa }}{% else %}&mdash;{% endif %}
                             </span>
-                            {% else %}
-                            <span class="text-gray-300 text-sm">—</span>
-                            {% endif %}
                         </div>
                     </div>
-                    {% endfor %}
-                </div>
 
-                {# Grades — desktop table #}
-                <div class="hidden sm:block overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="border-b border-gray-50">
-                                <th class="text-left px-5 lg:px-6 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Course</th>
-                                <th class="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Code</th>
-                                <th class="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Type</th>
-                                <th class="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Credits</th>
-                                <th class="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Score</th>
-                                <th class="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Grade</th>
-                                <th class="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Result</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-50">
-                            {% for g in sess.grades %}
-                            <tr class="hover:bg-gray-50/60 transition-colors
-                                        {% if g.is_passed %}bg-green-50/20{% elif g.grade %}bg-red-50/10{% endif %}">
-                                <td class="px-5 lg:px-6 py-3">
-                                    <p class="font-medium text-gray-900">{{ g.course.name }}</p>
-                                </td>
-                                <td class="px-3 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">{{ g.course.code }}</td>
-                                <td class="px-3 py-3 text-center">
-                                    <span class="inline-flex px-2 py-0.5 rounded-md text-xs font-semibold
-                                                 {% if g.course.course_type == 'core' %}bg-blue-100 text-blue-700
-                                                 {% elif g.course.course_type == 'elective' %}bg-purple-100 text-purple-700
-                                                 {% else %}bg-gray-100 text-gray-600{% endif %}">
-                                        {{ g.course.get_course_type_display }}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-3 text-center font-semibold text-gray-800">{{ g.credit_units }}</td>
-                                <td class="px-3 py-3 text-center text-gray-600">
-                                    {% if g.score is not None %}{{ g.score|floatformat:1 }}%{% else %}—{% endif %}
-                                </td>
-                                <td class="px-3 py-3 text-center">
-                                    {% if g.grade %}
-                                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-black
-                                                 {% if g.is_passed %}bg-green-100 text-green-700
-                                                 {% else %}bg-red-100 text-red-700{% endif %}">
-                                        {{ g.grade }}
-                                    </span>
-                                    {% else %}
-                                    <span class="text-gray-300">—</span>
-                                    {% endif %}
-                                </td>
-                                <td class="px-3 py-3 text-center">
-                                    {% if g.grade %}
-                                        {% if g.is_passed %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-lg">
-                                            <i class="fas fa-check text-[9px]"></i> Pass
+                    {# Grades table #}
+                    <div class="overflow-x-auto rounded-xl border border-gray-100">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    <th class="px-4 py-2.5 text-left">Course Code</th>
+                                    <th class="px-4 py-2.5 text-left">Course Title</th>
+                                    <th class="px-4 py-2.5 text-center">Credit Units</th>
+                                    <th class="px-4 py-2.5 text-center">Score (%)</th>
+                                    <th class="px-4 py-2.5 text-center">Grade</th>
+                                    <th class="px-4 py-2.5 text-center">Grade Points</th>
+                                    <th class="px-4 py-2.5 text-center">Weighted</th>
+                                    <th class="px-4 py-2.5 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50">
+                                {% for g in sem.grades %}
+                                <tr class="grade-row transition-colors">
+                                    <td class="px-4 py-3 font-mono text-xs font-semibold text-gray-700">
+                                        {{ g.display_code|default:"—" }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-800 font-medium max-w-xs">
+                                        {{ g.display_name|default:"Unknown" }}
+                                        {% if g.lms_course and g.result_status == 'released' %}
+                                        <span class="ml-1 text-[10px] text-green-600 font-semibold">[Released]</span>
+                                        {% elif g.result_status == 'withheld' %}
+                                        <span class="ml-1 text-[10px] text-red-500 font-semibold">[Withheld]</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-700 font-medium">
+                                        {{ g.credit_units }}
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-700">
+                                        {% if g.score %}{{ g.score }}{% else %}&mdash;{% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        {% if g.grade %}
+                                        <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold grade-{{ g.grade }}">
+                                            {{ g.grade }}
                                         </span>
                                         {% else %}
-                                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-lg">
-                                            <i class="fas fa-times text-[9px]"></i> Fail
+                                        <span class="text-gray-400 text-xs">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-700">
+                                        {% if g.grade %}{{ g.grade_points }}{% else %}&mdash;{% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-700 font-medium">
+                                        {% if g.grade %}{{ g.weighted_points }}{% else %}&mdash;{% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        {% if g.is_passed %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700">
+                                            <i class="fas fa-check text-[9px]"></i> Passed
+                                        </span>
+                                        {% elif g.grade == 'F' %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">
+                                            <i class="fas fa-times text-[9px]"></i> Failed
+                                        </span>
+                                        {% elif g.grade == 'W' %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600">
+                                            Withdrawn
+                                        </span>
+                                        {% elif g.grade == 'I' %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-100 text-yellow-700">
+                                            Incomplete
+                                        </span>
+                                        {% else %}
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">
+                                            <i class="fas fa-clock text-[9px]"></i> Pending
                                         </span>
                                         {% endif %}
-                                    {% else %}
-                                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs font-semibold rounded-lg">
-                                        Pending
-                                    </span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr class="bg-gray-50 border-t border-gray-100">
-                                <td colspan="3" class="px-5 lg:px-6 py-2.5 text-xs font-semibold text-gray-500">Session Total</td>
-                                <td class="px-3 py-2.5 text-center text-xs font-bold text-gray-800">
-                                    {{ sess.credits }} earned
-                                </td>
-                                <td class="px-3 py-2.5"></td>
-                                <td class="px-3 py-2.5 text-center">
-                                    {% if sess.gpa is not None %}
-                                    <span class="text-xs font-bold text-indigo-700">{{ sess.gpa }} GPA</span>
-                                    {% endif %}
-                                </td>
-                                <td class="px-3 py-2.5"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+
+                                {# Semester totals row #}
+                                <tr class="bg-blue-50 font-semibold text-sm border-t-2 border-blue-100">
+                                    <td class="px-4 py-2.5 text-blue-800 font-bold" colspan="2">
+                                        Semester Totals
+                                    </td>
+                                    <td class="px-4 py-2.5 text-center text-blue-800">
+                                        {{ sem.total_cu }} {{ sem.grades|length }} course{{ sem.grades|length|pluralize }}
+                                    </td>
+                                    <td class="px-4 py-2.5 text-center text-blue-600">&mdash;</td>
+                                    <td class="px-4 py-2.5 text-center text-blue-600">&mdash;</td>
+                                    <td class="px-4 py-2.5 text-center text-blue-600">&mdash;</td>
+                                    <td class="px-4 py-2.5 text-center text-blue-800 font-bold">
+                                        {{ sem.total_weighted }}
+                                    </td>
+                                    <td class="px-4 py-2.5 text-center">
+                                        <span class="inline-block px-3 py-0.5 rounded-full bg-blue-200 text-blue-900 text-xs font-bold">
+                                            GPA: {% if sem.gpa %}{{ sem.gpa }}{% else %}&mdash;{% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {# ── Session GPA summary footer ── #}
+                <div class="mx-4 sm:mx-6 mb-4 px-5 py-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 flex flex-wrap items-center gap-4 justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-chart-line text-primary-500"></i>
+                        <span class="text-sm font-semibold text-gray-700">{{ session.name }} Summary</span>
+                    </div>
+                    <div class="flex flex-wrap gap-6 text-sm">
+                        <div class="text-center">
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Credits Earned</p>
+                            <p class="font-bold text-gray-800">{{ session.credits }}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Session GPA</p>
+                            <p class="font-bold text-primary-700 text-lg">
+                                {% if session.gpa %}{{ session.gpa }}{% else %}&mdash;{% endif %}
+                            </p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[10px] text-gray-500 uppercase tracking-wide">CGPA (running)</p>
+                            <p class="font-bold text-gray-800 text-lg">{% if gpa %}{{ gpa }}{% else %}&mdash;{% endif %}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             {% endfor %}
+
+        </div>
+
+        {# ── Cumulative CGPA Footer ── #}
+        <div class="px-6 py-5 bg-gradient-to-r from-primary-600 to-indigo-600 flex flex-wrap gap-6 items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <i class="fas fa-graduation-cap text-white"></i>
+                </div>
+                <div>
+                    <p class="text-white font-bold text-sm">Cumulative Grade Point Average</p>
+                    <p class="text-blue-200 text-xs">Based on all released results</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-8">
+                <div class="text-center">
+                    <p class="text-blue-200 text-[10px] uppercase tracking-widest">Total Credits</p>
+                    <p class="text-white text-2xl font-black">{{ credits_earned }}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-blue-200 text-[10px] uppercase tracking-widest">CGPA</p>
+                    <p class="text-white text-2xl font-black">{% if gpa %}{{ gpa }}{% else %}&mdash;{% endif %}</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-blue-200 text-[10px] uppercase tracking-widest">Class</p>
+                    <p class="text-white text-lg font-bold">{% if gpa_class %}{{ gpa_class }}{% else %}&mdash;{% endif %}</p>
+                </div>
+            </div>
+        </div>
 
         {% else %}
-        {# No academic grade records yet #}
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
-            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <i class="fas fa-clipboard-list text-gray-400 text-xl"></i>
+        {# No grades yet #}
+        <div class="py-16 text-center">
+            <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-book-open text-gray-300 text-2xl"></i>
             </div>
-            <p class="text-sm font-semibold text-gray-700 mb-1">No Grades Recorded Yet</p>
-            <p class="text-xs text-gray-400 max-w-xs mx-auto">
-                Your grades will appear here once lecturers have recorded results for your courses.
-            </p>
+            <h3 class="text-gray-500 font-semibold text-sm">No academic grades recorded yet</h3>
+            <p class="text-gray-400 text-xs mt-1">Your results will appear here once they are released.</p>
         </div>
         {% endif %}
-    </section>
+    </div>
 
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    {# SECTION 5 — Certificates                                               #}
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    {% if certificates %}
-    <section class="mb-5 sm:mb-6 lg:mb-8">
-        <div class="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-certificate text-yellow-600 text-sm"></i>
-            </div>
-            <div>
-                <h2 class="text-sm sm:text-base font-bold text-gray-900">Certificates</h2>
-                <p class="text-[10px] sm:text-xs text-gray-500">Your earned academic certificates</p>
-            </div>
-        </div>
+    {# ══════════════════════════════════════════════════════════ #}
+    {# BOTTOM ROW: Certificates + Transcript Status              #}
+    {# ══════════════════════════════════════════════════════════ #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {% for cert in certificates %}
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-5
-                        hover:shadow-md transition-shadow duration-200 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-20 h-20 bg-yellow-50 rounded-bl-full opacity-60"></div>
-                <div class="relative">
-                    <div class="flex items-start gap-3 mb-3">
-                        <div class="w-9 h-9 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-award text-yellow-600"></i>
+        {# ── Certificates ── #}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-gray-900 font-heading">
+                    <i class="fas fa-certificate text-amber-500 mr-2"></i>Certificates
+                </h2>
+                <a href="{% url 'students:certificates' %}" class="no-print text-xs text-primary-600 hover:underline font-medium">View all</a>
+            </div>
+            <div class="divide-y divide-gray-50">
+                {% for cert in certificates %}
+                <div class="px-5 py-3.5 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-medal text-amber-600 text-xs"></i>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-xs sm:text-sm font-bold text-gray-900 leading-snug">
-                                {% if cert.program %}{{ cert.program.name }}{% elif cert.course %}{{ cert.course.title }}{% else %}Certificate{% endif %}
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-gray-800 truncate">
+                                {% if cert.course %}{{ cert.course.title }}{% elif cert.program %}{{ cert.program.name }}{% else %}Certificate{% endif %}
                             </p>
-                            <p class="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                            <p class="text-xs text-gray-400">
                                 Issued {{ cert.issued_date|date:"M j, Y" }}
+                                &bull; {{ cert.get_certificate_type_display }}
                             </p>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold
-                                     {% if cert.payment_status == 'paid' %}bg-green-100 text-green-700{% else %}bg-orange-100 text-orange-700{% endif %}">
-                            {% if cert.payment_status == 'paid' %}Unlocked{% else %}Payment Pending{% endif %}
-                        </span>
-                        {% if cert.payment_status == 'paid' %}
-                        <a href="{% url 'students:certificate_print' cert.certificate_id %}"
-                           class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
-                            <i class="fas fa-print text-[10px]"></i> Print
-                        </a>
-                        {% else %}
-                        <a href="{% url 'students:my_payments' %}"
-                           class="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 hover:text-orange-800 transition-colors">
-                            <i class="fas fa-lock text-[10px]"></i> Pay to unlock
-                        </a>
-                        {% endif %}
+                    <a href="{% url 'students:certificate_print' cert.certificate_id %}"
+                       class="no-print flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition border border-amber-200">
+                        <i class="fas fa-download text-[9px]"></i> Download
+                    </a>
+                </div>
+                {% empty %}
+                <div class="py-10 text-center">
+                    <i class="fas fa-certificate text-gray-200 text-3xl mb-2"></i>
+                    <p class="text-xs text-gray-400">No certificates yet</p>
+                    <p class="text-[11px] text-gray-300 mt-1">Complete your courses to earn certificates</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# ── Transcript Status ── #}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-100">
+                <h2 class="text-sm font-semibold text-gray-900 font-heading">
+                    <i class="fas fa-file-alt text-primary-500 mr-2"></i>Official Transcript
+                </h2>
+            </div>
+            <div class="p-5 space-y-4">
+
+                {% if not application %}
+                <div class="rounded-xl bg-gray-50 border border-gray-200 p-5 text-center">
+                    <i class="fas fa-user-slash text-gray-300 text-2xl mb-2"></i>
+                    <p class="text-sm text-gray-500">No approved application found.</p>
+                    <p class="text-xs text-gray-400 mt-1">You need an approved programme admission to request a transcript.</p>
+                </div>
+
+                {% elif not application.transcript_requested %}
+                {# Not yet requested #}
+                <div class="rounded-xl bg-blue-50 border border-blue-100 p-5">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                        <div>
+                            <p class="text-sm font-semibold text-blue-800">Transcript not yet requested</p>
+                            <p class="text-xs text-blue-600 mt-1">
+                                Requesting your official transcript will compile all your academic results into a
+                                formal document. You can only request this <strong>once</strong>.
+                            </p>
+                        </div>
                     </div>
                 </div>
+                <div class="rounded-xl bg-amber-50 border border-amber-100 p-4 text-xs text-amber-700">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    <strong>Note:</strong> Once requested, the transcript content is locked. Any pending
+                    results added after your request will not appear on this transcript.
+                </div>
+                <form method="post" id="transcriptFormBottom" class="no-print">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="request_transcript">
+                    <button type="button" onclick="confirmTranscriptRequest()"
+                            class="w-full py-3 px-4 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition shadow-sm flex items-center justify-center gap-2">
+                        <i class="fas fa-paper-plane text-xs"></i>
+                        Request Official Transcript
+                    </button>
+                </form>
+
+                {% elif application.transcript_issued %}
+                {# Issued #}
+                <div class="rounded-xl bg-green-50 border border-green-200 p-5 text-center">
+                    <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                    <p class="text-sm font-bold text-green-800">Transcript Issued</p>
+                    {% if application.transcript_issued_at %}
+                    <p class="text-xs text-green-600 mt-1">
+                        Issued on {{ application.transcript_issued_at|date:"F j, Y \a\t g:i A" }}
+                    </p>
+                    {% endif %}
+                    <p class="text-xs text-gray-500 mt-3">
+                        Your official transcript has been generated. Contact the registrar's office
+                        for a physical copy or official attestation.
+                    </p>
+                </div>
+                <button onclick="window.print()"
+                        class="no-print w-full py-2.5 px-4 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-print text-xs"></i> Print Transcript
+                </button>
+
+                {% else %}
+                {# Requested, not yet issued #}
+                <div class="rounded-xl bg-amber-50 border border-amber-200 p-5 text-center">
+                    <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-clock text-amber-600 text-xl"></i>
+                    </div>
+                    <p class="text-sm font-bold text-amber-800">Transcript Request Pending</p>
+                    <p class="text-xs text-amber-600 mt-1">
+                        Your request has been received and is being processed by the registrar's office.
+                    </p>
+                    <p class="text-xs text-gray-400 mt-3">
+                        You will be notified once your transcript is ready. This process typically takes
+                        3–5 working days.
+                    </p>
+                </div>
+                <div class="rounded-xl bg-gray-50 border border-gray-100 p-3 text-xs text-gray-500 text-center">
+                    <i class="fas fa-lock text-gray-400 mr-1"></i>
+                    You have already submitted your transcript request. Only one request is allowed.
+                </div>
+                {% endif %}
+
             </div>
-            {% endfor %}
         </div>
-    </section>
+    </div>
+
+    {# ══════════════════════════════════════════════════════════ #}
+    {# GRADUATION PROGRESS (if programme assigned)               #}
+    {# ══════════════════════════════════════════════════════════ #}
+    {% if program and total_credits_required > 0 %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 no-print">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-gray-900 font-heading">
+                <i class="fas fa-road text-primary-500 mr-2"></i>Graduation Progress
+            </h2>
+            <span class="text-xs font-bold text-primary-600">{{ graduation_pct }}%</span>
+        </div>
+        <div class="h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div class="prog-bar-inner h-full rounded-full
+                {% if graduation_pct >= 75 %}bg-green-500{% elif graduation_pct >= 50 %}bg-blue-500{% elif graduation_pct >= 25 %}bg-amber-500{% else %}bg-red-400{% endif %}"
+                style="width:{{ graduation_pct }}%"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-500">
+            <span>{{ credits_earned }} CU earned</span>
+            <span>{{ credits_remaining }} CU remaining</span>
+            <span>{{ total_credits_required }} CU required</span>
+        </div>
+
+        {% if graduation_pct >= 100 %}
+        <div class="mt-4 p-3 rounded-xl bg-green-50 border border-green-200 text-center text-sm text-green-700 font-semibold">
+            <i class="fas fa-star text-green-500 mr-1"></i>
+            Congratulations! You have met all credit requirements for graduation.
+        </div>
+        {% endif %}
+    </div>
     {% endif %}
 
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    {# SECTION 6 — Transcript & Export                                        #}
-    {# ═══════════════════════════════════════════════════════════════════════ #}
-    <section class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl border border-indigo-100 p-4 sm:p-5 lg:p-6 mb-5">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-            <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <i class="fas fa-file-alt text-indigo-600"></i>
-            </div>
-            <div class="flex-1">
-                <h3 class="text-sm sm:text-base font-bold text-gray-900 mb-0.5">Official Transcript</h3>
-                <p class="text-xs sm:text-sm text-gray-500">
-                    {% if application.transcript_issued %}
-                        Your transcript is ready.
-                        {% if application.transcript_issued_at %}Issued {{ application.transcript_issued_at|date:"M j, Y" }}.{% endif %}
-                    {% elif application.transcript_requested %}
-                        Your request is being processed. The registrar will contact you when it's ready.
-                    {% else %}
-                        Request your official academic transcript from the registrar's office.
-                    {% endif %}
-                </p>
-            </div>
-            <div class="flex-shrink-0">
-                {% if application.transcript_issued %}
-                <button class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700
-                               text-white text-sm font-semibold rounded-xl shadow-sm transition-all">
-                    <i class="fas fa-download text-xs"></i> Download PDF
-                </button>
-                {% elif application.transcript_requested %}
-                <span class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-yellow-100 text-yellow-700
-                             text-sm font-semibold rounded-xl">
-                    <i class="fas fa-clock text-xs"></i> In Progress
-                </span>
-                {% else %}
-                <button onclick="requestTranscript()"
-                        class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700
-                               text-white text-sm font-semibold rounded-xl shadow-sm transition-all">
-                    <i class="fas fa-paper-plane text-xs"></i> Request Transcript
-                </button>
-                {% endif %}
-            </div>
-        </div>
-    </section>
-
-    {% endif %}{# end if application #}
-
 </div>
+{% endblock %}
 
-{# ═══════════════════════════════════════════════════════════════════════════ #}
-{# JS: Requirements tab filter + transcript request SweetAlert                #}
-{# ═══════════════════════════════════════════════════════════════════════════ #}
+{% block extra_js %}
 <script>
-// ── Requirements filter ────────────────────────────────────────────────────
-function filterRequirements(type) {
-    // Update tab styles
-    document.querySelectorAll('.req-tab').forEach(t => {
-        t.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
-        t.classList.add('text-gray-500');
-    });
-    const active = document.getElementById('tab-' + type);
-    if (active) {
-        active.classList.add('bg-white', 'text-gray-800', 'shadow-sm');
-        active.classList.remove('text-gray-500');
-    }
-    // Filter rows (both table rows and mobile cards share .req-row)
-    document.querySelectorAll('.req-row').forEach(row => {
-        if (type === 'all' || row.dataset.type === type) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-// ── Transcript request ─────────────────────────────────────────────────────
-function requestTranscript() {
-    if (typeof Swal === 'undefined') {
-        alert('Transcript request submitted. The registrar will be in touch.');
-        return;
-    }
+function confirmTranscriptRequest() {
     Swal.fire({
         title: 'Request Official Transcript?',
-        html: `<p class="text-sm text-gray-600">Your transcript will be prepared by the registrar's office.
-               You will be notified when it is ready for download.</p>`,
-        icon: 'question',
+        html: `<p class="text-sm text-gray-600 mt-1">
+                    This action is <strong>permanent and cannot be undone</strong>.<br><br>
+                    Your transcript will be compiled from all currently released grades.
+                    Any results added after this request will <strong>not</strong> appear on this transcript.
+               </p>`,
+        icon: 'warning',
+        iconColor: '#f59e0b',
         showCancelButton: true,
-        confirmButtonText: 'Yes, Request',
+        confirmButtonColor: '#4a6bff',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fas fa-paper-plane mr-1"></i> Yes, Request It',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#4f46e5',
-        customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' },
-    }).then(result => {
+        reverseButtons: true,
+        customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'rounded-lg text-sm font-semibold',
+            cancelButton: 'rounded-lg text-sm font-semibold',
+        }
+    }).then((result) => {
         if (result.isConfirmed) {
-            // POST to a transcript-request endpoint if you add one,
-            // or just show a success message for now.
-            Swal.fire({
-                title: 'Request Sent!',
-                text: 'The registrar has been notified. Check back soon.',
-                icon: 'success',
-                confirmButtonColor: '#4f46e5',
-                customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl' },
-            });
+            // Submit whichever form is present
+            const form = document.getElementById('transcriptForm') || document.getElementById('transcriptFormBottom');
+            if (form) form.submit();
         }
     });
 }

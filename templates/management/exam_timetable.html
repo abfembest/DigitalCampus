@@ -1,0 +1,255 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Timetable — {{ exam.reference_code }}{% endblock %}
+{% block breadcrumb %}Exam Management / {{ exam.reference_code }} / Timetable{% endblock %}
+{% block breadcrumb_title %}{{ exam.reference_code }} — Timetable{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-full space-y-6">
+
+    <!-- ── Breadcrumb ── -->
+    <nav class="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
+        <a href="{% url 'management:admin_exam_list' %}"
+           class="hover:text-primary-600 transition-colors flex items-center gap-1">
+            <i class="fas fa-file-alt"></i> Exam Management
+        </a>
+        <i class="fas fa-chevron-right text-gray-300 text-[9px]"></i>
+        <a href="{% url 'management:admin_exam_detail' exam.slug %}"
+           class="hover:text-primary-600 transition-colors font-medium text-gray-600">
+            {{ exam.reference_code }}
+        </a>
+        <i class="fas fa-chevron-right text-gray-300 text-[9px]"></i>
+        <span class="text-gray-700 font-semibold">Update Timetable</span>
+    </nav>
+
+    <!-- ── Page Header ── -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-heading flex items-center gap-3">
+                <span class="inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl
+                             bg-gradient-to-br from-primary-500 to-secondary-500 text-white shadow shrink-0">
+                    <i class="fas fa-calendar-alt text-base sm:text-lg"></i>
+                </span>
+                Update Timetable
+            </h1>
+            <p class="text-sm text-gray-500 mt-1 ml-14 line-clamp-1">
+                {{ exam.title }}
+                <span class="font-mono text-xs text-gray-400 ml-1">{{ exam.reference_code }}</span>
+            </p>
+        </div>
+        <a href="{% url 'management:admin_exam_detail' exam.slug %}"
+           class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium
+                  border border-gray-300 bg-white text-gray-700 hover:bg-gray-50
+                  rounded-xl transition-colors self-start sm:self-center shrink-0">
+            <i class="fas fa-arrow-left text-xs text-gray-400"></i> Back to Exam
+        </a>
+    </div>
+
+    <!-- ── Flash Messages ── -->
+    {% if messages %}
+    <div class="space-y-2">
+        {% for msg in messages %}
+        <div class="flex items-start gap-3 p-4 rounded-2xl border
+                    {% if msg.tags == 'error' %}bg-red-50 border-red-200 text-red-700
+                    {% elif msg.tags == 'success' %}bg-green-50 border-green-200 text-green-700
+                    {% else %}bg-blue-50 border-blue-200 text-blue-700{% endif %}">
+            <i class="fas {% if msg.tags == 'error' %}fa-times-circle{% elif msg.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} mt-0.5 shrink-0"></i>
+            <span class="text-sm">{{ msg }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── Clash Warning ── -->
+    {% if exam.has_clash %}
+    <div class="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
+        <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+            <i class="fas fa-exclamation-triangle text-red-600 text-sm"></i>
+        </div>
+        <div>
+            <p class="text-sm font-semibold text-red-800">Scheduling Clash Detected</p>
+            {% if exam.clash_notes %}<p class="text-xs text-red-600 mt-0.5">{{ exam.clash_notes }}</p>{% endif %}
+            <p class="text-xs text-red-500 mt-1">Update the date and time below to resolve this conflict.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- ── Form ── -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+
+                <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
+                        <i class="fas fa-edit text-primary-500 text-xs"></i>
+                    </span>
+                    <h2 class="text-sm font-bold text-gray-800">Schedule Details</h2>
+                </div>
+
+                <form method="post" class="p-6 space-y-6">
+                    {% csrf_token %}
+
+                    <!-- Date -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                            Exam Date <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" name="exam_date"
+                               value="{{ exam.exam_date|date:'Y-m-d' }}"
+                               required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm
+                                      focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+                                      transition bg-white">
+                    </div>
+
+                    <!-- Start + End time -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                                Start Time <span class="text-red-500">*</span>
+                            </label>
+                            <input type="time" name="start_time"
+                                   value="{{ exam.start_time|time:'H:i' }}"
+                                   required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm
+                                          focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+                                          transition bg-white tabular-nums">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                                End Time <span class="text-red-500">*</span>
+                            </label>
+                            <input type="time" name="end_time"
+                                   value="{{ exam.end_time|time:'H:i' }}"
+                                   required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm
+                                          focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+                                          transition bg-white tabular-nums">
+                        </div>
+                    </div>
+
+                    <!-- Venue -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                            Venue / Hall
+                        </label>
+                        <input type="text" name="venue"
+                               value="{{ exam.venue }}"
+                               placeholder="e.g. Lecture Theatre 1, Hall B, Online"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm
+                                      focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+                                      transition bg-white">
+                        <p class="mt-1.5 text-xs text-gray-400">Leave blank for Online / TBD</p>
+                    </div>
+
+                    <!-- Conflict check notice -->
+                    <div class="flex items-start gap-3 p-4 bg-primary-50 border border-primary-100 rounded-xl">
+                        <i class="fas fa-shield-alt text-primary-400 mt-0.5 shrink-0 text-sm"></i>
+                        <p class="text-xs text-primary-700 leading-relaxed">
+                            <strong>Automatic conflict detection</strong> — the system checks for overlapping exams in
+                            the same department and time window before saving. The save will be blocked if a conflict is found.
+                        </p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
+                        <a href="{% url 'management:admin_exam_detail' exam.slug %}"
+                           class="px-5 py-2.5 text-sm font-medium border border-gray-300 text-gray-700
+                                  rounded-xl hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </a>
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold
+                                       bg-primary-600 hover:bg-primary-700 text-white rounded-xl
+                                       transition-colors shadow-sm">
+                            <i class="fas fa-save"></i> Save Timetable
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ── Right: current info + context ── -->
+        <div class="space-y-5">
+
+            <!-- Current Schedule -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                        <i class="fas fa-clock text-gray-400 text-xs"></i>
+                    </span>
+                    <h2 class="text-sm font-bold text-gray-800">Current Schedule</h2>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div>
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Date</div>
+                        <div class="text-sm font-semibold text-gray-800">{{ exam.exam_date|date:"D, d M Y" }}</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Start</div>
+                            <div class="text-sm font-semibold text-gray-800 tabular-nums">{{ exam.start_time|time:"H:i" }}</div>
+                        </div>
+                        <div>
+                            <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">End</div>
+                            <div class="text-sm font-semibold text-gray-800 tabular-nums">{{ exam.end_time|time:"H:i" }}</div>
+                        </div>
+                    </div>
+                    {% if exam.venue %}
+                    <div>
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Venue</div>
+                        <div class="text-sm text-gray-700">{{ exam.venue }}</div>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Duration</div>
+                        <div class="text-sm text-gray-700">{{ exam.duration_minutes }} minutes</div>
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Instruction Window</div>
+                        <div class="text-sm text-gray-700">{{ exam.instruction_window_minutes }} min before start</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course context -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                        <i class="fas fa-info-circle text-gray-400 text-xs"></i>
+                    </span>
+                    <h2 class="text-sm font-bold text-gray-800">Context</h2>
+                </div>
+                <div class="p-5 space-y-3.5">
+                    <div>
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">LMS Course</div>
+                        <div class="text-sm font-medium text-gray-800">{{ exam.course.title }}</div>
+                    </div>
+                    {% if exam.course.academic_course %}
+                    <div>
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Academic Link</div>
+                        <div class="text-sm text-gray-700">{{ exam.course.academic_course.code }}</div>
+                    </div>
+                    {% endif %}
+                    {% if exam.department %}
+                    <div>
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Department</div>
+                        <div class="text-sm text-gray-700">{{ exam.department.name }}</div>
+                    </div>
+                    {% endif %}
+                    {% if exam.academic_session %}
+                    <div>
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Session</div>
+                        <div class="text-sm text-gray-700">{{ exam.academic_session.name }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

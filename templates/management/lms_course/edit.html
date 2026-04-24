@@ -1,285 +1,362 @@
 {% extends 'management/base.html' %}
 {% load static %}
 
-{% block title %}Edit LMS Course - MIU Portal{% endblock %}
+{% block title %}Edit — {{ course.title }} — MIU Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-12xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-center gap-4">
-        <a href="{% url 'management:lms_courses_list' %}" class="p-2 hover:bg-gray-100 rounded-lg">
-            <i class="fas fa-arrow-left text-gray-600"></i>
-        </a>
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">Edit LMS Course</h1>
-            <p class="text-gray-600 mt-1">Update course information: {{ course.title }}</p>
+<div class="max-w-3xl mx-auto space-y-5">
+
+  {# Back header — only shown on full-page (non-modal) render #}
+  {% if not is_modal %}
+  <div class="flex items-center gap-3">
+    <a href="{% url 'management:lms_courses_list' %}"
+       class="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 transition-all">
+      <i class="fas fa-arrow-left text-sm"></i>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 font-heading">Edit LMS Course</h1>
+      <p class="text-sm text-gray-500" id="editFormTitle">{{ course.title }}</p>
+    </div>
+  </div>
+  {% else %}
+  {# In modal context — just provide the title hook for JS #}
+  <span id="editFormTitle" class="hidden">{{ course.title }}</span>
+  {% endif %}
+
+  {# ═══════════════════════════ THE FORM ═══════════════════════════ #}
+  <form method="post"
+        action="{% url 'management:lms_course_edit' course.pk %}"
+        enctype="multipart/form-data"
+        data-lms-edit-form
+        class="{% if not is_modal %}bg-white rounded-xl border border-gray-200 overflow-hidden{% endif %} divide-y divide-gray-100">
+    {% csrf_token %}
+
+    {# ── Section 1: Academic Link ── #}
+    <div class="px-6 py-5 space-y-4">
+      <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">1</span>
+        Academic Course Link <span class="text-red-500 text-xs">*</span>
+      </h3>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1.5">
+          Link to Academic Course <span class="text-red-500">*</span>
+        </label>
+        {{ form.academic_course }}
+        {% if form.academic_course.errors %}
+          <p class="text-xs text-red-600 mt-1">{{ form.academic_course.errors.0 }}</p>
+        {% endif %}
+        <p class="text-xs text-gray-400 mt-1">Ties this LMS delivery to the academic catalogue (Faculty → Dept → Program → Course).</p>
+        <div id="academic-linked-badge"
+             class="hidden mt-2 inline-flex items-center gap-1.5 text-xs bg-green-50 text-green-700 border border-green-200 rounded-lg px-3 py-1.5">
+          <i class="fas fa-link"></i> Linked — code &amp; title inherited from catalogue
         </div>
+      </div>
     </div>
 
-    <!-- Form -->
-    <form method="post" enctype="multipart/form-data" class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {% csrf_token %}
-        
-        <div class="p-8 space-y-8">
-            <!-- Basic Information -->
-            <div>
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-info-circle mr-3 text-primary-600"></i>Basic Information
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Course Title <span class="text-red-500">*</span>
-                        </label>
-                        {{ form.title }}
-                        {% if form.title.errors %}<p class="mt-1 text-sm text-red-600">{{ form.title.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Course Code <span class="text-red-500">*</span>
-                        </label>
-                        {{ form.code }}
-                        {% if form.code.errors %}<p class="mt-1 text-sm text-red-600">{{ form.code.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Category <span class="text-red-500">*</span>
-                        </label>
-                        {{ form.category }}
-                        {% if form.category.errors %}<p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Language</label>
-                        {{ form.language }}
-                        {% if form.language.errors %}<p class="mt-1 text-sm text-red-600">{{ form.language.errors.0 }}</p>{% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Descriptions -->
-            <div class="pt-8 border-t border-gray-200">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-file-alt mr-3 text-primary-600"></i>Descriptions
-                </h2>
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Short Description <span class="text-red-500">*</span>
-                        </label>
-                        {{ form.short_description }}
-                        {% if form.short_description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.short_description.errors.0 }}</p>{% endif %}
-                        <p class="text-xs text-gray-500 mt-1">Max 500 characters - used in course listings</p>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Full Description <span class="text-red-500">*</span>
-                        </label>
-                        {{ form.description }}
-                        {% if form.description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Learning Objectives
-                        </label>
-                        {{ form.learning_objectives_text }}
-                        {% if form.learning_objectives_text.errors %}<p class="mt-1 text-sm text-red-600">{{ form.learning_objectives_text.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Prerequisites
-                        </label>
-                        {{ form.prerequisites_text }}
-                        {% if form.prerequisites_text.errors %}<p class="mt-1 text-sm text-red-600">{{ form.prerequisites_text.errors.0 }}</p>{% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Course Details -->
-            <div class="pt-8 border-t border-gray-200">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-sliders-h mr-3 text-primary-600"></i>Course Details
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
-                        {{ form.difficulty_level }}
-                        {% if form.difficulty_level.errors %}<p class="mt-1 text-sm text-red-600">{{ form.difficulty_level.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Duration (Hours)</label>
-                        {{ form.duration_hours }}
-                        {% if form.duration_hours.errors %}<p class="mt-1 text-sm text-red-600">{{ form.duration_hours.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Students</label>
-                        {{ form.max_students }}
-                        {% if form.max_students.errors %}<p class="mt-1 text-sm text-red-600">{{ form.max_students.errors.0 }}</p>{% endif %}
-                        <p class="text-xs text-gray-500 mt-1">Leave empty for unlimited</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Instructor -->
-            <div class="pt-8 border-t border-gray-200">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-chalkboard-user mr-3 text-primary-600"></i>Instructor
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Instructor</label>
-                        {{ form.instructor }}
-                        {% if form.instructor.errors %}<p class="mt-1 text-sm text-red-600">{{ form.instructor.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Instructor Name</label>
-                        {{ form.instructor_name }}
-                        {% if form.instructor_name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.instructor_name.errors.0 }}</p>{% endif %}
-                        <p class="text-xs text-gray-500 mt-1">If different from selected user</p>
-                    </div>
-                </div>
-                
-                <div class="mt-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Instructor Biography</label>
-                    {{ form.instructor_bio }}
-                    {% if form.instructor_bio.errors %}<p class="mt-1 text-sm text-red-600">{{ form.instructor_bio.errors.0 }}</p>{% endif %}
-                </div>
-            </div>
-
-            <!-- Media -->
-            <div class="pt-8 border-t border-gray-200">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-image mr-3 text-primary-600"></i>Media
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Course Thumbnail</label>
-                        {% if course.thumbnail %}
-                        <div class="mb-3">
-                            <img src="{{ course.thumbnail.url }}" alt="Current thumbnail" class="h-40 w-full object-cover rounded-lg border border-gray-300">
-                        </div>
-                        {% endif %}
-                        {{ form.thumbnail }}
-                        {% if form.thumbnail.errors %}<p class="mt-1 text-sm text-red-600">{{ form.thumbnail.errors.0 }}</p>{% endif %}
-                        <p class="text-xs text-gray-500 mt-1">Recommended: 300x200px</p>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Promo Video URL</label>
-                        {{ form.promo_video_url }}
-                        {% if form.promo_video_url.errors %}<p class="mt-1 text-sm text-red-600">{{ form.promo_video_url.errors.0 }}</p>{% endif %}
-                        <p class="text-xs text-gray-500 mt-1">YouTube or Vimeo link</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Enrollment -->
-            <div class="pt-8 border-t border-gray-200">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-calendar-alt mr-3 text-primary-600"></i>Enrollment Period
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Enrollment Start</label>
-                        {{ form.enrollment_start_date }}
-                        {% if form.enrollment_start_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.enrollment_start_date.errors.0 }}</p>{% endif %}
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Enrollment End</label>
-                        {{ form.enrollment_end_date }}
-                        {% if form.enrollment_end_date.errors %}<p class="mt-1 text-sm text-red-600">{{ form.enrollment_end_date.errors.0 }}</p>{% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Certificate -->
-            <div class="pt-8 border-t border-gray-200">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-certificate mr-3 text-primary-600"></i>Certificate
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="flex items-start">
-                        <div class="flex items-center h-5 mt-1">
-                            {{ form.has_certificate }}
-                        </div>
-                        <div class="ml-3">
-                            <label class="text-sm font-medium text-gray-700">Issue Certificate on Completion</label>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Certificate Template</label>
-                        {{ form.certificate_template }}
-                        {% if form.certificate_template.errors %}<p class="mt-1 text-sm text-red-600">{{ form.certificate_template.errors.0 }}</p>{% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- SEO & Status -->
-            <div class="pt-8 border-t border-gray-200">
-                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-search mr-3 text-primary-600"></i>SEO & Status
-                </h2>
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Meta Description</label>
-                        {{ form.meta_description }}
-                        {% if form.meta_description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.meta_description.errors.0 }}</p>{% endif %}
-                        <p class="text-xs text-gray-500 mt-1">160 characters for search results</p>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Meta Keywords</label>
-                        {{ form.meta_keywords }}
-                        {% if form.meta_keywords.errors %}<p class="mt-1 text-sm text-red-600">{{ form.meta_keywords.errors.0 }}</p>{% endif %}
-                        <p class="text-xs text-gray-500 mt-1">Comma-separated keywords</p>
-                    </div>
-                    
-                    <div>
-                        <div class="flex items-center gap-6">
-                            <div class="flex items-start">
-                                <div class="flex items-center h-5 mt-1">
-                                    {{ form.is_published }}
-                                </div>
-                                <div class="ml-3">
-                                    <label class="text-sm font-medium text-gray-700">Published</label>
-                                    <p class="text-xs text-gray-500">Make visible to students</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-start">
-                                <div class="flex items-center h-5 mt-1">
-                                    {{ form.is_featured }}
-                                </div>
-                                <div class="ml-3">
-                                    <label class="text-sm font-medium text-gray-700">Featured</label>
-                                    <p class="text-xs text-gray-500">Highlight on homepage</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    {# ── Section 2: Identity ── #}
+    <div class="px-6 py-5 space-y-4">
+      <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">2</span>
+        Course Identity
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Title <span class="text-red-500">*</span></label>
+          {{ form.title }}
+          {% if form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ form.title.errors.0 }}</p>{% endif %}
         </div>
-
-        <!-- Form Actions -->
-        <div class="px-8 py-6 bg-gray-50 border-t border-gray-200 flex justify-between">
-            <a href="{% url 'management:lms_courses_list' %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100">
-                Cancel
-            </a>
-            <button type="submit" class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                <i class="fas fa-save mr-2"></i>Update Course
-            </button>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Course Code</label>
+          {{ form.code }}
+          {% if form.code.errors %}<p class="text-xs text-red-600 mt-1">{{ form.code.errors.0 }}</p>{% endif %}
         </div>
-    </form>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Language</label>
+          {{ form.language }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Level</label>
+          {{ form.difficulty_level }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Duration (hours)</label>
+          {{ form.duration_hours }}
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Short Description <span class="text-red-500">*</span></label>
+        {{ form.short_description }}
+        {% if form.short_description.errors %}<p class="text-xs text-red-600 mt-1">{{ form.short_description.errors.0 }}</p>{% endif %}
+        <p class="text-xs text-gray-400 mt-1">Max 500 chars — used in course listings.</p>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Full Description</label>
+        {{ form.description }}
+        {% if form.description.errors %}<p class="text-xs text-red-600 mt-1">{{ form.description.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+
+    {# ── Section 3: Session & Term ── #}
+    <div class="px-6 py-5 space-y-4">
+      <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">3</span>
+        Session &amp; Term
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Academic Session</label>
+          {{ form.session }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Term</label>
+          {{ form.term }}
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 4: Instructor ── #}
+    <div class="px-6 py-5 space-y-4">
+      <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">4</span>
+        Instructor
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Instructor (User)</label>
+          {{ form.instructor }}
+          {% if form.instructor.errors %}<p class="text-xs text-red-600 mt-1">{{ form.instructor.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Display Name
+            <span class="text-gray-400 font-normal">(auto-filled)</span>
+          </label>
+          {{ form.instructor_name }}
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Instructor Bio</label>
+          {{ form.instructor_bio }}
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 5: Content & Learning ── #}
+    <div class="px-6 py-5 space-y-4">
+      <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">5</span>
+        Content &amp; Learning
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Learning Objectives <span class="font-normal text-gray-400">(one per line)</span></label>
+          {{ form.learning_objectives_text }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Prerequisites <span class="font-normal text-gray-400">(one per line)</span></label>
+          {{ form.prerequisites_text }}
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Promo Video URL</label>
+        {{ form.promo_video_url }}
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Thumbnail</label>
+        {% if course.thumbnail %}
+        <div class="mb-2">
+          <img src="{{ course.thumbnail.url }}" alt="Current thumbnail"
+               class="h-32 w-full object-cover rounded-xl border border-gray-200">
+          <p class="text-xs text-gray-400 mt-1">Current thumbnail — upload a new file to replace it.</p>
+        </div>
+        {% endif %}
+        {{ form.thumbnail }}
+      </div>
+    </div>
+
+    {# ── Section 6: Enrollment ── #}
+    <div id="wrap-enrollment" class="px-6 py-5 space-y-4">
+      <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">6</span>
+        Enrollment Settings
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Max Students</label>
+          {{ form.max_students }}
+          <p class="text-xs text-gray-400 mt-1">Leave blank for unlimited.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Enrollment Start</label>
+          {{ form.enrollment_start_date }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Enrollment End</label>
+          {{ form.enrollment_end_date }}
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 7: Certificate ── #}
+    <div id="wrap-certificate" class="px-6 py-5 space-y-4">
+      <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">7</span>
+        Certificate
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+        <div class="flex items-center gap-3">
+          {{ form.has_certificate }}
+          <label class="text-sm font-medium text-gray-700">Issue Certificate</label>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Certificate Fee ($)</label>
+          {{ form.certificate_fee }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Template Name</label>
+          {{ form.certificate_template }}
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 8: SEO ── #}
+    <div class="px-6 py-5 space-y-4">
+      <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <span class="w-5 h-5 bg-gray-400 text-white rounded text-xs flex items-center justify-center font-bold">8</span>
+        SEO <span class="text-xs font-normal text-gray-400">(optional)</span>
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Meta Description</label>
+          {{ form.meta_description }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1.5">Meta Keywords</label>
+          {{ form.meta_keywords }}
+        </div>
+      </div>
+    </div>
+
+    {# ── Publish flags ── #}
+    <div class="px-6 py-5">
+      <div class="flex flex-wrap gap-6">
+        <label class="flex items-center gap-3 cursor-pointer">
+          {{ form.is_published }}
+          <div>
+            <p class="text-sm font-medium text-gray-800">Published</p>
+            <p class="text-xs text-gray-400">Visible to students</p>
+          </div>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          {{ form.is_featured }}
+          <div>
+            <p class="text-sm font-medium text-gray-800">Featured</p>
+            <p class="text-xs text-gray-400">Highlighted in listings</p>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    {# ── Form actions ── #}
+    <div class="flex items-center justify-between px-6 py-4 bg-gray-50 {% if not is_modal %}rounded-b-xl{% endif %}">
+      {% if is_modal %}
+      <button type="button" onclick="closeModal('editModal')"
+              class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">
+        Cancel
+      </button>
+      {% else %}
+      <a href="{% url 'management:lms_courses_list' %}"
+         class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">
+        ← Back to List
+      </a>
+      {% endif %}
+      <button type="submit"
+              class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow transition-all">
+        <i class="fas fa-save mr-2"></i> Save Changes
+      </button>
+    </div>
+  </form>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // ── Academic-course auto-fill ─────────────────────────────────────────────
+  const HIDE_WHEN_LINKED = ['wrap-enrollment', 'wrap-certificate'];
+
+  const acSel   = document.getElementById('id_academic_course');
+  const badge   = document.getElementById('academic-linked-badge');
+  const titleIn = document.getElementById('id_title');
+  const codeIn  = document.getElementById('id_code');
+
+  function applyState() {
+    const linked = acSel && acSel.value !== '';
+    if (badge) badge.classList.toggle('hidden', !linked);
+    HIDE_WHEN_LINKED.forEach(function (id) {
+      const wrapper = document.getElementById(id);
+      if (!wrapper) return;
+      wrapper.style.display = linked ? 'none' : '';
+      wrapper.querySelectorAll('input, select, textarea').forEach(function (el) {
+        el.disabled = linked;
+      });
+    });
+  }
+
+  function fillFromAcademic() {
+    if (!acSel) return;
+    const linked = acSel.value !== '';
+    if (linked) {
+      const txt = acSel.options[acSel.selectedIndex].text.trim();
+      const sep = txt.indexOf(' \u2014 ');   // ' — '
+      const parsedCode  = sep !== -1 ? txt.substring(0, sep).trim() : '';
+      const parsedTitle = sep !== -1 ? txt.substring(sep + 3).trim() : txt;
+      if (titleIn) {
+        titleIn.value = parsedTitle; titleIn.readOnly = true;
+        titleIn.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+      }
+      if (codeIn) {
+        codeIn.value = parsedCode; codeIn.readOnly = true;
+        codeIn.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
+      }
+    } else {
+      if (titleIn) { titleIn.readOnly = false; titleIn.classList.remove('bg-gray-50','text-gray-600','cursor-not-allowed'); }
+      if (codeIn)  { codeIn.readOnly  = false; codeIn.classList.remove('bg-gray-50','text-gray-600','cursor-not-allowed'); }
+    }
+  }
+
+  if (acSel) {
+    acSel.addEventListener('change', function () { applyState(); fillFromAcademic(); });
+    applyState();
+    fillFromAcademic();
+  }
+
+  // ── Instructor display-name auto-fill ─────────────────────────────────────
+  const INSTRUCTORS = {{ instructors_json|safe }};
+  const instrSel    = document.getElementById('id_instructor');
+  const instrName   = document.getElementById('id_instructor_name');
+
+  function fillInstructorName() {
+    if (!instrSel || !instrName) return;
+    const pk = instrSel.value;
+    if (pk && INSTRUCTORS[pk] && !instrName.dataset.manuallyEdited) {
+      instrName.value = INSTRUCTORS[pk].full_name;
+    } else if (!pk && !instrName.dataset.manuallyEdited) {
+      instrName.value = '';
+    }
+  }
+
+  if (instrSel) {
+    instrSel.addEventListener('change', function () {
+      instrName.removeAttribute('data-manually-edited');
+      fillInstructorName();
+    });
+    fillInstructorName();
+  }
+  if (instrName) {
+    instrName.addEventListener('input', function () {
+      this.dataset.manuallyEdited = 'true';
+    });
+  }
+})();
+</script>
 {% endblock %}

@@ -1,0 +1,874 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}{{ exam.title }} — Exam Detail{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6 overflow-x-auto" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center gap-1.5 text-xs whitespace-nowrap text-gray-500">
+            <li>
+                <a href="{% url 'instructor:dashboard' %}" class="hover:text-primary-600 transition-colors">Dashboard</a>
+            </li>
+            <li class="flex items-center gap-1.5">
+                <i class="fas fa-chevron-right text-gray-300 text-[10px]"></i>
+                <a href="{% url 'instructor:exam_list' %}" class="hover:text-primary-600 transition-colors">My Exams</a>
+            </li>
+            <li class="flex items-center gap-1.5">
+                <i class="fas fa-chevron-right text-gray-300 text-[10px]"></i>
+                <span class="text-gray-700 font-medium truncate max-w-[240px]">{{ exam.title }}</span>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% if messages %}
+    <div class="mb-5 space-y-2">
+        {% for message in messages %}
+        <div class="flex items-start gap-3 px-4 py-3 rounded-lg border
+            {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
+            {% elif message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
+            {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle text-red-500{% elif message.tags == 'success' %}fa-check-circle text-green-500{% else %}fa-info-circle text-blue-500{% endif %} mt-0.5 flex-shrink-0"></i>
+            <p class="text-sm">{{ message }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ══════════════════════════════════════════════════════════
+         REJECTION ALERT
+    ═══════════════════════════════════════════════════════════ -->
+    {% if exam.status == 'rejected' %}
+    <div class="mb-6 bg-red-50 border border-red-300 rounded-xl p-5">
+        <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="fas fa-ban text-red-600"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 class="text-base font-semibold text-red-900 mb-2">This exam was rejected</h3>
+                <div class="bg-white border border-red-200 rounded-lg p-3 mb-3 text-sm text-red-800 whitespace-pre-line leading-relaxed">
+                    {{ exam.rejection_reason|default:"No reason was provided by the reviewer." }}
+                </div>
+                {% if exam.rejected_at %}
+                <p class="text-xs text-red-500 mb-3">
+                    Rejected by
+                    <strong>{{ exam.rejected_by.get_full_name|default:exam.rejected_by.username }}</strong>
+                    on {{ exam.rejected_at|date:"M j, Y \a\t H:i" }}
+                </p>
+                {% endif %}
+                <p class="text-sm text-red-700 font-medium mb-4">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
+                    Review the feedback above, make the necessary corrections below, then re-submit for approval.
+                </p>
+                <form method="post" action="{% url 'instructor:exam_submit' slug=exam.slug %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-semibold shadow-sm">
+                        <i class="fas fa-paper-plane"></i> Re-submit for Approval
+                    </button>
+                </form>
+                {% if exam.submission_count > 1 %}
+                <div class="mt-4 pt-4 border-t border-red-200">
+                    <p class="text-xs text-red-600 font-medium mb-1"><i class="fas fa-history mr-1"></i>Submission history</p>
+                    <p class="text-xs text-red-500">This exam has been submitted {{ exam.submission_count }} time{{ exam.submission_count|pluralize }}.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ══════════════════════════════════════════════════════════
+         APPROVAL WORKFLOW STATUS BAR
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4 mb-6">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Approval Workflow</p>
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+
+            <!-- Step: Draft -->
+            {% with s=exam.status %}
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border
+                    {% if s == 'draft' %}bg-gray-600 text-white border-gray-600 shadow-sm{% else %}bg-gray-50 text-gray-400 border-gray-100{% endif %}">
+                    <i class="fas fa-pencil-alt"></i> Draft
+                </span>
+                {% if exam.created_at and s == 'draft' %}<span class="text-xs text-gray-400">{{ exam.created_at|date:"M j" }}</span>{% endif %}
+            </div>
+            <i class="fas fa-chevron-right text-gray-200 text-[10px] flex-shrink-0"></i>
+
+            <!-- Step: Submitted -->
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border
+                    {% if s == 'submitted' %}bg-yellow-500 text-white border-yellow-500 shadow-sm{% elif s in 'approved,rejected,published' %}bg-gray-100 text-gray-500 border-gray-200{% else %}bg-gray-50 text-gray-300 border-gray-100{% endif %}">
+                    <i class="fas fa-paper-plane"></i> Submitted
+                </span>
+                {% if exam.submitted_at %}<span class="text-xs text-gray-400">{{ exam.submitted_at|date:"M j" }}</span>{% endif %}
+            </div>
+            <i class="fas fa-chevron-right text-gray-200 text-[10px] flex-shrink-0"></i>
+
+            <!-- Step: Approved / Rejected (branch) -->
+            <div class="flex items-center gap-2">
+                {% if s == 'rejected' %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border bg-red-600 text-white border-red-600 shadow-sm">
+                    <i class="fas fa-ban"></i> Rejected
+                </span>
+                {% if exam.rejected_at %}<span class="text-xs text-gray-400">{{ exam.rejected_at|date:"M j" }}</span>{% endif %}
+                {% else %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border
+                    {% if s == 'approved' or s == 'published' %}bg-blue-600 text-white border-blue-600 shadow-sm{% else %}bg-gray-50 text-gray-300 border-gray-100{% endif %}">
+                    <i class="fas fa-thumbs-up"></i> Approved
+                </span>
+                {% if exam.approved_at %}<span class="text-xs text-gray-400">{{ exam.approved_at|date:"M j" }}</span>{% endif %}
+                {% endif %}
+            </div>
+            <i class="fas fa-chevron-right text-gray-200 text-[10px] flex-shrink-0"></i>
+
+            <!-- Step: Published -->
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border
+                    {% if s == 'published' %}bg-green-600 text-white border-green-600 shadow-sm{% else %}bg-gray-50 text-gray-300 border-gray-100{% endif %}">
+                    <i class="fas fa-globe"></i> Published
+                </span>
+                {% if exam.published_at %}<span class="text-xs text-gray-400">{{ exam.published_at|date:"M j" }}</span>{% endif %}
+            </div>
+            {% endwith %}
+
+            <!-- Action button — right aligned -->
+            <div class="ml-auto flex gap-2 flex-shrink-0">
+                {% if exam.status == 'draft' %}
+                <form method="post" action="{% url 'instructor:exam_submit' slug=exam.slug %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-xs font-semibold shadow-sm">
+                        <i class="fas fa-paper-plane"></i> Submit for Approval
+                    </button>
+                </form>
+                {% elif exam.status == 'rejected' %}
+                <form method="post" action="{% url 'instructor:exam_submit' slug=exam.slug %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-semibold shadow-sm">
+                        <i class="fas fa-redo"></i> Re-submit
+                    </button>
+                </form>
+                {% elif exam.status == 'approved' %}
+                <form method="post" action="{% url 'instructor:exam_publish' slug=exam.slug %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-semibold shadow-sm">
+                        <i class="fas fa-globe"></i> Publish Now
+                    </button>
+                </form>
+                {% elif exam.status == 'published' %}
+                <span class="inline-flex items-center gap-1.5 px-3 py-2 bg-green-100 text-green-800 rounded-lg text-xs font-semibold">
+                    <i class="fas fa-check-circle"></i> Live to Students
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB NAVIGATION
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200 mb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 overflow-x-auto">
+        <div class="flex gap-1 min-w-max">
+            <button onclick="switchTab('overview')" id="tab-btn-overview"
+                    class="exam-tab-btn flex items-center gap-2 px-5 py-3.5 text-sm font-semibold border-b-2 whitespace-nowrap transition-all border-primary-600 text-primary-600">
+                <i class="fas fa-info-circle text-xs"></i> Overview
+            </button>
+            {% if exam.status != 'published' %}
+            <button onclick="switchTab('edit')" id="tab-btn-edit"
+                    class="exam-tab-btn flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300">
+                <i class="fas fa-edit text-xs"></i> Edit Details
+            </button>
+            {% endif %}
+            <button onclick="switchTab('questions')" id="tab-btn-questions"
+                    class="exam-tab-btn flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300">
+                <i class="fas fa-list-ol text-xs"></i> Questions
+                <span class="ml-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">{{ exam.active_question_count }}</span>
+            </button>
+            <button onclick="switchTab('results')" id="tab-btn-results"
+                    class="exam-tab-btn flex items-center gap-2 px-5 py-3.5 text-sm font-medium border-b-2 whitespace-nowrap transition-all border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300">
+                <i class="fas fa-chart-bar text-xs"></i> Results
+            </button>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: OVERVIEW
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="tab-overview" class="exam-tab-panel">
+
+        <!-- Key Details Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-3">Scheduling</p>
+                <p class="text-sm font-medium text-gray-800"><i class="fas fa-calendar-alt text-gray-400 mr-2"></i>{{ exam.exam_date|date:"l, M j, Y" }}</p>
+                <p class="text-sm text-gray-600 mt-2"><i class="fas fa-clock text-gray-400 mr-2"></i>{{ exam.start_time|time:"H:i" }} – {{ exam.end_time|time:"H:i" }}</p>
+                <p class="text-sm text-gray-600 mt-2"><i class="fas fa-hourglass-half text-gray-400 mr-2"></i>{{ exam.duration_minutes }} minutes</p>
+                {% if exam.venue %}
+                <p class="text-sm text-gray-600 mt-2"><i class="fas fa-map-marker-alt text-gray-400 mr-2"></i>{{ exam.venue }}</p>
+                {% endif %}
+                <p class="text-sm text-gray-600 mt-2 capitalize"><i class="fas fa-desktop text-gray-400 mr-2"></i>{{ exam.get_mode_display }}</p>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-3">Question Pool</p>
+                <p class="text-sm font-medium text-gray-800"><i class="fas fa-question-circle text-gray-400 mr-2"></i>{{ exam.active_question_count }} active question{{ exam.active_question_count|pluralize }}</p>
+                <p class="text-sm text-gray-600 mt-2"><i class="fas fa-star text-gray-400 mr-2"></i>{{ exam.computed_total_marks }} total marks</p>
+                {% if exam.pass_mark %}<p class="text-sm text-gray-600 mt-2"><i class="fas fa-check-double text-gray-400 mr-2"></i>Pass mark: {{ exam.pass_mark }}</p>{% endif %}
+                {% if exam.questions_per_student %}<p class="text-sm text-gray-600 mt-2"><i class="fas fa-user text-gray-400 mr-2"></i>{{ exam.questions_per_student }} questions per student</p>{% endif %}
+                <p class="text-sm text-gray-600 mt-2"><i class="fas fa-tag text-gray-400 mr-2"></i>{{ exam.get_exam_type_display }}</p>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-3">Behaviour Settings</p>
+                <p class="text-sm text-gray-700 flex items-center gap-2 mt-2">
+                    <i class="fas {% if exam.shuffle_questions %}fa-check-circle text-green-500{% else %}fa-times-circle text-gray-300{% endif %}"></i>
+                    Shuffle Questions
+                </p>
+                <p class="text-sm text-gray-700 flex items-center gap-2 mt-2">
+                    <i class="fas {% if exam.shuffle_options %}fa-check-circle text-green-500{% else %}fa-times-circle text-gray-300{% endif %}"></i>
+                    Shuffle Options
+                </p>
+                <p class="text-sm text-gray-700 flex items-center gap-2 mt-2">
+                    <i class="fas {% if exam.show_result_immediately %}fa-check-circle text-green-500{% else %}fa-times-circle text-gray-300{% endif %}"></i>
+                    Show Result Immediately
+                </p>
+                <p class="text-sm text-gray-600 mt-2">
+                    <i class="fas fa-eye text-gray-400 mr-2"></i>Instruction window: {{ exam.instruction_window_minutes }} min
+                </p>
+            </div>
+        </div>
+
+        {% if exam.description %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+            <div class="px-5 py-3 border-b border-gray-100 bg-gray-50/70">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Internal Description</h3>
+            </div>
+            <p class="px-5 py-4 text-sm text-gray-600 whitespace-pre-line leading-relaxed">{{ exam.description }}</p>
+        </div>
+        {% endif %}
+
+        {% if exam.instructions %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+            <div class="px-5 py-3 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <i class="fas fa-info-circle text-blue-400"></i> Student Instructions
+                </h3>
+                <span class="text-xs text-gray-400">shown on countdown page</span>
+            </div>
+            <p class="px-5 py-4 text-sm text-gray-600 whitespace-pre-line leading-relaxed">{{ exam.instructions }}</p>
+        </div>
+        {% endif %}
+
+        {% if exam.special_instructions %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+            <div class="px-5 py-3 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <i class="fas fa-clipboard text-orange-400"></i> Special Instructions
+                </h3>
+                <span class="text-xs text-gray-400">shown on timetable</span>
+            </div>
+            <p class="px-5 py-4 text-sm text-gray-600 whitespace-pre-line leading-relaxed">{{ exam.special_instructions }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Audit Trail -->
+        {% if status_logs %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-100 bg-gray-50/70">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <i class="fas fa-history text-gray-400"></i> Audit Trail
+                </h3>
+            </div>
+            <div class="px-5 py-4 space-y-4">
+                {% for log in status_logs %}
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 flex flex-col items-center pt-0.5">
+                        <span class="w-2 h-2 rounded-full bg-gray-300 mt-0.5"></span>
+                        {% if not forloop.last %}<span class="w-px flex-1 bg-gray-100 mt-1 min-h-[16px]"></span>{% endif %}
+                    </div>
+                    <div class="pb-1">
+                        <p class="text-xs font-semibold text-gray-800">
+                            <span class="text-gray-400 font-normal">{{ log.from_status|default:"—" }}</span>
+                            <i class="fas fa-arrow-right text-gray-300 mx-1 text-[9px]"></i>
+                            {{ log.to_status }}
+                        </p>
+                        <p class="text-xs text-gray-400 mt-0.5">
+                            {% if log.changed_by %}<span class="text-gray-500">{{ log.changed_by.get_full_name|default:log.changed_by.username }}</span> · {% endif %}
+                            {{ log.created_at|date:"M j, Y · H:i" }}
+                        </p>
+                        {% if log.note %}
+                        <p class="mt-1 text-xs text-gray-500 italic bg-gray-50 border border-gray-100 rounded px-2 py-1">"{{ log.note }}"</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: EDIT DETAILS
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="tab-edit" class="exam-tab-panel hidden">
+
+        {% if exam.status == 'published' %}
+        <div class="mb-6 bg-amber-50 border border-amber-300 rounded-xl px-5 py-4 flex items-start gap-3">
+            <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                <i class="fas fa-exclamation-triangle text-amber-600 text-sm"></i>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-amber-900 mb-0.5">Editing a published exam</p>
+                <p class="text-sm text-amber-700">Saving changes will revert this exam to <strong>Draft</strong> status and require re-approval before it can be published again.</p>
+            </div>
+        </div>
+        {% elif exam.status == 'submitted' %}
+        <div class="mb-6 bg-yellow-50 border border-yellow-300 rounded-xl px-5 py-4 flex items-start gap-3">
+            <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
+                <i class="fas fa-info-circle text-yellow-600 text-sm"></i>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-yellow-900 mb-0.5">Exam is awaiting approval</p>
+                <p class="text-sm text-yellow-700">Saving changes will pull this exam back to <strong>Draft</strong> status and cancel the current review.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'instructor:exam_update' slug=exam.slug %}" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Core Info -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-5">
+                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                    <h3 class="text-sm font-semibold text-gray-700">Core Information</h3>
+                </div>
+                <div class="px-5 py-6 space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Title <span class="text-red-500">*</span></label>
+                        <input type="text" name="title" value="{{ exam.title }}" required
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                               placeholder="e.g. CSC301 — Data Structures End-of-Semester Exam 2025">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Exam Type</label>
+                            <select name="exam_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                <option value="ca" {% if exam.exam_type == 'ca' %}selected{% endif %}>Continuous Assessment</option>
+                                <option value="mid_semester" {% if exam.exam_type == 'mid_semester' %}selected{% endif %}>Mid-Semester Exam</option>
+                                <option value="end_of_semester" {% if exam.exam_type == 'end_of_semester' %}selected{% endif %}>End-of-Semester Exam</option>
+                                <option value="supplementary" {% if exam.exam_type == 'supplementary' %}selected{% endif %}>Supplementary Exam</option>
+                                <option value="resit" {% if exam.exam_type == 'resit' %}selected{% endif %}>Resit / Make-up Exam</option>
+                                <option value="practical" {% if exam.exam_type == 'practical' %}selected{% endif %}>Practical Exam</option>
+                                <option value="oral" {% if exam.exam_type == 'oral' %}selected{% endif %}>Oral / Viva Exam</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Delivery Mode</label>
+                            <select name="mode" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                                <option value="in_person" {% if exam.mode == 'in_person' %}selected{% endif %}>In-Person</option>
+                                <option value="online" {% if exam.mode == 'online' %}selected{% endif %}>Online</option>
+                                <option value="hybrid" {% if exam.mode == 'hybrid' %}selected{% endif %}>Hybrid</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Description <span class="text-gray-400 font-normal text-xs">(internal, not shown to students)</span></label>
+                        <textarea name="description" rows="3"
+                                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">{{ exam.description }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-5">
+                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                    <h3 class="text-sm font-semibold text-gray-700">Schedule</h3>
+                </div>
+                <div class="px-5 py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Exam Date <span class="text-red-500">*</span></label>
+                        <input type="date" name="exam_date" value="{{ exam.exam_date|date:'Y-m-d' }}" required
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Start Time <span class="text-red-500">*</span></label>
+                        <input type="time" name="start_time" value="{{ exam.start_time|time:'H:i' }}" required
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">End Time <span class="text-red-500">*</span></label>
+                        <input type="time" name="end_time" value="{{ exam.end_time|time:'H:i' }}" required
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Duration (minutes)</label>
+                        <div class="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 flex items-center gap-2">
+                            <i class="fas fa-lock text-gray-300 text-xs"></i>
+                            <span id="computed-duration">{{ exam.duration_minutes }}</span> min
+                            <span class="text-xs text-gray-400 ml-1">(auto-computed from start &amp; end time)</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Instruction Window (min before start)</label>
+                        <input type="number" name="instruction_window_minutes" value="{{ exam.instruction_window_minutes }}" min="0"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                        <p class="text-xs text-gray-400 mt-1">Students see the instruction countdown this many minutes before start.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Venue / Hall</label>
+                        <input type="text" name="venue" value="{{ exam.venue }}"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                               placeholder="Hall A or Online">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Pool & Grading -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-5">
+                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                    <h3 class="text-sm font-semibold text-gray-700">Question Pool &amp; Grading</h3>
+                </div>
+                <div class="px-5 py-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Questions Per Student</label>
+                        <input type="number" name="questions_per_student" value="{{ exam.questions_per_student|default:'' }}" min="1"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                               placeholder="Leave blank = all questions">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Pass Mark</label>
+                        <input type="number" name="pass_mark" value="{{ exam.pass_mark|default:'' }}" min="0" step="0.01"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div class="sm:col-span-2 flex flex-wrap gap-6 pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="shuffle_questions" {% if exam.shuffle_questions %}checked{% endif %}
+                                   class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                            <span class="text-sm text-gray-700">Shuffle Question Order</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="shuffle_options" {% if exam.shuffle_options %}checked{% endif %}
+                                   class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                            <span class="text-sm text-gray-700">Shuffle Answer Options</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" name="show_result_immediately" {% if exam.show_result_immediately %}checked{% endif %}
+                                   class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
+                            <span class="text-sm text-gray-700">Show Score Immediately After Submission</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions & Notes -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-5">
+                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                    <h3 class="text-sm font-semibold text-gray-700">Instructions &amp; Notes</h3>
+                </div>
+                <div class="px-5 py-6 space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Student Instructions
+                            <span class="text-gray-400 font-normal text-xs">(shown on the instruction countdown page)</span>
+                        </label>
+                        <textarea name="instructions" rows="4"
+                                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                                  placeholder="e.g. This exam has 40 questions. No calculators allowed…">{{ exam.instructions }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Special Instructions
+                            <span class="text-gray-400 font-normal text-xs">(shown on the timetable, e.g. bring your ID card)</span>
+                        </label>
+                        <textarea name="special_instructions" rows="2"
+                                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">{{ exam.special_instructions }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Internal Notes
+                            <span class="text-gray-400 font-normal text-xs">(staff-only, never visible to students)</span>
+                        </label>
+                        <textarea name="internal_notes" rows="2"
+                                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">{{ exam.internal_notes }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visibility Window -->
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-5">
+                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                    <h3 class="text-sm font-semibold text-gray-700">Visibility Window</h3>
+                </div>
+                <div class="px-5 py-4 bg-blue-50 border-b border-blue-100 text-xs text-blue-700 flex items-start gap-2">
+                    <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                    <span>Leave both blank to use automatic defaults: <strong>Visible From</strong> = exam start time, <strong>Visible Until</strong> = exam end time. Only set these to override that behaviour.</span>
+                </div>
+                <div class="px-5 py-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Visible From Override
+                            <span class="text-gray-400 font-normal text-xs">(optional — leave blank to default to exam start time)</span>
+                        </label>
+                        <input type="datetime-local" name="visible_from_override"
+                               value="{% if exam.visible_from_override %}{{ exam.visible_from_override|date:'Y-m-d' }}T{{ exam.visible_from_override|time:'H:i' }}{% endif %}"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                            Visible Until Override
+                            <span class="text-gray-400 font-normal text-xs">(optional — leave blank to default to exam end time)</span>
+                        </label>
+                        <input type="datetime-local" name="visible_until_override"
+                               value="{% if exam.visible_until_override %}{{ exam.visible_until_override|date:'Y-m-d' }}T{{ exam.visible_until_override|time:'H:i' }}{% endif %}"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Actions -->
+            <div class="flex justify-end gap-3 pb-2">
+                <a href="{% url 'instructor:exam_list' %}"
+                   class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold shadow-sm">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: QUESTIONS
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="tab-questions" class="exam-tab-panel hidden">
+
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+            <div class="flex items-center gap-4">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">Questions</p>
+                    <p class="text-lg font-bold text-gray-900 leading-tight">{{ exam.active_question_count }} <span class="text-sm font-normal text-gray-500">active</span></p>
+                </div>
+                <div class="w-px h-8 bg-gray-200"></div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold">Total Marks</p>
+                    <p class="text-lg font-bold text-gray-900 leading-tight">{{ exam.computed_total_marks }}</p>
+                </div>
+            </div>
+            {% if exam.status != 'published' %}
+            <a href="{% url 'instructor:exam_question_create' slug=exam.slug %}"
+               class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold shadow-sm">
+                <i class="fas fa-plus"></i> Add Question
+            </a>
+            {% endif %}
+        </div>
+
+        {% if questions %}
+        <div class="space-y-3" id="questionList">
+            {% for q in questions %}
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-start gap-4">
+
+                    <!-- Order badge -->
+                    <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center text-sm font-bold">
+                        {{ forloop.counter }}
+                    </div>
+
+                    <!-- Question content -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <!-- Type badge -->
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold
+                                {% if q.question_type == 'mcq' %}bg-blue-100 text-blue-700
+                                {% elif q.question_type == 'multi_select' %}bg-purple-100 text-purple-700
+                                {% elif q.question_type == 'true_false' %}bg-teal-100 text-teal-700
+                                {% elif q.question_type == 'short_answer' %}bg-orange-100 text-orange-700
+                                {% elif q.question_type == 'essay' %}bg-pink-100 text-pink-700
+                                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                {{ q.get_question_type_display }}
+                            </span>
+                            <!-- Difficulty badge -->
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold
+                                {% if q.difficulty == 'easy' %}bg-green-100 text-green-700
+                                {% elif q.difficulty == 'medium' %}bg-yellow-100 text-yellow-700
+                                {% elif q.difficulty == 'hard' %}bg-red-100 text-red-700
+                                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                {{ q.get_difficulty_display }}
+                            </span>
+                            <!-- Marks -->
+                            <span class="text-xs text-gray-500"><i class="fas fa-star text-gray-400 mr-1"></i>{{ q.marks }} mark{{ q.marks|pluralize }}</span>
+                            {% if not q.is_active %}
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-500">Inactive</span>
+                            {% endif %}
+                        </div>
+
+                        <p class="text-sm text-gray-800 font-medium leading-snug">{{ q.question_text|truncatechars:200 }}</p>
+
+                        <!-- Options preview (MCQ / TF only) -->
+                        {% if q.options %}
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            {% for opt in q.options %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs
+                                {% if opt.is_correct %}border-green-300 bg-green-50 text-green-800 font-semibold{% else %}border-gray-200 bg-gray-50 text-gray-600{% endif %}">
+                                {% if opt.is_correct %}<i class="fas fa-check text-green-500 text-xs"></i>{% endif %}
+                                {{ opt.text|truncatechars:60 }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if q.explanation %}
+                        <p class="mt-2 text-xs text-gray-400 italic">Explanation: {{ q.explanation|truncatechars:100 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Actions -->
+                    {% if exam.status != 'published' %}
+                    <div class="flex-shrink-0 flex gap-2">
+                        <a href="{% url 'instructor:exam_question_edit' slug=exam.slug question_id=q.pk %}"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-xs font-medium">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <form method="post" action="{% url 'instructor:exam_question_delete' slug=exam.slug question_id=q.pk %}"
+                              onsubmit="return confirm('Delete this question? This cannot be undone.')">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-xs font-medium">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="bg-white rounded-xl border border-gray-200 py-12 flex flex-col items-center text-center px-6">
+            <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+                <i class="fas fa-question-circle text-gray-400 text-2xl"></i>
+            </div>
+            <h3 class="font-semibold text-gray-800 mb-1">No questions yet</h3>
+            {% if exam.status != 'published' %}
+            <p class="text-sm text-gray-500 mb-4 max-w-xs">Start building the question pool for this exam.</p>
+            <a href="{% url 'instructor:exam_question_create' slug=exam.slug %}"
+               class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold">
+                <i class="fas fa-plus"></i> Add First Question
+            </a>
+            {% else %}
+            <p class="text-sm text-gray-500 max-w-xs">This exam is published and cannot be modified.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Import Questions from File -->
+        {% if exam.status != 'published' %}
+        <div class="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <h4 class="text-sm font-semibold text-gray-700 mb-1">
+                <i class="fas fa-upload text-gray-400 mr-2"></i>Import Questions from File
+            </h4>
+            <p class="text-xs text-gray-500 mb-3">Upload a <code>.docx</code> or <code>.xlsx</code> file. Each row/paragraph is parsed into a question.</p>
+            <form method="post" action="{% url 'instructor:exam_import_questions' slug=exam.slug %}"
+                  enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                {% csrf_token %}
+                <div class="flex-1">
+                    <input type="file" name="question_import_file" accept=".docx,.xlsx"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+                </div>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium">
+                    <i class="fas fa-file-import"></i> Import
+                </button>
+            </form>
+            {% if exam.import_status == 'failed' and exam.import_error_log %}
+            <div class="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 font-mono whitespace-pre-wrap">{{ exam.import_error_log }}</div>
+            {% elif exam.import_status == 'done' %}
+            <p class="mt-2 text-xs text-green-700"><i class="fas fa-check-circle mr-1"></i>Last import completed successfully.</p>
+            {% elif exam.import_status == 'processing' %}
+            <p class="mt-2 text-xs text-yellow-700"><i class="fas fa-spinner fa-spin mr-1"></i>Import is processing…</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB: RESULTS
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="tab-results" class="exam-tab-panel hidden">
+
+        {% if exam.status == 'published' %}
+        <!-- Stats Row -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center border-t-2 border-t-gray-300">
+                <p class="text-2xl font-bold text-gray-900">{{ response_stats.total|default:"0" }}</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wide mt-1">Total Students</p>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center border-t-2 border-t-green-400">
+                <p class="text-2xl font-bold text-green-700">{{ response_stats.submitted|default:"0" }}</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wide mt-1">Submitted</p>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center border-t-2 border-t-blue-400">
+                <p class="text-2xl font-bold text-blue-700">{{ response_stats.graded|default:"0" }}</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wide mt-1">Graded</p>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-center border-t-2 border-t-primary-400">
+                <p class="text-2xl font-bold text-gray-800">
+                    {% if response_stats.avg_score %}{{ response_stats.avg_score }}%{% else %}—{% endif %}
+                </p>
+                <p class="text-xs text-gray-500 uppercase tracking-wide mt-1">Avg Score</p>
+            </div>
+        </div>
+
+        {% if student_responses %}
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700">Student Responses</h3>
+                <span class="text-xs text-gray-500">{{ student_responses|length }} record{{ student_responses|length|pluralize }}</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Student</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Answered</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Score</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Submitted At</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for resp in student_responses %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-5 py-3.5">
+                                <p class="font-medium text-gray-800 text-sm">{{ resp.student.get_full_name|default:resp.student.username }}</p>
+                                <p class="text-xs text-gray-400">{{ resp.student.username }}</p>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                                    {% if resp.status == 'graded' %}bg-green-100 text-green-800
+                                    {% elif resp.status == 'submitted' %}bg-blue-100 text-blue-800
+                                    {% elif resp.status == 'in_progress' %}bg-yellow-100 text-yellow-800
+                                    {% elif resp.status == 'absent' %}bg-red-100 text-red-800
+                                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                    {{ resp.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3.5 text-gray-600 text-xs">
+                                {{ resp.questions_answered }} / {{ exam.active_question_count }}
+                            </td>
+                            <td class="px-4 py-3.5 text-right">
+                                {% if resp.score_percentage is not None %}
+                                <span class="font-semibold {% if resp.passed %}text-green-700{% else %}text-red-600{% endif %}">
+                                    {{ resp.score_percentage }}%
+                                </span>
+                                {% if resp.passed is not None %}
+                                <span class="ml-1 text-xs {% if resp.passed %}text-green-600{% else %}text-red-500{% endif %}">
+                                    ({% if resp.passed %}Pass{% else %}Fail{% endif %})
+                                </span>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-gray-400">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3.5 text-right text-gray-500 text-xs">
+                                {% if resp.submitted_at %}{{ resp.submitted_at|date:"M j, H:i" }}{% else %}—{% endif %}
+                            </td>
+                            <td class="px-4 py-3.5 text-right">
+                                <a href="#" class="text-primary-600 hover:text-primary-700 text-xs font-medium">Review</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="bg-white rounded-xl border border-gray-200 py-10 text-center">
+            <i class="fas fa-inbox text-gray-300 text-3xl mb-3"></i>
+            <p class="text-gray-500 text-sm">No student submissions yet.</p>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="bg-white rounded-xl border border-gray-200 py-12 flex flex-col items-center text-center px-6">
+            <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+                <i class="fas fa-lock text-gray-400 text-xl"></i>
+            </div>
+            <h3 class="font-semibold text-gray-700 mb-1">Results not available</h3>
+            <p class="text-sm text-gray-500 max-w-sm">
+                Results are only visible after the exam is published and students begin submitting responses.
+            </p>
+            {% if exam.status == 'approved' %}
+            <form method="post" action="{% url 'instructor:exam_publish' slug=exam.slug %}" class="mt-4">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold">
+                    <i class="fas fa-globe"></i> Publish Now to Enable Results
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<script>
+function switchTab(id) {
+    document.querySelectorAll('.exam-tab-panel').forEach(p => p.classList.add('hidden'));
+    document.querySelectorAll('.exam-tab-btn').forEach(b => {
+        b.classList.remove('border-primary-600', 'text-primary-600', 'font-semibold');
+        b.classList.add('border-transparent', 'text-gray-500', 'font-medium');
+    });
+    const panel = document.getElementById('tab-' + id);
+    if (panel) panel.classList.remove('hidden');
+    const btn = document.getElementById('tab-btn-' + id);
+    if (btn) {
+        btn.classList.remove('border-transparent', 'text-gray-500', 'font-medium');
+        btn.classList.add('border-primary-600', 'text-primary-600', 'font-semibold');
+    }
+    history.replaceState(null, '', '?tab=' + id);
+}
+
+// On load: honour ?tab= param
+(function () {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab && document.getElementById('tab-' + tab)) {
+        switchTab(tab);
+    }
+})();
+
+// Live-update the computed duration display when start/end times change
+(function () {
+    function updateDuration() {
+        const startVal = document.querySelector('input[name="start_time"]')?.value;
+        const endVal   = document.querySelector('input[name="end_time"]')?.value;
+        const display  = document.getElementById('computed-duration');
+        if (!display || !startVal || !endVal) return;
+        const [sh, sm] = startVal.split(':').map(Number);
+        const [eh, em] = endVal.split(':').map(Number);
+        const mins = (eh * 60 + em) - (sh * 60 + sm);
+        display.textContent = mins > 0 ? mins : '—';
+    }
+    document.querySelector('input[name="start_time"]')?.addEventListener('change', updateDuration);
+    document.querySelector('input[name="end_time"]')?.addEventListener('change', updateDuration);
+})();
+</script>
+{% endblock %}

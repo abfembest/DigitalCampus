@@ -98,18 +98,9 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 # =============================================================================
 
 def get_application_secure(application_id, user):
-    """
-    Securely retrieve an application with triple validation:
-      1. Application ID match
-      2. Email match  (immutable user attribute)
-      3. User FK match (immutable user attribute)
-
-    Returns the CourseApplication instance, or None on any failure.
-    """
     try:
         return CourseApplication.objects.get(
             application_id=application_id,
-            email=user.email,
             user=user,
         )
     except CourseApplication.DoesNotExist:
@@ -393,8 +384,6 @@ def user_logout(request):
     if user.is_authenticated:
         try:
             profile = user.profile
-            if profile.active_session_key:
-                Session.objects.filter(session_key=profile.active_session_key).delete()
             profile.is_logged_in = False
             profile.active_session_key = ''
             profile.save(update_fields=['is_logged_in', 'active_session_key'])
@@ -761,7 +750,7 @@ def program_detail(request, slug):
         'courses': (
             program.courses
             .filter(is_active=True)
-            .select_related('lecturer')
+            # .select_related('lecturer')
             .order_by('year_of_study', 'semester', 'display_order', 'name')
         ),
         'active_intakes': (
@@ -931,7 +920,7 @@ def application_status(request):
     """Show the most recent application for the logged-in user."""
     application = (
         CourseApplication.objects
-        .filter(email=request.user.email)
+        .filter(Q(email=request.user.email) | Q(user=request.user))  # fallback if email drifted
         .order_by('-created_at')
         .first()
     )

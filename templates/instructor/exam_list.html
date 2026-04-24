@@ -1,0 +1,354 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}My Exams — Instructor Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6 overflow-x-auto" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center gap-1.5 text-xs whitespace-nowrap text-gray-500">
+            <li>
+                <a href="{% url 'instructor:dashboard' %}" class="hover:text-primary-600 transition-colors">Dashboard</a>
+            </li>
+            <li class="flex items-center gap-1.5">
+                <i class="fas fa-chevron-right text-gray-300 text-[10px]"></i>
+                <span class="text-gray-700 font-medium">My Exams</span>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">My Exams</h1>
+            <p class="text-gray-500 mt-1 text-sm">
+                Manage exams across all statuses — draft, submitted, approved, rejected and published.
+            </p>
+        </div>
+        <a href="{% url 'instructor:create_assessment' %}?type=exam"
+           class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold shadow-sm flex-shrink-0">
+            <i class="fas fa-plus"></i> New Exam
+        </a>
+    </div>
+
+    <!-- Flash Messages -->
+    {% if messages %}
+    <div class="mb-5 space-y-2">
+        {% for message in messages %}
+        <div class="flex items-start gap-3 px-4 py-3 rounded-lg border
+            {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
+            {% elif message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
+            {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle text-red-500{% elif message.tags == 'success' %}fa-check-circle text-green-500{% else %}fa-info-circle text-blue-500{% endif %} mt-0.5 flex-shrink-0"></i>
+            <p class="text-sm">{{ message }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div class="w-9 h-9 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center mb-2">
+                <i class="fas fa-layer-group text-sm"></i>
+            </div>
+            <p class="text-xl font-bold text-gray-900">{{ stat_total }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Total</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div class="w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center mb-2">
+                <i class="fas fa-pencil-alt text-sm"></i>
+            </div>
+            <p class="text-xl font-bold text-gray-900">{{ stat_draft }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Draft</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div class="w-9 h-9 rounded-lg bg-yellow-100 text-yellow-700 flex items-center justify-center mb-2">
+                <i class="fas fa-paper-plane text-sm"></i>
+            </div>
+            <p class="text-xl font-bold text-gray-900">{{ stat_submitted }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Submitted</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-2">
+                <i class="fas fa-thumbs-up text-sm"></i>
+            </div>
+            <p class="text-xl font-bold text-gray-900">{{ stat_approved }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Approved</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div class="w-9 h-9 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mb-2">
+                <i class="fas fa-ban text-sm"></i>
+            </div>
+            <p class="text-xl font-bold text-gray-900">{{ stat_rejected }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Rejected</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+            <div class="w-9 h-9 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mb-2">
+                <i class="fas fa-globe text-sm"></i>
+            </div>
+            <p class="text-xl font-bold text-gray-900">{{ stat_published }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">Published</p>
+        </div>
+    </div>
+
+    <!-- Filter Tabs + Search Row -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+        <!-- Filter pills -->
+        <div class="flex flex-wrap gap-2">
+            <a href="?status=all{% if search %}&q={{ search }}{% endif %}"
+               class="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors
+                      {% if not active_status or active_status == 'all' %}bg-primary-600 text-white shadow-sm{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+                All
+            </a>
+            <a href="?status=draft{% if search %}&q={{ search }}{% endif %}"
+               class="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors
+                      {% if active_status == 'draft' %}bg-gray-700 text-white shadow-sm{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+                Draft
+            </a>
+            <a href="?status=submitted{% if search %}&q={{ search }}{% endif %}"
+               class="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors
+                      {% if active_status == 'submitted' %}bg-yellow-500 text-white shadow-sm{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+                Submitted
+            </a>
+            <a href="?status=approved{% if search %}&q={{ search }}{% endif %}"
+               class="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors
+                      {% if active_status == 'approved' %}bg-blue-600 text-white shadow-sm{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+                Approved
+            </a>
+            <a href="?status=rejected{% if search %}&q={{ search }}{% endif %}"
+               class="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors
+                      {% if active_status == 'rejected' %}bg-red-600 text-white shadow-sm{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+                Rejected
+            </a>
+            <a href="?status=published{% if search %}&q={{ search }}{% endif %}"
+               class="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors
+                      {% if active_status == 'published' %}bg-green-600 text-white shadow-sm{% else %}bg-white border border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+                Published
+            </a>
+        </div>
+
+        <!-- Search Bar -->
+        <form method="get" class="flex-shrink-0">
+            {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                <input type="text" name="q" value="{{ search }}" placeholder="Search exams…"
+                       class="pl-8 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-white w-52">
+            </div>
+        </form>
+    </div>
+
+    <!-- Exam Cards -->
+    {% if exams %}
+    <div class="space-y-4">
+        {% for exam in exams %}
+        {% with s=exam.status %}
+        <div class="bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden
+                    {% if s == 'rejected' %}border-red-200
+                    {% elif s == 'published' %}border-green-200
+                    {% elif s == 'approved' %}border-blue-200
+                    {% elif s == 'submitted' %}border-yellow-200
+                    {% else %}border-gray-200{% endif %}">
+
+            <!-- Rejected banner -->
+            {% if s == 'rejected' and exam.rejection_reason %}
+            <div class="bg-red-50 border-b border-red-200 px-5 py-3 flex items-start gap-3">
+                <i class="fas fa-exclamation-triangle text-red-500 flex-shrink-0 mt-0.5 text-sm"></i>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-red-800">Exam was rejected</p>
+                    <p class="text-sm text-red-700 mt-0.5 leading-snug">{{ exam.rejection_reason }}</p>
+                    {% if exam.rejected_at %}
+                    <p class="text-xs text-red-500 mt-1">
+                        Rejected by <strong>{{ exam.rejected_by.get_full_name|default:exam.rejected_by.username }}</strong>
+                        on {{ exam.rejected_at|date:"M j, Y" }}
+                    </p>
+                    {% endif %}
+                    <a href="{% url 'instructor:exam_detail' slug=exam.slug %}"
+                       class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-red-700 hover:text-red-900 underline underline-offset-2">
+                        <i class="fas fa-edit"></i> Fix &amp; Re-submit →
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="px-5 py-5 flex flex-col sm:flex-row sm:items-start gap-4">
+
+                <!-- Status Icon -->
+                <div class="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center
+                            {% if s == 'published' %}bg-green-100 text-green-600
+                            {% elif s == 'approved' %}bg-blue-100 text-blue-600
+                            {% elif s == 'rejected' %}bg-red-100 text-red-600
+                            {% elif s == 'submitted' %}bg-yellow-100 text-yellow-700
+                            {% elif s == 'cancelled' %}bg-gray-100 text-gray-400
+                            {% else %}bg-gray-100 text-gray-500{% endif %}">
+                    <i class="fas fa-file-alt text-lg"></i>
+                </div>
+
+                <!-- Main Info -->
+                <div class="flex-1 min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                        <h3 class="text-base font-semibold text-gray-900 truncate">{{ exam.title }}</h3>
+
+                        <!-- Status badge -->
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold
+                            {% if s == 'published' %}bg-green-100 text-green-800
+                            {% elif s == 'approved' %}bg-blue-100 text-blue-800
+                            {% elif s == 'rejected' %}bg-red-100 text-red-800
+                            {% elif s == 'submitted' %}bg-yellow-100 text-yellow-800
+                            {% elif s == 'cancelled' %}bg-gray-100 text-gray-600
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full
+                                {% if s == 'published' %}bg-green-500
+                                {% elif s == 'approved' %}bg-blue-500
+                                {% elif s == 'rejected' %}bg-red-500
+                                {% elif s == 'submitted' %}bg-yellow-500
+                                {% elif s == 'cancelled' %}bg-gray-400
+                                {% else %}bg-gray-400{% endif %}"></span>
+                            {{ exam.get_status_display }}
+                        </span>
+
+                        {% if exam.import_status == 'failed' %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
+                            <i class="fas fa-exclamation-circle"></i> Import Failed
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <p class="text-xs text-gray-500 mb-2">
+                        <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">{{ exam.reference_code }}</span>
+                        &nbsp;·&nbsp; {{ exam.get_exam_type_display }}
+                        {% if exam.course %}&nbsp;·&nbsp; {{ exam.course }}{% endif %}
+                    </p>
+
+                    <!-- Meta chips -->
+                    <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-500 mb-3">
+                        <span><i class="fas fa-calendar-alt mr-1 text-gray-400"></i>{{ exam.exam_date|date:"M j, Y" }}</span>
+                        <span><i class="fas fa-clock mr-1 text-gray-400"></i>{{ exam.start_time|time:"H:i" }} – {{ exam.end_time|time:"H:i" }}</span>
+                        <span><i class="fas fa-hourglass-half mr-1 text-gray-400"></i>{{ exam.duration_minutes }} min</span>
+                        <span><i class="fas fa-question-circle mr-1 text-gray-400"></i>{{ exam.active_question_count }} question{{ exam.active_question_count|pluralize }}</span>
+                        <span><i class="fas fa-star mr-1 text-gray-400"></i>{{ exam.total_marks }} marks</span>
+                        {% if exam.venue %}<span><i class="fas fa-map-marker-alt mr-1 text-gray-400"></i>{{ exam.venue }}</span>{% endif %}
+                        <span class="capitalize"><i class="fas fa-desktop mr-1 text-gray-400"></i>{{ exam.get_mode_display }}</span>
+                    </div>
+
+                    <!-- Approval workflow steps inline -->
+                    <div class="flex items-center flex-wrap gap-1 text-xs">
+                        {% for step_label, step_val, step_icon in exam.workflow_steps %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border
+                            {% if s == step_val %}
+                                {% if step_val == 'rejected' %}bg-red-600 text-white border-red-600
+                                {% elif step_val == 'approved' %}bg-blue-600 text-white border-blue-600
+                                {% elif step_val == 'published' %}bg-green-600 text-white border-green-600
+                                {% elif step_val == 'submitted' %}bg-yellow-500 text-white border-yellow-500
+                                {% else %}bg-gray-600 text-white border-gray-600{% endif %}
+                            {% else %}bg-gray-50 text-gray-300 border-gray-100{% endif %}">
+                            <i class="{{ step_icon }}"></i> {{ step_label }}
+                        </span>
+                        {% if not forloop.last %}<i class="fas fa-chevron-right text-gray-200 text-[9px]"></i>{% endif %}
+                        {% empty %}
+                        <!-- Fallback static steps if property not on model -->
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border {% if s == 'draft' %}bg-gray-600 text-white border-gray-600{% else %}bg-gray-50 text-gray-300 border-gray-100{% endif %}"><i class="fas fa-pencil-alt"></i> Draft</span>
+                        <i class="fas fa-chevron-right text-gray-200 text-[9px]"></i>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border {% if s == 'submitted' %}bg-yellow-500 text-white border-yellow-500{% else %}bg-gray-50 text-gray-300 border-gray-100{% endif %}"><i class="fas fa-paper-plane"></i> Submitted</span>
+                        <i class="fas fa-chevron-right text-gray-200 text-[9px]"></i>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border {% if s == 'approved' %}bg-blue-600 text-white border-blue-600{% else %}bg-gray-50 text-gray-300 border-gray-100{% endif %}"><i class="fas fa-thumbs-up"></i> Approved</span>
+                        <i class="fas fa-chevron-right text-gray-200 text-[9px]"></i>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border {% if s == 'published' %}bg-green-600 text-white border-green-600{% else %}bg-gray-50 text-gray-300 border-gray-100{% endif %}"><i class="fas fa-globe"></i> Published</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:items-end gap-2 flex-shrink-0">
+                    <a href="{% url 'instructor:exam_detail' slug=exam.slug %}"
+                       class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium shadow-sm">
+                        <i class="fas {% if s == 'published' %}fa-eye{% else %}fa-edit{% endif %} text-xs"></i>
+                        {% if s == 'published' %}View{% elif s == 'rejected' %}Fix &amp; Re-submit{% else %}Open{% endif %}
+                    </a>
+
+                    {% if s == 'draft' %}
+                    <form method="post" action="{% url 'instructor:exam_submit' slug=exam.slug %}" class="w-full sm:w-auto">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-yellow-300 text-yellow-700 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors text-sm font-medium">
+                            <i class="fas fa-paper-plane text-xs"></i> Submit for Approval
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if s == 'rejected' %}
+                    <form method="post" action="{% url 'instructor:exam_submit' slug=exam.slug %}" class="w-full sm:w-auto">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-red-300 text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+                            <i class="fas fa-redo text-xs"></i> Re-submit for Approval
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if s == 'approved' %}
+                    <form method="post" action="{% url 'instructor:exam_publish' slug=exam.slug %}" class="w-full sm:w-auto">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-green-300 text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
+                            <i class="fas fa-globe text-xs"></i> Publish
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if exams.has_other_pages %}
+    <div class="mt-8 flex justify-center gap-1">
+        {% if exams.has_previous %}
+        <a href="?page={{ exams.previous_page_number }}{% if active_status %}&status={{ active_status }}{% endif %}{% if search %}&q={{ search }}{% endif %}"
+           class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <i class="fas fa-chevron-left text-xs"></i>
+        </a>
+        {% endif %}
+        {% for p in exams.paginator.page_range %}
+        <a href="?page={{ p }}{% if active_status %}&status={{ active_status }}{% endif %}{% if search %}&q={{ search }}{% endif %}"
+           class="px-3 py-2 border rounded-lg text-sm transition-colors
+                  {% if p == exams.number %}bg-primary-600 text-white border-primary-600 font-semibold{% else %}border-gray-300 text-gray-600 hover:bg-gray-50{% endif %}">
+            {{ p }}
+        </a>
+        {% endfor %}
+        {% if exams.has_next %}
+        <a href="?page={{ exams.next_page_number }}{% if active_status %}&status={{ active_status }}{% endif %}{% if search %}&q={{ search }}{% endif %}"
+           class="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <i class="fas fa-chevron-right text-xs"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty state -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm py-16 flex flex-col items-center text-center px-6">
+        <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+            <i class="fas fa-file-alt text-gray-400 text-2xl"></i>
+        </div>
+        <h3 class="text-base font-semibold text-gray-800 mb-1">No exams found</h3>
+        <p class="text-gray-500 text-sm max-w-sm mb-5">
+            {% if search %}No exams match "{{ search }}"
+            {% elif active_status and active_status != 'all' %}No {{ active_status }} exams yet.
+            {% else %}You haven't created any exams yet.{% endif %}
+        </p>
+        <a href="{% url 'instructor:create_assessment' %}?type=exam"
+           class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold">
+            <i class="fas fa-plus"></i> Create Your First Exam
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

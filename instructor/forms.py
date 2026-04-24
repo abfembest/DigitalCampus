@@ -5,24 +5,20 @@ from eduweb.models import (
     QuizAnswer, Assignment, Announcement
 )
 from django.contrib.auth.models import User
-from eduweb.models import UserProfile
+from eduweb.models import UserProfile, Exam
 
 
-# ==================== COURSE FORMS ====================
 class CourseForm(forms.ModelForm):
     """Form for creating and editing courses with Tailwind styling"""
-    
+
     class Meta:
         model = LMSCourse
         fields = [
-            'title', 'code', 'category', 'short_description',
+            'title', 'code', 'short_description',
             'description', 'difficulty_level', 'duration_hours',
             'language', 'thumbnail', 'promo_video_url',
-            'max_students',
-            'enrollment_start_date', 'enrollment_end_date',
             'academic_course',
-            'has_certificate', 'certificate_fee', 'certificate_template',
-            'is_published', 'is_featured'
+            'has_certificate', 'certificate_template',
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -31,11 +27,11 @@ class CourseForm(forms.ModelForm):
             }),
             'code': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'placeholder': 'e.g., CS101'
+                'placeholder': 'e.g., CS101 (auto-generated if blank)'
             }),
-            'category': forms.Select(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
-            }),
+            # 'category': forms.Select(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            # }),
             'short_description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'rows': 3,
@@ -62,20 +58,21 @@ class CourseForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'https://youtube.com/watch?v=...'
             }),
-            'max_students': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'placeholder': 'Leave blank for unlimited'
-            }),
-            'enrollment_start_date': forms.DateInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'date'
-            }),
-            'enrollment_end_date': forms.DateInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'date'
-            }),
+            # 'max_students': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'placeholder': 'Leave blank for unlimited'
+            # }),
+            # 'enrollment_start_date': forms.DateInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'type': 'date'
+            # }),
+            # 'enrollment_end_date': forms.DateInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'type': 'date'
+            # }),
             'academic_course': forms.Select(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'id': 'id_academic_course',
             }),
             'thumbnail': forms.FileInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100'
@@ -83,22 +80,62 @@ class CourseForm(forms.ModelForm):
             'has_certificate': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
-            'certificate_fee': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'step': '0.01',
-                'placeholder': '0.00 — leave as 0 for free certificate'
-            }),
+            # 'certificate_fee': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'step': '0.01',
+            #     'placeholder': '0.00 — leave as 0 for free certificate'
+            # }),
             'certificate_template': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'e.g., default, gold, premium'
             }),
-            'is_published': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
-            }),
-            'is_featured': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
-            }),
+            # 'is_published': forms.CheckboxInput(attrs={
+            #     'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            # }),
+            # 'is_featured': forms.CheckboxInput(attrs={
+            #     'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            # }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # code is optional — auto-generated in save() if left blank
+        self.fields['code'].required = False
+        # Give the academic_course dropdown a clear "standalone" empty option
+        self.fields['academic_course'].empty_label = '— Choose Course —'
+        # category is conditionally optional — JS hides it when academic_course is chosen;
+        # the form-level required=False prevents server-side validation from blocking the save.
+        # category field removed — LMSCourse uses academic_course instead
+        # # certificate_fee has a model default of 0.00 — never block submission on it
+        # self.fields['certificate_fee'].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        academic_course = cleaned.get('academic_course')
+        # category field removed — no validation needed
+
+        # # certificate_fee: make it optional / zero-out when academic course is linked
+        # # (academic programmes handle certification fees themselves)
+        # if academic_course:
+        #     from decimal import Decimal
+        #     cleaned['certificate_fee'] = Decimal('0.00')
+        #     self.fields['certificate_fee'].required = False
+
+        return cleaned
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Auto-generate a unique course code if the instructor left it blank
+        if not instance.code:
+            import uuid as _uuid
+            base = _uuid.uuid4().hex[:8].upper()
+            candidate = f'LMS-{base}'
+            while LMSCourse.objects.filter(code=candidate).exclude(pk=instance.pk).exists():
+                candidate = f'LMS-{_uuid.uuid4().hex[:8].upper()}'
+            instance.code = candidate
+        if commit:
+            instance.save()
+        return instance
 
 
 class CourseObjectivesForm(forms.ModelForm):
@@ -213,12 +250,15 @@ class LessonForm(forms.ModelForm):
             self.fields['section'].queryset = LessonSection.objects.filter(
                 course=course
             )
+        # Section is required — a lesson must belong to a section to appear correctly
+        self.fields['section'].required = True
+        self.fields['section'].empty_label = '— Select a section —'
 
 
 # ==================== QUIZ FORMS ====================
 class QuizForm(forms.ModelForm):
     """Form for creating and editing quizzes"""
-    
+
     class Meta:
         model = Quiz
         fields = [
@@ -264,7 +304,20 @@ class QuizForm(forms.ModelForm):
             'show_correct_answers': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
+            'display_order': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'value': 0
+            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['display_order'].required = False
+        self.fields['display_order'].initial = 0
+
+    def clean_display_order(self):
+        val = self.cleaned_data.get('display_order')
+        return val if val is not None else 0
 
 
 class QuizQuestionForm(forms.ModelForm):
@@ -326,7 +379,7 @@ class QuizAnswerForm(forms.ModelForm):
 # ==================== ASSIGNMENT FORMS ====================
 class AssignmentForm(forms.ModelForm):
     """Form for creating and editing assignments"""
-    
+
     class Meta:
         model = Assignment
         fields = [
@@ -379,6 +432,15 @@ class AssignmentForm(forms.ModelForm):
                 'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['display_order'].required = False
+        self.fields['display_order'].initial = 0
+
+    def clean_display_order(self):
+        val = self.cleaned_data.get('display_order')
+        return val if val is not None else 0
 
 
 # ==================== ANNOUNCEMENT FORMS ====================
@@ -719,3 +781,149 @@ class DiscussionReplyForm(forms.ModelForm):
                 ),
             }),
         }
+
+class ExamForm(forms.ModelForm):
+    """
+    Trimmed exam creation form.
+    - title is a declared field (not in Meta.fields) so JS can auto-fill it from
+      the course name and the instructor can tweak it before saving.
+    - description, hall_capacity, expected_candidates, eligible_levels,
+      show_answers_after, special_instructions, internal_notes are omitted here
+      and can be edited after the exam is created.
+    """
+
+    # ── manually declared so POST value is accepted and validated ────────────
+    title = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            'class': (
+                'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            ),
+            'placeholder': 'e.g. CSC301 End-of-Semester Exam 2025',
+            'id': 'id_exam_title',
+        }),
+        help_text='Auto-filled from the course name — edit if needed.',
+    )
+
+    class Meta:
+        model  = Exam
+        fields = [
+            # classification
+            'exam_type', 'mode',
+            # schedule
+            'exam_date', 'start_time', 'end_time',
+            'instruction_window_minutes',
+            # venue — only the essentials at creation time
+            'venue',
+            # pool config
+            'questions_per_student', 'total_marks', 'pass_mark',
+            'shuffle_questions', 'shuffle_options',
+            'show_result_immediately',
+            # file import
+            'question_import_file',
+            # student-facing instructions only
+            'instructions',
+            # visibility
+            'visible_from_override', 'visible_until_override',
+        ]
+        widgets = {
+            'exam_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            }),
+            'mode': forms.Select(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
+            }),
+            'exam_date': forms.DateInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'type': 'date'
+            }),
+            'start_time': forms.TimeInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'type': 'time'
+            }),
+            'end_time': forms.TimeInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'type': 'time'
+            }),
+            'duration_minutes': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'value': 120
+            }),
+            'instruction_window_minutes': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'value': 10
+            }),
+            'venue': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'placeholder': 'e.g. Hall A, Room 201, or Online'
+            }),
+            'questions_per_student': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'placeholder': 'Leave blank for all questions'
+            }),
+            'total_marks': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'step': '0.01'
+            }),
+            'pass_mark': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'step': '0.01'
+            }),
+            'shuffle_questions': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'shuffle_options': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'show_result_immediately': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            }),
+            'question_import_file': forms.FileInput(attrs={
+                'class': 'w-full text-sm text-gray-500 '
+                         'file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 '
+                         'file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 '
+                         'hover:file:bg-primary-100',
+                'accept': '.docx,.xlsx'
+            }),
+            'instructions': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'rows': 4,
+                'placeholder': 'Shown to students on the instruction page'
+            }),
+            'visible_from': forms.DateTimeInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'type': 'datetime-local'
+            }),
+            'visible_until': forms.DateTimeInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                'type': 'datetime-local'
+            }),
+        }
+
+    def clean_instruction_window_minutes(self):
+        val = self.cleaned_data.get('instruction_window_minutes')
+        # Always enforce exactly 10 minutes — this is a system constant
+        return 10
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # Write the manually declared title field to the model instance
+        instance.title = self.cleaned_data.get('title', '')
+        if commit:
+            instance.save()
+        return instance

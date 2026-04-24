@@ -3206,11 +3206,11 @@ def _get_outstanding_for_student(user):
     Returns (outstanding, paid) for a student's required fees.
 
     Includes:
-    1. FeePayment rows for the student's program (auto-created on program assignment)
+    1. AllRequiredPayments for the student's program (admin-created fees)
     2. Auto-generated certificate fees for any completed courses that have
        has_certificate=True and no certificate fee has been paid yet.
 
-    outstanding → list of dicts: {'payment': AllRequiredPayments or dict, 'fee_payment': FeePayment or None, 'is_overdue': bool, 'is_certificate_fee': bool}
+    outstanding → list of dicts: {'payment': AllRequiredPayments or dict, 'is_overdue': bool, 'is_certificate_fee': bool}
     paid        → list of AllRequiredPayments instances already settled
     """
     from eduweb.models import AllRequiredPayments, Enrollment, FeePayment, Certificate
@@ -3219,29 +3219,31 @@ def _get_outstanding_for_student(user):
     if not profile or not profile.program:
         return [], []
 
-    # ── 1. Read directly from FeePayment rows (auto-created by signal) ───────
-    student_payments = (
-        FeePayment.objects
-        .filter(
+    # ── 1. Standard admin-created required fees ───────────────────────────
+    required_qs = AllRequiredPayments.objects.filter(
+        program=profile.program,
+        who_to_pay='student',
+        is_active=True,
+    ).select_related('program')
+
+    paid_fee_ids = set(
+        FeePayment.objects.filter(
             user=user,
-            fee__program=profile.program,
-            fee__who_to_pay='student',
-            fee__is_active=True,
-        )
-        .select_related('fee', 'fee__program', 'fee__academic_session')
+            status='success',
+            fee__in=required_qs,
+        ).values_list('fee_id', flat=True)
     )
 
     today = timezone.now().date()
     outstanding, paid = [], []
 
-    for fp in student_payments:
-        if fp.status == 'success':
-            paid.append(fp.fee)
+    for rp in required_qs:
+        if rp.pk in paid_fee_ids:
+            paid.append(rp)
         else:
             outstanding.append({
-                'payment': fp.fee,
-                'fee_payment': fp,
-                'is_overdue': fp.fee.due_date < today,
+                'payment': rp,
+                'is_overdue': rp.due_date < today,
                 'is_certificate_fee': False,
             })
 

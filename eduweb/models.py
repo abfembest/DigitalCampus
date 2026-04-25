@@ -3419,7 +3419,7 @@ def update_course_rating(sender, instance, created, **kwargs):
     instance.course.update_statistics()
 
 
-@receiver(post_save, sender=UserProfile)
+'''@receiver(post_save, sender=UserProfile)
 def auto_assign_required_fees(sender, instance, **kwargs):
     """
     When a student's program is set or changed, auto-create FeePayment
@@ -3445,7 +3445,7 @@ def auto_assign_required_fees(sender, instance, **kwargs):
                 'currency': fee.currency,
                 'status': 'pending',
             }
-        )
+        )'''
 
 # ==================== STUDY GROUPS ====================
 class StudyGroup(models.Model):

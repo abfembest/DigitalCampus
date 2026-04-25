@@ -33,6 +33,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "https://www.miuedu.com",
     "mail.miuedu.com",
+    "*",
 ]
 
 # --------------------------------------------------
@@ -162,7 +163,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",
+    default="django.core.mail.backends.smtp.EmailBackend",
 )
 
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")

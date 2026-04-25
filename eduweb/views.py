@@ -1381,7 +1381,7 @@ def create_payment_intent(request):
 
                 intent = stripe.PaymentIntent.create(
                     amount=amount_pence,
-                    currency='gbp',
+                    currency='usd',
                     metadata={
                         'type':           'student_fee',
                         'student_fee_id': str(fee.id),
@@ -1395,7 +1395,7 @@ def create_payment_intent(request):
                     user=request.user,
                     gateway_payment_id=intent.id,
                     amount=fee.amount,
-                    currency='GBP',
+                    currency='USD',
                     status='pending',
                     payment_metadata={
                         'type':           'student_fee',
@@ -1441,7 +1441,7 @@ def create_payment_intent(request):
                     application=application,
                     gateway_payment_id=intent.id,
                     amount=application.program.application_fee,
-                    currency='GBP',
+                    currency='USD',
                     status='pending',
                 )
                 return JsonResponse({'success': True, 'clientSecret': intent.client_secret})

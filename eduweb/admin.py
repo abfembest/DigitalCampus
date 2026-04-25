@@ -829,13 +829,14 @@ class CourseAdmin(admin.ModelAdmin):
 @admin.register(AllRequiredPayments)
 class AllRequiredPaymentsAdmin(admin.ModelAdmin):
     list_display = (
-        'purpose', 'program', 'course',
-        'amount', 'who_to_pay', 'semester', 'academic_session', 'is_active', 'due_date'
+        'purpose', 'program', 'level', 'course',
+        'amount', 'currency', 'who_to_pay', 'semester', 'academic_session', 'is_active', 'due_date'
     )
     list_filter = (
         'program__department__faculty',
         'program__department',
         'program',
+        'level',
         'who_to_pay',
         'semester',
         'academic_session',
@@ -847,10 +848,11 @@ class AllRequiredPaymentsAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Scope', {
-            'fields': ('program', 'course')
+            'fields': ('program', 'level', 'course'),
+            'description': 'Set "Level" to restrict this fee to a specific student level. Leave blank to apply to ALL levels in the program.'
         }),
         ('Payment Details', {
-            'fields': ('purpose', 'amount', 'who_to_pay', 'semester', 'academic_session', 'due_date')
+            'fields': ('purpose', 'amount', 'currency', 'who_to_pay', 'semester', 'academic_session', 'due_date')
         }),
         ('Status', {
             'fields': ('is_active',)
@@ -1352,7 +1354,8 @@ class LMSCourseAdmin(admin.ModelAdmin):
             'fields': ('description', 'learning_objectives', 'prerequisites')
         }),
         ('Course Details', {
-            'fields': ('difficulty_level', 'duration_hours', 'language')
+            'fields': ('difficulty_level', 'duration_hours', 'language'),
+            'description': 'Difficulty Level is now a student level (100–800), e.g. 100 = first year, 400 = final year undergraduate.'
         }),
         ('Instructor', {
             'fields': ('instructor', 'instructor_name', 'instructor_bio')

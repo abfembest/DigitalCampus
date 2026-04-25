@@ -21,6 +21,22 @@ DEGREE_LEVEL_CHOICES = [
     ('phd', 'PhD')
 ]
 
+# Canonical academic level choices (year_of_study × 100).
+# Level represents position within a program, not absolute academic rank.
+# Works for all international systems: UG (100–400/500), Masters (100–200),
+# PhD (100–400), Medicine/Law/Eng extended programs (up to 800).
+# The Program.degree_level field identifies the qualification type.
+STUDENT_LEVEL_CHOICES = [
+    (100, 'Level 100'),
+    (200, 'Level 200'),
+    (300, 'Level 300'),
+    (400, 'Level 400'),
+    (500, 'Level 500'),
+    (600, 'Level 600'),
+    (700, 'Level 700'),
+    (800, 'Level 800'),
+]
+
 import hashlib
 import secrets
 import uuid
@@ -1690,6 +1706,13 @@ class AllRequiredPayments(models.Model):
         help_text="ISO 4217 currency code e.g. USD, GBP, EUR"
     )
 
+    level = models.IntegerField(
+        choices=STUDENT_LEVEL_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Student level this fee applies to (100–800). Leave blank to apply to ALL levels."
+    )
+
     due_date = models.DateField()
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1703,7 +1726,7 @@ class AllRequiredPayments(models.Model):
         verbose_name = "Required Payment"
         verbose_name_plural = "All Required Payments"
         ordering = ["-created_at"]
-        unique_together = [['program', 'academic_session', 'purpose', 'semester']]
+        unique_together = [['program', 'academic_session', 'purpose', 'semester', 'level']]
 
     def __str__(self):
         session = self.academic_session.name if self.academic_session else 'No Session'
@@ -1936,11 +1959,11 @@ class CourseApplication(models.Model):
         This property is kept for backward compatibility with templates.
         """
         # Free flow: draft and above are all "unlocked"
-        if self.status in ['draft', 'payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
-            return True
+        #if self.status in ['draft', 'payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
+         #   return True
         # Legacy fallback: check actual payment record if status is pending_payment
         try:
-            return self.payment.status == 'success'
+            return self.payment_status == 'success'
         except Exception:
             return False
 
@@ -2489,16 +2512,6 @@ class LessonProgress(models.Model):
 # ==================== LMS COURSES ====================
 class LMSCourse(models.Model):
     """Learning Management System courses (actual learning content)"""
-    LEVEL_CHOICES = [
-        ('1', '100 Level'),
-        ('2', '200 Level'),
-        ('3', '300 Level'),
-        ('4', '400 Level'),
-        ('5', '500 Level'),
-        ('6', '600 Level'),
-        ('7', '700 Level'),
-        ('8', '800 Level'),
-    ]
     
     # Basic Information
     title = models.CharField(max_length=200)
@@ -2548,7 +2561,7 @@ class LMSCourse(models.Model):
     )
     
     # Course Details
-    difficulty_level = models.CharField(max_length=5, choices=LEVEL_CHOICES, default='1', verbose_name='Level')
+    difficulty_level = models.IntegerField(choices=STUDENT_LEVEL_CHOICES, default=100, verbose_name='Level')
     duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Estimated duration in hours")
     language = models.CharField(max_length=50, default='English')
     

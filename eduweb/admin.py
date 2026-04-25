@@ -2085,11 +2085,20 @@ class SiteHistoryMilestoneAdmin(admin.ModelAdmin):
 
 # ==================== EXAMS ====================
 class ExamQuestionInline(admin.TabularInline):
-    model  = ExamQuestion
-    extra  = 0
-    fields = ('question_text', 'question_type', 'difficulty', 'marks', 'order', 'is_active')
-    readonly_fields = ('created_at',)
+    model    = ExamQuestion
+    extra    = 0
+    max_num  = 20
+    per_page = 20
+    fields   = ('question_text', 'question_type', 'difficulty', 'marks', 'order', 'is_active')
+    readonly_fields  = ('created_at',)
     show_change_link = True
+
+    #def get_queryset(self, request):
+    #    qs = super().get_queryset(request).order_by('order')
+     #   # Return only first 20 — but don't slice here (breaks Django formset filter).
+      #  # Use the IDs instead so the queryset remains filterable.
+       # ids = list(qs.values_list('pk', flat=True)[:20])
+        #return qs.filter(pk__in=ids)
 
 
 class ExamStatusLogInline(admin.TabularInline):

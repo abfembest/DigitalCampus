@@ -2510,172 +2510,182 @@ def ajax_course_details(request):
 # FILE IMPORT HELPER — parses .docx / .xlsx into ExamQuestion rows
 # ─────────────────────────────────────────────────────────────────────────────
 def _parse_exam_questions_from_file(upload_file, exam, user):
-    """
-    Parse a .docx or .xlsx upload into ExamQuestion rows for the given exam.
-
-    DOCX FORMAT (one question per paragraph block, separated by blank lines):
-        Q: What is 2+2?
-        A: 3
-        A: *4       ← asterisk marks correct answer
-        A: 5
-        EXPLANATION: Basic arithmetic.
-        DIFFICULTY: easy
-        MARKS: 1
-
-    XLSX FORMAT (one question per row):
-        Column A: question_text
-        Column B: option_1
-        Column C: option_2
-        Column D: option_3
-        Column E: option_4
-        Column F: correct_option   (1-based index, e.g. 2 means option_2 is correct)
-        Column G: difficulty       (easy/medium/hard — optional, default medium)
-        Column H: marks            (number — optional, default 1)
-        Column I: explanation      (optional)
-
-    Silently skips rows/blocks that cannot be parsed.
-    Updates exam.import_status to 'done' or 'failed'.
-    """
     import uuid as _uuid
-    from eduweb.models import ExamQuestion
+    import pandas as pd
+    from django.db import transaction
+    from eduweb.models import ExamQuestion, ExamQuestionOption
 
     filename = upload_file.name.lower()
     questions_created = 0
 
+    def clean(val):
+        return '' if pd.isna(val) else str(val).strip()
+
     try:
-        if filename.endswith('.xlsx') or filename.endswith('.xls'):
-            import openpyxl
-            wb = openpyxl.load_workbook(upload_file, read_only=True, data_only=True)
-            ws = wb.active
-            for row in ws.iter_rows(min_row=2, values_only=True):
-                if not row or not row[0]:
-                    continue
-                q_text = str(row[0]).strip()
-                if not q_text:
-                    continue
+        with transaction.atomic():
 
-                raw_options = [str(row[i]).strip() for i in range(1, 5) if len(row) > i and row[i]]
-                try:
-                    correct_idx = int(row[5]) - 1 if len(row) > 5 and row[5] else 0
-                except (ValueError, TypeError):
-                    correct_idx = 0
+            # ================= XLSX =================
+            if filename.endswith(('.xlsx', '.xls')):
+                import openpyxl
 
-                difficulty = str(row[6]).strip().lower() if len(row) > 6 and row[6] else 'medium'
-                if difficulty not in ('easy', 'medium', 'hard'):
-                    difficulty = 'medium'
+                wb = openpyxl.load_workbook(upload_file, read_only=True, data_only=True)
+                ws = wb.active
 
-                try:
-                    marks = float(row[7]) if len(row) > 7 and row[7] else 1
-                except (ValueError, TypeError):
-                    marks = 1
+                for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
 
-                explanation = str(row[8]).strip() if len(row) > 8 and row[8] else ''
+                    if not row or not row[0]:
+                        continue
 
-                options = [
-                    {
-                        'id':         f'opt-{_uuid.uuid4().hex[:8]}',
-                        'text':       opt,
-                        'is_correct': (i == correct_idx),
-                    }
-                    for i, opt in enumerate(raw_options)
-                ]
+                    q_text = clean(row[0])
+                    if not q_text:
+                        continue
 
-                ExamQuestion.objects.create(
-                    exam          = exam,
-                    question_text = q_text,
-                    question_type = 'mcq' if raw_options else 'short_answer',
-                    difficulty    = difficulty,
-                    marks         = marks,
-                    options       = options,
-                    explanation   = explanation,
-                    order         = questions_created,
-                    created_by    = user,
-                    imported_from_file = upload_file.name,
-                    import_row_number  = questions_created + 2,
-                )
-                questions_created += 1
+                    # OPTIONS
+                    raw_options = [clean(row[i]) for i in range(1, 5)]
+                    raw_options = [opt for opt in raw_options if opt]
 
-        elif filename.endswith('.docx'):
-            import docx as _docx
-            doc = _docx.Document(upload_file)
-            block = {}
-            options = []
-            order = 0
+                    # CORRECT INDEX
+                    try:
+                        correct_idx = int(row[5]) - 1 if row[5] else None
+                    except:
+                        raise ValueError(f"Row {idx}: invalid correct_option")
 
-            def _flush(block, options, order):
-                q_text = block.get('question_text', '').strip()
-                if not q_text:
-                    return order
-                opts = [
-                    {
-                        'id':         f'opt-{_uuid.uuid4().hex[:8]}',
-                        'text':       o['text'],
-                        'is_correct': o['is_correct'],
-                    }
-                    for o in options
-                ]
-                difficulty = block.get('difficulty', 'medium').lower()
-                if difficulty not in ('easy', 'medium', 'hard'):
-                    difficulty = 'medium'
-                try:
-                    marks = float(block.get('marks', 1))
-                except (ValueError, TypeError):
-                    marks = 1
-                ExamQuestion.objects.create(
-                    exam          = exam,
-                    question_text = q_text,
-                    question_type = 'mcq' if opts else 'short_answer',
-                    difficulty    = difficulty,
-                    marks         = marks,
-                    options       = opts,
-                    explanation   = block.get('explanation', ''),
-                    order         = order,
-                    created_by    = user,
-                    imported_from_file = upload_file.name,
-                    import_row_number  = order + 1,
-                )
-                return order + 1
+                    difficulty = clean(row[6]).lower() if len(row) > 6 else 'medium'
+                    if difficulty not in ('easy', 'medium', 'hard'):
+                        difficulty = 'medium'
 
-            for para in doc.paragraphs:
-                line = para.text.strip()
-                if not line:
-                    # blank line = end of question block
-                    if block:
-                        order = _flush(block, options, order)
-                        block = {}
-                        options = []
-                    continue
-                upper = line.upper()
-                if upper.startswith('Q:'):
-                    if block:
-                        order = _flush(block, options, order)
-                        block = {}
-                        options = []
-                    block['question_text'] = line[2:].strip()
-                elif upper.startswith('A:'):
-                    raw = line[2:].strip()
-                    if raw.startswith('*'):
-                        options.append({'text': raw[1:].strip(), 'is_correct': True})
-                    else:
-                        options.append({'text': raw, 'is_correct': False})
-                elif upper.startswith('EXPLANATION:'):
-                    block['explanation'] = line[len('EXPLANATION:'):].strip()
-                elif upper.startswith('DIFFICULTY:'):
-                    block['difficulty'] = line[len('DIFFICULTY:'):].strip()
-                elif upper.startswith('MARKS:'):
-                    block['marks'] = line[len('MARKS:'):].strip()
+                    try:
+                        marks = float(row[7]) if len(row) > 7 and row[7] else 1
+                    except:
+                        raise ValueError(f"Row {idx}: invalid marks")
 
-            # flush last block
-            if block:
-                _flush(block, options, order)
+                    explanation = clean(row[8]) if len(row) > 8 else ''
 
-        exam.import_status = 'done'
-        exam.save(update_fields=['import_status'])
+                    # VALIDATION
+                    if raw_options:
+                        if correct_idx is None or correct_idx >= len(raw_options):
+                            raise ValueError(f"Row {idx}: invalid correct option index")
+
+                    # CREATE QUESTION
+                    question = ExamQuestion.objects.create(
+                        exam=exam,
+                        question_text=q_text,
+                        question_type='mcq' if raw_options else 'short_answer',
+                        difficulty=difficulty,
+                        marks=marks,
+                        explanation=explanation,
+                        order=questions_created,
+                        created_by=user,
+                        imported_from_file=upload_file.name,
+                        import_row_number=idx,
+                    )
+
+                    # CREATE OPTIONS
+                    if raw_options:
+                        for i, opt in enumerate(raw_options):
+                            ExamQuestionOption.objects.create(
+                                question=question,
+                                text=opt,
+                                is_correct=(i == correct_idx)
+                            )
+
+                    questions_created += 1
+
+            # ================= DOCX =================
+            elif filename.endswith('.docx'):
+                import docx
+
+                doc = docx.Document(upload_file)
+
+                block = {}
+                options = []
+                order = 0
+
+                def flush():
+                    nonlocal order, block, options
+
+                    q_text = block.get('question_text', '').strip()
+                    if not q_text:
+                        return
+
+                    difficulty = block.get('difficulty', 'medium').lower()
+                    if difficulty not in ('easy', 'medium', 'hard'):
+                        difficulty = 'medium'
+
+                    try:
+                        marks = float(block.get('marks', 1))
+                    except:
+                        marks = 1
+
+                    question = ExamQuestion.objects.create(
+                        exam=exam,
+                        question_text=q_text,
+                        question_type='mcq' if options else 'short_answer',
+                        difficulty=difficulty,
+                        marks=marks,
+                        explanation=block.get('explanation', ''),
+                        order=order,
+                        created_by=user,
+                        imported_from_file=upload_file.name,
+                        import_row_number=order + 1,
+                    )
+
+                    for opt in options:
+                        ExamQuestionOption.objects.create(
+                            question=question,
+                            text=opt['text'],
+                            is_correct=opt['is_correct']
+                        )
+
+                    order += 1
+                    block = {}
+                    options = []
+
+                for para in doc.paragraphs:
+                    line = para.text.strip()
+
+                    if not line:
+                        if block:
+                            flush()
+                        continue
+
+                    upper = line.upper()
+
+                    if upper.startswith('Q:'):
+                        if block:
+                            flush()
+                        block['question_text'] = line[2:].strip()
+
+                    elif upper.startswith('A:'):
+                        raw = line[2:].strip()
+                        if raw.startswith('*'):
+                            options.append({'text': raw[1:].strip(), 'is_correct': True})
+                        else:
+                            options.append({'text': raw, 'is_correct': False})
+
+                    elif upper.startswith('EXPLANATION:'):
+                        block['explanation'] = line[len('EXPLANATION:'):].strip()
+
+                    elif upper.startswith('DIFFICULTY:'):
+                        block['difficulty'] = line[len('DIFFICULTY:'):].strip()
+
+                    elif upper.startswith('MARKS:'):
+                        block['marks'] = line[len('MARKS:'):].strip()
+
+                if block:
+                    flush()
+
+            else:
+                raise ValueError("Unsupported file format")
+
+            exam.import_status = 'done'
+            exam.save(update_fields=['import_status'])
 
     except Exception as exc:
         exam.import_status = 'failed'
         exam.import_error_log = str(exc)
         exam.save(update_fields=['import_status', 'import_error_log'])
+        raise
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2810,24 +2820,24 @@ def create_assessment(request):
                     exam.created_by = request.user
                 exam.status     = 'draft'
 
-                # Link the LMS course's underlying academic Course object (optional)
+                # Always assign the LMSCourse instance (what the FK expects)
                 lms_course      = course  # LMSCourse instance
                 academic_course = getattr(lms_course, 'academic_course', None)
-                if academic_course:
-                    exam.course = academic_course
-                    # Denorm department if available
-                    try:
-                        if hasattr(academic_course, 'department') and academic_course.department:
-                            exam.department = academic_course.department
-                    except Exception:
-                        pass
-                    # Resolve academic_session through the academic course
-                    try:
-                        if getattr(academic_course, 'academic_session', None):
-                            exam.academic_session = academic_course.academic_session
-                    except Exception:
-                        pass
-                # If no academic course linked, exam.course stays None (now allowed by model)
+                exam.course     = lms_course  # ← always LMSCourse, never Course
+
+                # Denorm department from the academic course if available
+                try:
+                    if academic_course and hasattr(academic_course, 'department') and academic_course.department:
+                        exam.department = academic_course.department
+                except Exception:
+                    pass
+
+                # Resolve academic_session through the academic course
+                try:
+                    if academic_course and getattr(academic_course, 'academic_session', None):
+                        exam.academic_session = academic_course.academic_session
+                except Exception:
+                    pass
 
                 exam.save()
 
@@ -3442,7 +3452,7 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                 diff   = str(row[3]).strip().lower() if len(row) > 3 and row[3] else 'medium'
                 # Options in columns E–J (index 4–9), correct answer column K (index 10)
                 raw_opts = [str(row[i]).strip() for i in range(4, 9) if i < len(row) and row[i]]
-                correct_idx_raw = str(row[10]).strip() if len(row) > 10 and row[10] else '0'
+                correct_idx_raw = str(row[9]).strip() if len(row) > 9 and row[9] else '1'
                 try:
                     correct_idx = int(correct_idx_raw) - 1  # 1-based → 0-based
                 except ValueError:

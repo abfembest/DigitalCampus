@@ -5301,10 +5301,10 @@ def admin_exam_publish(request, slug):
     exam.published_by = request.user
     exam.published_at = timezone.now()
     if visible_from_raw:
-        exam.visible_from = parse_datetime(visible_from_raw) or exam.visible_from
+        exam.visible_from_override = parse_datetime(visible_from_raw) or exam.visible_from_override
     if visible_until_raw:
-        exam.visible_until = parse_datetime(visible_until_raw) or exam.visible_until
-    exam.save(update_fields=['status', 'published_by', 'published_at', 'visible_from', 'visible_until'])
+        exam.visible_until_override = parse_datetime(visible_until_raw) or exam.visible_until_override
+    exam.save(update_fields=['status', 'published_by', 'published_at', 'visible_from_override', 'visible_until_override'])
 
     ExamStatusLog.objects.create(
         exam=exam,

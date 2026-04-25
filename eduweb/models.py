@@ -2633,6 +2633,10 @@ class LMSCourse(models.Model):
         
         if not self.instructor_name and self.instructor:
             self.instructor_name = self.instructor.get_full_name() or self.instructor.username
+
+        # Auto-sync term from linked academic course if not manually set
+        if self.academic_course and not self.term:
+            self.term = self.academic_course.semester
         
         if self.is_published and not self.published_at:
             self.published_at = timezone.now()
@@ -4928,7 +4932,7 @@ class Exam(models.Model):
                     errors['instruction_window_minutes'] = (
                         "instruction_window_minutes must be at least 1."
                     )
-                elif self.instruction_window_minutes >= dur:
+                elif dur > 0 and self.instruction_window_minutes >= dur:
                     errors['instruction_window_minutes'] = (
                         f"instruction_window_minutes ({self.instruction_window_minutes}) "
                         f"must be less than exam duration ({dur} min)."

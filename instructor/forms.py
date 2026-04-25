@@ -784,14 +784,20 @@ class DiscussionReplyForm(forms.ModelForm):
 
 class ExamForm(forms.ModelForm):
     """
-    Trimmed exam creation form.
-    - title is a declared field (not in Meta.fields) so JS can auto-fill it from
-      the course name and the instructor can tweak it before saving.
-    - description, hall_capacity, expected_candidates, eligible_levels,
-      show_answers_after, special_instructions, internal_notes are omitted here
-      and can be edited after the exam is created.
+    Exam creation / edit form for the instructor dashboard.
+ 
+    Changes from original:
+      - 'mode'                       REMOVED — always online/CBT
+      - 'exam_date','start_time','end_time'
+                                     REMOVED — replaced by start_datetime / end_datetime
+      - 'instruction_window_minutes' REMOVED — fixed class constant (10 min)
+      - 'venue'                      REMOVED — online exam, no physical location
+      - 'difficulty_mix'             REMOVED — not used
+      - 'visible_from_override',
+        'visible_until_override'     REMOVED — visibility is fully computed
+      - start_datetime / end_datetime ADDED   — combined date+time pickers
     """
-
+ 
     # ── manually declared so POST value is accepted and validated ────────────
     title = forms.CharField(
         max_length=255,
@@ -805,67 +811,68 @@ class ExamForm(forms.ModelForm):
         }),
         help_text='Auto-filled from the course name — edit if needed.',
     )
-
+ 
     class Meta:
         model  = Exam
         fields = [
             # classification
-            'exam_type', 'mode',
-            # schedule
-            'exam_date', 'start_time', 'end_time',
-            'instruction_window_minutes',
-            # venue — only the essentials at creation time
-            'venue',
+            'exam_type',
+            # REMOVED: 'mode' — always online/CBT
+ 
+            # schedule — combined datetime fields replace the old date+time split
+            'start_datetime',
+            'end_datetime',
+            # REMOVED: 'exam_date', 'start_time', 'end_time'
+            # REMOVED: 'instruction_window_minutes' — fixed at 10, class constant
+ 
+            # REMOVED: 'venue' — online exam
+ 
             # pool config
-            'questions_per_student', 'total_marks', 'pass_mark',
+            'questions_per_student',
+            # REMOVED: 'difficulty_mix'
+            'total_marks', 'pass_mark',
             'shuffle_questions', 'shuffle_options',
             'show_result_immediately',
+ 
             # file import
             'question_import_file',
+ 
             # student-facing instructions only
             'instructions',
-            # visibility
-            'visible_from_override', 'visible_until_override',
+ 
+            # REMOVED: 'visible_from_override', 'visible_until_override'
+            #          — visibility is purely computed from start/end + class constants
         ]
         widgets = {
             'exam_type': forms.Select(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
             }),
-            'mode': forms.Select(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
-            }),
-            'exam_date': forms.DateInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'date'
-            }),
-            'start_time': forms.TimeInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'time'
-            }),
-            'end_time': forms.TimeInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'time'
-            }),
-            'duration_minutes': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'value': 120
-            }),
-            'instruction_window_minutes': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'value': 10
-            }),
-            'venue': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'placeholder': 'e.g. Hall A, Room 201, or Online'
-            }),
+ 
+            # REMOVED: 'mode' widget
+ 
+            # Combined datetime pickers — replaces the old separate date + time inputs
+            'start_datetime': forms.DateTimeInput(
+                format='%Y-%m-%dT%H:%M',
+                attrs={
+                    'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                             'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                    'type': 'datetime-local',
+                }
+            ),
+            'end_datetime': forms.DateTimeInput(
+                format='%Y-%m-%dT%H:%M',
+                attrs={
+                    'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
+                             'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+                    'type': 'datetime-local',
+                }
+            ),
+ 
+            # REMOVED: 'exam_date', 'start_time', 'end_time' widgets
+            # REMOVED: 'instruction_window_minutes' widget
+            # REMOVED: 'venue' widget
+ 
             'questions_per_student': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
@@ -903,26 +910,23 @@ class ExamForm(forms.ModelForm):
                 'rows': 4,
                 'placeholder': 'Shown to students on the instruction page'
             }),
-            'visible_from': forms.DateTimeInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'datetime-local'
-            }),
-            'visible_until': forms.DateTimeInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg '
-                         'focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'type': 'datetime-local'
-            }),
+ 
+            # REMOVED: 'visible_from' / 'visible_until' widgets
+            #          — these are now read-only @properties, not form fields
         }
-
-    def clean_instruction_window_minutes(self):
-        val = self.cleaned_data.get('instruction_window_minutes')
-        # Always enforce exactly 10 minutes — this is a system constant
-        return 10
-
+ 
+    # REMOVED: clean_instruction_window_minutes — field no longer exists on model
+ 
+    def clean(self):
+        cleaned = super().clean()
+        start   = cleaned.get('start_datetime')
+        end     = cleaned.get('end_datetime')
+        if start and end and end <= start:
+            self.add_error('end_datetime', 'End date/time must be after start date/time.')
+        return cleaned
+ 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # Write the manually declared title field to the model instance
         instance.title = self.cleaned_data.get('title', '')
         if commit:
             instance.save()

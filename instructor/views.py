@@ -3050,24 +3050,24 @@ def exam_update(request, slug):
                         note="Reverted to draft by instructor edit.")
  
     # Update fields from POST
-    exam.title                     = request.POST.get('title', exam.title).strip()
-    exam.exam_type                 = request.POST.get('exam_type', exam.exam_type)
-    exam.mode                      = request.POST.get('mode', exam.mode)
-    exam.description               = request.POST.get('description', exam.description)
-    exam.instructions              = request.POST.get('instructions', exam.instructions)
-    exam.special_instructions      = request.POST.get('special_instructions', exam.special_instructions)
-    exam.internal_notes            = request.POST.get('internal_notes', exam.internal_notes)
-    exam.venue                     = request.POST.get('venue', exam.venue)
-    exam.shuffle_questions         = 'shuffle_questions' in request.POST
-    exam.shuffle_options           = 'shuffle_options' in request.POST
-    exam.show_result_immediately   = 'show_result_immediately' in request.POST
+    exam.title                   = request.POST.get('title', exam.title).strip()
+    exam.exam_type               = request.POST.get('exam_type', exam.exam_type)
+    exam.description             = request.POST.get('description', exam.description)
+    exam.instructions            = request.POST.get('instructions', exam.instructions)
+    exam.special_instructions    = request.POST.get('special_instructions', exam.special_instructions)
+    exam.internal_notes          = request.POST.get('internal_notes', exam.internal_notes)
+    exam.shuffle_questions       = 'shuffle_questions' in request.POST
+    exam.shuffle_options         = 'shuffle_options' in request.POST
+    exam.show_result_immediately = 'show_result_immediately' in request.POST
  
-    # Numeric fields — guard against empty strings
-    # NOTE: duration_minutes is now a @property (computed from start/end time) — do NOT set it
+    # REMOVED: exam.mode  — always online, no longer a field
+    # REMOVED: exam.venue — no physical location
+ 
+    # Numeric fields
+    # REMOVED: 'instruction_window_minutes' — fixed class constant, never written from POST
     for attr, field in (
-        ('instruction_window_minutes', 'instruction_window_minutes'),
         ('questions_per_student', 'questions_per_student'),
-        ('pass_mark', 'pass_mark'),
+        ('pass_mark',             'pass_mark'),
     ):
         raw = request.POST.get(field, '').strip()
         if raw:
@@ -3075,25 +3075,25 @@ def exam_update(request, slug):
                 setattr(exam, attr, int(raw) if attr != 'pass_mark' else float(raw))
             except ValueError:
                 pass
-        elif attr in ('questions_per_student', 'pass_mark'):
+        else:
             setattr(exam, attr, None)
  
-    # Date / time fields
-    for attr, field in (
-        ('exam_date', 'exam_date'),
-        ('start_time', 'start_time'),
-        ('end_time', 'end_time'),
-    ):
-        raw = request.POST.get(field, '').strip()
-        if raw:
-            setattr(exam, attr, raw)
- 
-    # Visibility overrides — blank means "use auto-computed default"
+    # Combined datetime fields — replace the old exam_date / start_time / end_time split
+    # REMOVED: separate 'exam_date', 'start_time', 'end_time' parsing
     from django.utils.dateparse import parse_datetime
-    vf = request.POST.get('visible_from_override', '').strip()
-    vu = request.POST.get('visible_until_override', '').strip()
-    exam.visible_from_override  = parse_datetime(vf) if vf else None
-    exam.visible_until_override = parse_datetime(vu) if vu else None
+    raw_start = request.POST.get('start_datetime', '').strip()
+    raw_end   = request.POST.get('end_datetime',   '').strip()
+    if raw_start:
+        parsed = parse_datetime(raw_start)
+        if parsed:
+            exam.start_datetime = parsed
+    if raw_end:
+        parsed = parse_datetime(raw_end)
+        if parsed:
+            exam.end_datetime = parsed
+ 
+    # REMOVED: visible_from_override / visible_until_override parsing
+    # — visibility is now a fully computed @property, no overrides stored
  
     try:
         exam.save()

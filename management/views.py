@@ -3172,7 +3172,7 @@ def courses_list(request):
     courses = (
         Course.objects
         .select_related('program__department__faculty')
-        .order_by('year_of_study', 'semester', 'display_order', 'code')
+        .order_by('year_of_study', 'semester', 'code')
     )
     form = CourseForm()
  

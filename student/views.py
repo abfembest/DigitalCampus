@@ -133,8 +133,7 @@ def _get_eligible_exams(user):
         course__session=current_session,          # LMSCourse.session
         course__enrollments__student=user,        # Enrollment.student
         course__enrollments__status='active',     # Enrollment.status
-    ).select_related('course', 'academic_session').distinct()
-
+    ).select_related('course').distinct()
     # If the session has a current term, also filter by it
     # (blank term on LMSCourse means it matches any term — don't exclude those)
     if current_term:
@@ -348,11 +347,10 @@ def dashboard(request):
             course__in=Enrollment.objects.filter(
                 student=user, status='active'
             ).values('course_id'),
-            exam_date__gte=now.date(),
+            end_datetime__gt=now,
         )
-        .exclude(exam_date=now.date(), end_time__lte=now.time())
         .select_related('course')
-        .order_by('exam_date', 'start_time')[:3]
+        .order_by('start_datetime')[:3]
     )
 
     # ── Recent released grades ────────────────────────────────────────────────
@@ -2670,8 +2668,8 @@ def grades(request):
         
         enrollment.current_grade = grade_data['avg_score']
     
-    # Get graded assignment submissions
-    submissions = (
+    # Get graded assignment submissions — evaluate to list so .passed sticks
+    submissions = list(
         AssignmentSubmission.objects
         .filter(student=user, status='graded')
         .select_related(
@@ -2681,8 +2679,7 @@ def grades(request):
         )
         .order_by('-graded_at')
     )
-    
-    # Add passed status to submissions
+
     for submission in submissions:
         submission.passed = (
             submission.score >= submission.assignment.passing_score
@@ -2691,18 +2688,27 @@ def grades(request):
         )
     
     # Academic course grades (from program — recorded by lecturers)
-    academic_grades = (
-        CourseGrade.objects
-        .filter(student=user)
-        .select_related('course', 'course__program', 'session')
-        .order_by('session__name', 'course__year_of_study', 'course__semester')
+    # academic_grades = (
+    #     CourseGrade.objects
+    #     .filter(student=user)
+    #     .select_related('course', 'course__program', 'session')
+    #     .order_by('session__name', 'course__year_of_study', 'course__semester')
+    # )
+
+    # Quiz attempts — best attempt per quiz for graded display
+    quiz_attempts = list(
+        QuizAttempt.objects
+        .filter(student=user, is_completed=True)
+        .select_related('quiz', 'quiz__lesson', 'quiz__lesson__course')
+        .order_by('-completed_at')
     )
 
     context = {
         'page_title': 'Grades & Performance',
         'enrollments': enrollments,
         'submissions': submissions,
-        'academic_grades': academic_grades,
+        'quiz_attempts': quiz_attempts,
+        # 'academic_grades': academic_grades,
     }
     
     return render(request, 'students/grades.html', context)
@@ -3836,49 +3842,53 @@ STANDARD_EXAM_RULES = [
 @login_required
 @student_required
 def exam_list(request):
-    now = timezone.now()
+    now             = timezone.now()
+    user            = request.user
+    current_session = AcademicSession.get_current()
+    current_term    = current_session.get_current_term() if current_session else None
 
-    enrolled_courses = Enrollment.objects.filter(
-        student=request.user, status='active'
-    ).values_list('course_id', flat=True)
-
+    # Only exams whose LMSCourse the student is actively enrolled in,
+    # for the current session and term — mirrors my_courses logic.
     exams = (
         Exam.objects
-        .filter(status=Exam.PUBLISHED, is_active=True, course__in=enrolled_courses)
-        .select_related('course', 'academic_session', 'department')
-        .order_by('exam_date', 'start_time')
+        .filter(
+            status=Exam.PUBLISHED,
+            is_active=True,
+            course__session=current_session,
+            course__enrollments__student=user,
+            course__enrollments__status='active',
+        )
+        .select_related('course')
+        .order_by('start_datetime')
+        .distinct()
     )
+
+    # Also filter by current term if the session has one active
+    if current_term:
+        exams = exams.filter(
+            Q(course__term=current_term) | Q(course__term='')
+        )
 
     context_items = []
     for exam in exams:
-        # Show from instructions_open_at (before exam start), hide after exam ends
-        if now < exam.instructions_open_at:
-            continue
-        if now > exam.visible_until:
+        # Only show within the visibility window (property handles this)
+        if now < exam.visible_from or now > exam.visible_until:
             continue
 
-        instructions_at = exam.instructions_open_at
-        start_dt        = exam.exam_start_datetime
-        end_dt          = exam.exam_end_datetime
+        start_dt = exam.start_datetime
+        end_dt   = exam.end_datetime
 
-        can_read  = now >= instructions_at
-        can_start = now >= start_dt
-        is_live   = start_dt <= now < end_dt
-
-        student_status = 'not_started'
         response = StudentExamResponse.objects.filter(
-            exam=exam, student=request.user
+            exam=exam, student=user
         ).first()
-        if response:
-            student_status = response.status
 
         context_items.append({
             'exam':                     exam,
-            'can_read':                 can_read,
-            'can_start':                can_start,
-            'is_live':                  is_live,
-            'student_status':           student_status,
-            'instructions_open_at_iso': instructions_at.isoformat(),
+            'can_read':                 now >= exam.instructions_open_at,
+            'can_start':                now >= start_dt,
+            'is_live':                  start_dt <= now < end_dt,
+            'student_status':           response.status if response else 'not_started',
+            'instructions_open_at_iso': exam.instructions_open_at.isoformat(),
             'exam_start_datetime_iso':  start_dt.isoformat(),
             'exam_end_datetime_iso':    end_dt.isoformat(),
         })
@@ -3898,7 +3908,7 @@ def exam_instructions(request, slug):
     if now < exam.instructions_open_at:
         return redirect('students:exam_list')
 
-    if now >= exam.exam_end_datetime:
+    if now >= exam.end_datetime:
         return redirect('students:exam_list')
 
     response, _ = StudentExamResponse.objects.get_or_create(
@@ -3912,7 +3922,7 @@ def exam_instructions(request, slug):
         response.instructions_opened_at = now
     response.save(update_fields=['status', 'instructions_opened_at'])
 
-    secs = max(0, int((exam.exam_start_datetime - now).total_seconds()))
+    secs = max(0, int((exam.start_datetime - now).total_seconds()))
     h, m, s = min(secs // 3600, 99), (secs % 3600) // 60, secs % 60
 
     # Pre-render units as (value_str, label) pairs for the template
@@ -3924,8 +3934,8 @@ def exam_instructions(request, slug):
 
     return render(request, 'students/examinstructions.html', {
         'exam':            exam,
-        'exam_start_iso':  exam.exam_start_datetime.isoformat(),
-        'exam_end_iso':    exam.exam_end_datetime.isoformat(),
+        'exam_start_iso':  exam.start_datetime.isoformat(),
+        'exam_end_iso':    exam.end_datetime.isoformat(),
         'countdown_units': countdown_units,
         'standard_rules':  STANDARD_EXAM_RULES,
     })

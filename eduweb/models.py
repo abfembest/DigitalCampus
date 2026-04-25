@@ -1574,23 +1574,23 @@ class Course(models.Model):
     )
 
     # ── Display ────────────────────────────────────────────────────────────────
-    icon = models.CharField(
-        max_length=50,
-        default='book-open',
-        help_text="Lucide icon name for display"
-    )
-    color_primary = models.CharField(max_length=20, default='blue')
-    color_secondary = models.CharField(max_length=20, default='cyan')
+    # icon = models.CharField(
+    #     max_length=50,
+    #     default='book-open',
+    #     help_text="Lucide icon name for display"
+    # )
+    # color_primary = models.CharField(max_length=20, default='blue')
+    # color_secondary = models.CharField(max_length=20, default='cyan')
 
     # ── Status & Display ───────────────────────────────────────────────────────
     is_active = models.BooleanField(default=True)
-    display_order = models.IntegerField(default=0)
+    # display_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [['program', 'code']]
-        ordering = ['year_of_study', 'semester', 'display_order', 'name']
+        ordering = ['year_of_study', 'semester', 'name']
         verbose_name = 'Course'
         verbose_name_plural = 'Courses'
         indexes = [
@@ -1786,9 +1786,13 @@ class CourseApplication(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
     
-    # Course & Intake
+    # Course & Session & Level
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='applications')
-    intake = models.ForeignKey(CourseIntake, on_delete=models.CASCADE, related_name='applications')
+    academic_session = models.ForeignKey('AcademicSession', on_delete=models.SET_NULL, null=True, blank=True, related_name='applications')
+    entry_level = models.IntegerField(
+        null=True, blank=True,
+        help_text="Entry level e.g. 100, 200, 300 etc."
+    )
     study_mode = models.CharField(max_length=20, choices=Program.STUDY_MODE_CHOICES)
     
     # Personal Information
@@ -3419,6 +3423,7 @@ def update_course_rating(sender, instance, created, **kwargs):
     instance.course.update_statistics()
 
 
+<<<<<<< Updated upstream
 '''@receiver(post_save, sender=UserProfile)
 def auto_assign_required_fees(sender, instance, **kwargs):
     """
@@ -3429,13 +3434,26 @@ def auto_assign_required_fees(sender, instance, **kwargs):
     """
     if instance.role != 'student' or not instance.program:
         return
+=======
+# @receiver(post_save, sender=UserProfile)
+# def auto_assign_required_fees(sender, instance, **kwargs):
+#     """
+#     When a student's program is set or changed, auto-create FeePayment
+#     records (status='pending') for every active AllRequiredPayments
+#     that belongs to that program and doesn't already have a payment
+#     record for this student.
+#     """
+#     if instance.role != 'student' or not instance.program:
+#         return
+>>>>>>> Stashed changes
 
-    required_fees = AllRequiredPayments.objects.filter(
-        program=instance.program,
-        who_to_pay='student',
-        is_active=True,
-    )
+#     required_fees = AllRequiredPayments.objects.filter(
+#         program=instance.program,
+#         who_to_pay='student',
+#         is_active=True,
+#     )
 
+<<<<<<< Updated upstream
     for fee in required_fees:
         FeePayment.objects.get_or_create(
             user=instance.user,
@@ -3446,6 +3464,18 @@ def auto_assign_required_fees(sender, instance, **kwargs):
                 'status': 'pending',
             }
         )'''
+=======
+#     for fee in required_fees:
+#         FeePayment.objects.get_or_create(
+#             user=instance.user,
+#             fee=fee,
+#             defaults={
+#                 'amount': fee.amount,
+#                 'currency': fee.currency,
+#                 'status': 'pending',
+#             }
+#         )
+>>>>>>> Stashed changes
 
 # ==================== STUDY GROUPS ====================
 class StudyGroup(models.Model):

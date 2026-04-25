@@ -474,38 +474,17 @@ def application_detail(request, application_id):
     # Get pending count for sidebar
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded']).count()
     
+    academic_sessions = AcademicSession.objects.filter(
+        status__in=['active', 'upcoming']
+    ).order_by('-name')
+
     context = {
         'application': application,
         'pending_count': pending_count,
+        'academic_sessions': academic_sessions,
     }
     
     return render(request, 'management/application_detail.html', context)
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def mark_reviewed(request, pk):
-    """Log reviewer + timestamp, then redirect to make decision."""
-    if request.method != 'POST':
-        return redirect('management:applications_list')
-
-    application = get_object_or_404(CourseApplication, pk=pk)
-
-    # Only act on applications that are under review
-    if application.status != 'under_review':
-        messages.warning(request, 'Application is not in under_review status.')
-        return redirect('management:application_detail', application_id=application.application_id)
-
-    # Record who reviewed it and when (status stays under_review until decision)
-    application.reviewer = request.user
-    application.reviewed_at = timezone.now()
-    application.save(update_fields=['reviewer', 'reviewed_at'])
-
-    messages.success(
-        request,
-        f'Review recorded for {application.application_id}. Now make your decision.'
-    )
-    return redirect('management:application_detail', application_id=application.application_id)
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
@@ -522,14 +501,33 @@ def make_decision(request, pk):
             messages.error(request, 'Invalid decision. Choose Approved or Rejected.')
             return redirect('management:application_detail', application_id=application.application_id)
 
-        # Slot enforcement — block approval if intake is full
-        if decision == 'approved' and application.intake and application.intake.is_full:
-            messages.error(
-                request,
-                f'Cannot approve: the {application.intake} intake has no remaining slots '
-                f'({application.intake.available_slots} slots, all filled).'
-            )
-            return redirect('management:application_detail', application_id=application.application_id)
+        # Update academic session and entry level if provided in decision form
+        session_id = request.POST.get('academic_session')
+        entry_level = request.POST.get('entry_level')
+        if session_id:
+            try:
+                application.academic_session = AcademicSession.objects.get(id=session_id)
+            except AcademicSession.DoesNotExist:
+                pass
+        if entry_level:
+            try:
+                application.entry_level = int(entry_level)
+            except (ValueError, TypeError):
+                pass
+
+        # Update academic session and entry level if provided in decision form
+        session_id = request.POST.get('academic_session')
+        entry_level = request.POST.get('entry_level')
+        if session_id:
+            try:
+                application.academic_session = AcademicSession.objects.get(id=session_id)
+            except AcademicSession.DoesNotExist:
+                pass
+        if entry_level:
+            try:
+                application.entry_level = int(entry_level)
+            except (ValueError, TypeError):
+                pass
 
         # Update application status
         if decision == 'approved':
@@ -542,9 +540,28 @@ def make_decision(request, pk):
         application.reviewed_at = timezone.now()
         application.save()
 
-        # Auto-issue admission number for accepted students
-        if decision == 'approved':
-            application.issue_admission_number()
+        # On approval: sync program / dept / faculty / session / level to UserProfile
+        if decision == 'approved' and application.user:
+            try:
+                profile = application.user.profile
+                if application.program:
+                    profile.program    = application.program
+                    profile.department = application.program.department
+                    profile.faculty    = application.program.department.faculty
+                if application.academic_session:
+                    profile.admission_session = application.academic_session
+                if application.entry_level:
+                    profile.year_of_study = application.entry_level // 100
+                profile.save(update_fields=[
+                    'program', 'department', 'faculty',
+                    'admission_session', 'year_of_study',
+                ])
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception(
+                    "make_decision — failed to sync profile for application %s",
+                    application.application_id,
+                )
         
         # Send decision email
         send_decision_email(application)

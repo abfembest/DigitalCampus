@@ -408,7 +408,7 @@
                         <div class="form-step" id="step3">
                             <p class="text-gray-600 mb-6">Select your desired program and preferences.</p>
 
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                                 <div class="mb-6">
                                     <label class="block text-gray-700 font-medium mb-2">
@@ -422,12 +422,31 @@
 
                                 <div class="mb-6">
                                     <label class="block text-gray-700 font-medium mb-2">
-                                        {{ form.intake.label }} <span class="text-red-500">*</span>
+                                        academic session <span class="text-red-500">*</span>
                                     </label>
-                                    {{ form.intake }}
-                                    {% if form.intake.errors %}
-                                    <div class="text-red-500 text-sm mt-1">{{ form.intake.errors.0 }}</div>
-                                    {% endif %}
+                                    <select name="academic_session" id="id_academic_session" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 bg-white" required>
+                                        <option value="" selected disabled>-- select academic session --</option>
+                                        {% for session in academic_sessions %}
+                                        <option value="{{ session.id }}">{{ session.name }} ({{ session.get_status_display }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="mb-6">
+                                    <label class="block text-gray-700 font-medium mb-2">
+                                        entry level <span class="text-red-500">*</span>
+                                    </label>
+                                    <select name="entry_level" id="id_entry_level" class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 bg-white" required>
+                                        <option value="" selected disabled>-- select level --</option>
+                                        <option value="100">100 level</option>
+                                        <option value="200">200 level</option>
+                                        <option value="300">300 level</option>
+                                        <option value="400">400 level</option>
+                                        <option value="500">500 level</option>
+                                        <option value="600">600 level</option>
+                                        <option value="700">700 level</option>
+                                        <option value="800">800 level</option>
+                                    </select>
                                 </div>
 
                                 <div class="mb-6">
@@ -900,12 +919,14 @@ if (emergencyCountry && emergencyLocal) {
         document.querySelectorAll('#step3 .error-highlight').forEach(el => el.classList.remove('error-highlight', 'border-red-500'));
 
         const program = document.querySelector('select[name="program"]');
-        const intake = document.querySelector('select[name="intake"]');
+        const academicSession = document.querySelector('select[name="academic_session"]');
+        const entryLevel = document.querySelector('select[name="entry_level"]');
         const studyMode = document.querySelector('select[name="study_mode"]');
         const hear = document.querySelector('select[name="how_did_you_hear"]');
 
         if (!program.value || program.value === '--------') allValid = false;
-        if (!intake.value || intake.value === '--------') allValid = false;
+        if (!academicSession || !academicSession.value) allValid = false;
+        if (!entryLevel || !entryLevel.value) allValid = false;
         if (!studyMode.value || studyMode.value === '--------') allValid = false;
         if (!hear.value || hear.value === '') allValid = false;
 
@@ -1241,8 +1262,8 @@ if (emergencyCountry && emergencyLocal) {
         // Step 3: Course Selection (excluding personal statement)
         const programSelect = document.querySelector('select[name="program"]');
         const program = programSelect ? programSelect.options[programSelect.selectedIndex]?.text : '';
-        const intakeSelect = document.querySelector('select[name="intake"]');
-        const intake = intakeSelect ? intakeSelect.options[intakeSelect.selectedIndex]?.text : '';
+        const sessionSelect = document.querySelector('select[name="academic_session"]');
+        const intake = sessionSelect ? sessionSelect.options[sessionSelect.selectedIndex]?.text : '';
         const studyModeSelect = document.querySelector('select[name="study_mode"]');
         const studyMode = studyModeSelect ? studyModeSelect.options[studyModeSelect.selectedIndex]?.text : '';
         const scholarship = document.querySelector('input[name="scholarship"]')?.checked ? 'Yes' : 'No';
@@ -1263,7 +1284,7 @@ if (emergencyCountry && emergencyLocal) {
             <h4 class="font-semibold mb-3 text-lg text-purple-900 border-b pb-2">Course Selection</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div><strong>Program:</strong> ${program}</div>
-                <div><strong>Intake:</strong> ${intake}</div>
+                <div><strong>Academic Session:</strong> ${intake}</div>
                 <div><strong>Study Mode:</strong> ${studyMode}</div>
                 <div><strong>Scholarship:</strong> ${scholarship}</div>
                 <div><strong>Work Experience (years):</strong> ${workExp}</div>

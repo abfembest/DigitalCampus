@@ -26,6 +26,7 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-this-in-produc
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 # FIX: Hardcoded ALLOWED_HOSTS — no https://, no spaces issues, no .env parsing problems
+<<<<<<< Updated upstream
 ALLOWED_HOSTS = [
     "miuedu.com",
     "www.miuedu.com",
@@ -35,6 +36,18 @@ ALLOWED_HOSTS = [
     "mail.miuedu.com",
     "*",
 ]
+=======
+# ALLOWED_HOSTS = [
+#     "miuedu.com",
+#     "www.miuedu.com",
+#     "127.0.0.1",
+#     "localhost",
+#     "https://www.miuedu.com",
+#     "mail.miuedu.com",
+# ]
+
+ALLOWED_HOSTS = ['*']
+>>>>>>> Stashed changes
 
 # --------------------------------------------------
 # APPLICATION DEFINITION

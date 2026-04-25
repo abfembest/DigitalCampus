@@ -1,6 +1,6 @@
 ﻿from django import forms
 from .models import (
-    ContactMessage, CourseApplication, CourseIntake,
+    ContactMessage, CourseApplication,
     ListOfCountry, ApplicationDocument
 )
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -114,6 +114,20 @@ class ContactForm(forms.ModelForm):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+class DisabledEmptySelect(forms.Select):
+    """Renders the blank option as selected+disabled so it acts as a true placeholder."""
+    def __init__(self, *args, empty_label="-- Select --", **kwargs):
+        super().__init__(*args, **kwargs)
+        self._empty_label = empty_label
+
+    def create_option(self, name, value, label, selected, index, attrs=None, **kwargs):
+        option = super().create_option(name, value, label, selected, index, attrs=attrs, **kwargs)
+        if value == '' or value is None or str(value) == '':
+            option['attrs']['disabled'] = True
+            option['selected'] = True
+        return option
+
+
 # COURSE APPLICATION FORM  — all model fields included
 # ─────────────────────────────────────────────────────────────────────────────
 class CourseApplicationForm(forms.ModelForm):
@@ -139,21 +153,19 @@ class CourseApplicationForm(forms.ModelForm):
     country = forms.ChoiceField(
         choices=[('', 'Select Country')],
         required=True,
-        widget=forms.Select(attrs={'class': f'{_SELECT} select2-country'}),
+        widget=DisabledEmptySelect(attrs={'class': f'{_SELECT} select2-country'}),
     )
 
-    # Nationality — populated dynamically from ListOfCountry in __init__
     nationality = forms.ChoiceField(
         choices=[('', 'Select Nationality')],
         required=True,
-        widget=forms.Select(attrs={'class': f'{_SELECT} select2-nationality'}),
+        widget=DisabledEmptySelect(attrs={'class': f'{_SELECT} select2-nationality'}),
     )
 
-    # How did you hear — ChoiceField with controlled choices
     how_did_you_hear = forms.ChoiceField(
         choices=HEAR_CHOICES,
         required=True,
-        widget=forms.Select(attrs={'class': _SELECT}),
+        widget=DisabledEmptySelect(attrs={'class': _SELECT}),
     )
 
     # Additional model fields exposed as explicit form fields
@@ -173,8 +185,8 @@ class CourseApplicationForm(forms.ModelForm):
     class Meta:
         model = CourseApplication
         fields = [
-            # ── Course & Intake
-            'program', 'intake', 'study_mode',
+            # ── Course, Session & Level
+            'program', 'study_mode',
             # ── Personal
             'first_name', 'last_name', 'email', 'phone',
             'date_of_birth', 'gender', 'nationality',
@@ -198,10 +210,9 @@ class CourseApplicationForm(forms.ModelForm):
         ]
 
         widgets = {
-            # Course & Intake
-            'program':    forms.Select(attrs={'class': _SELECT}),
-            'intake':     forms.Select(attrs={'class': _SELECT}),
-            'study_mode': forms.Select(attrs={'class': _SELECT}),
+            # Course, Session & Level
+            'program':    DisabledEmptySelect(attrs={'class': _SELECT}),
+            'study_mode': DisabledEmptySelect(attrs={'class': _SELECT}),
 
             # Personal Information
             'first_name':    forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Enter your first name'}),
@@ -209,7 +220,7 @@ class CourseApplicationForm(forms.ModelForm):
             'email':         forms.EmailInput(attrs={'class': _INPUT, 'placeholder': 'your.email@example.com', 'readonly': 'readonly'}),
             'phone':         forms.TextInput(attrs={'class': _INPUT, 'placeholder': '+234 XXX XXX XXXX'}),
             'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': _INPUT}),
-            'gender':        forms.Select(attrs={'class': _SELECT}),
+            'gender':        DisabledEmptySelect(attrs={'class': _SELECT}),
 
             # Address
             'address_line1': forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Street address'}),
@@ -223,7 +234,7 @@ class CourseApplicationForm(forms.ModelForm):
             'institution_name':      forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'Name of institution attended'}),
             'graduation_year':       forms.NumberInput(attrs={'class': _INPUT, 'placeholder': 'e.g., 2020', 'min': 1950, 'max': 2030}),
             'gpa_or_grade':          forms.TextInput(attrs={'class': _INPUT, 'placeholder': 'e.g., 3.5/4.0 or First Class'}),
-            'language_skill':        forms.Select(attrs={'class': _SELECT}),
+            'language_skill':        DisabledEmptySelect(attrs={'class': _SELECT}),
             'language_score':        forms.NumberInput(attrs={'class': _INPUT, 'placeholder': 'e.g., 7.5 (IELTS) or 95 (TOEFL)', 'min': 0, 'step': '0.01'}),
 
             # Additional Information

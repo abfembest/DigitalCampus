@@ -294,26 +294,33 @@
         </div>
         
         <div class="flex flex-col sm:flex-row gap-3">
-            <!-- Log reviewer, then decision modal opens -->
             {% if application.status == 'under_review' %}
-            <form method="post" action="{% url 'management:mark_reviewed' application.id %}" class="inline">
+            <!-- Accept Admission -->
+            <form method="post" action="{% url 'management:make_decision' application.id %}" id="acceptForm">
                 {% csrf_token %}
-                <button type="submit"
-                    class="w-full sm:w-auto px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2">
-                    <i class="fas fa-check-double" aria-hidden="true"></i>
-                    <span>Log Review</span>
+                <input type="hidden" name="decision" value="approved">
+                <input type="hidden" name="decision_notes" id="accept_notes_hidden">
+                <input type="hidden" name="academic_session" id="accept_session_hidden">
+                <input type="hidden" name="entry_level" id="accept_level_hidden">
+                <button type="button" onclick="showAcceptPanel()"
+                    class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2">
+                    <i class="fas fa-check-circle" aria-hidden="true"></i>
+                    <span>Accept Admission</span>
                 </button>
             </form>
-
-            <!-- Make Decision always available when under_review -->
-            <button onclick="openDecisionModal()"
-                class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2">
-                <i class="fas fa-gavel" aria-hidden="true"></i>
-                <span>Make Decision</span>
-            </button>
+            <!-- Reject Admission -->
+            <form method="post" action="{% url 'management:make_decision' application.id %}" id="rejectForm">
+                {% csrf_token %}
+                <input type="hidden" name="decision" value="rejected">
+                <input type="hidden" name="decision_notes" id="reject_notes_hidden">
+                <button type="button" onclick="showRejectPanel()"
+                    class="w-full sm:w-auto px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2">
+                    <i class="fas fa-times-circle" aria-hidden="true"></i>
+                    <span>Reject Admission</span>
+                </button>
+            </form>
             {% endif %}
 
-            <!-- Admission letter for approved -->
             {% if application.status == 'approved' %}
             <a href="{% url 'eduweb:admission_letter' application.application_id %}"
                 target="_blank"
@@ -323,7 +330,6 @@
             </a>
             {% endif %}
 
-            <!-- Final status badge -->
             {% if application.status == 'approved' or application.status == 'rejected' %}
             <div class="px-6 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2
                 {% if application.status == 'approved' %}bg-green-100 text-green-700
@@ -496,95 +502,110 @@
 </section>
 {% endif %}
 
-<!-- Decision Modal -->
-<div id="decisionModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-secondary-50">
-            <div class="flex justify-between items-center">
-                <h3 class="text-2xl font-bold text-gray-800">Make Admission Decision</h3>
-                <button onclick="closeDecisionModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+<!-- Accept Panel -->
+<div id="acceptPanel" class="hidden bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+    <h3 class="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">
+        <i class="fas fa-check-circle text-green-600"></i> Accept Admission
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Academic Session <span class="text-red-500">*</span></label>
+            <select id="accept_session" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white" required>
+                <option value="" selected disabled>-- Select Session --</option>
+                {% for session in academic_sessions %}
+                <option value="{{ session.id }}" {% if application.academic_session_id == session.id %}selected{% endif %}>
+                    {{ session.name }} ({{ session.get_status_display }})
+                </option>
+                {% endfor %}
+            </select>
         </div>
-        
-        <form method="post" action="{% url 'management:make_decision' application.id %}" class="p-6">
-            {% csrf_token %}
-            
-            <div class="mb-6">
-                <label class="block text-sm font-semibold text-gray-700 mb-3">Select Decision</label>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <label class="relative cursor-pointer">
-                        <input type="radio" name="decision" value="approved" class="peer sr-only" required>
-                        <div class="p-4 border-2 border-gray-300 rounded-lg peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-green-400 transition-all">
-                            <div class="flex flex-col items-center text-center">
-                                <i class="fas fa-check-circle text-3xl text-green-600 mb-2"></i>
-                                <span class="font-semibold text-gray-800">Accept</span>
-                                <span class="text-xs text-gray-600 mt-1">Offer admission</span>
-                            </div>
-                        </div>
-                    </label>
-                    
-                    <label class="relative cursor-pointer">
-                        <input type="radio" name="decision" value="rejected" class="peer sr-only">
-                        <div class="p-4 border-2 border-gray-300 rounded-lg peer-checked:border-red-500 peer-checked:bg-red-50 hover:border-red-400 transition-all">
-                            <div class="flex flex-col items-center text-center">
-                                <i class="fas fa-times-circle text-3xl text-red-600 mb-2"></i>
-                                <span class="font-semibold text-gray-800">Reject</span>
-                                <span class="text-xs text-gray-600 mt-1">Decline admission</span>
-                            </div>
-                        </div>
-                    </label>
-                </div>
-            </div>
-            
-            <div class="mb-6">
-                <label for="decision_notes" class="block text-sm font-semibold text-gray-700 mb-2">
-                    Additional Notes (Optional)
-                </label>
-                <textarea name="decision_notes" id="decision_notes" rows="4" 
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Add any additional comments or instructions for the applicant..."></textarea>
-                <p class="text-xs text-gray-500 mt-1">These notes will be included in the decision email to the applicant.</p>
-            </div>
-            
-            <div class="flex gap-3">
-                <button type="submit" class="flex-1 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-semibold">
-                    <i class="fas fa-paper-plane mr-2"></i>
-                    Submit Decision
-                </button>
-                <button type="button" onclick="closeDecisionModal()" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
-                    Cancel
-                </button>
-            </div>
-        </form>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Entry Level <span class="text-red-500">*</span></label>
+            <select id="accept_level" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white" required>
+                <option value="" selected disabled>-- Select Level --</option>
+                <option value="100" {% if application.entry_level == 100 %}selected{% endif %}>100 Level</option>
+                <option value="200" {% if application.entry_level == 200 %}selected{% endif %}>200 Level</option>
+                <option value="300" {% if application.entry_level == 300 %}selected{% endif %}>300 Level</option>
+                <option value="400" {% if application.entry_level == 400 %}selected{% endif %}>400 Level</option>
+                <option value="500" {% if application.entry_level == 500 %}selected{% endif %}>500 Level</option>
+                <option value="600" {% if application.entry_level == 600 %}selected{% endif %}>600 Level</option>
+                <option value="700" {% if application.entry_level == 700 %}selected{% endif %}>700 Level</option>
+                <option value="800" {% if application.entry_level == 800 %}selected{% endif %}>800 Level</option>
+            </select>
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Notes to Applicant (Optional)</label>
+            <textarea id="accept_notes" rows="3"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                placeholder="Congratulations message or any instructions..."></textarea>
+        </div>
+    </div>
+    <div class="flex gap-3">
+        <button type="button" onclick="submitAccept()"
+            class="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2">
+            <i class="fas fa-paper-plane"></i> Confirm Acceptance
+        </button>
+        <button type="button" onclick="hideAcceptPanel()"
+            class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+            Cancel
+        </button>
+    </div>
+</div>
+
+<!-- Reject Panel -->
+<div id="rejectPanel" class="hidden bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
+    <h3 class="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
+        <i class="fas fa-times-circle text-red-600"></i> Reject Admission
+    </h3>
+    <div class="mb-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Reason / Notes to Applicant (Optional)</label>
+        <textarea id="reject_notes" rows="3"
+            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            placeholder="Reason for rejection or any feedback..."></textarea>
+    </div>
+    <div class="flex gap-3">
+        <button type="button" onclick="submitReject()"
+            class="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold flex items-center gap-2">
+            <i class="fas fa-paper-plane"></i> Confirm Rejection
+        </button>
+        <button type="button" onclick="hideRejectPanel()"
+            class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+            Cancel
+        </button>
     </div>
 </div>
 
 <script>
-function openDecisionModal() {
-    document.getElementById('decisionModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+function showAcceptPanel() {
+    document.getElementById('acceptPanel').classList.remove('hidden');
+    document.getElementById('rejectPanel').classList.add('hidden');
+    document.getElementById('acceptPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-
-function closeDecisionModal() {
-    document.getElementById('decisionModal').classList.add('hidden');
-    document.body.style.overflow = '';
+function hideAcceptPanel() {
+    document.getElementById('acceptPanel').classList.add('hidden');
 }
-
-// Close modal when clicking outside
-document.getElementById('decisionModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeDecisionModal();
-    }
-});
-
-// Close modal with Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeDecisionModal();
-    }
-});
+function showRejectPanel() {
+    document.getElementById('rejectPanel').classList.remove('hidden');
+    document.getElementById('acceptPanel').classList.add('hidden');
+    document.getElementById('rejectPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function hideRejectPanel() {
+    document.getElementById('rejectPanel').classList.add('hidden');
+}
+function submitAccept() {
+    const session = document.getElementById('accept_session').value;
+    const level   = document.getElementById('accept_level').value;
+    if (!session) { alert('Please select an Academic Session.'); return; }
+    if (!level)   { alert('Please select an Entry Level.'); return; }
+    document.getElementById('accept_session_hidden').value = session;
+    document.getElementById('accept_level_hidden').value   = level;
+    document.getElementById('accept_notes_hidden').value   = document.getElementById('accept_notes').value;
+    document.getElementById('acceptForm').submit();
+}
+function submitReject() {
+    document.getElementById('reject_notes_hidden').value = document.getElementById('reject_notes').value;
+    document.getElementById('rejectForm').submit();
+}
 </script>
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -676,7 +697,74 @@ document.addEventListener('keydown', function(e) {
             </div>
         </section>
 
-        <!-- Uploaded Documents -->
+        <!-- Additional Information -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="additional-info-heading">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h2 id="additional-info-heading" class="text-lg font-bold text-gray-800 font-display">Additional Information</h2>
+            </div>
+            <div class="p-6">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Nationality</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.nationality|default:"—" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Work Experience</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.work_experience_years }} year{{ application.work_experience_years|pluralize }}</dd>
+                    </div>
+                    <div>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">How They Heard About Us</dt>
+                        <dd class="text-gray-800 font-medium">
+                            {{ application.how_did_you_hear|default:"—" }}
+                            {% if application.how_did_you_hear_other %} — {{ application.how_did_you_hear_other }}{% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Scholarship Requested</dt>
+                        <dd class="text-gray-800 font-medium">{% if application.scholarship %}Yes{% else %}No{% endif %}</dd>
+                    </div>
+                    {% if application.personal_statement %}
+                    <div class="md:col-span-2">
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Personal Statement</dt>
+                        <dd class="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">{{ application.personal_statement }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </section>
+
+        <!-- Emergency Contact -->
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="emergency-heading">
+            <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h2 id="emergency-heading" class="text-lg font-bold text-gray-800 font-display">Emergency Contact</h2>
+            </div>
+            <div class="p-6">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Name</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.emergency_contact_name|default:"—" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Relationship</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.emergency_contact_relationship|default:"—" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Phone</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.emergency_contact_phone|default:"—" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Email</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.emergency_contact_email|default:"—" }}</dd>
+                    </div>
+                    {% if application.emergency_contact_address %}
+                    <div class="md:col-span-2">
+                        <dt class="block text-sm font-medium text-gray-600 mb-1">Address</dt>
+                        <dd class="text-gray-800 font-medium">{{ application.emergency_contact_address }}</dd>
+                    </div>
+                    {% endif %}
+                </dl>
+            </div>
+        </section>
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" aria-labelledby="documents-heading">
             <div class="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
                 <h2 id="documents-heading" class="text-lg font-bold text-gray-800 font-display">Uploaded Documents</h2>
@@ -749,19 +837,31 @@ document.addEventListener('keydown', function(e) {
             </div>
             <div>
                 <dt class="block text-sm font-medium text-gray-600 mb-1">Program</dt>
-                <dd class="text-gray-800 font-medium">{{ application.course.name }}</dd>
+                <dd class="text-gray-800 font-medium">{{ application.program.name|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">Faculty / Department</dt>
+                <dd class="text-gray-800 font-medium">
+                    {{ application.program.department.faculty.name|default:"—" }} &rsaquo; {{ application.program.department.name|default:"—" }}
+                </dd>
             </div>
             <div>
                 <dt class="block text-sm font-medium text-gray-600 mb-1">Degree Level</dt>
-                <dd class="text-gray-800 font-medium">{{ application.course.get_degree_level_display }}</dd>
+                <dd class="text-gray-800 font-medium">{{ application.program.get_degree_level_display|default:"—" }}</dd>
+            </div>
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">Academic Session</dt>
+                <dd class="text-gray-800 font-medium">{{ application.academic_session.name|default:"not specified" }}</dd>
+            </div>
+            <div>
+                <dt class="block text-sm font-medium text-gray-600 mb-1">entry level</dt>
+                <dd class="text-gray-800 font-medium">
+                    {% if application.entry_level %}{{ application.entry_level }} level{% else %}not specified{% endif %}
+                </dd>
             </div>
             <div>
                 <dt class="block text-sm font-medium text-gray-600 mb-1">Study Mode</dt>
                 <dd class="text-gray-800 font-medium">{{ application.get_study_mode_display }}</dd>
-            </div>
-            <div>
-                <dt class="block text-sm font-medium text-gray-600 mb-1">Intake</dt>
-                <dd class="text-gray-800 font-medium">{{ application.intake.get_intake_period_display }} {{ application.intake.year }}</dd>
             </div>
             <div>
                 <dt class="block text-sm font-medium text-gray-600 mb-1">Financial Aid</dt>

@@ -155,6 +155,7 @@ def dashboard(request):
         TERM_MAP = {
             'fall': 'first', 'spring': 'second',
             'summer': 'annual', 'third': 'second',
+            'first': 'first', 'second': 'second', 'annual': 'annual',
         }
         normalised_term = TERM_MAP.get(current_term, current_term)
 
@@ -266,7 +267,7 @@ def dashboard(request):
         admission_history = (
             CourseApplication.objects
             .filter(Q(user=user) | Q(email=user.email))
-            .select_related('program', 'program__department__faculty', 'intake')
+            .select_related('program', 'program__department__faculty', 'academic_session')
             .order_by('-created_at')[:5]
         )
 
@@ -418,6 +419,13 @@ def my_courses(request):
 
     if not selected_term and selected_session:
         selected_term = selected_session.get_current_term() or ''
+        # if no term is currently active by date, fall back to the first term
+        # defined in term_dates so courses still load
+        if not selected_term and selected_session.term_dates:
+            selected_term = selected_session.term_dates[0].get('term', '')
+        # last resort: use first semester
+        if not selected_term:
+            selected_term = 'first'
 
     # Check if the selected term is currently active within this session's term_dates
     def _term_is_active(session, term):
@@ -445,7 +453,6 @@ def my_courses(request):
         selected_session is not None
         and selected_session.status != 'closed'
         and selected_session.is_registration_open
-        and selected_term_is_active
     )
 
     # ── Semester courses ───────────────────────────────────────────────────
@@ -469,6 +476,7 @@ def my_courses(request):
         TERM_MAP = {
             'fall': 'first', 'spring': 'second',
             'summer': 'annual', 'third': 'second',
+            'first': 'first', 'second': 'second', 'annual': 'annual',
         }
         normalised_term = TERM_MAP.get(selected_term, selected_term)
 
@@ -920,9 +928,35 @@ def course_catalog(request):
     difficulty = request.GET.get('difficulty', '').strip()
     
     try:
-        # Start with published courses only
+        profile = getattr(request.user, 'profile', None)
+        current_session = AcademicSession.get_current()
+        current_term = current_session.get_current_term() if current_session else None
+
+        # Resolve normalised term (Course model uses first/second/annual)
+        TERM_MAP = {
+            'fall': 'first', 'spring': 'second', 'summer': 'annual',
+            'third': 'second', 'first': 'first', 'second': 'second', 'annual': 'annual',
+        }
+        normalised_term = TERM_MAP.get(current_term, current_term) if current_term else None
+
+        # Base filter: published + scoped to current session & student's level
         courses = LMSCourse.objects.filter(is_published=True)
-        
+
+        if current_session:
+            courses = courses.filter(session=current_session)
+
+        if normalised_term:
+            courses = courses.filter(
+                Q(term=normalised_term) | Q(term='annual') | Q(term='')
+            )
+
+        # Restrict to the student's own year_of_study level only
+        if profile and profile.year_of_study:
+            courses = courses.filter(
+                academic_course__year_of_study=profile.year_of_study,
+                academic_course__program=profile.program,
+            )
+
         # Apply search filter
         if search_query:
             courses = courses.filter(
@@ -931,19 +965,20 @@ def course_catalog(request):
                 Q(short_description__icontains=search_query) |
                 Q(code__icontains=search_query)
             )
-        
-        # Apply difficulty filter
+
+        # Apply difficulty filter (level filter now handled by year_of_study above,
+        # but keep this for any manual overrides)
         if difficulty and difficulty in dict(LMSCourse.LEVEL_CHOICES):
             courses = courses.filter(difficulty_level=difficulty)
-        
-        # Optimize query with select_related
+
         courses = (
             courses
-            .select_related('instructor')
+            .select_related('instructor', 'academic_course')
             .order_by('-is_featured', '-created_at')
+            .distinct()
         )
-        
-        # Get enrolled course IDs (LMS enrollments)
+
+        # Get enrolled course IDs
         enrolled_course_ids = set(
             Enrollment.objects
             .filter(student=request.user, status__in=['active', 'completed'])
@@ -951,8 +986,6 @@ def course_catalog(request):
         )
 
         # Also exclude LMS courses already linked to a semester-registered academic Course
-        current_session = AcademicSession.get_current()
-        current_term = current_session.get_current_term() if current_session else None
         if current_session and current_term:
             sem_registered_lms_ids = set(
                 LMSCourse.objects.filter(
@@ -964,21 +997,20 @@ def course_catalog(request):
             )
             enrolled_course_ids |= sem_registered_lms_ids
 
-        # Exclude already-enrolled/registered courses from catalog
         courses = courses.exclude(id__in=enrolled_course_ids)
-        
+
         # Get active categories
         categories = (
             CourseCategory.objects
             .filter(is_active=True)
             .order_by('name')
         )
-        
+
         # Pagination
         paginator = Paginator(courses, 12)
         page_number = request.GET.get('page', 1)
         page_obj = paginator.get_page(page_number)
-        
+
     except Exception as e:
         messages.error(
             request,
@@ -987,7 +1019,7 @@ def course_catalog(request):
         page_obj = None
         categories = []
         enrolled_course_ids = set()
-    
+
     context = {
         'page_title': 'Course Catalog',
         'courses': page_obj,
@@ -996,8 +1028,10 @@ def course_catalog(request):
         'search_query': search_query,
         'category_slug': category_slug,
         'difficulty': difficulty,
+        'current_session': current_session,
+        'current_term': current_term,
     }
-    
+
     return render(request, 'students/course_catalog.html', context)
 
 
@@ -3634,7 +3668,7 @@ def academic_records(request):
     application = (
         CourseApplication.objects
         .filter(user=user, status='approved')
-        .select_related('program', 'program__department__faculty', 'intake')
+        .select_related('program', 'program__department__faculty', 'academic_session')
         .order_by('-created_at')
         .first()
     )

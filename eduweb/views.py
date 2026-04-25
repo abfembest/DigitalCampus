@@ -801,13 +801,6 @@ def apply(request):
     for prog in programs:
         faculty_name = prog.department.faculty.name
         courses_by_faculty.setdefault(faculty_name, [])
-        intakes = list(
-            CourseIntake.objects.filter(
-                program=prog,
-                is_active=True,
-                application_deadline__gte=timezone.now().date(),
-            ).values('id', 'intake_period', 'year', 'start_date')
-        )
         courses_by_faculty[faculty_name].append({
             'id':                    prog.id,
             'name':                  prog.name,
@@ -816,7 +809,6 @@ def apply(request):
             'available_study_modes': prog.available_study_modes,
             'application_fee':       str(prog.application_fee),
             'tuition_fee':           str(prog.tuition_fee),
-            'intakes':               intakes,
         })
     courses_json = json.dumps(courses_by_faculty, cls=DjangoJSONEncoder)
 
@@ -901,12 +893,18 @@ def apply(request):
             initial={'email': request.user.email} if request.user.is_authenticated else {}
         )
 
+    from eduweb.models import AcademicSession
+    academic_sessions = AcademicSession.objects.filter(
+        status__in=['active', 'upcoming']
+    ).order_by('-name')
+
     return render(request, 'form.html', {
-        'form':         form,
-        'courses':      programs,
-        'faculties':    faculties,
-        'courses_json': courses_json,
-        'countries':    countries,
+        'form':              form,
+        'courses':           programs,
+        'faculties':         faculties,
+        'courses_json':      courses_json,
+        'countries':         countries,
+        'academic_sessions': academic_sessions,
     })
 
 
@@ -1013,6 +1011,26 @@ def accept_admission(request, application_id):
 
     if application.accept_admission():
         application.issue_admission_number()
+
+        # Sync academic session and entry level to the student's UserProfile
+        try:
+            profile = application.user.profile
+            if application.academic_session:
+                profile.admission_session = application.academic_session
+            if application.entry_level:
+                # entry_level is e.g. 100, 200 ... convert to year_of_study (1, 2 ...)
+                profile.year_of_study = application.entry_level // 100
+            if application.program:
+                profile.program    = application.program
+                profile.department = application.program.department
+                profile.faculty    = application.program.department.faculty
+            profile.save(update_fields=[
+                'admission_session', 'year_of_study',
+                'program', 'department', 'faculty',
+            ])
+        except Exception:
+            logger.exception("accept_admission — failed to sync profile fields")
+
         send_admission_offer_accepted_email(application)
         messages.success(
             request,
@@ -1066,11 +1084,19 @@ def save_application_draft(request):
             except Program.DoesNotExist:
                 pass
 
-        intake_id = data.get('intake')
-        if intake_id:
+        session_id = data.get('academic_session')
+        if session_id:
             try:
-                application.intake = CourseIntake.objects.get(id=intake_id)
-            except CourseIntake.DoesNotExist:
+                from eduweb.models import AcademicSession
+                application.academic_session = AcademicSession.objects.get(id=session_id)
+            except AcademicSession.DoesNotExist:
+                pass
+
+        entry_level = data.get('entry_level')
+        if entry_level:
+            try:
+                application.entry_level = int(entry_level)
+            except (ValueError, TypeError):
                 pass
 
         application.study_mode = data.get('study_mode', '')

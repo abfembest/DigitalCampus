@@ -602,9 +602,16 @@
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">
                                     <i data-lucide="calendar" class="w-4 h-4 text-primary-950"></i>
-                                    <p class="text-sm font-medium text-gray-500">Intake Term</p>
+                                    <p class="text-sm font-medium text-gray-500">Academic Session</p>
                                 </div>
-                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.intake.get_intake_period_display }} {{ application.intake.year }}</p>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{{ application.academic_session.name|default:"—" }}</p>
+                            </div>
+                            <div class="group">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="layers" class="w-4 h-4 text-primary-950"></i>
+                                    <p class="text-sm font-medium text-gray-500">entry level</p>
+                                </div>
+                                <p class="text-lg font-semibold text-gray-900 ml-6">{% if application.entry_level %}{{ application.entry_level }} level{% else %}—{% endif %}</p>
                             </div>
                             <div class="group">
                                 <div class="flex items-center gap-2 mb-2">

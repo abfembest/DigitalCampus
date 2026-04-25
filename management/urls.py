@@ -12,7 +12,7 @@ urlpatterns = [
     # Applications
     path('applications/', views.applications_list, name='applications_list'),
     path('applications/<str:application_id>/', views.application_detail, name='application_detail'),
-    path('applications/<int:pk>/mark-reviewed/', views.mark_reviewed, name='mark_reviewed'),
+    
     path('applications/<int:pk>/make-decision/', views.make_decision, name='make_decision'),
     path('applications/<int:pk>/approve-department/', views.approve_department, name='approve_department'),
     path('applications/<int:pk>/issue-transcript/', views.issue_transcript, name='issue_transcript'),

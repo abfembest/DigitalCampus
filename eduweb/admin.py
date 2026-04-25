@@ -784,7 +784,7 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'code', 'program', 'course_type',
         'credit_units', 'year_of_study', 'semester',
-        'is_active', 'display_order'
+        'is_active',
     )
     list_filter = (
         'program__department__faculty',
@@ -797,7 +797,8 @@ class CourseAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'code', 'description')
     prepopulated_fields = {'slug': ('code', 'name')}
-    list_editable = ('is_active', 'display_order')
+    list_editable = ('is_active',)
+                    #  'display_order')
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
@@ -805,7 +806,8 @@ class CourseAdmin(admin.ModelAdmin):
             'fields': ('program',)
         }),
         ('Identity', {
-            'fields': ('name', 'slug', 'code', 'is_active', 'display_order')
+            'fields': ('name', 'slug', 'code', 'is_active')
+                    #    'display_order')
         }),
         ('Academic Structure', {
             'fields': ('course_type', 'credit_units', 'year_of_study', 'semester')
@@ -813,10 +815,10 @@ class CourseAdmin(admin.ModelAdmin):
         ('Content', {
             'fields': ('description', 'learning_outcomes')
         }),
-        ('Display', {
-            'fields': ('icon', 'color_primary', 'color_secondary'),
-            'classes': ('collapse',)
-        }),
+        # ('Display', {
+        #     'fields': ('icon', 'color_primary', 'color_secondary'),
+        #     'classes': ('collapse',)
+        # }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
@@ -935,7 +937,8 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'get_full_name',
         'email',
         'program',
-        'intake',
+        'academic_session',
+        'study_mode',
         'status',
         'admission_accepted',
         'admission_number',
@@ -951,7 +954,8 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'department_approved',
         'program__department__faculty',
         'program',
-        'intake__year',
+        'academic_session',
+        'study_mode',
         'created_at',
         'payment_status'
     )
@@ -993,7 +997,7 @@ class CourseApplicationAdmin(admin.ModelAdmin):
             'description': 'Track student admission acceptance and department approval'
         }),
         ('Course Selection', {
-            'fields': ('program', 'intake', 'study_mode')
+            'fields': ('program', 'academic_session', 'study_mode')
         }),
         ('Personal Information', {
             'fields': (

@@ -284,8 +284,8 @@ class CourseForm(forms.ModelForm):
         fields = [
             'program', 'name', 'code', 'course_type', 'credit_units',
             'year_of_study', 'semester',
-            'description', 'learning_outcomes', 'icon', 'color_primary',
-            'color_secondary', 'is_active', 'display_order',
+            'description', 'learning_outcomes', 'is_active',
+            # 'icon', 'color_primary', 'color_secondary', 'display_order',
         ]
         widgets = {
             # ── Hierarchy ──────────────────────────────────────────────────
@@ -339,33 +339,33 @@ class CourseForm(forms.ModelForm):
             }),
 
             # ── Display ────────────────────────────────────────────────────
-            'icon': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., book-open (Lucide icon name)'
-            }),
-            'color_primary': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }, choices=[
-                ('blue', 'Blue'), ('teal', 'Teal'), ('green', 'Green'),
-                ('orange', 'Orange'), ('purple', 'Purple'), ('red', 'Red'),
-                ('pink', 'Pink'), ('indigo', 'Indigo'), ('cyan', 'Cyan')
-            ]),
-            'color_secondary': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }, choices=[
-                ('cyan', 'Cyan'), ('emerald', 'Emerald'), ('lime', 'Lime'),
-                ('amber', 'Amber'), ('violet', 'Violet'), ('rose', 'Rose'),
-                ('fuchsia', 'Fuchsia'), ('sky', 'Sky'), ('yellow', 'Yellow')
-            ]),
+            # 'icon': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+            #     'placeholder': 'e.g., book-open (Lucide icon name)'
+            # }),
+            # 'color_primary': forms.Select(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            # }, choices=[
+            #     ('blue', 'Blue'), ('teal', 'Teal'), ('green', 'Green'),
+            #     ('orange', 'Orange'), ('purple', 'Purple'), ('red', 'Red'),
+            #     ('pink', 'Pink'), ('indigo', 'Indigo'), ('cyan', 'Cyan')
+            # ]),
+            # 'color_secondary': forms.Select(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            # }, choices=[
+            #     ('cyan', 'Cyan'), ('emerald', 'Emerald'), ('lime', 'Lime'),
+            #     ('amber', 'Amber'), ('violet', 'Violet'), ('rose', 'Rose'),
+            #     ('fuchsia', 'Fuchsia'), ('sky', 'Sky'), ('yellow', 'Yellow')
+            # ]),
 
             # ── Status ─────────────────────────────────────────────────────
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
-            'display_order': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., 1 (lower numbers appear first)'
-            }),
+            # 'display_order': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+            #     'placeholder': 'e.g., 1 (lower numbers appear first)'
+            # }),
         }
 
     def __init__(self, *args, **kwargs):

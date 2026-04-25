@@ -564,18 +564,9 @@ def my_courses(request):
         if selected_session:
             # Normalise term for matching (fall→first, spring→second, etc.)
             _norm_term = term_normalisation_map.get(selected_term, selected_term) if selected_term else None
-
             session_term_filter = Q(course__session=selected_session) & Q(course__session__in=approved_session_ids)
-            if _norm_term:
-                # Match courses whose LMS term equals either the raw or normalised term,
-                # OR courses with no term set (blank/null = session-wide)
-                session_term_filter &= (
-                    Q(course__term=selected_term) |
-                    Q(course__term=_norm_term) |
-                    Q(course__term='') |
-                    Q(course__term__isnull=True)
-                )
             enrollment_qs = enrollment_qs.filter(session_term_filter)
+
         if status_filter == 'all':
             enrollment_qs = enrollment_qs.filter(status__in=['active', 'completed'])
         else:
@@ -972,11 +963,7 @@ def course_catalog(request):
         current_term = current_session.get_current_term() if current_session else None
 
         # Resolve normalised term (Course model uses first/second/annual)
-        TERM_MAP = {
-            'fall': 'first', 'spring': 'second', 'summer': 'annual',
-            'third': 'second', 'first': 'first', 'second': 'second', 'annual': 'annual',
-        }
-        normalised_term = TERM_MAP.get(current_term, current_term) if current_term else None
+        normalised_term = term_normalisation_map.get(current_term, current_term) if current_term else None
 
         # Base filter: published + scoped to current session & student's level
         courses = LMSCourse.objects.filter(is_published=True)
@@ -1009,13 +996,13 @@ def course_catalog(request):
                 # Case A: properly linked via FK
                 Q(
                     academic_course__program=profile.program,
-                    academic_course__year_of_study=profile.year_of_study,
-                ) |
+                    academic_course__year_of_study=profile.year_of_study,)
+               # ) |
                 # Case B: no FK, but code matches a course in their program+year
-                Q(
-                    academic_course__isnull=True,
-                    code__in=student_course_codes,
-                )
+                #Q(
+               #     academic_course__isnull=True,
+               #     code__in=student_course_codes,
+               # )
             )
 
         # Apply search filter
@@ -1047,25 +1034,25 @@ def course_catalog(request):
         )
 
         # Also exclude LMS courses already linked to a semester-registered academic Course
-        if current_session and current_term:
-            sem_registered_lms_ids = set(
-                LMSCourse.objects.filter(
-                    academic_course__registrations__student=request.user,
-                    academic_course__registrations__session=current_session,
-                    academic_course__registrations__term=current_term,
-                    academic_course__registrations__status__in=['pending', 'approved'],
-                ).values_list('id', flat=True)
-            )
-            enrolled_course_ids |= sem_registered_lms_ids
+        #if current_session and current_term:
+        #    sem_registered_lms_ids = set(
+         #       LMSCourse.objects.filter(
+          #          academic_course__registrations__student=request.user,
+           #         academic_course__registrations__session=current_session,
+            #        academic_course__registrations__term=current_term,
+             #       academic_course__registrations__status__in=['pending', 'approved'],
+              #  ).values_list('id', flat=True)
+           # )
+           # enrolled_course_ids |= sem_registered_lms_ids
 
-        courses = courses.exclude(id__in=enrolled_course_ids)
+       # courses = courses.exclude(id__in=enrolled_course_ids)
 
         # Get active categories
-        categories = (
-            CourseCategory.objects
-            .filter(is_active=True)
-            .order_by('name')
-        )
+        #categories = (
+         #   CourseCategory.objects
+        #    .filter(is_active=True)
+          #  .order_by('name')
+        #)
 
         # Pagination
         paginator = Paginator(courses, 12)
@@ -1084,7 +1071,7 @@ def course_catalog(request):
     context = {
         'page_title': 'Course Catalog',
         'courses': page_obj,
-        'categories': categories,
+        #'categories': categories,
         'enrolled_ids': enrolled_course_ids,
         'search_query': search_query,
         'category_slug': category_slug,

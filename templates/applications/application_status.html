@@ -253,7 +253,7 @@
                                     <span class="text-sm font-semibold text-center {% if application.is_paid %}text-gray-900{% else %}text-gray-500{% endif %}">
                                         Payment
                                     </span>
-
+                                
                                     <span class="text-xs text-gray-500 text-center mt-1">
                                         {% if application.is_paid %}Paid{% else %}Pending{% endif %}
                                     </span>
@@ -989,68 +989,43 @@
 
         <!-- Enhanced Instructions Section -->
         <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
+
             <div class="flex items-start gap-4">
+
                 <div class="flex-shrink-0">
                     <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
                         <i data-lucide="info" class="w-7 h-7 text-white"></i>
                     </div>
                 </div>
-                <div class="flex-1">
-                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+
+                <div class="flex-1 space-y-3">
+                    <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
                         <i data-lucide="lightbulb" class="w-5 h-5 text-yellow-500"></i>
                         How to Upload Your Documents
                     </h3>
-                    <div class="space-y-3 text-sm text-gray-700">
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">1</div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Select Document Type</p>
-                                <p class="text-gray-600">Choose the appropriate category for each document (e.g., Academic Transcript, Certificate, ID Document)</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">2</div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Choose Your File</p>
-                                <p class="text-gray-600">Click to select files from your device. Accepted formats: <strong>PDF, JPG, PNG</strong> (Max 5MB per file)</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">3</div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Add Multiple Documents</p>
-                                <p class="text-gray-600">Click <strong>"Add Another Document"</strong> to upload additional files in one go</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-xs shadow">4</div>
-                            <div>
-                                <p class="font-semibold text-gray-900">Upload & Submit (Optional)</p>
-                                <p class="text-gray-600">
-                                    ✅ Check <strong>"Submit application after upload"</strong> if these are your final documents<br>
-                                    ⏸️ Leave unchecked if you want to upload more later
-                                </p>
-                            </div>
-                        </div>
+
+                    <div class="text-sm text-gray-700 space-y-1.5">
+                        <p><span class="font-semibold text-gray-900">1. Select Type:</span> Choose document type (Transcript, Certificate, ID).</p>
+
+                        <p><span class="font-semibold text-gray-900">2. Upload File:</span> PDF, JPG, PNG — max 5MB.</p>
+
+                        <p><span class="font-semibold text-gray-900">3. Add More:</span> Click <strong>"Add Another Document"</strong> if needed.</p>
+
+                        <p><span class="font-semibold text-gray-900">4. To submit:</span> Check <strong>"Submit after upload"</strong>  after you have uploaded all required documents.</p>
                     </div>
-                    
-                    <!-- Required Documents Alert -->
-                    <div class="mt-4 bg-yellow-50 border border-yellow-300 rounded-lg p-3">
-                        <div class="flex items-start gap-2">
-                            <i data-lucide="alert-circle" class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"></i>
-                            <div>
-                                <p class="font-semibold text-yellow-900 text-sm">Required Documents:</p>
-                                <p class="text-xs text-yellow-800 mt-1">
-                                    • Academic Transcript/Results<br>
-                                    • Certificate/Diploma<br>
-                                    • Valid ID/Passport<br>
-                                    • CV/Resume (if applicable)
-                                </p>
-                            </div>
-                        </div>
+
+                    <!-- Required Documents -->
+                    <div class="text-xs text-gray-600 border-t pt-2">
+                        <p class="font-semibold text-gray-800">Required:</p>
+                        <p>
+                            Transcript • Certificate/Diploma • Valid ID/Passport • CV/Resume (if applicable)
+                        </p>
                     </div>
+
                 </div>
+
             </div>
+
         </div>
 
         <div id="uploadSections" class="space-y-4 max-h-96 overflow-y-auto mb-6">

@@ -182,7 +182,7 @@ def dashboard(request):
             )
             .filter(Q(semester=normalised_term) | Q(semester='annual'))
             .prefetch_related('prerequisites')
-            .order_by('course_type', 'display_order', 'name')
+            .order_by('course_type', 'name')
         )
 
         existing_regs = CourseRegistration.objects.filter(
@@ -496,7 +496,7 @@ def my_courses(request):
             )
             .filter(Q(semester=normalised_term) | Q(semester='annual'))
             .prefetch_related('prerequisites')
-            .order_by('course_type', 'display_order', 'name')
+            .order_by('course_type', 'name')
         )
 
         existing_regs = CourseRegistration.objects.filter(
@@ -3315,11 +3315,15 @@ def _get_outstanding_for_student(user):
         return [], []
 
     # ── 1. Standard admin-created required fees ───────────────────────────
+    student_level = profile.current_level  # e.g. 200 for year 2
+
     required_qs = AllRequiredPayments.objects.filter(
         program=profile.program,
         who_to_pay='student',
         is_active=True,
-    ).select_related('program')
+    ).filter(
+        models.Q(level__isnull=True) | models.Q(level=student_level)
+    ).select_related('program', 'program__department', 'program__department__faculty', 'academic_session')
 
     paid_fee_ids = set(
         FeePayment.objects.filter(
@@ -3410,12 +3414,17 @@ def my_payments(request):
         else getattr(_first, 'currency', 'USD')
     ) if _first else 'USD'
 
+    profile = request.user.profile
     context = {
         'page_title': 'My Payments',
         'outstanding_payments': outstanding_payments,
         'paid_payments': paid_payments,
         'total_outstanding': total_outstanding,
         'display_currency': display_currency,
+        'student_level': profile.current_level,
+        'student_program': profile.program,
+        'student_faculty': profile.faculty,
+        'student_department': profile.department,
     }
     return render(request, 'students/my_payments.html', context)
 

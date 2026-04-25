@@ -30,6 +30,24 @@ from django.core.mail import send_mail
 from django.conf import settings
 
 
+# maps international/alias term keys → the canonical semester keys used on course.semester.
+# academicsession stores term_dates with keys from term_choices (first/second/third/fall/spring/summer/annual).
+# course.semester only uses first/second/annual.
+# this single map is the only place that relationship is defined.
+term_normalisation_map = {
+    # nigerian semester terms (already canonical — map to themselves)
+    'first':  'first',
+    'second': 'second',
+    'third':  'second',   # third semester/harmattan treated as second semester
+    'annual': 'annual',
+    # international semester equivalents
+    'fall':   'first',
+    'spring': 'second',
+    'summer': 'annual',
+    'autumn': 'first',    # autumn = fall = first semester
+}
+
+
 def student_required(view_func):
     """Decorator to ensure only students with approved portal access can access"""
     @wraps(view_func)
@@ -152,12 +170,7 @@ def dashboard(request):
     registration_finalized  = False
 
     if profile and profile.program and current_session and current_term:
-        TERM_MAP = {
-            'fall': 'first', 'spring': 'second',
-            'summer': 'annual', 'third': 'second',
-            'first': 'first', 'second': 'second', 'annual': 'annual',
-        }
-        normalised_term = TERM_MAP.get(current_term, current_term)
+        normalised_term = term_normalisation_map.get(current_term, current_term)
 
         # All courses offered for this student's program / year / term
         semester_courses = list(
@@ -169,7 +182,7 @@ def dashboard(request):
             )
             .filter(Q(semester=normalised_term) | Q(semester='annual'))
             .prefetch_related('prerequisites')
-            .order_by('course_type', 'display_order', 'name')
+            .order_by('course_type', 'name')
         )
 
         existing_regs = CourseRegistration.objects.filter(
@@ -434,8 +447,7 @@ def my_courses(request):
             return False
         from datetime import date as _date
         today = timezone.now().date()
-        TERM_MAP = {'fall': 'first', 'spring': 'second', 'summer': 'annual', 'third': 'second'}
-        normalised = TERM_MAP.get(term, term)
+        normalised = term_normalisation_map.get(term, term)
         for entry in session.term_dates:
             if entry.get('term') in (term, normalised):
                 try:
@@ -473,12 +485,7 @@ def my_courses(request):
     )
 
     if profile and profile.program and selected_session and selected_term:
-        TERM_MAP = {
-            'fall': 'first', 'spring': 'second',
-            'summer': 'annual', 'third': 'second',
-            'first': 'first', 'second': 'second', 'annual': 'annual',
-        }
-        normalised_term = TERM_MAP.get(selected_term, selected_term)
+        normalised_term = term_normalisation_map.get(selected_term, selected_term)
 
         semester_courses = list(
             Course.objects
@@ -489,7 +496,7 @@ def my_courses(request):
             )
             .filter(Q(semester=normalised_term) | Q(semester='annual'))
             .prefetch_related('prerequisites')
-            .order_by('course_type', 'display_order', 'name')
+            .order_by('course_type', 'name')
         )
 
         existing_regs = CourseRegistration.objects.filter(
@@ -556,8 +563,7 @@ def my_courses(request):
         enrollment_qs = Enrollment.objects.filter(student=user)
         if selected_session:
             # Normalise term for matching (fall→first, spring→second, etc.)
-            _TERM_MAP = {'fall': 'first', 'spring': 'second', 'summer': 'annual', 'third': 'second'}
-            _norm_term = _TERM_MAP.get(selected_term, selected_term) if selected_term else None
+            _norm_term = term_normalisation_map.get(selected_term, selected_term) if selected_term else None
 
             session_term_filter = Q(course__session=selected_session) & Q(course__session__in=approved_session_ids)
             if _norm_term:
@@ -871,24 +877,57 @@ def register_all_semester_courses(request):
 
     # ── Auto-enroll into linked LMS courses ───────────────────────────────
     enrolled_count = 0
-    for reg in registered_regs:
-        # Find LMS courses linked to this academic course + session
-        lms_courses = LMSCourse.objects.filter(
-            academic_course=reg.course,
-            session=current_session,
-            is_published=True,
+
+    # Build two lookup sets from the registered academic Course records:
+    # 1. Their PKs  — for matching via LMSCourse.academic_course FK (when set)
+    # 2. Their codes — for matching via LMSCourse.code when academic_course is NULL
+    registered_academic_course_ids = [reg.course_id for reg in registered_regs]
+    registered_course_codes = [
+        reg.course.code.strip().upper()
+        for reg in registered_regs
+        if reg.course.code
+    ]
+
+    # Match 1: LMSCourse.academic_course FK is properly set
+    by_fk = LMSCourse.objects.filter(
+        academic_course_id__in=registered_academic_course_ids,
+    ).filter(
+        Q(session=current_session) | Q(session__isnull=True)
+    )
+
+    # Match 2: Fallback — LMSCourse.academic_course is NULL but code matches
+    # This handles LMS courses created before the academic_course FK was linked
+    by_code = LMSCourse.objects.filter(
+        academic_course__isnull=True,
+        code__in=registered_course_codes,
+    ).filter(
+        Q(session=current_session) | Q(session__isnull=True)
+    ) if registered_course_codes else LMSCourse.objects.none()
+
+    # Combine both sets, deduplicated
+    from itertools import chain
+    seen_ids = set()
+    lms_courses_to_enroll = []
+    for lms in chain(by_fk, by_code):
+        if lms.pk not in seen_ids:
+            seen_ids.add(lms.pk)
+            lms_courses_to_enroll.append(lms)
+
+    for lms_course in lms_courses_to_enroll:
+        enrollment, created = Enrollment.objects.get_or_create(
+            student=request.user,
+            course=lms_course,
+            defaults={
+                'enrolled_by': request.user,
+                'status': 'active',
+            },
         )
-        for lms_course in lms_courses:
-            _, created = Enrollment.objects.get_or_create(
-                student=request.user,
-                course=lms_course,
-                defaults={
-                    'enrolled_by': request.user,
-                    'status': 'active',
-                },
-            )
-            if created:
-                enrolled_count += 1
+        if not created and enrollment.status == 'dropped':
+            enrollment.status = 'active'
+            enrollment.save(update_fields=['status'])
+            enrolled_count += 1
+        elif created:
+            enrolled_count += 1
 
     # Flip all pending registrations to approved
     registered_regs.filter(status='pending').update(status='approved')
@@ -943,18 +982,40 @@ def course_catalog(request):
         courses = LMSCourse.objects.filter(is_published=True)
 
         if current_session:
-            courses = courses.filter(session=current_session)
+            # Include courses for this session OR session-agnostic (null session)
+            courses = courses.filter(
+                Q(session=current_session) | Q(session__isnull=True)
+            )
 
         if normalised_term:
             courses = courses.filter(
-                Q(term=normalised_term) | Q(term='annual') | Q(term='')
+                Q(term=normalised_term) | Q(term='annual') | Q(term='') | Q(term__isnull=True)
             )
 
-        # Restrict to the student's own year_of_study level only
-        if profile and profile.year_of_study:
+        # Restrict to the student's program / year / department / faculty.
+        # Two cases:
+        #   A) LMSCourse.academic_course is set → filter via that FK chain
+        #   B) LMSCourse.academic_course is NULL → filter by matching code against
+        #      Course records for this student's program+year (covers legacy data)
+        if profile and profile.program and profile.year_of_study:
+            student_course_codes = list(
+                Course.objects.filter(
+                    program=profile.program,
+                    year_of_study=profile.year_of_study,
+                    is_active=True,
+                ).values_list('code', flat=True)
+            )
             courses = courses.filter(
-                academic_course__year_of_study=profile.year_of_study,
-                academic_course__program=profile.program,
+                # Case A: properly linked via FK
+                Q(
+                    academic_course__program=profile.program,
+                    academic_course__year_of_study=profile.year_of_study,
+                ) |
+                # Case B: no FK, but code matches a course in their program+year
+                Q(
+                    academic_course__isnull=True,
+                    code__in=student_course_codes,
+                )
             )
 
         # Apply search filter
@@ -3254,11 +3315,15 @@ def _get_outstanding_for_student(user):
         return [], []
 
     # ── 1. Standard admin-created required fees ───────────────────────────
+    student_level = profile.current_level  # e.g. 200 for year 2
+
     required_qs = AllRequiredPayments.objects.filter(
         program=profile.program,
         who_to_pay='student',
         is_active=True,
-    ).select_related('program')
+    ).filter(
+        models.Q(level__isnull=True) | models.Q(level=student_level)
+    ).select_related('program', 'program__department', 'program__department__faculty', 'academic_session')
 
     paid_fee_ids = set(
         FeePayment.objects.filter(
@@ -3349,12 +3414,17 @@ def my_payments(request):
         else getattr(_first, 'currency', 'USD')
     ) if _first else 'USD'
 
+    profile = request.user.profile
     context = {
         'page_title': 'My Payments',
         'outstanding_payments': outstanding_payments,
         'paid_payments': paid_payments,
         'total_outstanding': total_outstanding,
         'display_currency': display_currency,
+        'student_level': profile.current_level,
+        'student_program': profile.program,
+        'student_faculty': profile.faculty,
+        'student_department': profile.department,
     }
     return render(request, 'students/my_payments.html', context)
 

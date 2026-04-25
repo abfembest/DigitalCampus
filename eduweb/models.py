@@ -3423,18 +3423,6 @@ def update_course_rating(sender, instance, created, **kwargs):
     instance.course.update_statistics()
 
 
-<<<<<<< Updated upstream
-'''@receiver(post_save, sender=UserProfile)
-def auto_assign_required_fees(sender, instance, **kwargs):
-    """
-    When a student's program is set or changed, auto-create FeePayment
-    records (status='pending') for every active AllRequiredPayments
-    that belongs to that program and doesn't already have a payment
-    record for this student.
-    """
-    if instance.role != 'student' or not instance.program:
-        return
-=======
 # @receiver(post_save, sender=UserProfile)
 # def auto_assign_required_fees(sender, instance, **kwargs):
 #     """
@@ -3445,7 +3433,6 @@ def auto_assign_required_fees(sender, instance, **kwargs):
 #     """
 #     if instance.role != 'student' or not instance.program:
 #         return
->>>>>>> Stashed changes
 
 #     required_fees = AllRequiredPayments.objects.filter(
 #         program=instance.program,
@@ -3453,18 +3440,6 @@ def auto_assign_required_fees(sender, instance, **kwargs):
 #         is_active=True,
 #     )
 
-<<<<<<< Updated upstream
-    for fee in required_fees:
-        FeePayment.objects.get_or_create(
-            user=instance.user,
-            fee=fee,
-            defaults={
-                'amount': fee.amount,
-                'currency': fee.currency,
-                'status': 'pending',
-            }
-        )'''
-=======
 #     for fee in required_fees:
 #         FeePayment.objects.get_or_create(
 #             user=instance.user,
@@ -3475,7 +3450,6 @@ def auto_assign_required_fees(sender, instance, **kwargs):
 #                 'status': 'pending',
 #             }
 #         )
->>>>>>> Stashed changes
 
 # ==================== STUDY GROUPS ====================
 class StudyGroup(models.Model):

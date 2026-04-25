@@ -948,138 +948,54 @@ def register_all_semester_courses(request):
 @login_required
 @student_required
 def course_catalog(request):
-    """
-    Browse available courses with filters and search
-    Optimized queries and pagination
-    """
-    # Get filter parameters
-    category_slug = request.GET.get('category', '').strip()
-    search_query = request.GET.get('q', '').strip()
-    difficulty = request.GET.get('difficulty', '').strip()
-    
-    try:
-        profile = getattr(request.user, 'profile', None)
-        current_session = AcademicSession.get_current()
-        current_term = current_session.get_current_term() if current_session else None
+    profile         = getattr(request.user, 'profile', None)
+    current_session = AcademicSession.get_current()
+    search_query    = request.GET.get('q', '').strip()
+    term_filter     = request.GET.get('term', '').strip()
 
-        # Resolve normalised term (Course model uses first/second/annual)
-        normalised_term = term_normalisation_map.get(current_term, current_term) if current_term else None
+    courses = LMSCourse.objects.filter(
+        is_published=True,
+        academic_course__program=profile.program,
+        academic_course__year_of_study=profile.year_of_study,
+        academic_course__is_active=True,
+    ).filter(
+        Q(session=current_session) | Q(session__isnull=True)
+    )
 
-        # Base filter: published + scoped to current session & student's level
-        courses = LMSCourse.objects.filter(is_published=True)
+    if term_filter:
+        courses = courses.filter(term=term_filter)
+    if search_query:
+        courses = courses.filter(Q(title__icontains=search_query) | Q(code__icontains=search_query))
 
-        if current_session:
-            # Include courses for this session OR session-agnostic (null session)
-            courses = courses.filter(
-                Q(session=current_session) | Q(session__isnull=True)
-            )
+    courses = courses.select_related('academic_course', 'instructor', 'session').distinct()
 
-        if normalised_term:
-            courses = courses.filter(
-                Q(term=normalised_term) | Q(term='annual') | Q(term='') | Q(term__isnull=True)
-            )
+    enrolled_course_ids = set(
+        Enrollment.objects
+        .filter(student=request.user, status__in=['active', 'completed'])
+        .values_list('course_id', flat=True)
+    )
+    registered_academic_ids = set(
+        CourseRegistration.objects
+        .filter(student=request.user, session=current_session, status__in=['pending', 'approved'])
+        .values_list('course_id', flat=True)
+    ) if current_session else set()
 
-        # Restrict to the student's program / year / department / faculty.
-        # Two cases:
-        #   A) LMSCourse.academic_course is set → filter via that FK chain
-        #   B) LMSCourse.academic_course is NULL → filter by matching code against
-        #      Course records for this student's program+year (covers legacy data)
-        if profile and profile.program and profile.year_of_study:
-            student_course_codes = list(
-                Course.objects.filter(
-                    program=profile.program,
-                    year_of_study=profile.year_of_study,
-                    is_active=True,
-                ).values_list('code', flat=True)
-            )
-            courses = courses.filter(
-                # Case A: properly linked via FK
-                Q(
-                    academic_course__program=profile.program,
-                    academic_course__year_of_study=profile.year_of_study,)
-               # ) |
-                # Case B: no FK, but code matches a course in their program+year
-                #Q(
-               #     academic_course__isnull=True,
-               #     code__in=student_course_codes,
-               # )
-            )
-
-        # Apply search filter
-        if search_query:
-            courses = courses.filter(
-                Q(title__icontains=search_query) |
-                Q(description__icontains=search_query) |
-                Q(short_description__icontains=search_query) |
-                Q(code__icontains=search_query)
-            )
-
-        # Apply difficulty filter (level filter now handled by year_of_study above,
-        # but keep this for any manual overrides)
-        if difficulty and difficulty in dict(LMSCourse.LEVEL_CHOICES):
-            courses = courses.filter(difficulty_level=difficulty)
-
-        courses = (
-            courses
-            .select_related('instructor', 'academic_course')
-            .order_by('-is_featured', '-created_at')
-            .distinct()
-        )
-
-        # Get enrolled course IDs
-        enrolled_course_ids = set(
-            Enrollment.objects
-            .filter(student=request.user, status__in=['active', 'completed'])
-            .values_list('course_id', flat=True)
-        )
-
-        # Also exclude LMS courses already linked to a semester-registered academic Course
-        #if current_session and current_term:
-        #    sem_registered_lms_ids = set(
-         #       LMSCourse.objects.filter(
-          #          academic_course__registrations__student=request.user,
-           #         academic_course__registrations__session=current_session,
-            #        academic_course__registrations__term=current_term,
-             #       academic_course__registrations__status__in=['pending', 'approved'],
-              #  ).values_list('id', flat=True)
-           # )
-           # enrolled_course_ids |= sem_registered_lms_ids
-
-       # courses = courses.exclude(id__in=enrolled_course_ids)
-
-        # Get active categories
-        #categories = (
-         #   CourseCategory.objects
-        #    .filter(is_active=True)
-          #  .order_by('name')
-        #)
-
-        # Pagination
-        paginator = Paginator(courses, 12)
-        page_number = request.GET.get('page', 1)
-        page_obj = paginator.get_page(page_number)
-
-    except Exception as e:
-        messages.error(
-            request,
-            'Error loading course catalog. Please try again.'
-        )
-        page_obj = None
-        categories = []
-        enrolled_course_ids = set()
+    # Enrolled first → registered → locked
+    courses = sorted(courses, key=lambda c: (
+        0 if c.id in enrolled_course_ids else
+        1 if c.academic_course_id in registered_academic_ids else 2
+    ))
 
     context = {
-        'page_title': 'Course Catalog',
-        'courses': page_obj,
-        #'categories': categories,
-        'enrolled_ids': enrolled_course_ids,
-        'search_query': search_query,
-        'category_slug': category_slug,
-        'difficulty': difficulty,
-        'current_session': current_session,
-        'current_term': current_term,
+        'page_title':              'Course Catalog',
+        'courses':                 Paginator(courses, 12).get_page(request.GET.get('page', 1)),
+        'enrolled_ids':            enrolled_course_ids,
+        'registered_academic_ids': registered_academic_ids,
+        'search_query':            search_query,
+        'term_filter':             term_filter,
+        'current_session':         current_session,
+        'term_choices':            LMSCourse._meta.get_field('term').choices,
     }
-
     return render(request, 'students/course_catalog.html', context)
 
 
@@ -3738,7 +3654,7 @@ def academic_records(request):
             Course.objects
             .filter(program=program, is_active=True)
             .select_related('program')
-            .order_by('year_of_study', 'semester', 'display_order')
+            .order_by('year_of_study', 'semester')
         )
     core_courses     = [c for c in program_courses if c.course_type == 'core']
     elective_courses = [c for c in program_courses if c.course_type == 'elective']

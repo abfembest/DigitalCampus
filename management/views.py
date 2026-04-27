@@ -5332,7 +5332,7 @@ def admin_exam_publish(request, slug):
 @user_passes_test(_is_staff)
 def admin_question_moderation(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
-    questions = exam.questions.order_by('order', 'created_at')
+    questions = exam.questions.order_by('created_at')
 
     if request.method == 'POST':
         q_id = request.POST.get('question_id')
@@ -5366,7 +5366,6 @@ def admin_exam_timetable_update(request, slug):
         exam_date = parse_date(request.POST.get('exam_date', ''))
         start_time = parse_time(request.POST.get('start_time', ''))
         end_time = parse_time(request.POST.get('end_time', ''))
-        venue = request.POST.get('venue', '').strip()
 
         errors = []
         if not exam_date:

@@ -41,6 +41,7 @@ urlpatterns = [
     path('academic-sessions/<int:pk>/set-current/', views.academic_session_set_current, name='academic_session_set_current'),
 
     path('courses/', views.courses_list, name='courses_list'),
+    path('exams/<slug:slug>/toggle-active/', views.admin_exam_toggle_active, name='admin_exam_toggle_active'),
 
     # Intakes
     path('intakes/', views.intakes_list, name='intakes_list'),

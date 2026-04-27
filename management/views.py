@@ -5160,7 +5160,7 @@ def admin_exam_list(request):
     search = request.GET.get('q', '')
     session_id = request.GET.get('session', '')
 
-    qs = Exam.objects.select_related('course', 'course__academic_course', 'department', 'academic_session').order_by('-exam_date', '-start_time')
+    qs = Exam.objects.select_related('course', 'course__academic_course', 'instructor').order_by('-start_datetime')
 
     if status_filter:
         qs = qs.filter(status=status_filter)
@@ -5171,7 +5171,7 @@ def admin_exam_list(request):
             Q(course__title__icontains=search)
         )
     if session_id:
-        qs = qs.filter(academic_session_id=session_id)
+        qs = qs.filter(course__session_id=session_id)
 
     status_counts = {
         s: Exam.objects.filter(status=s).count()
@@ -5192,12 +5192,22 @@ def admin_exam_list(request):
         'status_counts': status_counts,
     })
 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+@require_POST
+def admin_exam_toggle_active(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    exam.is_active = not exam.is_active
+    exam.save(update_fields=['is_active'])
+    state = 'activated' if exam.is_active else 'deactivated'
+    messages.success(request, f'Exam {exam.reference_code} has been {state}.')
+    return redirect('management:admin_exam_list')
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(_is_staff)
 def admin_exam_detail(request, slug):
     exam = get_object_or_404(
-        Exam.objects.select_related('course', 'course__academic_course', 'department', 'academic_session', 'instructor', 'submitted_by', 'approved_by', 'rejected_by', 'published_by'),
+        Exam.objects.select_related('course', 'course__academic_course', 'instructor', 'submitted_by', 'approved_by', 'rejected_by', 'published_by'),
         slug=slug
     )
     status_logs = exam.status_logs.select_related('changed_by').order_by('-created_at')[:10]
@@ -5292,19 +5302,11 @@ def admin_exam_publish(request, slug):
         messages.error(request, 'Only approved exams can be published.')
         return redirect('management:admin_exam_detail', slug=slug)
 
-    from django.utils.dateparse import parse_datetime
-    visible_from_raw = request.POST.get('visible_from', '').strip()
-    visible_until_raw = request.POST.get('visible_until', '').strip()
-
     prev = exam.status
     exam.status = Exam.PUBLISHED
     exam.published_by = request.user
     exam.published_at = timezone.now()
-    if visible_from_raw:
-        exam.visible_from_override = parse_datetime(visible_from_raw) or exam.visible_from_override
-    if visible_until_raw:
-        exam.visible_until_override = parse_datetime(visible_until_raw) or exam.visible_until_override
-    exam.save(update_fields=['status', 'published_by', 'published_at', 'visible_from_override', 'visible_until_override'])
+    exam.save(update_fields=['status', 'published_by', 'published_at'])
 
     ExamStatusLog.objects.create(
         exam=exam,
@@ -5339,11 +5341,11 @@ def admin_question_moderation(request, slug):
         if action == 'activate':
             question.is_active = True
             question.save(update_fields=['is_active'])
-            messages.success(request, f'Question #{question.order} activated.')
+            messages.success(request, f'Question activated.')
         elif action == 'deactivate':
             question.is_active = False
             question.save(update_fields=['is_active'])
-            messages.warning(request, f'Question #{question.order} deactivated.')
+            messages.warning(request, f'Question deactivated.')
         return redirect('management:admin_question_moderation', slug=slug)
 
     return render(request, 'management/question_moderation.html', {
@@ -5360,6 +5362,7 @@ def admin_exam_timetable_update(request, slug):
     if request.method == 'POST':
         from django.utils.dateparse import parse_date, parse_time
 
+        from datetime import datetime, timezone as dt_timezone
         exam_date = parse_date(request.POST.get('exam_date', ''))
         start_time = parse_time(request.POST.get('start_time', ''))
         end_time = parse_time(request.POST.get('end_time', ''))
@@ -5375,34 +5378,36 @@ def admin_exam_timetable_update(request, slug):
         if start_time and end_time and end_time <= start_time:
             errors.append('End time must be after start time.')
 
-        # Clash detection: same department, same date, overlapping time window
-        if not errors and exam.department:
+        if not errors:
+            from django.utils import timezone as dj_timezone
+            import zoneinfo
+            tz = zoneinfo.ZoneInfo('Africa/Lagos')
+            start_datetime = dj_timezone.make_aware(datetime.combine(exam_date, start_time), tz)
+            end_datetime = dj_timezone.make_aware(datetime.combine(exam_date, end_time), tz)
+
+            # Clash detection: overlapping start_datetime/end_datetime window
             clash_qs = Exam.objects.filter(
-                department=exam.department,
-                exam_date=exam_date,
+                course=exam.course,
                 status__in=[Exam.APPROVED, Exam.PUBLISHED],
             ).exclude(pk=exam.pk).filter(
-                start_time__lt=end_time,
-                end_time__gt=start_time,
+                start_datetime__lt=end_datetime,
+                end_datetime__gt=start_datetime,
             )
             if clash_qs.exists():
                 clash = clash_qs.first()
                 errors.append(
-                    f'Schedule conflict with {clash.reference_code} ({clash.start_time:%H:%M}–{clash.end_time:%H:%M}) '
-                    f'in the same department on this date.'
+                    f'Schedule conflict with {clash.reference_code} '
+                    f'({clash.start_datetime:%H:%M}–{clash.end_datetime:%H:%M}) on this date.'
                 )
 
         if errors:
             for e in errors:
                 messages.error(request, e)
         else:
-            exam.exam_date = exam_date
-            exam.start_time = start_time
-            exam.end_time = end_time
-            exam.venue = venue
-            exam.has_clash = False
+            exam.start_datetime = start_datetime
+            exam.end_datetime = end_datetime
             exam.clash_notes = ''
-            exam.save(update_fields=['exam_date', 'start_time', 'end_time', 'venue', 'has_clash', 'clash_notes'])
+            exam.save(update_fields=['start_datetime', 'end_datetime', 'clash_notes'])
             messages.success(request, 'Timetable updated successfully.')
             return redirect('management:admin_exam_detail', slug=slug)
 

@@ -5146,15 +5146,19 @@ class ExamQuestion(models.Model):
         (ESSAY,        "Essay / Long Answer"),
     ]
 
-    EASY   = "easy"
-    MEDIUM = "medium"
-    HARD   = "hard"
-
-    DIFFICULTY_CHOICES = [
-        (EASY,   "Easy"),
-        (MEDIUM, "Medium"),
-        (HARD,   "Hard"),
-    ]
+    # REMOVED: difficulty — students only sit exams for courses they are enrolled
+    # in, so academic level is already enforced at the Exam→LMSCourse level.
+    # The Exam model also has difficulty_mix commented out, making per-question
+    # difficulty unused end-to-end. Re-add if adaptive difficulty is ever needed.
+    # EASY   = "easy"
+    # MEDIUM = "medium"
+    # HARD   = "hard"
+    #
+    # DIFFICULTY_CHOICES = [
+    #     (EASY,   "Easy"),
+    #     (MEDIUM, "Medium"),
+    #     (HARD,   "Hard"),
+    # ]
 
     # =========================================================================
     # IDENTITY
@@ -5169,7 +5173,7 @@ class ExamQuestion(models.Model):
     # source_reference when picking for a new exam.
     # =========================================================================
     exam = models.ForeignKey(
-        Exam,
+        "Exam",
         on_delete=models.CASCADE,
         related_name="questions",
     )
@@ -5181,19 +5185,22 @@ class ExamQuestion(models.Model):
     question_type = models.CharField(
         max_length=20, choices=QUESTION_TYPE_CHOICES, default=MCQ,
     )
-    difficulty    = models.CharField(
-        max_length=10, choices=DIFFICULTY_CHOICES, default=MEDIUM, db_index=True,
-    )
-    marks         = models.DecimalField(
+
+    # REMOVED: difficulty — see note above at class constants.
+    # difficulty = models.CharField(
+    #     max_length=10, choices=DIFFICULTY_CHOICES, default=MEDIUM, db_index=True,
+    # )
+
+    marks = models.DecimalField(
         max_digits=6, decimal_places=2, default=1,
         validators=[MinValueValidator(0)],
     )
-    image         = models.ImageField(
+    image = models.ImageField(
         upload_to=upload_path("exam_question_images"),
         null=True, blank=True,
         help_text="Optional diagram or figure for the question.",
     )
-    explanation   = models.TextField(
+    explanation = models.TextField(
         blank=True,
         help_text="Explanation shown to students after answers are released.",
     )
@@ -5222,11 +5229,19 @@ class ExamQuestion(models.Model):
     # =========================================================================
     # BANK / POOL METADATA
     # =========================================================================
-    order            = models.PositiveIntegerField(
-        default=0, db_index=True,
-        help_text="Default display order within the exam (overridden by shuffle).",
-    )
-    tags             = models.JSONField(
+
+    # REMOVED: order — question sequencing is handled at the StudentExamResponse
+    # level via assigned_question_ids (written once per student draw). When
+    # shuffle_questions=True (the default on Exam), a stored order field is
+    # entirely overridden. When shuffle is off, assigned_question_ids preserves
+    # creation order (created_at). A stored order field adds maintenance burden
+    # with no benefit in this CBT setup.
+    # order = models.PositiveIntegerField(
+    #     default=0, db_index=True,
+    #     help_text="Default display order within the exam (overridden by shuffle).",
+    # )
+
+    tags = models.JSONField(
         default=list, blank=True,
         help_text='e.g. ["chapter-3", "sorting", "complexity"]',
     )
@@ -5234,7 +5249,7 @@ class ExamQuestion(models.Model):
         max_length=255, blank=True,
         help_text='e.g. "2019 Past Question Q4" or "Imported via Q-Bank"',
     )
-    year_first_used  = models.PositiveIntegerField(
+    year_first_used = models.PositiveIntegerField(
         null=True, blank=True,
         help_text="Year this question was first used — helps avoid recent repeats.",
     )
@@ -5244,10 +5259,15 @@ class ExamQuestion(models.Model):
         max_length=255, blank=True,
         help_text="Original filename this question was parsed from, if imported.",
     )
-    import_row_number  = models.PositiveIntegerField(
-        null=True, blank=True,
-        help_text="Row/paragraph number in import file — for parse-error tracing.",
-    )
+
+    # REMOVED: import_row_number — parse-error tracing is handled in
+    # Exam.import_error_log (text log written during the import job).
+    # Storing a row number per question record adds a column that is only
+    # meaningful during the import run and is never queried afterward.
+    # import_row_number = models.PositiveIntegerField(
+    #     null=True, blank=True,
+    #     help_text="Row/paragraph number in import file — for parse-error tracing.",
+    # )
 
     # =========================================================================
     # STANDARD METADATA
@@ -5264,18 +5284,22 @@ class ExamQuestion(models.Model):
     )
 
     class Meta:
-        ordering            = ["exam", "order", "created_at"]
+        ordering            = ["exam", "created_at"]   # order field removed
         verbose_name        = "Exam Question"
         verbose_name_plural = "Exam Questions"
         indexes = [
-            models.Index(fields=["exam", "difficulty", "is_active"]),
-            models.Index(fields=["exam", "order"]),
+            # REMOVED: difficulty index — field no longer stored
+            # models.Index(fields=["exam", "difficulty", "is_active"]),
+            # REMOVED: order index — field no longer stored
+            # models.Index(fields=["exam", "order"]),
+            models.Index(fields=["exam", "is_active"]),
+            models.Index(fields=["exam", "created_at"]),
         ]
 
     def __str__(self):
         return (
-            f"[{self.exam.reference_code}] Q{self.order} "
-            f"({self.get_difficulty_display()}) — {self.question_text[:80]}"
+            f"[{self.exam.reference_code}] "
+            f"({self.get_question_type_display()}) — {self.question_text[:80]}"
         )
 
     def clean(self):
@@ -5315,6 +5339,43 @@ class ExamQuestion(models.Model):
             )
         self.full_clean()
         super().save(*args, **kwargs)
+
+    # =========================================================================
+    # COMPUTED PROPERTIES
+    # =========================================================================
+
+    @property
+    def option_count(self) -> int:
+        """Number of answer options (meaningful for MCQ / multi_select / T/F)."""
+        return len(self.options)
+
+    @property
+    def correct_option_count(self) -> int:
+        """Number of options marked is_correct. Useful for grading validation."""
+        return sum(1 for o in self.options if o.get("is_correct"))
+
+    @property
+    def has_image(self) -> bool:
+        return bool(self.image)
+
+    @property
+    def is_auto_gradeable(self) -> bool:
+        """
+        True for question types that can be graded without human review.
+        MCQ and True/False are always auto-gradeable.
+        Multi-select is auto-gradeable.
+        Short-answer is auto-gradeable only when accepted_answers is populated.
+        Essay always requires manual grading.
+        """
+        if self.question_type in (self.MCQ, self.TRUE_FALSE, self.MULTI_SELECT):
+            return True
+        if self.question_type == self.SHORT_ANSWER:
+            return bool(self.accepted_answers)
+        return False  # essay
+
+    @property
+    def requires_manual_grading(self) -> bool:
+        return not self.is_auto_gradeable
 
     def safe_options_for_student(self, shuffled_order: list = None) -> list:
         """

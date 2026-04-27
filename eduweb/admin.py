@@ -2089,7 +2089,7 @@ class ExamQuestionInline(admin.TabularInline):
     extra    = 0
     max_num  = 20
     per_page = 20
-    fields   = ('question_text', 'question_type', 'difficulty', 'marks', 'order', 'is_active')
+    fields   = ('question_text', 'question_type', 'marks', 'is_active')
     readonly_fields  = ('created_at',)
     show_change_link = True
 
@@ -2273,20 +2273,20 @@ class ExamAdmin(admin.ModelAdmin):
 @admin.register(ExamQuestion)
 class ExamQuestionAdmin(admin.ModelAdmin):
     list_display  = (
-        'exam', 'question_type', 'difficulty', 'marks',
-        'order', 'is_active', 'year_first_used', 'source_reference',
+        'exam', 'question_type', 'marks',
+        'is_active', 'year_first_used', 'source_reference',
     )
-    list_filter = ('question_type', 'difficulty', 'is_active', 'exam__exam_type')
-    search_fields = ('question_text', 'source_reference', 'tags', 'exam__reference_code')
+    list_filter   = ('question_type', 'is_active', 'exam__exam_type')
+    search_fields = ('question_text', 'source_reference', 'exam__reference_code')
     readonly_fields = ('slug', 'created_at', 'updated_at')
-    list_editable   = ('order', 'is_active')
+    list_editable   = ('is_active',)
 
     fieldsets = (
         ('Pool Membership', {
-            'fields': ('slug', 'exam', 'is_active', 'order')
+            'fields': ('slug', 'exam', 'is_active')
         }),
         ('Question Content', {
-            'fields': ('question_text', 'question_type', 'difficulty', 'marks', 'image', 'explanation')
+            'fields': ('question_text', 'question_type', 'marks', 'image', 'explanation')
         }),
         ('Answer Options', {
             'fields': ('options', 'accepted_answers'),
@@ -2298,7 +2298,7 @@ class ExamQuestionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Import Traceability', {
-            'fields': ('imported_from_file', 'import_row_number'),
+            'fields': ('imported_from_file',),
             'classes': ('collapse',)
         }),
         ('Audit', {

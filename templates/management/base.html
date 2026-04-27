@@ -516,10 +516,10 @@
                                 class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-book mr-2" aria-hidden="true"></i>Course Catalog
                             </a>
-                            <a href="{% url 'management:intakes_list' %}"
+                            {% comment %} <a href="{% url 'management:intakes_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'intakes' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-door-open mr-2" aria-hidden="true"></i>Course Intakes
-                            </a>
+                            </a> {% endcomment %}
                         </div>
                     </div>
 

@@ -1,39 +1,47 @@
 {% extends 'management/base.html' %}
 {% load static %}
 
+{% comment %}
+  exam_detail.html — Admin Exam Detail & Approval Workflow
+  
+  CRITICAL MODEL CORRECTIONS applied here:
+  • exam.mode / exam.get_mode_display → REMOVED (mode field deleted; online-only CBT system)
+  • exam.academic_session → REMOVED from Exam; derive via exam.course.session
+  • exam.department → REMOVED from Exam; derive via exam.course.academic_course.program.department
+  • exam.exam_date / exam.start_time / exam.end_time → REMOVED; now exam.start_datetime / exam.end_datetime
+  • exam.venue → REMOVED (online-only, no venue)
+  • exam.instruction_window_minutes → CLASS CONSTANT; hardcode 10 in template
+  • responses → not passed by view; removed that block
+  • questions → not passed by view; use exam.active_question_count + exam.computed_total_marks
+  • Publish modal: visible_from/visible_until are computed @properties, not stored overrides;
+    the view only changes status, so those inputs are removed from the modal
+{% endcomment %}
+
 {% block title %}{{ exam.reference_code }} — Exam Detail{% endblock %}
 {% block breadcrumb %}Exam Management / {{ exam.reference_code }}{% endblock %}
 {% block breadcrumb_title %}{{ exam.reference_code }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .info-label { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; margin-bottom:.2rem; }
-    .info-value  { font-size:.875rem; color:#1e293b; font-weight:500; }
-
-    .timeline-dot {
-        width:.625rem; height:.625rem; border-radius:50%;
-        background: var(--color-primary-400, #60a5fa);
-        border: 2px solid var(--color-primary-200, #bfdbfe);
-        shrink-0: true; flex-shrink:0; margin-top:.25rem;
-    }
+    .info-label { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; margin-bottom:.25rem; }
+    .info-value  { font-size:.9rem; color:#1e293b; font-weight:500; }
     .modal-overlay { backdrop-filter: blur(2px); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="w-full max-w-full space-y-6">
+<div class="w-full max-w-full space-y-6 px-4 sm:px-6 lg:px-8">
 
-    <!-- ── Breadcrumb ── -->
+    {% comment %} Breadcrumb {% endcomment %}
     <nav class="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
-        <a href="{% url 'management:admin_exam_list' %}"
-           class="hover:text-primary-600 transition-colors flex items-center gap-1">
+        <a href="{% url 'management:admin_exam_list' %}" class="hover:text-primary-600 transition-colors flex items-center gap-1">
             <i class="fas fa-file-alt"></i> Exam Management
         </a>
         <i class="fas fa-chevron-right text-gray-300 text-[9px]"></i>
         <span class="text-gray-700 font-semibold">{{ exam.reference_code }}</span>
     </nav>
 
-    <!-- ── Page Header ── -->
+    {% comment %} Page Header Card {% endcomment %}
     <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="h-1.5 bg-gradient-to-r
             {% if exam.status == 'published' %}from-green-400 to-emerald-500
@@ -41,18 +49,15 @@
             {% elif exam.status == 'approved' %}from-blue-400 to-indigo-500
             {% elif exam.status == 'rejected' %}from-red-400 to-rose-500
             {% elif exam.status == 'cancelled' %}from-gray-300 to-gray-400
-            {% else %}from-primary-500 to-secondary-500{% endif %}">
-        </div>
+            {% else %}from-primary-500 to-secondary-500{% endif %}"></div>
         <div class="p-5 sm:p-7 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
             <div class="flex items-start gap-4 min-w-0">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500
-                            flex items-center justify-center text-white shadow shrink-0">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white shadow shrink-0">
                     <i class="fas fa-file-alt text-lg"></i>
                 </div>
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2 mb-1">
                         <span class="font-mono text-xs font-bold text-gray-400 tracking-widest">{{ exam.reference_code }}</span>
-                        <!-- Status pill -->
                         {% if exam.status == 'draft' %}
                         <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-gray-100 text-gray-600 rounded-full">
                             <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Draft
@@ -83,52 +88,55 @@
                             <i class="fas fa-exclamation-triangle text-[10px]"></i> CLASH
                         </span>
                         {% endif %}
+                        {% if not exam.is_active %}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-gray-200 text-gray-500 rounded-full">
+                            <i class="fas fa-ban text-[10px]"></i> Inactive
+                        </span>
+                        {% endif %}
                     </div>
                     <h1 class="text-xl sm:text-2xl font-bold text-gray-900 font-heading leading-snug">{{ exam.title }}</h1>
-                    <p class="text-sm text-gray-500 mt-1">{{ exam.get_exam_type_display }} &bull; {{ exam.get_mode_display }}</p>
+                    {% comment %} exam.get_exam_type_display is correct; mode was removed {% endcomment %}
+                    <p class="text-sm text-gray-500 mt-1">
+                        {{ exam.get_exam_type_display }} &bull;
+                        <span class="inline-flex items-center gap-1 text-blue-600 font-medium"><i class="fas fa-laptop text-xs"></i> Online / CBT</span>
+                    </p>
                 </div>
             </div>
 
-            <!-- Action buttons -->
+            {% comment %} Action Buttons {% endcomment %}
             <div class="flex flex-wrap gap-2 shrink-0">
                 {% if exam.status == 'submitted' %}
                 <button onclick="openModal('approveModal')"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold
-                               bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors shadow-sm">
+                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-check"></i> Approve
                 </button>
                 <button onclick="openModal('rejectModal')"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold
-                               bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors shadow-sm">
+                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-times"></i> Reject
                 </button>
                 {% elif exam.status == 'approved' %}
                 <button onclick="openModal('publishModal')"
-                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold
-                               bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors shadow-sm">
+                        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-globe"></i> Publish
                 </button>
                 {% endif %}
                 <a href="{% url 'management:admin_exam_timetable_update' exam.slug %}"
-                   class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium
-                          border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
+                   class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
                     <i class="fas fa-calendar-alt text-gray-400"></i> Timetable
                 </a>
                 <a href="{% url 'management:admin_question_moderation' exam.slug %}"
-                   class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium
-                          border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
+                   class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
                     <i class="fas fa-list-check text-gray-400"></i> Questions
                 </a>
                 <a href="{% url 'management:admin_exam_responses' exam.slug %}"
-                   class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium
-                          border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
+                   class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
                     <i class="fas fa-users text-gray-400"></i> Responses
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- ── Clash Alert ── -->
+    {% comment %} Alert: Clash {% endcomment %}
     {% if exam.has_clash %}
     <div class="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
         <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
@@ -138,14 +146,12 @@
             <p class="text-sm font-semibold text-red-800">Scheduling Clash Detected</p>
             {% if exam.clash_notes %}<p class="text-xs text-red-600 mt-0.5">{{ exam.clash_notes }}</p>{% endif %}
             <a href="{% url 'management:admin_exam_timetable_update' exam.slug %}"
-               class="text-xs text-red-700 underline mt-1 inline-block hover:text-red-900 transition-colors">
-                Update timetable to resolve →
-            </a>
+               class="text-xs text-red-700 underline mt-1 inline-block hover:text-red-900 transition-colors">Update timetable to resolve →</a>
         </div>
     </div>
     {% endif %}
 
-    <!-- ── Rejection Alert ── -->
+    {% comment %} Alert: Rejection Reason {% endcomment %}
     {% if exam.status == 'rejected' and exam.rejection_reason %}
     <div class="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
         <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
@@ -158,7 +164,7 @@
     </div>
     {% endif %}
 
-    <!-- ── Published Visibility Banner ── -->
+    {% comment %} Banner: Published Visibility {% endcomment %}
     {% if exam.status == 'published' %}
     <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-2xl">
         <div class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
@@ -166,28 +172,25 @@
         </div>
         <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold text-green-800">
-                Currently {% if exam.is_visible_to_students %}
-                    <span class="text-green-700">visible</span>
-                {% else %}
-                    <span class="text-amber-700">not yet visible</span>
-                {% endif %} to students
+                Currently {% if exam.is_visible_to_students %}<span class="text-green-700">visible</span>{% else %}<span class="text-amber-700">not yet visible</span>{% endif %} to students
             </p>
+            {% comment %} visible_from / visible_until are computed @properties, always available {% endcomment %}
             <p class="text-xs text-green-600 mt-0.5">
-                From: <strong>{{ exam.visible_from|date:"d M Y H:i"|default:"Immediately" }}</strong>
+                From: <strong>{{ exam.visible_from|date:"d M Y H:i" }}</strong>
                 &nbsp;·&nbsp;
-                Until: <strong>{{ exam.visible_until|date:"d M Y H:i"|default:"No expiry" }}</strong>
+                Until: <strong>{{ exam.visible_until|date:"d M Y H:i" }}</strong>
             </p>
         </div>
     </div>
     {% endif %}
 
-    <!-- ── Main Grid ── -->
+    {% comment %} Main Grid {% endcomment %}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Left col: info sections -->
+        {% comment %} Left: Info Sections {% endcomment %}
         <div class="lg:col-span-2 space-y-5">
 
-            <!-- Course Linkage -->
+            {% comment %} Course Linkage Card {% endcomment %}
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
                     <span class="w-7 h-7 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
@@ -207,18 +210,26 @@
                         <div class="info-label">Academic Course Link</div>
                         {% if exam.course.academic_course %}
                         <div class="info-value font-semibold">{{ exam.course.academic_course.code }} — {{ exam.course.academic_course.name }}</div>
-                        <div class="text-xs text-gray-400 mt-0.5">{{ exam.course.academic_course.program.name }} › {{ exam.course.academic_course.program.department.name }}</div>
+                        {% if exam.course.academic_course.program %}
+                        <div class="text-xs text-gray-400 mt-0.5">{{ exam.course.academic_course.program.name }}{% if exam.course.academic_course.program.department %} › {{ exam.course.academic_course.program.department.name }}{% endif %}</div>
+                        {% endif %}
                         {% else %}
                         <div class="text-sm text-gray-400 italic">Standalone — no academic link</div>
                         {% endif %}
                     </div>
                     <div>
+                        {% comment %} Department derived via exam.course.academic_course.program.department {% endcomment %}
                         <div class="info-label">Department</div>
-                        <div class="info-value">{{ exam.department.name|default:"—" }}</div>
+                        <div class="info-value">
+                            {% if exam.course.academic_course.program.department %}
+                                {{ exam.course.academic_course.program.department.name }}
+                            {% else %}—{% endif %}
+                        </div>
                     </div>
                     <div>
+                        {% comment %} Academic Session derived via exam.course.session (LMSCourse.session FK) {% endcomment %}
                         <div class="info-label">Academic Session</div>
-                        <div class="info-value">{{ exam.academic_session.name|default:"—" }}</div>
+                        <div class="info-value">{{ exam.course.session.name|default:"—" }}</div>
                     </div>
                     <div>
                         <div class="info-label">Exam Type</div>
@@ -226,12 +237,33 @@
                     </div>
                     <div>
                         <div class="info-label">Instructor</div>
-                        <div class="info-value">{{ exam.instructor.get_full_name|default:exam.instructor.username|default:"—" }}</div>
+                        <div class="info-value">
+                            {% if exam.instructor %}{{ exam.instructor.get_full_name|default:exam.instructor.username }}{% else %}—{% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        {% comment %} Delivery is always Online/CBT; mode field removed {% endcomment %}
+                        <div class="info-label">Delivery</div>
+                        <div class="info-value">
+                            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full font-semibold">
+                                <i class="fas fa-laptop text-xs"></i> Online / CBT
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="info-label">Submission Count</div>
+                        <div class="info-value">{{ exam.submission_count }} revision cycle{{ exam.submission_count|pluralize }}</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Timetable -->
+            {% comment %} Timetable Card
+              CORRECTIONS:
+              • exam_date / start_time / end_time → removed; use start_datetime / end_datetime
+              • venue → removed (model field deleted)
+              • instruction_window_minutes → class constant 10; hardcoded
+              • duration_minutes → computed @property (still works)
+            {% endcomment %}
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
@@ -248,32 +280,38 @@
                 <div class="p-5 grid grid-cols-2 sm:grid-cols-3 gap-5">
                     <div>
                         <div class="info-label">Date</div>
-                        <div class="info-value font-semibold">{{ exam.exam_date|date:"D, d M Y" }}</div>
+                        {% comment %} start_datetime replaces the old exam_date field {% endcomment %}
+                        <div class="info-value font-semibold">{{ exam.start_datetime|date:"D, d M Y" }}</div>
                     </div>
                     <div>
                         <div class="info-label">Start Time</div>
-                        <div class="info-value tabular-nums">{{ exam.start_time|time:"H:i" }}</div>
+                        {% comment %} time extracted from start_datetime {% endcomment %}
+                        <div class="info-value tabular-nums">{{ exam.start_datetime|time:"H:i" }}</div>
                     </div>
                     <div>
                         <div class="info-label">End Time</div>
-                        <div class="info-value tabular-nums">{{ exam.end_time|time:"H:i" }}</div>
+                        {% comment %} time extracted from end_datetime {% endcomment %}
+                        <div class="info-value tabular-nums">{{ exam.end_datetime|time:"H:i" }}</div>
                     </div>
                     <div>
                         <div class="info-label">Duration</div>
+                        {% comment %} duration_minutes is a computed @property {% endcomment %}
                         <div class="info-value">{{ exam.duration_minutes }} min</div>
                     </div>
                     <div>
-                        <div class="info-label">Venue</div>
-                        <div class="info-value">{{ exam.venue|default:"—" }}</div>
+                        {% comment %} instruction_window_minutes is a class constant = 10; not instance field {% endcomment %}
+                        <div class="info-label">Instruction Window</div>
+                        <div class="info-value">10 min before start</div>
                     </div>
                     <div>
-                        <div class="info-label">Instruction Window</div>
-                        <div class="info-value">{{ exam.instruction_window_minutes }} min before start</div>
+                        {% comment %} instructions_open_at is a computed @property {% endcomment %}
+                        <div class="info-label">Instructions Open</div>
+                        <div class="info-value tabular-nums">{{ exam.instructions_open_at|time:"H:i" }}</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Question Pool -->
+            {% comment %} Question Pool Card {% endcomment %}
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
@@ -290,78 +328,76 @@
                 <div class="p-5">
                     <div class="grid grid-cols-3 gap-4 mb-4">
                         <div class="bg-primary-50 border border-primary-100 rounded-xl p-4 text-center">
+                            {% comment %} active_question_count is a computed @property {% endcomment %}
                             <div class="text-2xl font-bold text-primary-700">{{ exam.active_question_count }}</div>
                             <div class="text-xs text-primary-500 font-medium mt-0.5">Active</div>
                         </div>
                         <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 text-center">
-                            <div class="text-2xl font-bold text-gray-700">{{ questions|length }}</div>
+                            {% comment %} Total pool = all questions for this exam (active + inactive) {% endcomment %}
+                            <div class="text-2xl font-bold text-gray-700">{{ exam.questions.count }}</div>
                             <div class="text-xs text-gray-400 font-medium mt-0.5">Total Pool</div>
                         </div>
                         <div class="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
+                            {% comment %} computed_total_marks is a computed @property {% endcomment %}
                             <div class="text-2xl font-bold text-green-700">{{ exam.computed_total_marks }}</div>
                             <div class="text-xs text-green-500 font-medium mt-0.5">Total Marks</div>
                         </div>
                     </div>
-                    {% if exam.questions_per_student %}
-                    <div class="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
-                        <i class="fas fa-random text-primary-400"></i>
-                        {{ exam.questions_per_student }} questions drawn per student from this pool.
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="flex items-center gap-2 text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                            <i class="fas fa-random text-primary-400 shrink-0"></i>
+                            <span>{{ exam.questions_per_student|default:"All" }} per student</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                            <i class="fas fa-{% if exam.shuffle_questions %}random text-green-500{% else %}sort text-gray-400{% endif %} shrink-0"></i>
+                            <span>Questions {% if exam.shuffle_questions %}shuffled{% else %}ordered{% endif %}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                            <i class="fas fa-{% if exam.shuffle_options %}random text-green-500{% else %}sort text-gray-400{% endif %} shrink-0"></i>
+                            <span>Options {% if exam.shuffle_options %}shuffled{% else %}ordered{% endif %}</span>
+                        </div>
+                        {% if exam.pass_mark %}
+                        <div class="flex items-center gap-2 text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                            <i class="fas fa-trophy text-yellow-500 shrink-0"></i>
+                            <span>Pass mark: {{ exam.pass_mark }}</span>
+                        </div>
+                        {% endif %}
                     </div>
+                </div>
+            </div>
+
+            {% comment %} Import Status (if applicable) {% endcomment %}
+            {% if exam.import_status != 'none' %}
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                        <i class="fas fa-file-import text-orange-500 text-xs"></i>
+                    </span>
+                    <h2 class="text-sm font-bold text-gray-800">Question Import</h2>
+                </div>
+                <div class="p-5">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full
+                            {% if exam.import_status == 'done' %}bg-green-100 text-green-700
+                            {% elif exam.import_status == 'failed' %}bg-red-100 text-red-700
+                            {% elif exam.import_status == 'processing' %}bg-yellow-100 text-yellow-700
+                            {% else %}bg-gray-100 text-gray-500{% endif %}">
+                            {{ exam.get_import_status_display }}
+                        </span>
+                    </div>
+                    {% if exam.import_error_log %}
+                    <pre class="text-xs bg-red-50 border border-red-100 rounded-lg p-3 text-red-600 overflow-x-auto whitespace-pre-wrap">{{ exam.import_error_log }}</pre>
                     {% endif %}
                 </div>
             </div>
-
-            <!-- Recent Responses -->
-            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-7 h-7 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
-                            <i class="fas fa-users text-primary-500 text-xs"></i>
-                        </span>
-                        <h2 class="text-sm font-bold text-gray-800">Recent Responses</h2>
-                    </div>
-                    <a href="{% url 'management:admin_exam_responses' exam.slug %}"
-                       class="text-xs text-primary-600 hover:text-primary-800 font-semibold transition-colors">
-                        View all <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
-                    </a>
-                </div>
-                <div class="divide-y divide-gray-50">
-                    {% for r in responses %}
-                    <div class="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                                <i class="fas fa-user text-gray-400 text-xs"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="text-sm font-medium text-gray-900 truncate">{{ r.student.get_full_name|default:r.student.username }}</div>
-                                <div class="text-xs text-gray-400">{{ r.get_status_display }}</div>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0 ml-3">
-                            {% if r.score_percentage is not None %}
-                            <div class="text-sm font-bold {% if r.passed %}text-green-600{% else %}text-red-600{% endif %}">
-                                {{ r.score_percentage|floatformat:1 }}%
-                            </div>
-                            {% else %}
-                            <div class="text-xs text-gray-400">—</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="px-5 py-8 text-center">
-                        <i class="fas fa-users text-2xl text-gray-200 block mb-2"></i>
-                        <p class="text-xs text-gray-400">No responses yet.</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+            {% endif %}
 
         </div>
 
-        <!-- Right col: status history -->
+        {% comment %} Right: Status History + Quick Info {% endcomment %}
         <div class="space-y-5">
 
-            <!-- Status History -->
+            {% comment %} Status History {% endcomment %}
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
                     <span class="w-7 h-7 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
@@ -406,7 +442,7 @@
                 </div>
             </div>
 
-            <!-- Quick Info Card -->
+            {% comment %} Quick Info {% endcomment %}
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
                     <span class="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
@@ -417,32 +453,24 @@
                 <div class="p-5 space-y-3.5">
                     <div>
                         <div class="info-label">Created By</div>
-                        <div class="info-value">{{ exam.created_by.get_full_name|default:exam.created_by.username|default:"—" }}</div>
+                        <div class="info-value">{% if exam.created_by %}{{ exam.created_by.get_full_name|default:exam.created_by.username }}{% else %}—{% endif %}</div>
                     </div>
                     <div>
-                        <div class="info-label">Shuffle Questions</div>
-                        <div class="info-value">
-                            {% if exam.shuffle_questions %}
-                            <span class="inline-flex items-center gap-1 text-xs text-green-700 font-semibold"><i class="fas fa-check-circle text-green-500"></i> Yes</span>
-                            {% else %}
-                            <span class="inline-flex items-center gap-1 text-xs text-gray-500"><i class="fas fa-times-circle text-gray-300"></i> No</span>
-                            {% endif %}
-                        </div>
+                        <div class="info-label">Submitted By</div>
+                        <div class="info-value">{% if exam.submitted_by %}{{ exam.submitted_by.get_full_name|default:exam.submitted_by.username }} <span class="text-xs text-gray-400">({{ exam.submitted_at|date:"d M Y" }})</span>{% else %}—{% endif %}</div>
                     </div>
+                    {% if exam.approved_by %}
                     <div>
-                        <div class="info-label">Shuffle Options</div>
-                        <div class="info-value">
-                            {% if exam.shuffle_options %}
-                            <span class="inline-flex items-center gap-1 text-xs text-green-700 font-semibold"><i class="fas fa-check-circle text-green-500"></i> Yes</span>
-                            {% else %}
-                            <span class="inline-flex items-center gap-1 text-xs text-gray-500"><i class="fas fa-times-circle text-gray-300"></i> No</span>
-                            {% endif %}
-                        </div>
+                        <div class="info-label">Approved By</div>
+                        <div class="info-value">{{ exam.approved_by.get_full_name|default:exam.approved_by.username }} <span class="text-xs text-gray-400">({{ exam.approved_at|date:"d M Y" }})</span></div>
                     </div>
+                    {% endif %}
+                    {% if exam.published_by %}
                     <div>
-                        <div class="info-label">Pass Mark</div>
-                        <div class="info-value">{{ exam.pass_mark|default:"—" }}</div>
+                        <div class="info-label">Published By</div>
+                        <div class="info-value">{{ exam.published_by.get_full_name|default:exam.published_by.username }} <span class="text-xs text-gray-400">({{ exam.published_at|date:"d M Y" }})</span></div>
                     </div>
+                    {% endif %}
                     <div>
                         <div class="info-label">Show Results Immediately</div>
                         <div class="info-value">
@@ -453,16 +481,52 @@
                             {% endif %}
                         </div>
                     </div>
+                    {% if exam.show_answers_after %}
+                    <div>
+                        <div class="info-label">Answers Visible After</div>
+                        <div class="info-value">{{ exam.show_answers_after|date:"d M Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="info-label">Total Marks (stored)</div>
+                        <div class="info-value">{{ exam.total_marks }}</div>
+                    </div>
                 </div>
             </div>
+
+            {% comment %} Instructions Preview {% endcomment %}
+            {% if exam.instructions or exam.special_instructions %}
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                        <i class="fas fa-scroll text-blue-400 text-xs"></i>
+                    </span>
+                    <h2 class="text-sm font-bold text-gray-800">Instructions</h2>
+                </div>
+                <div class="p-5 space-y-4">
+                    {% if exam.instructions %}
+                    <div>
+                        <div class="info-label mb-1">Student Instructions</div>
+                        <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ exam.instructions|truncatechars:300 }}</p>
+                    </div>
+                    {% endif %}
+                    {% if exam.special_instructions %}
+                    <div>
+                        <div class="info-label mb-1">Special Instructions</div>
+                        <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ exam.special_instructions|truncatechars:200 }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
         </div>
     </div>
 </div>
 
-<!-- ════════════════════ MODALS ════════════════════ -->
+{% comment %} ════ MODALS ════ {% endcomment %}
 
-<!-- Approve Modal -->
+{% comment %} Approve Modal {% endcomment %}
 <div id="approveModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay bg-black/50">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
@@ -479,14 +543,11 @@
             <div class="px-6 py-5">
                 <label class="block text-xs font-semibold text-gray-600 mb-2">Approval Note <span class="font-normal text-gray-400">(optional)</span></label>
                 <textarea name="note" rows="3" placeholder="Add a note to log with this approval…"
-                          class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm
-                                 focus:ring-2 focus:ring-green-400 focus:border-green-400 resize-none transition"></textarea>
+                          class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400 resize-none transition"></textarea>
             </div>
             <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
                 <button type="button" onclick="closeModal('approveModal')"
-                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">
-                    Cancel
-                </button>
+                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
                 <button type="submit"
                         class="px-5 py-2.5 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-check mr-1.5"></i> Confirm Approval
@@ -496,7 +557,7 @@
     </div>
 </div>
 
-<!-- Reject Modal -->
+{% comment %} Reject Modal {% endcomment %}
 <div id="rejectModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay bg-black/50">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
@@ -511,19 +572,14 @@
         <form method="post" action="{% url 'management:admin_exam_reject' exam.slug %}">
             {% csrf_token %}
             <div class="px-6 py-5">
-                <label class="block text-xs font-semibold text-gray-700 mb-2">
-                    Rejection Reason <span class="text-red-500">*</span>
-                </label>
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Rejection Reason <span class="text-red-500">*</span></label>
                 <textarea name="reason" rows="4" required
                           placeholder="Explain clearly what needs to be corrected before resubmission…"
-                          class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm
-                                 focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none transition"></textarea>
+                          class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none transition"></textarea>
             </div>
             <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
                 <button type="button" onclick="closeModal('rejectModal')"
-                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">
-                    Cancel
-                </button>
+                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
                 <button type="submit"
                         class="px-5 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-times mr-1.5"></i> Confirm Rejection
@@ -533,7 +589,11 @@
     </div>
 </div>
 
-<!-- Publish Modal -->
+{% comment %} Publish Modal
+  NOTE: visible_from / visible_until are computed @properties — NOT stored fields.
+  The admin_exam_publish view only changes exam.status = PUBLISHED.
+  No inputs for visibility windows needed; they are auto-computed from start/end_datetime.
+{% endcomment %}
 <div id="publishModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay bg-black/50">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
@@ -542,38 +602,28 @@
             </div>
             <div>
                 <h3 class="text-base font-bold text-gray-900">Publish Exam</h3>
-                <p class="text-xs text-gray-500 mt-0.5">Set visibility window. Leave blank to publish immediately with no expiry.</p>
+                <p class="text-xs text-gray-500 mt-0.5">Students can see this exam within the auto-computed visibility window.</p>
             </div>
         </div>
         <form method="post" action="{% url 'management:admin_exam_publish' exam.slug %}">
             {% csrf_token %}
             <div class="px-6 py-5 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Visible From <span class="font-normal text-gray-400">(optional)</span></label>
-                    <input type="datetime-local" name="visible_from"
-                           value="{% if exam.visible_from %}{{ exam.visible_from|date:'Y-m-d' }}T{{ exam.visible_from|time:'H:i' }}{% endif %}"
-                           class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm
-                                  focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Visible Until <span class="font-normal text-gray-400">(optional)</span></label>
-                    <input type="datetime-local" name="visible_until"
-                           value="{% if exam.visible_until %}{{ exam.visible_until|date:'Y-m-d' }}T{{ exam.visible_until|time:'H:i' }}{% endif %}"
-                           class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm
-                                  focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition">
+                {% comment %} Visibility window is auto-computed; show it for confirmation {% endcomment %}
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 space-y-1">
+                    <div class="font-semibold flex items-center gap-2"><i class="fas fa-info-circle"></i> Auto-computed Visibility Window</div>
+                    <div>Visible from: <strong>{{ exam.visible_from|date:"d M Y H:i" }}</strong></div>
+                    <div>Visible until: <strong>{{ exam.visible_until|date:"d M Y H:i" }}</strong></div>
+                    <div class="text-xs text-blue-500 mt-1">Based on exam start/end time ± {{ exam.VISIBILITY_HOURS_BEFORE }}h/{{ exam.VISIBILITY_HOURS_AFTER }}h</div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5">Note <span class="font-normal text-gray-400">(optional)</span></label>
                     <textarea name="note" rows="2"
-                              class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm
-                                     focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none transition"></textarea>
+                              class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none transition"></textarea>
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
                 <button type="button" onclick="closeModal('publishModal')"
-                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">
-                    Cancel
-                </button>
+                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
                 <button type="submit"
                         class="px-5 py-2.5 text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-globe mr-1.5"></i> Publish Now
@@ -587,25 +637,13 @@
 
 {% block extra_js %}
 <script>
-function openModal(id) {
-    document.getElementById(id).classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-function closeModal(id) {
-    document.getElementById(id).classList.add('hidden');
-    document.body.style.overflow = '';
-}
-// Close on overlay click
-document.querySelectorAll('[id$="Modal"]').forEach(modal => {
-    modal.addEventListener('click', e => {
-        if (e.target === modal) closeModal(modal.id);
-    });
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.body.style.overflow = ''; }
+document.querySelectorAll('[id$="Modal"]').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
 });
-// Close on Escape
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('[id$="Modal"]:not(.hidden)').forEach(m => closeModal(m.id));
-    }
+    if (e.key === 'Escape') document.querySelectorAll('[id$="Modal"]:not(.hidden)').forEach(m => closeModal(m.id));
 });
 </script>
 {% endblock %}

@@ -2571,13 +2571,10 @@ def _parse_exam_questions_from_file(upload_file, exam, user):
                         exam=exam,
                         question_text=q_text,
                         question_type='mcq' if raw_options else 'short_answer',
-                        difficulty=difficulty,
                         marks=marks,
                         explanation=explanation,
-                        order=questions_created,
                         created_by=user,
                         imported_from_file=upload_file.name,
-                        import_row_number=idx,
                     )
 
                     # CREATE OPTIONS
@@ -2621,13 +2618,10 @@ def _parse_exam_questions_from_file(upload_file, exam, user):
                         exam=exam,
                         question_text=q_text,
                         question_type='mcq' if options else 'short_answer',
-                        difficulty=difficulty,
                         marks=marks,
                         explanation=block.get('explanation', ''),
-                        order=order,
                         created_by=user,
                         imported_from_file=upload_file.name,
-                        import_row_number=order + 1,
                     )
 
                     for opt in options:
@@ -2867,11 +2861,9 @@ def create_assessment(request):
                         exam          = exam,
                         question_text = q_text,
                         question_type = eq_data.get('question_type', 'mcq'),
-                        difficulty    = eq_data.get('difficulty', 'medium'),
                         marks         = eq_data.get('marks', 1),
                         options       = options_with_ids,
                         explanation   = eq_data.get('explanation', ''),
-                        order         = idx,
                         created_by    = request.user,
                     )
 
@@ -2998,7 +2990,7 @@ def exam_detail(request, slug):
     """Single exam — tabbed view: overview, edit, questions, results."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
  
-    questions    = exam.questions.filter(is_active=True).order_by('order', 'created_at')
+    questions    = exam.questions.filter(is_active=True).order_by('created_at')
     status_logs  = exam.status_logs.all().order_by('-created_at')[:10]
  
     # Results stats (only meaningful when published)
@@ -3092,6 +3084,16 @@ def exam_update(request, slug):
         if parsed:
             exam.end_datetime = parsed
  
+    # show_answers_after
+    raw_saa = request.POST.get('show_answers_after', '').strip()
+    if raw_saa:
+        from django.utils.dateparse import parse_datetime as _pd
+        parsed_saa = _pd(raw_saa)
+        if parsed_saa:
+            exam.show_answers_after = parsed_saa
+    elif 'show_answers_after' in request.POST and not raw_saa:
+        exam.show_answers_after = None
+
     # REMOVED: visible_from_override / visible_until_override parsing
     # — visibility is now a fully computed @property, no overrides stored
  
@@ -3302,21 +3304,17 @@ def _save_exam_question(request, exam, question=None):
     if not q_text:
         return 'Question text is required.'
  
-    difficulty = request.POST.get('difficulty', 'medium')
-    marks_raw  = request.POST.get('marks', '1').strip()
-    order_raw  = request.POST.get('order', '0').strip()
+    marks_raw        = request.POST.get('marks', '1').strip()
     explanation      = request.POST.get('explanation', '').strip()
     source_reference = request.POST.get('source_reference', '').strip()
     is_active        = 'is_active' in request.POST
+    tags_raw         = request.POST.get('tags_input', '').strip()
+    tags             = [t.strip() for t in tags_raw.split(',') if t.strip()] if tags_raw else []
  
     try:
         marks = float(marks_raw)
     except ValueError:
         marks = 1.0
-    try:
-        order = int(order_raw)
-    except ValueError:
-        order = 0
  
     # Build options list
     options = []
@@ -3377,19 +3375,18 @@ def _save_exam_question(request, exam, question=None):
     if question is None:
         # Create
         q = ExamQuestion(
-            exam          = exam,
-            question_text = q_text,
-            question_type = q_type,
-            difficulty    = difficulty,
-            marks         = marks,
-            order         = order,
-            options       = options,
+            exam             = exam,
+            question_text    = q_text,
+            question_type    = q_type,
+            marks            = marks,
+            options          = options,
             accepted_answers = accepted_answers,
-            explanation   = explanation,
+            explanation      = explanation,
             source_reference = source_reference,
             year_first_used  = year_first_used,
-            is_active     = is_active,
-            created_by    = request.user,
+            tags             = tags,
+            is_active        = is_active,
+            created_by       = request.user,
         )
         if image_file:
             q.image = image_file
@@ -3398,14 +3395,13 @@ def _save_exam_question(request, exam, question=None):
         # Update
         question.question_text   = q_text
         question.question_type   = q_type
-        question.difficulty      = difficulty
         question.marks           = marks
-        question.order           = order
         question.options         = options
         question.accepted_answers = accepted_answers
         question.explanation     = explanation
         question.source_reference = source_reference
         question.year_first_used  = year_first_used
+        question.tags            = tags
         question.is_active       = is_active
         if clear_image and question.image:
             question.image.delete(save=False)

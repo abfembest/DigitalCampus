@@ -568,112 +568,113 @@ class UserSearchForm(forms.Form):
     )
 
 
-class UserCreateForm(UserCreationForm):
+class UserCreateForm(forms.ModelForm):
+    """
+    Admin-facing user creation form.
+    Password is NOT included — the view generates it automatically and
+    emails the credentials to the new user.
+    Role is captured here and applied to UserProfile after save().
+    is_staff is intentionally excluded: it is set by the view based on role.
+    """
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'user@example.com'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+            'placeholder': 'user@example.com',
         })
     )
     first_name = forms.CharField(
         max_length=150, required=True,
         widget=forms.TextInput(attrs={
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'John'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+            'placeholder': 'John',
         })
     )
     last_name = forms.CharField(
         max_length=150, required=True,
         widget=forms.TextInput(attrs={
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'Doe'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+            'placeholder': 'Doe',
         })
     )
     role = forms.ChoiceField(
         choices=UserProfile.ROLE_CHOICES,
         widget=forms.Select(attrs={
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-md',
         })
-    )
-    is_staff = forms.BooleanField(
-        required=False, initial=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
-        }),
-        help_text='Designates whether the user can log into this admin site.'
     )
     is_active = forms.BooleanField(
         required=False, initial=True,
         widget=forms.CheckboxInput(attrs={
-            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500',
         }),
-        help_text='Designates whether this user should be treated as active.'
+        help_text='User can log in immediately after creation.'
     )
-
+ 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email',
-                  'password1', 'password2', 'is_staff', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_active')
         widgets = {
             'username': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'username'
-            })
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+                'placeholder': 'johndoe',
+            }),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['password1'].widget.attrs.update({
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'Enter password'
-        })
-        self.fields['password2'].widget.attrs.update({
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'Confirm password'
-        })
-
+ 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
+        email = self.cleaned_data.get('email', '').lower()
         if User.objects.filter(email=email).exists():
             raise ValidationError('This email is already registered.')
-        return email.lower()
+        return email
+ 
+    def save(self, commit=True, raw_password=None):
+        """
+        Save the User instance.
+        raw_password must be provided by the view (already generated).
+        """
+        user = super().save(commit=False)
+        if raw_password:
+            user.set_password(raw_password)
+        if commit:
+            user.save()
+        return user
 
 
 class UserEditForm(forms.ModelForm):
+    """
+    Edit basic User fields. is_staff is NOT included — the view derives
+    it from UserProfile.role to enforce the admin-only staff rule.
+    """
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'is_staff', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_active')
         widgets = {
             'username': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'readonly': True
+                'class': 'w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-md text-gray-500 cursor-not-allowed',
+                'readonly': True,
             }),
             'first_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'First name'
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+                'placeholder': 'First name',
             }),
             'last_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'Last name'
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+                'placeholder': 'Last name',
             }),
             'email': forms.EmailInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'user@example.com'
-            }),
-            'is_staff': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+                'placeholder': 'user@example.com',
             }),
             'is_active': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
-            })
+                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500',
+            }),
         }
-
+ 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
+        email = self.cleaned_data.get('email', '').lower()
         if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
             raise ValidationError('This email is already in use.')
-        return email.lower()
+        return email
 
 
 class UserProfileForm(forms.ModelForm):

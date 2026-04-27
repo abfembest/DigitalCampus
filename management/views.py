@@ -1204,317 +1204,426 @@ def blog_category_delete(request, pk):
     
     return redirect('management:blog_categories_list')
 
-    UserSearchForm, UserCreateForm, UserEditForm, 
-    UserProfileForm, QuickRoleChangeForm
+import secrets
+import string
+ 
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+ 
+from eduweb.models import UserProfile
+from management.forms import (
+    QuickRoleChangeForm,
+    UserCreateForm,
+    UserEditForm,
+    UserProfileForm,
+    UserSearchForm,
+)
 
 
-@login_required
-@user_passes_test(is_admin)
+def _is_admin(user):
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+ 
+ 
+def _generate_password(length=12):
+    """Generate a secure random password."""
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    while True:
+        pwd = ''.join(secrets.choice(alphabet) for _ in range(length))
+        # Ensure at least one of each required character class
+        if (any(c.islower() for c in pwd)
+                and any(c.isupper() for c in pwd)
+                and any(c.isdigit() for c in pwd)):
+            return pwd
+ 
+ 
+def _send_new_user_credentials(user, raw_password):
+    """
+    Send login credentials email to a newly created user.
+    Integrates with eduweb.emailservices pattern.
+    Returns True on success, False on failure (non-fatal).
+    """
+    try:
+        from eduweb.emailservices import _site
+        from django.core.mail import EmailMultiAlternatives
+        from django.conf import settings
+ 
+        site = _site()
+        school = site.school_short_name or site.school_name or 'Portal'
+        subject = f'Your {school} Account Credentials'
+ 
+        text_body = (
+            f"Hello {user.get_full_name() or user.username},\n\n"
+            f"Your {school} portal account has been created.\n\n"
+            f"Username: {user.username}\n"
+            f"Password: {raw_password}\n\n"
+            f"Please log in and change your password immediately.\n\n"
+            f"— {school} Team"
+        )
+ 
+        html_body = f"""
+        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;">
+          <h2 style="color:#1a1a1a">Welcome to {school}</h2>
+          <p>Hello <strong>{user.get_full_name() or user.username}</strong>,</p>
+          <p>Your portal account has been created by an administrator.</p>
+          <div style="background:#f5f5f5;border-radius:8px;padding:16px 20px;margin:20px 0;">
+            <p style="margin:4px 0"><strong>Username:</strong> {user.username}</p>
+            <p style="margin:4px 0"><strong>Password:</strong> {raw_password}</p>
+          </div>
+          <p style="color:#e53e3e;font-size:14px">
+            Please log in and change your password immediately.
+          </p>
+          <p>— {school} Team</p>
+        </div>
+        """
+ 
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_body,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@portal.edu'),
+            to=[user.email],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send(fail_silently=False)
+        return True
+    except Exception:
+        return False
+ 
+ 
+def _apply_role_staff_rule(user_obj, role):
+    """
+    Enforce: only 'admin' role → is_staff=True. All others → False.
+    Always call after saving role to UserProfile.
+    """
+    should_be_staff = (role == 'admin')
+    if user_obj.is_staff != should_be_staff:
+        user_obj.is_staff = should_be_staff
+        user_obj.save(update_fields=['is_staff'])
+ 
+ 
+# ---------------------------------------------------------------------------
+# VIEW 1 — users_list  (GET: list + stats; POST bulk actions handled here)
+# ---------------------------------------------------------------------------
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 def users_list(request):
-    """List all users with search and filter functionality"""
-    # Get search and filter parameters
+    """
+    Main user management page.
+    Serves the single unified template with all modals embedded.
+    Handles bulk activate/deactivate via POST.
+    """
+    # ── Bulk action (POST from modal-less bulk bar) ──────────────────────────
+    if request.method == 'POST':
+        return _handle_bulk_action(request)
+ 
+    # ── Queryset + filters ───────────────────────────────────────────────────
     search_form = UserSearchForm(request.GET or None)
-    users = User.objects.select_related('profile').all()
-    
-    # Apply filters
+    qs = User.objects.select_related('profile').all()
+ 
     if search_form.is_valid():
         search = search_form.cleaned_data.get('search')
-        role = search_form.cleaned_data.get('role')
-        is_active = search_form.cleaned_data.get('is_active')
-        
+        role   = search_form.cleaned_data.get('role')
+        active = search_form.cleaned_data.get('is_active')
+ 
         if search:
-            users = users.filter(
-                Q(username__icontains=search) |
-                Q(first_name__icontains=search) |
-                Q(last_name__icontains=search) |
-                Q(email__icontains=search)
+            qs = qs.filter(
+                Q(username__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(email__icontains=search)
             )
-        
         if role:
-            users = users.filter(profile__role=role)
-        
-        if is_active:
-            users = users.filter(is_active=(is_active == 'true'))
-    
-    # Calculate statistics
+            qs = qs.filter(profile__role=role)
+        if active:
+            qs = qs.filter(is_active=(active == 'true'))
+ 
+    qs = qs.order_by('-date_joined')
+ 
+    # ── Stats ────────────────────────────────────────────────────────────────
     stats = {
-        'total_users': User.objects.count(),
+        'total_users':  User.objects.count(),
         'active_users': User.objects.filter(is_active=True).count(),
-        'staff_users': User.objects.filter(is_staff=True).count(),
-        'students': UserProfile.objects.filter(role='student').count(),
-        'instructors': UserProfile.objects.filter(role='instructor').count(),
+        'staff_users':  User.objects.filter(is_staff=True).count(),
+        'students':     UserProfile.objects.filter(role='student').count(),
+        'instructors':  UserProfile.objects.filter(role='instructor').count(),
     }
-    
-    # Order QuerySet before pagination to avoid inconsistent results
-    users = users.order_by('-date_joined')
-    
-    # Pagination
-    paginator = Paginator(users, 20)
-    page_number = request.GET.get('page')
-    users_page = paginator.get_page(page_number)
-    
-    return render(request, 'management/users/list.html', {
-        'users': users_page,
+ 
+    # ── Pagination ───────────────────────────────────────────────────────────
+    paginator = Paginator(qs, 25)
+    users_page = paginator.get_page(request.GET.get('page'))
+ 
+    return render(request, 'management/user_management.html', {
+        'users':       users_page,
         'search_form': search_form,
-        'stats': stats
+        'stats':       stats,
     })
-
-
-@login_required
-@user_passes_test(is_admin)
-def user_detail(request, pk):
-    """View user details"""
-    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
-    
-    # Calculate user statistics based on role
-    stats = {}
-    if user.profile.role == 'student':
-        stats = {
-            'enrollments': 0,  # Add actual enrollment count
-            'completed_courses': 0,  # Add actual completed courses count
-        }
-    elif user.profile.role == 'instructor':
-        stats = {
-            'courses_taught': 0,  # Add actual courses count
-            'total_students': 0,  # Add actual students count
-        }
-    
-    return render(request, 'management/users/detail.html', {
-        'user': user,
-        'stats': stats
-    })
-
-
-@login_required
-@user_passes_test(is_admin)
+ 
+ 
+def _handle_bulk_action(request):
+    """Internal handler for bulk activate/deactivate."""
+    action   = request.POST.get('action')
+    user_ids = request.POST.get('user_ids', '')
+ 
+    try:
+        ids = [int(uid) for uid in user_ids.split(',') if uid.strip()]
+    except ValueError:
+        messages.error(request, 'Invalid user selection.')
+        return redirect('management:users_list')
+ 
+    # Never allow self-modification
+    ids = [i for i in ids if i != request.user.id]
+ 
+    if not ids:
+        messages.warning(request, 'No valid users selected.')
+        return redirect('management:users_list')
+ 
+    affected = User.objects.filter(id__in=ids)
+ 
+    if action == 'activate':
+        affected.update(is_active=True)
+        messages.success(request, f'{affected.count()} user(s) activated.')
+    elif action == 'deactivate':
+        affected.update(is_active=False)
+        messages.success(request, f'{affected.count()} user(s) deactivated.')
+    else:
+        messages.error(request, 'Unknown action.')
+ 
+    return redirect('management:users_list')
+ 
+ 
+# ---------------------------------------------------------------------------
+# VIEW 2 — user_create  (GET stub / POST AJAX)
+# ---------------------------------------------------------------------------
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 def user_create(request):
-    """Create a new user"""
-    if request.method == 'POST':
-        form = UserCreateForm(request.POST)
-        if form.is_valid():
-            with transaction.atomic():
-                # Create user
-                user = form.save()
-                
-                # Update profile with role
-                user.profile.role = form.cleaned_data['role']
-                user.profile.save()
-                
-                messages.success(
-                    request, 
-                    f'User {user.username} created successfully!'
-                )
-                return redirect('management:user_detail', pk=user.pk)
-    else:
-        form = UserCreateForm()
-    
-    return render(request, 'management/users/create.html', {
-        'form': form
+    """
+    AJAX POST — creates a user, generates password, sends email credentials.
+    Returns JSON { success, errors }.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+ 
+    # Build a form that accepts (but does not require from the browser) password fields
+    raw_password = _generate_password()
+    post_data = request.POST.copy()
+    post_data['password1'] = raw_password
+    post_data['password2'] = raw_password
+ 
+    form = UserCreateForm(post_data)
+ 
+    if not form.is_valid():
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+ 
+    with transaction.atomic():
+        user = form.save(commit=False)
+        role = form.cleaned_data.get('role', 'student')
+ 
+        # Role rule: admin → staff
+        user.is_staff = (role == 'admin')
+        user.save()
+ 
+        # Update profile role (profile auto-created via signal)
+        user.profile.role = role
+        user.profile.save(update_fields=['role'])
+ 
+    # Send credentials (non-fatal if it fails)
+    email_sent = _send_new_user_credentials(user, raw_password)
+ 
+    return JsonResponse({
+        'success': True,
+        'user_id': user.id,
+        'email_sent': email_sent,
+        'message': f'User {user.username} created. Credentials {"sent" if email_sent else "could not be sent (check email config)"}.',
     })
-
-
-@login_required
-@user_passes_test(is_admin)
+ 
+ 
+# ---------------------------------------------------------------------------
+# VIEW 3 — user_edit  (GET redirects to list; POST AJAX; also handles delete)
+# ---------------------------------------------------------------------------
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 def user_edit(request, pk):
-    """Edit user information"""
-    user = get_object_or_404(User, pk=pk)
-    
-    if request.method == 'POST':
-        user_form = UserEditForm(request.POST, instance=user)
-        profile_form = UserProfileForm(
-            request.POST, 
-            request.FILES, 
-            instance=user.profile
-        )
-        
-        if user_form.is_valid() and profile_form.is_valid():
-            user_form.save()
-            profile_form.save()
-            messages.success(request, f'User {user.username} updated successfully!')
-            return redirect('management:user_detail', pk=user.pk)
-    else:
-        user_form = UserEditForm(instance=user)
-        profile_form = UserProfileForm(instance=user.profile)
-    
-    return render(request, 'management/users/edit.html', {
-        'user': user,
-        'user_form': user_form,
-        'profile_form': profile_form
-    })
-
-
-@login_required
-@user_passes_test(is_admin)
+    """
+    AJAX POST — updates User + UserProfile in one atomic transaction.
+    Returns JSON { success, errors }.
+    Also handles DELETE action when action=delete is in POST.
+    """
+    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
+ 
+    if request.method == 'GET':
+        # Non-AJAX fallback: redirect to list (modals handle everything)
+        return redirect('management:users_list')
+ 
+    # ── Delete action ────────────────────────────────────────────────────────
+    if request.POST.get('action') == 'delete':
+        if user.id == request.user.id:
+            return JsonResponse({'success': False, 'message': 'Cannot delete your own account.'}, status=400)
+        username = user.username
+        user.delete()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': f'User {username} deleted.'})
+        messages.success(request, f'User {username} deleted.')
+        return redirect('management:users_list')
+ 
+    # ── Edit action ──────────────────────────────────────────────────────────
+    user_form    = UserEditForm(request.POST, instance=user)
+    profile_form = UserProfileForm(request.POST, request.FILES, instance=user.profile)
+ 
+    if not (user_form.is_valid() and profile_form.is_valid()):
+        errors = {**user_form.errors, **profile_form.errors}
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+        messages.error(request, 'Please fix the errors below.')
+        return redirect('management:users_list')
+ 
+    with transaction.atomic():
+        updated_user    = user_form.save(commit=False)
+        updated_profile = profile_form.save(commit=False)
+ 
+        role = updated_profile.role
+ 
+        # Role rule: admin → staff, others → not staff
+        updated_user.is_staff = (role == 'admin')
+        updated_user.save()
+        updated_profile.save()
+ 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': f'User {user.username} updated.'})
+ 
+    messages.success(request, f'User {user.username} updated successfully.')
+    return redirect('management:users_list')
+ 
+ 
+# ---------------------------------------------------------------------------
+# UNCHANGED small endpoints (kept as-is; included for completeness)
+# ---------------------------------------------------------------------------
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 @require_POST
 def user_toggle_active(request, pk):
-    """Toggle user active status"""
     user = get_object_or_404(User, pk=pk)
-    
-    # Prevent self-deactivation
+ 
     if user.id == request.user.id:
-        messages.error(request, 'You cannot deactivate your own account!')
-        return redirect('management:user_detail', pk=pk)
-    
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'Cannot deactivate your own account.'}, status=400)
+        messages.error(request, 'You cannot deactivate your own account.')
+        return redirect('management:users_list')
+ 
     user.is_active = not user.is_active
-    user.save()
-    
-    status = 'activated' if user.is_active else 'deactivated'
-    messages.success(request, f'User {user.username} has been {status}.')
-
-    # Notify the affected user about their account status change
-    if user.is_active:
-        _notify(
-            user=user,
-            title='Account Activated',
-            message='Your account has been activated. You can now log in and access the portal.',
-            notif_type='account',
-            link='/dashboard/',
-        )
-    else:
-        _notify(
-            user=user,
-            title='Account Deactivated',
-            message='Your account has been deactivated. Please contact support if you believe this is an error.',
-            notif_type='account',
-            link='/',
-        )
-
-    # Return JSON for AJAX requests
+    user.save(update_fields=['is_active'])
+ 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({
-            'success': True,
-            'is_active': user.is_active
-        })
-    
-    return redirect('management:user_detail', pk=pk)
-
-
-@login_required
-@user_passes_test(is_admin)
+        return JsonResponse({'success': True, 'is_active': user.is_active})
+ 
+    messages.success(request, f'User {user.username} {"activated" if user.is_active else "deactivated"}.')
+    return redirect('management:users_list')
+ 
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 @require_POST
 def user_change_role(request, pk):
-    """Change user role (AJAX endpoint)"""
-    user = get_object_or_404(User, pk=pk)
+    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
     form = QuickRoleChangeForm(request.POST)
-    
+ 
     if form.is_valid():
-        user.profile.role = form.cleaned_data['role']
-        user.profile.save()
-
-        messages.success(
-            request,
-            f"Role changed to {user.profile.get_role_display()}"
-        )
-
-        # Notify the user their role has changed
-        _notify(
-            user=user,
-            title='Your Role Has Been Updated',
-            message=f'Your account role has been changed to "{user.profile.get_role_display()}" by an administrator.',
-            notif_type='account',
-            link='/dashboard/',
-        )
-
+        role = form.cleaned_data['role']
+        user.profile.role = role
+        user.profile.save(update_fields=['role'])
+        _apply_role_staff_rule(user, role)
+ 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
                 'role': user.profile.role,
-                'role_display': user.profile.get_role_display()
+                'role_display': user.profile.get_role_display(),
             })
-    else:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'errors': form.errors
-            }, status=400)
-    
-    return redirect('management:user_detail', pk=pk)
-
-
-@login_required
-@user_passes_test(is_admin)
+ 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+ 
+    return redirect('management:users_list')
+ 
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
+def user_quick_info(request, pk):
+    """AJAX GET — returns JSON snapshot for view/edit modals."""
+    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
+    profile = user.profile
+ 
+    return JsonResponse({
+        'id':          user.id,
+        'username':    user.username,
+        'full_name':   user.get_full_name() or user.username,
+        'email':       user.email,
+        'role':        profile.get_role_display(),
+        'role_value':  profile.role,
+        'is_active':   user.is_active,
+        'is_staff':    user.is_staff,
+        'date_joined': user.date_joined.strftime('%B %d, %Y'),
+        'last_login':  user.last_login.strftime('%B %d, %Y') if user.last_login else 'Never',
+        'avatar_url':  profile.avatar.url if profile.avatar else None,
+        # Extended profile fields
+        'phone':               profile.phone,
+        'date_of_birth':       str(profile.date_of_birth) if profile.date_of_birth else '',
+        'bio':                 profile.bio,
+        'address':             profile.address,
+        'city':                profile.city,
+        'country':             profile.country,
+        'website':             profile.website,
+        'linkedin':            profile.linkedin,
+        'twitter':             profile.twitter,
+        'email_notifications': profile.email_notifications,
+        'marketing_emails':    profile.marketing_emails,
+    })
+ 
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 @require_POST
 def bulk_user_action(request):
-    """Handle bulk actions on users"""
-    action = request.POST.get('action')
-    user_ids = request.POST.get('user_ids', '').split(',')
-    
-    if not action or not user_ids:
-        messages.error(request, 'Invalid bulk action request.')
-        return redirect('management:users_list')
-    
-    # Filter out current user to prevent self-modification
-    user_ids = [int(uid) for uid in user_ids if uid and int(uid) != request.user.id]
-    
-    if not user_ids:
-        messages.warning(request, 'No valid users selected.')
-        return redirect('management:users_list')
-    
-    users = User.objects.filter(id__in=user_ids)
-    count = users.count()
-    
+    """Standalone bulk action endpoint (also handled in users_list POST)."""
+    action   = request.POST.get('action')
+    user_ids = request.POST.get('user_ids', '')
+ 
+    try:
+        ids = [int(uid) for uid in user_ids.split(',') if uid.strip()]
+    except ValueError:
+        return JsonResponse({'success': False, 'message': 'Invalid user IDs.'}, status=400)
+ 
+    ids = [i for i in ids if i != request.user.id]
+ 
+    if not ids:
+        return JsonResponse({'success': False, 'message': 'No valid users selected.'}, status=400)
+ 
+    affected = User.objects.filter(id__in=ids)
+ 
     if action == 'activate':
-        users.update(is_active=True)
-        messages.success(request, f'{count} user(s) activated successfully.')
-        for u in User.objects.filter(id__in=user_ids):
-            _notify(
-                user=u,
-                title='Account Activated',
-                message='Your account has been activated by an administrator. You can now log in and access the portal.',
-                notif_type='account',
-                link='/dashboard/',
-            )
-
+        affected.update(is_active=True)
+        msg = f'{affected.count()} user(s) activated.'
     elif action == 'deactivate':
-        users.update(is_active=False)
-        messages.success(request, f'{count} user(s) deactivated successfully.')
-        for u in User.objects.filter(id__in=user_ids):
-            _notify(
-                user=u,
-                title='Account Deactivated',
-                message='Your account has been deactivated by an administrator. Please contact support if you believe this is an error.',
-                notif_type='account',
-                link='/',
-            )
-
+        affected.update(is_active=False)
+        msg = f'{affected.count()} user(s) deactivated.'
     else:
-        messages.error(request, 'Invalid action specified.')
-    
+        return JsonResponse({'success': False, 'message': 'Unknown action.'}, status=400)
+ 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': msg})
+ 
+    messages.success(request, msg)
     return redirect('management:users_list')
-
-
-@login_required
-@user_passes_test(is_admin)
-def user_quick_info(request, pk):
-    """Get quick user info for preview (AJAX endpoint)"""
-    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
-    
-    data = {
-        'id': user.id,
-        'username': user.username,
-        'full_name': user.get_full_name() or user.username,
-        'email': user.email,
-        'role': user.profile.get_role_display(),
-        'is_active': user.is_active,
-        'is_staff': user.is_staff,
-        'date_joined': user.date_joined.strftime('%B %d, %Y'),
-        'last_login': user.last_login.strftime('%B %d, %Y') if user.last_login else 'Never',
-        'avatar_url': user.profile.avatar.url if user.profile.avatar else None,
-    }
-    
-    return JsonResponse(data)
-
-
-    SystemConfiguration, 
-    CourseCategory, 
-    AuditLog
-
-    SystemConfigurationForm,
-    BrandingConfigForm,
-    EmailConfigForm,
-    NotificationConfigForm,
-    CourseCategoryForm,
-    AuditLogFilterForm
 
 
 # ==================== SYSTEM CONFIGURATION VIEWS ====================

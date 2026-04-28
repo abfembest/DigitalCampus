@@ -3856,12 +3856,14 @@ def exam_list(request):
             is_active=True,
             course__session=current_session,
             course__enrollments__student=user,
-            course__enrollments__status='active',
+            course__enrollments__status__in=['active', 'completed'],
         )
         .select_related('course')
         .order_by('start_datetime')
         .distinct()
     )
+
+    print(exams)
 
     # Also filter by current term if the session has one active
     if current_term:
@@ -3950,9 +3952,9 @@ def start_exam(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
     now  = timezone.now()
 
-    if now < exam.exam_start_datetime:
+    if now < exam.start_datetime:
         return redirect('students:exam_instructions', slug=slug)
-    if now >= exam.exam_end_datetime:
+    if now >= exam.end_datetime:
         return redirect('students:exam_list')
 
     response, _ = StudentExamResponse.objects.get_or_create(
@@ -3991,7 +3993,7 @@ def start_exam(request, slug):
 
     return render(request, 'students/exams.html', {
         'exam':         exam,
-        'exam_end_iso': exam.exam_end_datetime.isoformat(),
+        'exam_end_iso': exam.end_datetime.isoformat(),
     })
 
 
@@ -4032,7 +4034,7 @@ def get_exam_data(request, slug):
 
     now       = timezone.now()
     total_sec = exam.duration_minutes * 60
-    wall_secs = max(0, int((exam.exam_end_datetime - now).total_seconds()))
+    wall_secs = max(0, int((exam.end_datetime - now).total_seconds()))
 
     if response.exam_started_at:
         elapsed   = int((now - response.exam_started_at).total_seconds())

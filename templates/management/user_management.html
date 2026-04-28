@@ -296,16 +296,6 @@
                   <i class="fas {% if u.is_active %}fa-ban{% else %}fa-check-circle{% endif %}"></i>
                 </button>
 
-                {% comment %}
-                  Delete — opens confirmation modal.
-                  Passes user id + display name so the modal can label it clearly.
-                {% endcomment %}
-                <button onclick="openDeleteModal({{ u.id }}, '{{ u.get_full_name|default:u.username|escapejs }}', '{{ u.username|escapejs }}')"
-                        class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete user">
-                  <i class="fas fa-trash-alt"></i>
-                </button>
-
               </div>
             </td>
 
@@ -388,8 +378,9 @@
   {% comment %} Backdrop {% endcomment %}
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('createModal')"></div>
 
-  {% comment %} Dialog panel — max-h keeps it inside viewport {% endcomment %}
-  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
+  {% comment %} Dialog panel — constrained to viewport with internal scroll {% endcomment %}
+  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col"
+       style="max-height:100dvh;overflow:hidden;">
 
     {% comment %} Sticky header {% endcomment %}
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
@@ -486,12 +477,17 @@
 
         </div>
 
-        {% comment %} Info banner — password is auto-generated {% endcomment %}
-        <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-start gap-3">
-          <i class="fas fa-envelope text-blue-500 mt-0.5 flex-shrink-0"></i>
-          <p class="text-md text-blue-700">
-            A secure password will be auto-generated and emailed to the user along with their login credentials.
-          </p>
+        {% comment %} Info banner — verification-first flow {% endcomment %}
+        <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-3">
+          <i class="fas fa-envelope text-amber-500 mt-0.5 flex-shrink-0"></i>
+          <div class="text-md text-amber-800">
+            <p class="font-semibold mb-0.5">Verification required before login</p>
+            <p>
+              A secure password will be auto-generated. The user will receive one email containing
+              their credentials <strong>and</strong> a verification link.
+              They must verify their email first — the account is inactive until then.
+            </p>
+          </div>
         </div>
 
       </form>
@@ -517,17 +513,10 @@
 ════════════════════════════════════════════════════════════════
   MODAL: EDIT USER
   ─────────────────
-  Fields covered (User model):
-    username (readonly), first_name, last_name, email, is_active
-
-  Fields covered (UserProfile model):
-    role, phone, date_of_birth, bio,
-    address, city, country,
-    website, linkedin, twitter,
-    email_notifications, marketing_emails
-
-  is_staff is NOT exposed here — the view derives it from role.
-  Modal structure: fixed header + scrollable body + fixed footer.
+  Layout: fixed header + scrollable body (overflow-y-auto) + fixed footer.
+  Modal is capped at 90dvh so it never overflows the viewport on any screen.
+  Content is reorganised into a compact 3-column grid to eliminate wasted
+  whitespace — all sections stay in a single dense layout.
 ════════════════════════════════════════════════════════════════
 {% endcomment %}
 <div id="editModal"
@@ -536,92 +525,84 @@
 
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('editModal')"></div>
 
-  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
+  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col"
+       style="max-height:90dvh;overflow:hidden;">
 
-    {% comment %} Sticky header {% endcomment %}
-    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+    {% comment %} ── Fixed header ── {% endcomment %}
+    <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200 flex-shrink-0">
       <div class="flex items-center gap-3">
-        <span class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-          <i class="fas fa-user-edit text-amber-600"></i>
+        <span class="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-user-edit text-amber-600 text-sm"></i>
         </span>
         <div>
-          <h2 id="editModalTitle" class="text-xl font-bold text-gray-900">Edit User</h2>
-          <p id="editModalSubtitle" class="text-gray-500 text-md">Update user information</p>
+          <h2 id="editModalTitle" class="text-lg font-bold text-gray-900 leading-tight">Edit User</h2>
+          <p id="editModalSubtitle" class="text-gray-400 text-xs">Update user information</p>
         </div>
       </div>
       <button onclick="closeModal('editModal')"
-              class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition flex-shrink-0"
+              class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition flex-shrink-0"
               aria-label="Close">
-        <i class="fas fa-times text-lg"></i>
+        <i class="fas fa-times"></i>
       </button>
     </div>
 
-    {% comment %} Scrollable body — only this region overflows {% endcomment %}
+    {% comment %} ── Scrollable body ── {% endcomment %}
     <div class="flex-1 overflow-y-auto">
       <form id="editForm" method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         <input type="hidden" id="editUserId" name="user_id">
 
         <div id="editErrors"
-             class="hidden mx-6 mt-5 bg-red-50 border border-red-200 rounded-lg p-4 text-md text-red-700"
+             class="hidden mx-5 mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700"
              role="alert"></div>
 
-        <div class="p-6 space-y-6">
+        <div class="p-5 space-y-4">
 
-          {% comment %} Section: Account Information {% endcomment %}
+          {% comment %} ── Row 1: Account (username · email · first · last) ── {% endcomment %}
           <div>
-            <h3 class="text-md font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <i class="fas fa-user-circle"></i> Account Information
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <i class="fas fa-user-circle"></i> Account
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">Username</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Username</label>
                 <input type="text" name="username" id="editUsername" readonly
-                       class="w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-md text-gray-500 cursor-not-allowed">
-                <p class="text-gray-400 text-md mt-1">Username cannot be changed</p>
+                       class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-400 cursor-not-allowed">
               </div>
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">
-                  Email Address <span class="text-red-500">*</span>
-                </label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Email <span class="text-red-500">*</span></label>
                 <input type="email" name="email" id="editEmail" required autocomplete="email"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
               </div>
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">
-                  First Name <span class="text-red-500">*</span>
-                </label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">First Name <span class="text-red-500">*</span></label>
                 <input type="text" name="first_name" id="editFirstName" required
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
               </div>
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">
-                  Last Name <span class="text-red-500">*</span>
-                </label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Last Name <span class="text-red-500">*</span></label>
                 <input type="text" name="last_name" id="editLastName" required
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
               </div>
 
             </div>
           </div>
 
-          {% comment %} Section: Role & Permissions {% endcomment %}
-          <div class="border-t border-gray-100 pt-5">
-            <h3 class="text-md font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <i class="fas fa-user-shield"></i> Role & Permissions
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% comment %} ── Row 2: Role + Active (side by side) ── {% endcomment %}
+          <div class="border-t border-gray-100 pt-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <i class="fas fa-user-shield"></i> Role &amp; Permissions
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">
-                  Role <span class="text-red-500">*</span>
-                </label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Role <span class="text-red-500">*</span></label>
                 <select name="role" id="editRole" required
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                   <option value="student">Student</option>
                   <option value="instructor">Instructor</option>
                   <option value="admin">Administrator</option>
@@ -630,154 +611,143 @@
                   <option value="qa">QA Reviewer</option>
                   <option value="finance">Finance Manager</option>
                 </select>
-                <p class="text-gray-400 text-md mt-1">Staff privileges: Administrator only</p>
+                <p class="text-gray-400 text-xs mt-0.5">Staff privileges: Administrator only</p>
               </div>
 
-              <div class="flex items-start gap-3 pt-1">
+              <div class="flex items-center gap-2 pb-1">
                 <input type="checkbox" name="is_active" id="editIsActive"
-                       class="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 mt-1 flex-shrink-0">
+                       class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 flex-shrink-0">
                 <div>
-                  <label for="editIsActive" class="text-md font-medium text-gray-700 cursor-pointer">Active Account</label>
-                  <p class="text-gray-400 text-md">User can log in when active</p>
+                  <label for="editIsActive" class="text-sm font-medium text-gray-700 cursor-pointer">Active Account</label>
+                  <p class="text-gray-400 text-xs">Can log in when active</p>
                 </div>
               </div>
 
             </div>
           </div>
 
-          {% comment %} Section: Personal Information {% endcomment %}
-          <div class="border-t border-gray-100 pt-5">
-            <h3 class="text-md font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+          {% comment %} ── Row 3: Personal (phone · dob · bio) ── {% endcomment %}
+          <div class="border-t border-gray-100 pt-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <i class="fas fa-id-card"></i> Personal Information
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">Phone</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Phone</label>
                 <input type="text" name="phone" id="editPhone" autocomplete="tel"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                        placeholder="+1234567890">
               </div>
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">Date of Birth</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Date of Birth</label>
                 <input type="date" name="date_of_birth" id="editDob"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
               </div>
 
-              <div class="sm:col-span-2">
-                <label class="block text-md font-medium text-gray-700 mb-1.5">Bio</label>
-                <textarea name="bio" id="editBio" rows="3" autocomplete="off"
-                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+              <div class="col-span-2 sm:col-span-3">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Bio</label>
+                <textarea name="bio" id="editBio" rows="2" autocomplete="off"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
                           placeholder="Tell us about yourself…"></textarea>
               </div>
 
             </div>
           </div>
 
-          {% comment %} Section: Location {% endcomment %}
-          <div class="border-t border-gray-100 pt-5">
-            <h3 class="text-md font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+          {% comment %} ── Row 4: Location (address · city · country) ── {% endcomment %}
+          <div class="border-t border-gray-100 pt-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <i class="fas fa-map-marker-alt"></i> Location
-            </h3>
-            <div class="space-y-4">
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
 
-              <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">Address</label>
-                <textarea name="address" id="editAddress" rows="2" autocomplete="street-address"
-                          class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
-                          placeholder="Street address"></textarea>
+              <div class="col-span-2 sm:col-span-3">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                <input type="text" name="address" id="editAddress" autocomplete="street-address"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       placeholder="Street address">
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-md font-medium text-gray-700 mb-1.5">City</label>
-                  <input type="text" name="city" id="editCity" autocomplete="address-level2"
-                         class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                         placeholder="City">
-                </div>
-                <div>
-                  <label class="block text-md font-medium text-gray-700 mb-1.5">Country</label>
-                  <input type="text" name="country" id="editCountry" autocomplete="country-name"
-                         class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                         placeholder="Country">
-                </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">City</label>
+                <input type="text" name="city" id="editCity" autocomplete="address-level2"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       placeholder="City">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Country</label>
+                <input type="text" name="country" id="editCountry" autocomplete="country-name"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       placeholder="Country">
               </div>
 
             </div>
           </div>
 
-          {% comment %} Section: Social Links {% endcomment %}
-          <div class="border-t border-gray-100 pt-5">
-            <h3 class="text-md font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <i class="fas fa-link"></i> Social Links
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {% comment %} ── Row 5: Social links + notifications (all in one row) ── {% endcomment %}
+          <div class="border-t border-gray-100 pt-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <i class="fas fa-link"></i> Social &amp; Notifications
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">Website</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Website</label>
                 <input type="url" name="website" id="editWebsite" autocomplete="url"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                        placeholder="https://…">
               </div>
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">LinkedIn</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">LinkedIn</label>
                 <input type="url" name="linkedin" id="editLinkedin"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                        placeholder="https://linkedin.com/in/…">
               </div>
 
               <div>
-                <label class="block text-md font-medium text-gray-700 mb-1.5">Twitter / X</label>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Twitter / X</label>
                 <input type="url" name="twitter" id="editTwitter"
-                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                        placeholder="https://twitter.com/…">
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input type="checkbox" name="email_notifications" id="editEmailNotif"
+                       class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 flex-shrink-0">
+                <div>
+                  <label for="editEmailNotif" class="text-sm font-medium text-gray-700 cursor-pointer">Email Alerts</label>
+                  <p class="text-gray-400 text-xs">Activity notifications</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input type="checkbox" name="marketing_emails" id="editMarketingEmails"
+                       class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 flex-shrink-0">
+                <div>
+                  <label for="editMarketingEmails" class="text-sm font-medium text-gray-700 cursor-pointer">Marketing Emails</label>
+                  <p class="text-gray-400 text-xs">Newsletters &amp; promos</p>
+                </div>
               </div>
 
             </div>
           </div>
 
-          {% comment %} Section: Notification Preferences {% endcomment %}
-          <div class="border-t border-gray-100 pt-5">
-            <h3 class="text-md font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <i class="fas fa-bell"></i> Notification Preferences
-            </h3>
-            <div class="flex flex-col sm:flex-row gap-6">
-
-              <label class="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" name="email_notifications" id="editEmailNotif"
-                       class="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 mt-0.5 flex-shrink-0">
-                <div>
-                  <span class="text-md font-medium text-gray-700">Email Notifications</span>
-                  <p class="text-gray-400 text-md">Activity &amp; account alerts</p>
-                </div>
-              </label>
-
-              <label class="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" name="marketing_emails" id="editMarketingEmails"
-                       class="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 mt-0.5 flex-shrink-0">
-                <div>
-                  <span class="text-md font-medium text-gray-700">Marketing Emails</span>
-                  <p class="text-gray-400 text-md">Newsletters &amp; promotions</p>
-                </div>
-              </label>
-
-            </div>
-          </div>
-
-        </div>{% comment %} /p-6 inner content {% endcomment %}
+        </div>{% comment %} /p-5 inner content {% endcomment %}
       </form>
     </div>{% comment %} /scrollable body {% endcomment %}
 
-    {% comment %} Sticky footer {% endcomment %}
-    <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 flex-shrink-0">
+    {% comment %} ── Fixed footer ── {% endcomment %}
+    <div class="flex justify-end gap-3 px-5 py-3 bg-gray-50 border-t border-gray-200 flex-shrink-0">
       <button onclick="closeModal('editModal')"
-              class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-md">
+              class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm">
         Cancel
       </button>
       <button id="editSubmitBtn" onclick="submitEditForm()"
-              class="px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition shadow text-md font-semibold">
+              class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition shadow text-sm font-semibold">
         <i class="fas fa-save mr-2"></i>Save Changes
       </button>
     </div>
@@ -834,63 +804,6 @@
 
   </div>
 </div>
-
-
-{% comment %}
-════════════════════════════════════════════════════════════════
-  MODAL: DELETE CONFIRMATION
-  ───────────────────────────
-  FIX: The previous version tried to build a URL by string-replacing
-  'toggle-active' → 'delete' which was fragile and incorrect.
-
-  Correct approach: POST to user_edit URL with action=delete in the body.
-  The user_edit view already handles this case and returns JSON.
-  The form submission is intercepted by JS (confirmDelete()) which sends
-  an AJAX POST, shows a toast, and removes the row without a page reload.
-
-  Self-deletion is prevented server-side.  The button is also hidden
-  in the template for the current logged-in user's own row.
-════════════════════════════════════════════════════════════════
-{% endcomment %}
-<div id="deleteModal"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
-     role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
-
-  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('deleteModal')"></div>
-
-  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
-
-    <div class="p-6 text-center flex-1 overflow-y-auto">
-      <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <i class="fas fa-trash-alt text-red-600 text-xl"></i>
-      </div>
-      <h2 id="deleteModalTitle" class="text-xl font-bold text-gray-900 mb-2">Delete User?</h2>
-      <p class="text-gray-500 text-md mb-1">You are about to permanently delete:</p>
-      <p class="text-md font-bold text-gray-900 mb-1" id="deleteUserName">—</p>
-      <p class="text-gray-400 text-md mb-4" id="deleteUserUsername">—</p>
-      <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-left">
-        <p class="text-red-700 text-md font-medium flex items-start gap-2">
-          <i class="fas fa-exclamation-triangle mt-0.5 flex-shrink-0"></i>
-          This action is permanent and cannot be undone.
-          All data associated with this user will be removed.
-        </p>
-      </div>
-    </div>
-
-    <div class="flex gap-3 px-6 pb-6 flex-shrink-0">
-      <button onclick="closeModal('deleteModal')"
-              class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-md font-medium">
-        Cancel
-      </button>
-      <button id="deleteConfirmBtn" onclick="confirmDelete()"
-              class="flex-1 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-md font-semibold">
-        <i class="fas fa-trash-alt mr-2"></i>Delete User
-      </button>
-    </div>
-
-  </div>
-</div>
-
 
 {% comment %}
 ════════════════════════════════════════════════════════════════

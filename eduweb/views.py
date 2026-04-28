@@ -485,13 +485,13 @@ def index(request):
             Program.objects
             .filter(is_active=True, is_featured=True)
             .select_related('department__faculty')
-            .order_by('display_order', 'name')[:6]
+            .order_by('name')[:6]
         ),
         'faculties': (
             Faculty.objects
             .filter(is_active=True)
             .prefetch_related('departments')
-            .order_by('display_order', 'name')[:6]
+            .order_by('name')[:6]
         ),
         'testimonials': Testimonial.objects.filter(is_active=True).order_by('order'),
         'recent_posts': (
@@ -507,26 +507,26 @@ def about(request):
     from .models import InstitutionMember, SiteConfig, SiteHistoryMilestone, InstitutionPartner
     partners_qs = InstitutionPartner.objects.filter(is_active=True)
     return render(request, 'about.html', {
-        'faculties': Faculty.objects.filter(is_active=True).order_by('display_order', 'name'),
+        'faculties': Faculty.objects.filter(is_active=True).order_by('name'),
         'admin_board_members': (
             InstitutionMember.objects.filter(member_type='admin_board', is_active=True)
-            .order_by('display_order')
+            .order_by('name')
         ),
         'academic_board_members': (
             InstitutionMember.objects.filter(member_type='academic_board', is_active=True)
-            .order_by('display_order')
+            .order_by('name')
         ),
         'advisorate_board_members': (
             InstitutionMember.objects.filter(member_type='advisorate_board', is_active=True)
-            .order_by('display_order')
+            .order_by('name')
         ),
         'staff_members': (
             InstitutionMember.objects.filter(member_type='staff', is_active=True)
-            .order_by('display_order')
+            .order_by('name')
         ),
         'history_milestones': (
             SiteHistoryMilestone.objects.filter(is_active=True)
-            .order_by('display_order', 'year')
+            .order_by('year')
         ),
         'partners_list':      partners_qs.filter(category='partner'),
         'affiliations_list':  partners_qs.filter(category='affiliation'),
@@ -545,12 +545,12 @@ def all_programs(request):
                     Prefetch(
                         'programs',
                         queryset=Program.objects.filter(is_active=True)
-                                        .order_by('display_order', 'name'),
+                                        .order_by('name'),
                     )
-                ).order_by('display_order', 'name'),
+                ).order_by('name'),
             )
         )
-        .order_by('display_order', 'name')
+        .order_by('name')
     )
     return render(request, 'all_programs.html', {'faculties': faculties})
 
@@ -629,7 +629,7 @@ def blog(request):
 
     paginator = Paginator(posts, 9)
     page_obj  = paginator.get_page(request.GET.get('page', 1))
-    categories = BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name')
+    categories = BlogCategory.objects.filter(is_active=True).order_by('name')
 
     return render(request, 'blog/blog_list.html', {
         'posts':            page_obj,
@@ -651,7 +651,7 @@ def blog_detail(request, slug):
     return render(request, 'blog/blog_detail.html', {
         'post':          post,
         'related_posts': post.get_related_posts(limit=3),
-        'categories':    BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name'),
+        'categories':    BlogCategory.objects.filter(is_active=True).order_by('', 'name'),
     })
 
 
@@ -667,7 +667,7 @@ def blog_category(request, slug):
     paginator = Paginator(posts, 9)
     return render(request, 'blog/blog_category.html', {
         'posts':            paginator.get_page(request.GET.get('page', 1)),
-        'categories':       BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name'),
+        'categories':       BlogCategory.objects.filter(is_active=True).order_by('', 'name'),
         'current_category': category,
     })
 
@@ -722,14 +722,14 @@ def faculty_detail(request, slug):
                     Prefetch(
                         'courses',
                         queryset=Course.objects.filter(is_active=True)
-                                        .order_by('year_of_study', 'semester', 'display_order'),
+                                        .order_by('year_of_study', 'semester'),
                         to_attr='active_courses',
                     )
-                ).order_by('display_order', 'name'),
+                ).order_by('name'),
                 to_attr='active_programs',
             )
         )
-        .order_by('display_order', 'name')
+        .order_by('name')
     )
     return render(request, 'faculty_detail.html', {
         'faculty':     faculty,
@@ -751,7 +751,7 @@ def program_detail(request, slug):
             program.courses
             .filter(is_active=True)
             # .select_related('lecturer')
-            .order_by('year_of_study', 'semester', 'display_order', 'name')
+            .order_by('year_of_study', 'semester', 'name')
         ),
         'active_intakes': (
             program.intakes

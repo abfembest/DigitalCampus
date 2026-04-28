@@ -64,6 +64,7 @@ urlpatterns = [
 
     # LMS Courses
     path('lms-courses/', views.lms_courses_list, name='lms_courses_list'),
+    path('lms-courses/academic-course-data/<int:pk>/', views.lms_academic_course_data, name='lms_academic_course_data'),
     path('lms-courses/create/', views.lms_course_create, name='lms_course_create'),
     path('lms-courses/<int:pk>/', views.lms_course_detail, name='lms_course_detail'),
     path('lms-courses/<int:pk>/edit/', views.lms_course_edit, name='lms_course_edit'),

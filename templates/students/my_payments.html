@@ -257,24 +257,24 @@ View and pay all outstanding university fees assigned to your faculty and depart
                         </td>
 
                         <!-- Faculty -->
-                        <td class="px-6 py-4">
+                        {% comment %} <td class="px-6 py-4">
                             <p class="font-medium text-gray-900">
                                 {{ item.payment.faculty.code }}
                             </p>
                             <p class="text-xs text-gray-400 truncate max-w-[140px]">
                                 {{ item.payment.faculty.name }}
                             </p>
-                        </td>
+                        </td> {% endcomment %}
 
                         <!-- Department -->
-                        <td class="px-6 py-4">
+                        {% comment %} <td class="px-6 py-4">
                             <p class="font-medium text-gray-900">
                                 {{ item.payment.department.code }}
                             </p>
                             <p class="text-xs text-gray-400 truncate max-w-[140px]">
                                 {{ item.payment.department.name }}
                             </p>
-                        </td>
+                        </td> {% endcomment %}
 
                         <!-- Amount -->
                         <td class="px-6 py-4">

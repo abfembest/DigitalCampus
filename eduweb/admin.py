@@ -1327,14 +1327,14 @@ class LessonProgressAdmin(admin.ModelAdmin):
 @admin.register(LMSCourse)
 class LMSCourseAdmin(admin.ModelAdmin):
     list_display = (
-        'title', 'code', 'instructor_name', 'difficulty_level',
+        'title', 'code', 'difficulty_level',
         'is_published', 'is_featured', 'total_enrollments', 'average_rating'
     )
     list_filter = (
         'difficulty_level', 'is_published',
-        'is_featured', 'language', 'created_at'
+        'is_featured', 'created_at'
     )
-    search_fields = ('title', 'code', 'description', 'instructor_name')
+    search_fields = ('title', 'code', 'description')
     prepopulated_fields = {'slug': ('title',)}
     list_editable = ('is_published', 'is_featured')
     readonly_fields = (
@@ -1354,25 +1354,25 @@ class LMSCourseAdmin(admin.ModelAdmin):
             'fields': ('description', 'learning_objectives', 'prerequisites')
         }),
         ('Course Details', {
-            'fields': ('difficulty_level', 'duration_hours', 'language'),
+            'fields': ('difficulty_level',),
             'description': 'Difficulty Level is now a student level (100–800), e.g. 100 = first year, 400 = final year undergraduate.'
         }),
         ('Instructor', {
-            'fields': ('instructor', 'instructor_name', 'instructor_bio')
+            'fields': ('instructor',)
         }),
         ('Media', {
             'fields': ('thumbnail', 'promo_video_url'),
             'classes': ('collapse',)
         }),
-        ('Enrollment', {
-            'fields': ('max_students', 'enrollment_start_date', 'enrollment_end_date')
-        }),
+        # ('Enrollment', {
+        #     'fields': ('max_students', 'enrollment_start_date', 'enrollment_end_date')
+        # }),
         ('Status', {
             'fields': ('is_published', 'is_featured')
         }),
-        ('Certificate', {
-            'fields': ('has_certificate', 'certificate_template', 'certificate_fee')
-        }),
+        # ('Certificate', {
+        #     'fields': ('has_certificate', 'certificate_template', 'certificate_fee')
+        # }),
         ('SEO', {
             'fields': ('meta_description', 'meta_keywords'),
             'classes': ('collapse',)

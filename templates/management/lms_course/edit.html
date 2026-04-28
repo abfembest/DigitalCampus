@@ -70,18 +70,18 @@
           {{ form.code }}
           {% if form.code.errors %}<p class="text-xs text-red-600 mt-1">{{ form.code.errors.0 }}</p>{% endif %}
         </div>
-        <div>
+        {% comment %} <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1.5">Language</label>
           {{ form.language }}
-        </div>
+        </div> {% endcomment %}
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1.5">Level</label>
           {{ form.difficulty_level }}
         </div>
-        <div>
+        {% comment %} <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1.5">Duration (hours)</label>
           {{ form.duration_hours }}
-        </div>
+        </div> {% endcomment %}
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-600 mb-1.5">Short Description <span class="text-red-500">*</span></label>
@@ -101,15 +101,21 @@
       <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
         <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">3</span>
         Session &amp; Term
+        <span id="session-term-auto-badge"
+              class="hidden ml-1 inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-full px-2 py-0.5">
+          <i class="fas fa-magic text-[10px]"></i> Auto-filled from course
+        </span>
       </h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1.5">Academic Session</label>
           {{ form.session }}
+          <p class="text-xs text-gray-400 mt-1">Auto-set from active session when a course is linked.</p>
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1.5">Term</label>
           {{ form.term }}
+          <p class="text-xs text-gray-400 mt-1">Auto-derived from the linked course's semester.</p>
         </div>
       </div>
     </div>
@@ -126,7 +132,7 @@
           {{ form.instructor }}
           {% if form.instructor.errors %}<p class="text-xs text-red-600 mt-1">{{ form.instructor.errors.0 }}</p>{% endif %}
         </div>
-        <div>
+        {% comment %} <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1.5">Display Name
             <span class="text-gray-400 font-normal">(auto-filled)</span>
           </label>
@@ -135,7 +141,7 @@
         <div class="sm:col-span-2">
           <label class="block text-xs font-semibold text-gray-600 mb-1.5">Instructor Bio</label>
           {{ form.instructor_bio }}
-        </div>
+        </div> {% endcomment %}
       </div>
     </div>
 
@@ -173,7 +179,7 @@
     </div>
 
     {# ── Section 6: Enrollment ── #}
-    <div id="wrap-enrollment" class="px-6 py-5 space-y-4">
+    {% comment %} <div id="wrap-enrollment" class="px-6 py-5 space-y-4">
       <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
         <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">6</span>
         Enrollment Settings
@@ -193,10 +199,10 @@
           {{ form.enrollment_end_date }}
         </div>
       </div>
-    </div>
+    </div> {% endcomment %}
 
     {# ── Section 7: Certificate ── #}
-    <div id="wrap-certificate" class="px-6 py-5 space-y-4">
+    {% comment %} <div id="wrap-certificate" class="px-6 py-5 space-y-4">
       <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
         <span class="w-5 h-5 bg-primary-600 text-white rounded text-xs flex items-center justify-center font-bold">7</span>
         Certificate
@@ -215,7 +221,7 @@
           {{ form.certificate_template }}
         </div>
       </div>
-    </div>
+    </div> {% endcomment %}
 
     {# ── Section 8: SEO ── #}
     <div class="px-6 py-5 space-y-4">
@@ -282,40 +288,31 @@
 <script>
 (function () {
   // ── Academic-course auto-fill ─────────────────────────────────────────────
-  const HIDE_WHEN_LINKED = ['wrap-enrollment', 'wrap-certificate'];
-
+  // (wrap-enrollment and wrap-certificate are commented out but kept for safety)
   const acSel   = document.getElementById('id_academic_course');
   const badge   = document.getElementById('academic-linked-badge');
   const titleIn = document.getElementById('id_title');
   const codeIn  = document.getElementById('id_code');
 
   function applyState() {
-    const linked = acSel && acSel.value !== '';
-    if (badge) badge.classList.toggle('hidden', !linked);
-    HIDE_WHEN_LINKED.forEach(function (id) {
-      const wrapper = document.getElementById(id);
-      if (!wrapper) return;
-      wrapper.style.display = linked ? 'none' : '';
-      wrapper.querySelectorAll('input, select, textarea').forEach(function (el) {
-        el.disabled = linked;
-      });
-    });
+    if (badge) badge.classList.toggle('hidden', !(acSel && acSel.value !== ''));
   }
 
   function fillFromAcademic() {
     if (!acSel) return;
-    const linked = acSel.value !== '';
-    if (linked) {
+    if (acSel.value !== '') {
       const txt = acSel.options[acSel.selectedIndex].text.trim();
-      const sep = txt.indexOf(' \u2014 ');   // ' — '
+      const sep = txt.indexOf(' \u2014 ');
       const parsedCode  = sep !== -1 ? txt.substring(0, sep).trim() : '';
       const parsedTitle = sep !== -1 ? txt.substring(sep + 3).trim() : txt;
       if (titleIn) {
-        titleIn.value = parsedTitle; titleIn.readOnly = true;
+        titleIn.value = parsedTitle;
+        titleIn.readOnly = true;
         titleIn.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
       }
       if (codeIn) {
-        codeIn.value = parsedCode; codeIn.readOnly = true;
+        codeIn.value = parsedCode;
+        codeIn.readOnly = true;
         codeIn.classList.add('bg-gray-50', 'text-gray-600', 'cursor-not-allowed');
       }
     } else {
@@ -329,34 +326,8 @@
     applyState();
     fillFromAcademic();
   }
-
-  // ── Instructor display-name auto-fill ─────────────────────────────────────
-  const INSTRUCTORS = {{ instructors_json|safe }};
-  const instrSel    = document.getElementById('id_instructor');
-  const instrName   = document.getElementById('id_instructor_name');
-
-  function fillInstructorName() {
-    if (!instrSel || !instrName) return;
-    const pk = instrSel.value;
-    if (pk && INSTRUCTORS[pk] && !instrName.dataset.manuallyEdited) {
-      instrName.value = INSTRUCTORS[pk].full_name;
-    } else if (!pk && !instrName.dataset.manuallyEdited) {
-      instrName.value = '';
-    }
-  }
-
-  if (instrSel) {
-    instrSel.addEventListener('change', function () {
-      instrName.removeAttribute('data-manually-edited');
-      fillInstructorName();
-    });
-    fillInstructorName();
-  }
-  if (instrName) {
-    instrName.addEventListener('input', function () {
-      this.dataset.manuallyEdited = 'true';
-    });
-  }
+  // NOTE: instructor_name / instructor_bio auto-fill removed — those fields
+  // are commented out on the model and form, so the elements don't exist in DOM.
 })();
 </script>
 {% endblock %}

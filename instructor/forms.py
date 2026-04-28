@@ -15,10 +15,10 @@ class CourseForm(forms.ModelForm):
         model = LMSCourse
         fields = [
             'title', 'code', 'short_description',
-            'description', 'difficulty_level', 'duration_hours',
-            'language', 'thumbnail', 'promo_video_url',
+            'description', 'difficulty_level',
+            'thumbnail', 'promo_video_url',
             'academic_course',
-            'has_certificate', 'certificate_template',
+            # 'has_certificate', 'certificate_template',
         ]
         widgets = {
             'title': forms.TextInput(attrs={
@@ -45,15 +45,15 @@ class CourseForm(forms.ModelForm):
             'difficulty_level': forms.Select(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors'
             }),
-            'duration_hours': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'step': '0.5',
-                'placeholder': 'e.g., 10'
-            }),
-            'language': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'value': 'English'
-            }),
+            # 'duration_hours': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'step': '0.5',
+            #     'placeholder': 'e.g., 10'
+            # }),
+            # 'language': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'value': 'English'
+            # }),
             'promo_video_url': forms.URLInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'https://youtube.com/watch?v=...'
@@ -77,18 +77,18 @@ class CourseForm(forms.ModelForm):
             'thumbnail': forms.FileInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100'
             }),
-            'has_certificate': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
-            }),
+            # 'has_certificate': forms.CheckboxInput(attrs={
+            #     'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
+            # }),
             # 'certificate_fee': forms.NumberInput(attrs={
             #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
             #     'step': '0.01',
             #     'placeholder': '0.00 — leave as 0 for free certificate'
             # }),
-            'certificate_template': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
-                'placeholder': 'e.g., default, gold, premium'
-            }),
+            # 'certificate_template': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
+            #     'placeholder': 'e.g., default, gold, premium'
+            # }),
             # 'is_published': forms.CheckboxInput(attrs={
             #     'class': 'w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             # }),
@@ -219,7 +219,7 @@ class LessonForm(forms.ModelForm):
                 'rows': 8,
                 'placeholder': 'Lesson content (for text lessons)'
             }),
-            'video_url': forms.URLInput(attrs={
+            'video_url': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors',
                 'placeholder': 'YouTube, Vimeo, or storage URL'
             }),

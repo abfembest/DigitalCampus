@@ -840,7 +840,7 @@
                             </a>
                         </div>
                     </div>
-
+                    
                     {% elif request.user.profile.role == 'student' %}
                     <!-- STUDENT/LEARNER MENU -->
                     <!-- Dashboard -->
@@ -1585,14 +1585,14 @@
                     </span>
 
                     {# Faculty #}
-                    {% with fac=dept.faculty %}
+                    {% comment %} {% with fac=dept.faculty %}
                     {% if fac %}
                     <span class="hidden lg:inline-flex items-center gap-1.5 text-blue-500 truncate max-w-[160px]" title="{{ fac.name }}">
                         <i class="fas fa-university text-blue-300 text-[11px] flex-shrink-0" aria-hidden="true"></i>
                         <span class="truncate">{{ fac.name }}</span>
                     </span>
                     {% endif %}
-                    {% endwith %}
+                    {% endwith %} {% endcomment %}
                     {% endif %}
                     {% endwith %}
 

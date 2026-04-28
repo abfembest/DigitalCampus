@@ -2562,36 +2562,36 @@ class LMSCourse(models.Model):
     
     # Course Details
     difficulty_level = models.IntegerField(choices=STUDENT_LEVEL_CHOICES, default=100, verbose_name='Level')
-    duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Estimated duration in hours")
-    language = models.CharField(max_length=50, default='English')
+    # duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Estimated duration in hours")
+    # language = models.CharField(max_length=50, default='English')
     
     # Instructor
     instructor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='lms_courses_teaching')
-    instructor_name = models.CharField(max_length=100, blank=True)
-    instructor_bio = models.TextField(blank=True)
+    # instructor_name = models.CharField(max_length=100, blank=True)
+    # instructor_bio = models.TextField(blank=True)
     
     # Media
     thumbnail = models.ImageField(upload_to='courses/thumbnails/', blank=True, null=True)
     promo_video_url = models.URLField(blank=True)
     
     # Enrollment
-    max_students = models.IntegerField(null=True, blank=True)
-    enrollment_start_date = models.DateField(null=True, blank=True)
-    enrollment_end_date = models.DateField(null=True, blank=True)
+    # max_students = models.IntegerField(null=True, blank=True)
+    # enrollment_start_date = models.DateField(null=True, blank=True)
+    # enrollment_end_date = models.DateField(null=True, blank=True)
     
     # Status
     is_published = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
     
     # Certificate
-    has_certificate = models.BooleanField(default=False)
-    certificate_fee = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal('0.00'),
-        help_text="Fee charged to the student to receive their certificate"
-    )
-    certificate_template = models.CharField(max_length=100, blank=True)
+    # has_certificate = models.BooleanField(default=False)
+    # certificate_fee = models.DecimalField(
+    #     max_digits=10,
+    #     decimal_places=2,
+    #     default=Decimal('0.00'),
+    #     help_text="Fee charged to the student to receive their certificate"
+    # )
+    # certificate_template = models.CharField(max_length=100, blank=True)
     
     # SEO
     meta_description = models.CharField(max_length=160, blank=True)
@@ -2631,8 +2631,8 @@ class LMSCourse(models.Model):
                 self.slug = f"{original_slug}-{counter}"
                 counter += 1
         
-        if not self.instructor_name and self.instructor:
-            self.instructor_name = self.instructor.get_full_name() or self.instructor.username
+        # if not self.instructor_name and self.instructor:
+        #     self.instructor_name = self.instructor.get_full_name() or self.instructor.username
 
         # Auto-sync term from linked academic course if not manually set
         if self.academic_course and not self.term:

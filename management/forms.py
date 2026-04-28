@@ -1481,13 +1481,11 @@ class LMSCourseForm(forms.ModelForm):
         model = LMSCourse
         fields = [
             'title', 'code', 'short_description', 'description',
-            'difficulty_level', 'duration_hours', 'language',
+            'difficulty_level',
             'academic_course', 'session', 'term',
-            'instructor', 'instructor_name', 'instructor_bio',
+            'instructor',
             'thumbnail', 'promo_video_url',
-            'max_students', 'enrollment_start_date', 'enrollment_end_date',
             'is_published', 'is_featured',
-            'has_certificate', 'certificate_fee', 'certificate_template',
             'meta_description', 'meta_keywords',
         ]
         widgets = {
@@ -1515,28 +1513,28 @@ class LMSCourseForm(forms.ModelForm):
             'difficulty_level': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'duration_hours': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'Estimated hours',
-                'step': '0.5',
-                'min': '0'
-            }),
-            'language': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'English'
-            }),
+            # 'duration_hours': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'Estimated hours',
+            #     'step': '0.5',
+            #     'min': '0'
+            # }),
+            # 'language': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'English'
+            # }),
             'instructor': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'instructor_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'Instructor name (if not selected above)'
-            }),
-            'instructor_bio': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'rows': 3,
-                'placeholder': 'Brief biography'
-            }),
+            # 'instructor_name': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'Instructor name (if not selected above)'
+            # }),
+            # 'instructor_bio': forms.Textarea(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'rows': 3,
+            #     'placeholder': 'Brief biography'
+            # }),
             'thumbnail': forms.FileInput(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
             }),
@@ -1544,31 +1542,31 @@ class LMSCourseForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'placeholder': 'YouTube or Vimeo URL'
             }),
-            'max_students': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'Leave empty for unlimited'
-            }),
-            'enrollment_start_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-            }),
-            'enrollment_end_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-            }),
+            # 'max_students': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'Leave empty for unlimited'
+            # }),
+            # 'enrollment_start_date': forms.DateInput(attrs={
+            #     'type': 'date',
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            # }),
+            # 'enrollment_end_date': forms.DateInput(attrs={
+            #     'type': 'date',
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            # }),
             'is_published': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
             }),
             'is_featured': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
             }),
-            'has_certificate': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
-            }),
-            'certificate_template': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'Certificate template filename'
-            }),
+            # 'has_certificate': forms.CheckboxInput(attrs={
+            #     'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
+            # }),
+            # 'certificate_template': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'Certificate template filename'
+            # }),
             'academic_course': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
@@ -1578,12 +1576,12 @@ class LMSCourseForm(forms.ModelForm):
             'term': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'certificate_fee': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': '0.00',
-                'step': '0.01',
-                'min': '0'
-            }),
+            # 'certificate_fee': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': '0.00',
+            #     'step': '0.01',
+            #     'min': '0'
+            # }),
             'meta_description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'rows': 2,
@@ -1625,8 +1623,7 @@ class LMSCourseForm(forms.ModelForm):
             .order_by('program__department__faculty__name', 'program__department__name', 'program__name', 'year_of_study', 'semester', 'code')
         )
         self.fields['academic_course'].label_from_instance = lambda c: (
-            f"{c.code} — {c.name}  "
-            f"({c.program.name} · {c.get_semester_display()} Yr{c.year_of_study})"
+            f"{c.code} — {c.name}"
         )        
         # Pre-populate JSON fields when editing
         if self.instance.pk:

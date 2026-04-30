@@ -33,7 +33,6 @@ ALLOWED_HOSTS = [
     "localhost",
     "https://www.miuedu.com",
     "mail.miuedu.com",
-    "*",
 ]
 
 # --------------------------------------------------
@@ -233,9 +232,9 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 
 # settings.py
-CHAT_SESSION_TIMEOUT_MINUTES = 900
+CHAT_SESSION_TIMEOUT_MINUTES = 15
 
 # ── Inactivity session timeout ────────────────────────────────────────────────
 # Minutes of no requests before SessionSecurityMiddleware kills the session.
 # Change this single value to adjust the timeout across the whole platform.
-SESSION_INACTIVITY_TIMEOUT = 900  # minutes
+SESSION_INACTIVITY_TIMEOUT = 15  # minutes

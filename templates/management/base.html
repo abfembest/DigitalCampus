@@ -629,10 +629,10 @@
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'transactions' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-exchange-alt mr-2" aria-hidden="true"></i>Transactions
                             </a>
-                            <a href="{% url 'management:payment_gateways_list' %}"
+                            {% comment %} <a href="{% url 'management:payment_gateways_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'payment-gateways' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-credit-card mr-2" aria-hidden="true"></i>Payment Gateways
-                            </a>
+                            </a> {% endcomment %}
                         </div>
                     </div>
 
@@ -755,7 +755,7 @@
                     <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">System</div>
 
                     <!-- System Configuration -->
-                    <div class="mb-1">
+                    {% comment %} <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'config' in request.path and 'site-config' not in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-cogs w-5 text-center" aria-hidden="true"></i>
@@ -781,7 +781,7 @@
                                 <i class="fas fa-bell mr-2" aria-hidden="true"></i>Notifications
                             </a>
                         </div>
-                    </div>
+                    </div> {% endcomment %}
 
                     <!-- Site Content -->
                     <div class="mb-1">
@@ -1310,6 +1310,7 @@
                     </a>
 
                     <!-- Settings — role-based URL, shown to all -->
+                     {% if not request.user.profile.role == 'admin' %}
                     <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:system_config_list' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% else %}#{% endif %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'system_config_list' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
@@ -1317,6 +1318,7 @@
                             <span class="ml-3">Settings</span>
                         </div>
                     </a>
+                    {% endif %}
 
                     <!-- Help & Support — role-based URL, shown to all -->
                     <a href="{% if request.user.profile.role == 'student' %}{% url 'students:help_support' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:help_support' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:tickets_list' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% else %}#{% endif %}"

@@ -61,6 +61,7 @@ from eduweb.models import (
     SystemConfiguration,
     Testimonial,
     TicketReply,
+    Invoice,
     Transaction,
     UserProfile,
     Message,
@@ -4461,220 +4462,166 @@ def send_overdue_payment_reminders(request):
 # FINANCIAL ANALYTICS DASHBOARD
 # ---------------------------------------------------------------------------
 
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
 def financial_analytics(request):
-    """
-    Comprehensive financial analytics dashboard with:
-    - Revenue by source (applications, fees, certificates)
-    - Student payment rates (on-time vs late)
-    - Instructor payout history
-    - Monthly recurring revenue (MRR)
-    """
-    
-    # 1. REVENUE BY SOURCE
-    # ─────────────────────────────────────────────────────────────────────
-    
-    # Application fees revenue
-    app_payment_revenue = ApplicationPayment.objects.filter(
-        status='success'
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    # Student fees (required payments) revenue
-    fee_payment_revenue = FeePayment.objects.filter(
-        status='success'
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    # Certificate revenue
-    cert_revenue = Certificate.objects.filter(
-        payment_status='paid'
-    ).count()
-    
-    total_revenue = float(app_payment_revenue['total']) + float(fee_payment_revenue['total'])
-    
+    """Financial analytics — all student payment records."""
+
+    _zero = Value(0, output_field=DecimalField())
+
+    def _agg(qs, field='amount'):
+        r = qs.aggregate(
+            total=Coalesce(Sum(field), _zero, output_field=DecimalField()),
+            count=Count('id'),
+        )
+        return float(r['total'] or 0), r['count']
+
+    # ── Querysets ─────────────────────────────────────────────────────────────
+    app_qs = ApplicationPayment.objects.select_related(
+        'application', 'application__program'
+    ).order_by('-created_at')
+
+    # FeePayment → fee (AllRequiredPayments) → program, academic_session
+    fee_qs = FeePayment.objects.select_related(
+        'user', 'fee', 'fee__program', 'fee__academic_session'
+    ).order_by('-created_at')
+
+    txn_qs = Transaction.objects.select_related(
+        'user', 'course', 'gateway'
+    ).order_by('-created_at')
+
+    inv_qs = Invoice.objects.select_related(
+        'student', 'course'
+    ).order_by('-issue_date')
+
+    # ── Revenue aggregates ────────────────────────────────────────────────────
+    app_total, app_count = _agg(app_qs.filter(status='success'))
+    fee_total, fee_count = _agg(fee_qs.filter(status='success'))
+    txn_total, txn_count = _agg(txn_qs.filter(status='completed'))
+    inv_total, inv_count = _agg(inv_qs, field='total_amount')
+
+    total_revenue = app_total + fee_total
+
     revenue_by_source = {
         'application_fees': {
-            'amount': float(app_payment_revenue['total']),
-            'transactions': app_payment_revenue['count'],
-            'percentage': (float(app_payment_revenue['total']) / total_revenue * 100) if total_revenue > 0 else 0,
+            'amount': app_total,
+            'transactions': app_count,
+            'percentage': round(app_total / total_revenue * 100, 1) if total_revenue else 0,
         },
         'student_fees': {
-            'amount': float(fee_payment_revenue['total']),
-            'transactions': fee_payment_revenue['count'],
-            'percentage': (float(fee_payment_revenue['total']) / total_revenue * 100) if total_revenue > 0 else 0,
+            'amount': fee_total,
+            'transactions': fee_count,
+            'percentage': round(fee_total / total_revenue * 100, 1) if total_revenue else 0,
         },
         'certificates': {
-            'count': cert_revenue,
-        }
+            'count': Certificate.objects.filter(payment_status='paid').count(),
+        },
     }
-    
-    # 2. STUDENT PAYMENT RATES
-    # ─────────────────────────────────────────────────────────────────────
-    
-    # Get all fee payments with due dates (FeePayment linked to AllRequiredPayments)
-    all_fee_payments = FeePayment.objects.select_related('fee').all()
-    
-    paid_on_time = 0
-    paid_late = 0
-    unpaid = 0
-    
-    for fee_payment in all_fee_payments:
-        if fee_payment.status == 'success':
-            # Payment completed - check if on time or late
-            if fee_payment.paid_at and fee_payment.fee.due_date:
-                if fee_payment.paid_at.date() <= fee_payment.fee.due_date:
-                    paid_on_time += 1
-                else:
-                    paid_late += 1
-        elif fee_payment.status in ['pending', 'failed']:
+
+    # ── Outstanding & refunds ─────────────────────────────────────────────────
+    out_fee_total, out_fee_count = _agg(fee_qs.filter(status__in=['pending', 'failed']))
+    out_app_total, out_app_count = _agg(app_qs.filter(status__in=['pending', 'failed']))
+    ref_app_total, ref_app_count = _agg(app_qs.filter(status='refunded'))
+    ref_fee_total, ref_fee_count = _agg(fee_qs.filter(status='refunded'))
+
+    # ── Payment timing: values_list avoids .only() + select_related conflict ──
+    # FeePayment direct fields: status, paid_at
+    # Related field via FK fee → AllRequiredPayments.due_date (DateField)
+    on_time = late = unpaid = 0
+    for status, paid_at, due_date in FeePayment.objects.values_list('status', 'paid_at', 'fee__due_date'):
+        if status == 'success':
+            if paid_at and due_date and paid_at.date() > due_date:
+                late += 1
+            else:
+                on_time += 1
+        else:
             unpaid += 1
-    
-    total_fees = paid_on_time + paid_late + unpaid
-    
+
+    total_fees = on_time + late + unpaid
     payment_rates = {
-        'on_time': {
-            'count': paid_on_time,
-            'percentage': (paid_on_time / total_fees * 100) if total_fees > 0 else 0,
-        },
-        'late': {
-            'count': paid_late,
-            'percentage': (paid_late / total_fees * 100) if total_fees > 0 else 0,
-        },
-        'unpaid': {
-            'count': unpaid,
-            'percentage': (unpaid / total_fees * 100) if total_fees > 0 else 0,
-        },
+        'on_time':    {'count': on_time, 'percentage': round(on_time / total_fees * 100, 1) if total_fees else 0},
+        'late':       {'count': late,    'percentage': round(late    / total_fees * 100, 1) if total_fees else 0},
+        'unpaid':     {'count': unpaid,  'percentage': round(unpaid  / total_fees * 100, 1) if total_fees else 0},
         'total_fees': total_fees,
     }
-    
-    # 3. INSTRUCTOR PAYOUT HISTORY
-    # ─────────────────────────────────────────────────────────────────────
-    
-    payroll_data = StaffPayroll.objects.filter(
-        payment_status='paid'
-    ).values('staff__id', 'staff__first_name', 'staff__last_name', 'staff__username').annotate(
-        total_paid=Coalesce(Sum('net_salary'), Value(0.0), output_field=DecimalField()),
-        total_gross=Coalesce(Sum('gross_salary'), Value(0.0), output_field=DecimalField()),
-        payment_count=Count('id'),
-        average_monthly=Coalesce(Avg('net_salary'), Value(0.0), output_field=DecimalField()),
-    ).order_by('-total_paid')[:10]  # Top 10 highest paid instructors
-    
+
+    # ── Monthly revenue (last 6 months) ───────────────────────────────────────
+    cutoff = timezone.now() - timedelta(days=365)
+
+    def _monthly(qs, status='success'):
+        return (
+            qs.filter(status=status, paid_at__gte=cutoff)
+            .annotate(month=TruncMonth('paid_at'))
+            .values('month')
+            .annotate(total=Sum('amount'))
+            .order_by('month')
+        )
+
+    monthly_data = {}
+    for r in _monthly(app_qs):
+        k = r['month'].strftime('%Y-%m') if r['month'] else '?'
+        monthly_data.setdefault(k, {'app_fees': 0.0, 'student_fees': 0.0})
+        monthly_data[k]['app_fees'] += float(r['total'] or 0)
+    for r in _monthly(fee_qs):
+        k = r['month'].strftime('%Y-%m') if r['month'] else '?'
+        monthly_data.setdefault(k, {'app_fees': 0.0, 'student_fees': 0.0})
+        monthly_data[k]['student_fees'] += float(r['total'] or 0)
+    for v in monthly_data.values():
+        v['total'] = v['app_fees'] + v['student_fees']
+
+    monthly_revenue = sorted(monthly_data.items())[-6:]
+    current_mrr = monthly_revenue[-1][1]['total'] if monthly_revenue else 0.0
+
+    # ── Instructor payouts ────────────────────────────────────────────────────
+    payroll_rows = (
+        StaffPayroll.objects
+        .filter(payment_status='paid')
+        .values('staff__id', 'staff__first_name', 'staff__last_name', 'staff__username')
+        .annotate(
+            total_paid=Coalesce(Sum('net_salary'),      _zero, output_field=DecimalField()),
+            total_gross=Coalesce(Sum('gross_salary'),   _zero, output_field=DecimalField()),
+            average_monthly=Coalesce(Avg('net_salary'), _zero, output_field=DecimalField()),
+            payment_count=Count('id'),
+        )
+        .order_by('-total_paid')[:10]
+    )
+
     instructor_payouts = []
     total_instructor_payouts = 0.0
-    for payout in payroll_data:
-        amount = float(payout['total_paid'])
-        total_instructor_payouts += amount
+    for p in payroll_rows:
+        amt = float(p['total_paid'] or 0)
+        total_instructor_payouts += amt
+        name = f"{p['staff__first_name']} {p['staff__last_name']}".strip() or p['staff__username']
         instructor_payouts.append({
-            'staff_name': f"{payout['staff__first_name']} {payout['staff__last_name']}",
-            'count': payout['payment_count'],
-            'total_paid': amount,
-            'average_monthly': float(payout['average_monthly']),
-            'total_gross': float(payout['total_gross']),
+            'staff_name':      name,
+            'count':           p['payment_count'],
+            'total_paid':      amt,
+            'total_gross':     float(p['total_gross'] or 0),
+            'average_monthly': float(p['average_monthly'] or 0),
         })
-    
-    # 4. MONTHLY RECURRING REVENUE (MRR)
-    # ─────────────────────────────────────────────────────────────────────
-    
-    # Get last 12 months of successful payments
-    from datetime import datetime, timedelta as td
-    today = timezone.now()
-    twelve_months_ago = today - td(days=365)
-    
-    # Monthly revenue from application payments
-    app_monthly = ApplicationPayment.objects.filter(
-        status='success',
-        paid_at__gte=twelve_months_ago
-    ).annotate(
-        month=TruncMonth('paid_at')
-    ).values('month').annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('month')
-    
-    # Monthly revenue from student fees
-    fee_monthly = FeePayment.objects.filter(
-        status='success',
-        paid_at__gte=twelve_months_ago
-    ).annotate(
-        month=TruncMonth('paid_at')
-    ).values('month').annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('month')
-    
-    # Combine monthly data
-    monthly_data = {}
-    for record in app_monthly:
-        month_key = record['month'].strftime('%Y-%m') if record['month'] else 'Unknown'
-        if month_key not in monthly_data:
-            monthly_data[month_key] = {'app_fees': 0.0, 'student_fees': 0.0, 'total': 0.0}
-        monthly_data[month_key]['app_fees'] += float(record['total']) if record['total'] else 0
-    
-    for record in fee_monthly:
-        month_key = record['month'].strftime('%Y-%m') if record['month'] else 'Unknown'
-        if month_key not in monthly_data:
-            monthly_data[month_key] = {'app_fees': 0.0, 'student_fees': 0.0, 'total': 0.0}
-        monthly_data[month_key]['student_fees'] += float(record['total']) if record['total'] else 0
-    
-    # Calculate totals and sort
-    for month in monthly_data:
-        monthly_data[month]['total'] = monthly_data[month]['app_fees'] + monthly_data[month]['student_fees']
-    
-    monthly_revenue = sorted(monthly_data.items())[-6:]  # Last 6 months
-    
-    # Current MRR (last month)
-    current_mrr = 0.0
-    if monthly_revenue:
-        current_mrr = monthly_revenue[-1][1]['total']
-    
-    # 5. ADDITIONAL METRICS
-    # ─────────────────────────────────────────────────────────────────────
-    
-    # Outstanding payments
-    outstanding_fees = FeePayment.objects.filter(
-        status__in=['pending', 'failed']
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    # Refunded amounts
-    refunded_payments = ApplicationPayment.objects.filter(
-        status='refunded'
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    refunded_fees = FeePayment.objects.filter(
-        status='refunded'
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    total_refunded = float(refunded_payments['total']) + float(refunded_fees['total'])
-    
+
+    # ── Context ───────────────────────────────────────────────────────────────
     context = {
-        'revenue_by_source': revenue_by_source,
-        'total_revenue': total_revenue,
-        'payment_rates': payment_rates,
-        'instructor_payouts': instructor_payouts,
-        'total_instructor_payouts': total_instructor_payouts,
-        'monthly_revenue': monthly_revenue,
-        'current_mrr': current_mrr,
-        'outstanding_amount': float(outstanding_fees['total']),
-        'outstanding_count': outstanding_fees['count'],
-        'total_refunded': total_refunded,
-        'refund_count': refunded_payments['count'] + refunded_fees['count'],
+        'revenue_by_source':         revenue_by_source,
+        'total_revenue':             total_revenue,
+        'total_payment_count':       app_count + fee_count,
+        'current_mrr':               current_mrr,
+        'payment_rates':             payment_rates,
+        'monthly_revenue':           monthly_revenue,
+        'outstanding_amount':        out_fee_total + out_app_total,
+        'outstanding_count':         out_fee_count + out_app_count,
+        'total_refunded':            ref_app_total + ref_fee_total,
+        'refund_count':              ref_app_count + ref_fee_count,
+        'application_payments':      app_qs[:200],
+        'fee_payments':              fee_qs[:200],
+        'transactions':              txn_qs[:200],
+        'invoices':                  inv_qs[:200],
+        'invoices_count':            inv_count,
+        'invoices_total':            inv_total,
+        'transactions_total_count':  txn_count,
+        'transactions_total_amount': txn_total,
+        'instructor_payouts':        instructor_payouts,
+        'total_instructor_payouts':  total_instructor_payouts,
     }
-    
+
     return render(request, 'management/financial_analytics.html', context)
 
 

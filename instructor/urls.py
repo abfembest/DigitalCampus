@@ -276,6 +276,12 @@ urlpatterns = [
         name='exam_import_questions',
     ),
 
+    path(
+        'exams/<slug:slug>/responses/<int:response_id>/grade/',
+        views.exam_grade_response,
+        name='exam_grade_response',
+    ),
+
     path('courses/<slug:slug>/manage/', views.course_manage, name='course_manage'),
     path('manage/', views.course_manage_default, name='course_manage_default'),
 

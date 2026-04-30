@@ -288,55 +288,100 @@
         </div>
     </div>
 
-</div>
+<!-- quiz grades -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-8">
+        <div class="p-3 sm:p-4 lg:p-6 border-b border-gray-200">
+            <h2 class="text-sm sm:text-base lg:text-xl font-bold text-gray-900">quiz grades</h2>
+        </div>
 
-{% if academic_grades %}
-<div class="mt-8">
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Academic Program Grades</h2>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Session</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Course</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Credits</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Score</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Grade</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                {% for g in academic_grades %}
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 text-gray-600 text-xs">{{ g.session.name }}</td>
-                    <td class="px-4 py-3">
-                        <p class="font-medium text-gray-900">{{ g.course.name }}</p>
-                        <p class="text-xs text-gray-400">{{ g.course.code }}</p>
-                    </td>
-                    <td class="px-4 py-3 text-gray-600">{{ g.credit_units }}</td>
-                    <td class="px-4 py-3 text-gray-900 font-medium">{{ g.score|default:"—" }}</td>
-                    <td class="px-4 py-3">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded font-bold text-sm
-                            {% if g.grade == 'A' %}bg-green-100 text-green-800
-                            {% elif g.grade == 'B' %}bg-blue-100 text-blue-800
-                            {% elif g.grade == 'C' %}bg-yellow-100 text-yellow-800
-                            {% elif g.grade == 'F' %}bg-red-100 text-red-800
-                            {% else %}bg-gray-100 text-gray-700{% endif %}">
-                            {{ g.grade|default:"—" }}
+        <!-- mobile cards -->
+        <div class="md:hidden divide-y divide-gray-100">
+            {% for attempt in quiz_attempts %}
+            <div class="p-3 sm:p-4">
+                <p class="text-xs sm:text-sm font-semibold text-gray-900 leading-snug mb-0.5">{{ attempt.quiz.title }}</p>
+                <p class="text-xs text-gray-500 mb-0.5">{{ attempt.quiz.lesson.course.title }}</p>
+                <p class="text-xs text-gray-400 mb-2">{{ attempt.completed_at|date:"m d, y" }}</p>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-sm font-bold {% if attempt.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ attempt.percentage|floatformat:1 }}%
                         </span>
-                    </td>
-                    <td class="px-4 py-3">
-                        {% if g.is_passed %}
-                        <span class="text-xs text-green-600 font-medium">Passed</span>
+                        <span class="text-xs text-gray-400">/ 100%</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        {% if attempt.passed %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                            <i class="fas fa-check-circle text-xs" aria-hidden="true"></i>passed
+                        </span>
                         {% else %}
-                        <span class="text-xs text-red-500 font-medium">Not Passed</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                            <i class="fas fa-times-circle text-xs" aria-hidden="true"></i>failed
+                        </span>
                         {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-8 text-center">
+                <i class="fas fa-question-circle text-3xl text-gray-200 mb-2 block" aria-hidden="true"></i>
+                <p class="text-xs sm:text-sm text-gray-500">no quiz attempts yet</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- desktop table -->
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">quiz</th>
+                        <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">course</th>
+                        <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">date</th>
+                        <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">score</th>
+                        <th class="px-4 lg:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                    {% for attempt in quiz_attempts %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 lg:px-6 py-3 lg:py-4">
+                            <p class="text-sm font-semibold text-gray-900">{{ attempt.quiz.title }}</p>
+                        </td>
+                        <td class="px-4 lg:px-6 py-3 lg:py-4">
+                            <p class="text-sm text-gray-600">{{ attempt.quiz.lesson.course.title }}</p>
+                        </td>
+                        <td class="px-4 lg:px-6 py-3 lg:py-4">
+                            <p class="text-sm text-gray-500">{{ attempt.completed_at|date:"M d, Y" }}</p>
+                        </td>
+                        <td class="px-4 lg:px-6 py-3 lg:py-4">
+                            <span class="text-base font-bold {% if attempt.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ attempt.percentage|floatformat:1 }}%
+                            </span>
+                        </td>
+                        <td class="px-4 lg:px-6 py-3 lg:py-4">
+                            {% if attempt.passed %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                <i class="fas fa-check-circle" aria-hidden="true"></i>Passed
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                <i class="fas fa-times-circle" aria-hidden="true"></i>Failed
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center">
+                            <i class="fas fa-question-circle text-4xl text-gray-200 mb-2 block" aria-hidden="true"></i>
+                            <p class="text-sm text-gray-500">No quiz attempts yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+
 </div>
-{% endif %}
 {% endblock %}

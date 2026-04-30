@@ -293,6 +293,7 @@
                                     <th class="px-4 py-2.5 text-center">Grade Points</th>
                                     <th class="px-4 py-2.5 text-center">Weighted</th>
                                     <th class="px-4 py-2.5 text-center">Status</th>
+                                    <th class="px-4 py-2.5 text-center">Exam</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-50">
@@ -303,11 +304,6 @@
                                     </td>
                                     <td class="px-4 py-3 text-gray-800 font-medium max-w-xs">
                                         {{ g.display_name|default:"Unknown" }}
-                                        {% if g.lms_course and g.result_status == 'released' %}
-                                        <span class="ml-1 text-[10px] text-green-600 font-semibold">[Released]</span>
-                                        {% elif g.result_status == 'withheld' %}
-                                        <span class="ml-1 text-[10px] text-red-500 font-semibold">[Withheld]</span>
-                                        {% endif %}
                                     </td>
                                     <td class="px-4 py-3 text-center text-gray-700 font-medium">
                                         {{ g.credit_units }}
@@ -374,6 +370,9 @@
                                         <span class="inline-block px-3 py-0.5 rounded-full bg-blue-200 text-blue-900 text-xs font-bold">
                                             GPA: {% if sem.gpa %}{{ sem.gpa }}{% else %}&mdash;{% endif %}
                                         </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-xs text-gray-400">
+                                        {{ g.exam_ref|default:"—" }}
                                     </td>
                                 </tr>
                             </tbody>

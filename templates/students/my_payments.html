@@ -29,10 +29,17 @@ View and pay all outstanding university fees assigned to your faculty and depart
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
                     My Outstanding Fees
                 </h1>
-                <p class="text-sm sm:text-base text-gray-600 mt-1">
-                    {{ request.user.profile.faculty.name|default:"—" }}
-                    <span class="mx-1 text-gray-300">&bull;</span>
-                    {{ request.user.profile.department.name|default:"—" }}
+                <p class="text-sm sm:text-base text-gray-600 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {{ student_faculty.name|default:"—" }}
+                    <span class="text-gray-300">&bull;</span>
+                    {{ student_department.name|default:"—" }}
+                    <span class="text-gray-300">&bull;</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary-100 text-primary-700">
+                        Level {{ student_level }}
+                    </span>
+                    {% if student_program %}
+                    <span class="text-xs text-gray-400">({{ student_program.name }})</span>
+                    {% endif %}
                 </p>
             </div>
 
@@ -171,9 +178,9 @@ View and pay all outstanding university fees assigned to your faculty and depart
                         <th class="text-left text-xs font-semibold text-gray-500
                                    uppercase tracking-wider px-6 py-3.5">Purpose</th>
                         <th class="text-left text-xs font-semibold text-gray-500
-                                   uppercase tracking-wider px-6 py-3.5">Faculty</th>
+                                   uppercase tracking-wider px-6 py-3.5">Level</th>
                         <th class="text-left text-xs font-semibold text-gray-500
-                                   uppercase tracking-wider px-6 py-3.5">Department</th>
+                                   uppercase tracking-wider px-6 py-3.5">Session</th>
                         <th class="text-left text-xs font-semibold text-gray-500
                                    uppercase tracking-wider px-6 py-3.5">Amount</th>
                         <th class="text-left text-xs font-semibold text-gray-500
@@ -204,37 +211,70 @@ View and pay all outstanding university fees assigned to your faculty and depart
                                 </div>
                                 <div>
                                     <p class="font-semibold text-gray-900 leading-tight">
+                                        {% if item.is_certificate_fee %}
                                         {{ item.payment.purpose }}
+                                        {% else %}
+                                        {{ item.payment.purpose }}
+                                        {% endif %}
                                     </p>
-                                    {% if item.payment.academic_year %}
+                                    {% if not item.is_certificate_fee and item.payment.semester %}
                                     <p class="text-xs text-gray-400 mt-0.5">
                                         {{ item.payment.get_semester_display }}
-                                        &bull; {{ item.payment.academic_year }}
                                     </p>
                                     {% endif %}
                                 </div>
                             </div>
                         </td>
 
-                        <!-- Faculty -->
+                        <!-- Level -->
                         <td class="px-6 py-4">
+                            {% if item.is_certificate_fee %}
+                            <span class="text-xs text-gray-400">—</span>
+                            {% elif item.payment.level %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full
+                                             text-xs font-semibold bg-primary-100 text-primary-700">
+                                Level {{ item.payment.level }}
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full
+                                             text-xs font-semibold bg-gray-100 text-gray-500">
+                                All Levels
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Session -->
+                        <td class="px-6 py-4">
+                            {% if item.is_certificate_fee %}
+                            <span class="text-xs text-gray-400">—</span>
+                            {% elif item.payment.academic_session %}
+                            <p class="font-medium text-gray-900 text-xs">
+                                {{ item.payment.academic_session.name }}
+                            </p>
+                            {% else %}
+                            <span class="text-xs text-gray-400">Any session</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Faculty -->
+                        {% comment %} <td class="px-6 py-4">
                             <p class="font-medium text-gray-900">
                                 {{ item.payment.faculty.code }}
                             </p>
                             <p class="text-xs text-gray-400 truncate max-w-[140px]">
                                 {{ item.payment.faculty.name }}
                             </p>
-                        </td>
+                        </td> {% endcomment %}
 
                         <!-- Department -->
-                        <td class="px-6 py-4">
+                        {% comment %} <td class="px-6 py-4">
                             <p class="font-medium text-gray-900">
                                 {{ item.payment.department.code }}
                             </p>
                             <p class="text-xs text-gray-400 truncate max-w-[140px]">
                                 {{ item.payment.department.name }}
                             </p>
-                        </td>
+                        </td> {% endcomment %}
 
                         <!-- Amount -->
                         <td class="px-6 py-4">
@@ -302,7 +342,7 @@ View and pay all outstanding university fees assigned to your faculty and depart
                     <tr class="border-t-2 border-gray-200 bg-gray-50">
                         <td colspan="4"
                             class="px-6 py-4 text-sm font-semibold text-gray-600">
-                            Total Outstanding
+                            Total Outstanding — Level {{ student_level }}
                         </td>
                         <td colspan="4" class="px-6 py-4">
                             <span class="text-xl font-bold text-red-700">
@@ -330,8 +370,15 @@ View and pay all outstanding university fees assigned to your faculty and depart
                                 {{ item.payment.purpose }}
                             </p>
                             <p class="text-xs text-gray-400 mt-0.5 truncate">
-                                {{ item.payment.faculty.code }} /
-                                {{ item.payment.department.code }}
+                                {% if item.is_certificate_fee %}
+                                Certificate Fee
+                                {% else %}
+                                {{ student_faculty.code|default:"—" }} /
+                                {{ student_department.code|default:"—" }}
+                                {% if item.payment.level %}
+                                &bull; Level {{ item.payment.level }}
+                                {% endif %}
+                                {% endif %}
                             </p>
                         </div>
                     </div>

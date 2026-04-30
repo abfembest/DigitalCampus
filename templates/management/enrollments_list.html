@@ -78,7 +78,7 @@
             <th scope="col" class="py-3 px-5 text-left font-semibold">Progress</th>
             <th scope="col" class="py-3 px-5 text-left font-semibold">Grade</th>
             <th scope="col" class="py-3 px-5 text-left font-semibold">Enrolled</th>
-            <th scope="col" class="py-3 px-5 text-left font-semibold">Actions</th>
+            {% comment %} <th scope="col" class="py-3 px-5 text-left font-semibold">Actions</th> {% endcomment %}
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
@@ -151,7 +151,7 @@
             </td>
 
             <!-- Actions -->
-            <td class="py-4 px-5">
+            {% comment %} <td class="py-4 px-5">
               <div class="flex items-center gap-2">
                 <a href="{% url 'management:enrollment_edit' enrollment.pk %}"
                    class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -169,7 +169,7 @@
                   </button>
                 </form>
               </div>
-            </td>
+            </td> {% endcomment %}
           </tr>
           {% empty %}
           <tr>

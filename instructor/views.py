@@ -2505,183 +2505,6 @@ def ajax_course_details(request):
         'exam_allowed':          True,
     })
  
- 
-# ─────────────────────────────────────────────────────────────────────────────
-# FILE IMPORT HELPER — parses .docx / .xlsx into ExamQuestion rows
-# ─────────────────────────────────────────────────────────────────────────────
-def _parse_exam_questions_from_file(upload_file, exam, user):
-    import uuid as _uuid
-    import pandas as pd
-    from django.db import transaction
-    from eduweb.models import ExamQuestion, ExamQuestionOption
-
-    filename = upload_file.name.lower()
-    questions_created = 0
-
-    def clean(val):
-        return '' if pd.isna(val) else str(val).strip()
-
-    try:
-        with transaction.atomic():
-
-            # ================= XLSX =================
-            if filename.endswith(('.xlsx', '.xls')):
-                import openpyxl
-
-                wb = openpyxl.load_workbook(upload_file, read_only=True, data_only=True)
-                ws = wb.active
-
-                for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-
-                    if not row or not row[0]:
-                        continue
-
-                    q_text = clean(row[0])
-                    if not q_text:
-                        continue
-
-                    # OPTIONS
-                    raw_options = [clean(row[i]) for i in range(1, 5)]
-                    raw_options = [opt for opt in raw_options if opt]
-
-                    # CORRECT INDEX
-                    try:
-                        correct_idx = int(row[5]) - 1 if row[5] else None
-                    except:
-                        raise ValueError(f"Row {idx}: invalid correct_option")
-
-                    difficulty = clean(row[6]).lower() if len(row) > 6 else 'medium'
-                    if difficulty not in ('easy', 'medium', 'hard'):
-                        difficulty = 'medium'
-
-                    try:
-                        marks = float(row[7]) if len(row) > 7 and row[7] else 1
-                    except:
-                        raise ValueError(f"Row {idx}: invalid marks")
-
-                    explanation = clean(row[8]) if len(row) > 8 else ''
-
-                    # VALIDATION
-                    if raw_options:
-                        if correct_idx is None or correct_idx >= len(raw_options):
-                            raise ValueError(f"Row {idx}: invalid correct option index")
-
-                    # CREATE QUESTION
-                    question = ExamQuestion.objects.create(
-                        exam=exam,
-                        question_text=q_text,
-                        question_type='mcq' if raw_options else 'short_answer',
-                        marks=marks,
-                        explanation=explanation,
-                        created_by=user,
-                        imported_from_file=upload_file.name,
-                    )
-
-                    # CREATE OPTIONS
-                    if raw_options:
-                        for i, opt in enumerate(raw_options):
-                            ExamQuestionOption.objects.create(
-                                question=question,
-                                text=opt,
-                                is_correct=(i == correct_idx)
-                            )
-
-                    questions_created += 1
-
-            # ================= DOCX =================
-            elif filename.endswith('.docx'):
-                import docx
-
-                doc = docx.Document(upload_file)
-
-                block = {}
-                options = []
-                order = 0
-
-                def flush():
-                    nonlocal order, block, options
-
-                    q_text = block.get('question_text', '').strip()
-                    if not q_text:
-                        return
-
-                    difficulty = block.get('difficulty', 'medium').lower()
-                    if difficulty not in ('easy', 'medium', 'hard'):
-                        difficulty = 'medium'
-
-                    try:
-                        marks = float(block.get('marks', 1))
-                    except:
-                        marks = 1
-
-                    question = ExamQuestion.objects.create(
-                        exam=exam,
-                        question_text=q_text,
-                        question_type='mcq' if options else 'short_answer',
-                        marks=marks,
-                        explanation=block.get('explanation', ''),
-                        created_by=user,
-                        imported_from_file=upload_file.name,
-                    )
-
-                    for opt in options:
-                        ExamQuestionOption.objects.create(
-                            question=question,
-                            text=opt['text'],
-                            is_correct=opt['is_correct']
-                        )
-
-                    order += 1
-                    block = {}
-                    options = []
-
-                for para in doc.paragraphs:
-                    line = para.text.strip()
-
-                    if not line:
-                        if block:
-                            flush()
-                        continue
-
-                    upper = line.upper()
-
-                    if upper.startswith('Q:'):
-                        if block:
-                            flush()
-                        block['question_text'] = line[2:].strip()
-
-                    elif upper.startswith('A:'):
-                        raw = line[2:].strip()
-                        if raw.startswith('*'):
-                            options.append({'text': raw[1:].strip(), 'is_correct': True})
-                        else:
-                            options.append({'text': raw, 'is_correct': False})
-
-                    elif upper.startswith('EXPLANATION:'):
-                        block['explanation'] = line[len('EXPLANATION:'):].strip()
-
-                    elif upper.startswith('DIFFICULTY:'):
-                        block['difficulty'] = line[len('DIFFICULTY:'):].strip()
-
-                    elif upper.startswith('MARKS:'):
-                        block['marks'] = line[len('MARKS:'):].strip()
-
-                if block:
-                    flush()
-
-            else:
-                raise ValueError("Unsupported file format")
-
-            exam.import_status = 'done'
-            exam.save(update_fields=['import_status'])
-
-    except Exception as exc:
-        exam.import_status = 'failed'
-        exam.import_error_log = str(exc)
-        exam.save(update_fields=['import_status', 'import_error_log'])
-        raise
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # UNIFIED CREATE ASSESSMENT  (quiz / assignment / exam — all on one page)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3500,3 +3323,92 @@ def _parse_exam_questions_from_file(import_file, exam, user):
  
     exam.import_status = Exam.IMPORT_DONE
     exam.save(update_fields=['import_status', 'import_error_log'])
+
+# ──────────────────────────────────────────────────────────────────────────────
+# EXAM GRADE RESPONSE  — instructor manually grades pending-manual questions
+# ──────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='eduweb:auth_page')
+@instructor_required
+def exam_grade_response(request, slug, response_id):
+    from eduweb.models import StudentExamResponse
+    exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
+    response = get_object_or_404(StudentExamResponse, pk=response_id, exam=exam)
+
+    assigned_ids = response.assigned_question_ids or []
+    questions    = {q.id: q for q in exam.questions.filter(id__in=assigned_ids)}
+
+    if request.method == 'POST':
+        question_scores = response.question_scores or {}
+
+        for qid_str, entry in question_scores.items():
+            if not entry.get('pending_manual'):
+                continue
+            raw = request.POST.get(f'marks_{qid_str}', '').strip()
+            if raw == '':
+                continue
+            try:
+                awarded = float(raw)
+            except ValueError:
+                continue
+            max_marks = entry['max_marks']
+            awarded   = max(0.0, min(awarded, float(max_marks)))
+            question_scores[qid_str] = {
+                'marks_awarded':  awarded,
+                'max_marks':      max_marks,
+                'is_correct':     awarded == float(max_marks),
+                'pending_manual': False,
+            }
+
+        pending_manual = sum(1 for e in question_scores.values() if e.get('pending_manual'))
+        total_score    = sum(float(e['marks_awarded']) for e in question_scores.values() if e.get('marks_awarded') is not None)
+        total_marks    = sum(float(e['max_marks']) for e in question_scores.values())
+        score_pct      = round((total_score / total_marks) * 100, 2) if total_marks > 0 else 0.0
+
+        response.question_scores      = question_scores
+        response.total_score          = total_score
+        response.score_percentage     = score_pct
+        response.pending_manual_count = pending_manual
+
+        now = timezone.now()
+        if pending_manual == 0:
+            response.status    = StudentExamResponse.GRADED
+            response.passed    = score_pct >= float(exam.pass_mark)
+            response.graded_at = now
+            response.graded_by = request.user
+        else:
+            response.passed = None
+
+        response.save(update_fields=[
+            'question_scores', 'total_score', 'score_percentage',
+            'pending_manual_count', 'status', 'passed', 'graded_at', 'graded_by',
+        ])
+
+        if pending_manual == 0:
+            messages.success(request, f"Fully graded — {response.student.get_full_name() or response.student.username} scored {score_pct}%.")
+        else:
+            messages.success(request, f"Saved. {pending_manual} question(s) still awaiting marks.")
+
+        return redirect('instructor:exam_grade_response', slug=slug, response_id=response_id)
+
+    # GET
+    question_scores = response.question_scores or {}
+    rows = []
+    for qid in assigned_ids:
+        q = questions.get(qid)
+        if not q:
+            continue
+        entry = question_scores.get(str(qid), {})
+        rows.append({
+            'question':       q,
+            'student_answer': response.answers.get(str(qid)),
+            'entry':          entry,
+            'is_pending':     entry.get('pending_manual', False),
+            'marks_awarded':  entry.get('marks_awarded'),
+            'max_marks':      entry.get('max_marks', float(q.marks)),
+        })
+
+    return render(request, 'instructor/exam_grade_response.html', {
+        'exam':     exam,
+        'response': response,
+        'rows':     rows,
+    })

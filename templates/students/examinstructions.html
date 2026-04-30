@@ -61,33 +61,61 @@
                     <span class="text-[10px] text-primary-500 font-bold uppercase tracking-widest">{{ exam.reference_code }}</span>
                     <span class="text-gray-200 text-xs">|</span>
                     <span class="text-[10px] text-gray-400 uppercase tracking-wide">{{ exam.get_exam_type_display }}</span>
-                    {% if exam.course %}<span class="text-gray-200 text-xs">|</span><span class="text-[10px] text-secondary-500 font-semibold truncate max-w-[160px]">{{ exam.course }}</span>{% endif %}
+                    {% if exam.course %}
+                    <span class="text-gray-200 text-xs">|</span>
+                    <span class="text-[10px] text-secondary-500 font-semibold truncate max-w-[160px]">
+                        {% if exam.course.code %}{{ exam.course.code }} — {% endif %}{{ exam.course.title }}
+                    </span>
+                    {% endif %}
                 </div>
                 <h1 class="text-sm sm:text-base font-bold text-gray-900 font-heading leading-snug truncate">{{ exam.title }}</h1>
-                {% if exam.description %}<p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ exam.description }}</p>{% endif %}
+                {% if exam.description %}
+                <p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ exam.description }}</p>
+                {% endif %}
 
                 <!-- Stat chips — inline with title on large screens -->
                 <div class="flex flex-wrap gap-1.5 mt-2">
+
+                    <!-- Date chip — uses start_datetime.date -->
                     <div class="stat-chip">
                         <span class="lbl"><i class="fas fa-calendar-day mr-0.5"></i>Date</span>
-                        <span class="val">{{ exam.exam_date|date:"d M Y" }}</span>
-                        <span class="sub">{{ exam.exam_date|date:"l" }}</span>
+                        <span class="val">{{ exam.start_datetime|date:"d M Y" }}</span>
+                        <span class="sub">{{ exam.start_datetime|date:"l" }}</span>
                     </div>
+
+                    <!-- Start → End chip — rendered by JS from ISO strings -->
                     <div class="stat-chip">
                         <span class="lbl"><i class="fas fa-play-circle mr-0.5"></i>Start</span>
-                        <span class="val js-start-12hr" data-iso="{{ exam_start_iso }}">{{ exam.start_time|time:"P" }}</span>
-                        <span class="sub">Ends <span class="js-end-12hr" data-iso="{{ exam_end_iso }}">{{ exam.end_time|time:"P" }}</span></span>
+                        <span class="val js-start-12hr" data-iso="{{ exam_start_iso }}">{{ exam.start_datetime|time:"P" }}</span>
+                        <span class="sub">Ends <span class="js-end-12hr" data-iso="{{ exam_end_iso }}">{{ exam.end_datetime|time:"P" }}</span></span>
                     </div>
+
+                    <!-- Duration chip — computed @property, always safe -->
                     <div class="stat-chip">
                         <span class="lbl"><i class="fas fa-hourglass-half mr-0.5"></i>Duration</span>
                         <span class="val">{{ exam.duration_minutes }} mins</span>
                         <span class="sub">From start time</span>
                     </div>
+
+                    <!-- Questions + marks chip -->
                     <div class="stat-chip">
                         <span class="lbl"><i class="fas fa-list-ol mr-0.5"></i>Questions</span>
                         <span class="val">{{ exam.active_question_count }}</span>
-                        <span class="sub">{% if exam.total_marks %}{{ exam.total_marks }}m{% endif %}{% if exam.pass_mark %} &bull; Pass {{ exam.pass_mark }}%{% endif %}</span>
+                        <span class="sub">
+                            {% if exam.total_marks %}{{ exam.total_marks }}m{% endif %}
+                            {% if exam.pass_mark %}&bull; Pass {{ exam.pass_mark }}{% endif %}
+                        </span>
                     </div>
+
+                    <!-- Session chip — via course.session -->
+                    {% if exam.course.session %}
+                    <div class="stat-chip">
+                        <span class="lbl"><i class="fas fa-university mr-0.5"></i>Session</span>
+                        <span class="val">{{ exam.course.session.name }}</span>
+                        <span class="sub">{{ exam.course.get_term_display|default:"—" }}</span>
+                    </div>
+                    {% endif %}
+
                 </div>
             </div>
 
@@ -114,41 +142,45 @@
                         <span class="text-[8px] text-gray-400 uppercase tracking-widest font-bold">Sec</span>
                     </div>
                 </div>
-                <p class="text-[10px] text-gray-400 text-center" id="cdSub">
-                    <strong class="text-gray-600 js-start-12hr-hero" data-iso="{{ exam_start_iso }}">{{ exam.start_time|time:"P" }}</strong>
-                    · <strong class="text-gray-600">{{ exam.exam_date|date:"D, d M Y" }}</strong>
+                <p id="cdSub" class="text-[9px] text-gray-400 mt-1 text-center leading-tight">
+                    Exam starts <span class="js-start-12hr-hero font-semibold text-gray-600" data-iso="{{ exam_start_iso }}">{{ exam.start_datetime|time:"P" }}</span>
                 </p>
-                <!-- Start button (hidden until live) -->
-                <div id="startBtnWrap" class="hidden mt-2 text-center">
+
+                <!-- Start button (hidden until exam is live) -->
+                <div id="startBtnWrap" class="hidden mt-2 w-full">
                     <a href="{% url 'students:start_exam' exam.slug %}"
-                       class="inline-flex items-center gap-1.5 px-5 py-2 bg-green-600 hover:bg-green-700
-                              text-white font-bold rounded-xl shadow-lg pulse-green transition text-sm">
-                        <i class="fas fa-play-circle"></i> Start Exam Now
+                       class="flex items-center justify-center gap-1.5 w-full px-4 py-2 rounded-xl
+                              bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700
+                              text-white text-xs font-bold shadow transition">
+                        <i class="fas fa-play-circle"></i> Enter Exam
                     </a>
-                    <p class="text-[10px] text-gray-400 mt-1" id="autoRedirectMsg"></p>
+                    <p id="autoRedirectMsg" class="text-[9px] text-gray-400 text-center mt-1"></p>
                 </div>
             </div>
-
         </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════════
-         BOTTOM SECTION — instructions + rules + checklist in 3 columns
+         BOTTOM GRID — instructions / rules / checklist
     ══════════════════════════════════════════════════════════════════════ -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-3">
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3 mb-3">
 
-        <!-- Instructions -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-3">
+        <!-- Exam Instructions -->
+        <div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
             <h2 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                <span class="w-5 h-5 rounded-md bg-primary-50 flex items-center justify-center shrink-0">
-                    <i class="fas fa-info-circle text-primary-600 text-[9px]"></i>
-                </span>
-                Exam Instructions
+                <i class="fas fa-info-circle text-primary-400 text-[9px]"></i> Exam Instructions
             </h2>
             {% if exam.instructions %}
             <div class="text-xs text-gray-700 leading-relaxed">{{ exam.instructions|linebreaks }}</div>
             {% else %}
             <p class="text-xs text-gray-400 italic">No specific instructions. Follow standard exam conduct rules.</p>
+            {% endif %}
+
+            {% if exam.special_instructions %}
+            <div class="mt-2 p-2 bg-blue-50 border border-blue-100 rounded-lg">
+                <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Special Notes</p>
+                <p class="text-xs text-blue-800 leading-relaxed">{{ exam.special_instructions }}</p>
+            </div>
             {% endif %}
 
             <!-- Academic integrity inline -->
@@ -213,49 +245,80 @@
 {% block extra_js %}
 <script>
 'use strict';
-function fmt12(iso){ return iso?new Date(iso).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:true}):''; }
-document.querySelectorAll('.js-start-12hr,.js-start-12hr-hero,.js-end-12hr').forEach(el=>{ if(el.dataset.iso) el.textContent=fmt12(el.dataset.iso); });
+function fmt12(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:'numeric', minute:'2-digit', hour12:true}) : ''; }
+document.querySelectorAll('.js-start-12hr, .js-start-12hr-hero, .js-end-12hr').forEach(el => {
+    if (el.dataset.iso) el.textContent = fmt12(el.dataset.iso);
+});
 
 const examStart = new Date("{{ exam_start_iso }}");
 const startUrl  = "{% url 'students:start_exam' exam.slug %}";
-const pad = n => String(n).padStart(2,'0');
-let liveFired=false, rcd=5, tid;
+const pad = n => String(n).padStart(2, '0');
+let liveFired = false, rcd = 5, tid;
 
-function upd(){
-    const now=new Date(), diff=Math.max(0,Math.floor((examStart-now)/1000));
-    if(diff>0){
-        const h=Math.min(Math.floor(diff/3600),99), m=Math.floor((diff%3600)/60), s=diff%60;
-        [{id:'cd-hrs',v:pad(h)},{id:'cd-min',v:pad(m)},{id:'cd-sec',v:pad(s)}].forEach(({id,v})=>{
-            const el=document.getElementById(id); if(!el) return;
-            if(el.textContent.trim()!==v){ el.classList.add('tick'); setTimeout(()=>el.classList.remove('tick'),150); el.textContent=v; }
+function upd() {
+    const now  = new Date();
+    const diff = Math.max(0, Math.floor((examStart - now) / 1000));
+
+    if (diff > 0) {
+        const h = Math.min(Math.floor(diff / 3600), 99);
+        const m = Math.floor((diff % 3600) / 60);
+        const s = diff % 60;
+        [{id:'cd-hrs', v:pad(h)}, {id:'cd-min', v:pad(m)}, {id:'cd-sec', v:pad(s)}].forEach(({id, v}) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (el.textContent.trim() !== v) {
+                el.classList.add('tick');
+                setTimeout(() => el.classList.remove('tick'), 150);
+                el.textContent = v;
+            }
         });
         return;
     }
-    if(!liveFired){
-        liveFired=true; clearInterval(tid);
+
+    if (!liveFired) {
+        liveFired = true;
+        clearInterval(tid);
+
         // Top band → green
-        const band=document.getElementById('topBand');
-        band.classList.remove('border-yellow-200','pulse-amber');
-        band.classList.add('border-green-300','pulse-green');
-        const card=document.getElementById('countdownCard');
+        const band = document.getElementById('topBand');
+        band.classList.remove('border-yellow-200', 'pulse-amber');
+        band.classList.add('border-green-300', 'pulse-green');
+
+        const card = document.getElementById('countdownCard');
         card.classList.remove('border-yellow-200');
-        card.classList.add('border-green-200','bg-green-50');
-        const lt=document.getElementById('cdLabelText'), li=document.getElementById('cdIcon');
-        if(lt) lt.textContent='Exam is live!';
-        if(li) li.className='fas fa-play-circle text-green-500';
-        const cs=document.getElementById('cdSub'); if(cs) cs.classList.add('hidden');
-        ['cd-hrs','cd-min','cd-sec'].forEach(id=>{
-            const el=document.getElementById(id); if(!el) return;
-            el.textContent='00';
-            el.classList.remove('from-primary-500','to-secondary-500');
-            el.classList.add('from-green-500','to-emerald-600');
+        card.classList.add('border-green-200', 'bg-green-50');
+
+        const lt = document.getElementById('cdLabelText');
+        const li = document.getElementById('cdIcon');
+        if (lt) lt.textContent = 'Exam is live!';
+        if (li) li.className = 'fas fa-play-circle text-green-500';
+
+        const cs = document.getElementById('cdSub');
+        if (cs) cs.classList.add('hidden');
+
+        ['cd-hrs', 'cd-min', 'cd-sec'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = '00';
+            el.classList.remove('from-primary-500', 'to-secondary-500');
+            el.classList.add('from-green-500', 'to-emerald-600');
         });
-        const w=document.getElementById('startBtnWrap'); if(w) w.classList.remove('hidden');
-        const me=document.getElementById('autoRedirectMsg');
-        if(me) me.textContent=`Auto-redirecting in ${rcd}…`;
-        const t=setInterval(()=>{ rcd--; if(me) me.textContent=rcd>0?`Auto-redirecting in ${rcd}…`:'Redirecting…'; if(rcd<=0){clearInterval(t);window.location.href=startUrl;} },1000);
+
+        const w = document.getElementById('startBtnWrap');
+        if (w) w.classList.remove('hidden');
+
+        const me = document.getElementById('autoRedirectMsg');
+        if (me) me.textContent = `Auto-redirecting in ${rcd}…`;
+
+        const t = setInterval(() => {
+            rcd--;
+            if (me) me.textContent = rcd > 0 ? `Auto-redirecting in ${rcd}…` : 'Redirecting…';
+            if (rcd <= 0) { clearInterval(t); window.location.href = startUrl; }
+        }, 1000);
     }
 }
-upd(); tid=setInterval(upd,1000);
+
+upd();
+tid = setInterval(upd, 1000);
 </script>
 {% endblock %}

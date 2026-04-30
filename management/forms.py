@@ -1392,21 +1392,21 @@ class AcademicSessionForm(forms.ModelForm):
         model = AcademicSession
         fields = [
             'name', 'status', 'is_current',
-            'term_dates', 'override_current_term',
-            'registration_start', 'registration_end',
+            'term_dates'
+            # 'registration_start', 'registration_end',
         ]
-        widgets = {
-            'registration_start': forms.DateInput(attrs={'type': 'date'}),
-            'registration_end': forms.DateInput(attrs={'type': 'date'}),
-        }
+        # widgets = {
+        #     'registration_start': forms.DateInput(attrs={'type': 'date'}),
+        #     'registration_end': forms.DateInput(attrs={'type': 'date'}),
+        # }
 
-    def clean(self):
-        cleaned = super().clean()
-        reg_start = cleaned.get('registration_start')
-        reg_end = cleaned.get('registration_end')
-        if reg_start and reg_end and reg_start >= reg_end:
-            raise forms.ValidationError('Registration start must be before end date.')
-        return cleaned
+    # def clean(self):
+    #     cleaned = super().clean()
+    #     reg_start = cleaned.get('registration_start')
+    #     reg_end = cleaned.get('registration_end')
+    #     if reg_start and reg_end and reg_start >= reg_end:
+    #         raise forms.ValidationError('Registration start must be before end date.')
+    #     return cleaned
 
 
 class CourseIntakeForm(forms.ModelForm):

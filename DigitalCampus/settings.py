@@ -74,6 +74,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "eduweb.security_middleware.SessionSecurityMiddleware",
+    "eduweb.exam_middleware.ExamLockMiddleware",
 ]
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"

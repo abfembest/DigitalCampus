@@ -753,7 +753,7 @@ class ProgramAdmin(admin.ModelAdmin):
 class AcademicSessionAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'status', 'is_current',
-        'registration_start', 'registration_end',
+        # 'registration_start', 'registration_end',
     )
     list_filter = ('status', 'is_current')
     search_fields = ('name',)
@@ -765,13 +765,13 @@ class AcademicSessionAdmin(admin.ModelAdmin):
             'fields': ('name', 'status', 'is_current')
         }),
         ('Term Dates', {
-            'fields': ('term_dates', 'override_current_term'),
+            'fields': ('term_dates',),
             'description': 'JSON list of term windows: [{"term": "first", "start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}, ...]'
         }),
-        ('Registration Window', {
-            'fields': ('registration_start', 'registration_end'),
-            'classes': ('collapse',)
-        }),
+        # ('Registration Window', {
+        #     'fields': ('registration_start', 'registration_end'),
+        #     'classes': ('collapse',)
+        # }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)

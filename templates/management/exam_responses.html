@@ -231,6 +231,9 @@
                         <th class="text-right px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Score
                         </th>
+                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
+                            Correct / Missed
+                        </th>
                         <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
                             Flags
                         </th>
@@ -359,12 +362,6 @@
 
                         {% comment %} ── Score Column ── {% endcomment %}
                         <td class="px-5 py-4 text-right">
-                            {% comment %}
-                              score_percentage: DecimalField — null until graded
-                              total_score: DecimalField — null until graded
-                              passed: BooleanField (nullable) — null = not yet graded
-                              exam.computed_total_marks: @property Sum of active question marks
-                            {% endcomment %}
                             {% if r.score_percentage is not None %}
                             <div class="font-bold text-base whitespace-nowrap
                                         {% if r.passed %}text-green-600
@@ -380,6 +377,40 @@
                             {% elif r.passed is False %}
                             <div class="text-base text-red-400 whitespace-nowrap"><i class="fas fa-times text-xs mr-0.5"></i>Failed</div>
                             {% endif %}
+                            {% else %}
+                            <span class="text-base text-gray-300">—</span>
+                            {% endif %}
+                        </td>
+
+                        {% comment %} ── Correct / Missed Column ── {% endcomment %}
+                        <td class="px-5 py-4 text-center hidden lg:table-cell">
+                            {% if r.status == 'graded' or r.status == 'submitted' %}
+                            <div class="inline-flex flex-col items-center gap-1">
+                                <div class="flex items-center gap-3 whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-1 text-base font-semibold text-green-700"
+                                          title="Correct answers">
+                                        <i class="fas fa-check-circle text-green-400 text-xs"></i>
+                                        {{ r.q_correct }}
+                                    </span>
+                                    <span class="text-gray-300">|</span>
+                                    <span class="inline-flex items-center gap-1 text-base font-semibold text-red-600"
+                                          title="Missed / wrong answers">
+                                        <i class="fas fa-times-circle text-red-400 text-xs"></i>
+                                        {{ r.q_missed }}
+                                    </span>
+                                    {% if r.q_pending %}
+                                    <span class="text-gray-300">|</span>
+                                    <span class="inline-flex items-center gap-1 text-base font-semibold text-orange-500"
+                                          title="Pending manual grading">
+                                        <i class="fas fa-clock text-orange-400 text-xs"></i>
+                                        {{ r.q_pending }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <span class="text-base text-gray-400 whitespace-nowrap">
+                                    of {{ r.questions_answered }} answered
+                                </span>
+                            </div>
                             {% else %}
                             <span class="text-base text-gray-300">—</span>
                             {% endif %}
@@ -406,7 +437,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="px-5 py-16 text-center">
+                        <td colspan="8" class="px-5 py-16 text-center">
                             <div class="flex flex-col items-center gap-3">
                                 <div class="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center">
                                     <i class="fas fa-users text-3xl text-gray-300"></i>
@@ -470,6 +501,83 @@
             </div>
         </div>
         {% endif %}
+    </div>
+
+    {% comment %} ── Results Release Panel ── {% endcomment %}
+    <div class="bg-white rounded-2xl border shadow-sm overflow-hidden
+        {% if exam.show_result_immediately %}border-green-300{% elif all_graded %}border-primary-300{% else %}border-gray-200{% endif %}">
+
+        <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+            <!-- Left: status + explanation -->
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                    {% if exam.show_result_immediately %}bg-green-100{% elif all_graded %}bg-primary-50{% else %}bg-gray-100{% endif %}">
+                    <i class="fas {% if exam.show_result_immediately %}fa-eye text-green-600{% elif all_graded %}fa-check-circle text-primary-500{% else %}fa-eye-slash text-gray-400{% endif %}"></i>
+                </div>
+                <div>
+                    <p class="text-base font-semibold text-gray-800">
+                        Results are currently
+                        <span class="{% if exam.show_result_immediately %}text-green-600{% else %}text-gray-500{% endif %}">
+                            {% if exam.show_result_immediately %}visible to students{% else %}hidden from students{% endif %}
+                        </span>
+                    </p>
+                    {% if exam.show_result_immediately %}
+                    <p class="text-base text-gray-500 mt-0.5">
+                        Students can view their score, percentage, and pass/fail status on their dashboard.
+                    </p>
+                    {% elif all_graded %}
+                    <p class="text-base text-gray-500 mt-0.5">
+                        All responses are fully graded. Results are ready to release.
+                    </p>
+                    {% elif pending_any_manual %}
+                    <p class="text-base text-amber-600 mt-0.5">
+                        <i class="fas fa-exclamation-triangle text-xs mr-1"></i>
+                        Some responses still have pending manual questions. Release anyway only if you're sure.
+                    </p>
+                    {% else %}
+                    <p class="text-base text-gray-500 mt-0.5">
+                        Grading is not yet complete. Release when all responses are graded.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right: action button -->
+            <form method="post" action="{% url 'management:admin_exam_release_results' exam.slug %}">
+                {% csrf_token %}
+                {% if exam.show_result_immediately %}
+                <input type="hidden" name="action" value="retract">
+                <button type="submit"
+                        onclick="return confirm('Hide results from students?')"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 text-base font-semibold
+                               bg-red-50 text-red-700 border border-red-300 rounded-xl
+                               hover:bg-red-100 transition-colors whitespace-nowrap shrink-0">
+                    <i class="fas fa-eye-slash"></i> Retract Results
+                </button>
+                {% else %}
+                <input type="hidden" name="action" value="release">
+                <button type="submit"
+                        onclick="return confirm('Release results to all students for this exam?')"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 text-base font-semibold
+                               {% if all_graded %}bg-green-600 hover:bg-green-700 text-white border-green-600
+                               {% else %}bg-primary-600 hover:bg-primary-700 text-white border-primary-600{% endif %}
+                               border rounded-xl transition-colors whitespace-nowrap shrink-0">
+                    <i class="fas fa-eye"></i> Release Results to Students
+                </button>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Grading summary bar at bottom of panel -->
+        <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 flex flex-wrap gap-x-6 gap-y-1 text-base text-gray-500">
+            <span><span class="font-semibold text-gray-700">{{ summary.graded }}</span> graded</span>
+            <span><span class="font-semibold text-gray-700">{{ summary.submitted }}</span> awaiting grading</span>
+            <span><span class="font-semibold text-gray-700">{{ summary.in_progress }}</span> in progress</span>
+            {% if summary.avg_score %}
+            <span>Avg: <span class="font-semibold text-gray-700">{{ summary.avg_score|floatformat:1 }}%</span></span>
+            {% endif %}
+        </div>
     </div>
 
     {% comment %} Security notice {% endcomment %}

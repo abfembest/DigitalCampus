@@ -84,13 +84,28 @@
               </div>
             </td>
 
-            {# Registration Window #}
-            <td class="py-4 px-5 text-gray-500 text-xs">
-              {% if session.registration_start %}
-                {{ session.registration_start|date:"M d" }} – {{ session.registration_end|date:"M d, Y" }}
-              {% else %}
-                <span class="text-gray-300">—</span>
-              {% endif %}
+            {# Registration Window — 3 weeks from each term's start date #}
+            <td class="py-4 px-5 text-xs">
+              <div class="space-y-1">
+                {% for td in session.term_dates %}
+                  {% if session.is_registration_open and session.get_current_term == td.term %}
+                  <div class="whitespace-nowrap text-green-600 font-semibold">
+                    <span class="font-medium text-green-700">{{ td.term|title }}:</span>
+                    {{ td.start|slice:":10" }}
+                    <span class="text-green-400">→ +21 days</span>
+                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">OPEN</span>
+                  </div>
+                  {% else %}
+                  <div class="whitespace-nowrap text-gray-400">
+                    <span class="font-medium text-gray-500">{{ td.term|title }}:</span>
+                    {{ td.start|slice:":10" }}
+                    <span class="text-gray-300">→ +21 days</span>
+                  </div>
+                  {% endif %}
+                {% empty %}
+                  <span class="text-gray-300">—</span>
+                {% endfor %}
+              </div>
             </td>
 
             {# Status Badge #}
@@ -142,9 +157,6 @@
                         data-id="{{ session.id }}"
                         data-name="{{ session.name }}"
                         data-status="{{ session.status }}"
-                        data-override="{{ session.override_current_term }}"
-                        data-regstart="{{ session.registration_start|date:'Y-m-d' }}"
-                        data-regend="{{ session.registration_end|date:'Y-m-d' }}"
                         data-iscurrent="{{ session.is_current|yesno:'true,false' }}"
                         class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors focus:outline-none"
                         title="Edit">
@@ -257,54 +269,15 @@
           </div>
         </div>
 
-        {# ── Override Current Term ─────────────────────────────────────────── #}
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Override Current Term
-            <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
-          </label>
-          <p class="text-xs text-gray-400 mb-1.5">
-            Force the system to report a specific term as current — ignores the date ranges above.
-            Leave blank for automatic detection from the semester date ranges.
+        {# ── Registration Window (auto-computed — read only) ──────────────── #}
+        <div class="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+          <p class="text-sm font-medium text-blue-800 mb-1">
+            <i class="fas fa-info-circle mr-1"></i>Registration Window (auto)
           </p>
-          <div id="autoTermHint" class="hidden mb-2 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded px-3 py-1.5">
-            <i class="fas fa-magic mr-1"></i>
-            Auto-detected term: <strong id="autoTermValue">—</strong>
-            <span class="text-gray-400 ml-1">(based on today's date vs the date ranges above)</span>
-          </div>
-          <select name="override_current_term" id="modal_override_term"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white transition">
-            <option value="">— Auto-detect from dates —</option>
-            <option value="first">First Semester</option>
-            <option value="second">Second Semester</option>
-            <option value="third">Third Semester / Harmattan</option>
-            <option value="annual">Annual</option>
-            <option value="fall">Fall</option>
-            <option value="spring">Spring</option>
-            <option value="summer">Summer</option>
-          </select>
-        </div>
-
-        {# ── Registration Window ───────────────────────────────────────────── #}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-4 bg-gray-50 border border-gray-100 rounded-lg">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">
-              <i class="fas fa-lock-open text-green-500 text-xs mr-1"></i>
-              Registration Opens
-            </label>
-            <input type="date" name="registration_start" id="modal_reg_start"
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm transition">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">
-              <i class="fas fa-lock text-red-400 text-xs mr-1"></i>
-              Registration Closes
-            </label>
-            <input type="date" name="registration_end" id="modal_reg_end"
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm transition">
-          </div>
-          <p class="col-span-full text-xs text-gray-400 -mt-2">
-            Controls the <strong>Registration: Open / Closed</strong> indicator shown to students.
+          <p class="text-xs text-blue-600">
+            Registration automatically opens on the <strong>first day of each term</strong> and
+            closes <strong>21 days later</strong>. Set the term start dates above — no separate
+            registration fields needed.
           </p>
         </div>
 
@@ -453,15 +426,6 @@
       document.getElementById('modal_session_id').value   = id;
       document.getElementById('modal_name').value          = btn.getAttribute('data-name') || '';
       document.getElementById('modal_status').value        = btn.getAttribute('data-status') || 'upcoming';
-      document.getElementById('modal_override_term').value = btn.getAttribute('data-override') || '';
-
-      const regStart = btn.getAttribute('data-regstart');
-      const regEnd   = btn.getAttribute('data-regend');
-      document.getElementById('modal_reg_start').value =
-        (regStart && regStart !== 'None') ? regStart : '';
-      document.getElementById('modal_reg_end').value =
-        (regEnd   && regEnd   !== 'None') ? regEnd   : '';
-
       document.getElementById('modal_is_current').checked =
         btn.getAttribute('data-iscurrent') === 'true';
 
@@ -475,31 +439,6 @@
         addTermRow('first', '', '');
       } else {
         terms.forEach(t => addTermRow(t.term || 'first', t.start || '', t.end || ''));
-      }
-
-      // Show auto-detected term hint based on today vs term_dates
-      const hintBox   = document.getElementById('autoTermHint');
-      const hintVal   = document.getElementById('autoTermValue');
-      const today     = new Date().toISOString().slice(0, 10);
-      const overrideVal = btn.getAttribute('data-override') || '';
-      let detected = null;
-      for (const t of terms) {
-        if (t.start && t.end && today >= t.start && today <= t.end) {
-          detected = t.term;
-          break;
-        }
-      }
-      if (hintBox && hintVal) {
-        if (overrideVal) {
-          hintBox.classList.remove('hidden');
-          hintVal.textContent = overrideVal + ' (override active)';
-        } else if (detected) {
-          hintBox.classList.remove('hidden');
-          hintVal.textContent = detected;
-        } else {
-          hintBox.classList.add('hidden');
-          hintVal.textContent = '—';
-        }
       }
     }
 

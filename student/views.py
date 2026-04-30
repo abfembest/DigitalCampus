@@ -329,14 +329,6 @@ def dashboard(request):
         outstanding_total    = Decimal('0.00')
         outstanding_currency = 'USD'
 
-    # ── Nav badge counts ──────────────────────────────────────────────────────
-    unread_notifications = (
-        Notification.objects.filter(user=user, is_read=False).count()
-    )
-    unread_messages = (
-        Message.objects.filter(recipient=user, is_read=False, parent__isnull=True).count()
-    )
-
     # ── Upcoming exams ────────────────────────────────────────────────────────
     now = timezone.now()
     upcoming_exams = (
@@ -377,8 +369,6 @@ def dashboard(request):
         'outstanding_currency':     outstanding_currency,
         # Academic identity
         'profile':                  profile,
-        'current_session':          current_session,
-        'current_term':             current_term,
         'department':               department,
         'faculty':                  faculty,
         # Semester-registered courses (Course model)
@@ -387,10 +377,6 @@ def dashboard(request):
         'registered_credit_total':  registered_credit_total,
         'registration_submitted':   registration_submitted,
         'registration_finalized':   registration_finalized,
-        'registration_open':        getattr(current_session, 'is_registration_open', False),
-        # Nav badges
-        'unread_notifications':     unread_notifications,
-        'unread_messages':          unread_messages,
         # Exams & grades
         'upcoming_exams':           upcoming_exams,
         'recent_grades':            recent_grades,
@@ -414,19 +400,13 @@ def my_courses(request):
     profile = getattr(user, 'profile', None)
 
     # ── Session / Term selector ────────────────────────────────────────────
-    all_sessions = AcademicSession.objects.order_by('-name')
-    current_session = AcademicSession.get_current()
+    # Always use the current session — students cannot switch sessions here.
+    current_session  = AcademicSession.get_current()
+    selected_session = current_session
+    all_sessions     = [current_session] if current_session else []
 
-    selected_session_id = request.GET.get('session_id', '').strip()
-    selected_term       = request.GET.get('term', '').strip()
-
-    if selected_session_id:
-        try:
-            selected_session = AcademicSession.objects.get(pk=selected_session_id)
-        except AcademicSession.DoesNotExist:
-            selected_session = current_session
-    else:
-        selected_session = current_session
+    # Term is derived automatically from session.term_dates — never from GET params.
+    selected_term = ''
 
     if not selected_term and selected_session:
         selected_term = selected_session.get_current_term() or ''
@@ -513,9 +493,13 @@ def my_courses(request):
             and not existing_regs.filter(status='pending').exists()
         )
 
+        # Build a map of course_id → registration status for the template
+        reg_status_map = {r.course_id: r.status for r in existing_regs}
+
         for course in semester_courses:
             course.is_registered = course.id in registered_course_ids
             course.is_core       = course.course_type == 'core'
+            course.registration_status = reg_status_map.get(course.id, '')  # 'pending' | 'approved' | ''
             if course.course_type == 'core':
                 core_credit_total += course.credit_units
 
@@ -545,6 +529,12 @@ def my_courses(request):
         registered_credit_total >= core_credit_total
         and registered_credit_total <= max_credits_per_semester
         and registered_credit_total > 0
+    )
+
+    # count only pending (newly selected, not yet approved) courses for the confirm modal
+    new_registration_count = sum(
+        1 for c in semester_courses
+        if c.is_registered and getattr(c, 'registration_status', '') == 'pending'
     )
 
     # ── LMS Enrollments — only show courses for selected session ──────────
@@ -598,14 +588,20 @@ def my_courses(request):
         department = getattr(profile.program, 'department', None)
         faculty    = getattr(department, 'faculty', None) if department else None
 
-    term_choices = AcademicSession.TERM_CHOICES
+    # Build term label from session's own term_dates JSON entries
+    term_label = ''
+    if selected_session and selected_term:
+        term_label_map = dict(AcademicSession.TERM_CHOICES)
+        term_label = term_label_map.get(selected_term, selected_term.title())
 
     context = {
         'page_title':               'My Courses',
         'all_sessions':             all_sessions,
+        'new_registration_count':   new_registration_count,
+        'status_options':           [('active', 'Active'), ('completed', 'Completed')],
         'selected_session':         selected_session,
         'selected_term':            selected_term,
-        'term_choices':             term_choices,
+        'term_label':               term_label,
         'registration_open':        registration_open,
         'selected_term_is_active':  selected_term_is_active,
         'semester_courses':         semester_courses,
@@ -622,8 +618,7 @@ def my_courses(request):
         'profile':                  profile,
         'department':               department,
         'faculty':                  faculty,
-        'semester_courses_debug':   semester_courses_debug,
-    }
+        }
 
     return render(request, 'students/my_courses.html', context)
 
@@ -654,7 +649,9 @@ def register_semester_course(request, course_slug):
         return redirect('students:my_courses')
 
     if not current_session.is_registration_open:
-        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration window: {current_session.registration_start} – {current_session.registration_end}.')
+        reg_open, reg_close = current_session.get_registration_window()
+        window_str = current_session.registration_window_for_term(current_session.get_current_term())
+        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration opens: {window_str}.')
         return redirect('students:my_courses')
 
     course = get_object_or_404(
@@ -746,7 +743,9 @@ def drop_semester_course(request, course_slug):
         return redirect('students:my_courses')
 
     if not current_session.is_registration_open:
-        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration window: {current_session.registration_start} – {current_session.registration_end}.')
+        reg_open, reg_close = current_session.get_registration_window()
+        window_str = current_session.registration_window_for_term(current_session.get_current_term())
+        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration opens: {window_str}.')
         return redirect('students:my_courses')
 
     course = get_object_or_404(Course, slug=course_slug)
@@ -805,18 +804,16 @@ def register_all_semester_courses(request):
         return redirect('students:my_courses')
 
     if not current_session.is_registration_open:
-        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration window: {current_session.registration_start} – {current_session.registration_end}.')
+        reg_open, reg_close = current_session.get_registration_window()
+        window_str = current_session.registration_window_for_term(current_session.get_current_term())
+        messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration opens: {window_str}.')
         return redirect('students:my_courses')
 
     if not profile or not profile.program:
         messages.error(request, 'No program assigned to your profile.')
         return redirect('students:my_courses')
 
-    TERM_MAP = {
-        'fall': 'first', 'spring': 'second',
-        'summer': 'annual', 'third': 'second',
-    }
-    normalised_term = TERM_MAP.get(current_term, current_term)
+    normalised_term = term_normalisation_map.get(current_term, current_term)
 
     MAX_CU = profile.program.max_credits_per_semester
 
@@ -864,12 +861,7 @@ def register_all_semester_courses(request):
         from django.urls import reverse
         return redirect(f"{reverse('students:my_courses')}?session_id={current_session.pk}&term={current_term}")
 
-    # ── Auto-enroll into linked LMS courses ───────────────────────────────
-    enrolled_count = 0
-
-    # Build two lookup sets from the registered academic Course records:
-    # 1. Their PKs  — for matching via LMSCourse.academic_course FK (when set)
-    # 2. Their codes — for matching via LMSCourse.code when academic_course is NULL
+    # ── Step 1: Build LMS course lookup (FK match first, code fallback) ──────
     registered_academic_course_ids = [reg.course_id for reg in registered_regs]
     registered_course_codes = [
         reg.course.code.strip().upper()
@@ -877,15 +869,10 @@ def register_all_semester_courses(request):
         if reg.course.code
     ]
 
-    # Match 1: LMSCourse.academic_course FK is properly set
     by_fk = LMSCourse.objects.filter(
         academic_course_id__in=registered_academic_course_ids,
-    ).filter(
-        Q(session=current_session) | Q(session__isnull=True)
-    )
+    ).filter(Q(session=current_session) | Q(session__isnull=True))
 
-    # Match 2: Fallback — LMSCourse.academic_course is NULL but code matches
-    # This handles LMS courses created before the academic_course FK was linked
     by_code = LMSCourse.objects.filter(
         academic_course__isnull=True,
         code__in=registered_course_codes,
@@ -893,55 +880,188 @@ def register_all_semester_courses(request):
         Q(session=current_session) | Q(session__isnull=True)
     ) if registered_course_codes else LMSCourse.objects.none()
 
-    # Combine both sets, deduplicated
     from itertools import chain
-    seen_ids = set()
+    seen_lms_ids = set()
     lms_courses_to_enroll = []
     for lms in chain(by_fk, by_code):
-        if lms.pk not in seen_ids:
-            seen_ids.add(lms.pk)
+        if lms.pk not in seen_lms_ids:
+            seen_lms_ids.add(lms.pk)
             lms_courses_to_enroll.append(lms)
 
-    for lms_course in lms_courses_to_enroll:
-        enrollment, created = Enrollment.objects.get_or_create(
-            student=request.user,
-            course=lms_course,
-            defaults={
-                'enrolled_by': request.user,
-                'status': 'active',
-            },
-        )
-        if not created and enrollment.status == 'dropped':
-            enrollment.status = 'active'
-            enrollment.save(update_fields=['status'])
-            enrolled_count += 1
-        elif created:
-            enrolled_count += 1
+    # Build a map: academic_course_id → lms_course (for later lookup per reg)
+    lms_by_academic_id = {}
+    for lms in lms_courses_to_enroll:
+        if lms.academic_course_id:
+            lms_by_academic_id[lms.academic_course_id] = lms
+        elif lms.code:
+            # code-based fallback: map by code
+            lms_by_academic_id[('code', lms.code.strip().upper())] = lms
 
-    # Flip all pending registrations to approved
-    registered_regs.filter(status='pending').update(status='approved')
+    # ── Step 2: Per-registration — enroll only if LMS course exists AND has content ──
+    enrolled_count = 0
+    pending_count = 0
+
+    for reg in registered_regs:
+        # Find the matching LMS course for this specific registration
+        lms_course = lms_by_academic_id.get(reg.course_id)
+        if not lms_course and reg.course.code:
+            lms_course = lms_by_academic_id.get(('code', reg.course.code.strip().upper()))
+
+        has_lms   = lms_course is not None
+        has_content = has_lms and lms_course.lessons.filter(is_active=True).exists()
+
+        if has_lms and has_content:
+            # ✅ LMS course exists and has content → enroll and approve
+            enrollment, created = Enrollment.objects.get_or_create(
+                student=request.user,
+                course=lms_course,
+                defaults={
+                    'enrolled_by': request.user,
+                    'status': 'active',
+                },
+            )
+            if created or (not created and enrollment.status == 'dropped'):
+                if not created:
+                    enrollment.status = 'active'
+                    enrollment.save(update_fields=['status'])
+                enrolled_count += 1
+
+            # Only approve if we actually enrolled
+            if reg.status == 'pending':
+                reg.status = 'approved'
+                reg.save(update_fields=['status'])
+        else:
+            # ⏳ LMS course missing or has no content → keep as pending
+            pending_count += 1
+            # Leave reg.status = 'pending' — do NOT approve
 
     total_registered = registered_regs.count()
 
-    messages.success(
-        request,
-        f'✅ Registration finalized — {total_registered} course(s) registered '
-        f'and {enrolled_count} LMS course(s) enrolled for '
-        f'{current_term.title()} Semester, {current_session}.'
-    )
+    if pending_count > 0 and enrolled_count > 0:
+        messages.warning(
+            request,
+            f'⚠️ Partially finalized — {enrolled_count} course(s) enrolled. '
+            f'{pending_count} course(s) are pending because their LMS content is not ready yet. '
+            f'They will appear as "Register" buttons and you can retry enrollment later.'
+        )
+    elif pending_count > 0 and enrolled_count == 0:
+        messages.warning(
+            request,
+            f'⚠️ Registration saved ({total_registered} course(s)) but no LMS courses are ready for enrollment yet. '
+            f'Your registrations are saved as pending. Use the "Register" button per course to retry once content is available.'
+        )
+    else:
+        messages.success(
+            request,
+            f'✅ Registration finalized — {total_registered} course(s) registered '
+            f'and {enrolled_count} LMS course(s) enrolled for '
+            f'{current_term.title()} Semester, {current_session}.'
+        )
+
     _notify(
         user=request.user,
         notification_type='enrollment',
         title='Semester Registration Confirmed',
         message=(
             f'Your {current_term.title()} Semester registration for {current_session} '
-            f'is complete. {total_registered} courses registered, {enrolled_count} enrolled.'
+            f'is complete. {total_registered} courses registered, {enrolled_count} enrolled, '
+            f'{pending_count} pending LMS readiness.'
         ),
         link='/student/courses/',
     )
 
     from django.urls import reverse
     return redirect(f"{reverse('students:my_courses')}?session_id={current_session.pk}&term={current_term}")
+
+@login_required
+@student_required
+def retry_lms_enrollment(request, course_slug):
+    """
+    Retry LMS enrollment for a single pending CourseRegistration.
+    Called when student clicks the "Register" button on a pending course row.
+    Returns JSON so the template can update the button without a page reload.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'POST required.'}, status=405)
+
+    session_id    = request.POST.get('session_id', '').strip()
+    term_override = request.POST.get('term_override', '').strip()
+
+    try:
+        current_session = AcademicSession.objects.get(pk=session_id) if session_id else AcademicSession.get_current()
+    except AcademicSession.DoesNotExist:
+        current_session = AcademicSession.get_current()
+
+    current_term = term_override or (current_session.get_current_term() if current_session else None)
+
+    course = get_object_or_404(
+        Course, slug=course_slug,
+        program=request.user.profile.program,
+        is_active=True,
+    )
+
+    reg = CourseRegistration.objects.filter(
+        student=request.user,
+        course=course,
+        session=current_session,
+        term__in=[current_term, term_normalisation_map.get(current_term, current_term)],
+        status='pending',
+    ).first()
+
+    if not reg:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No pending registration found for this course.',
+        })
+
+    # Find matching LMS course
+    lms_course = None
+    if course.code:
+        lms_course = LMSCourse.objects.filter(
+            Q(academic_course=course) |
+            Q(academic_course__isnull=True, code__iexact=course.code)
+        ).filter(
+            Q(session=current_session) | Q(session__isnull=True)
+        ).first()
+
+    if not lms_course:
+        return JsonResponse({
+            'status': 'pending',
+            'message': 'Course is not yet ready for enrollment. Please check back later.',
+        })
+
+    has_content = lms_course.lessons.filter(is_active=True).exists()
+    if not has_content:
+        return JsonResponse({
+            'status': 'pending',
+            'message': 'Course is not yet ready for enrollment — content has not been published.',
+        })
+
+    # ✅ LMS course exists and has content — enroll now
+    enrollment, created = Enrollment.objects.get_or_create(
+        student=request.user,
+        course=lms_course,
+        defaults={'enrolled_by': request.user, 'status': 'active'},
+    )
+    if not created and enrollment.status == 'dropped':
+        enrollment.status = 'active'
+        enrollment.save(update_fields=['status'])
+
+    reg.status = 'approved'
+    reg.save(update_fields=['status'])
+
+    _notify(
+        user=request.user,
+        notification_type='enrollment',
+        title='Course Enrollment Confirmed',
+        message=f'You have been enrolled in {course.code} — {course.name}.',
+        link='/student/courses/',
+    )
+
+    return JsonResponse({
+        'status': 'enrolled',
+        'message': f'Successfully enrolled in {course.name}.',
+    })
 
 @login_required
 @student_required
@@ -991,7 +1111,6 @@ def course_catalog(request):
         'registered_academic_ids': registered_academic_ids,
         'search_query':            search_query,
         'term_filter':             term_filter,
-        'current_session':         current_session,
         'term_choices':            LMSCourse._meta.get_field('term').choices,
     }
     return render(request, 'students/course_catalog.html', context)
@@ -3259,41 +3378,42 @@ def _get_outstanding_for_student(user):
     # Find all completed enrollments where the course issues a certificate
     completed_enrollments = (
         Enrollment.objects
-        .filter(student=user, status='completed', course__has_certificate=True)
+        .filter(student=user, status='completed')
         .select_related('course')
     )
 
     for enrollment in completed_enrollments:
         course = enrollment.course
+        cert_fee = getattr(course, 'certificate_fee', None)
 
-        # Check payment status per-certificate, not globally
+        # Skip entirely if the model has no certificate fee field
+        if not cert_fee:
+            continue
+
         cert = Certificate.objects.filter(
             student=user, course=course, certificate_type='lms_course'
         ).first()
 
         if cert and cert.payment_status == 'paid':
-            # Already settled — show in paid section
             paid.append({
                 'purpose': f'Certificate Fee — {course.title}',
-                'amount': course.certificate_fee,
+                'amount': cert_fee,
                 'is_certificate_fee': True,
                 'course': course,
             })
-        elif not cert or cert.payment_status == 'unpaid':
-            if course.certificate_fee and course.certificate_fee > 0:
-                # Outstanding certificate fee entry
-                outstanding.append({
-                    'payment': {
-                        'purpose': f'Certificate Fee — {course.title}',
-                        'amount': course.certificate_fee,
-                        'due_date': today,
-                        'is_certificate_fee': True,
-                        'course': course,
-                        'pk': f'cert_{course.pk}',
-                    },
-                    'is_overdue': False,
+        elif (not cert or cert.payment_status == 'unpaid') and cert_fee > 0:
+            outstanding.append({
+                'payment': {
+                    'purpose': f'Certificate Fee — {course.title}',
+                    'amount': cert_fee,
+                    'due_date': today,
                     'is_certificate_fee': True,
-                })
+                    'course': course,
+                    'pk': f'cert_{course.pk}',
+                },
+                'is_overdue': False,
+                'is_certificate_fee': True,
+            })
 
     return outstanding, paid
 
@@ -3667,24 +3787,93 @@ def academic_records(request):
     other_courses    = [c for c in program_courses if c.course_type not in ('core', 'elective')]
     total_credits_required = program.credits_required if program else 0
 
-    # ── 3. All grade records ──────────────────────────────────────────────────
-    academic_grades = list(
-        CourseGrade.objects
-        .filter(student=user)
-        .select_related(
-            'course', 'course__program',
-            'session',
-            'lms_course', 'lms_course__session', 'lms_course__academic_course',
+    # ── 3. End-of-semester exam responses (submitted + graded only) ───────────
+    #
+    # SOURCE OF TRUTH: StudentExamResponse where:
+    #   • exam.exam_type == 'end_of_semester'
+    #   • status == 'graded'   (fully graded — total_score is set)
+    #
+    # Each response is enriched with display helpers so the template
+    # can treat it identically to the old CourseGrade objects.
+    # ─────────────────────────────────────────────────────────────────────────
+    GRADE_POINTS = {'A': 5.0, 'B': 4.0, 'C': 3.0, 'D': 2.0, 'F': 0.0, 'I': 0.0, 'W': 0.0}
+
+    def score_to_grade(pct):
+        """Nigerian grading: score_percentage → letter grade."""
+        if pct is None:
+            return ''
+        pct = float(pct)
+        if pct >= 70:   return 'A'
+        if pct >= 60:   return 'B'
+        if pct >= 50:   return 'C'
+        if pct >= 45:   return 'D'
+        return 'F'
+
+    exam_responses = list(
+        StudentExamResponse.objects
+        .filter(
+            student=user,
+            status=StudentExamResponse.GRADED,
+            exam__exam_type=Exam.END_OF_SEMESTER,
+            exam__show_result_immediately=True,      # admin must release results
         )
-        .order_by('session__name', 'course__year_of_study', 'course__semester')
+        .select_related(
+            'exam',
+            'exam__course',
+            'exam__course__academic_course',
+            'exam__course__academic_course__program',
+            'exam__course__session',
+        )
+        .order_by(
+            'exam__course__session__name',
+            'exam__course__term',
+            'exam__course__academic_course__year_of_study',
+        )
     )
 
-    graded_map = {g.course_id: g for g in academic_grades if g.course_id}
-    for course in program_courses:
-        course.student_grade = graded_map.get(course.id)
+    # Build synthetic grade-like objects the template can consume
+    class ExamGradeProxy:
+        """Wraps a StudentExamResponse to look like a CourseGrade row."""
+        def __init__(self, response):
+            self._r = response
+            lms   = response.exam.course          # LMSCourse
+            acad  = lms.academic_course           # Course or None
+
+            # ── Display fields ────────────────────────────────────────────
+            self.display_name  = acad.name if acad else lms.title
+            self.display_code  = lms.code or (acad.code if acad else '')
+            self.credit_units  = acad.credit_units if acad else 3
+            self.score         = response.score_percentage  # shown as %
+            self.grade         = score_to_grade(response.score_percentage)
+            self.grade_points  = GRADE_POINTS.get(self.grade, 0)
+            self.weighted_points = self.grade_points * self.credit_units
+            self.is_passed     = self.grade not in ('F', 'I', 'W', '')
+            self.result_status = 'released'        # graded = released to student
+
+            # ── Grouping keys ─────────────────────────────────────────────
+            sess = lms.session
+            self.sess_key = sess.name if sess else 'Unassigned'
+
+            # Semester label
+            if acad and acad.semester:
+                self.sem_key = acad.get_semester_display()
+            elif lms.term:
+                self.sem_key = lms.get_term_display()
+            else:
+                self.sem_key = 'Unknown'
+
+            # ── Exam meta (for tooltip / detail) ─────────────────────────
+            self.exam_title    = response.exam.title
+            self.exam_ref      = response.exam.reference_code
+            self.total_score   = response.total_score
+            self.max_score     = response.exam.total_marks if hasattr(response.exam, 'total_marks') else None
+            self.graded_at     = response.graded_at
+            self.submitted_at  = response.submitted_at
+
+    proxies = [ExamGradeProxy(r) for r in exam_responses]
 
     # ── 4. Credits ────────────────────────────────────────────────────────────
-    credits_earned    = sum(g.credit_units for g in academic_grades if g.is_passed)
+    credits_earned    = sum(p.credit_units for p in proxies if p.is_passed)
     credits_remaining = max(0, total_credits_required - credits_earned)
     graduation_pct    = (
         round(credits_earned / total_credits_required * 100, 1)
@@ -3692,9 +3881,8 @@ def academic_records(request):
     )
 
     # ── 5. Cumulative GPA — Nigerian 5-point scale ────────────────────────────
-    GRADE_POINTS = {'A': 5.0, 'B': 4.0, 'C': 3.0, 'D': 2.0, 'F': 0.0, 'I': 0.0, 'W': 0.0}
-    weighted_sum    = sum(GRADE_POINTS.get(g.grade, 0) * g.credit_units for g in academic_grades if g.grade)
-    total_gpa_units = sum(g.credit_units for g in academic_grades if g.grade and g.grade != 'W')
+    weighted_sum    = sum(p.grade_points * p.credit_units for p in proxies if p.grade)
+    total_gpa_units = sum(p.credit_units for p in proxies if p.grade and p.grade != 'W')
     gpa = round(weighted_sum / total_gpa_units, 2) if total_gpa_units > 0 else None
 
     if gpa is None:       gpa_class = None
@@ -3704,37 +3892,10 @@ def academic_records(request):
     elif gpa >= 1.5:      gpa_class = 'Third Class'
     else:                 gpa_class = 'Pass'
 
-    # ── 6. Group grades: session → semester ───────────────────────────────────
+    # ── 6. Group by session → semester ───────────────────────────────────────
     sessions_raw = {}
-    for g in academic_grades:
-        # Session key — fall back to lms_course.session if direct session null
-        if g.session:
-            sess_key = g.session.name
-        elif g.lms_course and g.lms_course.session:
-            sess_key = g.lms_course.session.name
-        else:
-            sess_key = 'Unassigned'
-
-        # Semester key — fall back through lms_course.term then g.term
-        if g.course:
-            sem_key = g.course.get_semester_display()
-        elif g.lms_course and g.lms_course.term:
-            sem_key = g.lms_course.get_term_display()
-        else:
-            sem_key = g.term or 'Unknown'
-
-        # Resolve display name for the course
-        if g.lms_course:
-            g.display_name = g.lms_course.title
-            g.display_code = g.lms_course.code or (g.course.code if g.course else '')
-        elif g.course:
-            g.display_name = g.course.name
-            g.display_code = g.course.code
-        else:
-            g.display_name = 'Unknown Course'
-            g.display_code = ''
-
-        sessions_raw.setdefault(sess_key, {}).setdefault(sem_key, []).append(g)
+    for p in proxies:
+        sessions_raw.setdefault(p.sess_key, {}).setdefault(p.sem_key, []).append(p)
 
     session_summaries = []
     for sess_name, semesters in sorted(sessions_raw.items(), reverse=True):
@@ -3744,10 +3905,10 @@ def academic_records(request):
         sess_credits_earned = 0
 
         for sem_label, grades_list in semesters.items():
-            sem_weighted = sum(GRADE_POINTS.get(g.grade, 0) * g.credit_units for g in grades_list if g.grade)
-            sem_units    = sum(g.credit_units for g in grades_list if g.grade and g.grade != 'W')
+            sem_weighted = sum(p.grade_points * p.credit_units for p in grades_list if p.grade)
+            sem_units    = sum(p.credit_units for p in grades_list if p.grade and p.grade != 'W')
             sem_gpa      = round(sem_weighted / sem_units, 2) if sem_units > 0 else None
-            sem_credits  = sum(g.credit_units for g in grades_list if g.is_passed)
+            sem_credits  = sum(p.credit_units for p in grades_list if p.is_passed)
 
             semester_blocks.append({
                 'label':          sem_label,
@@ -3769,10 +3930,7 @@ def academic_records(request):
             'credits':   sess_credits_earned,
         })
 
-    # ── 7. Current session banner ─────────────────────────────────────────────
-    current_session = AcademicSession.get_current()
-
-    # ── 8. LMS enrollments ────────────────────────────────────────────────────
+    # ── 8. LMS enrollments (informational only) ───────────────────────────────
     lms_enrollments = (
         Enrollment.objects
         .filter(student=user)
@@ -3788,11 +3946,13 @@ def academic_records(request):
         .order_by('-issued_date')
     )
 
+    # academic_grades kept for backward compat with any other template refs
+    academic_grades = proxies
+
     context = {
         'page_title':              'Academic Records',
         'application':             application,
         'program':                 program,
-        'current_session':         current_session,
         'program_courses':         program_courses,
         'core_courses':            core_courses,
         'elective_courses':        elective_courses,
@@ -3846,44 +4006,46 @@ def exam_list(request):
     user            = request.user
     current_session = AcademicSession.get_current()
     current_term    = current_session.get_current_term() if current_session else None
-
-    # Only exams whose LMSCourse the student is actively enrolled in,
-    # for the current session and term — mirrors my_courses logic.
-    exams = (
+ 
+    # ── Base queryset: published exams for courses this student is enrolled in ──
+    base_qs = (
         Exam.objects
         .filter(
-            status=Exam.PUBLISHED,
             is_active=True,
             course__session=current_session,
             course__enrollments__student=user,
             course__enrollments__status__in=['active', 'completed'],
         )
-        .select_related('course')
+        .select_related('course', 'course__session')
         .order_by('start_datetime')
         .distinct()
     )
-
-    print(exams)
-
-    # Also filter by current term if the session has one active
+ 
     if current_term:
-        exams = exams.filter(
+        base_qs = base_qs.filter(
             Q(course__term=current_term) | Q(course__term='')
         )
-
+ 
+    # ── 1. ALL EXAMS for the semester timetable table ──────────────────────────
+    #    Shows every exam that has been created (draft/submitted/approved/published/cancelled)
+    #    so students can see the full semester schedule even before exams go live.
+    all_exams = base_qs.exclude(status=Exam.REJECTED)
+ 
+    # ── 2. ACTIVE / IMMINENT CARDS — published only, within visibility window ──
+    published_qs = base_qs.filter(status=Exam.PUBLISHED)
+ 
     context_items = []
-    for exam in exams:
-        # Only show within the visibility window (property handles this)
+    for exam in published_qs:
         if now < exam.visible_from or now > exam.visible_until:
-            continue
-
+            continue  # outside the 2-hour visibility window
+ 
         start_dt = exam.start_datetime
         end_dt   = exam.end_datetime
-
+ 
         response = StudentExamResponse.objects.filter(
             exam=exam, student=user
         ).first()
-
+ 
         context_items.append({
             'exam':                     exam,
             'can_read':                 now >= exam.instructions_open_at,
@@ -3894,8 +4056,11 @@ def exam_list(request):
             'exam_start_datetime_iso':  start_dt.isoformat(),
             'exam_end_datetime_iso':    end_dt.isoformat(),
         })
-
-    return render(request, 'students/examlist.html', {'exams': context_items})
+ 
+    return render(request, 'students/examlist.html', {
+        'exams':     context_items,
+        'all_exams': all_exams,
+    })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -4121,28 +4286,124 @@ def submit_exam(request, slug):
     if response.status in (StudentExamResponse.SUBMITTED, StudentExamResponse.GRADED):
         return JsonResponse({'status': 'already_submitted'})
 
-    exam  = response.exam
-    total = 0.0
+    exam = response.exam
+    now  = timezone.now()
 
-    for qid in response.assigned_question_ids:
-        try:
-            q = exam.questions.get(id=qid)
-        except Exception:
+    # ── Pre-fetch all assigned questions in one query ─────────────────────────
+    assigned_ids = response.assigned_question_ids or []
+    questions    = {q.id: q for q in exam.questions.filter(id__in=assigned_ids)}
+
+    # ── Grade every question ──────────────────────────────────────────────────
+    question_scores   = {}
+    total_score       = 0.0
+    total_marks       = 0.0
+    pending_manual    = 0
+
+    for qid in assigned_ids:
+        q = questions.get(qid)
+        if not q:
             continue
-        answer  = response.answers.get(str(qid))
-        correct = [opt['id'] for opt in q.options if opt.get('is_correct')]
-        if answer and answer in correct:
-            total += float(q.marks)
 
-    now = timezone.now()
-    response.total_score    = total
-    response.status         = StudentExamResponse.SUBMITTED
-    response.submitted_at   = now
+        max_marks = float(q.marks)
+        total_marks += max_marks
+        answer = response.answers.get(str(qid))
+
+        # ── MCQ / True-False: single option ID ───────────────────────────────
+        if q.question_type in (q.MCQ, q.TRUE_FALSE):
+            correct_ids = {opt['id'] for opt in q.options if opt.get('is_correct')}
+            if answer and answer in correct_ids:
+                awarded = max_marks
+            else:
+                awarded = 0.0
+            total_score += awarded
+            question_scores[str(qid)] = {
+                'marks_awarded':   awarded,
+                'max_marks':       max_marks,
+                'is_correct':      awarded == max_marks,
+                'pending_manual':  False,
+            }
+
+        # ── Multi-select: list of option IDs, all-or-nothing scoring ─────────
+        elif q.question_type == q.MULTI_SELECT:
+            correct_ids  = {opt['id'] for opt in q.options if opt.get('is_correct')}
+            selected     = set(answer) if isinstance(answer, list) else set()
+            is_correct   = selected == correct_ids
+            awarded      = max_marks if is_correct else 0.0
+            total_score += awarded
+            question_scores[str(qid)] = {
+                'marks_awarded':  awarded,
+                'max_marks':      max_marks,
+                'is_correct':     is_correct,
+                'pending_manual': False,
+            }
+
+        # ── Short answer: exact-match auto-grade if accepted_answers set ──────
+        elif q.question_type == q.SHORT_ANSWER:
+            if q.accepted_answers:
+                normalised   = (answer or '').strip().lower()
+                is_correct   = normalised in [a.strip().lower() for a in q.accepted_answers]
+                awarded      = max_marks if is_correct else 0.0
+                total_score += awarded
+                question_scores[str(qid)] = {
+                    'marks_awarded':  awarded,
+                    'max_marks':      max_marks,
+                    'is_correct':     is_correct,
+                    'pending_manual': False,
+                }
+            else:
+                # Needs manual grading
+                pending_manual += 1
+                question_scores[str(qid)] = {
+                    'marks_awarded':  None,
+                    'max_marks':      max_marks,
+                    'is_correct':     None,
+                    'pending_manual': True,
+                }
+
+        # ── Essay: always manual ──────────────────────────────────────────────
+        elif q.question_type == q.ESSAY:
+            pending_manual += 1
+            question_scores[str(qid)] = {
+                'marks_awarded':  None,
+                'max_marks':      max_marks,
+                'is_correct':     None,
+                'pending_manual': True,
+            }
+
+    # ── Compute percentage & pass/fail ────────────────────────────────────────
+    score_pct = round((total_score / total_marks) * 100, 2) if total_marks > 0 else 0.0
+    is_fully_graded = pending_manual == 0
+
+    # ── Write everything to DB ────────────────────────────────────────────────
+    response.question_scores      = question_scores
+    response.total_score          = total_score
+    response.score_percentage     = score_pct
+    response.pending_manual_count = pending_manual
+    response.submitted_at         = now
+    response.status               = (
+        StudentExamResponse.GRADED if is_fully_graded else StudentExamResponse.SUBMITTED
+    )
+    if is_fully_graded:
+        response.passed     = score_pct >= float(exam.pass_mark)
+        response.graded_at  = now
+        response.graded_by  = None   # system-graded
+    else:
+        response.passed = None       # awaits manual grading
+
     if response.exam_started_at:
         response.time_spent_seconds = int((now - response.exam_started_at).total_seconds())
 
     response.save(update_fields=[
-        'total_score', 'status', 'submitted_at', 'time_spent_seconds'
+        'question_scores', 'total_score', 'score_percentage',
+        'pending_manual_count', 'submitted_at', 'status',
+        'passed', 'graded_at', 'graded_by', 'time_spent_seconds',
     ])
 
-    return JsonResponse({'status': 'submitted', 'score': total})
+    return JsonResponse({
+        'status':           'submitted',
+        'score':            total_score,
+        'score_percentage': score_pct,
+        'passed':           response.passed,
+        'pending_manual':   pending_manual,
+        'fully_graded':     is_fully_graded,
+    })

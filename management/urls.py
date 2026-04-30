@@ -62,12 +62,10 @@ urlpatterns = [
     # path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
     # path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
 
-    # LMS Courses
     path('lms-courses/', views.lms_courses_list, name='lms_courses_list'),
+    path('lms-courses/save/', views.lms_course_save, name='lms_course_save'),
     path('lms-courses/academic-course-data/<int:pk>/', views.lms_academic_course_data, name='lms_academic_course_data'),
-    path('lms-courses/create/', views.lms_course_create, name='lms_course_create'),
     path('lms-courses/<int:pk>/', views.lms_course_detail, name='lms_course_detail'),
-    path('lms-courses/<int:pk>/edit/', views.lms_course_edit, name='lms_course_edit'),
     path('lms-courses/<int:pk>/delete/', views.lms_course_delete, name='lms_course_delete'),
 
     # Blog
@@ -229,6 +227,7 @@ urlpatterns = [
     path('exams/<slug:slug>/questions/', views.admin_question_moderation, name='admin_question_moderation'),
     path('exams/<slug:slug>/timetable/', views.admin_exam_timetable_update, name='admin_exam_timetable_update'),
     path('exams/<slug:slug>/responses/', views.admin_exam_responses, name='admin_exam_responses'),
+    path('exams/<slug:slug>/release-results/', views.admin_exam_release_results, name='admin_exam_release_results'),
 
     # ── Library ──────────────────────────────────────────────────────────────
     path('library/',                             views.library_items_list,         name='library_items_list'),

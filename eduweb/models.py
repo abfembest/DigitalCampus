@@ -1440,23 +1440,6 @@ class AcademicSession(models.Model):
         )
     )
 
-    # ── Registration Windows ───────────────────────────────────────────────
-    registration_start = models.DateField(
-        null=True, blank=True,
-        help_text="When student course registration opens"
-    )
-    registration_end = models.DateField(
-        null=True, blank=True,
-        help_text="When student course registration closes"
-    )
-
-    # ── Override ────────────────────────────────────────────────────────────
-    override_current_term = models.CharField(
-        max_length=20, choices=TERM_CHOICES,
-        blank=True,
-        help_text="Admin override: force the system to report this term as current"
-    )
-
     # ── Status ─────────────────────────────────────────────────────────────
     status = models.CharField(
         max_length=20,
@@ -1487,9 +1470,7 @@ class AcademicSession(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_current:
-            # Unmark all other sessions as current
             AcademicSession.objects.exclude(pk=self.pk).update(is_current=False)
-            # Ensure this session is active when marked current
             if not self.status or self.status == 'upcoming':
                 self.status = 'active'
         super().save(*args, **kwargs)
@@ -1500,23 +1481,75 @@ class AcademicSession(models.Model):
         return cls.objects.filter(is_current=True).first()
 
     def get_current_term(self):
-        if self.override_current_term:
-            return self.override_current_term
+        """
+        Return the term key whose date window contains today.
+        Derived purely from term_dates — no override field needed.
+        e.g. term_dates = [
+            {"term": "first",  "start": "2025-09-01", "end": "2026-01-31"},
+            {"term": "second", "start": "2026-02-01", "end": "2026-06-30"},
+        ]
+        """
+        from datetime import date
         today = timezone.now().date()
         for entry in self.term_dates:
-            from datetime import date
-            start = date.fromisoformat(entry['start'])
-            end   = date.fromisoformat(entry['end'])
-            if start <= today <= end:
-                return entry['term']
+            try:
+                start = date.fromisoformat(entry['start'])
+                end   = date.fromisoformat(entry['end'])
+                if start <= today <= end:
+                    return entry['term']
+            except (KeyError, ValueError):
+                continue
         return None
+
+    def get_registration_window(self, term=None):
+        """
+        Return (reg_open, reg_close) for the given term (defaults to
+        get_current_term).  Registration opens on the first day of the
+        term and closes 21 days later (3-week window).
+
+        Returns (None, None) if the term is not found in term_dates.
+        """
+        from datetime import date, timedelta
+        target = term or self.get_current_term()
+        if not target:
+            return (None, None)
+        for entry in self.term_dates:
+            if entry.get('term') == target:
+                try:
+                    reg_open  = date.fromisoformat(entry['start'])
+                    reg_close = reg_open + timedelta(days=21)
+                    return (reg_open, reg_close)
+                except (KeyError, ValueError):
+                    return (None, None)
+        return (None, None)
 
     @property
     def is_registration_open(self):
+        """
+        True when today falls inside the 3-week registration window
+        of whichever term is currently running.
+
+        The window is computed from term_dates — no separate DB fields
+        required.  Works for any term key the admin configures
+        (first, second, third, fall, spring, summer, …).
+        """
+        from datetime import date
         today = timezone.now().date()
-        if self.registration_start and self.registration_end:
-            return self.registration_start <= today <= self.registration_end
-        return False
+        reg_open, reg_close = self.get_registration_window()
+        if reg_open is None:
+            return False
+        return reg_open <= today <= reg_close
+
+    def registration_window_for_term(self, term):
+        """
+        Convenience: human-readable window string for a specific term.
+        Useful in admin list_display or template tags.
+        e.g. "01 Sep 2025 – 22 Sep 2025"
+        """
+        reg_open, reg_close = self.get_registration_window(term=term)
+        if reg_open and reg_close:
+            return f"{reg_open.strftime('%d %b %Y')} – {reg_close.strftime('%d %b %Y')}"
+        return "—"
 
 class Course(models.Model):
 
@@ -5604,6 +5637,11 @@ class StudentExamResponse(models.Model):
     @property
     def needs_manual_grading(self):
         return self.pending_manual_count > 0
+
+    @property
+    def auto_graded(self):
+        """true if the attempt has been fully auto-graded (no pending manual questions)."""
+        return self.status == self.graded and self.pending_manual_count == 0
 
 
 # =============================================================================

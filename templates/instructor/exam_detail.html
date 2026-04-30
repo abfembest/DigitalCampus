@@ -916,7 +916,16 @@
                                 {% if resp.submitted_at %}{{ resp.submitted_at|date:"M j, H:i" }}{% else %}—{% endif %}
                             </td>
                             <td class="px-3 sm:px-4 py-3.5 text-right">
-                                <a href="#" class="text-primary-600 hover:text-primary-700 text-xs font-medium">Review</a>
+                                <a href="{% url 'instructor:exam_grade_response' slug=exam.slug response_id=resp.id %}"
+   class="text-primary-600 hover:text-primary-700 text-xs font-medium whitespace-nowrap">
+    {% if resp.pending_manual_count %}
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
+            <i class="fas fa-pen text-[10px]"></i> Grade ({{ resp.pending_manual_count }})
+        </span>
+    {% else %}
+        Review <i class="fas fa-arrow-right text-xs ml-0.5"></i>
+    {% endif %}
+</a>
                             </td>
                         </tr>
                         {% endfor %}

@@ -16,6 +16,7 @@ urlpatterns = [
     path('courses/<slug:course_slug>/', views.course_detail, name='course_detail'),
     path('courses/<slug:course_slug>/enroll/', views.enroll_course, name='enroll_course'),
     path('courses/<slug:course_slug>/review/', views.submit_review, name='submit_review'),  # NEW
+    path('courses/<slug:course_slug>/retry-lms-enrollment/', views.retry_lms_enrollment, name='retry_lms_enrollment'),
 
     # ── Lessons ──────────────────────────────────────────────────────────────
     path(

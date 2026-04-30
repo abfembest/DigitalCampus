@@ -857,18 +857,18 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-book w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">My Courses</span>
+                                <span class="ml-3">Course Registration</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:my_courses' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
-                                <i class="fas fa-list mr-2" aria-hidden="true"></i> Enrolled Courses
+                                <i class="fas fa-list mr-2" aria-hidden="true"></i> Register Courses
                             </a>
                             <a href="{% url 'students:course_catalog' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
-                                <i class="fas fa-search mr-2" aria-hidden="true"></i> Browse Catalog
+                                <i class="fas fa-search mr-2" aria-hidden="true"></i> Session / Semester Courses
                             </a>
                         </div>
                     </div>
@@ -1637,11 +1637,19 @@
                     </span>
                     {% endif %}
 
-                    {# Registration window — pushed to the right on large screens #}
+                    {# Registration window — shows exact open/close dates #}
                     {% if registration_open %}
                     <span class="ml-auto inline-flex items-center gap-1.5 text-green-700 bg-green-50 border border-green-200 rounded-lg px-2.5 py-1 text-[11px] font-semibold flex-shrink-0">
                         <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                        Registration Open
+                        Reg. Open
+                        {% if reg_open and reg_close %}
+                        &bull; {{ reg_open|date:"M j" }} – {{ reg_close|date:"M j, Y" }}
+                        {% endif %}
+                    </span>
+                    {% elif reg_open %}
+                    <span class="ml-auto inline-flex items-center gap-1.5 text-gray-500 bg-gray-100 border border-gray-200 rounded-lg px-2.5 py-1 text-[11px] font-medium flex-shrink-0">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                        Reg. Closed &bull; Opens {{ reg_open|date:"M j, Y" }}
                     </span>
                     {% else %}
                     <span class="ml-auto inline-flex items-center gap-1.5 text-gray-500 bg-gray-100 border border-gray-200 rounded-lg px-2.5 py-1 text-[11px] font-medium flex-shrink-0">
@@ -1973,9 +1981,11 @@
         }
     </style>
     {% endif %}
-    {% if request.user.is_authenticated and request.user.profile.role != 'admin' %}
-        {% include 'chatbot/chatbot.html' %}
-    {% endif %}
+    {% block chatbot %}
+        {% if request.user.is_authenticated and request.user.profile.role != 'admin' %}
+            {% include 'chatbot/chatbot.html' %}
+        {% endif %}
+    {% endblock %}
     {% block extra_js %}{% endblock %}
 </body>
 </html>

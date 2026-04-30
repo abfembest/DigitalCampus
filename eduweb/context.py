@@ -164,6 +164,21 @@ def student_counts(request):
             result['current_session']   = cs
             result['current_term']      = cs.get_current_term() if cs else None
             result['registration_open'] = cs.is_registration_open if cs else False
+            if cs:
+                _ro, _rc = cs.get_registration_window()
+                result['reg_open']  = _ro
+                result['reg_close'] = _rc
+            else:
+                result['reg_open'] = result['reg_close'] = None
+
+            # Student academic identity — profile, department, faculty
+            # Available globally so views don't need to re-fetch them.
+            profile    = request.user.profile
+            department = getattr(profile.program, 'department', None) if getattr(profile, 'program', None) else None
+            faculty    = getattr(department, 'faculty', None) if department else None
+            result['student_profile']     = profile
+            result['student_department']  = department
+            result['student_faculty']     = faculty
 
         return result
 

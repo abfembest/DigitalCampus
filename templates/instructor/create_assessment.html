@@ -4,90 +4,89 @@
 {% block title %}Create Assessment{% endblock %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto px-2 sm:px-0">
+<div class="max-w-full px-4 sm:px-6 lg:px-8">
 
-    <!-- Breadcrumb -->
+    {% comment %} ── Breadcrumb ── {% endcomment %}
     <nav class="flex mb-4 sm:mb-6 overflow-x-auto" aria-label="Breadcrumb">
-        <ol class="inline-flex items-center space-x-1 text-sm whitespace-nowrap">
-            <li><a href="{% url 'instructor:dashboard' %}" class="text-gray-500 hover:text-primary-600 transition-colors">Dashboard</a></li>
-            <li class="flex items-center">
-                <i class="fas fa-chevron-right text-gray-400 mx-1.5 text-xs"></i>
-                <span class="text-gray-800 font-medium">Create Assessment</span>
+        <ol class="inline-flex items-center gap-1.5 text-md whitespace-nowrap flex-wrap">
+            <li><a href="{% url 'instructor:dashboard' %}" class="text-gray-500 hover:text-primary-600 transition-colors font-medium">Dashboard</a></li>
+            <li class="flex items-center gap-1.5">
+                <i class="fas fa-chevron-right text-gray-400 text-md"></i>
+                <span class="text-gray-800 font-semibold">Create Assessment</span>
             </li>
         </ol>
     </nav>
 
-    <!-- Page Header -->
+    {% comment %} ── Page Header ── {% endcomment %}
     <div class="mb-6">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Create Assessment</h1>
-        <p class="text-gray-600 mt-1 text-sm sm:text-base">Create a quiz, assignment, or exam for one of your courses.</p>
+        <h1 class="text-2xl sm:text-3xl xl:text-4xl font-bold text-gray-900">Create Assessment</h1>
+        <p class="text-gray-600 mt-1 text-md lg:text-lg">Create a quiz, assignment, or exam for one of your courses.</p>
     </div>
 
-    <!-- Django messages -->
+    {% comment %} ── Django messages ── {% endcomment %}
     {% if messages %}
     <div class="mb-5 space-y-2">
         {% for message in messages %}
-        <div class="flex items-start gap-3 px-4 py-3 rounded-lg border
+        <div class="flex items-start gap-3 px-4 py-3 rounded-xl border
             {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
             {% elif message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
             {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
-            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle text-red-500{% elif message.tags == 'success' %}fa-check-circle text-green-500{% else %}fa-info-circle text-blue-500{% endif %} mt-0.5 flex-shrink-0"></i>
-            <p class="text-sm">{{ message }}</p>
+            <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle text-red-500{% elif message.tags == 'success' %}fa-check-circle text-green-500{% else %}fa-info-circle text-blue-500{% endif %} mt-0.5 flex-shrink-0 text-lg"></i>
+            <p class="text-md">{{ message }}</p>
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <!-- ══════════════════════════════════════════════════════════════════
+    {% comment %} ══════════════════════════════════════════════════════════════════
          STEP 1 — Pick assessment type
-    ══════════════════════════════════════════════════════════════════ -->
+    ══════════════════════════════════════════════════════════════════ {% endcomment %}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-4">Step 1 — What are you creating?</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4" id="typeCards">
+        <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Step 1 — What are you creating?</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="typeCards">
 
-            <label class="type-card cursor-pointer rounded-xl border-2 border-gray-200 p-4 sm:p-5 flex flex-col items-center gap-2 hover:border-primary-400 hover:bg-primary-50 transition-all" data-type="quiz">
+            <label class="type-card cursor-pointer rounded-xl border-2 border-gray-200 p-5 sm:p-6 flex flex-col items-center gap-3 hover:border-primary-400 hover:bg-primary-50 transition-all" data-type="quiz">
                 <input type="radio" name="assessment_type" value="quiz" class="sr-only">
-                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-question-circle text-blue-600 text-xl"></i>
+                <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-question-circle text-blue-600 text-2xl"></i>
                 </div>
-                <span class="font-semibold text-gray-900 text-sm sm:text-base">Quiz</span>
-                <span class="text-xs text-gray-500 text-center">Timed/untimed MCQ or open questions attached to a lesson</span>
+                <span class="font-semibold text-gray-900 text-md lg:text-lg">Quiz</span>
+                <span class="text-md text-gray-500 text-center">Timed/untimed MCQ or open questions attached to a lesson</span>
             </label>
 
-            <label class="type-card cursor-pointer rounded-xl border-2 border-gray-200 p-4 sm:p-5 flex flex-col items-center gap-2 hover:border-green-400 hover:bg-green-50 transition-all" data-type="assignment">
+            <label class="type-card cursor-pointer rounded-xl border-2 border-gray-200 p-5 sm:p-6 flex flex-col items-center gap-3 hover:border-green-400 hover:bg-green-50 transition-all" data-type="assignment">
                 <input type="radio" name="assessment_type" value="assignment" class="sr-only">
-                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-file-alt text-green-600 text-xl"></i>
+                <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-file-alt text-green-600 text-2xl"></i>
                 </div>
-                <span class="font-semibold text-gray-900 text-sm sm:text-base">Assignment</span>
-                <span class="text-xs text-gray-500 text-center">Written / file-upload task with a deadline, attached to a lesson</span>
+                <span class="font-semibold text-gray-900 text-md lg:text-lg">Assignment</span>
+                <span class="text-md text-gray-500 text-center">Written / file-upload task with a deadline, attached to a lesson</span>
             </label>
 
-            <label class="type-card cursor-pointer rounded-xl border-2 border-gray-200 p-4 sm:p-5 flex flex-col items-center gap-2 hover:border-purple-400 hover:bg-purple-50 transition-all" data-type="exam">
+            <label class="type-card cursor-pointer rounded-xl border-2 border-gray-200 p-5 sm:p-6 flex flex-col items-center gap-3 hover:border-purple-400 hover:bg-purple-50 transition-all" data-type="exam">
                 <input type="radio" name="assessment_type" value="exam" class="sr-only">
-                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-scroll text-purple-600 text-xl"></i>
+                <div class="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-scroll text-purple-600 text-2xl"></i>
                 </div>
-                <span class="font-semibold text-gray-900 text-sm sm:text-base">Exam</span>
-                <span class="text-xs text-gray-500 text-center">Formal timetabled exam — submitted for admin approval before publishing</span>
+                <span class="font-semibold text-gray-900 text-md lg:text-lg">Exam</span>
+                <span class="text-md text-gray-500 text-center">Formal timetabled exam — submitted for admin approval before publishing</span>
             </label>
 
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════════════
+    {% comment %} ══════════════════════════════════════════════════════════════════
          STEP 2 — Pick course (always visible once type is chosen)
-    ══════════════════════════════════════════════════════════════════ -->
+    ══════════════════════════════════════════════════════════════════ {% endcomment %}
     <div id="step2" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-        <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-4">Step 2 — Choose a Course</h2>
+        <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Step 2 — Choose a Course</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label for="courseInput" class="block text-sm font-medium text-gray-700 mb-1.5">Your Courses *</label>
-                <!-- Datalist for course selection -->
+                <label for="courseInput" class="block text-md font-semibold text-gray-700 mb-1.5">Your Courses *</label>
                 <input
                     id="courseInput"
                     list="courseList"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-md"
                     placeholder="Type to search your courses…"
                     autocomplete="off"
                 >
@@ -101,220 +100,212 @@
                     ></option>
                     {% endfor %}
                 </datalist>
-                <p class="text-xs text-gray-400 mt-1">Start typing the course name or code</p>
+                <p class="text-md text-gray-400 mt-1">Start typing the course name or code</p>
             </div>
-            <div id="courseInfoBox" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 text-sm space-y-1">
-                <p class="font-semibold text-gray-800" id="ciTitle"></p>
-                <p class="text-gray-500">Code: <span id="ciCode" class="font-medium text-gray-700">—</span></p>
-                <p class="text-gray-500">Session: <span id="ciSession" class="font-medium text-gray-700">—</span></p>
+            <div id="courseInfoBox" class="hidden bg-gray-50 border border-gray-200 rounded-xl p-4 text-md space-y-1.5">
+                <p class="font-semibold text-gray-800 text-md lg:text-lg" id="ciTitle"></p>
+                <p class="text-gray-500 text-md">Code: <span id="ciCode" class="font-medium text-gray-700">—</span></p>
+                <p class="text-gray-500 text-md">Session: <span id="ciSession" class="font-medium text-gray-700">—</span></p>
             </div>
         </div>
 
-        <!-- Exam + unlinked course notice (informational only — does NOT block submission) -->
-        <div id="examUnlinkedWarning" class="hidden mt-4 flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3">
-            <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
+        <div id="examUnlinkedWarning" class="hidden mt-4 flex items-start gap-3 bg-amber-50 border border-amber-300 rounded-xl px-4 py-4">
+            <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0 text-lg"></i>
             <div>
-                <p class="text-sm font-semibold text-amber-900">Course not linked to an academic record</p>
-                <p class="text-xs text-amber-800 mt-0.5">
+                <p class="text-md font-semibold text-amber-900">Course not linked to an academic record</p>
+                <p class="text-md text-amber-800 mt-1">
                     This LMS course has no linked academic course. The exam will be created as a standalone exam without a session link.
                     You can link it to an academic course later via <strong>Course Settings</strong> if needed. You may still proceed.
                 </p>
             </div>
         </div>
 
-        <!-- Lesson picker (quiz & assignment only) -->
         <div id="lessonRow" class="hidden mt-4">
-            <label for="lessonInput" class="block text-sm font-medium text-gray-700 mb-1.5">Lesson *</label>
+            <label for="lessonInput" class="block text-md font-semibold text-gray-700 mb-1.5">Lesson *</label>
             <input
                 id="lessonInput"
                 list="lessonList"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-md"
                 placeholder="Type to search lessons…"
                 autocomplete="off"
                 disabled
             >
             <datalist id="lessonList"></datalist>
-            <!-- hidden real value for form submission -->
             <input type="hidden" id="selectedLessonId">
-            <p class="text-xs text-gray-400 mt-1">The quiz / assignment will be attached to this lesson.</p>
+            <p class="text-md text-gray-400 mt-1">The quiz / assignment will be attached to this lesson.</p>
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════════════
+    {% comment %} ══════════════════════════════════════════════════════════════════
          STEP 3 — The correct form panel
-    ══════════════════════════════════════════════════════════════════ -->
+    ══════════════════════════════════════════════════════════════════ {% endcomment %}
 
-    <!-- ── QUIZ PANEL ─────────────────────────────────────────────────── -->
+    {% comment %} ── QUIZ PANEL ─────────────────────────────────────────────────── {% endcomment %}
     <div id="panelQuiz" class="hidden">
         <form method="post" enctype="multipart/form-data" id="quizForm">
             {% csrf_token %}
-{% if form.errors %}
-<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-    <p class="text-sm font-semibold text-red-700 mb-1"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
-    {% for field in form %}{% for error in field.errors %}<p class="text-xs text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
-    {% for error in form.non_field_errors %}<p class="text-xs text-red-600">• {{ error }}</p>{% endfor %}
-</div>
-{% endif %}
+            {% if form.errors %}
+            <div class="mb-5 p-4 sm:p-5 bg-red-50 border border-red-200 rounded-xl">
+                <p class="text-md font-semibold text-red-700 mb-2"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
+                {% for field in form %}{% for error in field.errors %}<p class="text-md text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<p class="text-md text-red-600">• {{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
             <input type="hidden" name="assessment_type" value="quiz">
             <input type="hidden" name="course_id"       id="hfCourseIdQuiz">
             <input type="hidden" name="lesson_id"       id="hfLessonIdQuiz">
             <input type="hidden" name="questions_data"  id="hfQuestionsData" value="[]">
 
-            <!-- Quiz basics -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Quiz Details</h2>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Quiz Details</h2>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Quiz Title *</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Quiz Title *</label>
                         {{ quiz_form.title }}
-                        {% if quiz_form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ quiz_form.title.errors.0 }}</p>{% endif %}
+                        {% if quiz_form.title.errors %}<p class="text-md text-red-600 mt-1">{{ quiz_form.title.errors.0 }}</p>{% endif %}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Description</label>
                         {{ quiz_form.description }}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Instructions for Students</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Instructions for Students</label>
                         {{ quiz_form.instructions }}
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Time Limit (mins)</label>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Time Limit (mins)</label>
                             {{ quiz_form.time_limit_minutes }}
-                            <p class="text-xs text-gray-400 mt-1">Blank = no limit</p>
+                            <p class="text-md text-gray-400 mt-1">Blank = no limit</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Passing Score (%) *</label>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Passing Score (%) *</label>
                             {{ quiz_form.passing_score }}
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Max Attempts *</label>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Max Attempts *</label>
                             {{ quiz_form.max_attempts }}
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-4">
-                        <label class="flex items-center gap-2 cursor-pointer text-sm">
+                        <label class="flex items-center gap-2 cursor-pointer text-md">
                             {{ quiz_form.shuffle_questions }}<span>Shuffle Questions</span>
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer text-sm">
+                        <label class="flex items-center gap-2 cursor-pointer text-md">
                             {{ quiz_form.show_correct_answers }}<span>Show Correct Answers After Submission</span>
                         </label>
                     </div>
                 </div>
             </div>
 
-            <!-- Questions builder -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
-                    <h2 class="text-base sm:text-lg font-semibold text-gray-900">Questions</h2>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2 border-b border-gray-200">
+                    <h2 class="text-lg sm:text-xl font-semibold text-gray-900">Questions</h2>
                     <button type="button" id="addQuestionBtn"
-                            class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium transition-colors">
-                        <i class="fas fa-plus mr-2"></i>Add Question
+                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-md font-semibold transition-colors">
+                        <i class="fas fa-plus"></i>Add Question
                     </button>
                 </div>
-
                 <div id="questionsContainer" class="space-y-4">
-                    <p id="noQuestionsMsg" class="text-sm text-gray-400 text-center py-6">No questions yet. Click "Add Question" to start.</p>
+                    <p id="noQuestionsMsg" class="text-md text-gray-400 text-center py-8 border-2 border-dashed border-gray-200 rounded-xl">No questions yet. Click "Add Question" to start.</p>
                 </div>
             </div>
 
-            <!-- Submit -->
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-8">
-                <a href="{% url 'instructor:all_quizzes' %}" class="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium w-full sm:w-auto text-center">Cancel</a>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-8">
+                <a href="{% url 'instructor:all_quizzes' %}" class="px-5 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-md font-semibold w-full sm:w-auto text-center transition-colors">Cancel</a>
                 <button type="submit" id="submitQuiz"
-                        class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-sm text-sm font-medium w-full sm:w-auto">
+                        class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 shadow-sm text-md font-semibold w-full sm:w-auto transition-colors">
                     <i class="fas fa-save mr-2"></i>Save Quiz &amp; Questions
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- ── ASSIGNMENT PANEL ───────────────────────────────────────────── -->
+    {% comment %} ── ASSIGNMENT PANEL ───────────────────────────────────────────── {% endcomment %}
     <div id="panelAssignment" class="hidden">
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
-{% if form.errors %}
-<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-    <p class="text-sm font-semibold text-red-700 mb-1"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
-    {% for field in form %}{% for error in field.errors %}<p class="text-xs text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
-    {% for error in form.non_field_errors %}<p class="text-xs text-red-600">• {{ error }}</p>{% endfor %}
-</div>
-{% endif %}
+            {% if form.errors %}
+            <div class="mb-5 p-4 sm:p-5 bg-red-50 border border-red-200 rounded-xl">
+                <p class="text-md font-semibold text-red-700 mb-2"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
+                {% for field in form %}{% for error in field.errors %}<p class="text-md text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<p class="text-md text-red-600">• {{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
             <input type="hidden" name="assessment_type" value="assignment">
             <input type="hidden" name="course_id"       id="hfCourseIdAssign">
             <input type="hidden" name="lesson_id"       id="hfLessonIdAssign">
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Assignment Details</h2>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Assignment Details</h2>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Title *</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Title *</label>
                         {{ assign_form.title }}
-                        {% if assign_form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ assign_form.title.errors.0 }}</p>{% endif %}
+                        {% if assign_form.title.errors %}<p class="text-md text-red-600 mt-1">{{ assign_form.title.errors.0 }}</p>{% endif %}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Description *</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Description *</label>
                         {{ assign_form.description }}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Detailed Instructions *</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Detailed Instructions *</label>
                         {{ assign_form.instructions }}
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Max Score *</label>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Max Score *</label>
                             {{ assign_form.max_score }}
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Passing Score *</label>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Passing Score *</label>
                             {{ assign_form.passing_score }}
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="sm:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Due Date *</label>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Due Date *</label>
                             {{ assign_form.due_date }}
                         </div>
                         <div>
-                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                            <label class="flex items-center gap-2 cursor-pointer text-md">
                                 {{ assign_form.allow_late_submission }}<span>Allow Late Submissions</span>
                             </label>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Late Penalty (%)</label>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Late Penalty (%)</label>
                             {{ assign_form.late_penalty_percent }}
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Attachment (Optional)</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Attachment (Optional)</label>
                         {{ assign_form.attachment }}
-                        <p class="text-xs text-gray-400 mt-1">PDF, DOC, DOCX, TXT, ZIP</p>
+                        <p class="text-md text-gray-400 mt-1">PDF, DOC, DOCX, TXT, ZIP</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Display Order</label>
-                        <div class="w-28">{{ assign_form.display_order }}</div>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Display Order</label>
+                        <div class="w-36">{{ assign_form.display_order }}</div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-8">
-                <a href="{% url 'instructor:all_assignments' %}" class="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium w-full sm:w-auto text-center">Cancel</a>
-                <button type="submit" class="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-sm text-sm font-medium w-full sm:w-auto">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-8">
+                <a href="{% url 'instructor:all_assignments' %}" class="px-5 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-md font-semibold w-full sm:w-auto text-center transition-colors">Cancel</a>
+                <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-sm text-md font-semibold w-full sm:w-auto transition-colors">
                     <i class="fas fa-save mr-2"></i>Save Assignment
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- ── EXAM PANEL ─────────────────────────────────────────────────── -->
+    {% comment %} ── EXAM PANEL ─────────────────────────────────────────────────── {% endcomment %}
     <div id="panelExam" class="hidden">
 
-        <!-- Admin approval notice -->
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex gap-3">
-            <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0 text-lg"></i>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-5 mb-5 flex gap-3">
+            <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0 text-xl"></i>
             <div>
-                <p class="text-sm font-semibold text-amber-900">Approval Required</p>
-                <p class="text-xs text-amber-800 mt-0.5">
+                <p class="text-md font-semibold text-amber-900 lg:text-lg">Approval Required</p>
+                <p class="text-md text-amber-800 mt-1">
                     Exams are saved as <strong>Draft</strong> and sent to the admin for approval.
                     After approval &amp; publishing, students can only see the exam on the scheduled date/time.
                 </p>
@@ -323,208 +314,290 @@
 
         <form method="post" enctype="multipart/form-data" id="examForm">
             {% csrf_token %}
-{% if form.errors %}
-<div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-    <p class="text-sm font-semibold text-red-700 mb-1"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
-    {% for field in form %}{% for error in field.errors %}<p class="text-xs text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
-    {% for error in form.non_field_errors %}<p class="text-xs text-red-600">• {{ error }}</p>{% endfor %}
-</div>
-{% endif %}
+            {% if form.errors %}
+            <div class="mb-5 p-4 sm:p-5 bg-red-50 border border-red-200 rounded-xl">
+                <p class="text-md font-semibold text-red-700 mb-2"><i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below:</p>
+                {% for field in form %}{% for error in field.errors %}<p class="text-md text-red-600">• {{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<p class="text-md text-red-600">• {{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
             <input type="hidden" name="assessment_type" value="exam">
             <input type="hidden" name="course_id" id="hfCourseIdExam">
             <input type="hidden" name="exam_questions_data" id="hfExamQuestionsData" value="[]">
 
-            <!-- Identity — title auto-filled from course, editable -->
+            {% comment %} ── Identity ── {% endcomment %}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 pb-2 border-b border-gray-200">Exam Details</h2>
-                <p class="text-xs text-gray-400 mb-4">Title is auto-filled from the selected course. Edit as needed.</p>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-1 pb-2 border-b border-gray-200">Exam Details</h2>
+                <p class="text-md text-gray-400 mb-4">Title is auto-filled from the selected course — edit as needed. Delivery is always online (CBT).</p>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Exam Title *</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Exam Title *</label>
                         {{ exam_form.title }}
-                        {% if exam_form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ exam_form.title.errors.0 }}</p>{% endif %}
+                        {% if exam_form.title.errors %}<p class="text-md text-red-600 mt-1">{{ exam_form.title.errors.0 }}</p>{% endif %}
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Exam Type *</label>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Exam Type *</label>
                             {{ exam_form.exam_type }}
+                            {% if exam_form.exam_type.errors %}<p class="text-md text-red-600 mt-1">{{ exam_form.exam_type.errors.0 }}</p>{% endif %}
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Delivery Mode *</label>
-                            {{ exam_form.mode }}
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Delivery Mode</label>
+                            <div class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 text-md">
+                                Online / CBT <span class="text-gray-400 font-normal">(system default — always online)</span>
+                            </div>
                         </div>
+                    </div>
+                    <div>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Internal Description <span class="text-gray-400 font-normal">(not shown to students)</span></label>
+                        {{ exam_form.description }}
                     </div>
                 </div>
             </div>
 
-            <!-- Timetable -->
+            {% comment %} ── Timetable ── {% endcomment %}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Timetable</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="sm:col-span-2 md:col-span-1">
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Exam Date *</label>
-                        {{ exam_form.exam_date }}
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-1 pb-2 border-b border-gray-200">Timetable</h2>
+                <p class="text-md text-gray-400 mb-4">
+                    Duration is <strong>auto-calculated</strong> from start and end datetimes.
+                    The instruction page opens automatically <strong>10 minutes before</strong> the start time (system constant).
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Start Date &amp; Time *</label>
+                        {{ exam_form.start_datetime }}
+                        {% if exam_form.start_datetime.errors %}<p class="text-md text-red-600 mt-1">{{ exam_form.start_datetime.errors.0 }}</p>{% endif %}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Start Time *</label>
-                        {{ exam_form.start_time }}
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">End Date &amp; Time *</label>
+                        {{ exam_form.end_datetime }}
+                        {% if exam_form.end_datetime.errors %}<p class="text-md text-red-600 mt-1">{{ exam_form.end_datetime.errors.0 }}</p>{% endif %}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">End Time *</label>
-                        {{ exam_form.end_time }}
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Instruction Window</label>
-                        <div class="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 text-sm font-medium">
-                            10 minutes <span class="text-gray-400 font-normal">(fixed)</span>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Computed Duration</label>
+                        <div id="computedDuration" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 text-md">
+                            — set start &amp; end to calculate
                         </div>
-                        {# Hidden field still submitted so form validation passes #}
-                        <input type="hidden" name="instruction_window_minutes" value="10">
-                        <p class="text-xs text-gray-400 mt-1">Students can view the instruction page 10 mins before exam start. This is a system constant.</p>
+                        <p class="text-md text-gray-400 mt-1">Auto-calculated · Instruction page: 10 min before start (fixed)</p>
                     </div>
                 </div>
             </div>
 
-            
-
-            <!-- Question Pool Config -->
+            {% comment %} ── Question Pool Config ── {% endcomment %}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Question Pool Configuration</h2>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Question Pool Configuration</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Questions per Student</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Questions per Student</label>
                         {{ exam_form.questions_per_student }}
-                        <p class="text-xs text-gray-400 mt-1">Blank = all active questions</p>
+                        <p class="text-md text-gray-400 mt-1">Blank = all active questions</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Total Marks</label>
-                        {{ exam_form.total_marks }}
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Total Marks</label>
+                        <div class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-md">
+                            Auto-summed from active questions
+                        </div>
+                        <p class="text-md text-gray-400 mt-1">Calculated from question marks — not editable here</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Pass Mark</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Pass Mark</label>
                         {{ exam_form.pass_mark }}
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-4">
-                    <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <div class="flex flex-wrap gap-4 sm:gap-6">
+                    <label class="flex items-center gap-2 cursor-pointer text-md">
                         {{ exam_form.shuffle_questions }}<span>Shuffle Questions</span>
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer text-sm">
+                    <label class="flex items-center gap-2 cursor-pointer text-md">
                         {{ exam_form.shuffle_options }}<span>Shuffle Options</span>
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer text-sm">
+                    <label class="flex items-center gap-2 cursor-pointer text-md">
                         {{ exam_form.show_result_immediately }}<span>Show Result Immediately After Submit</span>
                     </label>
                 </div>
             </div>
 
-            <!-- ══════════════════════════════════════════════════════════
-                 QUESTION INPUT METHOD — choose one: manual OR file upload
-            ══════════════════════════════════════════════════════════════ -->
+            {% comment %} ── Question Input Method ── {% endcomment %}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 pb-2 border-b border-gray-200">Add Exam Questions</h2>
-                <p class="text-xs text-gray-500 mb-4">Choose how you want to add questions — you can only use one method per submission.</p>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-1 pb-2 border-b border-gray-200">Add Exam Questions</h2>
+                <p class="text-md text-gray-500 mb-4">Choose how you want to add questions — you can only use one method per submission.</p>
 
-                <!-- Toggle buttons -->
-                <div class="flex gap-3 mb-5" id="qMethodToggle">
+                <div class="flex flex-wrap gap-3 mb-5" id="qMethodToggle">
                     <button type="button" id="btnMethodManual"
-                        class="q-method-btn flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all border-purple-500 bg-purple-50 text-purple-700"
+                        class="q-method-btn flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border-2 text-md font-semibold transition-all border-purple-500 bg-purple-50 text-purple-700"
                         data-method="manual">
                         <i class="fas fa-keyboard"></i>Enter Manually
                     </button>
                     <button type="button" id="btnMethodUpload"
-                        class="q-method-btn flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all border-gray-200 bg-white text-gray-600 hover:border-purple-300"
+                        class="q-method-btn flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border-2 text-md font-semibold transition-all border-gray-200 bg-white text-gray-600 hover:border-purple-300"
                         data-method="upload">
                         <i class="fas fa-upload"></i>Upload File
                     </button>
                 </div>
 
-                <!-- MANUAL builder -->
+                {% comment %} ── MANUAL builder ── {% endcomment %}
                 <div id="qMethodManualPanel">
-                    <div class="flex items-center justify-between mb-3">
-                        <p class="text-sm text-gray-600">Add questions one by one using the builder below.</p>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <p class="text-md text-gray-600">Add questions one by one using the builder below.</p>
                         <button type="button" id="addExamQuestionBtn"
-                                class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-colors">
-                            <i class="fas fa-plus mr-2"></i>Add Question
+                                class="inline-flex items-center gap-2 px-5 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-md font-semibold transition-colors self-start sm:self-auto">
+                            <i class="fas fa-plus"></i>Add Question
                         </button>
                     </div>
                     <div id="examQuestionsContainer" class="space-y-4">
-                        <p id="noExamQuestionsMsg" class="text-sm text-gray-400 text-center py-8 border-2 border-dashed border-gray-200 rounded-xl">
+                        <p id="noExamQuestionsMsg" class="text-md text-gray-400 text-center py-10 border-2 border-dashed border-gray-200 rounded-xl">
                             No questions yet. Click "Add Question" to start.
                         </p>
                     </div>
                 </div>
 
-                <!-- UPLOAD panel (hidden by default) -->
+                {% comment %} ── UPLOAD panel ── {% endcomment %}
                 <div id="qMethodUploadPanel" class="hidden">
-                    <div class="space-y-3">
-                        <label class="block text-sm font-medium text-gray-700">Upload .docx or .xlsx file</label>
-                        {{ exam_form.question_import_file }}
-                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-600 space-y-1.5 mt-2">
-                            <p class="font-semibold text-gray-700">XLSX format (one question per row):</p>
-                            <p>Col A: Question text &nbsp;|&nbsp; B–E: Options (B=opt1, C=opt2…) &nbsp;|&nbsp; F: Correct option number (1–4) &nbsp;|&nbsp; G: Difficulty (easy/medium/hard) &nbsp;|&nbsp; H: Marks &nbsp;|&nbsp; I: Explanation</p>
-                            <p class="font-semibold text-gray-700 mt-1">DOCX format (blank line between questions):</p>
-                            <p>Q: Question text &nbsp;|&nbsp; A: Option (prefix * for correct, e.g. <code>A: *Paris</code>) &nbsp;|&nbsp; EXPLANATION: … &nbsp;|&nbsp; DIFFICULTY: easy &nbsp;|&nbsp; MARKS: 2</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-md font-semibold text-gray-700 mb-1.5">Upload .xlsx file *</label>
+                            {{ exam_form.question_import_file }}
+                            {% if exam_form.question_import_file.errors %}<p class="text-md text-red-600 mt-1">{{ exam_form.question_import_file.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <div class="rounded-xl border border-purple-200 overflow-hidden">
+                            <div class="bg-purple-50 px-4 py-3 flex items-center gap-2 border-b border-purple-200">
+                                <i class="fas fa-table text-purple-600"></i>
+                                <span class="text-md font-semibold text-purple-900">XLSX Format — one question per row (row 1 = header, skip it)</span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-md border-collapse" style="min-width:780px;">
+                                    <thead>
+                                        <tr class="bg-gray-100 text-gray-600 font-semibold">
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-green-100 text-green-800 font-bold">A</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-blue-100 text-blue-800 font-bold">B</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-blue-100 text-blue-800 font-bold">C</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-blue-100 text-blue-800 font-bold">D</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-blue-100 text-blue-800 font-bold">E</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-yellow-100 text-yellow-800 font-bold">F</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-orange-100 text-orange-800 font-bold">G</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-red-100 text-red-800 font-bold">H</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-purple-100 text-purple-800 font-bold">I</td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center bg-gray-100 text-gray-700 font-bold">J</td>
+                                        </tr>
+                                        <tr class="bg-gray-50 text-gray-500 text-md">
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">question_text</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">option_1</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">option_2</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">option_3</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">option_4</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">correct_option</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">difficulty</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">marks</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">explanation</td>
+                                            <td class="border border-gray-300 px-2 py-1.5 font-semibold">question_type</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-gray-700 bg-white">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="border border-gray-200 px-2 py-2">What is the capital of France?</td>
+                                            <td class="border border-gray-200 px-2 py-2">London</td>
+                                            <td class="border border-gray-200 px-2 py-2 font-semibold text-green-700">Paris</td>
+                                            <td class="border border-gray-200 px-2 py-2">Berlin</td>
+                                            <td class="border border-gray-200 px-2 py-2">Madrid</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center font-bold text-yellow-700">2</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">easy</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">1</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-gray-400 italic">Paris has been France's capital since…</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">mcq</td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="border border-gray-200 px-2 py-2">H₂O is the chemical formula for water.</td>
+                                            <td class="border border-gray-200 px-2 py-2 font-semibold text-green-700">True</td>
+                                            <td class="border border-gray-200 px-2 py-2">False</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-gray-300">—</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-gray-300">—</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center font-bold text-yellow-700">1</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">easy</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">1</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-gray-400 italic">H₂O = 2 hydrogen + 1 oxygen</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">true_false</td>
+                                        </tr>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="border border-gray-200 px-2 py-2">Which are primary colours? (select all)</td>
+                                            <td class="border border-gray-200 px-2 py-2 font-semibold text-green-700">Red</td>
+                                            <td class="border border-gray-200 px-2 py-2 font-semibold text-green-700">Blue</td>
+                                            <td class="border border-gray-200 px-2 py-2 font-semibold text-green-700">Yellow</td>
+                                            <td class="border border-gray-200 px-2 py-2">Green</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center font-bold text-yellow-700">1,2,3</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">medium</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">2</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-gray-400 italic">Red, blue, yellow are the primary colours</td>
+                                            <td class="border border-gray-200 px-2 py-2 text-center">multi_select</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="bg-gray-50 border-t border-gray-200 px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-md text-gray-600">
+                                <div class="flex items-start gap-2"><span class="font-semibold text-yellow-700 min-w-[90px]">Col F (correct):</span> Column number(s) of correct option — e.g. <code class="bg-gray-200 px-1 rounded">2</code> for option 2; <code class="bg-gray-200 px-1 rounded">1,2,3</code> for multi_select</div>
+                                <div class="flex items-start gap-2"><span class="font-semibold text-orange-700 min-w-[90px]">Col G (difficulty):</span> <code class="bg-gray-200 px-1 rounded">easy</code> / <code class="bg-gray-200 px-1 rounded">medium</code> / <code class="bg-gray-200 px-1 rounded">hard</code></div>
+                                <div class="flex items-start gap-2"><span class="font-semibold text-gray-700 min-w-[90px]">Col J (type):</span> <code class="bg-gray-200 px-1 rounded">mcq</code> / <code class="bg-gray-200 px-1 rounded">multi_select</code> / <code class="bg-gray-200 px-1 rounded">true_false</code> / <code class="bg-gray-200 px-1 rounded">short_answer</code> / <code class="bg-gray-200 px-1 rounded">essay</code></div>
+                                <div class="flex items-start gap-2"><span class="font-semibold text-green-700 min-w-[90px]">Correct cells:</span> highlighted in green above — leave options C–E blank for true_false</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Instructions -->
+            {% comment %} ── Instructions ── {% endcomment %}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Student Instructions <span class="text-sm font-normal text-gray-400">(optional)</span></h2>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Student Instructions <span class="text-md font-normal text-gray-400">(optional)</span></h2>
                 <div>
                     {{ exam_form.instructions }}
-                    <p class="text-xs text-gray-400 mt-1">Shown on the instruction countdown page before the exam starts</p>
+                    <p class="text-md text-gray-400 mt-1">Shown on the instruction countdown page before the exam starts</p>
                 </div>
             </div>
 
+            {% comment %} Visibility window block is commented out in original — preserved {% endcomment %}
             {% comment %} <!-- Visibility window -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6 mb-5">
-                <h2 class="text-base sm:text-lg font-semibold text-gray-900 mb-2 pb-2 border-b border-gray-200">Student Visibility Window <span class="text-sm font-normal text-gray-400">(optional)</span></h2>
-                <p class="text-xs text-gray-500 mb-4">Students can only see the exam once published AND within this window. Leave blank to show as soon as it is published.</p>
+                <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-2 pb-2 border-b border-gray-200">Student Visibility Window <span class="text-md font-normal text-gray-400">(optional)</span></h2>
+                <p class="text-md text-gray-500 mb-4">Students can only see the exam once published AND within this window. Leave blank to show as soon as it is published.</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Visible From</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Visible From</label>
                         {{ exam_form.visible_from }}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Visible Until</label>
+                        <label class="block text-md font-semibold text-gray-700 mb-1.5">Visible Until</label>
                         {{ exam_form.visible_until }}
                     </div>
                 </div>
             </div> {% endcomment %}
 
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-8">
-                <a href="{% url 'instructor:dashboard' %}" class="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium w-full sm:w-auto text-center">Cancel</a>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-8">
+                <a href="{% url 'instructor:dashboard' %}" class="px-5 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-md font-semibold w-full sm:w-auto text-center transition-colors">Cancel</a>
                 <button type="submit" id="submitExam"
-                        class="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm text-sm font-medium w-full sm:w-auto">
+                        class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm text-md font-semibold w-full sm:w-auto transition-colors">
                     <i class="fas fa-paper-plane mr-2"></i>Submit for Approval
                 </button>
             </div>
         </form>
     </div>
 
-</div><!-- /max-w-5xl -->
+</div>{% comment %} /max-w-full {% endcomment %}
 
-<!-- ══════════════════════════════════════════════════════════════════
+{% comment %} ══════════════════════════════════════════════════════════════════
      QUESTION BLOCK TEMPLATE (cloned by JS) — QUIZ
-══════════════════════════════════════════════════════════════════ -->
+══════════════════════════════════════════════════════════════════ {% endcomment %}
 <template id="questionTemplate">
     <div class="question-block border border-gray-200 rounded-xl p-4 sm:p-5 bg-gray-50 relative" data-qindex="">
-
         <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-semibold text-gray-700 q-label">Question #1</span>
-            <button type="button" class="remove-question text-red-500 hover:text-red-700 text-xs">
+            <span class="text-md font-semibold text-gray-700 q-label">Question #1</span>
+            <button type="button" class="remove-question text-red-500 hover:text-red-700 text-md font-medium">
                 <i class="fas fa-trash mr-1"></i>Remove
             </button>
         </div>
-
         <div class="space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Question Type</label>
-                    <select class="q-type w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500">
+                    <label class="block text-md font-semibold text-gray-600 mb-1">Question Type</label>
+                    <select class="q-type w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500">
                         <option value="mcq">Multiple Choice (single)</option>
                         <option value="multi_select">Multiple Choice (multi)</option>
                         <option value="true_false">True / False</option>
@@ -533,29 +606,26 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Points</label>
-                    <input type="number" class="q-points w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500" value="1" min="0" step="0.01">
+                    <label class="block text-md font-semibold text-gray-600 mb-1">Points</label>
+                    <input type="number" class="q-points w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500" value="1" min="0" step="0.01">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Order</label>
-                    <input type="number" class="q-order w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500" value="0" min="0">
+                    <label class="block text-md font-semibold text-gray-600 mb-1">Order</label>
+                    <input type="number" class="q-order w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500" value="0" min="0">
                 </div>
             </div>
-
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Question Text *</label>
-                <textarea class="q-text w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 resize-y" rows="2" placeholder="Enter your question..."></textarea>
+                <label class="block text-md font-semibold text-gray-600 mb-1">Question Text *</label>
+                <textarea class="q-text w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 resize-y" rows="2" placeholder="Enter your question..."></textarea>
             </div>
-
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Explanation <span class="text-gray-400 font-normal">(shown after submission)</span></label>
-                <textarea class="q-explanation w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 resize-y" rows="1" placeholder="Optional..."></textarea>
+                <label class="block text-md font-semibold text-gray-600 mb-1">Explanation <span class="text-gray-400 font-normal">(shown after submission)</span></label>
+                <textarea class="q-explanation w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 resize-y" rows="1" placeholder="Optional..."></textarea>
             </div>
-
             <div class="answers-section">
                 <div class="flex items-center justify-between mb-2">
-                    <label class="block text-xs font-medium text-gray-600">Answer Choices</label>
-                    <button type="button" class="add-answer text-xs text-primary-600 hover:text-primary-800 font-medium">
+                    <label class="block text-md font-semibold text-gray-600">Answer Choices</label>
+                    <button type="button" class="add-answer text-md text-primary-600 hover:text-primary-800 font-semibold">
                         <i class="fas fa-plus mr-1"></i>Add Choice
                     </button>
                 </div>
@@ -565,34 +635,34 @@
     </div>
 </template>
 
-<!-- ANSWER ROW TEMPLATE -->
+{% comment %} ANSWER ROW TEMPLATE {% endcomment %}
 <template id="answerTemplate">
     <div class="answer-row flex items-center gap-2 sm:gap-3">
         <input type="checkbox" class="a-correct flex-shrink-0 w-4 h-4 text-primary-600 border-gray-300 rounded" title="Mark as correct">
-        <input type="text"     class="a-text flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500" placeholder="Answer choice text">
-        <input type="number"   class="a-order w-14 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 text-center" value="0" min="0" title="Order">
-        <button type="button"  class="remove-answer flex-shrink-0 text-red-400 hover:text-red-600 text-xs px-1">
+        <input type="text"     class="a-text flex-1 px-3 py-2 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500" placeholder="Answer choice text">
+        <input type="number"   class="a-order w-16 px-2 py-2 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 text-center" value="0" min="0" title="Order">
+        <button type="button"  class="remove-answer flex-shrink-0 text-red-400 hover:text-red-600 text-md px-1">
             <i class="fas fa-times"></i>
         </button>
     </div>
 </template>
 
-<!-- ══════════════════════════════════════════════════════════════════
+{% comment %} ══════════════════════════════════════════════════════════════════
      EXAM QUESTION BLOCK TEMPLATE
-══════════════════════════════════════════════════════════════════ -->
+══════════════════════════════════════════════════════════════════ {% endcomment %}
 <template id="examQuestionTemplate">
     <div class="exam-question-block border border-gray-200 rounded-xl p-4 sm:p-5 bg-gray-50 relative">
         <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-semibold text-gray-700 eq-label">Question #1</span>
-            <button type="button" class="remove-eq text-red-500 hover:text-red-700 text-xs">
+            <span class="text-md font-semibold text-gray-700 eq-label">Question #1</span>
+            <button type="button" class="remove-eq text-red-500 hover:text-red-700 text-md font-medium">
                 <i class="fas fa-trash mr-1"></i>Remove
             </button>
         </div>
         <div class="space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div class="sm:col-span-2">
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Question Type</label>
-                    <select class="eq-type w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-400">
+                    <label class="block text-md font-semibold text-gray-600 mb-1">Question Type</label>
+                    <select class="eq-type w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-purple-400">
                         <option value="mcq">Multiple Choice (single)</option>
                         <option value="multi_select">Multiple Choice (multi)</option>
                         <option value="true_false">True / False</option>
@@ -601,34 +671,34 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Difficulty</label>
-                    <select class="eq-difficulty w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-400">
+                    <label class="block text-md font-semibold text-gray-600 mb-1">Difficulty</label>
+                    <select class="eq-difficulty w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-purple-400">
                         <option value="easy">Easy</option>
                         <option value="medium" selected>Medium</option>
                         <option value="hard">Hard</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Marks</label>
-                    <input type="number" class="eq-marks w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-400" value="1" min="0" step="0.5">
+                    <label class="block text-md font-semibold text-gray-600 mb-1">Marks</label>
+                    <input type="number" class="eq-marks w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-purple-400" value="1" min="0" step="0.5">
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Question Text *</label>
-                <textarea class="eq-text w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-400 resize-y" rows="2" placeholder="Enter your question..."></textarea>
+                <label class="block text-md font-semibold text-gray-600 mb-1">Question Text *</label>
+                <textarea class="eq-text w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-purple-400 resize-y" rows="2" placeholder="Enter your question..."></textarea>
             </div>
             <div class="eq-options-section">
                 <div class="flex items-center justify-between mb-2">
-                    <label class="block text-xs font-medium text-gray-600">Answer Options <span class="text-gray-400 font-normal">(check the correct one(s))</span></label>
-                    <button type="button" class="add-eq-option text-xs text-purple-600 hover:text-purple-800 font-medium">
+                    <label class="block text-md font-semibold text-gray-600">Answer Options <span class="text-gray-400 font-normal">(check the correct one(s))</span></label>
+                    <button type="button" class="add-eq-option text-md text-purple-600 hover:text-purple-800 font-semibold">
                         <i class="fas fa-plus mr-1"></i>Add Option
                     </button>
                 </div>
                 <div class="eq-options-container space-y-2"></div>
             </div>
             <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">Explanation <span class="text-gray-400 font-normal">(optional, shown after answers released)</span></label>
-                <textarea class="eq-explanation w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-400 resize-y" rows="1" placeholder="Optional..."></textarea>
+                <label class="block text-md font-semibold text-gray-600 mb-1">Explanation <span class="text-gray-400 font-normal">(optional, shown after answers released)</span></label>
+                <textarea class="eq-explanation w-full px-3 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-purple-400 resize-y" rows="1" placeholder="Optional..."></textarea>
             </div>
         </div>
     </div>
@@ -637,8 +707,8 @@
 <template id="examOptionTemplate">
     <div class="eq-option-row flex items-center gap-2">
         <input type="checkbox" class="eq-opt-correct flex-shrink-0 w-4 h-4 text-purple-600 border-gray-300 rounded" title="Mark as correct">
-        <input type="text" class="eq-opt-text flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-400" placeholder="Option text">
-        <button type="button" class="remove-eq-option flex-shrink-0 text-red-400 hover:text-red-600 text-xs px-1">
+        <input type="text" class="eq-opt-text flex-1 px-3 py-2 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-purple-400" placeholder="Option text">
+        <button type="button" class="remove-eq-option flex-shrink-0 text-red-400 hover:text-red-600 text-md px-1">
             <i class="fas fa-times"></i>
         </button>
     </div>
@@ -656,10 +726,8 @@
     const $ = id => document.getElementById(id);
 
     // ─────────────────────────────────────────────────────────────────
-    // Helpers: build a lookup map from datalist options
+    // Build course lookup map
     // ─────────────────────────────────────────────────────────────────
-
-    // Build course lookup: "display text" → {id, slug, linked}
     const courseMap = {};
     document.querySelectorAll('#courseList option').forEach(opt => {
         courseMap[opt.value] = {
@@ -705,14 +773,11 @@
 
     function updateExamUnlinkedWarning() {
         const warn = $('examUnlinkedWarning');
-        // Show informational warning only — do NOT disable the button.
-        // Unlinked courses can still create exams (no academic session will be set).
         if (selectedType === 'exam' && selectedCourseId && !selectedCourseLinked) {
             warn.classList.remove('hidden');
         } else {
             warn.classList.add('hidden');
         }
-        // Always keep submit enabled
         const btn = $('submitExam');
         if (btn) btn.disabled = false;
     }
@@ -725,7 +790,6 @@
             selectedCourseLinked = match.linked;
             onCourseSelected(match.id);
         } else {
-            // User is still typing or cleared — reset
             if (!val) {
                 selectedCourseId = null;
                 selectedCourseLinked = false;
@@ -737,7 +801,6 @@
         }
     });
 
-    // Also handle when user selects from the datalist (fires 'change' in some browsers)
     $('courseInput').addEventListener('change', function() {
         const val = this.value.trim();
         const match = courseMap[val];
@@ -749,12 +812,10 @@
     });
 
     function onCourseSelected(courseId) {
-        // Propagate to all hidden course_id fields
         ['hfCourseIdQuiz','hfCourseIdAssign','hfCourseIdExam'].forEach(id => {
             const el = $(id); if (el) el.value = courseId;
         });
 
-        // Fetch course details (code, session, is_linked)
         fetch(`{% url 'instructor:ajax_course_details' %}?course_id=${courseId}`)
             .then(r => r.json())
             .then(d => {
@@ -763,11 +824,9 @@
                 $('ciSession').textContent = d.academic_session_name || '—';
                 $('courseInfoBox').classList.remove('hidden');
 
-                // Update linked status from server response (more reliable)
                 selectedCourseLinked = !!d.is_linked;
                 updateExamUnlinkedWarning();
 
-                // Auto-fill exam title
                 const examTitleEl = document.getElementById('id_exam_title');
                 if (examTitleEl && (!examTitleEl.value || examTitleEl.dataset.autofilled === 'true')) {
                     examTitleEl.value = d.title ? `${d.title} — Exam` : '';
@@ -776,7 +835,6 @@
             })
             .catch(() => {});
 
-        // Fetch lessons (quiz / assignment only)
         if (selectedType && selectedType !== 'exam') {
             loadLessons(courseId);
         }
@@ -785,7 +843,6 @@
         if (selectedType) showPanel();
     }
 
-    // If title is manually edited, stop auto-filling it
     const examTitleElListener = document.getElementById('id_exam_title');
     if (examTitleElListener) {
         examTitleElListener.addEventListener('input', function() {
@@ -796,8 +853,6 @@
     // ─────────────────────────────────────────────────────────────────
     // Lesson datalist
     // ─────────────────────────────────────────────────────────────────
-
-    // Lesson map built dynamically after AJAX
     let lessonMap = {};
 
     function resetLessonInput() {
@@ -858,9 +913,9 @@
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Exam question method toggle (manual vs upload — only one allowed)
+    // Exam question method toggle (manual vs upload)
     // ─────────────────────────────────────────────────────────────────
-    let qMethod = 'manual'; // default
+    let qMethod = 'manual';
 
     function setQMethod(method) {
         qMethod = method;
@@ -870,13 +925,11 @@
         $('qMethodManualPanel').classList.toggle('hidden', method !== 'manual');
         $('qMethodUploadPanel').classList.toggle('hidden', method !== 'upload');
 
-        // When switching to upload, clear manual questions to avoid sending both
         if (method === 'upload') {
             $('examQuestionsContainer').querySelectorAll('.exam-question-block').forEach(b => b.remove());
             $('noExamQuestionsMsg').style.display = '';
             $('hfExamQuestionsData').value = '[]';
         }
-        // When switching to manual, clear the file input
         if (method === 'manual') {
             const fileInput = document.querySelector('[name="question_import_file"]');
             if (fileInput) fileInput.value = '';
@@ -885,7 +938,6 @@
 
     $('btnMethodManual').addEventListener('click', () => setQMethod('manual'));
     $('btnMethodUpload').addEventListener('click', () => setQMethod('upload'));
-    // Set initial active state
     setQMethod('manual');
 
     // ─────────────────────────────────────────────────────────────────
@@ -970,7 +1022,7 @@
     let eqCount = 0;
 
     function buildExamQuestionsData() {
-        if (qMethod === 'upload') return [];  // file upload path — no manual data
+        if (qMethod === 'upload') return [];
         const data = [];
         document.querySelectorAll('.exam-question-block').forEach(b => {
             const options = [];
@@ -1041,9 +1093,37 @@
             $('courseInput').focus();
             return;
         }
-        // Collect manual questions only if using manual mode; upload path leaves it as []
         $('hfExamQuestionsData').value = JSON.stringify(buildExamQuestionsData());
     });
+
+    // ─────────────────────────────────────────────────────────────────
+    // Auto-calculate exam duration from start_datetime / end_datetime
+    // ─────────────────────────────────────────────────────────────────
+    (function () {
+        const startEl = document.querySelector('[name="start_datetime"]');
+        const endEl   = document.querySelector('[name="end_datetime"]');
+        const display = document.getElementById('computedDuration');
+        if (!startEl || !endEl || !display) return;
+
+        function updateDuration() {
+            const s = new Date(startEl.value);
+            const e = new Date(endEl.value);
+            if (!startEl.value || !endEl.value || isNaN(s) || isNaN(e) || e <= s) {
+                display.textContent = e <= s && startEl.value && endEl.value
+                    ? '⚠ End must be after start'
+                    : '— set start & end to calculate';
+                display.className = 'w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-md';
+                return;
+            }
+            const mins = Math.round((e - s) / 60000);
+            const h = Math.floor(mins / 60), m = mins % 60;
+            display.textContent = h > 0 ? `${h}h ${m}m (${mins} mins total)` : `${m} minutes`;
+            display.className = 'w-full px-4 py-3 border border-gray-200 rounded-lg bg-green-50 text-green-700 text-md font-semibold';
+        }
+
+        startEl.addEventListener('change', updateDuration);
+        endEl.addEventListener('change',   updateDuration);
+    })();
 
     // ─────────────────────────────────────────────────────────────────
     // Restore active tab after POST error
@@ -1054,7 +1134,6 @@
     if (serverTab && ['quiz','assignment','exam'].includes(serverTab)) {
         selectType(serverTab);
         if (serverCourseId) {
-            // Find the matching option text so we can set the datalist input
             const matchEntry = Object.entries(courseMap).find(([, v]) => v.id === serverCourseId);
             if (matchEntry) {
                 $('courseInput').value   = matchEntry[0];
@@ -1065,7 +1144,6 @@
                 });
                 updateExamUnlinkedWarning();
                 showPanel();
-                // Reload lessons for quiz/assignment
                 if (serverTab !== 'exam') loadLessons(serverCourseId);
             }
         }

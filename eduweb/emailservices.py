@@ -2559,3 +2559,136 @@ The {site.school_short_name} Team
             payroll.staff.email, e, exc_info=True,
         )
         return False
+
+
+#######################################################
+# ADMIN-CREATED USER — VERIFICATION + CREDENTIALS EMAIL
+#######################################################
+def send_admin_created_user_email(request, user, raw_password):
+    """
+    Sent when an admin creates a new user account.
+
+    Flow:
+      1. Generates a fresh verification token on the profile.
+      2. Sends ONE email containing:
+         - Login credentials (username + temporary password)
+         - Verification link
+         - Clear instruction: verify FIRST, then log in.
+
+    Returns True on success, False on failure (non-fatal).
+    """
+    try:
+        site    = _site()
+        school  = site.school_short_name or site.school_name or 'Portal'
+        profile = user.profile
+
+        # Rotate token so it is always fresh for admin-created accounts
+        token = profile.generate_verification_token()
+
+        verification_url = request.build_absolute_uri(
+            reverse('eduweb:verify_email', kwargs={'token': str(token)})
+        )
+
+        subject = f'Your {school} Account — Verify Your Email to Get Started'
+
+        text_body = (
+            f"Hello {user.get_full_name() or user.username},\n\n"
+            f"An administrator has created a {school} portal account for you.\n\n"
+            f"--- Your Login Credentials ---\n"
+            f"Username : {user.username}\n"
+            f"Password : {raw_password}\n\n"
+            f"IMPORTANT: You must verify your email address BEFORE you can log in.\n\n"
+            f"Click the link below to verify your email:\n"
+            f"{verification_url}\n\n"
+            f"This link expires in 24 hours.\n\n"
+            f"Once verified, you can log in and change your password immediately.\n\n"
+            f"— {school} Team"
+        )
+
+        html_body = f"""
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;
+                    padding:0;background:#f4f4f4;">
+          <div style="background:linear-gradient(135deg,#840384 0%,#a855f7 100%);
+                      padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+            <h1 style="color:white;margin:0;font-size:24px;">
+              Welcome to {school}!
+            </h1>
+          </div>
+          <div style="background:#ffffff;padding:30px;border-radius:0 0 10px 10px;">
+            <p style="font-size:16px;">
+              Dear <strong>{user.get_full_name() or user.username}</strong>,
+            </p>
+            <p>
+              An administrator has created a portal account for you on
+              <strong>{site.school_name}</strong>.
+            </p>
+
+            <!-- Credentials box -->
+            <div style="background:#f5f5f5;border-radius:8px;
+                        padding:16px 20px;margin:20px 0;
+                        border-left:4px solid #840384;">
+              <p style="margin:4px 0;font-size:15px;">
+                <strong>Username:</strong> {user.username}
+              </p>
+              <p style="margin:4px 0;font-size:15px;">
+                <strong>Password:</strong>
+                <code style="background:#ede9fe;padding:2px 6px;
+                             border-radius:4px;">{raw_password}</code>
+              </p>
+            </div>
+
+            <!-- Verification warning -->
+            <div style="background:#fef9c3;border:1px solid #fde047;
+                        border-radius:8px;padding:14px 18px;margin:20px 0;">
+              <p style="margin:0;font-size:14px;color:#713f12;">
+                ⚠️ <strong>Important:</strong> You must verify your email address
+                <em>before</em> you can log in. Please click the button below first.
+              </p>
+            </div>
+
+            <!-- Verify button -->
+            <div style="text-align:center;margin:28px 0;">
+              <a href="{verification_url}"
+                 style="display:inline-block;padding:14px 36px;
+                        background:linear-gradient(135deg,#840384 0%,#a855f7 100%);
+                        color:white;text-decoration:none;
+                        border-radius:8px;font-weight:bold;font-size:15px;">
+                Verify My Email Address
+              </a>
+            </div>
+
+            <p style="font-size:13px;color:#666;">
+              Or copy and paste this link:<br>
+              <a href="{verification_url}"
+                 style="color:#1D4ED8;word-break:break-all;">
+                {verification_url}
+              </a>
+            </p>
+            <p style="font-size:13px;color:#666;margin-top:20px;">
+              This link expires in <strong>24 hours</strong>.
+              After verifying, please log in and change your password immediately.
+            </p>
+            <p>
+              Best regards,<br>
+              <strong style="color:#840384;">The {school} Team</strong>
+            </p>
+          </div>
+        </div>
+        """
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_body,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@portal.edu'),
+            to=[user.email],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send(fail_silently=False)
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Admin-created user email failed for %s: %s", user.email, e,
+            exc_info=True,
+        )
+        return False

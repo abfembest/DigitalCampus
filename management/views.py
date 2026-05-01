@@ -61,6 +61,7 @@ from eduweb.models import (
     SystemConfiguration,
     Testimonial,
     TicketReply,
+    Invoice,
     Transaction,
     UserProfile,
     Message,
@@ -117,6 +118,7 @@ from eduweb.emailservices import (
     send_transcript_generated_email,
     send_overdue_payment_reminder_email,
     send_payroll_payment_notification_email,
+    send_admin_created_user_email,
 )
 
 
@@ -474,38 +476,17 @@ def application_detail(request, application_id):
     # Get pending count for sidebar
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded']).count()
     
+    academic_sessions = AcademicSession.objects.filter(
+        status__in=['active', 'upcoming']
+    ).order_by('-name')
+
     context = {
         'application': application,
         'pending_count': pending_count,
+        'academic_sessions': academic_sessions,
     }
     
     return render(request, 'management/application_detail.html', context)
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def mark_reviewed(request, pk):
-    """Log reviewer + timestamp, then redirect to make decision."""
-    if request.method != 'POST':
-        return redirect('management:applications_list')
-
-    application = get_object_or_404(CourseApplication, pk=pk)
-
-    # Only act on applications that are under review
-    if application.status != 'under_review':
-        messages.warning(request, 'Application is not in under_review status.')
-        return redirect('management:application_detail', application_id=application.application_id)
-
-    # Record who reviewed it and when (status stays under_review until decision)
-    application.reviewer = request.user
-    application.reviewed_at = timezone.now()
-    application.save(update_fields=['reviewer', 'reviewed_at'])
-
-    messages.success(
-        request,
-        f'Review recorded for {application.application_id}. Now make your decision.'
-    )
-    return redirect('management:application_detail', application_id=application.application_id)
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
@@ -522,14 +503,33 @@ def make_decision(request, pk):
             messages.error(request, 'Invalid decision. Choose Approved or Rejected.')
             return redirect('management:application_detail', application_id=application.application_id)
 
-        # Slot enforcement — block approval if intake is full
-        if decision == 'approved' and application.intake and application.intake.is_full:
-            messages.error(
-                request,
-                f'Cannot approve: the {application.intake} intake has no remaining slots '
-                f'({application.intake.available_slots} slots, all filled).'
-            )
-            return redirect('management:application_detail', application_id=application.application_id)
+        # Update academic session and entry level if provided in decision form
+        session_id = request.POST.get('academic_session')
+        entry_level = request.POST.get('entry_level')
+        if session_id:
+            try:
+                application.academic_session = AcademicSession.objects.get(id=session_id)
+            except AcademicSession.DoesNotExist:
+                pass
+        if entry_level:
+            try:
+                application.entry_level = int(entry_level)
+            except (ValueError, TypeError):
+                pass
+
+        # Update academic session and entry level if provided in decision form
+        session_id = request.POST.get('academic_session')
+        entry_level = request.POST.get('entry_level')
+        if session_id:
+            try:
+                application.academic_session = AcademicSession.objects.get(id=session_id)
+            except AcademicSession.DoesNotExist:
+                pass
+        if entry_level:
+            try:
+                application.entry_level = int(entry_level)
+            except (ValueError, TypeError):
+                pass
 
         # Update application status
         if decision == 'approved':
@@ -542,9 +542,28 @@ def make_decision(request, pk):
         application.reviewed_at = timezone.now()
         application.save()
 
-        # Auto-issue admission number for accepted students
-        if decision == 'approved':
-            application.issue_admission_number()
+        # On approval: sync program / dept / faculty / session / level to UserProfile
+        if decision == 'approved' and application.user:
+            try:
+                profile = application.user.profile
+                if application.program:
+                    profile.program    = application.program
+                    profile.department = application.program.department
+                    profile.faculty    = application.program.department.faculty
+                if application.academic_session:
+                    profile.admission_session = application.academic_session
+                if application.entry_level:
+                    profile.year_of_study = application.entry_level // 100
+                profile.save(update_fields=[
+                    'program', 'department', 'faculty',
+                    'admission_session', 'year_of_study',
+                ])
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception(
+                    "make_decision — failed to sync profile for application %s",
+                    application.application_id,
+                )
         
         # Send decision email
         send_decision_email(application)
@@ -1187,317 +1206,385 @@ def blog_category_delete(request, pk):
     
     return redirect('management:blog_categories_list')
 
-    UserSearchForm, UserCreateForm, UserEditForm, 
-    UserProfileForm, QuickRoleChangeForm
+import secrets
+import string
+ 
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+ 
+from eduweb.models import UserProfile
+from management.forms import (
+    QuickRoleChangeForm,
+    UserCreateForm,
+    UserEditForm,
+    UserProfileForm,
+    UserSearchForm,
+)
 
 
-@login_required
-@user_passes_test(is_admin)
+def _is_admin(user):
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+ 
+ 
+def _generate_password(length=12):
+    """Generate a secure random password."""
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    while True:
+        pwd = ''.join(secrets.choice(alphabet) for _ in range(length))
+        # Ensure at least one of each required character class
+        if (any(c.islower() for c in pwd)
+                and any(c.isupper() for c in pwd)
+                and any(c.isdigit() for c in pwd)):
+            return pwd
+ 
+ 
+# _send_new_user_credentials removed — logic moved to
+# eduweb.emailservices.send_admin_created_user_email
+ 
+ 
+def _apply_role_staff_rule(user_obj, role):
+    """
+    Enforce: only 'admin' role → is_staff=True. All others → False.
+    Always call after saving role to UserProfile.
+    """
+    should_be_staff = (role == 'admin')
+    if user_obj.is_staff != should_be_staff:
+        user_obj.is_staff = should_be_staff
+        user_obj.save(update_fields=['is_staff'])
+ 
+ 
+# ---------------------------------------------------------------------------
+# VIEW 1 — users_list  (GET: list + stats; POST bulk actions handled here)
+# ---------------------------------------------------------------------------
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 def users_list(request):
-    """List all users with search and filter functionality"""
-    # Get search and filter parameters
+    """
+    Main user management page.
+    Serves the single unified template with all modals embedded.
+    Handles bulk activate/deactivate via POST.
+    """
+    # ── Bulk action (POST from modal-less bulk bar) ──────────────────────────
+    if request.method == 'POST':
+        return _handle_bulk_action(request)
+ 
+    # ── Queryset + filters ───────────────────────────────────────────────────
     search_form = UserSearchForm(request.GET or None)
-    users = User.objects.select_related('profile').all()
-    
-    # Apply filters
+    qs = User.objects.select_related('profile').all()
+ 
     if search_form.is_valid():
         search = search_form.cleaned_data.get('search')
-        role = search_form.cleaned_data.get('role')
-        is_active = search_form.cleaned_data.get('is_active')
-        
+        role   = search_form.cleaned_data.get('role')
+        active = search_form.cleaned_data.get('is_active')
+ 
         if search:
-            users = users.filter(
-                Q(username__icontains=search) |
-                Q(first_name__icontains=search) |
-                Q(last_name__icontains=search) |
-                Q(email__icontains=search)
+            qs = qs.filter(
+                Q(username__icontains=search)
+                | Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(email__icontains=search)
             )
-        
         if role:
-            users = users.filter(profile__role=role)
-        
-        if is_active:
-            users = users.filter(is_active=(is_active == 'true'))
-    
-    # Calculate statistics
+            qs = qs.filter(profile__role=role)
+        if active:
+            qs = qs.filter(is_active=(active == 'true'))
+ 
+    qs = qs.order_by('-date_joined')
+ 
+    # ── Stats ────────────────────────────────────────────────────────────────
     stats = {
-        'total_users': User.objects.count(),
+        'total_users':  User.objects.count(),
         'active_users': User.objects.filter(is_active=True).count(),
-        'staff_users': User.objects.filter(is_staff=True).count(),
-        'students': UserProfile.objects.filter(role='student').count(),
-        'instructors': UserProfile.objects.filter(role='instructor').count(),
+        'staff_users':  User.objects.filter(is_staff=True).count(),
+        'students':     UserProfile.objects.filter(role='student').count(),
+        'instructors':  UserProfile.objects.filter(role='instructor').count(),
     }
-    
-    # Order QuerySet before pagination to avoid inconsistent results
-    users = users.order_by('-date_joined')
-    
-    # Pagination
-    paginator = Paginator(users, 20)
-    page_number = request.GET.get('page')
-    users_page = paginator.get_page(page_number)
-    
-    return render(request, 'management/users/list.html', {
-        'users': users_page,
+ 
+    # ── Pagination ───────────────────────────────────────────────────────────
+    paginator = Paginator(qs, 25)
+    users_page = paginator.get_page(request.GET.get('page'))
+ 
+    return render(request, 'management/user_management.html', {
+        'users':       users_page,
         'search_form': search_form,
-        'stats': stats
+        'stats':       stats,
     })
-
-
-@login_required
-@user_passes_test(is_admin)
-def user_detail(request, pk):
-    """View user details"""
-    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
-    
-    # Calculate user statistics based on role
-    stats = {}
-    if user.profile.role == 'student':
-        stats = {
-            'enrollments': 0,  # Add actual enrollment count
-            'completed_courses': 0,  # Add actual completed courses count
-        }
-    elif user.profile.role == 'instructor':
-        stats = {
-            'courses_taught': 0,  # Add actual courses count
-            'total_students': 0,  # Add actual students count
-        }
-    
-    return render(request, 'management/users/detail.html', {
-        'user': user,
-        'stats': stats
-    })
-
-
-@login_required
-@user_passes_test(is_admin)
+ 
+ 
+def _handle_bulk_action(request):
+    """Internal handler for bulk activate/deactivate."""
+    action   = request.POST.get('action')
+    user_ids = request.POST.get('user_ids', '')
+ 
+    try:
+        ids = [int(uid) for uid in user_ids.split(',') if uid.strip()]
+    except ValueError:
+        messages.error(request, 'Invalid user selection.')
+        return redirect('management:users_list')
+ 
+    # Never allow self-modification
+    ids = [i for i in ids if i != request.user.id]
+ 
+    if not ids:
+        messages.warning(request, 'No valid users selected.')
+        return redirect('management:users_list')
+ 
+    affected = User.objects.filter(id__in=ids)
+ 
+    if action == 'activate':
+        affected.update(is_active=True)
+        messages.success(request, f'{affected.count()} user(s) activated.')
+    elif action == 'deactivate':
+        affected.update(is_active=False)
+        messages.success(request, f'{affected.count()} user(s) deactivated.')
+    else:
+        messages.error(request, 'Unknown action.')
+ 
+    return redirect('management:users_list')
+ 
+ 
+# ---------------------------------------------------------------------------
+# VIEW 2 — user_create  (GET stub / POST AJAX)
+# ---------------------------------------------------------------------------
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 def user_create(request):
-    """Create a new user"""
-    if request.method == 'POST':
-        form = UserCreateForm(request.POST)
-        if form.is_valid():
-            with transaction.atomic():
-                # Create user
-                user = form.save()
-                
-                # Update profile with role
-                user.profile.role = form.cleaned_data['role']
-                user.profile.save()
-                
-                messages.success(
-                    request, 
-                    f'User {user.username} created successfully!'
-                )
-                return redirect('management:user_detail', pk=user.pk)
-    else:
-        form = UserCreateForm()
-    
-    return render(request, 'management/users/create.html', {
-        'form': form
+    """
+    AJAX POST — creates a user, generates a secure password, marks account as
+    inactive until email is verified, then sends a single email containing:
+      • login credentials (username + temporary password)
+      • email verification link
+      • instruction to verify BEFORE logging in
+
+    Returns JSON { success, user_id, email_sent, message }.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+
+    raw_password = _generate_password()
+    post_data = request.POST.copy()
+    post_data['password1'] = raw_password
+    post_data['password2'] = raw_password
+
+    form = UserCreateForm(post_data)
+
+    if not form.is_valid():
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+    with transaction.atomic():
+        user = form.save(commit=False)
+        role = form.cleaned_data.get('role', 'student')
+
+        # Role rule: only 'admin' → is_staff=True
+        user.is_staff = (role == 'admin')
+
+        # Set the password correctly so it is hashed in the database
+        user.set_password(raw_password)
+
+        # Account starts inactive — activated automatically after email verification
+        user.is_active = False
+        user.save()
+
+        # Sync role onto the auto-created profile
+        user.profile.role = role
+        user.profile.email_verified = False
+        user.profile.save(update_fields=['role', 'email_verified'])
+
+    # Delegate email entirely to the service module (non-fatal if it fails)
+    email_sent = send_admin_created_user_email(request, user, raw_password)
+
+    status_note = 'sent' if email_sent else 'could not be sent (check email config)'
+    return JsonResponse({
+        'success': True,
+        'user_id': user.id,
+        'email_sent': email_sent,
+        'message': (
+            f'User {user.username} created. '
+            f'Verification + credentials email {status_note}. '
+            f'Account will activate after email verification.'
+        ),
     })
-
-
-@login_required
-@user_passes_test(is_admin)
+ 
+ 
+# ---------------------------------------------------------------------------
+# VIEW 3 — user_edit  (GET redirects to list; POST AJAX; also handles delete)
+# ---------------------------------------------------------------------------
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 def user_edit(request, pk):
-    """Edit user information"""
-    user = get_object_or_404(User, pk=pk)
-    
-    if request.method == 'POST':
-        user_form = UserEditForm(request.POST, instance=user)
-        profile_form = UserProfileForm(
-            request.POST, 
-            request.FILES, 
-            instance=user.profile
-        )
-        
-        if user_form.is_valid() and profile_form.is_valid():
-            user_form.save()
-            profile_form.save()
-            messages.success(request, f'User {user.username} updated successfully!')
-            return redirect('management:user_detail', pk=user.pk)
-    else:
-        user_form = UserEditForm(instance=user)
-        profile_form = UserProfileForm(instance=user.profile)
-    
-    return render(request, 'management/users/edit.html', {
-        'user': user,
-        'user_form': user_form,
-        'profile_form': profile_form
-    })
+    """
+    AJAX POST — updates User + UserProfile in one atomic transaction.
+    Returns JSON { success, errors }.
+    User deletion is not permitted.
+    """
+    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
 
+    if request.method == 'GET':
+        return redirect('management:users_list')
 
-@login_required
-@user_passes_test(is_admin)
+    # Deletion is disabled — reject any attempt explicitly
+    if request.POST.get('action') == 'delete':
+        return JsonResponse({'success': False, 'message': 'User deletion is not permitted.'}, status=403)
+
+    # ── Edit action ──────────────────────────────────────────────────────────
+    user_form    = UserEditForm(request.POST, instance=user)
+    profile_form = UserProfileForm(request.POST, request.FILES, instance=user.profile)
+ 
+    if not (user_form.is_valid() and profile_form.is_valid()):
+        errors = {**user_form.errors, **profile_form.errors}
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+        messages.error(request, 'Please fix the errors below.')
+        return redirect('management:users_list')
+ 
+    with transaction.atomic():
+        updated_user    = user_form.save(commit=False)
+        updated_profile = profile_form.save(commit=False)
+ 
+        role = updated_profile.role
+ 
+        # Role rule: admin → staff, others → not staff
+        updated_user.is_staff = (role == 'admin')
+        updated_user.save()
+        updated_profile.save()
+ 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': f'User {user.username} updated.'})
+ 
+    messages.success(request, f'User {user.username} updated successfully.')
+    return redirect('management:users_list')
+ 
+ 
+# ---------------------------------------------------------------------------
+# UNCHANGED small endpoints (kept as-is; included for completeness)
+# ---------------------------------------------------------------------------
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 @require_POST
 def user_toggle_active(request, pk):
-    """Toggle user active status"""
     user = get_object_or_404(User, pk=pk)
-    
-    # Prevent self-deactivation
+ 
     if user.id == request.user.id:
-        messages.error(request, 'You cannot deactivate your own account!')
-        return redirect('management:user_detail', pk=pk)
-    
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'Cannot deactivate your own account.'}, status=400)
+        messages.error(request, 'You cannot deactivate your own account.')
+        return redirect('management:users_list')
+ 
     user.is_active = not user.is_active
-    user.save()
-    
-    status = 'activated' if user.is_active else 'deactivated'
-    messages.success(request, f'User {user.username} has been {status}.')
-
-    # Notify the affected user about their account status change
-    if user.is_active:
-        _notify(
-            user=user,
-            title='Account Activated',
-            message='Your account has been activated. You can now log in and access the portal.',
-            notif_type='account',
-            link='/dashboard/',
-        )
-    else:
-        _notify(
-            user=user,
-            title='Account Deactivated',
-            message='Your account has been deactivated. Please contact support if you believe this is an error.',
-            notif_type='account',
-            link='/',
-        )
-
-    # Return JSON for AJAX requests
+    user.save(update_fields=['is_active'])
+ 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({
-            'success': True,
-            'is_active': user.is_active
-        })
-    
-    return redirect('management:user_detail', pk=pk)
-
-
-@login_required
-@user_passes_test(is_admin)
+        return JsonResponse({'success': True, 'is_active': user.is_active})
+ 
+    messages.success(request, f'User {user.username} {"activated" if user.is_active else "deactivated"}.')
+    return redirect('management:users_list')
+ 
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 @require_POST
 def user_change_role(request, pk):
-    """Change user role (AJAX endpoint)"""
-    user = get_object_or_404(User, pk=pk)
+    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
     form = QuickRoleChangeForm(request.POST)
-    
+ 
     if form.is_valid():
-        user.profile.role = form.cleaned_data['role']
-        user.profile.save()
-
-        messages.success(
-            request,
-            f"Role changed to {user.profile.get_role_display()}"
-        )
-
-        # Notify the user their role has changed
-        _notify(
-            user=user,
-            title='Your Role Has Been Updated',
-            message=f'Your account role has been changed to "{user.profile.get_role_display()}" by an administrator.',
-            notif_type='account',
-            link='/dashboard/',
-        )
-
+        role = form.cleaned_data['role']
+        user.profile.role = role
+        user.profile.save(update_fields=['role'])
+        _apply_role_staff_rule(user, role)
+ 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
                 'role': user.profile.role,
-                'role_display': user.profile.get_role_display()
+                'role_display': user.profile.get_role_display(),
             })
-    else:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'errors': form.errors
-            }, status=400)
-    
-    return redirect('management:user_detail', pk=pk)
-
-
-@login_required
-@user_passes_test(is_admin)
+ 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+ 
+    return redirect('management:users_list')
+ 
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
+def user_quick_info(request, pk):
+    """AJAX GET — returns JSON snapshot for view/edit modals."""
+    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
+    profile = user.profile
+ 
+    return JsonResponse({
+        'id':          user.id,
+        'username':    user.username,
+        'full_name':   user.get_full_name() or user.username,
+        'email':       user.email,
+        'role':        profile.get_role_display(),
+        'role_value':  profile.role,
+        'is_active':   user.is_active,
+        'is_staff':    user.is_staff,
+        'date_joined': user.date_joined.strftime('%B %d, %Y'),
+        'last_login':  user.last_login.strftime('%B %d, %Y') if user.last_login else 'Never',
+        'avatar_url':  profile.avatar.url if profile.avatar else None,
+        # Extended profile fields
+        'phone':               profile.phone,
+        'date_of_birth':       str(profile.date_of_birth) if profile.date_of_birth else '',
+        'bio':                 profile.bio,
+        'address':             profile.address,
+        'city':                profile.city,
+        'country':             profile.country,
+        'website':             profile.website,
+        'linkedin':            profile.linkedin,
+        'twitter':             profile.twitter,
+        'email_notifications': profile.email_notifications,
+        'marketing_emails':    profile.marketing_emails,
+    })
+ 
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
 @require_POST
 def bulk_user_action(request):
-    """Handle bulk actions on users"""
-    action = request.POST.get('action')
-    user_ids = request.POST.get('user_ids', '').split(',')
-    
-    if not action or not user_ids:
-        messages.error(request, 'Invalid bulk action request.')
-        return redirect('management:users_list')
-    
-    # Filter out current user to prevent self-modification
-    user_ids = [int(uid) for uid in user_ids if uid and int(uid) != request.user.id]
-    
-    if not user_ids:
-        messages.warning(request, 'No valid users selected.')
-        return redirect('management:users_list')
-    
-    users = User.objects.filter(id__in=user_ids)
-    count = users.count()
-    
+    """Standalone bulk action endpoint (also handled in users_list POST)."""
+    action   = request.POST.get('action')
+    user_ids = request.POST.get('user_ids', '')
+ 
+    try:
+        ids = [int(uid) for uid in user_ids.split(',') if uid.strip()]
+    except ValueError:
+        return JsonResponse({'success': False, 'message': 'Invalid user IDs.'}, status=400)
+ 
+    ids = [i for i in ids if i != request.user.id]
+ 
+    if not ids:
+        return JsonResponse({'success': False, 'message': 'No valid users selected.'}, status=400)
+ 
+    affected = User.objects.filter(id__in=ids)
+ 
     if action == 'activate':
-        users.update(is_active=True)
-        messages.success(request, f'{count} user(s) activated successfully.')
-        for u in User.objects.filter(id__in=user_ids):
-            _notify(
-                user=u,
-                title='Account Activated',
-                message='Your account has been activated by an administrator. You can now log in and access the portal.',
-                notif_type='account',
-                link='/dashboard/',
-            )
-
+        affected.update(is_active=True)
+        msg = f'{affected.count()} user(s) activated.'
     elif action == 'deactivate':
-        users.update(is_active=False)
-        messages.success(request, f'{count} user(s) deactivated successfully.')
-        for u in User.objects.filter(id__in=user_ids):
-            _notify(
-                user=u,
-                title='Account Deactivated',
-                message='Your account has been deactivated by an administrator. Please contact support if you believe this is an error.',
-                notif_type='account',
-                link='/',
-            )
-
+        affected.update(is_active=False)
+        msg = f'{affected.count()} user(s) deactivated.'
     else:
-        messages.error(request, 'Invalid action specified.')
-    
+        return JsonResponse({'success': False, 'message': 'Unknown action.'}, status=400)
+ 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': msg})
+ 
+    messages.success(request, msg)
     return redirect('management:users_list')
-
-
-@login_required
-@user_passes_test(is_admin)
-def user_quick_info(request, pk):
-    """Get quick user info for preview (AJAX endpoint)"""
-    user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
-    
-    data = {
-        'id': user.id,
-        'username': user.username,
-        'full_name': user.get_full_name() or user.username,
-        'email': user.email,
-        'role': user.profile.get_role_display(),
-        'is_active': user.is_active,
-        'is_staff': user.is_staff,
-        'date_joined': user.date_joined.strftime('%B %d, %Y'),
-        'last_login': user.last_login.strftime('%B %d, %Y') if user.last_login else 'Never',
-        'avatar_url': user.profile.avatar.url if user.profile.avatar else None,
-    }
-    
-    return JsonResponse(data)
-
-
-    SystemConfiguration, 
-    CourseCategory, 
-    AuditLog
-
-    SystemConfigurationForm,
-    BrandingConfigForm,
-    EmailConfigForm,
-    NotificationConfigForm,
-    CourseCategoryForm,
-    AuditLogFilterForm
 
 
 # ==================== SYSTEM CONFIGURATION VIEWS ====================
@@ -1872,169 +1959,154 @@ def notification_config(request):
 #     })
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SHARED HELPERS  (unchanged — keep as-is)
+# ─────────────────────────────────────────────────────────────────────────────
+ 
+def _pluralise(count, singular, plural=None):
+    """Return '1 lesson' / '2 lessons' etc."""
+    label = plural if (plural and count != 1) else (singular + ('' if count == 1 else 's'))
+    return f"{count} {label}"
+ 
+ 
+def _notify_instructor(course, requesting_user):
+    """Notify an assigned instructor they have been given a course."""
+    if course.instructor and course.instructor != requesting_user:
+        Notification.objects.create(
+            user=course.instructor,
+            notification_type='system',
+            title=f'Course Assigned: {course.title}',
+            message=(
+                f'You have been assigned as instructor for "{course.title}". '
+                f'You can now add content, lessons, and assessments.'
+            ),
+            link=f'/instructor/courses/{course.slug}/manage/',
+        )
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# VIEW 1 — LIST  (GET: render page | POST: create via modal)
+# ─────────────────────────────────────────────────────────────────────────────
+ 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def lms_courses_list(request):
     """
-    Single-page hub: list  +  create-modal POST handling.
-    All other CRUD operations (edit / detail / delete) are handled by their
-    own views and called via AJAX / modal forms from this page.
+    Single-page hub: course table + create modal + edit modal (inline form).
+    POST here is no longer used for creates (lms_course_save handles both
+    create and update), but the create_form is still rendered for the modal.
     """
-    import json as _json
-    from eduweb.models import AcademicSession, Program
- 
-    # ── POST: create via modal form ───────────────────────────────────────────
-    if request.method == 'POST':
-        create_form = LMSCourseForm(request.POST, request.FILES)
-        if create_form.is_valid():
-            course = create_form.save()
-            AuditLog.objects.create(
-                user=request.user,
-                action='create',
-                model_name='LMSCourse',
-                object_id=course.id,
-                description=f'Created LMS course: {course.title}',
-            )
-            if course.instructor and course.instructor != request.user:
-                Notification.objects.create(
-                    user=course.instructor,
-                    notification_type='system',
-                    title=f'Course Assigned: {course.title}',
-                    message=(
-                        f'You have been assigned as instructor for "{course.title}". '
-                        f'You can now add content, lessons, and assessments.'
-                    ),
-                    link=f'/instructor/courses/{course.slug}/manage/',
-                )
-            messages.success(request, f'LMS course "{course.title}" created successfully.')
-            return redirect('management:lms_courses_list')
-        # Form has errors — fall through so the template re-opens the modal
-    else:
-        create_form = LMSCourseForm()
- 
-    # ── Main queryset ─────────────────────────────────────────────────────────
-    courses = LMSCourse.objects.select_related(
-        'instructor',
-        'academic_course__program__department',
-        'session',
-    ).prefetch_related('enrollments').annotate(
-        lesson_count=Count('lessons')
-    ).order_by('-created_at')
+    # ── Base queryset ─────────────────────────────────────────────────────────
+    courses = (
+        LMSCourse.objects
+        .select_related('instructor', 'academic_course__program__department', 'session')
+        .prefetch_related('enrollments')
+        .annotate(lesson_count=Count('lessons', distinct=True))
+        .order_by('-created_at')
+    )
  
     # ── Filters ───────────────────────────────────────────────────────────────
-    program_id = request.GET.get('program')
-    if program_id:
+    program_id = request.GET.get('program', '').strip()
+    if program_id.isdigit():
         courses = courses.filter(academic_course__program_id=program_id)
  
-    session_id = request.GET.get('session')
-    if session_id:
+    session_id = request.GET.get('session', '').strip()
+    if session_id.isdigit():
         courses = courses.filter(session_id=session_id)
  
-    term_filter = request.GET.get('term')
+    term_filter = request.GET.get('term', '').strip()
     if term_filter:
         courses = courses.filter(term=term_filter)
  
-    published_filter = request.GET.get('published')
+    published_filter = request.GET.get('published', '').strip()
     if published_filter == 'published':
         courses = courses.filter(is_published=True)
     elif published_filter == 'draft':
         courses = courses.filter(is_published=False)
  
-    # ── Stats (unfiltered totals for the stat cards) ──────────────────────────
+    # ── Stats (always from the full, unfiltered table) ────────────────────────
     _s = LMSCourse.objects.aggregate(
         total=Count('id'),
         published=Count('id', filter=Q(is_published=True)),
         draft=Count('id', filter=Q(is_published=False)),
         featured=Count('id', filter=Q(is_featured=True)),
     )
-    stats = {
-        'total':     _s['total'],
-        'published': _s['published'],
-        'draft':     _s['draft'],
-        'featured':  _s['featured'],
-    }
- 
-    # ── Instructor JSON for auto-fill JS ──────────────────────────────────────
-    instructors_data = {
-        str(u.pk): {
-            'full_name': u.get_full_name().strip() or u.username,
-            'bio': getattr(u, 'profile', None) and u.profile.bio or '',
-        }
-        for u in User.objects.filter(
-            profile__role='instructor', is_active=True
-        ).select_related('profile')
-    }
  
     context = {
-        'courses':          courses,
-        'create_form':      create_form,
-        'programs':         Program.objects.order_by('name'),
-        'sessions':         AcademicSession.objects.order_by('-name'),
-        'stats':            stats,
-        'instructors_json': _json.dumps(instructors_data),
+        'courses':      courses,
+        'create_form':  LMSCourseForm(),               # create modal
+        'edit_form':    LMSCourseForm(),               # edit modal (values filled by JS)
+        'programs':     Program.objects.only('id', 'name').order_by('name'),
+        'sessions':     AcademicSession.objects.only('id', 'name').order_by('-name'),
+        'term_choices': LMSCourse._meta.get_field('term').choices,
+        'stats': {
+            'total':     _s['total'],
+            'published': _s['published'],
+            'draft':     _s['draft'],
+            'featured':  _s['featured'],
+        },
     }
     return render(request, 'management/lms_course/list.html', context)
  
  
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def lms_course_create(request):
-    """
-    Standalone POST endpoint for the create modal form
-    (action="{{ url 'management:lms_course_create' }}").
-    On success → redirect to list.  On failure → redirect to list
-    (the list view detects form errors and re-opens the modal).
-    """
-    import json as _json
-    if request.method == 'POST':
-        form = LMSCourseForm(request.POST, request.FILES)
-        if form.is_valid():
-            course = form.save()
-            AuditLog.objects.create(
-                user=request.user,
-                action='create',
-                model_name='LMSCourse',
-                object_id=course.id,
-                description=f'Created LMS course: {course.title}',
-            )
-            if course.instructor and course.instructor != request.user:
-                Notification.objects.create(
-                    user=course.instructor,
-                    notification_type='system',
-                    title=f'Course Assigned: {course.title}',
-                    message=(
-                        f'You have been assigned as instructor for "{course.title}". '
-                        f'You can now add content, lessons, and assessments.'
-                    ),
-                    link=f'/instructor/courses/{course.slug}/manage/',
-                )
-            messages.success(request, f'LMS course "{course.title}" created successfully.')
-        else:
-            messages.error(request, 'Please correct the errors in the form.')
-    return redirect('management:lms_courses_list')
- 
+# ─────────────────────────────────────────────────────────────────────────────
+# AJAX HELPER — academic-course data for auto-fill (create modal only)
+# ─────────────────────────────────────────────────────────────────────────────
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
-def lms_course_edit(request, pk):
+def lms_academic_course_data(request, pk):
     """
-    Handles:
-      GET  ?_modal=1  → return a partial HTML page containing the <form> so the
-                        edit modal can inject it (JS strips and uses the form).
-      GET  (normal)   → full-page edit (JS-disabled fallback).
-      POST            → save; on success redirect to list; on failure re-render.
- 
-    The returned form has   data-lms-edit-form  attribute so the modal JS can
-    locate it reliably.
+    AJAX — returns session, term, level for a given academic Course pk.
+    Used by the create modal to auto-fill fields when academic_course changes.
+    NOT called on edit (edit shows saved values only).
     """
-    import json as _json
-    course = get_object_or_404(LMSCourse, pk=pk)
+    try:
+        course = Course.objects.select_related('program').get(pk=pk, is_active=True)
+    except Course.DoesNotExist:
+        return JsonResponse({'error': 'Not found'}, status=404)
  
-    if request.method == 'POST':
-        form = LMSCourseForm(request.POST, request.FILES, instance=course)
+    active_session = AcademicSession.objects.filter(is_current=True).first()
+    return JsonResponse({
+        'session_id':   active_session.pk   if active_session else None,
+        'session_name': str(active_session) if active_session else '',
+        'term':         course.semester,
+        'level':        course.year_of_study * 100,
+    })
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# VIEW 2 — SAVE  (create + update in one endpoint)
+# ─────────────────────────────────────────────────────────────────────────────
+ 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+@require_POST
+def lms_course_save(request):
+    """
+    Unified create / update endpoint.
+ 
+    POST body must include:
+        _mode      = 'create' | 'edit'
+        course_id  = <pk>  (required when _mode == 'edit')
+ 
+    On success → redirect to list with a success message.
+    On failure → redirect to list with an error message (modal re-open is
+                 not needed because inline Select2 forms don't need re-population
+                 from the server on validation failure in this design).
+    """
+    mode      = request.POST.get('_mode', 'create')
+    course_id = request.POST.get('course_id', '').strip()
+ 
+    if mode == 'edit' and course_id.isdigit():
+        # ── UPDATE ────────────────────────────────────────────────────────────
+        course = get_object_or_404(LMSCourse, pk=int(course_id))
+        form   = LMSCourseForm(request.POST, request.FILES, instance=course)
+ 
         if form.is_valid():
             was_published = course.is_published
             course = form.save()
+ 
             AuditLog.objects.create(
                 user=request.user,
                 action='update',
@@ -2044,161 +2116,193 @@ def lms_course_edit(request, pk):
             )
             messages.success(request, f'LMS course "{course.title}" updated successfully.')
  
-            # Notify enrolled students when a draft course is published
+            # Notify enrolled students when a draft course is first published
             if not was_published and course.is_published:
-                enrolled_students = User.objects.filter(
-                    enrollments__course=course,
-                    enrollments__status='active',
-                    is_active=True,
-                ).distinct()
+                enrolled_students = (
+                    User.objects
+                    .filter(
+                        enrollments__course=course,
+                        enrollments__status='active',
+                        is_active=True,
+                    )
+                    .only('id')
+                    .distinct()
+                )
                 for student in enrolled_students:
                     _notify(
                         user=student,
                         title=f'Course Now Available: {course.title}',
-                        message=f'The course "{course.title}" you are enrolled in has been published.',
+                        message=(
+                            f'The course "{course.title}" you are enrolled in '
+                            f'has been published and is now accessible.'
+                        ),
                         notif_type='enrollment',
                         link=f'/courses/{course.slug}/',
                     )
-            return redirect('management:lms_courses_list')
+        else:
+            messages.error(request, 'Could not save — please check the form and try again.')
+ 
     else:
-        form = LMSCourseForm(instance=course)
+        # ── CREATE ────────────────────────────────────────────────────────────
+        form = LMSCourseForm(request.POST, request.FILES)
  
-    instructors_data = {
-        str(u.pk): {
-            'full_name': u.get_full_name().strip() or u.username,
-            'bio': getattr(u, 'profile', None) and u.profile.bio or '',
-        }
-        for u in User.objects.filter(
-            profile__role='instructor', is_active=True
-        ).select_related('profile')
-    }
+        if form.is_valid():
+            course = form.save()
+            AuditLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='LMSCourse',
+                object_id=course.id,
+                description=f'Created LMS course: {course.title}',
+            )
+            _notify_instructor(course, request.user)
+            messages.success(request, f'LMS course "{course.title}" created successfully.')
+        else:
+            messages.error(request, 'Please correct the errors in the form.')
  
-    context = {
-        'form':             form,
-        'course':           course,
-        'instructors_json': _json.dumps(instructors_data),
-        'is_modal':         bool(request.GET.get('_modal')),
-    }
-    return render(request, 'management/lms_course/edit.html', context)
+    return redirect('management:lms_courses_list')
  
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# VIEW 3 — DETAIL  (JSON for modals, full-page fallback)
+# ─────────────────────────────────────────────────────────────────────────────
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def lms_course_detail(request, pk):
     """
-    GET ?_modal=1  (AJAX from list page) → returns JSON for detail modal.
-    GET (normal)   → full detail page (fallback / direct link).
+    GET ?_modal=1 or XHR → JsonResponse (used by both detail AND edit modals).
+    GET (normal)          → redirect to list (no standalone detail page needed).
+ 
+    Extra fields returned for the edit modal:
+        session_id, term_value, difficulty_level_value, instructor_id, thumbnail_url
     """
     course = get_object_or_404(
         LMSCourse.objects.select_related(
-            'instructor',
-            'academic_course__program__department',
-            'session',
+            'instructor', 'academic_course__program__department', 'session',
         ),
         pk=pk,
     )
+ 
     enrollments_count = course.enrollments.count()
     lessons_count     = course.lessons.count()
  
-    # ── AJAX / modal → return JSON ────────────────────────────────────────────
     if (
         request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         or request.GET.get('_modal')
     ):
         ac = course.academic_course
-        data = {
-            'pk':                        course.pk,
-            'title':                     course.title,
-            'code':                      course.code or '',
-            'short_description':         course.short_description or '',
-            'description':               course.description or '',
-            'difficulty_level_display':  course.get_difficulty_level_display(),
-            'duration_hours':            str(course.duration_hours),
-            'language':                  course.language or 'English',
-            'is_published':              course.is_published,
-            'is_featured':               course.is_featured,
-            'has_certificate':           course.has_certificate,
-            'instructor_name':           (
-                course.instructor_name
-                or (course.instructor.get_full_name() if course.instructor else 'Unassigned')
-            ),
-            'instructor_bio':            course.instructor_bio or '',
-            'enrollments':               enrollments_count,
-            'lessons':                   lessons_count,
-            'max_students':              course.max_students,
-            'enrollment_start_date':     (
-                course.enrollment_start_date.strftime('%b %d, %Y')
-                if course.enrollment_start_date else ''
-            ),
-            'enrollment_end_date':       (
-                course.enrollment_end_date.strftime('%b %d, %Y')
-                if course.enrollment_end_date else ''
-            ),
-            'created_at':                course.created_at.strftime('%b %d, %Y %H:%M'),
-            'session':                   course.session.name if course.session else '',
-            'term':                      course.get_term_display() if course.term else '',
-            # Academic course fields
-            'academic_course':           ac.pk if ac else None,
-            'academic_course_code':      ac.code if ac else '',
-            'academic_course_name':      ac.name if ac else '',
-            'academic_course_program':   (
-                f"{ac.program.name} — {ac.program.department.name}"
-                if ac and ac.program and ac.program.department else
-                (ac.program.name if ac and ac.program else '')
-            ),
-        }
-        return JsonResponse(data)
+        ac_program_str = ''
+        if ac and ac.program:
+            ac_program_str = ac.program.name
+            if ac.program.department:
+                ac_program_str += f' — {ac.program.department.name}'
  
-    # ── Full page fallback ────────────────────────────────────────────────────
-    context = {
-        'course':      course,
-        'enrollments': enrollments_count,
-        'lessons':     lessons_count,
-    }
-    return render(request, 'management/lms_course/detail.html', context)
+        instructor_display = 'Unassigned'
+        if course.instructor:
+            instructor_display = course.instructor.get_full_name().strip() or course.instructor.username
  
+        return JsonResponse({
+            # ── Identity
+            'pk':    course.pk,
+            'title': course.title,
+            'code':  course.code or '',
+ 
+            # ── Descriptions
+            'short_description': course.short_description or '',
+            'description':       course.description or '',
+ 
+            # ── Structured content
+            'learning_objectives': (
+                course.learning_objectives if isinstance(course.learning_objectives, list) else []
+            ),
+            'prerequisites': (
+                course.prerequisites if isinstance(course.prerequisites, list) else []
+            ),
+ 
+            # ── Classification
+            'difficulty_level_display': course.get_difficulty_level_display(),
+            'difficulty_level_value':   course.difficulty_level or '',
+ 
+            # ── Session & term (display values for detail modal)
+            'session': course.session.name if course.session else '',
+            'term':    course.get_term_display() if course.term else '',
+ 
+            # ── Session & term (raw values for edit modal selects)
+            'session_id':  course.session_id or '',
+            'term_value':  course.term or '',
+ 
+            # ── Status
+            'is_published': course.is_published,
+            'is_featured':  course.is_featured,
+ 
+            # ── Instructor
+            'instructor_name': instructor_display,
+            'instructor_id':   course.instructor_id or '',
+ 
+            # ── Media
+            'promo_video_url': course.promo_video_url or '',
+            'thumbnail_url':   course.thumbnail.url if course.thumbnail else '',
+ 
+            # ── SEO
+            'meta_description': course.meta_description or '',
+            'meta_keywords':    course.meta_keywords or '',
+ 
+            # ── Counts
+            'enrollments': enrollments_count,
+            'lessons':     lessons_count,
+ 
+            # ── Timestamps
+            'created_at': course.created_at.strftime('%b %d, %Y %H:%M'),
+ 
+            # ── Linked academic course
+            'academic_course':         ac.pk   if ac else None,
+            'academic_course_code':    ac.code if ac else '',
+            'academic_course_name':    ac.name if ac else '',
+            'academic_course_program': ac_program_str,
+        })
+ 
+    # Full-page fallback — redirect to list (edit page is gone)
+    return redirect('management:lms_courses_list')
+ 
+ 
+# ─────────────────────────────────────────────────────────────────────────────
+# VIEW 4 — DELETE  (POST only, modal form)
+# ─────────────────────────────────────────────────────────────────────────────
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def lms_course_delete(request, pk):
     """
     POST → validate safety guards, then delete and redirect to list.
-    GET  → redirect to list (delete is handled via modal POST only).
+    GET  → redirect to list (delete only via modal POST).
  
-    Safety guards (in order of priority):
-      1. Course has lessons  → HARD BLOCK  (must clear lessons first)
-      2. Course has sections → HARD BLOCK  (must clear sections first)
-      3. Course has active enrollments → allowed, but enrollments are cascade-deleted
- 
-    The delete modal JS already prevents submitting if lessons > 0, so
-    this server-side guard is a belt-and-braces double-check.
+    Safety guards:
+      1. Course has lessons or sections → HARD BLOCK
+      2. Course has active enrollments  → soft, cascade-deleted (allowed with confirm)
     """
     course = get_object_or_404(LMSCourse, pk=pk)
  
     if request.method == 'POST':
-        # ── Count related objects ─────────────────────────────────────────────
-        lessons_count  = course.lessons.count()
-        sections_count = course.sections.count()
+        lessons_count     = course.lessons.count()
+        sections_count    = course.sections.count()
         enrollments_count = course.enrollments.count()
  
-        # ── Hard block: content exists ────────────────────────────────────────
         if lessons_count > 0 or sections_count > 0:
             blocking = []
-            if lessons_count  > 0: blocking.append(f"{lessons_count} lesson{'s' if lessons_count != 1 else ''}")
-            if sections_count > 0: blocking.append(f"{sections_count} section{'s' if sections_count != 1 else ''}")
+            if lessons_count:  blocking.append(_pluralise(lessons_count,  'lesson'))
+            if sections_count: blocking.append(_pluralise(sections_count, 'section'))
             messages.error(
                 request,
-                f'Cannot delete "{course.title}" — it still contains {" and ".join(blocking)}. '
-                f'Remove all content first, then try again.'
+                f'Cannot delete "{course.title}" — it still contains '
+                f'{" and ".join(blocking)}. Remove all content first.',
             )
             return redirect('management:lms_courses_list')
  
-        # ── Confirm checkbox must be ticked ───────────────────────────────────
         if not request.POST.get('confirm'):
-            messages.warning(request, 'Please check the confirmation box before deleting.')
+            messages.warning(request, 'Please tick the confirmation box before deleting.')
             return redirect('management:lms_courses_list')
  
-        # ── Safe to delete ────────────────────────────────────────────────────
         course_title = course.title
         AuditLog.objects.create(
             user=request.user,
@@ -2207,7 +2311,7 @@ def lms_course_delete(request, pk):
             object_id=course.id,
             description=(
                 f'Deleted LMS course: {course_title}'
-                + (f' (had {enrollments_count} enrollment{"s" if enrollments_count != 1 else ""})' if enrollments_count else '')
+                + (f' (had {_pluralise(enrollments_count, "enrollment")})' if enrollments_count else '')
             ),
         )
         course.delete()
@@ -3155,7 +3259,7 @@ def courses_list(request):
     courses = (
         Course.objects
         .select_related('program__department__faculty')
-        .order_by('year_of_study', 'semester', 'display_order', 'code')
+        .order_by('year_of_study', 'semester', 'code')
     )
     form = CourseForm()
  
@@ -4358,220 +4462,166 @@ def send_overdue_payment_reminders(request):
 # FINANCIAL ANALYTICS DASHBOARD
 # ---------------------------------------------------------------------------
 
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
 def financial_analytics(request):
-    """
-    Comprehensive financial analytics dashboard with:
-    - Revenue by source (applications, fees, certificates)
-    - Student payment rates (on-time vs late)
-    - Instructor payout history
-    - Monthly recurring revenue (MRR)
-    """
-    
-    # 1. REVENUE BY SOURCE
-    # ─────────────────────────────────────────────────────────────────────
-    
-    # Application fees revenue
-    app_payment_revenue = ApplicationPayment.objects.filter(
-        status='success'
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    # Student fees (required payments) revenue
-    fee_payment_revenue = FeePayment.objects.filter(
-        status='success'
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    # Certificate revenue
-    cert_revenue = Certificate.objects.filter(
-        payment_status='paid'
-    ).count()
-    
-    total_revenue = float(app_payment_revenue['total']) + float(fee_payment_revenue['total'])
-    
+    """Financial analytics — all student payment records."""
+
+    _zero = Value(0, output_field=DecimalField())
+
+    def _agg(qs, field='amount'):
+        r = qs.aggregate(
+            total=Coalesce(Sum(field), _zero, output_field=DecimalField()),
+            count=Count('id'),
+        )
+        return float(r['total'] or 0), r['count']
+
+    # ── Querysets ─────────────────────────────────────────────────────────────
+    app_qs = ApplicationPayment.objects.select_related(
+        'application', 'application__program'
+    ).order_by('-created_at')
+
+    # FeePayment → fee (AllRequiredPayments) → program, academic_session
+    fee_qs = FeePayment.objects.select_related(
+        'user', 'fee', 'fee__program', 'fee__academic_session'
+    ).order_by('-created_at')
+
+    txn_qs = Transaction.objects.select_related(
+        'user', 'course', 'gateway'
+    ).order_by('-created_at')
+
+    inv_qs = Invoice.objects.select_related(
+        'student', 'course'
+    ).order_by('-issue_date')
+
+    # ── Revenue aggregates ────────────────────────────────────────────────────
+    app_total, app_count = _agg(app_qs.filter(status='success'))
+    fee_total, fee_count = _agg(fee_qs.filter(status='success'))
+    txn_total, txn_count = _agg(txn_qs.filter(status='completed'))
+    inv_total, inv_count = _agg(inv_qs, field='total_amount')
+
+    total_revenue = app_total + fee_total
+
     revenue_by_source = {
         'application_fees': {
-            'amount': float(app_payment_revenue['total']),
-            'transactions': app_payment_revenue['count'],
-            'percentage': (float(app_payment_revenue['total']) / total_revenue * 100) if total_revenue > 0 else 0,
+            'amount': app_total,
+            'transactions': app_count,
+            'percentage': round(app_total / total_revenue * 100, 1) if total_revenue else 0,
         },
         'student_fees': {
-            'amount': float(fee_payment_revenue['total']),
-            'transactions': fee_payment_revenue['count'],
-            'percentage': (float(fee_payment_revenue['total']) / total_revenue * 100) if total_revenue > 0 else 0,
+            'amount': fee_total,
+            'transactions': fee_count,
+            'percentage': round(fee_total / total_revenue * 100, 1) if total_revenue else 0,
         },
         'certificates': {
-            'count': cert_revenue,
-        }
+            'count': Certificate.objects.filter(payment_status='paid').count(),
+        },
     }
-    
-    # 2. STUDENT PAYMENT RATES
-    # ─────────────────────────────────────────────────────────────────────
-    
-    # Get all fee payments with due dates (FeePayment linked to AllRequiredPayments)
-    all_fee_payments = FeePayment.objects.select_related('fee').all()
-    
-    paid_on_time = 0
-    paid_late = 0
-    unpaid = 0
-    
-    for fee_payment in all_fee_payments:
-        if fee_payment.status == 'success':
-            # Payment completed - check if on time or late
-            if fee_payment.paid_at and fee_payment.fee.due_date:
-                if fee_payment.paid_at.date() <= fee_payment.fee.due_date:
-                    paid_on_time += 1
-                else:
-                    paid_late += 1
-        elif fee_payment.status in ['pending', 'failed']:
+
+    # ── Outstanding & refunds ─────────────────────────────────────────────────
+    out_fee_total, out_fee_count = _agg(fee_qs.filter(status__in=['pending', 'failed']))
+    out_app_total, out_app_count = _agg(app_qs.filter(status__in=['pending', 'failed']))
+    ref_app_total, ref_app_count = _agg(app_qs.filter(status='refunded'))
+    ref_fee_total, ref_fee_count = _agg(fee_qs.filter(status='refunded'))
+
+    # ── Payment timing: values_list avoids .only() + select_related conflict ──
+    # FeePayment direct fields: status, paid_at
+    # Related field via FK fee → AllRequiredPayments.due_date (DateField)
+    on_time = late = unpaid = 0
+    for status, paid_at, due_date in FeePayment.objects.values_list('status', 'paid_at', 'fee__due_date'):
+        if status == 'success':
+            if paid_at and due_date and paid_at.date() > due_date:
+                late += 1
+            else:
+                on_time += 1
+        else:
             unpaid += 1
-    
-    total_fees = paid_on_time + paid_late + unpaid
-    
+
+    total_fees = on_time + late + unpaid
     payment_rates = {
-        'on_time': {
-            'count': paid_on_time,
-            'percentage': (paid_on_time / total_fees * 100) if total_fees > 0 else 0,
-        },
-        'late': {
-            'count': paid_late,
-            'percentage': (paid_late / total_fees * 100) if total_fees > 0 else 0,
-        },
-        'unpaid': {
-            'count': unpaid,
-            'percentage': (unpaid / total_fees * 100) if total_fees > 0 else 0,
-        },
+        'on_time':    {'count': on_time, 'percentage': round(on_time / total_fees * 100, 1) if total_fees else 0},
+        'late':       {'count': late,    'percentage': round(late    / total_fees * 100, 1) if total_fees else 0},
+        'unpaid':     {'count': unpaid,  'percentage': round(unpaid  / total_fees * 100, 1) if total_fees else 0},
         'total_fees': total_fees,
     }
-    
-    # 3. INSTRUCTOR PAYOUT HISTORY
-    # ─────────────────────────────────────────────────────────────────────
-    
-    payroll_data = StaffPayroll.objects.filter(
-        payment_status='paid'
-    ).values('staff__id', 'staff__first_name', 'staff__last_name', 'staff__username').annotate(
-        total_paid=Coalesce(Sum('net_salary'), Value(0.0), output_field=DecimalField()),
-        total_gross=Coalesce(Sum('gross_salary'), Value(0.0), output_field=DecimalField()),
-        payment_count=Count('id'),
-        average_monthly=Coalesce(Avg('net_salary'), Value(0.0), output_field=DecimalField()),
-    ).order_by('-total_paid')[:10]  # Top 10 highest paid instructors
-    
+
+    # ── Monthly revenue (last 6 months) ───────────────────────────────────────
+    cutoff = timezone.now() - timedelta(days=365)
+
+    def _monthly(qs, status='success'):
+        return (
+            qs.filter(status=status, paid_at__gte=cutoff)
+            .annotate(month=TruncMonth('paid_at'))
+            .values('month')
+            .annotate(total=Sum('amount'))
+            .order_by('month')
+        )
+
+    monthly_data = {}
+    for r in _monthly(app_qs):
+        k = r['month'].strftime('%Y-%m') if r['month'] else '?'
+        monthly_data.setdefault(k, {'app_fees': 0.0, 'student_fees': 0.0})
+        monthly_data[k]['app_fees'] += float(r['total'] or 0)
+    for r in _monthly(fee_qs):
+        k = r['month'].strftime('%Y-%m') if r['month'] else '?'
+        monthly_data.setdefault(k, {'app_fees': 0.0, 'student_fees': 0.0})
+        monthly_data[k]['student_fees'] += float(r['total'] or 0)
+    for v in monthly_data.values():
+        v['total'] = v['app_fees'] + v['student_fees']
+
+    monthly_revenue = sorted(monthly_data.items())[-6:]
+    current_mrr = monthly_revenue[-1][1]['total'] if monthly_revenue else 0.0
+
+    # ── Instructor payouts ────────────────────────────────────────────────────
+    payroll_rows = (
+        StaffPayroll.objects
+        .filter(payment_status='paid')
+        .values('staff__id', 'staff__first_name', 'staff__last_name', 'staff__username')
+        .annotate(
+            total_paid=Coalesce(Sum('net_salary'),      _zero, output_field=DecimalField()),
+            total_gross=Coalesce(Sum('gross_salary'),   _zero, output_field=DecimalField()),
+            average_monthly=Coalesce(Avg('net_salary'), _zero, output_field=DecimalField()),
+            payment_count=Count('id'),
+        )
+        .order_by('-total_paid')[:10]
+    )
+
     instructor_payouts = []
     total_instructor_payouts = 0.0
-    for payout in payroll_data:
-        amount = float(payout['total_paid'])
-        total_instructor_payouts += amount
+    for p in payroll_rows:
+        amt = float(p['total_paid'] or 0)
+        total_instructor_payouts += amt
+        name = f"{p['staff__first_name']} {p['staff__last_name']}".strip() or p['staff__username']
         instructor_payouts.append({
-            'staff_name': f"{payout['staff__first_name']} {payout['staff__last_name']}",
-            'count': payout['payment_count'],
-            'total_paid': amount,
-            'average_monthly': float(payout['average_monthly']),
-            'total_gross': float(payout['total_gross']),
+            'staff_name':      name,
+            'count':           p['payment_count'],
+            'total_paid':      amt,
+            'total_gross':     float(p['total_gross'] or 0),
+            'average_monthly': float(p['average_monthly'] or 0),
         })
-    
-    # 4. MONTHLY RECURRING REVENUE (MRR)
-    # ─────────────────────────────────────────────────────────────────────
-    
-    # Get last 12 months of successful payments
-    from datetime import datetime, timedelta as td
-    today = timezone.now()
-    twelve_months_ago = today - td(days=365)
-    
-    # Monthly revenue from application payments
-    app_monthly = ApplicationPayment.objects.filter(
-        status='success',
-        paid_at__gte=twelve_months_ago
-    ).annotate(
-        month=TruncMonth('paid_at')
-    ).values('month').annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('month')
-    
-    # Monthly revenue from student fees
-    fee_monthly = FeePayment.objects.filter(
-        status='success',
-        paid_at__gte=twelve_months_ago
-    ).annotate(
-        month=TruncMonth('paid_at')
-    ).values('month').annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('month')
-    
-    # Combine monthly data
-    monthly_data = {}
-    for record in app_monthly:
-        month_key = record['month'].strftime('%Y-%m') if record['month'] else 'Unknown'
-        if month_key not in monthly_data:
-            monthly_data[month_key] = {'app_fees': 0.0, 'student_fees': 0.0, 'total': 0.0}
-        monthly_data[month_key]['app_fees'] += float(record['total']) if record['total'] else 0
-    
-    for record in fee_monthly:
-        month_key = record['month'].strftime('%Y-%m') if record['month'] else 'Unknown'
-        if month_key not in monthly_data:
-            monthly_data[month_key] = {'app_fees': 0.0, 'student_fees': 0.0, 'total': 0.0}
-        monthly_data[month_key]['student_fees'] += float(record['total']) if record['total'] else 0
-    
-    # Calculate totals and sort
-    for month in monthly_data:
-        monthly_data[month]['total'] = monthly_data[month]['app_fees'] + monthly_data[month]['student_fees']
-    
-    monthly_revenue = sorted(monthly_data.items())[-6:]  # Last 6 months
-    
-    # Current MRR (last month)
-    current_mrr = 0.0
-    if monthly_revenue:
-        current_mrr = monthly_revenue[-1][1]['total']
-    
-    # 5. ADDITIONAL METRICS
-    # ─────────────────────────────────────────────────────────────────────
-    
-    # Outstanding payments
-    outstanding_fees = FeePayment.objects.filter(
-        status__in=['pending', 'failed']
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    # Refunded amounts
-    refunded_payments = ApplicationPayment.objects.filter(
-        status='refunded'
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    refunded_fees = FeePayment.objects.filter(
-        status='refunded'
-    ).aggregate(
-        total=Coalesce(Sum('amount'), Value(0.0), output_field=DecimalField()),
-        count=Count('id')
-    )
-    
-    total_refunded = float(refunded_payments['total']) + float(refunded_fees['total'])
-    
+
+    # ── Context ───────────────────────────────────────────────────────────────
     context = {
-        'revenue_by_source': revenue_by_source,
-        'total_revenue': total_revenue,
-        'payment_rates': payment_rates,
-        'instructor_payouts': instructor_payouts,
-        'total_instructor_payouts': total_instructor_payouts,
-        'monthly_revenue': monthly_revenue,
-        'current_mrr': current_mrr,
-        'outstanding_amount': float(outstanding_fees['total']),
-        'outstanding_count': outstanding_fees['count'],
-        'total_refunded': total_refunded,
-        'refund_count': refunded_payments['count'] + refunded_fees['count'],
+        'revenue_by_source':         revenue_by_source,
+        'total_revenue':             total_revenue,
+        'total_payment_count':       app_count + fee_count,
+        'current_mrr':               current_mrr,
+        'payment_rates':             payment_rates,
+        'monthly_revenue':           monthly_revenue,
+        'outstanding_amount':        out_fee_total + out_app_total,
+        'outstanding_count':         out_fee_count + out_app_count,
+        'total_refunded':            ref_app_total + ref_fee_total,
+        'refund_count':              ref_app_count + ref_fee_count,
+        'application_payments':      app_qs[:200],
+        'fee_payments':              fee_qs[:200],
+        'transactions':              txn_qs[:200],
+        'invoices':                  inv_qs[:200],
+        'invoices_count':            inv_count,
+        'invoices_total':            inv_total,
+        'transactions_total_count':  txn_count,
+        'transactions_total_amount': txn_total,
+        'instructor_payouts':        instructor_payouts,
+        'total_instructor_payouts':  total_instructor_payouts,
     }
-    
+
     return render(request, 'management/financial_analytics.html', context)
 
 
@@ -5143,7 +5193,7 @@ def admin_exam_list(request):
     search = request.GET.get('q', '')
     session_id = request.GET.get('session', '')
 
-    qs = Exam.objects.select_related('course', 'course__academic_course', 'department', 'academic_session').order_by('-exam_date', '-start_time')
+    qs = Exam.objects.select_related('course', 'course__academic_course', 'instructor').order_by('-start_datetime')
 
     if status_filter:
         qs = qs.filter(status=status_filter)
@@ -5154,7 +5204,7 @@ def admin_exam_list(request):
             Q(course__title__icontains=search)
         )
     if session_id:
-        qs = qs.filter(academic_session_id=session_id)
+        qs = qs.filter(course__session_id=session_id)
 
     status_counts = {
         s: Exam.objects.filter(status=s).count()
@@ -5175,12 +5225,22 @@ def admin_exam_list(request):
         'status_counts': status_counts,
     })
 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+@require_POST
+def admin_exam_toggle_active(request, slug):
+    exam = get_object_or_404(Exam, slug=slug)
+    exam.is_active = not exam.is_active
+    exam.save(update_fields=['is_active'])
+    state = 'activated' if exam.is_active else 'deactivated'
+    messages.success(request, f'Exam {exam.reference_code} has been {state}.')
+    return redirect('management:admin_exam_list')
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(_is_staff)
 def admin_exam_detail(request, slug):
     exam = get_object_or_404(
-        Exam.objects.select_related('course', 'course__academic_course', 'department', 'academic_session', 'instructor', 'submitted_by', 'approved_by', 'rejected_by', 'published_by'),
+        Exam.objects.select_related('course', 'course__academic_course', 'instructor', 'submitted_by', 'approved_by', 'rejected_by', 'published_by'),
         slug=slug
     )
     status_logs = exam.status_logs.select_related('changed_by').order_by('-created_at')[:10]
@@ -5275,19 +5335,11 @@ def admin_exam_publish(request, slug):
         messages.error(request, 'Only approved exams can be published.')
         return redirect('management:admin_exam_detail', slug=slug)
 
-    from django.utils.dateparse import parse_datetime
-    visible_from_raw = request.POST.get('visible_from', '').strip()
-    visible_until_raw = request.POST.get('visible_until', '').strip()
-
     prev = exam.status
     exam.status = Exam.PUBLISHED
     exam.published_by = request.user
     exam.published_at = timezone.now()
-    if visible_from_raw:
-        exam.visible_from = parse_datetime(visible_from_raw) or exam.visible_from
-    if visible_until_raw:
-        exam.visible_until = parse_datetime(visible_until_raw) or exam.visible_until
-    exam.save(update_fields=['status', 'published_by', 'published_at', 'visible_from', 'visible_until'])
+    exam.save(update_fields=['status', 'published_by', 'published_at'])
 
     ExamStatusLog.objects.create(
         exam=exam,
@@ -5313,7 +5365,7 @@ def admin_exam_publish(request, slug):
 @user_passes_test(_is_staff)
 def admin_question_moderation(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
-    questions = exam.questions.order_by('order', 'created_at')
+    questions = exam.questions.order_by('created_at')
 
     if request.method == 'POST':
         q_id = request.POST.get('question_id')
@@ -5322,11 +5374,11 @@ def admin_question_moderation(request, slug):
         if action == 'activate':
             question.is_active = True
             question.save(update_fields=['is_active'])
-            messages.success(request, f'Question #{question.order} activated.')
+            messages.success(request, f'Question activated.')
         elif action == 'deactivate':
             question.is_active = False
             question.save(update_fields=['is_active'])
-            messages.warning(request, f'Question #{question.order} deactivated.')
+            messages.warning(request, f'Question deactivated.')
         return redirect('management:admin_question_moderation', slug=slug)
 
     return render(request, 'management/question_moderation.html', {
@@ -5343,10 +5395,10 @@ def admin_exam_timetable_update(request, slug):
     if request.method == 'POST':
         from django.utils.dateparse import parse_date, parse_time
 
+        from datetime import datetime, timezone as dt_timezone
         exam_date = parse_date(request.POST.get('exam_date', ''))
         start_time = parse_time(request.POST.get('start_time', ''))
         end_time = parse_time(request.POST.get('end_time', ''))
-        venue = request.POST.get('venue', '').strip()
 
         errors = []
         if not exam_date:
@@ -5358,34 +5410,36 @@ def admin_exam_timetable_update(request, slug):
         if start_time and end_time and end_time <= start_time:
             errors.append('End time must be after start time.')
 
-        # Clash detection: same department, same date, overlapping time window
-        if not errors and exam.department:
+        if not errors:
+            from django.utils import timezone as dj_timezone
+            import zoneinfo
+            tz = zoneinfo.ZoneInfo('Africa/Lagos')
+            start_datetime = dj_timezone.make_aware(datetime.combine(exam_date, start_time), tz)
+            end_datetime = dj_timezone.make_aware(datetime.combine(exam_date, end_time), tz)
+
+            # Clash detection: overlapping start_datetime/end_datetime window
             clash_qs = Exam.objects.filter(
-                department=exam.department,
-                exam_date=exam_date,
+                course=exam.course,
                 status__in=[Exam.APPROVED, Exam.PUBLISHED],
             ).exclude(pk=exam.pk).filter(
-                start_time__lt=end_time,
-                end_time__gt=start_time,
+                start_datetime__lt=end_datetime,
+                end_datetime__gt=start_datetime,
             )
             if clash_qs.exists():
                 clash = clash_qs.first()
                 errors.append(
-                    f'Schedule conflict with {clash.reference_code} ({clash.start_time:%H:%M}–{clash.end_time:%H:%M}) '
-                    f'in the same department on this date.'
+                    f'Schedule conflict with {clash.reference_code} '
+                    f'({clash.start_datetime:%H:%M}–{clash.end_datetime:%H:%M}) on this date.'
                 )
 
         if errors:
             for e in errors:
                 messages.error(request, e)
         else:
-            exam.exam_date = exam_date
-            exam.start_time = start_time
-            exam.end_time = end_time
-            exam.venue = venue
-            exam.has_clash = False
+            exam.start_datetime = start_datetime
+            exam.end_datetime = end_datetime
             exam.clash_notes = ''
-            exam.save(update_fields=['exam_date', 'start_time', 'end_time', 'venue', 'has_clash', 'clash_notes'])
+            exam.save(update_fields=['start_datetime', 'end_datetime', 'clash_notes'])
             messages.success(request, 'Timetable updated successfully.')
             return redirect('management:admin_exam_detail', slug=slug)
 
@@ -5415,13 +5469,78 @@ def admin_exam_responses(request, slug):
         )['avg'],
     }
 
+    # Per-response correct/missed counts derived from question_scores JSON.
+    # question_scores = {qid: {is_correct: bool|null, pending_manual: bool, ...}}
+    # We compute per student: how many auto-graded correct, missed, and still pending.
     paginator = Paginator(qs, 25)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
+    page_obj  = paginator.get_page(request.GET.get('page', 1))
+
+    for r in page_obj:
+        correct = missed = pending = 0
+        for entry in (r.question_scores or {}).values():
+            if entry.get('pending_manual'):
+                pending += 1
+            elif entry.get('is_correct') is True:
+                correct += 1
+            elif entry.get('is_correct') is False:
+                missed += 1
+        r.q_correct = correct
+        r.q_missed  = missed
+        r.q_pending = pending
+
+    # Grading readiness — for the admin release banner
+    all_submitted = all_responses.filter(
+        status__in=[StudentExamResponse.SUBMITTED, StudentExamResponse.GRADED]
+    )
+    pending_any_manual = all_responses.filter(pending_manual_count__gt=0).exists()
+    all_graded = (
+        all_submitted.exists()
+        and not all_responses.filter(status=StudentExamResponse.SUBMITTED).exists()
+        and not pending_any_manual
+    )
 
     return render(request, 'management/exam_responses.html', {
-        'exam': exam,
-        'page_obj': page_obj,
-        'summary': summary,
-        'status_filter': status_filter,
+        'exam':                 exam,
+        'page_obj':             page_obj,
+        'summary':              summary,
+        'status_filter':        status_filter,
         'ATTEMPT_STATUS_CHOICES': ATTEMPT_STATUS_CHOICES,
+        'all_graded':           all_graded,
+        'pending_any_manual':   pending_any_manual,
     })
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_staff)
+@require_POST
+def admin_exam_release_results(request, slug):
+    """
+    Toggle show_result_immediately on the Exam.
+    ON  → results are visible to students on their dashboard/result page.
+    OFF → results are hidden again (e.g. if a grading error is found).
+    No new model field — reuses the existing BooleanField.
+    """
+    exam = get_object_or_404(Exam, slug=slug)
+    action = request.POST.get('action', '')
+
+    if action == 'release':
+        exam.show_result_immediately = True
+        exam.save(update_fields=['show_result_immediately'])
+        # Notify instructor
+        if exam.instructor:
+            _notify(
+                user=exam.instructor,
+                title=f'Results Released: {exam.reference_code}',
+                message=f'Results for "{exam.title}" are now visible to students.',
+                notif_type='system',
+            )
+        messages.success(request, f'Results for {exam.reference_code} are now visible to students.')
+
+    elif action == 'retract':
+        exam.show_result_immediately = False
+        exam.save(update_fields=['show_result_immediately'])
+        messages.warning(request, f'Results for {exam.reference_code} have been hidden from students.')
+
+    else:
+        messages.error(request, 'Unknown action.')
+
+    return redirect('management:admin_exam_responses', slug=slug)

@@ -21,6 +21,22 @@ DEGREE_LEVEL_CHOICES = [
     ('phd', 'PhD')
 ]
 
+# Canonical academic level choices (year_of_study × 100).
+# Level represents position within a program, not absolute academic rank.
+# Works for all international systems: UG (100–400/500), Masters (100–200),
+# PhD (100–400), Medicine/Law/Eng extended programs (up to 800).
+# The Program.degree_level field identifies the qualification type.
+STUDENT_LEVEL_CHOICES = [
+    (100, 'Level 100'),
+    (200, 'Level 200'),
+    (300, 'Level 300'),
+    (400, 'Level 400'),
+    (500, 'Level 500'),
+    (600, 'Level 600'),
+    (700, 'Level 700'),
+    (800, 'Level 800'),
+]
+
 import hashlib
 import secrets
 import uuid
@@ -1424,23 +1440,6 @@ class AcademicSession(models.Model):
         )
     )
 
-    # ── Registration Windows ───────────────────────────────────────────────
-    registration_start = models.DateField(
-        null=True, blank=True,
-        help_text="When student course registration opens"
-    )
-    registration_end = models.DateField(
-        null=True, blank=True,
-        help_text="When student course registration closes"
-    )
-
-    # ── Override ────────────────────────────────────────────────────────────
-    override_current_term = models.CharField(
-        max_length=20, choices=TERM_CHOICES,
-        blank=True,
-        help_text="Admin override: force the system to report this term as current"
-    )
-
     # ── Status ─────────────────────────────────────────────────────────────
     status = models.CharField(
         max_length=20,
@@ -1471,9 +1470,7 @@ class AcademicSession(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_current:
-            # Unmark all other sessions as current
             AcademicSession.objects.exclude(pk=self.pk).update(is_current=False)
-            # Ensure this session is active when marked current
             if not self.status or self.status == 'upcoming':
                 self.status = 'active'
         super().save(*args, **kwargs)
@@ -1484,23 +1481,75 @@ class AcademicSession(models.Model):
         return cls.objects.filter(is_current=True).first()
 
     def get_current_term(self):
-        if self.override_current_term:
-            return self.override_current_term
+        """
+        Return the term key whose date window contains today.
+        Derived purely from term_dates — no override field needed.
+        e.g. term_dates = [
+            {"term": "first",  "start": "2025-09-01", "end": "2026-01-31"},
+            {"term": "second", "start": "2026-02-01", "end": "2026-06-30"},
+        ]
+        """
+        from datetime import date
         today = timezone.now().date()
         for entry in self.term_dates:
-            from datetime import date
-            start = date.fromisoformat(entry['start'])
-            end   = date.fromisoformat(entry['end'])
-            if start <= today <= end:
-                return entry['term']
+            try:
+                start = date.fromisoformat(entry['start'])
+                end   = date.fromisoformat(entry['end'])
+                if start <= today <= end:
+                    return entry['term']
+            except (KeyError, ValueError):
+                continue
         return None
+
+    def get_registration_window(self, term=None):
+        """
+        Return (reg_open, reg_close) for the given term (defaults to
+        get_current_term).  Registration opens on the first day of the
+        term and closes 21 days later (3-week window).
+
+        Returns (None, None) if the term is not found in term_dates.
+        """
+        from datetime import date, timedelta
+        target = term or self.get_current_term()
+        if not target:
+            return (None, None)
+        for entry in self.term_dates:
+            if entry.get('term') == target:
+                try:
+                    reg_open  = date.fromisoformat(entry['start'])
+                    reg_close = reg_open + timedelta(days=21)
+                    return (reg_open, reg_close)
+                except (KeyError, ValueError):
+                    return (None, None)
+        return (None, None)
 
     @property
     def is_registration_open(self):
+        """
+        True when today falls inside the 3-week registration window
+        of whichever term is currently running.
+
+        The window is computed from term_dates — no separate DB fields
+        required.  Works for any term key the admin configures
+        (first, second, third, fall, spring, summer, …).
+        """
+        from datetime import date
         today = timezone.now().date()
-        if self.registration_start and self.registration_end:
-            return self.registration_start <= today <= self.registration_end
-        return False
+        reg_open, reg_close = self.get_registration_window()
+        if reg_open is None:
+            return False
+        return reg_open <= today <= reg_close
+
+    def registration_window_for_term(self, term):
+        """
+        Convenience: human-readable window string for a specific term.
+        Useful in admin list_display or template tags.
+        e.g. "01 Sep 2025 – 22 Sep 2025"
+        """
+        reg_open, reg_close = self.get_registration_window(term=term)
+        if reg_open and reg_close:
+            return f"{reg_open.strftime('%d %b %Y')} – {reg_close.strftime('%d %b %Y')}"
+        return "—"
 
 class Course(models.Model):
 
@@ -1574,23 +1623,23 @@ class Course(models.Model):
     )
 
     # ── Display ────────────────────────────────────────────────────────────────
-    icon = models.CharField(
-        max_length=50,
-        default='book-open',
-        help_text="Lucide icon name for display"
-    )
-    color_primary = models.CharField(max_length=20, default='blue')
-    color_secondary = models.CharField(max_length=20, default='cyan')
+    # icon = models.CharField(
+    #     max_length=50,
+    #     default='book-open',
+    #     help_text="Lucide icon name for display"
+    # )
+    # color_primary = models.CharField(max_length=20, default='blue')
+    # color_secondary = models.CharField(max_length=20, default='cyan')
 
     # ── Status & Display ───────────────────────────────────────────────────────
     is_active = models.BooleanField(default=True)
-    display_order = models.IntegerField(default=0)
+    # display_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [['program', 'code']]
-        ordering = ['year_of_study', 'semester', 'display_order', 'name']
+        ordering = ['year_of_study', 'semester', 'name']
         verbose_name = 'Course'
         verbose_name_plural = 'Courses'
         indexes = [
@@ -1690,6 +1739,13 @@ class AllRequiredPayments(models.Model):
         help_text="ISO 4217 currency code e.g. USD, GBP, EUR"
     )
 
+    level = models.IntegerField(
+        choices=STUDENT_LEVEL_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Student level this fee applies to (100–800). Leave blank to apply to ALL levels."
+    )
+
     due_date = models.DateField()
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1703,7 +1759,7 @@ class AllRequiredPayments(models.Model):
         verbose_name = "Required Payment"
         verbose_name_plural = "All Required Payments"
         ordering = ["-created_at"]
-        unique_together = [['program', 'academic_session', 'purpose', 'semester']]
+        unique_together = [['program', 'academic_session', 'purpose', 'semester', 'level']]
 
     def __str__(self):
         session = self.academic_session.name if self.academic_session else 'No Session'
@@ -1786,9 +1842,13 @@ class CourseApplication(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
     
-    # Course & Intake
+    # Course & Session & Level
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='applications')
-    intake = models.ForeignKey(CourseIntake, on_delete=models.CASCADE, related_name='applications')
+    academic_session = models.ForeignKey('AcademicSession', on_delete=models.SET_NULL, null=True, blank=True, related_name='applications')
+    entry_level = models.IntegerField(
+        null=True, blank=True,
+        help_text="Entry level e.g. 100, 200, 300 etc."
+    )
     study_mode = models.CharField(max_length=20, choices=Program.STUDY_MODE_CHOICES)
     
     # Personal Information
@@ -1932,11 +1992,11 @@ class CourseApplication(models.Model):
         This property is kept for backward compatibility with templates.
         """
         # Free flow: draft and above are all "unlocked"
-        if self.status in ['draft', 'payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
-            return True
+        #if self.status in ['draft', 'payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
+         #   return True
         # Legacy fallback: check actual payment record if status is pending_payment
         try:
-            return self.payment.status == 'success'
+            return self.payment_status == 'success'
         except Exception:
             return False
 
@@ -2485,16 +2545,6 @@ class LessonProgress(models.Model):
 # ==================== LMS COURSES ====================
 class LMSCourse(models.Model):
     """Learning Management System courses (actual learning content)"""
-    LEVEL_CHOICES = [
-        ('1', '100 Level'),
-        ('2', '200 Level'),
-        ('3', '300 Level'),
-        ('4', '400 Level'),
-        ('5', '500 Level'),
-        ('6', '600 Level'),
-        ('7', '700 Level'),
-        ('8', '800 Level'),
-    ]
     
     # Basic Information
     title = models.CharField(max_length=200)
@@ -2544,37 +2594,37 @@ class LMSCourse(models.Model):
     )
     
     # Course Details
-    difficulty_level = models.CharField(max_length=5, choices=LEVEL_CHOICES, default='1', verbose_name='Level')
-    duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Estimated duration in hours")
-    language = models.CharField(max_length=50, default='English')
+    difficulty_level = models.IntegerField(choices=STUDENT_LEVEL_CHOICES, default=100, verbose_name='Level')
+    # duration_hours = models.DecimalField(max_digits=5, decimal_places=1, default=0, help_text="Estimated duration in hours")
+    # language = models.CharField(max_length=50, default='English')
     
     # Instructor
     instructor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='lms_courses_teaching')
-    instructor_name = models.CharField(max_length=100, blank=True)
-    instructor_bio = models.TextField(blank=True)
+    # instructor_name = models.CharField(max_length=100, blank=True)
+    # instructor_bio = models.TextField(blank=True)
     
     # Media
     thumbnail = models.ImageField(upload_to='courses/thumbnails/', blank=True, null=True)
     promo_video_url = models.URLField(blank=True)
     
     # Enrollment
-    max_students = models.IntegerField(null=True, blank=True)
-    enrollment_start_date = models.DateField(null=True, blank=True)
-    enrollment_end_date = models.DateField(null=True, blank=True)
+    # max_students = models.IntegerField(null=True, blank=True)
+    # enrollment_start_date = models.DateField(null=True, blank=True)
+    # enrollment_end_date = models.DateField(null=True, blank=True)
     
     # Status
     is_published = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
     
     # Certificate
-    has_certificate = models.BooleanField(default=False)
-    certificate_fee = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal('0.00'),
-        help_text="Fee charged to the student to receive their certificate"
-    )
-    certificate_template = models.CharField(max_length=100, blank=True)
+    # has_certificate = models.BooleanField(default=False)
+    # certificate_fee = models.DecimalField(
+    #     max_digits=10,
+    #     decimal_places=2,
+    #     default=Decimal('0.00'),
+    #     help_text="Fee charged to the student to receive their certificate"
+    # )
+    # certificate_template = models.CharField(max_length=100, blank=True)
     
     # SEO
     meta_description = models.CharField(max_length=160, blank=True)
@@ -2614,8 +2664,12 @@ class LMSCourse(models.Model):
                 self.slug = f"{original_slug}-{counter}"
                 counter += 1
         
-        if not self.instructor_name and self.instructor:
-            self.instructor_name = self.instructor.get_full_name() or self.instructor.username
+        # if not self.instructor_name and self.instructor:
+        #     self.instructor_name = self.instructor.get_full_name() or self.instructor.username
+
+        # Auto-sync term from linked academic course if not manually set
+        if self.academic_course and not self.term:
+            self.term = self.academic_course.semester
         
         if self.is_published and not self.published_at:
             self.published_at = timezone.now()
@@ -3419,33 +3473,33 @@ def update_course_rating(sender, instance, created, **kwargs):
     instance.course.update_statistics()
 
 
-@receiver(post_save, sender=UserProfile)
-def auto_assign_required_fees(sender, instance, **kwargs):
-    """
-    When a student's program is set or changed, auto-create FeePayment
-    records (status='pending') for every active AllRequiredPayments
-    that belongs to that program and doesn't already have a payment
-    record for this student.
-    """
-    if instance.role != 'student' or not instance.program:
-        return
+# @receiver(post_save, sender=UserProfile)
+# def auto_assign_required_fees(sender, instance, **kwargs):
+#     """
+#     When a student's program is set or changed, auto-create FeePayment
+#     records (status='pending') for every active AllRequiredPayments
+#     that belongs to that program and doesn't already have a payment
+#     record for this student.
+#     """
+#     if instance.role != 'student' or not instance.program:
+#         return
 
-    required_fees = AllRequiredPayments.objects.filter(
-        program=instance.program,
-        who_to_pay='student',
-        is_active=True,
-    )
+#     required_fees = AllRequiredPayments.objects.filter(
+#         program=instance.program,
+#         who_to_pay='student',
+#         is_active=True,
+#     )
 
-    for fee in required_fees:
-        FeePayment.objects.get_or_create(
-            user=instance.user,
-            fee=fee,
-            defaults={
-                'amount': fee.amount,
-                'currency': fee.currency,
-                'status': 'pending',
-            }
-        )
+#     for fee in required_fees:
+#         FeePayment.objects.get_or_create(
+#             user=instance.user,
+#             fee=fee,
+#             defaults={
+#                 'amount': fee.amount,
+#                 'currency': fee.currency,
+#                 'status': 'pending',
+#             }
+#         )
 
 # ==================== STUDY GROUPS ====================
 class StudyGroup(models.Model):
@@ -4506,7 +4560,7 @@ class CourseGrade(models.Model):
 # =============================================================================
 #
 # Tables:
-#   Exam                  — master record: timetable, scheduling, approval workflow
+#   Exam                  — master record: scheduling, approval workflow
 #   ExamQuestion          — permanent question bank / pool (never deleted)
 #   StudentExamResponse   — one row per student per exam; question draw + answers + grading
 #   ExamStatusLog         — immutable audit trail (uses ImmutableMixin already in file)
@@ -4516,15 +4570,19 @@ class CourseGrade(models.Model):
 # in this same models.py — no extra imports needed.
 #
 # FK references use the actual class objects directly (same pattern as the
-# rest of this file) — Course, AcademicSession, Department must be defined
-# above this block in the same file. If they are in a different app, swap to
-# string references like "eduweb.Course".
+# rest of this file) — LMSCourse must be defined above this block in the
+# same file. If it is in a different app, swap to string reference "eduweb.LMSCourse".
 #
-# TIMING MODEL (example: start = 08:00, instruction_window_minutes = 10)
+# TIMING MODEL (instruction window is always 10 minutes — fixed constant)
 # ──────────────────────────────────────────────────────────────────────────
-#   07:50  instructions_open_at  → student opens instruction page + countdown
-#   08:00  exam_start_datetime   → countdown hits 0 → questions auto-unlock
-#   10:00  exam_end_datetime     → server fires auto-submit for all open attempts
+#   start_datetime − 10 min  →  instructions_open_at  (instruction page + countdown)
+#   start_datetime           →  countdown hits 0 → questions auto-unlock
+#   end_datetime             →  server fires auto-submit for all open attempts
+#
+# VISIBILITY WINDOW (computed — no stored overrides)
+# ──────────────────────────────────────────────────
+#   visible_from  = start_datetime − VISIBILITY_HOURS_BEFORE  (default 2 h)
+#   visible_until = end_datetime   + VISIBILITY_HOURS_AFTER   (default 2 h)
 #
 # SECURITY MODEL
 # ──────────────
@@ -4547,7 +4605,17 @@ class Exam(models.Model):
 
     Every status transition is written to ExamStatusLog (immutable).
     Rejection never deletes data — the instructor amends and re-submits.
-    Students only see the exam once PUBLISHED and within visible_from/visible_until.
+    Students only see the exam once PUBLISHED and within the computed
+    visible_from / visible_until window.
+
+    This is a CBT / online-only exam system:
+      • No delivery mode field — always online.
+      • No venue or hall — no physical location.
+      • No invigilators — proctoring (if any) is handled elsewhere.
+      • academic_session and department are derived from the linked LMSCourse.
+      • Student eligibility is determined by LMSCourse enrollment.
+      • Visibility window and instruction window are computed properties.
+      • Clash detection is a computed property — no stored clash_group.
     """
 
     # ── Exam type ──────────────────────────────────────────────────────────────
@@ -4569,16 +4637,15 @@ class Exam(models.Model):
         (ORAL,            "Oral / Viva Exam"),
     ]
 
-    # ── Delivery mode ──────────────────────────────────────────────────────────
-    IN_PERSON = "in_person"
-    ONLINE    = "online"
-    HYBRID    = "hybrid"
-
-    MODE_CHOICES = [
-        (IN_PERSON, "In-Person"),
-        (ONLINE,    "Online"),
-        (HYBRID,    "Hybrid"),
-    ]
+    # ── REMOVED: Delivery mode — this is an online/CBT system only ────────────
+    # IN_PERSON = "in_person"
+    # ONLINE    = "online"
+    # HYBRID    = "hybrid"
+    # MODE_CHOICES = [
+    #     (IN_PERSON, "In-Person"),
+    #     (ONLINE,    "Online"),
+    #     (HYBRID,    "Hybrid"),
+    # ]
 
     # ── Approval status ────────────────────────────────────────────────────────
     DRAFT      = "draft"
@@ -4610,19 +4677,24 @@ class Exam(models.Model):
         (IMPORT_FAILED,     "Failed"),
     ]
 
+    # ── Timing / visibility constants (no DB columns needed) ──────────────────
+    INSTRUCTION_WINDOW_MINUTES = 10   # instruction page opens this many mins before start
+    VISIBILITY_HOURS_BEFORE    = 2    # exam card appears to students this many hours before start
+    VISIBILITY_HOURS_AFTER     = 2    # exam card stays visible this many hours after end
+
     # =========================================================================
     # IDENTITY
     # =========================================================================
     slug           = models.SlugField(unique=True, max_length=220)
     reference_code = models.CharField(
         max_length=40, unique=True, db_index=True, blank=True,
-        help_text="Auto-generated on save. Printed on timetables, e.g. EX-2025-4F2A.",
+        help_text="Auto-generated on save. e.g. EX-2025-4F2A.",
     )
-    title          = models.CharField(
+    title = models.CharField(
         max_length=255,
         help_text="e.g. 'CSC301 — Data Structures End-of-Semester Exam 2025'",
     )
-    description    = models.TextField(
+    description = models.TextField(
         blank=True,
         help_text="Internal description; not shown to students.",
     )
@@ -4630,105 +4702,138 @@ class Exam(models.Model):
     # =========================================================================
     # CLASSIFICATION & RELATIONSHIPS
     # =========================================================================
-    exam_type        = models.CharField(
+    exam_type = models.CharField(
         max_length=30, choices=EXAM_TYPE_CHOICES, default=END_OF_SEMESTER,
     )
-    mode             = models.CharField(
-        max_length=20, choices=MODE_CHOICES, default=IN_PERSON,
-    )
+
+    # REMOVED: mode — always online/CBT, no need to store this
+    # mode = models.CharField(
+    #     max_length=20, choices=MODE_CHOICES, default=IN_PERSON,
+    # )
 
     course = models.ForeignKey(
         "LMSCourse",
         on_delete=models.PROTECT,
         related_name="exams",
-        help_text="LMS course this exam belongs to. This may optionally be linked to an academic course via LMSCourse."
+        help_text=(
+            "LMS course this exam belongs to. "
+            "Academic session, department, and eligible student level "
+            "are all derived from here — no need to store them separately."
+        ),
     )
 
-    academic_session = models.ForeignKey(
-        AcademicSession, on_delete=models.SET_NULL,
-        null=True, blank=True,   # ← must be nullable for standalone exams
-        related_name='exams',
-    )
-    department       = models.ForeignKey(
-        "Department",
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name="exams",
-        help_text="Denormalised from Course for fast timetable filtering.",
-    )
-    instructor       = models.ForeignKey(
+    # REMOVED: academic_session — derivable via course.academic_session
+    # academic_session = models.ForeignKey(
+    #     AcademicSession, on_delete=models.SET_NULL,
+    #     null=True, blank=True,
+    #     related_name='exams',
+    # )
+
+    # REMOVED: department — derivable via course.course.department
+    # department = models.ForeignKey(
+    #     "Department",
+    #     on_delete=models.SET_NULL,
+    #     null=True, blank=True,
+    #     related_name="exams",
+    #     help_text="Denormalised from Course for fast timetable filtering.",
+    # )
+
+    instructor = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name="exams_as_instructor",
     )
-    invigilators     = models.ManyToManyField(
-        User,
-        blank=True,
-        related_name="exams_as_invigilator",
-    )
+
+    # REMOVED: invigilators — online/CBT exam, no invigilators needed
+    # invigilators = models.ManyToManyField(
+    #     User,
+    #     blank=True,
+    #     related_name="exams_as_invigilator",
+    # )
 
     # =========================================================================
-    # TIMETABLE — SCHEDULING
+    # SCHEDULING
     # ─────────────────────────────────────────────────────────────────────────
-    # duration_minutes is a @property computed from start_time/end_time.
-    # instruction_window_minutes defaults to 10 — the instruction page unlocks
-    # that many minutes before start_time. Countdown hits zero → auto-unlock.
+    # start_datetime and end_datetime replace the old exam_date + start_time
+    # + end_time split. Combining date and time into a single DateTimeField
+    # removes the need to manually combine them in every property and view.
+    #
+    # duration_minutes, instructions_open_at, visible_from, visible_until,
+    # and has_clash are all computed @properties — nothing extra is stored.
     # =========================================================================
-    exam_date                  = models.DateField(db_index=True)
-    start_time                 = models.TimeField(
-        help_text="Exact exam start. The instruction-page countdown counts to this.",
+
+    # REMOVED: separate date + time fields — replaced by the two DateTimeFields below
+    # exam_date  = models.DateField(db_index=True)
+    # start_time = models.TimeField(
+    #     help_text="Exact exam start. The instruction-page countdown counts to this.",
+    # )
+    # end_time   = models.TimeField(
+    #     help_text="Exam end time. Server fires auto-submit at this time.",
+    # )
+
+    start_datetime = models.DateTimeField(
+        db_index=True,
+        help_text="Exact exam start (date + time). The instruction-page countdown counts to this.",
     )
-    end_time                   = models.TimeField(
-        help_text="Exam end time. Server fires auto-submit at this time.",
-    )
-    instruction_window_minutes = models.PositiveIntegerField(
-        default=10,
-        help_text=(
-            "Minutes before start_time the instruction page unlocks. "
-            "The countdown reads down to start_time; questions auto-unlock at zero."
-        ),
+    end_datetime = models.DateTimeField(
+        help_text="Exam end (date + time). Server fires auto-submit at this moment.",
     )
 
+    # REMOVED: instruction_window_minutes — always 10 min, now a class constant above
+    # instruction_window_minutes = models.PositiveIntegerField(
+    #     default=10,
+    #     help_text=(
+    #         "Minutes before start_time the instruction page unlocks. "
+    #         "The countdown reads down to start_time; questions auto-unlock at zero."
+    #     ),
+    # )
+
     # =========================================================================
-    # VENUE / HALL
+    # REMOVED: VENUE / HALL — online exam, no physical location
     # =========================================================================
-    venue               = models.CharField(
-        max_length=200, blank=True,
-        help_text="Hall name, room number, or 'Online'.",
-    )
-    hall_capacity       = models.PositiveIntegerField(null=True, blank=True)
-    expected_candidates = models.PositiveIntegerField(null=True, blank=True)
-    eligible_levels     = models.CharField(
-        max_length=100, blank=True,
-        help_text="Comma-separated student levels eligible, e.g. '200,300'.",
-    )
+    # venue               = models.CharField(
+    #     max_length=200, blank=True,
+    #     help_text="Hall name, room number, or 'Online'.",
+    # )
+    # hall_capacity       = models.PositiveIntegerField(null=True, blank=True)
+    # expected_candidates = models.PositiveIntegerField(null=True, blank=True)
+    #
+    # REMOVED: eligible_levels — students are already enrolled in the LMSCourse,
+    # so their level is known. Only enrolled students can sit the exam.
+    # eligible_levels = models.CharField(
+    #     max_length=100, blank=True,
+    #     help_text="Comma-separated student levels eligible, e.g. '200,300'.",
+    # )
 
     # =========================================================================
     # QUESTION POOL CONFIGURATION
     # =========================================================================
-    questions_per_student   = models.PositiveIntegerField(
+    questions_per_student = models.PositiveIntegerField(
         null=True, blank=True,
         help_text="Questions served to each student. Blank = give all active questions.",
     )
-    difficulty_mix          = models.JSONField(
-        default=dict, blank=True,
-        help_text='e.g. {"easy": 40, "medium": 40, "hard": 20}. Empty = ignore difficulty.',
-    )
-    shuffle_questions       = models.BooleanField(
+
+    # REMOVED: difficulty_mix — not used in this system
+    # difficulty_mix = models.JSONField(
+    #     default=dict, blank=True,
+    #     help_text='e.g. {"easy": 40, "medium": 40, "hard": 20}. Empty = ignore difficulty.',
+    # )
+
+    shuffle_questions = models.BooleanField(
         default=True,
         help_text="Serve questions in a different order to each student.",
     )
-    shuffle_options         = models.BooleanField(
+    shuffle_options = models.BooleanField(
         default=True,
         help_text="Shuffle MCQ answer options independently per student.",
     )
-    total_marks             = models.DecimalField(
+    total_marks = models.DecimalField(
         max_digits=8, decimal_places=2, default=0,
         validators=[MinValueValidator(0)],
         help_text="Auto-summed from active pool questions, or set manually.",
     )
-    pass_mark               = models.DecimalField(
+    pass_mark = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True,
         validators=[MinValueValidator(0)],
     )
@@ -4736,7 +4841,7 @@ class Exam(models.Model):
         default=False,
         help_text="Show score to student immediately after auto-graded submission.",
     )
-    show_answers_after      = models.DateTimeField(
+    show_answers_after = models.DateTimeField(
         null=True, blank=True,
         help_text="When correct answers become visible to students.",
     )
@@ -4749,58 +4854,60 @@ class Exam(models.Model):
         null=True, blank=True,
         help_text="Upload .docx or .xlsx. Background task parses into ExamQuestion rows.",
     )
-    import_status        = models.CharField(
+    import_status = models.CharField(
         max_length=20, choices=IMPORT_STATUS_CHOICES, default=IMPORT_NONE,
     )
-    import_error_log     = models.TextField(
+    import_error_log = models.TextField(
         blank=True,
         help_text="Rows that failed parsing — shown to the instructor.",
     )
 
     # =========================================================================
-    # FILE UPLOADS
+    # REMOVED: FILE UPLOADS — not applicable for online/CBT exam
     # =========================================================================
-    timetable_file    = models.FileField(
-        upload_to=upload_path("exam_timetables"),
-        null=True, blank=True,
-    )
-    seating_plan_file = models.FileField(
-        upload_to=upload_path("exam_seating_plans"),
-        null=True, blank=True,
-    )
+    # REMOVED: timetable_file — no printed timetable needed for online exams
+    # timetable_file = models.FileField(
+    #     upload_to=upload_path("exam_timetables"),
+    #     null=True, blank=True,
+    # )
+    # REMOVED: seating_plan_file — no physical seating for online exams
+    # seating_plan_file = models.FileField(
+    #     upload_to=upload_path("exam_seating_plans"),
+    #     null=True, blank=True,
+    # )
 
     # =========================================================================
     # APPROVAL WORKFLOW
     # =========================================================================
-    status           = models.CharField(
+    status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default=DRAFT, db_index=True,
     )
     submission_count = models.PositiveIntegerField(
         default=0,
         help_text="Increments on each instructor submission — tracks revision cycles.",
     )
-    submitted_by     = models.ForeignKey(
+    submitted_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="exams_submitted",
     )
-    submitted_at     = models.DateTimeField(null=True, blank=True)
-    approved_by      = models.ForeignKey(
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="exams_approved",
     )
-    approved_at      = models.DateTimeField(null=True, blank=True)
-    rejected_by      = models.ForeignKey(
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="exams_rejected",
     )
     rejected_at      = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.TextField(blank=True)
-    published_by     = models.ForeignKey(
+    published_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="exams_published",
     )
-    published_at     = models.DateTimeField(null=True, blank=True)
-    cancelled_by     = models.ForeignKey(
+    published_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="exams_cancelled",
     )
@@ -4808,52 +4915,58 @@ class Exam(models.Model):
     cancellation_reason = models.TextField(blank=True)
 
     # =========================================================================
-    # STUDENT VISIBILITY WINDOW
+    # REMOVED: STUDENT VISIBILITY OVERRIDES
     # ─────────────────────────────────────────────────────────────────────────
-    # Leave both blank → auto-defaults:
-    #   visible_from  = exam_start_datetime  (students see it when exam opens)
-    #   visible_until = exam_end_datetime    (hidden after exam closes)
-    # Set an override to publish early or keep visible longer.
+    # Visibility is now fully computed from start_datetime / end_datetime
+    # using the class constants VISIBILITY_HOURS_BEFORE / VISIBILITY_HOURS_AFTER.
+    # No manual override fields are needed.
     # =========================================================================
-    visible_from_override  = models.DateTimeField(
-        null=True, blank=True,
-        help_text=(
-            "Optional. Override when students can first see this exam. "
-            "Leave blank to default to exam_start_datetime."
-        ),
-    )
-    visible_until_override = models.DateTimeField(
-        null=True, blank=True,
-        help_text=(
-            "Optional. Override when this exam disappears from student view. "
-            "Leave blank to default to exam_end_datetime."
-        ),
-    )
+    # visible_from_override = models.DateTimeField(
+    #     null=True, blank=True,
+    #     help_text=(
+    #         "Optional. Override when students can first see this exam. "
+    #         "Leave blank to default to exam_start_datetime."
+    #     ),
+    # )
+    # visible_until_override = models.DateTimeField(
+    #     null=True, blank=True,
+    #     help_text=(
+    #         "Optional. Override when this exam disappears from student view. "
+    #         "Leave blank to default to exam_end_datetime."
+    #     ),
+    # )
 
     # =========================================================================
-    # CLASH DETECTION
+    # REMOVED: CLASH DETECTION FIELDS — clash is now a computed @property
+    # ─────────────────────────────────────────────────────────────────────────
+    # has_clash and clashing_exams are properties below.
+    # clash_notes kept as a plain text field for manual staff annotations.
     # =========================================================================
-    clash_group = models.CharField(max_length=80, blank=True, db_index=True)
-    has_clash   = models.BooleanField(default=False)
+    # clash_group = models.CharField(max_length=80, blank=True, db_index=True)
+    # has_clash   = models.BooleanField(default=False)
     clash_notes = models.TextField(blank=True)
 
     # =========================================================================
     # INSTRUCTIONS & NOTES
     # =========================================================================
-    instructions         = models.TextField(
+    instructions = models.TextField(
         blank=True,
         help_text="Shown to students on the instruction page during the countdown.",
     )
     special_instructions = models.TextField(
         blank=True,
-        help_text="Shown on the timetable listing (e.g. 'Bring your matric card').",
+        help_text="Additional notes shown on the exam listing (e.g. 'Have your matric card ready').",
     )
-    internal_notes       = models.TextField(
+    internal_notes = models.TextField(
         blank=True,
         help_text="Staff-only — never visible to students.",
     )
-    has_accommodations  = models.BooleanField(default=False)
-    accommodation_notes = models.TextField(blank=True)
+
+    # REMOVED: has_accommodations / accommodation_notes — physical-exam concepts,
+    # not applicable for a fully online/CBT system. If accessibility settings are
+    # ever needed, store them on the student profile, not the exam.
+    # has_accommodations  = models.BooleanField(default=False)
+    # accommodation_notes = models.TextField(blank=True)
 
     # =========================================================================
     # STANDARD METADATA
@@ -4867,22 +4980,25 @@ class Exam(models.Model):
     is_active  = models.BooleanField(default=True)
 
     class Meta:
-        ordering            = ["exam_date", "start_time"]
+        ordering            = ["start_datetime"]
         verbose_name        = "Exam"
         verbose_name_plural = "Exams"
         indexes = [
-            models.Index(fields=["exam_date", "status"]),
-            models.Index(fields=["academic_session", "exam_date"]),
-            models.Index(fields=["course", "academic_session"]),
+            models.Index(fields=["start_datetime", "status"]),
+            models.Index(fields=["course", "start_datetime"]),
+            # REMOVED: academic_session indexes — session derived from LMSCourse
+            # models.Index(fields=["academic_session", "exam_date"]),
+            # models.Index(fields=["course", "academic_session"]),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["course", "academic_session", "exam_type"],
-                condition=models.Q(course__isnull=False),
-                name="unique_exam_course_session_type",
-            ),
+            # REMOVED: unique_exam_course_session_type — academic_session no longer stored
+            # models.UniqueConstraint(
+            #     fields=["course", "academic_session", "exam_type"],
+            #     condition=models.Q(course__isnull=False),
+            #     name="unique_exam_course_session_type",
+            # ),
             models.CheckConstraint(
-                check=models.Q(end_time__gt=models.F("start_time")),
+                condition=models.Q(end_datetime__gt=models.F("start_datetime")),
                 name="exam_end_after_start",
             ),
         ]
@@ -4890,112 +5006,88 @@ class Exam(models.Model):
     def __str__(self):
         return (
             f"[{self.reference_code}] {self.title} | "
-            f"{self.exam_date} {self.start_time:%H:%M}–{self.end_time:%H:%M}"
+            f"{self.start_datetime:%Y-%m-%d %H:%M}–{self.end_datetime:%H:%M}"
         )
 
     # ── Validation ────────────────────────────────────────────────────────────
 
     def clean(self):
         super().clean()
-        import datetime as dt
         errors = {}
 
-        # 1. end_time must be after start_time
-        if self.start_time and self.end_time:
-            if self.end_time <= self.start_time:
-                errors['end_time'] = "end_time must be after start_time."
+        # 1. end_datetime must be after start_datetime
+        if self.start_datetime and self.end_datetime:
+            if self.end_datetime <= self.start_datetime:
+                errors["end_datetime"] = "end_datetime must be after start_datetime."
             else:
-                dur = self.duration_minutes  # computed property — safe here
-                # 2. instruction window must be positive and smaller than exam duration
-                if self.instruction_window_minutes < 1:
-                    errors['instruction_window_minutes'] = (
-                        "instruction_window_minutes must be at least 1."
-                    )
-                elif self.instruction_window_minutes >= dur:
-                    errors['instruction_window_minutes'] = (
-                        f"instruction_window_minutes ({self.instruction_window_minutes}) "
-                        f"must be less than exam duration ({dur} min)."
+                dur = self.duration_minutes
+                # 2. instruction window (fixed constant) must be smaller than exam duration
+                if dur > 0 and self.INSTRUCTION_WINDOW_MINUTES >= dur:
+                    errors["start_datetime"] = (
+                        f"Exam duration ({dur} min) is too short for the "
+                        f"{self.INSTRUCTION_WINDOW_MINUTES}-minute instruction window."
                     )
 
         # 3. pass_mark may not exceed total_marks
         if self.pass_mark is not None and self.total_marks:
             if self.pass_mark > self.total_marks:
-                errors['pass_mark'] = "pass_mark cannot exceed total_marks."
-
-        # 4. visible_until_override must be after visible_from_override when both set
-        if self.visible_from_override and self.visible_until_override:
-            if self.visible_until_override <= self.visible_from_override:
-                errors['visible_until_override'] = (
-                    "visible_until_override must be after visible_from_override."
-                )
+                errors["pass_mark"] = "pass_mark cannot exceed total_marks."
 
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         if not self.reference_code:
-            year = self.exam_date.year if self.exam_date else timezone.now().year
+            year = self.start_datetime.year if self.start_datetime else timezone.now().year
             self.reference_code = f"EX-{year}-{secrets.token_hex(3).upper()}"
         if not self.slug:
             self.slug = unique_slug(Exam, self.reference_code)
-        # Run full model validation on every save (not just via forms/admin)
         self.full_clean()
         super().save(*args, **kwargs)
 
-    # ── Computed datetimes ────────────────────────────────────────────────────
-
-    @property
-    def exam_start_datetime(self):
-        """Timezone-aware datetime of the exact exam start."""
-        import datetime
-        from django.utils.timezone import make_aware
-        return make_aware(datetime.datetime.combine(self.exam_date, self.start_time))
-
-    @property
-    def exam_end_datetime(self):
-        """Timezone-aware datetime of the exam end."""
-        import datetime
-        from django.utils.timezone import make_aware
-        return make_aware(datetime.datetime.combine(self.exam_date, self.end_time))
+    # ── Computed timing properties ─────────────────────────────────────────────
 
     @property
     def duration_minutes(self) -> int:
-        """
-        Auto-computed from start_time and end_time. Never stored in the DB.
-        The student-facing timer and get_exam_data view both use this.
-        """
-        import datetime
-        start_dt = datetime.datetime.combine(datetime.date.today(), self.start_time)
-        end_dt   = datetime.datetime.combine(datetime.date.today(), self.end_time)
-        return int((end_dt - start_dt).total_seconds() // 60)
+        """Total exam duration in minutes, computed from start/end datetimes."""
+        if not (self.start_datetime and self.end_datetime):
+            return 0
+        return int((self.end_datetime - self.start_datetime).total_seconds() // 60)
 
     @property
     def instructions_open_at(self):
         """
         When the instruction page unlocks for students.
-        = exam_start_datetime − instruction_window_minutes (default 10 min).
-        The countdown reads down to exam_start_datetime; questions auto-unlock at zero.
+        = start_datetime − INSTRUCTION_WINDOW_MINUTES (always 10 min).
+        The countdown reads down to start_datetime; questions auto-unlock at zero.
         """
         import datetime
-        return self.exam_start_datetime - datetime.timedelta(
-            minutes=self.instruction_window_minutes
-        )
+        return self.start_datetime - datetime.timedelta(minutes=self.INSTRUCTION_WINDOW_MINUTES)
+
+    # ── Computed visibility properties ────────────────────────────────────────
+    #
+    # Replaces the old visible_from_override / visible_until_override fields.
+    # Window is derived purely from the exam datetimes + class-level constants.
+    # To change the window institution-wide, adjust the constants at the top
+    # of this class — no migration needed.
 
     @property
     def visible_from(self):
         """
-        When students can first see this exam in their list.
-        Uses visible_from_override if set, otherwise defaults to exam_start_datetime.
+        When students can first see this exam in their dashboard.
+        Defaults to VISIBILITY_HOURS_BEFORE hours before start_datetime.
         """
-        return self.visible_from_override or self.exam_start_datetime
+        import datetime
+        return self.start_datetime - datetime.timedelta(hours=self.VISIBILITY_HOURS_BEFORE)
 
     @property
     def visible_until(self):
         """
         When this exam disappears from student view.
-        Uses visible_until_override if set, otherwise defaults to exam_end_datetime.
+        Defaults to VISIBILITY_HOURS_AFTER hours after end_datetime.
         """
-        return self.visible_until_override or self.exam_end_datetime
+        import datetime
+        return self.end_datetime + datetime.timedelta(hours=self.VISIBILITY_HOURS_AFTER)
 
     @property
     def is_published(self):
@@ -5003,15 +5095,41 @@ class Exam(models.Model):
 
     @property
     def is_visible_to_students(self):
-        """True only when published, active, and within the visibility window."""
+        """True only when published, active, and within the computed visibility window."""
         now = timezone.now()
-        if not self.is_published:
-            return False
-        if now < self.visible_from:
-            return False
-        if now > self.visible_until:
-            return False
-        return True
+        return self.is_published and self.visible_from <= now <= self.visible_until
+
+    # ── Computed clash properties ──────────────────────────────────────────────
+    #
+    # Replaces the old clash_group / has_clash fields.
+    # Overlap condition: another exam's window intersects this one.
+    # clash_notes (plain TextField above) is kept for manual staff annotations.
+
+    @property
+    def clashing_exams(self):
+        """
+        Queryset of other published exams whose time window overlaps this one.
+        Overlap: other.start_datetime < self.end_datetime
+              AND other.end_datetime  > self.start_datetime
+        """
+        if not (self.start_datetime and self.end_datetime):
+            return Exam.objects.none()
+        return (
+            Exam.objects
+            .filter(status=self.PUBLISHED, is_active=True)
+            .filter(
+                start_datetime__lt=self.end_datetime,
+                end_datetime__gt=self.start_datetime,
+            )
+            .exclude(pk=self.pk)
+        )
+
+    @property
+    def has_clash(self) -> bool:
+        """True if any other published exam overlaps this exam's window."""
+        return self.clashing_exams.exists()
+
+    # ── Question pool helpers ──────────────────────────────────────────────────
 
     @property
     def active_question_count(self):
@@ -5061,15 +5179,19 @@ class ExamQuestion(models.Model):
         (ESSAY,        "Essay / Long Answer"),
     ]
 
-    EASY   = "easy"
-    MEDIUM = "medium"
-    HARD   = "hard"
-
-    DIFFICULTY_CHOICES = [
-        (EASY,   "Easy"),
-        (MEDIUM, "Medium"),
-        (HARD,   "Hard"),
-    ]
+    # REMOVED: difficulty — students only sit exams for courses they are enrolled
+    # in, so academic level is already enforced at the Exam→LMSCourse level.
+    # The Exam model also has difficulty_mix commented out, making per-question
+    # difficulty unused end-to-end. Re-add if adaptive difficulty is ever needed.
+    # EASY   = "easy"
+    # MEDIUM = "medium"
+    # HARD   = "hard"
+    #
+    # DIFFICULTY_CHOICES = [
+    #     (EASY,   "Easy"),
+    #     (MEDIUM, "Medium"),
+    #     (HARD,   "Hard"),
+    # ]
 
     # =========================================================================
     # IDENTITY
@@ -5084,7 +5206,7 @@ class ExamQuestion(models.Model):
     # source_reference when picking for a new exam.
     # =========================================================================
     exam = models.ForeignKey(
-        Exam,
+        "Exam",
         on_delete=models.CASCADE,
         related_name="questions",
     )
@@ -5096,19 +5218,22 @@ class ExamQuestion(models.Model):
     question_type = models.CharField(
         max_length=20, choices=QUESTION_TYPE_CHOICES, default=MCQ,
     )
-    difficulty    = models.CharField(
-        max_length=10, choices=DIFFICULTY_CHOICES, default=MEDIUM, db_index=True,
-    )
-    marks         = models.DecimalField(
+
+    # REMOVED: difficulty — see note above at class constants.
+    # difficulty = models.CharField(
+    #     max_length=10, choices=DIFFICULTY_CHOICES, default=MEDIUM, db_index=True,
+    # )
+
+    marks = models.DecimalField(
         max_digits=6, decimal_places=2, default=1,
         validators=[MinValueValidator(0)],
     )
-    image         = models.ImageField(
+    image = models.ImageField(
         upload_to=upload_path("exam_question_images"),
         null=True, blank=True,
         help_text="Optional diagram or figure for the question.",
     )
-    explanation   = models.TextField(
+    explanation = models.TextField(
         blank=True,
         help_text="Explanation shown to students after answers are released.",
     )
@@ -5137,11 +5262,19 @@ class ExamQuestion(models.Model):
     # =========================================================================
     # BANK / POOL METADATA
     # =========================================================================
-    order            = models.PositiveIntegerField(
-        default=0, db_index=True,
-        help_text="Default display order within the exam (overridden by shuffle).",
-    )
-    tags             = models.JSONField(
+
+    # REMOVED: order — question sequencing is handled at the StudentExamResponse
+    # level via assigned_question_ids (written once per student draw). When
+    # shuffle_questions=True (the default on Exam), a stored order field is
+    # entirely overridden. When shuffle is off, assigned_question_ids preserves
+    # creation order (created_at). A stored order field adds maintenance burden
+    # with no benefit in this CBT setup.
+    # order = models.PositiveIntegerField(
+    #     default=0, db_index=True,
+    #     help_text="Default display order within the exam (overridden by shuffle).",
+    # )
+
+    tags = models.JSONField(
         default=list, blank=True,
         help_text='e.g. ["chapter-3", "sorting", "complexity"]',
     )
@@ -5149,7 +5282,7 @@ class ExamQuestion(models.Model):
         max_length=255, blank=True,
         help_text='e.g. "2019 Past Question Q4" or "Imported via Q-Bank"',
     )
-    year_first_used  = models.PositiveIntegerField(
+    year_first_used = models.PositiveIntegerField(
         null=True, blank=True,
         help_text="Year this question was first used — helps avoid recent repeats.",
     )
@@ -5159,10 +5292,15 @@ class ExamQuestion(models.Model):
         max_length=255, blank=True,
         help_text="Original filename this question was parsed from, if imported.",
     )
-    import_row_number  = models.PositiveIntegerField(
-        null=True, blank=True,
-        help_text="Row/paragraph number in import file — for parse-error tracing.",
-    )
+
+    # REMOVED: import_row_number — parse-error tracing is handled in
+    # Exam.import_error_log (text log written during the import job).
+    # Storing a row number per question record adds a column that is only
+    # meaningful during the import run and is never queried afterward.
+    # import_row_number = models.PositiveIntegerField(
+    #     null=True, blank=True,
+    #     help_text="Row/paragraph number in import file — for parse-error tracing.",
+    # )
 
     # =========================================================================
     # STANDARD METADATA
@@ -5179,18 +5317,22 @@ class ExamQuestion(models.Model):
     )
 
     class Meta:
-        ordering            = ["exam", "order", "created_at"]
+        ordering            = ["exam", "created_at"]   # order field removed
         verbose_name        = "Exam Question"
         verbose_name_plural = "Exam Questions"
         indexes = [
-            models.Index(fields=["exam", "difficulty", "is_active"]),
-            models.Index(fields=["exam", "order"]),
+            # REMOVED: difficulty index — field no longer stored
+            # models.Index(fields=["exam", "difficulty", "is_active"]),
+            # REMOVED: order index — field no longer stored
+            # models.Index(fields=["exam", "order"]),
+            models.Index(fields=["exam", "is_active"]),
+            models.Index(fields=["exam", "created_at"]),
         ]
 
     def __str__(self):
         return (
-            f"[{self.exam.reference_code}] Q{self.order} "
-            f"({self.get_difficulty_display()}) — {self.question_text[:80]}"
+            f"[{self.exam.reference_code}] "
+            f"({self.get_question_type_display()}) — {self.question_text[:80]}"
         )
 
     def clean(self):
@@ -5230,6 +5372,43 @@ class ExamQuestion(models.Model):
             )
         self.full_clean()
         super().save(*args, **kwargs)
+
+    # =========================================================================
+    # COMPUTED PROPERTIES
+    # =========================================================================
+
+    @property
+    def option_count(self) -> int:
+        """Number of answer options (meaningful for MCQ / multi_select / T/F)."""
+        return len(self.options)
+
+    @property
+    def correct_option_count(self) -> int:
+        """Number of options marked is_correct. Useful for grading validation."""
+        return sum(1 for o in self.options if o.get("is_correct"))
+
+    @property
+    def has_image(self) -> bool:
+        return bool(self.image)
+
+    @property
+    def is_auto_gradeable(self) -> bool:
+        """
+        True for question types that can be graded without human review.
+        MCQ and True/False are always auto-gradeable.
+        Multi-select is auto-gradeable.
+        Short-answer is auto-gradeable only when accepted_answers is populated.
+        Essay always requires manual grading.
+        """
+        if self.question_type in (self.MCQ, self.TRUE_FALSE, self.MULTI_SELECT):
+            return True
+        if self.question_type == self.SHORT_ANSWER:
+            return bool(self.accepted_answers)
+        return False  # essay
+
+    @property
+    def requires_manual_grading(self) -> bool:
+        return not self.is_auto_gradeable
 
     def safe_options_for_student(self, shuffled_order: list = None) -> list:
         """
@@ -5459,6 +5638,11 @@ class StudentExamResponse(models.Model):
     def needs_manual_grading(self):
         return self.pending_manual_count > 0
 
+    @property
+    def auto_graded(self):
+        """true if the attempt has been fully auto-graded (no pending manual questions)."""
+        return self.status == self.graded and self.pending_manual_count == 0
+
 
 # =============================================================================
 # TABLE 4 — EXAM STATUS LOG  (immutable — uses ImmutableMixin from this file)
@@ -5514,3 +5698,218 @@ class ExamStatusLog(ImmutableMixin, models.Model):
                 f"esl-{self.exam_id}-{secrets.token_hex(4)}",
             )
         super().save(*args, **kwargs)
+
+# ==================== BADGE AUTO-AWARD ENGINE ====================
+
+def check_and_award_badges(user):
+    """
+    Call this after any student action (quiz submit, lesson complete, etc.)
+    It checks every milestone and silently awards badges the student hasn't got yet.
+    Safe to call multiple times — unique_together on StudentBadge prevents duplicates.
+    """
+    from django.utils.text import slugify
+
+    def _award(slug, name, description, icon, color, points, reason):
+        """Get-or-create the badge then award it if not already held."""
+        badge, _ = Badge.objects.get_or_create(
+            slug=slug,
+            defaults=dict(
+                name=name, description=description,
+                icon=icon, color=color, points=points,
+                criteria=description, is_active=True,
+            ),
+        )
+        StudentBadge.objects.get_or_create(
+            student=user, badge=badge,
+            defaults=dict(awarded_by=None, reason=reason),
+        )
+
+    # ── Lazy imports to avoid circular deps ──────────────────────────────────
+    from django.utils import timezone
+    from datetime import timedelta
+
+    now = timezone.now()
+
+    # ── Gather student stats ──────────────────────────────────────────────────
+    enrollments      = Enrollment.objects.filter(student=user)
+    completed_enroll = enrollments.filter(status='completed')
+    active_enroll    = enrollments.filter(status='active')
+
+    lessons_completed = LessonProgress.objects.filter(
+        enrollment__student=user, is_completed=True
+    )
+    total_lessons_done = lessons_completed.count()
+
+    submissions = AssignmentSubmission.objects.filter(student=user, status='graded')
+    total_subs  = submissions.count()
+    on_time_subs = submissions.filter(
+        submitted_at__lte=models.F('assignment__due_date')
+    ).count() if submissions.exists() else 0
+
+    quiz_attempts   = QuizAttempt.objects.filter(student=user, is_completed=True)
+    passed_quizzes  = quiz_attempts.filter(passed=True)
+    perfect_quizzes = quiz_attempts.filter(percentage=100)
+
+    discussions = Discussion.objects.filter(author=user)
+    replies     = DiscussionReply.objects.filter(author=user)
+
+    total_courses_enrolled  = enrollments.count()
+    total_courses_completed = completed_enroll.count()
+
+    # ── 1. First Lesson ───────────────────────────────────────────────────────
+    if total_lessons_done >= 1:
+        _award('first-lesson', 'First Step',
+               'Complete your first lesson', 'play-circle', 'blue', 5,
+               'Completed first lesson')
+
+    # ── 2. Lesson milestones ──────────────────────────────────────────────────
+    for count, slug, name, pts in [
+        (10,  'lessons-10',  'Lesson Learner',   10),
+        (25,  'lessons-25',  'Dedicated Student', 15),
+        (50,  'lessons-50',  'Knowledge Seeker',  20),
+        (100, 'lessons-100', 'Century Learner',   30),
+    ]:
+        if total_lessons_done >= count:
+            _award(slug, name, f'Complete {count} lessons',
+                   'book-open', 'blue', pts, f'Completed {count} lessons')
+
+    # ── 3. First Course Enrolled ──────────────────────────────────────────────
+    if total_courses_enrolled >= 1:
+        _award('first-enrollment', 'First Course Enrolled',
+               'Enroll in your first course', 'bookmark', 'purple', 5,
+               'Enrolled in first course')
+
+    # ── 4. First Course Completed ─────────────────────────────────────────────
+    if total_courses_completed >= 1:
+        _award('first-course', 'First Course Completed',
+               'Complete your first course', 'graduation-cap', 'green', 20,
+               'Completed first course')
+
+    # ── 5. Course milestones ──────────────────────────────────────────────────
+    for count, slug, name, pts in [
+        (3,  'courses-3',  'Course Collector',  20),
+        (5,  'courses-5',  'Marathon Learner',  30),
+        (10, 'courses-10', 'Super Achiever',    50),
+    ]:
+        if total_courses_completed >= count:
+            _award(slug, name, f'Complete {count} or more courses',
+                   'graduation-cap', 'gold', pts, f'Completed {count} courses')
+
+    # ── 6. Assignment milestones ──────────────────────────────────────────────
+    if total_subs >= 1:
+        _award('first-assignment', 'First Submission',
+               'Submit your first assignment', 'file-text', 'orange', 5,
+               'First assignment submitted')
+
+    for count, slug, name, pts in [
+        (5,  'assignments-5',  'Assignment Starter', 10),
+        (10, 'assignments-10', 'Hard Worker',        15),
+        (20, 'assignments-20', 'Assignment Pro',     25),
+        (50, 'assignments-50', 'Assignment Master',  40),
+    ]:
+        if total_subs >= count:
+            _award(slug, name, f'Submit {count} assignments on time',
+                   'file-check', 'orange', pts, f'Submitted {count} assignments')
+
+    # ── 7. Perfect assignment score ───────────────────────────────────────────
+    perfect_subs = [s for s in submissions if s.score == s.assignment.max_score]
+    if perfect_subs:
+        _award('perfect-score', 'Perfect Score',
+               'Achieve 100% on a course final assessment', 'star', 'gold', 20,
+               'Scored 100% on an assignment')
+
+    # ── 8. Quiz milestones ────────────────────────────────────────────────────
+    if quiz_attempts.exists():
+        _award('first-quiz', 'Quiz Taker',
+               'Complete your first quiz', 'help-circle', 'teal', 5,
+               'Completed first quiz')
+
+    for count, slug, name, pts in [
+        (5,  'quizzes-5',  'Quiz Regular',  10),
+        (10, 'quizzes-10', 'Quiz Veteran',  20),
+        (25, 'quizzes-25', 'Quiz Master',   35),
+    ]:
+        if passed_quizzes.count() >= count:
+            _award(slug, name, f'Pass {count} quizzes',
+                   'check-circle', 'teal', pts, f'Passed {count} quizzes')
+
+    if perfect_quizzes.exists():
+        _award('quiz-perfect', 'Quiz Perfectionist',
+               'Score 100% on a quiz', 'award', 'gold', 15,
+               'Scored 100% on a quiz')
+
+    if perfect_quizzes.count() >= 5:
+        _award('quiz-perfect-5', 'Quiz Master',
+               'Score 100% on 5 quizzes', 'award', 'gold', 30,
+               'Scored 100% on 5 quizzes')
+
+    # ── 9. Community ─────────────────────────────────────────────────────────
+    if discussions.exists():
+        _award('first-post', 'Conversationalist',
+               'Start your first discussion', 'message-circle', 'purple', 5,
+               'Started first discussion')
+
+    total_community = discussions.count() + replies.count()
+    for count, slug, name, pts in [
+        (10, 'community-10', 'Community Helper',  15),
+        (25, 'community-25', 'Community Star',    25),
+        (50, 'community-50', 'Community Legend',  40),
+    ]:
+        if total_community >= count:
+            _award(slug, name,
+                   f'Contribute {count} discussions or replies',
+                   'users', 'purple', pts,
+                   f'{count} community contributions')
+
+    # ── 10. Early Bird — lesson completed before 8 AM ─────────────────────────
+    early_lessons = lessons_completed.filter(
+        completed_at__hour__lt=8
+    )
+    if early_lessons.count() >= 7:
+        _award('early-bird', 'Early Bird',
+               'Complete lessons before 8 AM for 7 consecutive days',
+               'sun', 'yellow', 20,
+               'Early morning learner')
+
+    # ── 11. Quick Learner — completed a course in under 7 days ───────────────
+    for enrollment in completed_enroll:
+        if enrollment.completed_at and enrollment.enrolled_at:
+            days = (enrollment.completed_at - enrollment.enrolled_at).days
+            if days <= 7:
+                _award('quick-learner', 'Quick Learner',
+                       'Complete a course in under 7 days',
+                       'zap', 'yellow', 25,
+                       'Finished a course in under 7 days')
+                break
+
+    # ── 12. Streak — 7 days consecutive lesson activity ──────────────────────
+    activity_dates = set(
+        lessons_completed
+        .values_list('completed_at__date', flat=True)
+        .distinct()
+    )
+    streak = 0
+    check_date = now.date()
+    while check_date in activity_dates:
+        streak += 1
+        check_date -= timedelta(days=1)
+
+    if streak >= 7:
+        _award('streak-7', '7-Day Streak',
+               'Learn every day for 7 days in a row', 'flame', 'red', 20,
+               f'{streak}-day learning streak')
+    if streak >= 30:
+        _award('streak-30', '30-Day Streak',
+               'Learn every day for 30 days in a row', 'flame', 'red', 50,
+               f'{streak}-day learning streak')
+
+    # ── 13. Certificate earned ────────────────────────────────────────────────
+    certs = Certificate.objects.filter(student=user)
+    if certs.exists():
+        _award('first-certificate', 'Certified!',
+               'Earn your first certificate', 'award', 'green', 30,
+               'First certificate earned')
+    if certs.count() >= 3:
+        _award('certificates-3', 'Certificate Collector',
+               'Earn 3 certificates', 'award', 'green', 50,
+               '3 certificates earned')

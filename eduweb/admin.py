@@ -753,7 +753,7 @@ class ProgramAdmin(admin.ModelAdmin):
 class AcademicSessionAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'status', 'is_current',
-        'registration_start', 'registration_end',
+        # 'registration_start', 'registration_end',
     )
     list_filter = ('status', 'is_current')
     search_fields = ('name',)
@@ -765,13 +765,13 @@ class AcademicSessionAdmin(admin.ModelAdmin):
             'fields': ('name', 'status', 'is_current')
         }),
         ('Term Dates', {
-            'fields': ('term_dates', 'override_current_term'),
+            'fields': ('term_dates',),
             'description': 'JSON list of term windows: [{"term": "first", "start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}, ...]'
         }),
-        ('Registration Window', {
-            'fields': ('registration_start', 'registration_end'),
-            'classes': ('collapse',)
-        }),
+        # ('Registration Window', {
+        #     'fields': ('registration_start', 'registration_end'),
+        #     'classes': ('collapse',)
+        # }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
@@ -784,7 +784,7 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'code', 'program', 'course_type',
         'credit_units', 'year_of_study', 'semester',
-        'is_active', 'display_order'
+        'is_active',
     )
     list_filter = (
         'program__department__faculty',
@@ -797,7 +797,8 @@ class CourseAdmin(admin.ModelAdmin):
     )
     search_fields = ('name', 'code', 'description')
     prepopulated_fields = {'slug': ('code', 'name')}
-    list_editable = ('is_active', 'display_order')
+    list_editable = ('is_active',)
+                    #  'display_order')
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
@@ -805,7 +806,8 @@ class CourseAdmin(admin.ModelAdmin):
             'fields': ('program',)
         }),
         ('Identity', {
-            'fields': ('name', 'slug', 'code', 'is_active', 'display_order')
+            'fields': ('name', 'slug', 'code', 'is_active')
+                    #    'display_order')
         }),
         ('Academic Structure', {
             'fields': ('course_type', 'credit_units', 'year_of_study', 'semester')
@@ -813,10 +815,10 @@ class CourseAdmin(admin.ModelAdmin):
         ('Content', {
             'fields': ('description', 'learning_outcomes')
         }),
-        ('Display', {
-            'fields': ('icon', 'color_primary', 'color_secondary'),
-            'classes': ('collapse',)
-        }),
+        # ('Display', {
+        #     'fields': ('icon', 'color_primary', 'color_secondary'),
+        #     'classes': ('collapse',)
+        # }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
@@ -827,13 +829,14 @@ class CourseAdmin(admin.ModelAdmin):
 @admin.register(AllRequiredPayments)
 class AllRequiredPaymentsAdmin(admin.ModelAdmin):
     list_display = (
-        'purpose', 'program', 'course',
-        'amount', 'who_to_pay', 'semester', 'academic_session', 'is_active', 'due_date'
+        'purpose', 'program', 'level', 'course',
+        'amount', 'currency', 'who_to_pay', 'semester', 'academic_session', 'is_active', 'due_date'
     )
     list_filter = (
         'program__department__faculty',
         'program__department',
         'program',
+        'level',
         'who_to_pay',
         'semester',
         'academic_session',
@@ -845,10 +848,11 @@ class AllRequiredPaymentsAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Scope', {
-            'fields': ('program', 'course')
+            'fields': ('program', 'level', 'course'),
+            'description': 'Set "Level" to restrict this fee to a specific student level. Leave blank to apply to ALL levels in the program.'
         }),
         ('Payment Details', {
-            'fields': ('purpose', 'amount', 'who_to_pay', 'semester', 'academic_session', 'due_date')
+            'fields': ('purpose', 'amount', 'currency', 'who_to_pay', 'semester', 'academic_session', 'due_date')
         }),
         ('Status', {
             'fields': ('is_active',)
@@ -935,7 +939,8 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'get_full_name',
         'email',
         'program',
-        'intake',
+        'academic_session',
+        'study_mode',
         'status',
         'admission_accepted',
         'admission_number',
@@ -951,7 +956,8 @@ class CourseApplicationAdmin(admin.ModelAdmin):
         'department_approved',
         'program__department__faculty',
         'program',
-        'intake__year',
+        'academic_session',
+        'study_mode',
         'created_at',
         'payment_status'
     )
@@ -993,7 +999,7 @@ class CourseApplicationAdmin(admin.ModelAdmin):
             'description': 'Track student admission acceptance and department approval'
         }),
         ('Course Selection', {
-            'fields': ('program', 'intake', 'study_mode')
+            'fields': ('program', 'academic_session', 'study_mode')
         }),
         ('Personal Information', {
             'fields': (
@@ -1321,14 +1327,14 @@ class LessonProgressAdmin(admin.ModelAdmin):
 @admin.register(LMSCourse)
 class LMSCourseAdmin(admin.ModelAdmin):
     list_display = (
-        'title', 'code', 'instructor_name', 'difficulty_level',
+        'title', 'code', 'difficulty_level',
         'is_published', 'is_featured', 'total_enrollments', 'average_rating'
     )
     list_filter = (
         'difficulty_level', 'is_published',
-        'is_featured', 'language', 'created_at'
+        'is_featured', 'created_at'
     )
-    search_fields = ('title', 'code', 'description', 'instructor_name')
+    search_fields = ('title', 'code', 'description')
     prepopulated_fields = {'slug': ('title',)}
     list_editable = ('is_published', 'is_featured')
     readonly_fields = (
@@ -1348,24 +1354,25 @@ class LMSCourseAdmin(admin.ModelAdmin):
             'fields': ('description', 'learning_objectives', 'prerequisites')
         }),
         ('Course Details', {
-            'fields': ('difficulty_level', 'duration_hours', 'language')
+            'fields': ('difficulty_level',),
+            'description': 'Difficulty Level is now a student level (100–800), e.g. 100 = first year, 400 = final year undergraduate.'
         }),
         ('Instructor', {
-            'fields': ('instructor', 'instructor_name', 'instructor_bio')
+            'fields': ('instructor',)
         }),
         ('Media', {
             'fields': ('thumbnail', 'promo_video_url'),
             'classes': ('collapse',)
         }),
-        ('Enrollment', {
-            'fields': ('max_students', 'enrollment_start_date', 'enrollment_end_date')
-        }),
+        # ('Enrollment', {
+        #     'fields': ('max_students', 'enrollment_start_date', 'enrollment_end_date')
+        # }),
         ('Status', {
             'fields': ('is_published', 'is_featured')
         }),
-        ('Certificate', {
-            'fields': ('has_certificate', 'certificate_template', 'certificate_fee')
-        }),
+        # ('Certificate', {
+        #     'fields': ('has_certificate', 'certificate_template', 'certificate_fee')
+        # }),
         ('SEO', {
             'fields': ('meta_description', 'meta_keywords'),
             'classes': ('collapse',)
@@ -2078,11 +2085,20 @@ class SiteHistoryMilestoneAdmin(admin.ModelAdmin):
 
 # ==================== EXAMS ====================
 class ExamQuestionInline(admin.TabularInline):
-    model  = ExamQuestion
-    extra  = 0
-    fields = ('question_text', 'question_type', 'difficulty', 'marks', 'order', 'is_active')
-    readonly_fields = ('created_at',)
+    model    = ExamQuestion
+    extra    = 0
+    max_num  = 20
+    per_page = 20
+    fields   = ('question_text', 'question_type', 'marks', 'is_active')
+    readonly_fields  = ('created_at',)
     show_change_link = True
+
+    #def get_queryset(self, request):
+    #    qs = super().get_queryset(request).order_by('order')
+     #   # Return only first 20 — but don't slice here (breaks Django formset filter).
+      #  # Use the IDs instead so the queryset remains filterable.
+       # ids = list(qs.values_list('pk', flat=True)[:20])
+        #return qs.filter(pk__in=ids)
 
 
 class ExamStatusLogInline(admin.TabularInline):
@@ -2099,40 +2115,75 @@ class ExamStatusLogInline(admin.TabularInline):
 @admin.register(Exam)
 class ExamAdmin(admin.ModelAdmin):
     list_display  = (
-        'reference_code', 'title', 'exam_type', 'mode', 'course',
-        'academic_session', 'exam_date', 'start_time', 'end_time',
+        'reference_code', 'title', 'exam_type', 'course',
+        'start_datetime', 'end_datetime',
         'status', 'show_result_immediately', 'is_active',
+        # REMOVED: 'mode'             — always online, no longer a field
+        # REMOVED: 'academic_session' — derived from LMSCourse
+        # REMOVED: 'department'       — derived from LMSCourse
+        # REMOVED: 'exam_date'        — replaced by start_datetime
     )
     list_filter   = (
-        'status', 'exam_type', 'mode', 'academic_session',
-        'department', 'show_result_immediately', 'is_active', 'exam_date',
+        'status', 'exam_type',
+        'show_result_immediately', 'is_active',
+        # REMOVED: 'mode'             — always online
+        # REMOVED: 'academic_session' — not stored on Exam
+        # REMOVED: 'department'       — not stored on Exam
+        # REMOVED: 'exam_date'        — replaced by start_datetime
     )
-    search_fields = ('reference_code', 'title', 'instructor__username', 'venue')
+    search_fields = ('reference_code', 'title', 'instructor__username')
+    # REMOVED: 'venue' from search_fields — venue no longer stored
     readonly_fields = (
         'reference_code', 'slug', 'submission_count',
         'submitted_at', 'approved_at', 'rejected_at',
         'published_at', 'cancelled_at', 'created_at', 'updated_at',
+        # Computed properties — shown read-only so admins can inspect them
+        'duration_minutes_display',
+        'instructions_open_at_display',
+        'visible_from_display',
+        'visible_until_display',
+        'has_clash_display',
     )
-    date_hierarchy  = 'exam_date'
-    inlines         = [ExamQuestionInline, ExamStatusLogInline]
-
+    date_hierarchy = 'start_datetime'
+    # REMOVED: date_hierarchy = 'exam_date' — replaced by start_datetime
+    inlines        = [ExamQuestionInline, ExamStatusLogInline]
+ 
     fieldsets = (
         ('Identity', {
-            'fields': ('reference_code', 'slug', 'title', 'description', 'exam_type', 'mode', 'is_active')
+            'fields': (
+                'reference_code', 'slug', 'title', 'description',
+                'exam_type',
+                # REMOVED: 'mode' — always online/CBT
+                'is_active',
+            )
         }),
         ('Relationships', {
-            'fields': ('course', 'academic_session', 'department', 'instructor', 'invigilators')
+            'fields': (
+                'course',
+                'instructor',
+                # REMOVED: 'academic_session' — derived from LMSCourse
+                # REMOVED: 'department'       — derived from LMSCourse
+                # REMOVED: 'invigilators'     — online exam, no invigilators
+            )
         }),
         ('Schedule', {
-            'fields': ('exam_date', 'start_time', 'end_time', 'instruction_window_minutes')
+            # REMOVED: 'exam_date', 'start_time', 'end_time' (split fields)
+            # REMOVED: 'instruction_window_minutes' (now a class constant = 10)
+            'fields': (
+                'start_datetime', 'end_datetime',
+                'duration_minutes_display',
+                'instructions_open_at_display',
+            ),
         }),
-        ('Venue', {
-            'fields': ('venue', 'hall_capacity', 'expected_candidates', 'eligible_levels'),
-            'classes': ('collapse',)
-        }),
+        # REMOVED: Venue fieldset entirely — online exam, no physical location
+        # ('Venue', {
+        #     'fields': ('venue', 'hall_capacity', 'expected_candidates', 'eligible_levels'),
+        #     'classes': ('collapse',)
+        # }),
         ('Question Pool', {
             'fields': (
-                'questions_per_student', 'difficulty_mix',
+                'questions_per_student',
+                # REMOVED: 'difficulty_mix' — not used in this system
                 'shuffle_questions', 'shuffle_options',
                 'total_marks', 'pass_mark',
                 'show_result_immediately', 'show_answers_after',
@@ -2142,10 +2193,11 @@ class ExamAdmin(admin.ModelAdmin):
             'fields': ('question_import_file', 'import_status', 'import_error_log'),
             'classes': ('collapse',)
         }),
-        ('Files', {
-            'fields': ('timetable_file', 'seating_plan_file'),
-            'classes': ('collapse',)
-        }),
+        # REMOVED: Files fieldset — timetable_file and seating_plan_file removed
+        # ('Files', {
+        #     'fields': ('timetable_file', 'seating_plan_file'),
+        #     'classes': ('collapse',)
+        # }),
         ('Approval Workflow', {
             'fields': (
                 'status', 'submission_count',
@@ -2157,18 +2209,29 @@ class ExamAdmin(admin.ModelAdmin):
             ),
             'classes': ('collapse',)
         }),
-        ('Student Visibility', {
-            'fields': ('visible_from_override', 'visible_until_override'),
+        ('Student Visibility  (computed — read only)', {
+            # REMOVED: 'visible_from_override', 'visible_until_override' (fields removed)
+            # These are now pure @properties on the model.
+            'description': (
+                'Visibility is automatically computed: students see the exam '
+                f'{Exam.VISIBILITY_HOURS_BEFORE}h before start and '
+                f'{Exam.VISIBILITY_HOURS_AFTER}h after end. '
+                'No manual overrides are stored.'
+            ),
+            'fields': ('visible_from_display', 'visible_until_display'),
             'classes': ('collapse',)
         }),
-        ('Clash Detection', {
-            'fields': ('clash_group', 'has_clash', 'clash_notes'),
+        ('Clash Detection  (computed — read only)', {
+            # REMOVED: 'clash_group', has_clash BooleanField (both removed from model)
+            # has_clash is now a @property; clash_notes plain text field is kept.
+            'fields': ('has_clash_display', 'clash_notes'),
             'classes': ('collapse',)
         }),
         ('Instructions & Notes', {
             'fields': (
                 'instructions', 'special_instructions', 'internal_notes',
-                'has_accommodations', 'accommodation_notes',
+                # REMOVED: 'has_accommodations', 'accommodation_notes'
+                # — physical-exam concepts, not applicable for online/CBT
             ),
             'classes': ('collapse',)
         }),
@@ -2177,7 +2240,30 @@ class ExamAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-
+ 
+    # ── Readonly display helpers for computed @properties ──────────────────────
+    # These let admins see the derived values without them being editable fields.
+ 
+    @admin.display(description='Duration (mins)')
+    def duration_minutes_display(self, obj):
+        return obj.duration_minutes
+ 
+    @admin.display(description='Instructions open at')
+    def instructions_open_at_display(self, obj):
+        return obj.instructions_open_at
+ 
+    @admin.display(description='Visible from')
+    def visible_from_display(self, obj):
+        return obj.visible_from
+ 
+    @admin.display(description='Visible until')
+    def visible_until_display(self, obj):
+        return obj.visible_until
+ 
+    @admin.display(description='Has clash?', boolean=True)
+    def has_clash_display(self, obj):
+        return obj.has_clash
+ 
     def has_delete_permission(self, request, obj=None):
         if obj and obj.status in (Exam.PUBLISHED, Exam.APPROVED):
             return False
@@ -2187,20 +2273,20 @@ class ExamAdmin(admin.ModelAdmin):
 @admin.register(ExamQuestion)
 class ExamQuestionAdmin(admin.ModelAdmin):
     list_display  = (
-        'exam', 'question_type', 'difficulty', 'marks',
-        'order', 'is_active', 'year_first_used', 'source_reference',
+        'exam', 'question_type', 'marks',
+        'is_active', 'year_first_used', 'source_reference',
     )
-    list_filter   = ('question_type', 'difficulty', 'is_active', 'exam__academic_session')
-    search_fields = ('question_text', 'source_reference', 'tags', 'exam__reference_code')
+    list_filter   = ('question_type', 'is_active', 'exam__exam_type')
+    search_fields = ('question_text', 'source_reference', 'exam__reference_code')
     readonly_fields = ('slug', 'created_at', 'updated_at')
-    list_editable   = ('order', 'is_active')
+    list_editable   = ('is_active',)
 
     fieldsets = (
         ('Pool Membership', {
-            'fields': ('slug', 'exam', 'is_active', 'order')
+            'fields': ('slug', 'exam', 'is_active')
         }),
         ('Question Content', {
-            'fields': ('question_text', 'question_type', 'difficulty', 'marks', 'image', 'explanation')
+            'fields': ('question_text', 'question_type', 'marks', 'image', 'explanation')
         }),
         ('Answer Options', {
             'fields': ('options', 'accepted_answers'),
@@ -2212,7 +2298,7 @@ class ExamQuestionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Import Traceability', {
-            'fields': ('imported_from_file', 'import_row_number'),
+            'fields': ('imported_from_file',),
             'classes': ('collapse',)
         }),
         ('Audit', {
@@ -2229,9 +2315,9 @@ class StudentExamResponseAdmin(admin.ModelAdmin):
         'passed', 'auto_submitted', 'pending_manual_count',
         'tab_switch_count', 'submitted_at',
     )
-    list_filter   = (
+    list_filter = (
         'status', 'passed', 'auto_submitted',
-        'exam__academic_session', 'exam__exam_type',
+        'exam__exam_type',
     )
     search_fields = ('student__username', 'student__email', 'exam__reference_code', 'ip_address')
     readonly_fields = (

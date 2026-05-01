@@ -284,8 +284,8 @@ class CourseForm(forms.ModelForm):
         fields = [
             'program', 'name', 'code', 'course_type', 'credit_units',
             'year_of_study', 'semester',
-            'description', 'learning_outcomes', 'icon', 'color_primary',
-            'color_secondary', 'is_active', 'display_order',
+            'description', 'learning_outcomes', 'is_active',
+            # 'icon', 'color_primary', 'color_secondary', 'display_order',
         ]
         widgets = {
             # ── Hierarchy ──────────────────────────────────────────────────
@@ -339,33 +339,33 @@ class CourseForm(forms.ModelForm):
             }),
 
             # ── Display ────────────────────────────────────────────────────
-            'icon': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., book-open (Lucide icon name)'
-            }),
-            'color_primary': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }, choices=[
-                ('blue', 'Blue'), ('teal', 'Teal'), ('green', 'Green'),
-                ('orange', 'Orange'), ('purple', 'Purple'), ('red', 'Red'),
-                ('pink', 'Pink'), ('indigo', 'Indigo'), ('cyan', 'Cyan')
-            ]),
-            'color_secondary': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
-            }, choices=[
-                ('cyan', 'Cyan'), ('emerald', 'Emerald'), ('lime', 'Lime'),
-                ('amber', 'Amber'), ('violet', 'Violet'), ('rose', 'Rose'),
-                ('fuchsia', 'Fuchsia'), ('sky', 'Sky'), ('yellow', 'Yellow')
-            ]),
+            # 'icon': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+            #     'placeholder': 'e.g., book-open (Lucide icon name)'
+            # }),
+            # 'color_primary': forms.Select(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            # }, choices=[
+            #     ('blue', 'Blue'), ('teal', 'Teal'), ('green', 'Green'),
+            #     ('orange', 'Orange'), ('purple', 'Purple'), ('red', 'Red'),
+            #     ('pink', 'Pink'), ('indigo', 'Indigo'), ('cyan', 'Cyan')
+            # ]),
+            # 'color_secondary': forms.Select(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all bg-white'
+            # }, choices=[
+            #     ('cyan', 'Cyan'), ('emerald', 'Emerald'), ('lime', 'Lime'),
+            #     ('amber', 'Amber'), ('violet', 'Violet'), ('rose', 'Rose'),
+            #     ('fuchsia', 'Fuchsia'), ('sky', 'Sky'), ('yellow', 'Yellow')
+            # ]),
 
             # ── Status ─────────────────────────────────────────────────────
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
-            'display_order': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., 1 (lower numbers appear first)'
-            }),
+            # 'display_order': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+            #     'placeholder': 'e.g., 1 (lower numbers appear first)'
+            # }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -568,112 +568,113 @@ class UserSearchForm(forms.Form):
     )
 
 
-class UserCreateForm(UserCreationForm):
+class UserCreateForm(forms.ModelForm):
+    """
+    Admin-facing user creation form.
+    Password is NOT included — the view generates it automatically and
+    emails the credentials to the new user.
+    Role is captured here and applied to UserProfile after save().
+    is_staff is intentionally excluded: it is set by the view based on role.
+    """
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'user@example.com'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+            'placeholder': 'user@example.com',
         })
     )
     first_name = forms.CharField(
         max_length=150, required=True,
         widget=forms.TextInput(attrs={
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'John'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+            'placeholder': 'John',
         })
     )
     last_name = forms.CharField(
         max_length=150, required=True,
         widget=forms.TextInput(attrs={
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'Doe'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+            'placeholder': 'Doe',
         })
     )
     role = forms.ChoiceField(
         choices=UserProfile.ROLE_CHOICES,
         widget=forms.Select(attrs={
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-md',
         })
-    )
-    is_staff = forms.BooleanField(
-        required=False, initial=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
-        }),
-        help_text='Designates whether the user can log into this admin site.'
     )
     is_active = forms.BooleanField(
         required=False, initial=True,
         widget=forms.CheckboxInput(attrs={
-            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500',
         }),
-        help_text='Designates whether this user should be treated as active.'
+        help_text='User can log in immediately after creation.'
     )
-
+ 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email',
-                  'password1', 'password2', 'is_staff', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_active')
         widgets = {
             'username': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'username'
-            })
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+                'placeholder': 'johndoe',
+            }),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['password1'].widget.attrs.update({
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'Enter password'
-        })
-        self.fields['password2'].widget.attrs.update({
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': 'Confirm password'
-        })
-
+ 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
+        email = self.cleaned_data.get('email', '').lower()
         if User.objects.filter(email=email).exists():
             raise ValidationError('This email is already registered.')
-        return email.lower()
+        return email
+ 
+    def save(self, commit=True, raw_password=None):
+        """
+        Save the User instance.
+        raw_password must be provided by the view (already generated).
+        """
+        user = super().save(commit=False)
+        if raw_password:
+            user.set_password(raw_password)
+        if commit:
+            user.save()
+        return user
 
 
 class UserEditForm(forms.ModelForm):
+    """
+    Edit basic User fields. is_staff is NOT included — the view derives
+    it from UserProfile.role to enforce the admin-only staff rule.
+    """
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'is_staff', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_active')
         widgets = {
             'username': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'readonly': True
+                'class': 'w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-md text-gray-500 cursor-not-allowed',
+                'readonly': True,
             }),
             'first_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'First name'
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+                'placeholder': 'First name',
             }),
             'last_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'Last name'
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+                'placeholder': 'Last name',
             }),
             'email': forms.EmailInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': 'user@example.com'
-            }),
-            'is_staff': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
+                'placeholder': 'user@example.com',
             }),
             'is_active': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
-            })
+                'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500',
+            }),
         }
-
+ 
     def clean_email(self):
-        email = self.cleaned_data.get('email')
+        email = self.cleaned_data.get('email', '').lower()
         if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
             raise ValidationError('This email is already in use.')
-        return email.lower()
+        return email
 
 
 class UserProfileForm(forms.ModelForm):
@@ -1391,21 +1392,21 @@ class AcademicSessionForm(forms.ModelForm):
         model = AcademicSession
         fields = [
             'name', 'status', 'is_current',
-            'term_dates', 'override_current_term',
-            'registration_start', 'registration_end',
+            'term_dates'
+            # 'registration_start', 'registration_end',
         ]
-        widgets = {
-            'registration_start': forms.DateInput(attrs={'type': 'date'}),
-            'registration_end': forms.DateInput(attrs={'type': 'date'}),
-        }
+        # widgets = {
+        #     'registration_start': forms.DateInput(attrs={'type': 'date'}),
+        #     'registration_end': forms.DateInput(attrs={'type': 'date'}),
+        # }
 
-    def clean(self):
-        cleaned = super().clean()
-        reg_start = cleaned.get('registration_start')
-        reg_end = cleaned.get('registration_end')
-        if reg_start and reg_end and reg_start >= reg_end:
-            raise forms.ValidationError('Registration start must be before end date.')
-        return cleaned
+    # def clean(self):
+    #     cleaned = super().clean()
+    #     reg_start = cleaned.get('registration_start')
+    #     reg_end = cleaned.get('registration_end')
+    #     if reg_start and reg_end and reg_start >= reg_end:
+    #         raise forms.ValidationError('Registration start must be before end date.')
+    #     return cleaned
 
 
 class CourseIntakeForm(forms.ModelForm):
@@ -1480,13 +1481,11 @@ class LMSCourseForm(forms.ModelForm):
         model = LMSCourse
         fields = [
             'title', 'code', 'short_description', 'description',
-            'difficulty_level', 'duration_hours', 'language',
+            'difficulty_level',
             'academic_course', 'session', 'term',
-            'instructor', 'instructor_name', 'instructor_bio',
+            'instructor',
             'thumbnail', 'promo_video_url',
-            'max_students', 'enrollment_start_date', 'enrollment_end_date',
             'is_published', 'is_featured',
-            'has_certificate', 'certificate_fee', 'certificate_template',
             'meta_description', 'meta_keywords',
         ]
         widgets = {
@@ -1514,28 +1513,28 @@ class LMSCourseForm(forms.ModelForm):
             'difficulty_level': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'duration_hours': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'Estimated hours',
-                'step': '0.5',
-                'min': '0'
-            }),
-            'language': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'English'
-            }),
+            # 'duration_hours': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'Estimated hours',
+            #     'step': '0.5',
+            #     'min': '0'
+            # }),
+            # 'language': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'English'
+            # }),
             'instructor': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'instructor_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'Instructor name (if not selected above)'
-            }),
-            'instructor_bio': forms.Textarea(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'rows': 3,
-                'placeholder': 'Brief biography'
-            }),
+            # 'instructor_name': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'Instructor name (if not selected above)'
+            # }),
+            # 'instructor_bio': forms.Textarea(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'rows': 3,
+            #     'placeholder': 'Brief biography'
+            # }),
             'thumbnail': forms.FileInput(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
             }),
@@ -1543,31 +1542,31 @@ class LMSCourseForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'placeholder': 'YouTube or Vimeo URL'
             }),
-            'max_students': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'Leave empty for unlimited'
-            }),
-            'enrollment_start_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-            }),
-            'enrollment_end_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-            }),
+            # 'max_students': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'Leave empty for unlimited'
+            # }),
+            # 'enrollment_start_date': forms.DateInput(attrs={
+            #     'type': 'date',
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            # }),
+            # 'enrollment_end_date': forms.DateInput(attrs={
+            #     'type': 'date',
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
+            # }),
             'is_published': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
             }),
             'is_featured': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
             }),
-            'has_certificate': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
-            }),
-            'certificate_template': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'Certificate template filename'
-            }),
+            # 'has_certificate': forms.CheckboxInput(attrs={
+            #     'class': 'w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500'
+            # }),
+            # 'certificate_template': forms.TextInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': 'Certificate template filename'
+            # }),
             'academic_course': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
@@ -1577,12 +1576,12 @@ class LMSCourseForm(forms.ModelForm):
             'term': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'certificate_fee': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': '0.00',
-                'step': '0.01',
-                'min': '0'
-            }),
+            # 'certificate_fee': forms.NumberInput(attrs={
+            #     'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
+            #     'placeholder': '0.00',
+            #     'step': '0.01',
+            #     'min': '0'
+            # }),
             'meta_description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
                 'rows': 2,
@@ -1624,8 +1623,7 @@ class LMSCourseForm(forms.ModelForm):
             .order_by('program__department__faculty__name', 'program__department__name', 'program__name', 'year_of_study', 'semester', 'code')
         )
         self.fields['academic_course'].label_from_instance = lambda c: (
-            f"{c.code} — {c.name}  "
-            f"({c.program.name} · {c.get_semester_display()} Yr{c.year_of_study})"
+            f"{c.code} — {c.name}"
         )        
         # Pre-populate JSON fields when editing
         if self.instance.pk:

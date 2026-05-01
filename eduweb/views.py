@@ -480,6 +480,8 @@ def reset_password(request, token):
 @check_for_auth
 def index(request):
     from .models import Testimonial
+    captcha_question, captcha_answer = generate_captcha()
+    request.session['contact_captcha_answer'] = captcha_answer
     return render(request, 'index.html', {
         'featured_programs': (
             Program.objects
@@ -499,6 +501,7 @@ def index(request):
             .filter(status='published')
             .order_by('-publish_date')[:6]
         ),
+        'captcha_question': captcha_question,
     })
 
 
@@ -556,7 +559,11 @@ def all_programs(request):
 
 @check_for_auth
 def contact(request):
-    return render(request, 'contact.html')
+    captcha_question, captcha_answer = generate_captcha()
+    request.session['contact_captcha_answer'] = captcha_answer
+    return render(request, 'contact.html', {
+        'captcha_question': captcha_question,
+    })
 
 @check_for_auth
 def activities(request):
@@ -681,6 +688,29 @@ def contact_submit(request):
     if request.method != 'POST':
         return redirect('index')
 
+    # ── CAPTCHA verification ──────────────────────────────────────────────────
+    session_answer = request.session.get('contact_captcha_answer')
+    user_answer    = request.POST.get('captcha', '').strip()
+
+    def _captcha_fail(msg):
+        new_question, new_answer = generate_captcha()
+        request.session['contact_captcha_answer'] = new_answer
+        messages.error(request, msg)
+        return render(request, 'contact.html', {
+            'form': ContactForm(request.POST),
+            'captcha_question': new_question,
+        })
+
+    try:
+        if int(user_answer) != int(session_answer):
+            return _captcha_fail('Incorrect answer. Please try the bot check again.')
+    except (ValueError, TypeError):
+        return _captcha_fail('Invalid answer. Please enter a number.')
+
+    # Clear used captcha
+    request.session.pop('contact_captcha_answer', None)
+    # ─────────────────────────────────────────────────────────────────────────
+
     form = ContactForm(request.POST)
     if form.is_valid():
         contact_message = form.save()
@@ -699,8 +729,11 @@ def contact_submit(request):
             )
         return redirect('eduweb:contact')
 
+    # Re-generate captcha on form validation failure too
+    new_question, new_answer = generate_captcha()
+    request.session['contact_captcha_answer'] = new_answer
     messages.error(request, 'Please correct the errors below.')
-    return render(request, 'contact.html', {'form': form})
+    return render(request, 'contact.html', {'form': form, 'captcha_question': new_question})
 
 
 # =============================================================================

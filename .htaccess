@@ -1,0 +1,9 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/miuenecd/theology/DigitalCampus"
+PassengerBaseURI "/"
+PassengerPython "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/bin/python"
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+PassengerEnabled on
+PassengerAppRoot /home/miuenecd/theology/DigitalCampus
+PassengerAppType wsgi
+PassengerStartupFile passenger_wsgi.py

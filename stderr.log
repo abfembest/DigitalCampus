@@ -844,3 +844,1078 @@ Not Found: /robots.txt
 Not Found: /robots.txt
 Not Found: /robots.txt
 Not Found: /robots.txt
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 26, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/apps/registry.py", line 116, in populate
+    app_config.import_models()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/apps/config.py", line 269, in import_models
+    self.models_module = import_module(models_module_name)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/alt/python312/lib64/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/models.py", line 4597, in <module>
+    class Exam(models.Model):
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/models.py", line 4982, in Exam
+    class Meta:
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/models.py", line 5000, in Meta
+    models.CheckConstraint(
+TypeError: CheckConstraint.__init__() got an unexpected keyword argument 'condition'
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 26, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/apps/registry.py", line 83, in populate
+    raise RuntimeError("populate() isn't reentrant")
+RuntimeError: populate() isn't reentrant
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 26, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/apps/registry.py", line 83, in populate
+    raise RuntimeError("populate() isn't reentrant")
+RuntimeError: populate() isn't reentrant
+Traceback (most recent call last):
+  File "/home/miuenecd/theology/DigitalCampus/passenger_wsgi.py", line 26, in <module>
+    from DigitalCampus.wsgi import application
+  File "/home/miuenecd/theology/DigitalCampus/DigitalCampus/wsgi.py", line 16, in <module>
+    application = get_wsgi_application()
+                  ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/wsgi.py", line 12, in get_wsgi_application
+    django.setup(set_prefix=False)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/apps/registry.py", line 83, in populate
+    raise RuntimeError("populate() isn't reentrant")
+RuntimeError: populate() isn't reentrant
+Internal Server Error: /admission/apply/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: eduweb_exam.start_datetime
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/exam_middleware.py", line 72, in process_request
+    .first()
+     ^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1095, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 398, in __iter__
+    self._fetch_all()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such column: eduweb_exam.start_datetime
+Internal Server Error: /favicon.ico
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: eduweb_exam.start_datetime
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/exam_middleware.py", line 72, in process_request
+    .first()
+     ^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1095, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 398, in __iter__
+    self._fetch_all()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such column: eduweb_exam.start_datetime
+Internal Server Error: /admission/apply/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: eduweb_exam.start_datetime
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/exam_middleware.py", line 72, in process_request
+    .first()
+     ^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1095, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 398, in __iter__
+    self._fetch_all()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such column: eduweb_exam.start_datetime
+Internal Server Error: /favicon.ico
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: eduweb_exam.start_datetime
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/exam_middleware.py", line 72, in process_request
+    .first()
+     ^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1095, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 398, in __iter__
+    self._fetch_all()
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1926, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 91, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such column: eduweb_exam.start_datetime
+Not Found: /media/avatars/avatar_student.jpg
+Not Found: /media/avatars/avatar_student.jpg
+Not Found: /favicon.ico
+Not Found: /media/avatars/avatar_student.jpg
+Not Found: /media/avatars/avatar_student.jpg
+Not Found: /media/avatars/avatar_student.jpg
+Not Found: /media/avatars/avatar_student.jpg
+Not Found: /media/avatars/avatar_student.jpg
+Not Found: /media/avatars/avatar_student.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Not Found: /media/avatars/avatar_instructor.jpg
+Bad Request: /auth/
+Content-Type: multipart/alternative;
+ boundary="===============8780879046107494513=="
+MIME-Version: 1.0
+Subject: Verify Your MIUSOT Account
+From: MIU <noreply@miu.edu>
+To: obikolade@gmail.com
+Date: Fri, 01 May 2026 09:26:07 -0000
+Message-ID: 
+ <177762756756.1396063.4705995444113400623@business800.web-hosting.com>
+
+--===============8780879046107494513==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+
+Welcome to MIU School of Theology!
+
+Dear George Kolade Obigbesan,
+
+Thank you for creating an account. Please verify your email address by
+clicking the link below:
+
+https://theology.miuedu.com/verify-email/b9fedef9-33ff-4c68-954e-db2675fe5be6/
+
+This link will expire in 24 hours.
+
+Best regards,
+The MIUSOT Team
+        
+--===============8780879046107494513==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+
+        <html>
+            <body style="font-family: Arial, sans-serif;
+                         line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto;
+                            padding: 20px; background-color: #f4f4f4;">
+                    <div style="background: linear-gradient(135deg,
+                                #840384 0%, #a855f7 100%);
+                                padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">
+                            Welcome to MIUSOT!
+                        </h1>
+                    </div>
+                    <div style="background-color: white;
+                                padding: 30px; margin-top: 20px;">
+                        <p style="font-size: 16px;">
+                            Dear <strong>
+                                George Kolade Obigbesan
+                            </strong>,
+                        </p>
+                        <p>
+                            Thank you for creating an account with
+                            MIU School of Theology. Please verify
+                            your email address to complete your registration.
+                        </p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://theology.miuedu.com/verify-email/b9fedef9-33ff-4c68-954e-db2675fe5be6/"
+                               style="display: inline-block;
+                                      padding: 15px 40px;
+                                      background: linear-gradient(135deg,
+                                      #840384 0%, #a855f7 100%);
+                                      color: white;
+                                      text-decoration: none;
+                                      border-radius: 8px;
+                                      font-weight: bold;
+                                      font-size: 16px;">
+                                Verify Email Address
+                            </a>
+                        </div>
+                        <p style="font-size: 14px; color: #666;">
+                            Or copy and paste this link into your browser:
+                        </p>
+                        <p style="font-size: 14px; color: #1D4ED8;
+                                  word-break: break-all;">
+                            https://theology.miuedu.com/verify-email/b9fedef9-33ff-4c68-954e-db2675fe5be6/
+                        </p>
+                        <p style="font-size: 14px; color: #666;
+                                  margin-top: 30px;">
+                            This link will expire in 24 hours.
+                        </p>
+                        <p>
+                            Best regards,<br>
+                            <strong style="color: #840384;">
+                                The MIUSOT Team
+                            </strong>
+                        </p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        
+--===============8780879046107494513==--
+
+-------------------------------------------------------------------------------
+Not Found: /static/apple-touch-icon.png
+Content-Type: multipart/alternative;
+ boundary="===============4929219746706340616=="
+MIME-Version: 1.0
+Subject: Verify Your MIUSOT Account
+From: MIU <noreply@miu.edu>
+To: team.profviaconnect@gmail.com
+Date: Fri, 01 May 2026 09:28:19 -0000
+Message-ID: 
+ <177762769941.1396063.2443493567504394190@business800.web-hosting.com>
+
+--===============4929219746706340616==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+
+Welcome to MIU School of Theology!
+
+Dear George Kolade Obigbesan,
+
+Thank you for creating an account. Please verify your email address by
+clicking the link below:
+
+https://theology.miuedu.com/verify-email/ddfd2aef-badd-44ad-93f8-6082f9f2f9d5/
+
+This link will expire in 24 hours.
+
+Best regards,
+The MIUSOT Team
+        
+--===============4929219746706340616==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+
+        <html>
+            <body style="font-family: Arial, sans-serif;
+                         line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto;
+                            padding: 20px; background-color: #f4f4f4;">
+                    <div style="background: linear-gradient(135deg,
+                                #840384 0%, #a855f7 100%);
+                                padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">
+                            Welcome to MIUSOT!
+                        </h1>
+                    </div>
+                    <div style="background-color: white;
+                                padding: 30px; margin-top: 20px;">
+                        <p style="font-size: 16px;">
+                            Dear <strong>
+                                George Kolade Obigbesan
+                            </strong>,
+                        </p>
+                        <p>
+                            Thank you for creating an account with
+                            MIU School of Theology. Please verify
+                            your email address to complete your registration.
+                        </p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://theology.miuedu.com/verify-email/ddfd2aef-badd-44ad-93f8-6082f9f2f9d5/"
+                               style="display: inline-block;
+                                      padding: 15px 40px;
+                                      background: linear-gradient(135deg,
+                                      #840384 0%, #a855f7 100%);
+                                      color: white;
+                                      text-decoration: none;
+                                      border-radius: 8px;
+                                      font-weight: bold;
+                                      font-size: 16px;">
+                                Verify Email Address
+                            </a>
+                        </div>
+                        <p style="font-size: 14px; color: #666;">
+                            Or copy and paste this link into your browser:
+                        </p>
+                        <p style="font-size: 14px; color: #1D4ED8;
+                                  word-break: break-all;">
+                            https://theology.miuedu.com/verify-email/ddfd2aef-badd-44ad-93f8-6082f9f2f9d5/
+                        </p>
+                        <p style="font-size: 14px; color: #666;
+                                  margin-top: 30px;">
+                            This link will expire in 24 hours.
+                        </p>
+                        <p>
+                            Best regards,<br>
+                            <strong style="color: #840384;">
+                                The MIUSOT Team
+                            </strong>
+                        </p>
+                    </div>
+                </div>
+            </body>
+        </html>
+        
+--===============4929219746706340616==--
+
+-------------------------------------------------------------------------------
+Session data corrupted
+Session data corrupted
+Bad Request: /auth/
+Not Found: /robots.txt
+Internal Server Error: /program/bachelor-of-christian-education-and-ethics/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-theology/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Not Found: /robots.txt
+Internal Server Error: /program/bachelor-of-christian-communication-evangelism/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Not Found: /favicon.ico
+Internal Server Error: /program/bachelor-of-christian-communication-evangelism/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /faculty/faculty-of-christian-education/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 725, in faculty_detail
+    .order_by('year_of_study', 'semester', 'display_order'),
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Session data corrupted
+Internal Server Error: /program/bachelor-of-christian-communication-evangelism/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Not Found: /favicon.ico
+Internal Server Error: /program/bachelor-of-missiology/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-communication-evangelism/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Not Found: /static/apple-touch-icon.png
+Not Found: /static/apple-touch-icon.png
+Internal Server Error: /program/bachelor-of-christian-counseling/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Not Found: /robots.txt
+Not Found: /robots.txt
+Internal Server Error: /faculty/faculty-of-arts/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 725, in faculty_detail
+    .order_by('year_of_study', 'semester', 'display_order'),
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /faculty/faculty-of-christian-education/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 725, in faculty_detail
+    .order_by('year_of_study', 'semester', 'display_order'),
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /faculty/faculty-of-church-management-administration/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 725, in faculty_detail
+    .order_by('year_of_study', 'semester', 'display_order'),
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-communication-evangelism/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-counseling/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-education-and-ethics/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-educational-administration/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-religious-studiesministry/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-church-business-management/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-church-financial-management-administration/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-church-intercultural-relations/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-intercessory-prayer-deliverance-studies/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-missiology/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-theology/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-communication-evangelism/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-communication-evangelism/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study
+Internal Server Error: /program/bachelor-of-christian-communication-evangelism/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 17, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 754, in program_detail
+    .order_by('year_of_study', 'semester', 'display_order', 'name')
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/query.py", line 1699, in order_by
+    obj.query.add_ordering(*field_names)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 2242, in add_ordering
+    self.names_to_path(item.split(LOOKUP_SEP), self.model._meta)
+  File "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages/django/db/models/sql/query.py", line 1761, in names_to_path
+    raise FieldError(
+django.core.exceptions.FieldError: Cannot resolve keyword 'display_order' into field. Choices are: code, course_type, created_at, credit_units, description, id, is_active, learning_outcomes, lms_courses, name, prerequisite_for, prerequisites, program, program_id, registrations, required_payments, semester, slug, student_grades, updated_at, year_of_study

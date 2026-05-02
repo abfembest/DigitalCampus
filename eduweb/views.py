@@ -658,7 +658,7 @@ def blog_detail(request, slug):
     return render(request, 'blog/blog_detail.html', {
         'post':          post,
         'related_posts': post.get_related_posts(limit=3),
-        'categories':    BlogCategory.objects.filter(is_active=True).order_by('', 'name'),
+        'categories':    BlogCategory.objects.filter(is_active=True).order_by('name'),
     })
 
 
@@ -674,7 +674,7 @@ def blog_category(request, slug):
     paginator = Paginator(posts, 9)
     return render(request, 'blog/blog_category.html', {
         'posts':            paginator.get_page(request.GET.get('page', 1)),
-        'categories':       BlogCategory.objects.filter(is_active=True).order_by('', 'name'),
+        'categories':       BlogCategory.objects.filter(is_active=True).order_by('name'),
         'current_category': category,
     })
 

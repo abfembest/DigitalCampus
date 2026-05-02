@@ -480,18 +480,20 @@ def reset_password(request, token):
 @check_for_auth
 def index(request):
     from .models import Testimonial
+    captcha_question, captcha_answer = generate_captcha()
+    request.session['contact_captcha_answer'] = captcha_answer
     return render(request, 'index.html', {
         'featured_programs': (
             Program.objects
             .filter(is_active=True, is_featured=True)
             .select_related('department__faculty')
-            .order_by('display_order', 'name')[:6]
+            .order_by('name')[:6]
         ),
         'faculties': (
             Faculty.objects
             .filter(is_active=True)
             .prefetch_related('departments')
-            .order_by('display_order', 'name')[:6]
+            .order_by('name')[:6]
         ),
         'testimonials': Testimonial.objects.filter(is_active=True).order_by('order'),
         'recent_posts': (
@@ -499,6 +501,7 @@ def index(request):
             .filter(status='published')
             .order_by('-publish_date')[:6]
         ),
+        'captcha_question': captcha_question,
     })
 
 
@@ -507,26 +510,26 @@ def about(request):
     from .models import InstitutionMember, SiteConfig, SiteHistoryMilestone, InstitutionPartner
     partners_qs = InstitutionPartner.objects.filter(is_active=True)
     return render(request, 'about.html', {
-        'faculties': Faculty.objects.filter(is_active=True).order_by('display_order', 'name'),
+        'faculties': Faculty.objects.filter(is_active=True).order_by('name'),
         'admin_board_members': (
             InstitutionMember.objects.filter(member_type='admin_board', is_active=True)
-            .order_by('display_order')
+            .order_by('name')
         ),
         'academic_board_members': (
             InstitutionMember.objects.filter(member_type='academic_board', is_active=True)
-            .order_by('display_order')
+            .order_by('name')
         ),
         'advisorate_board_members': (
             InstitutionMember.objects.filter(member_type='advisorate_board', is_active=True)
-            .order_by('display_order')
+            .order_by('name')
         ),
         'staff_members': (
             InstitutionMember.objects.filter(member_type='staff', is_active=True)
-            .order_by('display_order')
+            .order_by('name')
         ),
         'history_milestones': (
             SiteHistoryMilestone.objects.filter(is_active=True)
-            .order_by('display_order', 'year')
+            .order_by('year')
         ),
         'partners_list':      partners_qs.filter(category='partner'),
         'affiliations_list':  partners_qs.filter(category='affiliation'),
@@ -545,18 +548,22 @@ def all_programs(request):
                     Prefetch(
                         'programs',
                         queryset=Program.objects.filter(is_active=True)
-                                        .order_by('display_order', 'name'),
+                                        .order_by('name'),
                     )
-                ).order_by('display_order', 'name'),
+                ).order_by('name'),
             )
         )
-        .order_by('display_order', 'name')
+        .order_by('name')
     )
     return render(request, 'all_programs.html', {'faculties': faculties})
 
 @check_for_auth
 def contact(request):
-    return render(request, 'contact.html')
+    captcha_question, captcha_answer = generate_captcha()
+    request.session['contact_captcha_answer'] = captcha_answer
+    return render(request, 'contact.html', {
+        'captcha_question': captcha_question,
+    })
 
 @check_for_auth
 def activities(request):
@@ -629,7 +636,7 @@ def blog(request):
 
     paginator = Paginator(posts, 9)
     page_obj  = paginator.get_page(request.GET.get('page', 1))
-    categories = BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name')
+    categories = BlogCategory.objects.filter(is_active=True).order_by('name')
 
     return render(request, 'blog/blog_list.html', {
         'posts':            page_obj,
@@ -651,7 +658,7 @@ def blog_detail(request, slug):
     return render(request, 'blog/blog_detail.html', {
         'post':          post,
         'related_posts': post.get_related_posts(limit=3),
-        'categories':    BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name'),
+        'categories':    BlogCategory.objects.filter(is_active=True).order_by('', 'name'),
     })
 
 
@@ -667,7 +674,7 @@ def blog_category(request, slug):
     paginator = Paginator(posts, 9)
     return render(request, 'blog/blog_category.html', {
         'posts':            paginator.get_page(request.GET.get('page', 1)),
-        'categories':       BlogCategory.objects.filter(is_active=True).order_by('display_order', 'name'),
+        'categories':       BlogCategory.objects.filter(is_active=True).order_by('', 'name'),
         'current_category': category,
     })
 
@@ -680,6 +687,29 @@ def blog_category(request, slug):
 def contact_submit(request):
     if request.method != 'POST':
         return redirect('index')
+
+    # ── CAPTCHA verification ──────────────────────────────────────────────────
+    session_answer = request.session.get('contact_captcha_answer')
+    user_answer    = request.POST.get('captcha', '').strip()
+
+    def _captcha_fail(msg):
+        new_question, new_answer = generate_captcha()
+        request.session['contact_captcha_answer'] = new_answer
+        messages.error(request, msg)
+        return render(request, 'contact.html', {
+            'form': ContactForm(request.POST),
+            'captcha_question': new_question,
+        })
+
+    try:
+        if int(user_answer) != int(session_answer):
+            return _captcha_fail('Incorrect answer. Please try the bot check again.')
+    except (ValueError, TypeError):
+        return _captcha_fail('Invalid answer. Please enter a number.')
+
+    # Clear used captcha
+    request.session.pop('contact_captcha_answer', None)
+    # ─────────────────────────────────────────────────────────────────────────
 
     form = ContactForm(request.POST)
     if form.is_valid():
@@ -699,8 +729,11 @@ def contact_submit(request):
             )
         return redirect('eduweb:contact')
 
+    # Re-generate captcha on form validation failure too
+    new_question, new_answer = generate_captcha()
+    request.session['contact_captcha_answer'] = new_answer
     messages.error(request, 'Please correct the errors below.')
-    return render(request, 'contact.html', {'form': form})
+    return render(request, 'contact.html', {'form': form, 'captcha_question': new_question})
 
 
 # =============================================================================
@@ -722,14 +755,14 @@ def faculty_detail(request, slug):
                     Prefetch(
                         'courses',
                         queryset=Course.objects.filter(is_active=True)
-                                        .order_by('year_of_study', 'semester', 'display_order'),
+                                        .order_by('year_of_study', 'semester'),
                         to_attr='active_courses',
                     )
-                ).order_by('display_order', 'name'),
+                ).order_by('name'),
                 to_attr='active_programs',
             )
         )
-        .order_by('display_order', 'name')
+        .order_by('name')
     )
     return render(request, 'faculty_detail.html', {
         'faculty':     faculty,
@@ -751,7 +784,7 @@ def program_detail(request, slug):
             program.courses
             .filter(is_active=True)
             # .select_related('lecturer')
-            .order_by('year_of_study', 'semester', 'display_order', 'name')
+            .order_by('year_of_study', 'semester', 'name')
         ),
         'active_intakes': (
             program.intakes
@@ -801,13 +834,6 @@ def apply(request):
     for prog in programs:
         faculty_name = prog.department.faculty.name
         courses_by_faculty.setdefault(faculty_name, [])
-        intakes = list(
-            CourseIntake.objects.filter(
-                program=prog,
-                is_active=True,
-                application_deadline__gte=timezone.now().date(),
-            ).values('id', 'intake_period', 'year', 'start_date')
-        )
         courses_by_faculty[faculty_name].append({
             'id':                    prog.id,
             'name':                  prog.name,
@@ -816,7 +842,6 @@ def apply(request):
             'available_study_modes': prog.available_study_modes,
             'application_fee':       str(prog.application_fee),
             'tuition_fee':           str(prog.tuition_fee),
-            'intakes':               intakes,
         })
     courses_json = json.dumps(courses_by_faculty, cls=DjangoJSONEncoder)
 
@@ -901,12 +926,18 @@ def apply(request):
             initial={'email': request.user.email} if request.user.is_authenticated else {}
         )
 
+    from eduweb.models import AcademicSession
+    academic_sessions = AcademicSession.objects.filter(
+        status__in=['active', 'upcoming']
+    ).order_by('-name')
+
     return render(request, 'form.html', {
-        'form':         form,
-        'courses':      programs,
-        'faculties':    faculties,
-        'courses_json': courses_json,
-        'countries':    countries,
+        'form':              form,
+        'courses':           programs,
+        'faculties':         faculties,
+        'courses_json':      courses_json,
+        'countries':         countries,
+        'academic_sessions': academic_sessions,
     })
 
 
@@ -1013,6 +1044,26 @@ def accept_admission(request, application_id):
 
     if application.accept_admission():
         application.issue_admission_number()
+
+        # Sync academic session and entry level to the student's UserProfile
+        try:
+            profile = application.user.profile
+            if application.academic_session:
+                profile.admission_session = application.academic_session
+            if application.entry_level:
+                # entry_level is e.g. 100, 200 ... convert to year_of_study (1, 2 ...)
+                profile.year_of_study = application.entry_level // 100
+            if application.program:
+                profile.program    = application.program
+                profile.department = application.program.department
+                profile.faculty    = application.program.department.faculty
+            profile.save(update_fields=[
+                'admission_session', 'year_of_study',
+                'program', 'department', 'faculty',
+            ])
+        except Exception:
+            logger.exception("accept_admission — failed to sync profile fields")
+
         send_admission_offer_accepted_email(application)
         messages.success(
             request,
@@ -1066,11 +1117,19 @@ def save_application_draft(request):
             except Program.DoesNotExist:
                 pass
 
-        intake_id = data.get('intake')
-        if intake_id:
+        session_id = data.get('academic_session')
+        if session_id:
             try:
-                application.intake = CourseIntake.objects.get(id=intake_id)
-            except CourseIntake.DoesNotExist:
+                from eduweb.models import AcademicSession
+                application.academic_session = AcademicSession.objects.get(id=session_id)
+            except AcademicSession.DoesNotExist:
+                pass
+
+        entry_level = data.get('entry_level')
+        if entry_level:
+            try:
+                application.entry_level = int(entry_level)
+            except (ValueError, TypeError):
                 pass
 
         application.study_mode = data.get('study_mode', '')
@@ -1381,7 +1440,7 @@ def create_payment_intent(request):
 
                 intent = stripe.PaymentIntent.create(
                     amount=amount_pence,
-                    currency='gbp',
+                    currency='usd',
                     metadata={
                         'type':           'student_fee',
                         'student_fee_id': str(fee.id),
@@ -1395,7 +1454,7 @@ def create_payment_intent(request):
                     user=request.user,
                     gateway_payment_id=intent.id,
                     amount=fee.amount,
-                    currency='GBP',
+                    currency='USD',
                     status='pending',
                     payment_metadata={
                         'type':           'student_fee',
@@ -1441,7 +1500,7 @@ def create_payment_intent(request):
                     application=application,
                     gateway_payment_id=intent.id,
                     amount=application.program.application_fee,
-                    currency='GBP',
+                    currency='USD',
                     status='pending',
                 )
                 return JsonResponse({'success': True, 'clientSecret': intent.client_secret})

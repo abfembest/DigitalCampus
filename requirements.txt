@@ -54,3 +54,7 @@ urllib3==2.2.1
 weasyprint==66.0
 webencodings==0.5.1
 zopfli==0.2.3.post1
+pycountry==24.6.1
+phonenumbers==8.13.55
+# Optional — geonamescache is a fallback, pycountry subdivisions work fine without it
+geonamescache==1.6.0

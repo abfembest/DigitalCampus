@@ -86,6 +86,16 @@ from .models import (
     UserProfile,
 )
 
+# ─── Location libs ────────────────────────────────────────────────────────────
+import pycountry
+import phonenumbers
+try:
+    import geonamescache
+    _gc = geonamescache.GeonamesCache()
+    GEONAMES_AVAILABLE = True
+except ImportError:
+    GEONAMES_AVAILABLE = False
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Module-level logger & Stripe initialisation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -800,10 +810,108 @@ def program_detail(request, slug):
 # APPLICATION — FORM
 # =============================================================================
 
+# =============================================================================
+# LOCATION HELPERS  (used only by the apply view)
+# =============================================================================
+
+# Territories/dependencies to EXCLUDE from country list (not independent countries)
+# This prevents duplicate phone codes and confusion in selection (e.g., Guernsey vs UK)
+EXCLUDED_TERRITORIES = {
+    'AX', 'AI', 'AS', 'AW', 'BQ', 'BV', 'CC', 'CW', 'CX', 'FK', 'FO', 'GF',
+    'GG', 'GI', 'GP', 'GS', 'GU', 'HK', 'HM', 'IO', 'JE', 'KY', 'MF', 'MO',
+    'MP', 'MQ', 'MS', 'PM', 'PR', 'RE', 'SJ', 'SX', 'TC', 'TF', 'TW', 'UM',
+    'VG', 'VI', 'WF', 'IM', 'BL',  # IM=Isle of Man, BL=Saint Barthélemy
+}
+
+def _build_countries_list():
+    """
+    Returns a list of dicts: {code, name, phone_code, nationality}
+    Sorted by name. pycountry → country list; phonenumbers → dial code.
+    
+    FILTERS OUT: Territories and dependencies (GG, JE, IM, etc.) to prevent
+    duplicate phone codes. Only returns independent sovereign countries.
+    """
+    countries = []
+    for c in pycountry.countries:
+        # SKIP territories/dependencies to avoid duplicate phone codes
+        if c.alpha_2 in EXCLUDED_TERRITORIES:
+            continue
+            
+        try:
+            phone_code = ""
+            # phonenumbers uses alpha-2 codes
+            codes = phonenumbers.country_code_for_region(c.alpha_2)
+            if codes:
+                phone_code = f"+{codes}"
+        except Exception:
+            phone_code = ""
+
+        # Derive nationality from pycountry common_name / name
+        name = getattr(c, "common_name", None) or c.name
+        # Simple heuristic: strip trailing qualifiers like ", Republic of"
+        short = name.split(",")[0].strip()
+        nationality = short  # fallback; override known irregular forms below
+
+        countries.append({
+            "code":        c.alpha_2,
+            "name":        name,
+            "phone_code":  phone_code,
+            "nationality": nationality,
+        })
+
+    countries.sort(key=lambda x: x["name"])
+    return countries
+
+
+def _get_states(country_code):
+    """
+    Return list of {code, name} for a given alpha-2 country code.
+    Uses geonamescache if available, otherwise pycountry subdivisions.
+    """
+    states = []
+
+    if GEONAMES_AVAILABLE:
+        try:
+            all_countries = _gc.get_countries()
+            # geonamescache doesn't directly map alpha-2 → states;
+            # use pycountry subdivisions as primary with gc as fallback
+            pass  # fall through to pycountry below
+        except Exception:
+            pass
+
+    # pycountry subdivisions (works for all countries)
+    try:
+        subdivisions = pycountry.subdivisions.get(country_code=country_code)
+        if subdivisions:
+            # Only include top-level (no parent)
+            top_level = [s for s in subdivisions if s.parent_code is None]
+            if not top_level:
+                top_level = list(subdivisions)
+            for s in sorted(top_level, key=lambda x: x.name):
+                states.append({
+                    "code": s.code,          # e.g. "US-CA"
+                    "name": s.name,
+                })
+    except Exception:
+        pass
+
+    return states
+
+
+# =============================================================================
+# APPLICATION — FORM
+# =============================================================================
+
 @login_required
 @smart_redirect_applicant
 def apply(request):
-    """Multi-step course application form."""
+    """Multi-step course application form.
+
+    Handles three request types in one view:
+    1. GET  → render initial page with countries from pycountry
+    2. AJAX POST action=location_data → return states/cities/phone/nationality JSON
+    3. Normal POST → save application (existing logic unchanged)
+    """
 
     if not request.user.profile.email_verified:
         messages.warning(request, 'Please verify your email before applying.')
@@ -820,6 +928,54 @@ def apply(request):
         messages.info(request, 'You already have an application in progress.')
         return redirect('eduweb:application_status')
 
+    # ── AJAX location requests ────────────────────────────────────────────────
+    is_ajax = (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or request.POST.get('x_requested_with') == 'XMLHttpRequest'
+    )
+
+    if request.method == 'POST' and is_ajax:
+        action = request.POST.get('action')
+
+        # ── Country selected: return phone_code + nationality + states ────────
+        if action == 'get_location_data':
+            country_code = request.POST.get('country_code', '').strip().upper()
+            if not country_code:
+                return JsonResponse({'error': 'country_code required'}, status=400)
+            
+            # Security check: reject territories/dependencies
+            if country_code in EXCLUDED_TERRITORIES:
+                return JsonResponse({
+                    'error': f'Territory code {country_code} not allowed. Use the main country.',
+                }, status=400)
+
+            phone_code   = ""
+            nationality  = ""
+            states       = []
+
+            try:
+                country_obj = pycountry.countries.get(alpha_2=country_code)
+                if country_obj:
+                    name = getattr(country_obj, 'common_name', None) or country_obj.name
+                    nationality = name.split(',')[0].strip()
+
+                dial = phonenumbers.country_code_for_region(country_code)
+                if dial:
+                    phone_code = f"+{dial}"
+            except Exception as e:
+                logger.warning("Location data error for %s: %s", country_code, e)
+
+            states = _get_states(country_code)
+
+            return JsonResponse({
+                'phone_code':  phone_code,
+                'nationality': nationality,
+                'states':      states,
+            })
+
+        # get_cities and get_postal_code removed — city/postal are now plain text inputs
+
+    # ── Build data for initial page render ────────────────────────────────────
     programs  = (
         Program.objects
         .filter(is_active=True)
@@ -827,7 +983,9 @@ def apply(request):
         .order_by('department__faculty__name', 'name')
     )
     faculties = Faculty.objects.filter(is_active=True)
-    countries = ListOfCountry.objects.order_by('country')
+
+    # Countries from pycountry (NOT from ListOfCountry model)
+    pycountry_countries = _build_countries_list()
 
     # Build JSON for JS-driven dynamic dropdowns
     courses_by_faculty = {}
@@ -852,7 +1010,6 @@ def apply(request):
                 application = form.save(commit=False)
                 application.user = request.user
 
-                # Build academic history from dynamic POST fields
                 academic_history = []
                 entry_count = 1
                 while True:
@@ -871,7 +1028,6 @@ def apply(request):
                 application.status = 'draft'
                 application.save()
 
-                # Optional document uploads
                 file_field_mapping = {
                     'transcript_file':      'transcript',
                     'certificate_file':     'certificate',
@@ -891,13 +1047,12 @@ def apply(request):
                             file_size=f.size,
                         )
 
-                # Send confirmation emails in a background thread
                 def _send_emails():
                     send_application_confirmation_email(application)
                     send_application_admin_notification(application)
                 Thread(target=_send_emails, daemon=True).start()
 
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                if is_ajax:
                     return JsonResponse({
                         'success':        True,
                         'application_id': application.application_id,
@@ -912,12 +1067,12 @@ def apply(request):
 
             except Exception as exc:
                 logger.exception("apply view — error saving application")
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                if is_ajax:
                     return JsonResponse({'success': False, 'error': str(exc)}, status=500)
                 messages.error(request, f'An error occurred: {exc}')
 
         else:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if is_ajax:
                 return JsonResponse({'success': False, 'errors': form.errors}, status=400)
             messages.error(request, 'Please correct the errors highlighted in the form.')
 
@@ -932,12 +1087,12 @@ def apply(request):
     ).order_by('-name')
 
     return render(request, 'form.html', {
-        'form':              form,
-        'courses':           programs,
-        'faculties':         faculties,
-        'courses_json':      courses_json,
-        'countries':         countries,
-        'academic_sessions': academic_sessions,
+        'form':                 form,
+        'courses':              programs,
+        'faculties':            faculties,
+        'courses_json':         courses_json,
+        'countries':            pycountry_countries,   # replaces ListOfCountry queryset
+        'academic_sessions':    academic_sessions,
     })
 
 

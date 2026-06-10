@@ -87,6 +87,12 @@ class SignUpForm(UserCreationForm):
             from django.core.exceptions import ValidationError
             raise ValidationError(errors)
         return password
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email already exists.")
+        return email
 
 
 class LoginForm(AuthenticationForm):

@@ -3358,6 +3358,22 @@ class UserProfile(models.Model):
         default='',
         help_text="Django session key of the current active session."
     )
+
+    # ── OTP / Two-Step Verification ───────────────────────────────────────────
+    otp_code = models.CharField(
+        max_length=6,
+        blank=True,
+        default='',
+        help_text="Current one-time password (6 digits)."
+    )
+    otp_created_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the OTP was last generated. Expires after 10 minutes."
+    )
+    otp_attempts = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Failed OTP attempts for current code. Locked after 5."
+    )
     
     class Meta:
         verbose_name = 'User Profile'

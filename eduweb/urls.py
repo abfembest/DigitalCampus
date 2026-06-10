@@ -28,6 +28,8 @@ urlpatterns = [
 
     path('admission-letter/<str:application_id>/', views.admission_letter, name='admission_letter'),
 
+    path('verify-otp/', views.otp_verify, name='otp_verify'),
+
     # Faculty Pages
     path('faculty/<slug:slug>/', views.faculty_detail, name='faculty_detail'),
     path('program/<slug:slug>/', views.program_detail, name='program_detail'),

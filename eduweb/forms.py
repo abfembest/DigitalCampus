@@ -68,6 +68,25 @@ class SignUpForm(UserCreationForm):
         except (ValueError, TypeError):
             raise ValidationError('Invalid captcha answer format.')
         return captcha
+    
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1', '')
+        import re
+        errors = []
+        if len(password) < 8:
+            errors.append('At least 8 characters.')
+        if not re.search(r'[A-Z]', password):
+            errors.append('At least one uppercase letter.')
+        if not re.search(r'[a-z]', password):
+            errors.append('At least one lowercase letter.')
+        if not re.search(r'\d', password):
+            errors.append('At least one number.')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            errors.append('At least one special character (!@#$% etc).')
+        if errors:
+            from django.core.exceptions import ValidationError
+            raise ValidationError(errors)
+        return password
 
 
 class LoginForm(AuthenticationForm):

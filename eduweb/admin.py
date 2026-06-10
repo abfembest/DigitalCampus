@@ -1769,7 +1769,7 @@ class UserProfileAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Preferences', {
-            'fields': ('email_notifications', 'marketing_emails')
+            'fields': ('email_notifications', 'marketing_emails', 'otp_code', 'otp_created_at', 'otp_attempts')
         }),
         ('Verification & Security', {
             'fields': ('email_verified', 'verification_token', 'is_logged_in', 'active_session_key'),

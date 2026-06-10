@@ -50,6 +50,7 @@ from .emailservices import (
     send_admission_offer_accepted_email,
     send_document_upload_confirmation,
     send_document_upload_admin_notification,
+    send_otp_email,
     send_password_reset_email,
     send_user_confirmation_email,
     send_verification_email,
@@ -351,34 +352,24 @@ def auth_page(request):
                     profile.active_session_key = ''
                     profile.save(update_fields=['is_logged_in', 'active_session_key'])
 
-            login(request, user)
+            # ── OTP: generate, email, then hold login until verified ──────────
+            otp = str(random.randint(100000, 999999))
+            profile.otp_code       = otp
+            profile.otp_created_at = timezone.now()
+            profile.otp_attempts   = 0
+            profile.save(update_fields=['otp_code', 'otp_created_at', 'otp_attempts'])
 
-            if request.POST.get('remember_me') == 'on':
-                request.session.set_expiry(1209600)  # 14 days
-            else:
-                request.session.set_expiry(900)      # 15 min — inactivity middleware handles logout
-
+            # Store pending user in session — actual login() fires after OTP
+            request.session['otp_user_id']     = user.pk
+            request.session['otp_remember_me'] = request.POST.get('remember_me') == 'on'
             request.session.pop('captcha_answer', None)
 
-            # Mark user as logged in with this session key
-            profile.is_logged_in = True
-            profile.active_session_key = request.session.session_key
-            profile.save(update_fields=['is_logged_in', 'active_session_key'])
-
-            role = user.profile.role
-            if role == 'admin' or user.is_superuser:
-                redirect_url = 'management:dashboard'
-            elif role == 'instructor':
-                redirect_url = 'instructor:dashboard'
-            elif role == 'finance':
-                redirect_url = 'finance:dashboard'
-            else:
-                redirect_url = 'eduweb:apply'
+            Thread(target=send_otp_email, args=(user, otp), daemon=True).start()
 
             return JsonResponse({
                 'success': True,
-                'message': 'Login successful!',
-                'redirect_url': reverse(redirect_url),
+                'message': f'A 6-digit code has been sent to {user.email}',
+                'redirect_url': reverse('eduweb:otp_verify'),
             })
 
     # ── GET — render page ─────────────────────────────────────────────────────
@@ -388,6 +379,142 @@ def auth_page(request):
         'captcha_question': captcha_question,
     })
 
+from threading import Thread as thread
+from django.http import JsonResponse as jsonresponse
+
+def otp_verify(request):
+    """
+    intermediate otp verification step.
+    session must contain 'otp_user_id' set by the login flow.
+    """
+    user_id = request.session.get('otp_user_id')
+    if not user_id:
+        return redirect('eduweb:auth_page')
+
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return redirect('eduweb:auth_page')
+
+    # ── resend (GET ?resend=1) ────────────────────────────────────────────────
+    if request.method == 'GET' and request.GET.get('resend') == '1':
+        otp = str(random.randint(100000, 999999))
+        profile = user.profile
+        profile.otp_code       = otp
+        profile.otp_created_at = timezone.now()
+        profile.otp_attempts   = 0
+        profile.save(update_fields=['otp_code', 'otp_created_at', 'otp_attempts'])
+
+        Thread(
+            target=send_otp_email,
+            args=(user, otp),
+            daemon=True
+        ).start()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'new code sent to your email.'
+        })
+
+    # ── POST: validate submitted otp ──────────────────────────────────────────
+    if request.method == 'POST':
+        entered_otp = request.POST.get('otp', '').strip()
+        profile = user.profile
+
+        # rate-limit: max 5 attempts
+        if profile.otp_attempts >= 5:
+            request.session.pop('otp_user_id', None)
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'otp': ['too many failed attempts. please log in again.']
+                },
+                'redirect_login': True,
+            }, status=429)
+
+        # expiry: 10 minutes
+        if not profile.otp_created_at or (
+            timezone.now() - profile.otp_created_at
+        ).total_seconds() > 600:
+            request.session.pop('otp_user_id', None)
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'otp': ['your code has expired. please log in again.']
+                },
+                'redirect_login': True,
+            }, status=400)
+
+        # wrong code
+        if entered_otp != profile.otp_code:
+            profile.otp_attempts += 1
+            profile.save(update_fields=['otp_attempts'])
+
+            remaining = 5 - profile.otp_attempts
+
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'otp': [
+                        f'incorrect code. {remaining} attempt(s) remaining.'
+                    ]
+                },
+            }, status=400)
+
+        # ── correct — complete login ──────────────────────────────────────────
+        profile.otp_code = ''
+        profile.otp_created_at = None
+        profile.otp_attempts = 0
+
+        login(request, user)
+
+        remember_me = request.session.pop('otp_remember_me', False)
+        request.session.pop('otp_user_id', None)
+
+        if remember_me:
+            request.session.set_expiry(1209600)
+        else:
+            request.session.set_expiry(900)
+
+        profile.is_logged_in = True
+        profile.active_session_key = request.session.session_key
+
+        profile.save(update_fields=[
+            'otp_code',
+            'otp_created_at',
+            'otp_attempts',
+            'is_logged_in',
+            'active_session_key',
+        ])
+
+        role = user.profile.role
+
+        if role == 'admin' or user.is_superuser:
+            redirect_url = reverse('management:dashboard')
+        elif role == 'instructor':
+            redirect_url = reverse('instructor:dashboard')
+        elif role == 'finance':
+            redirect_url = reverse('finance:dashboard')
+        else:
+            redirect_url = reverse('eduweb:apply')
+
+        return JsonResponse({
+            'success': True,
+            'message': 'verification successful!',
+            'redirect_url': redirect_url,
+        })
+
+    # ── GET: render otp page ──────────────────────────────────────────────────
+    email = user.email or ''
+
+    if '@' in email:
+        masked = email[:3] + '****' + email[email.index('@'):]
+    else:
+        masked = email
+
+    return render(request, 'otp_verify.html', {
+        'masked_email': masked,
+    })
 
 def user_logout(request):
     user = request.user

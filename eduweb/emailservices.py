@@ -2692,3 +2692,48 @@ def send_admin_created_user_email(request, user, raw_password):
             exc_info=True,
         )
         return False
+
+
+def send_otp_email(user, otp_code):
+    """Send a 6-digit OTP to the user for login verification."""
+    subject = "Your Login Verification Code"
+    html_message = f"""
+    <div style="font-family: Inter, sans-serif; max-width: 480px; margin: 0 auto; 
+                background: #fff; border-radius: 12px; overflow: hidden; 
+                box-shadow: 0 4px 24px rgba(132,3,132,0.12);">
+        <div style="background: linear-gradient(135deg, #840384 0%, #a855f7 100%); 
+                    padding: 32px; text-align: center;">
+            <h1 style="color: #fff; margin: 0; font-size: 22px; font-weight: 700;">
+                Login Verification
+            </h1>
+        </div>
+        <div style="padding: 32px; text-align: center;">
+            <p style="color: #374151; font-size: 15px; margin-bottom: 24px;">
+                Hi <strong>{user.first_name or user.username}</strong>, use the code below to complete your sign in.
+                It expires in <strong>10 minutes</strong>.
+            </p>
+            <div style="background: linear-gradient(135deg, #f5f3ff, #faf5ff);
+                        border: 2px dashed #a855f7; border-radius: 12px;
+                        padding: 24px; display: inline-block; margin-bottom: 24px;">
+                <span style="font-size: 40px; font-weight: 800; letter-spacing: 12px; 
+                             color: #840384;">{otp_code}</span>
+            </div>
+            <p style="color: #6b7280; font-size: 13px;">
+                If you didn't request this, you can safely ignore this email.
+            </p>
+        </div>
+    </div>
+    """
+    from django.core.mail import send_mail
+    try:
+        send_mail(
+            subject=subject,
+            message=f"Your login verification code is: {otp_code}. It expires in 10 minutes.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("OTP email failed for %s: %s", user.email, e)

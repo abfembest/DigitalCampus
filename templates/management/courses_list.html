@@ -71,6 +71,7 @@
 </style>{% endblock %}
 
 {% block content %}
+<button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; back</button>
 {% if messages %}{% for m in messages %}
 <div class="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium mb-3 {% if m.tags == 'success' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">
   <i class="fas {% if m.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>{{ m }}

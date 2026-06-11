@@ -825,6 +825,7 @@ def contact_submit(request):
     if request.method != 'POST':
         return redirect('index')
 
+    referer = request.POST.get('next') or request.META.get('HTTP_REFERER', '/')
     # ── CAPTCHA verification ──────────────────────────────────────────────────
     session_answer = request.session.get('contact_captcha_answer')
     user_answer    = request.POST.get('captcha', '').strip()
@@ -833,10 +834,7 @@ def contact_submit(request):
         new_question, new_answer = generate_captcha()
         request.session['contact_captcha_answer'] = new_answer
         messages.error(request, msg)
-        return render(request, 'contact.html', {
-            'form': ContactForm(request.POST),
-            'captcha_question': new_question,
-        })
+        return redirect(referer)
 
     try:
         if int(user_answer) != int(session_answer):
@@ -864,13 +862,13 @@ def contact_submit(request):
                 request,
                 'Thank you for contacting us! We have received your message and will get back to you soon.',
             )
-        return redirect('eduweb:contact')
+        return redirect(referer)
 
     # Re-generate captcha on form validation failure too
     new_question, new_answer = generate_captcha()
     request.session['contact_captcha_answer'] = new_answer
     messages.error(request, 'Please correct the errors below.')
-    return render(request, 'contact.html', {'form': form, 'captcha_question': new_question})
+    return redirect(referer)
 
 
 # =============================================================================

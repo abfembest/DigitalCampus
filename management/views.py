@@ -4265,23 +4265,51 @@ def payment_gateway_delete(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def transactions_list(request):
-
     qs = Transaction.objects.select_related('user', 'gateway').order_by('-created_at')
 
     search = request.GET.get('search', '').strip()
+    status = request.GET.get('status', '').strip()
+    txn_type = request.GET.get('type', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+
     if search:
         qs = qs.filter(
-            Q(user__first_name__icontains=search)  |
-            Q(user__last_name__icontains=search)   |
-            Q(user__username__icontains=search)    |
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search)  |
+            Q(user__username__icontains=search)   |
             Q(transaction_id__icontains=search)
         )
-
-    status = request.GET.get('status', '').strip()
     if status:
         qs = qs.filter(status=status)
+    if txn_type:
+        qs = qs.filter(transaction_type=txn_type)
+    if date_from:
+        qs = qs.filter(created_at__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(created_at__date__lte=date_to)
 
-    # Summary counts on the full table (not the filtered qs)
+    # Export CSV of filtered results
+    if request.GET.get('export') == 'csv':
+        import csv
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Transaction ID', 'User', 'Username', 'Gateway', 'Type', 'Amount', 'Currency', 'Status', 'Date'])
+        for txn in qs:
+            writer.writerow([
+                txn.transaction_id,
+                txn.user.get_full_name() or txn.user.username,
+                txn.user.username,
+                txn.gateway.name if txn.gateway else '',
+                txn.get_transaction_type_display(),
+                txn.amount,
+                txn.currency,
+                txn.get_status_display(),
+                txn.created_at.strftime('%Y-%m-%d %H:%M'),
+            ])
+        return response
+
     all_txns = Transaction.objects
     summary = {
         'total':     all_txns.count(),
@@ -4291,11 +4319,11 @@ def transactions_list(request):
     }
 
     paginator = Paginator(qs, 25)
-    page_obj  = paginator.get_page(request.GET.get('page'))
+    page_obj = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'management/transactions.html', {
         'transactions': page_obj,
-        'summary':      summary,
+        'summary': summary,
     })
 
 

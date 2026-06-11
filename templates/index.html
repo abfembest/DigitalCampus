@@ -723,6 +723,7 @@ function admTab(btn, panelId) {
                 {% endif %}
 
                 <form id="contactForm" method="POST" action="{% url 'eduweb:contact_submit' %}" class="space-y-5">
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     {% csrf_token %}
 
                     <div>

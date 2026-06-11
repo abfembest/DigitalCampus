@@ -1981,6 +1981,9 @@ class CourseApplication(models.Model):
             models.Index(fields=['email']),
             models.Index(fields=['status']),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['email', 'program'], name='unique_application_email_per_program'),
+        ]
     
     def __str__(self):
         return f"{self.application_id} - {self.first_name} {self.last_name}"

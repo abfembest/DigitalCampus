@@ -69,7 +69,7 @@
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                                 <p class="text-xs sm:text-sm font-semibold text-gray-900 truncate">
                                     To: {{ msg.recipient.get_full_name|default:msg.recipient.username }}
-                                    <span class="ml-1 text-xs font-normal text-gray-400">
+                                    <span class="ml-1 text-xs font-normal text-gray-400">   
                                         [{{ msg.recipient.profile.get_role_display|default:'User' }}]
                                     </span>
                                 </p>
@@ -84,7 +84,20 @@
                 {% endfor %}
             </ul>
             {% else %}
-            {% include "management/partials/_inbox_empty.html" with icon="fa-paper-plane" label="No sent messages yet" %}
+            <div class="py-16 sm:py-24 px-6 text-center">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-paper-plane text-2xl sm:text-3xl text-gray-300" aria-hidden="true"></i>
+                </div>
+                <h3 class="text-base sm:text-lg font-semibold text-gray-700 mb-1 capitalize">no sent messages yet</h3>
+                <p class="text-xs sm:text-sm text-gray-400 max-w-xs mx-auto">
+                    messages you send to students, instructors and staff will appear here.
+                </p>
+                <a href="{% url 'management:admin_compose_message' %}"
+                   class="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-primary-blue-500 hover:bg-primary-blue-600
+                          text-white text-sm font-semibold rounded-lg transition-all">
+                    <i class="fas fa-pen-to-square" aria-hidden="true"></i> Compose Message
+                </a>
+            </div>
             {% endif %}
             {% endwith %}
 

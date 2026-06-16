@@ -224,7 +224,7 @@
               <div class="text-xs text-gray-400">{{ ticket.user.email }}</div>
             </div>
           </div>
-          <a href="{% url 'management:user_detail' ticket.user.pk %}"
+          <a href="{% url 'management:users_list' %}?search={{ ticket.user.username|urlencode }}"
              class="block w-full text-center px-4 py-2 bg-gray-50 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-100 text-xs font-medium transition-colors">
             View User Profile →
           </a>

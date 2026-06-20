@@ -364,7 +364,7 @@ def auth_page(request):
             request.session['otp_remember_me'] = request.POST.get('remember_me') == 'on'
             request.session.pop('captcha_answer', None)
 
-            Thread(target=send_otp_email, args=(user, otp), daemon=True).start()
+            send_otp_email(user, otp)
 
             return JsonResponse({
                 'success': True,
@@ -379,7 +379,6 @@ def auth_page(request):
         'captcha_question': captcha_question,
     })
 
-from threading import Thread as thread
 from django.http import JsonResponse as jsonresponse
 
 def otp_verify(request):
@@ -405,11 +404,7 @@ def otp_verify(request):
         profile.otp_attempts   = 0
         profile.save(update_fields=['otp_code', 'otp_created_at', 'otp_attempts'])
 
-        Thread(
-            target=send_otp_email,
-            args=(user, otp),
-            daemon=True
-        ).start()
+        send_otp_email(user, otp)
 
         return JsonResponse({
             'success': True,

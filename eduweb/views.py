@@ -354,17 +354,17 @@ def auth_page(request):
 
             # ── OTP: generate, email, then hold login until verified ──────────
             otp = str(random.randint(100000, 999999))
-            profile.otp_code       = otp
+            profile.otp_code       = otp      # encrypted via setter
             profile.otp_created_at = timezone.now()
             profile.otp_attempts   = 0
-            profile.save(update_fields=['otp_code', 'otp_created_at', 'otp_attempts'])
+            profile.save(update_fields=['_otp_code', 'otp_created_at', 'otp_attempts'])
 
             # Store pending user in session — actual login() fires after OTP
             request.session['otp_user_id']     = user.pk
             request.session['otp_remember_me'] = request.POST.get('remember_me') == 'on'
             request.session.pop('captcha_answer', None)
 
-            Thread(target=send_otp_email, args=(user, otp), daemon=True).start()
+            send_otp_email(user, otp)
 
             return JsonResponse({
                 'success': True,
@@ -379,7 +379,6 @@ def auth_page(request):
         'captcha_question': captcha_question,
     })
 
-from threading import Thread as thread
 from django.http import JsonResponse as jsonresponse
 
 def otp_verify(request):
@@ -400,16 +399,12 @@ def otp_verify(request):
     if request.method == 'GET' and request.GET.get('resend') == '1':
         otp = str(random.randint(100000, 999999))
         profile = user.profile
-        profile.otp_code       = otp
+        profile.otp_code       = otp      # encrypted via setter
         profile.otp_created_at = timezone.now()
         profile.otp_attempts   = 0
-        profile.save(update_fields=['otp_code', 'otp_created_at', 'otp_attempts'])
+        profile.save(update_fields=['_otp_code', 'otp_created_at', 'otp_attempts'])
 
-        Thread(
-            target=send_otp_email,
-            args=(user, otp),
-            daemon=True
-        ).start()
+        send_otp_email(user, otp)
 
         return JsonResponse({
             'success': True,
@@ -445,7 +440,7 @@ def otp_verify(request):
                 'redirect_login': True,
             }, status=400)
 
-        # wrong code
+        # wrong code  (profile.otp_code decrypts automatically)
         if entered_otp != profile.otp_code:
             profile.otp_attempts += 1
             profile.save(update_fields=['otp_attempts'])
@@ -462,7 +457,7 @@ def otp_verify(request):
             }, status=400)
 
         # ── correct — complete login ──────────────────────────────────────────
-        profile.otp_code = ''
+        profile.otp_code = ''             # setter encrypts empty string
         profile.otp_created_at = None
         profile.otp_attempts = 0
 
@@ -480,7 +475,7 @@ def otp_verify(request):
         profile.active_session_key = request.session.session_key
 
         profile.save(update_fields=[
-            'otp_code',
+            '_otp_code',
             'otp_created_at',
             'otp_attempts',
             'is_logged_in',

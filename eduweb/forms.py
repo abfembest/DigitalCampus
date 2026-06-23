@@ -87,6 +87,13 @@ class SignUpForm(UserCreationForm):
             from django.core.exceptions import ValidationError
             raise ValidationError(errors)
         return password
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+        if password1 and password2 and password1 != password2:
+            raise ValidationError('Passwords do not match.')
+        return password2
     
     def clean_email(self):
         email = self.cleaned_data.get('email')
@@ -405,12 +412,29 @@ class SetNewPasswordForm(forms.Form):
         })
     )
 
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1', '')
+        import re
+        errors = []
+        if len(password) < 8:
+            errors.append('At least 8 characters.')
+        if not re.search(r'[A-Z]', password):
+            errors.append('At least one uppercase letter.')
+        if not re.search(r'[a-z]', password):
+            errors.append('At least one lowercase letter.')
+        if not re.search(r'\d', password):
+            errors.append('At least one number.')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            errors.append('At least one special character (!@#$% etc).')
+        if errors:
+            from django.core.exceptions import ValidationError
+            raise ValidationError(errors)
+        return password
+
     def clean(self):
         cleaned = super().clean()
         p1 = cleaned.get('password1')
         p2 = cleaned.get('password2')
         if p1 and p2 and p1 != p2:
             raise ValidationError({'password2': 'Passwords do not match.'})
-        if p1 and len(p1) < 8:
-            raise ValidationError({'password1': 'Password must be at least 8 characters.'})
         return cleaned

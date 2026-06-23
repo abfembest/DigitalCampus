@@ -3363,11 +3363,14 @@ class UserProfile(models.Model):
     )
 
     # ── OTP / Two-Step Verification ───────────────────────────────────────────
-    otp_code = models.CharField(
-        max_length=6,
+    # otp_code is encrypted at rest using Django signing to prevent DB exposure.
+    # Always use get_otp_code() / set_otp_code() — never access _otp_code directly.
+    _otp_code = models.CharField(
+        max_length=128,  # signed string is longer than raw 6 digits
         blank=True,
         default='',
-        help_text="Current one-time password (6 digits)."
+        db_column='otp_code',
+        help_text="Encrypted one-time password (6 digits)."
     )
     otp_created_at = models.DateTimeField(
         null=True, blank=True,
@@ -3377,6 +3380,26 @@ class UserProfile(models.Model):
         default=0,
         help_text="Failed OTP attempts for current code. Locked after 5."
     )
+
+    @property
+    def otp_code(self):
+        """Decrypt and return the OTP, or empty string if unset/invalid."""
+        from django.core.signing import Signer, BadSignature
+        if not self._otp_code:
+            return ''
+        try:
+            return Signer().unsign(self._otp_code)
+        except BadSignature:
+            return ''
+
+    @otp_code.setter
+    def otp_code(self, raw_value):
+        """Encrypt and store the OTP. Pass empty string to clear."""
+        from django.core.signing import Signer
+        if not raw_value:
+            self._otp_code = ''
+        else:
+            self._otp_code = Signer().sign(raw_value)
     
     class Meta:
         verbose_name = 'User Profile'

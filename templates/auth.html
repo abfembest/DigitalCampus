@@ -348,7 +348,13 @@
                                         {{ signup_form.password1 }}
                                         <i data-lucide="eye" class="password-toggle w-5 h-5" data-target="id_password1"></i>
                                     </div>
-                                    <div class="error-message text-red-600 text-sm mt-1" id="password1_error"></div>
+                                    <div class="error-message text-red-600 text-sm mt-1" id="password1_error">
+                                        {% if signup_form.password1.errors %}
+                                            {% for error in signup_form.password1.errors %}
+                                                <p class="flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>{{ error }}</p>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
                                 </div>
                                 
                                 <!-- Confirm Password -->
@@ -361,7 +367,13 @@
                                         {{ signup_form.password2 }}
                                         <i data-lucide="eye" class="password-toggle w-5 h-5" data-target="id_password2"></i>
                                     </div>
-                                    <div class="error-message text-red-600 text-sm mt-1" id="password2_error"></div>
+                                    <div class="error-message text-red-600 text-sm mt-1" id="password2_error">
+                                        {% if signup_form.password2.errors %}
+                                            {% for error in signup_form.password2.errors %}
+                                                <p class="flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>{{ error }}</p>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             

@@ -2724,16 +2724,14 @@ def send_otp_email(user, otp_code):
         </div>
     </div>
     """
-    from django.core.mail import send_mail
     try:
-        send_mail(
+        msg = EmailMultiAlternatives(
             subject=subject,
-            message=f"Your login verification code is: {otp_code}. It expires in 10 minutes.",
+            body=f"Your login verification code is: {otp_code}. It expires in 10 minutes.",
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
+            to=[user.email],
         )
+        msg.attach_alternative(html_message, "text/html")
+        msg.send(fail_silently=False)
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error("OTP email failed for %s: %s", user.email, e)
+        logger.error("OTP email failed for %s: %s", user.email, e)

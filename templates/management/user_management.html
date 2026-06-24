@@ -282,7 +282,7 @@
                 </button>
 
                 {% if u.profile.role == 'admin' or u.profile.role == 'support' or u.profile.role == 'finance' %}
-                <button onclick="openPermissionsModal({{ u.id }}, '{{ u.get_full_name|default:u.username|escapejs }}')"
+                <button onclick="openPermissionsModal({{ u.id }}, '{{ u.get_full_name|default:u.username|escapejs }}', '{{ u.profile.get_role_display|escapejs }}')"
                         class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                         title="Manage permissions">
                   <i class="fas fa-shield-alt"></i>
@@ -1378,9 +1378,9 @@ async function confirmDelete() {
 
 let _permUserId = null;
 
-function openPermissionsModal(userId, displayName) {
+function openPermissionsModal(userId, displayName, userRole) {
   _permUserId = userId;
-  document.getElementById('permModalSubtitle').textContent = displayName;
+  document.getElementById('permModalSubtitle').textContent = displayName + (userRole ? ' · ' + userRole : '');
   document.getElementById('permErrors').classList.add('hidden');
   document.getElementById('permMatrix').innerHTML =
     '<tr><td colspan="7" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl"></i></td></tr>';

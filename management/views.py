@@ -1594,7 +1594,7 @@ def user_quick_info(request, pk):
 def user_permissions(request, pk):
     """
     GET  → JSON: current effective permissions for this user (user override or role default).
-    POST → save/upsert user-level overrides for all modules.
+    POST → save/upsert user-level overrides for all modules..
     """
     from eduweb.models import StaffPermissionsMatrix
 

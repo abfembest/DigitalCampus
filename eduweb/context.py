@@ -282,9 +282,11 @@ def currency_symbol(currency_code):
         return ''
     return symbols.get(str(currency_code).upper(), str(currency_code) + ' ')
 
-# eduweb/context_processors.py
-
 def permissions_context(request):
+    """
+    expose request.permissions (set by sessionsecuritymiddleware) to templates.
+    returns empty dict if middleware hasn't run or user is not staff.
+    """
     return {
         'permissions': getattr(request, 'permissions', {})
     }

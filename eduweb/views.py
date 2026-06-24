@@ -242,6 +242,63 @@ def force_change_password(request):
     return JsonResponse({'success': False, 'message': errors}, status=400)
 
 
+def _get_first_permitted_url(user):
+    """
+    Return the first management URL the user has can_view on.
+    Only called for admin role and superusers.
+    Falls back to management:dashboard for superusers (full access).
+    Falls back to eduweb:apply if no module is permitted (misconfigured role).
+    """
+    from eduweb.models import StaffPermissionsMatrix as _SPM
+
+    if user.is_superuser:
+        return reverse('management:dashboard')
+
+    role = getattr(getattr(user, 'profile', None), 'role', None)
+    if not role:
+        return reverse('eduweb:apply')
+
+    # finance has its own portal — always send there
+    if role == 'finance':
+        return reverse('finance:dashboard')
+
+    _MODULE_URL_MAP = [
+        ('dashboard',       'management:dashboard'),
+        ('applications',    'management:applications_list'),
+        ('user_management', 'management:users_list'),
+        ('academics',       'management:faculties_list'),
+        ('lms_courses',     'management:lms_courses_list'),
+        ('exams',           'management:admin_exam_list'),
+        ('enrollments',     'management:enrollments_list'),
+        ('finance',         'management:transactions_list'),
+        ('communications',  'management:broadcast_center'),
+        ('blog',            'management:blog_posts_list'),
+        ('library',         'management:library_items_list'),
+        ('site_content',    'management:site_config_general'),
+        ('security_audit',  'management:audit_logs_list'),
+        ('ticket_management', 'management:ticket_list'),
+    ]
+
+    # Role-level defaults
+    permitted = set(
+        _SPM.objects.filter(role=role, user__isnull=True, can_view=True)
+        .values_list('module', flat=True)
+    )
+    # User-level overrides (can grant or revoke individually)
+    for row in _SPM.objects.filter(user=user):
+        if row.can_view:
+            permitted.add(row.module)
+        else:
+            permitted.discard(row.module)
+
+    for module, url_name in _MODULE_URL_MAP:
+        if module in permitted:
+            return reverse(url_name)
+
+    # No permitted module found — role misconfigured in StaffPermissionsMatrix
+    return reverse('eduweb:apply')
+
+
 def auth_page(request):
     """Combined login / signup page."""
 
@@ -261,7 +318,7 @@ def auth_page(request):
             messages.info(request, 'You are already logged in.')
             role = request.user.profile.role
             if role == 'admin' or request.user.is_superuser:
-                return redirect('management:dashboard')
+                return redirect(_get_first_permitted_url(request.user))
             elif role == 'instructor':
                 return redirect('instructor:dashboard')
             elif role == 'finance':
@@ -526,7 +583,7 @@ def otp_verify(request):
         role = user.profile.role
 
         if role == 'admin' or user.is_superuser:
-            redirect_url = reverse('management:dashboard')
+            redirect_url = _get_first_permitted_url(user)
         elif role == 'instructor':
             redirect_url = reverse('instructor:dashboard')
         elif role == 'finance':

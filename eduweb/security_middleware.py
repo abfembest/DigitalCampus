@@ -74,7 +74,17 @@ def _load_permissions(user) -> dict:
         modules = StaffPermissionsMatrix.objects.values_list('module', flat=True).distinct()
         return {m: full.copy() for m in modules}
 
-    permissions = {}
+    # Initialize all known modules with False permissions
+    # so templates never fall through "or not permissions"
+    from eduweb.models import StaffPermissionsMatrix as _SPM
+    all_modules = [m[0] for m in _SPM.MODULE_CHOICES]
+    permissions = {
+        mod: {
+            'can_view': False, 'can_create': False, 'can_edit': False,
+            'can_delete': False, 'can_approve': False, 'can_export': False,
+        }
+        for mod in all_modules
+    }
 
     # Step 1: role defaults
     for row in StaffPermissionsMatrix.objects.filter(role=role, user__isnull=True):

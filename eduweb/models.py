@@ -3281,9 +3281,9 @@ class UserProfile(models.Model):
         ('instructor', 'Instructor'),
         ('admin', 'Administrator'),
         # ('content_manager', 'Content Manager'),
-        ('support', 'Support Staff'),
+        ('support', 'Support'),
         # ('qa', 'QA Reviewer'),
-        ('finance', 'Finance Manager'),
+        ('finance', 'Finance'),
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')

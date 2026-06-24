@@ -36,7 +36,7 @@ def check_for_auth(view_func):
 
         role = request.user.profile.role
 
-        if role == 'administrator' or request.user.is_superuser:
+        if role == 'admin' and not request.user.is_superuser:
             messages.info(
                 request, 
                 'Admin users should use the admin dashboard.'
@@ -119,12 +119,8 @@ def applicant_required(view_func):
 
         role = request.user.profile.role
 
-        if role == 'administrator' or request.user.is_superuser:
-            messages.info(
-                request, 
-                'Admin users should use the admin dashboard.'
-            )
-            return redirect('management:dashboard')
+        if request.user.is_superuser and role == 'admin':
+            return view_func(request, *args, **kwargs)
 
         elif role == 'instructor':
             messages.info(
@@ -184,12 +180,8 @@ def smart_redirect_applicant(view_func):
 
         role = request.user.profile.role
 
-        if role == 'administrator' or request.user.is_superuser:
-            messages.info(
-                request, 
-                'Admin users should use the admin dashboard.'
-            )
-            return redirect('management:dashboard')
+        if request.user.is_superuser and role == 'admin':
+            return view_func(request, *args, **kwargs)
 
         elif role == 'instructor':
             messages.info(
@@ -279,7 +271,7 @@ def instructor_required(view_func):
 
         role = request.user.profile.role
 
-        if role != 'instructor':
+        if role != 'instructor' and not (request.user.is_superuser and role == 'admin'):
             messages.warning(
                 request, 
                 'Access denied. Instructor role required.'
@@ -325,10 +317,10 @@ def admin_required(view_func):
 
         role = request.user.profile.role
 
-        if role != 'administrator' and not request.user.is_superuser:
+        if role != 'admin' and not request.user.is_superuser:
             messages.warning(
                 request, 
-                'Access denied. Administrator role required.'
+                'Access denied. Admin role required.'
             )
             return redirect('eduweb:auth_page')
 
@@ -371,7 +363,7 @@ def finance_required(view_func):
 
         role = request.user.profile.role
 
-        if role != 'finance':
+        if role != 'finance' and not (request.user.is_superuser and role == 'admin'):
             messages.warning(
                 request, 
                 'Access denied. Finance role required.'

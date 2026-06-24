@@ -3278,8 +3278,8 @@ class UserProfile(models.Model):
     """Extended user profile"""
     ROLE_CHOICES = [
         ('student', 'Student'),
-        ('instructor', 'Instructor'),
-        ('admin', 'Administrator'),
+        ('instructor', 'Lecturers'),
+        ('admin', 'Admin'),
         # ('content_manager', 'Content Manager'),
         ('support', 'Support'),
         # ('qa', 'QA Reviewer'),

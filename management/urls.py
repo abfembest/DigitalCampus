@@ -89,6 +89,7 @@ urlpatterns = [
     path('users/<int:pk>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
     path('users/<int:pk>/change-role/', views.user_change_role, name='user_change_role'),
     path('users/<int:pk>/quick-info/', views.user_quick_info, name='user_quick_info'),
+    path('users/role-assign/', views.role_assign, name='role_assign'),
 
     # System Config
     path('config/', views.system_config_list, name='system_config_list'),

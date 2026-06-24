@@ -1587,7 +1587,33 @@ def user_quick_info(request, pk):
         'marketing_emails':    profile.marketing_emails,
         'permissions':         permissions_data,
     })
- 
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
+def role_assign(request):
+    """
+    Standalone role-assign + permissions page.
+    GET  → render page (optionally pre-select user via ?user_id=<pk>)
+    POST → handled via AJAX to existing user_change_role / user_permissions endpoints.
+    """
+    from django.contrib.auth.models import User
+    from eduweb.models import UserProfile
+
+    selected_user = None
+    user_id = request.GET.get('user_id')
+    if user_id:
+        try:
+            selected_user = User.objects.select_related('profile').get(pk=int(user_id))
+        except (User.DoesNotExist, ValueError):
+            pass
+
+    users = User.objects.select_related('profile').order_by('first_name', 'last_name', 'username')
+
+    return render(request, 'management/role_assign.html', {
+        'users': users,
+        'selected_user': selected_user,
+        'role_choices': UserProfile.ROLE_CHOICES,
+    }) 
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(_is_admin)

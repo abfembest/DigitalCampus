@@ -67,7 +67,7 @@ def student_required(view_func):
             )
             return redirect('eduweb:index')
         
-        if request.user.profile.role != 'student':
+        if request.user.profile.role != 'student' and not request.user.is_superuser:
             messages.error(
                 request, 
                 'Access denied. Students only.'

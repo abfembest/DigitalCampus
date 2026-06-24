@@ -94,6 +94,7 @@ TEMPLATES = [
                 'eduweb.context.site_config_context',
                 "eduweb.context.student_counts",
                 'eduweb.context.admin_counts',
+                'eduweb.context.permissions_context',
             ],
         },
     },

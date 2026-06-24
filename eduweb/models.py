@@ -3280,9 +3280,9 @@ class UserProfile(models.Model):
         ('student', 'Student'),
         ('instructor', 'Instructor'),
         ('admin', 'Administrator'),
-        ('content_manager', 'Content Manager'),
+        # ('content_manager', 'Content Manager'),
         ('support', 'Support Staff'),
-        ('qa', 'QA Reviewer'),
+        # ('qa', 'QA Reviewer'),
         ('finance', 'Finance Manager'),
     ]
     
@@ -3465,10 +3465,144 @@ class UserProfile(models.Model):
         self.password_reset_token_created = None
         self.save(update_fields=['password_reset_token', 'password_reset_token_created'])
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PERMISSIONS MATRIX  (internal staff only — student/instructor excluded)
+# ─────────────────────────────────────────────────────────────────────────────
 
-   
+class StaffPermissionsMatrix(models.Model):
+    """
+    Flat permission table — one row per (role OR user) × module.
+    Only applies to internal staff roles: admin, content_manager, support,
+    qa, finance. Students and instructors are never looked up here.
 
+    role set, user null  → role-level default
+    user set, role null  → user-level override (supersedes role row)
+    """
 
+    STAFF_ROLES = [
+        ('admin',           'Administrator'),
+        # ('content_manager', 'Content Manager'),
+        ('support',         'Support Staff'),
+        # ('qa',              'QA Reviewer'),
+        ('finance',         'Finance Manager'),
+    ]
+
+    MODULE_CHOICES = [
+        ('dashboard',        'Dashboard'),
+        ('user_management',  'User Management'),
+        ('academics',        'Academics'),
+        ('lms_courses',      'LMS Courses'),
+        ('applications',     'Applications'),
+        ('exams',            'Exams'),
+        ('enrollments',      'Enrollments'),
+        ('finance',          'Finance'),
+        ('communications',   'Communications'),
+        ('blog',             'Blog'),
+        ('library',          'Library'),
+        ('site_content',     'Site Content'),
+        ('security_audit',   'Security & Audit'),
+    ]
+
+    # Role-level defaults — mirrors sidebar sections visible per role
+    ROLE_DEFAULT_PERMISSIONS = {
+    'admin': {
+        'dashboard':       {'can_view': True},
+        'user_management': {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'academics':       {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'lms_courses':     {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'applications':    {'can_view': True, 'can_edit': True},
+        'exams':           {'can_view': True, 'can_edit': True, 'can_approve': True},
+        'enrollments':     {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'finance':         {'can_view': True, 'can_edit': True, 'can_export': True},
+        'communications':  {'can_view': True, 'can_create': True, 'can_delete': True},
+        'blog':            {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'library':         {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'site_content':    {'can_view': True, 'can_edit': True},
+        'security_audit':  {'can_view': True},
+    },
+    'support': {
+        'dashboard':      {'can_view': True},
+        'user_management':{'can_view': True},
+        'enrollments':    {'can_view': True},
+        'applications':   {'can_view': True},
+        'communications': {'can_view': True, 'can_create': True},
+        'exams':          {'can_view': True},
+    },
+    'finance': {
+        'dashboard':      {'can_view': True},
+        'finance':        {'can_view': True, 'can_edit': True, 'can_export': True},
+        'enrollments':    {'can_view': True},
+        'user_management':{'can_view': True},
+    },
+}
+
+    ALL_ACTION_FIELDS = [
+        'can_view', 'can_create', 'can_edit', 'can_delete',
+        'can_approve', 'can_export',
+    ]
+
+    role   = models.CharField(max_length=30, choices=STAFF_ROLES, null=True, blank=True)
+    user   = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.CASCADE, related_name='permission_matrix_rows'
+    )
+    module = models.CharField(max_length=40, choices=MODULE_CHOICES)
+
+    can_view    = models.BooleanField(default=False)
+    can_create  = models.BooleanField(default=False)
+    can_edit    = models.BooleanField(default=False)
+    can_delete  = models.BooleanField(default=False)
+    can_approve = models.BooleanField(default=False)
+    can_export  = models.BooleanField(default=False)
+
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='permission_matrix_changes'
+    )
+
+    @classmethod
+    def seed_defaults_for_role(cls, role_name):
+        """
+        Upsert role-default rows from ROLE_DEFAULT_PERMISSIONS.
+        Safe to call multiple times — never overwrites user overrides.
+        """
+        module_defaults = cls.ROLE_DEFAULT_PERMISSIONS.get(role_name, {})
+        for module_key, true_flags in module_defaults.items():
+            field_values = {f: False for f in cls.ALL_ACTION_FIELDS}
+            field_values.update(true_flags)
+            cls.objects.update_or_create(
+                role=role_name, module=module_key, user=None,
+                defaults=field_values,
+            )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['role', 'module'],
+                condition=models.Q(user=None),
+                name='unique_staff_role_module'
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'module'],
+                condition=models.Q(role=None),
+                name='unique_staff_user_module'
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(role__isnull=False, user__isnull=True) |
+                    models.Q(user__isnull=False, role__isnull=True)
+                ),
+                name='staff_matrix_role_xor_user'
+            ),
+        ]
+        ordering = ['role', 'user', 'module']
+        verbose_name        = 'Staff Permissions Matrix Row'
+        verbose_name_plural = 'Staff Permissions Matrix'
+
+    def __str__(self):
+        target = f"Role:{self.role}" if self.role else f"User:{self.user_id}"
+        return f"{target} | {self.get_module_display()}"
 
 # ==================== VENDOR MANAGEMENT ====================
 class Vendor(models.Model):

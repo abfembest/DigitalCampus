@@ -17,6 +17,8 @@ urlpatterns = [
     path('applications/<int:pk>/approve-department/', views.approve_department, name='approve_department'),
     path('applications/<int:pk>/issue-transcript/', views.issue_transcript, name='issue_transcript'),
 
+    path('users/<int:pk>/permissions/', views.user_permissions, name='user_permissions'),
+
     # Faculties
     path('faculties/', views.faculties_list, name='faculties_list'),
     path('faculties/create/', views.faculty_create, name='faculty_create'),

@@ -1312,10 +1312,13 @@ def users_list(request):
     paginator = Paginator(qs, 25)
     users_page = paginator.get_page(request.GET.get('page'))
  
+    from management.forms import UserCreateForm, UserEditForm, UserProfileForm
     return render(request, 'management/user_management.html', {
-        'users':       users_page,
-        'search_form': search_form,
-        'stats':       stats,
+        'users':        users_page,
+        'search_form':  search_form,
+        'stats':        stats,
+        'create_form':  UserCreateForm(),
+        'profile_form': UserProfileForm(),
     })
  
  
@@ -1529,6 +1532,36 @@ def user_quick_info(request, pk):
     user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
     profile = user.profile
  
+    from eduweb.models import StaffPermissionsMatrix
+
+    # Build permissions snapshot: user overrides → role defaults → zeros
+    MODULES = [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
+    ACTION_FIELDS = StaffPermissionsMatrix.ALL_ACTION_FIELDS
+
+    role = profile.role
+    role_defaults = StaffPermissionsMatrix.ROLE_DEFAULT_PERMISSIONS.get(role, {})
+
+    # Fetch any user-level overrides
+    user_rows = {
+        r.module: r
+        for r in StaffPermissionsMatrix.objects.filter(user=user, role=None)
+    }
+    # Fetch role-level defaults from DB (may differ from hardcoded if manually edited)
+    role_rows = {
+        r.module: r
+        for r in StaffPermissionsMatrix.objects.filter(role=role, user=None)
+    }
+
+    permissions_data = {}
+    for module in MODULES:
+        row = user_rows.get(module) or role_rows.get(module)
+        if row:
+            permissions_data[module] = {f: getattr(row, f) for f in ACTION_FIELDS}
+        else:
+            # Fall back to hardcoded role defaults
+            defaults = role_defaults.get(module, {})
+            permissions_data[module] = {f: defaults.get(f, False) for f in ACTION_FIELDS}
+
     return JsonResponse({
         'id':          user.id,
         'username':    user.username,
@@ -1541,7 +1574,6 @@ def user_quick_info(request, pk):
         'date_joined': user.date_joined.strftime('%B %d, %Y'),
         'last_login':  user.last_login.strftime('%B %d, %Y') if user.last_login else 'Never',
         'avatar_url':  profile.avatar.url if profile.avatar else None,
-        # Extended profile fields
         'phone':               profile.phone,
         'date_of_birth':       str(profile.date_of_birth) if profile.date_of_birth else '',
         'bio':                 profile.bio,
@@ -1553,9 +1585,59 @@ def user_quick_info(request, pk):
         'twitter':             profile.twitter,
         'email_notifications': profile.email_notifications,
         'marketing_emails':    profile.marketing_emails,
+        'permissions':         permissions_data,
     })
  
  
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(_is_admin)
+def user_permissions(request, pk):
+    """
+    GET  → JSON: current effective permissions for this user (user override or role default).
+    POST → save/upsert user-level overrides for all modules.
+    """
+    from eduweb.models import StaffPermissionsMatrix
+
+    target = get_object_or_404(User.objects.select_related('profile'), pk=pk)
+    MODULES = [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
+    ACTION_FIELDS = StaffPermissionsMatrix.ALL_ACTION_FIELDS
+
+    if request.method == 'GET':
+        role = target.profile.role
+        role_defaults = StaffPermissionsMatrix.ROLE_DEFAULT_PERMISSIONS.get(role, {})
+        user_rows = {r.module: r for r in StaffPermissionsMatrix.objects.filter(user=target, role=None)}
+        role_rows = {r.module: r for r in StaffPermissionsMatrix.objects.filter(role=role, user=None)}
+
+        result = {}
+        for module in MODULES:
+            row = user_rows.get(module) or role_rows.get(module)
+            if row:
+                result[module] = {f: getattr(row, f) for f in ACTION_FIELDS}
+            else:
+                defaults = role_defaults.get(module, {})
+                result[module] = {f: defaults.get(f, False) for f in ACTION_FIELDS}
+        return JsonResponse({'success': True, 'permissions': result, 'modules': MODULES, 'actions': ACTION_FIELDS})
+
+    # POST — upsert user-level rows for every submitted module
+    with transaction.atomic():
+        for module in MODULES:
+            prefix = f'perm_{module}_'
+            row_data = {
+                f: bool(request.POST.get(f'{prefix}{f}'))
+                for f in ACTION_FIELDS
+            }
+            StaffPermissionsMatrix.objects.update_or_create(
+                user=target, module=module, role=None,
+                defaults={**row_data, 'updated_by': request.user},
+            )
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': f'Permissions updated for {target.username}.'})
+
+    messages.success(request, f'Permissions updated for {target.username}.')
+    return redirect('management:users_list')
+
+
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(_is_admin)
 @require_POST

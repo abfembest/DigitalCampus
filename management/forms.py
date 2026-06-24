@@ -745,6 +745,27 @@ class QuickRoleChangeForm(forms.Form):
     )
 
 
+class UserPermissionsForm(forms.ModelForm):
+    """
+    One form per module row in StaffPermissionsMatrix.
+    Used in a formset for the permissions modal.
+    """
+    class Meta:
+        from eduweb.models import StaffPermissionsMatrix
+        model = StaffPermissionsMatrix
+        fields = ['module', 'can_view', 'can_create', 'can_edit',
+                  'can_delete', 'can_approve', 'can_export']
+        widgets = {
+            'module': forms.HiddenInput(),
+            'can_view':    forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_create':  forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_edit':    forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_delete':  forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_approve': forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_export':  forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+        }
+
+
 # ==============================================================================
 # SYSTEM CONFIGURATION FORMS
 # ==============================================================================

@@ -10,6 +10,7 @@ urlpatterns = [
     path('activities/', views.activities, name='activities'),
     path('auth/', views.auth_page, name='auth_page'),
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
+    path('account/change-password/', views.force_change_password, name='force_change_password'),
     path('logout/', views.user_logout, name='logout'),
     path('resend-verification/', views.resend_verification, name='resend_verification'),
 
@@ -29,7 +30,6 @@ urlpatterns = [
     path('admission-letter/<str:application_id>/', views.admission_letter, name='admission_letter'),
 
     path('verify-otp/', views.otp_verify, name='otp_verify'),
-    path('account/change-password/', views.force_change_password, name='force_change_password'),
 
     # Faculty Pages
     path('faculty/<slug:slug>/', views.faculty_detail, name='faculty_detail'),

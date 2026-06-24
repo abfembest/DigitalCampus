@@ -134,17 +134,13 @@
                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
       </div>
 
-      {% comment %} Role dropdown filter {% endcomment %}
+      {% comment %} Role dropdown filter — choices driven from UserProfile.ROLE_CHOICES {% endcomment %}
       <select id="roleFilter"
               class="px-4 py-2.5 border border-gray-300 rounded-lg text-md bg-white focus:ring-2 focus:ring-primary-500 min-w-[160px]">
         <option value="">All Roles</option>
-        <option value="student">Student</option>
-        <option value="instructor">Instructor</option>
-        <option value="admin">Administrator</option>
-        <option value="content_manager">Content Manager</option>
-        <option value="support">Support Staff</option>
-        <option value="qa">QA Reviewer</option>
-        <option value="finance">Finance Manager</option>
+        {% for val, label in profile_form.role.field.choices %}
+          <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
       </select>
 
       {% comment %} Active / Inactive status filter {% endcomment %}
@@ -269,7 +265,7 @@
               {% if u.last_login %}{{ u.last_login|date:"M d, Y" }}{% else %}Never{% endif %}
             </td>
 
-            {% comment %} Action buttons: View · Edit · Toggle active · Delete {% endcomment %}
+            {% comment %} Action buttons: View · Edit · Permissions · Toggle active {% endcomment %}
             <td class="px-4 py-3 whitespace-nowrap text-right">
               <div class="inline-flex items-center gap-0.5">
 
@@ -285,10 +281,14 @@
                   <i class="fas fa-pen"></i>
                 </button>
 
-                {% comment %}
-                  Toggle-active button — icon/colour flips based on current state.
-                  NOTE: this only de/activates, it does NOT delete.
-                {% endcomment %}
+                {% if u.profile.role == 'admin' or u.profile.role == 'support' or u.profile.role == 'finance' %}
+                <button onclick="openPermissionsModal({{ u.id }}, '{{ u.get_full_name|default:u.username|escapejs }}')"
+                        class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="Manage permissions">
+                  <i class="fas fa-shield-alt"></i>
+                </button>
+                {% endif %}
+
                 <button onclick="toggleActive({{ u.id }})"
                         class="p-2 rounded-lg transition-colors
                           {% if u.is_active %}text-gray-400 hover:text-orange-600 hover:bg-orange-50
@@ -417,27 +417,21 @@
             <label class="block text-md font-medium text-gray-700 mb-1.5">
               First Name <span class="text-red-500">*</span>
             </label>
-            <input type="text" name="first_name" required autocomplete="given-name"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                   placeholder="John">
+            {{ create_form.first_name }}
           </div>
 
           <div>
             <label class="block text-md font-medium text-gray-700 mb-1.5">
               Last Name <span class="text-red-500">*</span>
             </label>
-            <input type="text" name="last_name" required autocomplete="family-name"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                   placeholder="Doe">
+            {{ create_form.last_name }}
           </div>
 
           <div>
             <label class="block text-md font-medium text-gray-700 mb-1.5">
               Username <span class="text-red-500">*</span>
             </label>
-            <input type="text" name="username" required autocomplete="username"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                   placeholder="johndoe">
+            {{ create_form.username }}
             <p class="text-gray-400 text-md mt-1">Letters, digits and @/./+/-/_ only</p>
           </div>
 
@@ -445,33 +439,21 @@
             <label class="block text-md font-medium text-gray-700 mb-1.5">
               Email Address <span class="text-red-500">*</span>
             </label>
-            <input type="email" name="email" required autocomplete="email"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                   placeholder="john@example.com">
+            {{ create_form.email }}
           </div>
 
           <div>
             <label class="block text-md font-medium text-gray-700 mb-1.5">
               Role <span class="text-red-500">*</span>
             </label>
-            <select name="role" required
-                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-md bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-              <option value="student">Student</option>
-              <option value="instructor">Instructor</option>
-              <option value="admin">Administrator</option>
-              <option value="content_manager">Content Manager</option>
-              <option value="support">Support Staff</option>
-              <option value="qa">QA Reviewer</option>
-              <option value="finance">Finance Manager</option>
-            </select>
+            {{ profile_form.role }}
             <p class="text-gray-400 text-md mt-1">Administrator role grants staff privileges</p>
           </div>
 
           <div class="flex items-start gap-3 pt-1">
-            <input type="checkbox" name="is_active" id="createIsActive" checked
-                   class="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 mt-0.5 flex-shrink-0">
+            {{ create_form.is_active }}
             <div>
-              <label for="createIsActive" class="text-md font-medium text-gray-700 cursor-pointer">Active on creation</label>
+              <label for="{{ create_form.is_active.id_for_label }}" class="text-md font-medium text-gray-700 cursor-pointer">Active on creation</label>
               <p class="text-gray-400 text-md">User can log in immediately</p>
             </div>
           </div>
@@ -604,13 +586,9 @@
                 <label class="block text-xs font-medium text-gray-600 mb-1">Role <span class="text-red-500">*</span></label>
                 <select name="role" id="editRole" required
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                  <option value="student">Student</option>
-                  <option value="instructor">Instructor</option>
-                  <option value="admin">Administrator</option>
-                  <option value="content_manager">Content Manager</option>
-                  <option value="support">Support Staff</option>
-                  <option value="qa">QA Reviewer</option>
-                  <option value="finance">Finance Manager</option>
+                  {% for val, label in profile_form.role.field.choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
                 </select>
                 <p class="text-gray-400 text-xs mt-0.5">Staff privileges: Administrator only</p>
               </div>
@@ -808,6 +786,83 @@
 
 {% comment %}
 ════════════════════════════════════════════════════════════════
+  MODAL: PERMISSIONS MATRIX
+  ─────────────────────────
+  Loaded dynamically via AJAX GET user_permissions/<pk>/.
+  Saved via POST. Each row = one StaffPermissionsMatrix module.
+  User-level overrides stored; role defaults auto-populated.
+════════════════════════════════════════════════════════════════
+{% endcomment %}
+<div id="permissionsModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     role="dialog" aria-modal="true" aria-labelledby="permModalTitle">
+
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('permissionsModal')"></div>
+
+  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style="max-height:90dvh;overflow:hidden;">
+
+    <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <span class="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i class="fas fa-shield-alt text-indigo-600 text-sm"></i>
+        </span>
+        <div>
+          <h2 id="permModalTitle" class="text-lg font-bold text-gray-900 leading-tight">Permissions Matrix</h2>
+          <p id="permModalSubtitle" class="text-gray-400 text-xs"></p>
+        </div>
+      </div>
+      <button onclick="closeModal('permissionsModal')"
+              class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition flex-shrink-0">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+      <div id="permErrors"
+           class="hidden mx-5 mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700"></div>
+
+      <form id="permForm" novalidate>
+        {% csrf_token %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Module</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">View</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Create</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Edit</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Delete</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Approve</th>
+                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Export</th>
+              </tr>
+            </thead>
+            <tbody id="permMatrix"></tbody>
+          </table>
+        </div>
+        <p class="px-5 py-3 text-xs text-gray-400 border-t border-gray-100">
+          <i class="fas fa-info-circle mr-1"></i>
+          Saved overrides apply to this user only. Admin users inherit all permissions by default.
+        </p>
+      </form>
+    </div>
+
+    <div class="flex justify-end gap-3 px-5 py-3 bg-gray-50 border-t border-gray-200 flex-shrink-0">
+      <button onclick="closeModal('permissionsModal')"
+              class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm">
+        Cancel
+      </button>
+      <button id="permSubmitBtn" onclick="submitPermissions()"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow text-sm font-semibold">
+        <i class="fas fa-save mr-2"></i>Save Permissions
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+{% comment %}
+════════════════════════════════════════════════════════════════
   TOAST NOTIFICATION
   Used for all AJAX operation feedback (success / error / info).
 ════════════════════════════════════════════════════════════════
@@ -882,7 +937,7 @@ function openModal(id) {
 /** Close a modal by its ID. Restores body scroll if none are open. */
 function closeModal(id) {
   document.getElementById(id).classList.add('hidden');
-  const anyOpen = ['createModal','editModal','viewModal','deleteModal']
+  const anyOpen = ['createModal','editModal','viewModal','deleteModal','permissionsModal']
     .some(m => !document.getElementById(m).classList.contains('hidden'));
   if (!anyOpen) document.body.style.overflow = '';
 }
@@ -1319,12 +1374,99 @@ async function confirmDelete() {
 }
 
 
-{% comment %} ── 9. Keyboard — Escape closes the topmost open modal ─────────── {% endcomment %}
+{% comment %} ── 9. Permissions Modal ───────────────────────────────────────── {% endcomment %}
+
+let _permUserId = null;
+
+function openPermissionsModal(userId, displayName) {
+  _permUserId = userId;
+  document.getElementById('permModalSubtitle').textContent = displayName;
+  document.getElementById('permErrors').classList.add('hidden');
+  document.getElementById('permMatrix').innerHTML =
+    '<tr><td colspan="7" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl"></i></td></tr>';
+  openModal('permissionsModal');
+
+  fetch(
+    '{% url "management:user_permissions" pk=0 %}'.replace('/0/', '/' + userId + '/'),
+    { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+  )
+  .then(r => r.json())
+  .then(data => {
+    if (!data.success) { showToast('Failed to load permissions', 'error'); return; }
+
+    const actionLabels = {
+      can_view: 'View', can_create: 'Create', can_edit: 'Edit',
+      can_delete: 'Delete', can_approve: 'Approve', can_export: 'Export',
+    };
+    const moduleLabels = {
+      dashboard: 'Dashboard', user_management: 'User Management',
+      academics: 'Academics', lms_courses: 'LMS Courses',
+      applications: 'Applications', exams: 'Exams', enrollments: 'Enrollments',
+      finance: 'Finance', communications: 'Communications', blog: 'Blog',
+      library: 'Library', site_content: 'Site Content', security_audit: 'Security & Audit',
+    };
+
+    let rows = '';
+    for (const mod of data.modules) {
+      const perms = data.permissions[mod] || {};
+      let cells = '';
+      for (const action of data.actions) {
+        const name = `perm_${mod}_${action}`;
+        cells += `<td class="px-3 py-2 text-center">
+          <input type="checkbox" name="${name}" class="w-4 h-4 text-primary-600 border-gray-300 rounded"
+            ${perms[action] ? 'checked' : ''}>
+        </td>`;
+      }
+      rows += `<tr class="border-b border-gray-100 hover:bg-gray-50">
+        <td class="px-3 py-2 text-sm font-medium text-gray-700 whitespace-nowrap">
+          ${moduleLabels[mod] || mod}
+        </td>${cells}
+      </tr>`;
+    }
+    document.getElementById('permMatrix').innerHTML = rows;
+  })
+  .catch(() => showToast('Network error loading permissions', 'error'));
+}
+
+async function submitPermissions() {
+  if (!_permUserId) return;
+  const btn = document.getElementById('permSubmitBtn');
+  const errBox = document.getElementById('permErrors');
+  errBox.classList.add('hidden');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving…';
+
+  const fd = new FormData(document.getElementById('permForm'));
+  fd.set('csrfmiddlewaretoken', csrf());
+
+  try {
+    const url = '{% url "management:user_permissions" pk=0 %}'.replace('/0/', '/' + _permUserId + '/');
+    const res = await fetch(url, {
+      method: 'POST', body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Permissions saved.', 'success');
+      closeModal('permissionsModal');
+    } else {
+      errBox.textContent = data.message || 'Error saving permissions.';
+      errBox.classList.remove('hidden');
+    }
+  } catch {
+    errBox.textContent = 'Network error — please try again.';
+    errBox.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Permissions';
+  }
+}
+
+{% comment %} ── 10. Keyboard — Escape closes the topmost open modal ────────── {% endcomment %}
 
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  /* Close in reverse order of z-index priority */
-  ['deleteModal', 'viewModal', 'editModal', 'createModal'].some(id => {
+  ['deleteModal', 'permissionsModal', 'viewModal', 'editModal', 'createModal'].some(id => {
     const el = document.getElementById(id);
     if (!el.classList.contains('hidden')) {
       closeModal(id);

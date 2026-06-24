@@ -281,3 +281,10 @@ def currency_symbol(currency_code):
     if not currency_code:
         return ''
     return symbols.get(str(currency_code).upper(), str(currency_code) + ' ')
+
+# eduweb/context_processors.py
+
+def permissions_context(request):
+    return {
+        'permissions': getattr(request, 'permissions', {})
+    }

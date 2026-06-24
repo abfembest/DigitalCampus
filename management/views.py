@@ -3570,9 +3570,9 @@ def ticket_change_status(request, pk):
             ticket.save(update_fields=['status', 'resolved_at', 'updated_at'])
             messages.success(request, f'Status changed to {ticket.get_status_display()}.')
             # Notify the ticket submitter about the status change
-            if ticket.submitted_by:
+            if ticket.user:
                 _notify(
-                    user=ticket.submitted_by,
+                    user=ticket.user,
                     title=f'Support Ticket Status Updated',
                     message=f'Your support ticket "{ticket.subject}" status has been changed to "{ticket.get_status_display()}".',
                     notif_type='system',

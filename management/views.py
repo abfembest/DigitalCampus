@@ -1384,6 +1384,10 @@ def user_create(request):
         user = form.save(commit=False)
         role = form.cleaned_data.get('role', 'student')
 
+        # Enforce capitalization on names
+        user.first_name = user.first_name.strip().title()
+        user.last_name = user.last_name.strip().title()
+
         # Role rule: only 'admin' → is_staff=True
         user.is_staff = (role == 'admin')
 
@@ -1397,7 +1401,8 @@ def user_create(request):
         # Sync role onto the auto-created profile
         user.profile.role = role
         user.profile.email_verified = False
-        user.profile.save(update_fields=['role', 'email_verified'])
+        user.profile.must_change_password = True
+        user.profile.save(update_fields=['role', 'email_verified', 'must_change_password'])
 
     # Delegate email entirely to the service module (non-fatal if it fails)
     email_sent = send_admin_created_user_email(request, user, raw_password)

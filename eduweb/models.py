@@ -3345,6 +3345,12 @@ class UserProfile(models.Model):
     # Password Reset
     password_reset_token = models.UUIDField(null=True, blank=True, editable=False)
     password_reset_token_created = models.DateTimeField(null=True, blank=True)
+
+    # Force password change on first login (set for admin-created accounts)
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text="If True, user is redirected to change password immediately after login."
+    )
     
     # Timestamps
     created_at = models.DateTimeField(default=timezone.now)

@@ -1750,13 +1750,13 @@ class SystemConfigurationAdmin(admin.ModelAdmin):
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'role', 'faculty', 'department', 'program', 'year_of_study', 'progression_status', 'email_verified', 'is_logged_in')
-    list_filter = ('role', 'faculty', 'department', 'email_verified', 'progression_status', 'is_logged_in')
+    list_filter = ('role', 'faculty', 'department', 'email_verified', 'progression_status', 'is_logged_in', 'must_change_password')
     search_fields = ('user__username', 'user__email', 'phone')
     readonly_fields = ('verification_token', 'active_session_key', 'otp_code', 'created_at', 'updated_at')
 
     fieldsets = (
         ('Identity', {
-            'fields': ('user', 'role', 'faculty', 'department', 'program')
+            'fields': ('user', 'role', 'faculty', 'department', 'must_change_password')
         }),
         ('Academic Progression', {
             'fields': ('year_of_study', 'progression_status', 'admission_session')

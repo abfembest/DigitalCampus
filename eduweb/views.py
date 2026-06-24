@@ -200,6 +200,47 @@ def verify_email(request, token):
         messages.error(request, 'Invalid verification link.')
         return redirect('eduweb:auth_page')
 
+@login_required(login_url='eduweb:auth_page')
+def force_change_password(request):
+    """
+    AJAX POST — submitted by the force-password modal (force_password_modal.html).
+    Uses PasswordChangeForm so the user must supply their temporary password
+    before setting a new one. Clears must_change_password flag on success.
+    Returns JSON { success, message }.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    from django.contrib.auth.forms import PasswordChangeForm
+
+    form = PasswordChangeForm(request.user, request.POST)
+
+    if form.is_valid():
+        form.save()
+        # Keep the user logged in after password change
+        from django.contrib.auth import update_session_auth_hash
+        update_session_auth_hash(request, form.user)
+
+        profile = request.user.profile
+        profile.must_change_password = False
+        profile.save(update_fields=['must_change_password'])
+
+        # Non-fatal — send confirmation email
+        try:
+            from eduweb.emailservices import send_password_changed_email
+            send_password_changed_email(request.user)
+        except Exception:
+            pass
+
+        return JsonResponse({'success': True, 'message': 'Password updated successfully.'})
+
+    errors = ' '.join(
+        str(e)
+        for field_errors in form.errors.values()
+        for e in field_errors
+    )
+    return JsonResponse({'success': False, 'message': errors}, status=400)
+
 
 def auth_page(request):
     """Combined login / signup page."""
@@ -495,7 +536,7 @@ def otp_verify(request):
 
         return JsonResponse({
             'success': True,
-            'message': 'verification successful!',
+            'message': 'Verification Successful!',
             'redirect_url': redirect_url,
         })
 

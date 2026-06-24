@@ -29,6 +29,7 @@ urlpatterns = [
     path('admission-letter/<str:application_id>/', views.admission_letter, name='admission_letter'),
 
     path('verify-otp/', views.otp_verify, name='otp_verify'),
+    path('account/change-password/', views.force_change_password, name='force_change_password'),
 
     # Faculty Pages
     path('faculty/<slug:slug>/', views.faculty_detail, name='faculty_detail'),

@@ -2735,3 +2735,76 @@ def send_otp_email(user, otp_code):
         msg.send(fail_silently=False)
     except Exception as e:
         logger.error("OTP email failed for %s: %s", user.email, e)
+
+def send_password_changed_email(user):
+    """
+    Triggered after a user successfully changes their temporary password
+    via the force-change-password modal.
+    """
+    from django.utils import timezone
+
+    try:
+        site = SiteConfig.get()
+        school_name = site.school_name
+    except Exception:
+        school_name = 'Portal'
+
+    full_name = user.get_full_name() or user.username
+    changed_at = timezone.localtime(timezone.now()).strftime('%d %b %Y, %I:%M %p')
+
+    subject = f'Password Changed Successfully — {school_name}'
+
+    text_body = (
+        f'Hi {full_name},\n\n'
+        f'Your password was changed successfully on {changed_at}.\n\n'
+        f'You can now log in with your new password.\n\n'
+        f'If you did not make this change, please contact support immediately.\n\n'
+        f'— {school_name}'
+    )
+
+    html_body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <div style="background:#16a34a;padding:28px 32px;text-align:center;">
+            <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;">{school_name}</h1>
+        </div>
+        <div style="padding:32px;">
+            <h2 style="font-size:18px;color:#111827;margin:0 0 8px;">Password Changed ✓</h2>
+            <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Hi {full_name},</p>
+            <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+                Your password was changed successfully on <strong>{changed_at}</strong>.
+                You can now log in to the portal using your new password.
+            </p>
+            <table role="presentation" width="100%" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin:0 0 24px;">
+                <tr>
+                    <td style="padding:14px 16px;">
+                        <span style="font-size:13px;color:#15803d;">
+                            ✓ &nbsp;Your account is secure and active.
+                        </span>
+                    </td>
+                </tr>
+            </table>
+            <table role="presentation" width="100%" style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;margin:0 0 24px;">
+                <tr>
+                    <td style="padding:14px 16px;">
+                        <span style="font-size:13px;color:#dc2626;">
+                            ⚠ &nbsp;If you did not make this change, contact support immediately.
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+            <p style="color:#9ca3af;font-size:12px;margin:0;">
+                © {school_name}. This is an automated security notification.
+            </p>
+        </div>
+    </div>
+    """
+
+    try:
+        msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [user.email])
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send()
+        return True
+    except Exception:
+        return False

@@ -467,7 +467,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Dashboard</span>
+                            <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
                     {% endif %}
@@ -478,32 +478,32 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'users' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-users w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">User Management</span>
+                                <span class="ml-3 text-[17px] font-semibold">User Management</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'users' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="userManagementMenu" class="mt-1 space-y-1 {% if 'users' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:users_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.path == '/management/users/' or request.GET.role == '' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.path == '/management/users/' or request.GET.role == '' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i>All Users
                             </a>
                             <a href="{% url 'management:users_list' %}?role=admin"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.GET.role == 'admin' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.GET.role == 'admin' %}bg-white/20{% endif %}">
                                 <i class="fas fa-user-shield mr-2" aria-hidden="true"></i>Admins
                             </a>
                             <a href="{% url 'management:users_list' %}?role=instructor"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.GET.role == 'instructor' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.GET.role == 'instructor' %}bg-white/20{% endif %}">
                                 <i class="fas fa-chalkboard-teacher mr-2" aria-hidden="true"></i>Lecturers
                             </a>
                             <a href="{% url 'management:users_list' %}?role=student"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.GET.role == 'student' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.GET.role == 'student' %}bg-white/20{% endif %}">
                                 <i class="fas fa-user-graduate mr-2" aria-hidden="true"></i>Students
                             </a>
                             <a href="{% url 'management:users_list' %}?role=finance"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.GET.role == 'finance' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.GET.role == 'finance' %}bg-white/20{% endif %}">
                                 <i class="fas fa-dollar-sign mr-2" aria-hidden="true"></i>Finance
                             </a>
-                            <a href="{% url 'management:role_assign' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.GET.role == 'admin' %}bg-white/20{% endif %}">
+                            <a href="{% url 'management:role_assign' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.GET.role == 'admin' %}bg-white/20{% endif %}">
                             <i class="fas fa-user-shield"></i> Role & Permissions
                             </a>
                             <div class="border-t border-white/10 my-1"></div>
@@ -518,7 +518,7 @@
                     <!-- Divider: Academic -->
                     {% if permissions.academics.can_view or permissions.lms_courses.can_view or permissions.applications.can_view or permissions.exams.can_view or permissions.enrollments.can_view %}
                     <div class="border-t border-white/10 my-3"></div>
-                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Academic</div>
+                    <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Academic</div>
                     {% endif %}
 
                     <!-- Academics (Structure + Sessions + Catalog + Intakes) -->
@@ -527,36 +527,36 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'faculties' in request.path or 'departments' in request.path or 'programs' in request.path or 'academic-sessions' in request.path or 'intakes' in request.path or request.resolver_match.url_name == 'courses_list' %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-university w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Academics</span>
+                                <span class="ml-3 text-[17px] font-semibold">Academics</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'faculties' in request.path or 'departments' in request.path or 'programs' in request.path or 'academic-sessions' in request.path or 'intakes' in request.path or request.resolver_match.url_name == 'courses_list' %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="academicMenu" class="mt-1 space-y-1 {% if 'faculties' not in request.path and 'departments' not in request.path and 'programs' not in request.path and 'academic-sessions' not in request.path and 'intakes' not in request.path and request.resolver_match.url_name != 'courses_list' %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <p class="px-4 text-[10px] uppercase tracking-widest text-white/40 font-semibold py-1">Structure</p>
                             <a href="{% url 'management:faculties_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'faculties' in request.path %}bg-white/20{% endif %}">
+                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'faculties' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-building mr-2" aria-hidden="true"></i>Faculties
                             </a>
                             <a href="{% url 'management:departments_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'departments' in request.path %}bg-white/20{% endif %}">
+                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'departments' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-sitemap mr-2" aria-hidden="true"></i>Departments
                             </a>
                             <a href="{% url 'management:programs_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'programs' in request.path %}bg-white/20{% endif %}">
+                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'programs' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i>Programs
                             </a>
                             <div class="border-t border-white/10 my-1"></div>
                             <p class="px-4 text-[10px] uppercase tracking-widest text-white/40 font-semibold py-1">Sessions & Courses</p>
                             <a href="{% url 'management:academic_sessions_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'academic-sessions' in request.path %}bg-white/20{% endif %}">
+                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'academic-sessions' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-calendar-alt mr-2" aria-hidden="true"></i>Academic Sessions
                             </a>
                             <a href="{% url 'management:courses_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'courses_list' %}bg-white/20{% endif %}">
+                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'courses_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-book mr-2" aria-hidden="true"></i>Course Catalog
                             </a>
                             {% comment %} <a href="{% url 'management:intakes_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'intakes' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'intakes' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-door-open mr-2" aria-hidden="true"></i>Course Intakes
                             </a> {% endcomment %}
                          </div>
@@ -569,7 +569,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'lms_course' in request.resolver_match.url_name %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-chalkboard-teacher w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">LMS Courses</span>
+                            <span class="ml-3 text-[17px] font-semibold">LMS Courses</span>
                         </div>
                     </a>
                     {% endif %}
@@ -580,7 +580,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'applications' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-file-alt w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Applications</span>
+                            <span class="ml-3 text-[17px] font-semibold">Applications</span>
                         </div>
                     </a>
                     {% endif %}
@@ -591,17 +591,17 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'exams' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-pen-square w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Exams</span>
+                                <span class="ml-3 text-[17px] font-semibold">Exams</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'exams' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="examsMenu" class="mt-1 space-y-1 {% if 'exams' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:admin_exam_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'admin_exam_list' and request.GET.status != 'submitted' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'admin_exam_list' and request.GET.status != 'submitted' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i>All Exams
                             </a>
                             <a href="{% url 'management:admin_exam_list' %}?status=submitted"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'admin_exam_list' and request.GET.status == 'submitted' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'admin_exam_list' and request.GET.status == 'submitted' %}bg-white/20{% endif %}">
                                 <i class="fas fa-clock mr-2" aria-hidden="true"></i>Pending Approval
                             </a>
                         </div>
@@ -611,36 +611,36 @@
                     <!-- Divider: Students -->
                     {% if permissions.enrollments.can_view %}
                     <div class="border-t border-white/10 my-3"></div>
-                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Students</div>
+                    <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Students</div>
 
                     <!-- Student Data -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'enrollments' in request.path or 'student-badges' in request.path or 'badges' in request.path or 'certificates' in request.path or 'reviews' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-user-graduate w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Student Data</span>
+                                <span class="ml-3 text-[17px] font-semibold">Student Data</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'enrollments' in request.path or 'badges' in request.path or 'certificates' in request.path or 'reviews' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="studentDataMenu" class="mt-1 space-y-1 {% if 'enrollments' not in request.path and 'badges' not in request.path and 'certificates' not in request.path and 'reviews' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:enrollments_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'enrollments' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'enrollments' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-sign-in-alt mr-2" aria-hidden="true"></i>Enrollments
                             </a>
                             <a href="{% url 'management:certificates_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'certificates' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'certificates' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-certificate mr-2" aria-hidden="true"></i>Certificates
                             </a>
                             <a href="{% url 'management:badges_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'badges' in request.path and 'student-badges' not in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'badges' in request.path and 'student-badges' not in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-medal mr-2" aria-hidden="true"></i>Badges
                             </a>
                             <a href="{% url 'management:student_badges_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'student-badges' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'student-badges' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-award mr-2" aria-hidden="true"></i>Assign Badges
                             </a>
                             <a href="{% url 'management:reviews_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'reviews' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'reviews' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-star mr-2" aria-hidden="true"></i>Reviews
                             </a>
                         </div>
@@ -650,36 +650,36 @@
                     <!-- Divider: Finance -->
                     {% if permissions.finance.can_view %}
                     <div class="border-t border-white/10 my-3"></div>
-                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Finance</div>
+                    <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Finance</div>
 
                     <!-- Finance Management -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payroll' in request.path or 'transactions' in request.path or 'payment-gateways' in request.path or 'required-payments' in request.path or 'analytics/financial' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-dollar-sign w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Finance</span>
+                                <span class="ml-3 text-[17px] font-semibold">Finance</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'payroll' in request.path or 'transactions' in request.path or 'payment-gateways' in request.path or 'required-payments' in request.path or 'analytics/financial' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="financeMenu" class="mt-1 space-y-1 {% if 'payroll' not in request.path and 'transactions' not in request.path and 'payment-gateways' not in request.path and 'required-payments' not in request.path and 'analytics/financial' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:financial_analytics' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'analytics/financial' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'analytics/financial' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-chart-line mr-2" aria-hidden="true"></i>Analytics Dashboard
                             </a>
                             <a href="{% url 'management:staff_payroll_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'payroll' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'payroll' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-wallet mr-2" aria-hidden="true"></i>Staff Payroll
                             </a>
                             <a href="{% url 'management:required_payments_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'required-payments' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'required-payments' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-receipt mr-2" aria-hidden="true"></i>Required Payments
                             </a>
                             <a href="{% url 'management:transactions_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'transactions' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'transactions' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-exchange-alt mr-2" aria-hidden="true"></i>Transactions
                             </a>
                             {% comment %} <a href="{% url 'management:payment_gateways_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'payment-gateways' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'payment-gateways' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-credit-card mr-2" aria-hidden="true"></i>Payment Gateways
                             </a> {% endcomment %}
                         </div>
@@ -689,13 +689,13 @@
                     <!-- Divider: Communications -->
                     {% if permissions.communications.can_view %}
                     <div class="border-t border-white/10 my-3"></div>
-                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Communications</div>
+                    <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Communications</div>
                     <!-- Inbox (standalone) -->
                     <a href="{% url 'management:admin_inbox' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'inbox' in request.path and request.resolver_match.app_name == 'management' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-inbox w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Inbox</span>
+                            <span class="ml-3 text-[17px] font-semibold">Inbox</span>
                         </div>
                         {% if unread_messages_count > 0 %}
                         <span class="badge-count bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
@@ -709,7 +709,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'notifications_view' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-bell w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Notifications</span>
+                            <span class="ml-3 text-[17px] font-semibold">Notifications</span>
                         </div>
                         {% if unread_notifications_count > 0 %}
                         <span class="badge-count bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
@@ -723,7 +723,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'announcements' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-bullhorn w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Announcements</span>
+                            <span class="ml-3 text-[17px] font-semibold">Announcements</span>
                         </div>
                     </a>
 
@@ -732,7 +732,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'broadcast' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-satellite-dish w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Broadcast Center</span>
+                            <span class="ml-3 text-[17px] font-semibold">Broadcast Center</span>
                         </div>
                     </a>
 
@@ -741,7 +741,7 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'tickets' in request.path or 'contact-messages' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-headset w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Support</span>
+                                <span class="ml-3 text-[17px] font-semibold">Support</span>
                                 {% with total=open_tickets_count|add:unread_contact_count %}
                                 {% if total %}<span class="ml-2 badge-count bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ total }}</span>{% endif %}
                                 {% endwith %}
@@ -750,14 +750,14 @@
                         </button>
                         <div id="supportMenu" class="mt-1 space-y-1 {% if 'tickets' not in request.path and 'contact-messages' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:tickets_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'tickets' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'tickets' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-ticket-alt mr-2" aria-hidden="true"></i>Support Tickets
                                 {% if open_tickets_count %}
                                 <span class="ml-auto badge-count bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ open_tickets_count }}</span>
                                 {% endif %}
                             </a>
                             <a href="{% url 'management:contact_messages_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'contact-messages' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'contact-messages' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-inbox mr-2" aria-hidden="true"></i>Contact Messages
                                 {% if unread_contact_count %}
                                 <span class="ml-auto badge-count bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ unread_contact_count }}</span>
@@ -774,21 +774,21 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'blog' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-blog w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Blog</span>
+                                <span class="ml-3 text-[17px] font-semibold">Blog</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'blog' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="blogMenu" class="mt-1 space-y-1 {% if 'blog' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:blog_posts_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_posts_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'blog_posts_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i>All Posts
                             </a>
                             <a href="{% url 'management:blog_post_create' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_post_create' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'blog_post_create' %}bg-white/20{% endif %}">
                                 <i class="fas fa-plus mr-2" aria-hidden="true"></i>Create Post
                             </a>
                             <a href="{% url 'management:blog_categories_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'blog_categories_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'blog_categories_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-tags mr-2" aria-hidden="true"></i>Categories
                             </a>
                         </div>
@@ -801,7 +801,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'library' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-book-open w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Library</span>
+                            <span class="ml-3 text-[17px] font-semibold">Library</span>
                         </div>
                     </a>
                     {% endif %}
@@ -809,7 +809,7 @@
                     <!-- Divider: System -->
                     {% if permissions.site_content.can_view or permissions.security_audit.can_view %}
                     <div class="border-t border-white/10 my-3"></div>
-                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">System</div>
+                    <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">System</div>
                     {% endif %}
 
                     <!-- System Configuration -->
@@ -817,25 +817,25 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'config' in request.path and 'site-config' not in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-cogs w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">System Config</span>
+                                <span class="ml-3 text-[17px] font-semibold">System Config</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'config' in request.path and 'site-config' not in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="configMenu" class="mt-1 space-y-1 {% if 'config' not in request.path or 'site-config' in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:system_config_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'system_config_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'system_config_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i>All Settings
                             </a>
                             <a href="{% url 'management:branding_config' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'branding_config' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'branding_config' %}bg-white/20{% endif %}">
                                 <i class="fas fa-paint-brush mr-2" aria-hidden="true"></i>Branding
                             </a>
                             <a href="{% url 'management:email_config' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'email_config' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'email_config' %}bg-white/20{% endif %}">
                                 <i class="fas fa-envelope mr-2" aria-hidden="true"></i>Email Setup
                             </a>
                             <a href="{% url 'management:notification_config' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'notification_config' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'notification_config' %}bg-white/20{% endif %}">
                                 <i class="fas fa-bell mr-2" aria-hidden="true"></i>Notifications
                             </a>
                         </div>
@@ -847,33 +847,33 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'site-config' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-globe w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Website Content</span>
+                                <span class="ml-3 text-[17px] font-semibold">Website Content</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'site-config' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="siteConfigMenu" class="mt-1 space-y-1 {% if 'site-config' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:site_config_general' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'site_config_general' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'site_config_general' %}bg-white/20{% endif %}">
                                 <i class="fas fa-id-card mr-2" aria-hidden="true"></i>General &amp; Identity
                             </a>
                             <a href="{% url 'management:site_config_index' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'site_config_index' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'site_config_index' %}bg-white/20{% endif %}">
                                 <i class="fas fa-home mr-2" aria-hidden="true"></i>Home Page
                             </a>
                             <a href="{% url 'management:site_config_about' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'site_config_about' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'site_config_about' %}bg-white/20{% endif %}">
                                 <i class="fas fa-info-circle mr-2" aria-hidden="true"></i>About Page
                             </a>
                             <a href="{% url 'management:site_milestones_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'milestones' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'milestones' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-clock mr-2" aria-hidden="true"></i>History Timeline
                             </a>
                             <a href="{% url 'management:testimonials_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'testimonials' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'testimonials' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-quote-right mr-2" aria-hidden="true"></i>Testimonials
                             </a>
                             <a href="{% url 'management:institution_members_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'members' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'members' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-user-tie mr-2" aria-hidden="true"></i>Leadership &amp; Staff
                             </a>
                         </div>
@@ -886,17 +886,17 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'audit' in request.path or 'security' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-shield-alt w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Security &amp; Audit</span>
+                                <span class="ml-3 text-[17px] font-semibold">Security &amp; Audit</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'audit' in request.path or 'security' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="securityMenu" class="mt-1 space-y-1 {% if 'audit' not in request.path and 'security' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'management:security_dashboard' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'security_dashboard' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'security_dashboard' %}bg-white/20{% endif %}">
                                 <i class="fas fa-lock mr-2" aria-hidden="true"></i>Security Dashboard
                             </a>
                             <a href="{% url 'management:audit_logs_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'audit_logs_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'audit_logs_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-history mr-2" aria-hidden="true"></i>Audit Logs
                             </a>
                         </div>
@@ -905,7 +905,7 @@
                     {% endif %}{# /admin menu block #}
 
                     {% if request.user.is_superuser or request.user.profile.role == 'student' %}
-                    {% if request.user.is_superuser %}<div class="border-t border-white/10 my-4"></div><div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Student Portal</div>{% endif %}
+                    {% if request.user.is_superuser %}<div class="border-t border-white/10 my-4"></div><div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Student Portal</div>{% endif %}
 
                     <!-- STUDENT/LEARNER MENU -->
                     <!-- Dashboard -->
@@ -913,7 +913,7 @@
                        class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Dashboard</span>
+                            <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
 
@@ -922,17 +922,17 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-book w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Course Registration</span>
+                                <span class="ml-3 text-[17px] font-semibold">Course Registration</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:my_courses' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> Register Courses
                             </a>
                             <a href="{% url 'students:course_catalog' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
                                 <i class="fas fa-search mr-2" aria-hidden="true"></i> Session / Semester Courses
                             </a>
                         </div>
@@ -943,21 +943,21 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'assignments' in request.path or 'quizzes' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-tasks w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Assessment</span>
+                                <span class="ml-3 text-[17px] font-semibold">Assessment</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="tasksMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:assignments' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'assignments' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'assignments' %}bg-white/20{% endif %}">
                                 <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Assignments
                             </a>
                             <a href="{% url 'students:quiz_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'quiz_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'quiz_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2" aria-hidden="true"></i> Quizzes
                             </a>
                             <a href="{% url 'students:exam_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'exam_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'exam_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2" aria-hidden="true"></i>Examinations
                             </a>
                         </div>
@@ -968,25 +968,25 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if request.resolver_match.url_name in 'grades,progress,achievements,certificates' %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Performance</span>
+                                <span class="ml-3 text-[17px] font-semibold">Performance</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="performanceMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:grades' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'grades' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'grades' %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i> Grades
                             </a>
                             <a href="{% url 'students:progress' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
                                 <i class="fas fa-chart-bar mr-2" aria-hidden="true"></i> Progress
                             </a>
                             <a href="{% url 'students:achievements' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'achievements' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'achievements' %}bg-white/20{% endif %}">
                                 <i class="fas fa-trophy mr-2" aria-hidden="true"></i> Achievements
                             </a>
                             <a href="{% url 'students:certificates' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
                                 <i class="fas fa-certificate mr-2" aria-hidden="true"></i> Certificates
                             </a>
                         </div>
@@ -997,7 +997,7 @@
                        class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'academic_records' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-graduation-cap w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Academic Records</span>
+                            <span class="ml-3 text-[17px] font-semibold">Academic Records</span>
                         </div>
                     </a>
 
@@ -1006,17 +1006,17 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'community' in request.path or 'study-groups' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-comments w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Community</span>
+                                <span class="ml-3 text-[17px] font-semibold">Community</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="communityMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:community' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'community' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'community' %}bg-white/20{% endif %}">
                                 <i class="fas fa-comment-dots mr-2" aria-hidden="true"></i> Discussions
                             </a>
                             <a href="{% url 'students:study_groups' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'study-groups' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'study-groups' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-users mr-2" aria-hidden="true"></i> Study Groups
                             </a>
                         </div>
@@ -1027,7 +1027,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'inbox' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-inbox w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Inbox</span>
+                            <span class="ml-3 text-[17px] font-semibold">Inbox</span>
                         </div>
                         {% if unread_messages_count > 0 %}
                         <span class="badge-count bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
@@ -1041,7 +1041,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'notifications' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-bell w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Notifications</span>
+                            <span class="ml-3 text-[17px] font-semibold">Notifications</span>
                         </div>
                         {% if unread_notifications_count > 0 %}
                         <span class="badge-count bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
@@ -1055,7 +1055,7 @@
                        class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payments' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-credit-card w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Payments</span>
+                            <span class="ml-3 text-[17px] font-semibold">Payments</span>
                         </div>
                     </a>
 
@@ -1064,21 +1064,21 @@
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'profile' in request.path or 'settings' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-user-circle w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Account</span>
+                                <span class="ml-3 text-[17px] font-semibold">Account</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="accountMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'students:profile' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
                                 <i class="fas fa-user mr-2" aria-hidden="true"></i> My Profile
                             </a>
                             <a href="{% url 'students:settings' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'settings' %}bg-white/20{% endif %}">
                                 <i class="fas fa-cog mr-2" aria-hidden="true"></i> Settings
                             </a>
                             <a href="{% url 'students:help_support' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
                                 <i class="fas fa-life-ring mr-2" aria-hidden="true"></i> Help & Support
                             </a>
                         </div>
@@ -1086,7 +1086,7 @@
                     {% endif %}{# /student menu block #}
 
                     {% if request.user.is_superuser or request.user.profile.role == 'instructor' %}
-                    {% if request.user.is_superuser %}<div class="border-t border-white/10 my-4"></div><div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Instructor Portal</div>{% endif %}
+                    {% if request.user.is_superuser %}<div class="border-t border-white/10 my-4"></div><div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Instructor Portal</div>{% endif %}
                     <!-- ================================================ -->
                     <!-- INSTRUCTOR MENU                                   -->
                     <!-- ================================================ -->
@@ -1096,7 +1096,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Dashboard</span>
+                            <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
 
@@ -1106,7 +1106,7 @@
                               {% if 'courses' in request.path and request.resolver_match.url_name == 'course_list' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-book-open w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">My Courses</span>
+                            <span class="ml-3 text-[17px] font-semibold">My Courses</span>
                         </div>
                     </a>
 
@@ -1126,7 +1126,7 @@
                             {% if request.resolver_match.url_name == 'course_manage' and not request.GET.tab %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-th-large w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Manage Course</span>
+                            <span class="ml-3 text-[17px] font-semibold">Manage Course</span>
                         </div>
                     </a>
 
@@ -1136,20 +1136,20 @@
                               {% if request.resolver_match.url_name == 'course_manage' and request.GET.tab == 'content' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-layer-group w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Lessons & Sections</span>
+                            <span class="ml-3 text-[17px] font-semibold">Lessons & Sections</span>
                         </div>
                     </a>
 
                     <!-- Divider -->
                     <div class="border-t border-white/10 my-3"></div>
-                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Assessments</div>
+                    <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Assessments</div>
 
                     <!-- Assessments -->
                     <div class="mb-1">
                         <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'assessments' in request.path or 'quizzes' in request.path or 'assignments' in request.path or 'exams' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-clipboard-check w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Assessments</span>
+                                <span class="ml-3 text-[17px] font-semibold">Assessments</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
@@ -1162,12 +1162,12 @@
                             </a>
                             <div class="border-t border-white/10 my-1"></div>
                             <a href="{% url 'instructor:all_quizzes' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
                                       {% if request.resolver_match.url_name == 'all_quizzes' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2 w-4" aria-hidden="true"></i> All Quizzes
                             </a>
                             <a href="{% url 'instructor:all_assignments' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
                                       {% if request.resolver_match.url_name == 'all_assignments' %}bg-white/20{% endif %}">
                                 <i class="fas fa-tasks mr-2 w-4" aria-hidden="true"></i> All Assignments
                             </a>
@@ -1188,28 +1188,28 @@
 
                     <!-- Divider -->
                     <div class="border-t border-white/10 my-3"></div>
-                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Reports</div>
+                    <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Reports</div>
 
                     <!-- Analytics -->
                     <div class="mb-1">
                         <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'analytics' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Analytics</span>
+                                <span class="ml-3 text-[17px] font-semibold">Analytics</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
                         <div id="analyticsMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'instructor:analytics_course_stats' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'analytics_course_stats' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'analytics_course_stats' %}bg-white/20{% endif %}">
                                 <i class="fas fa-chart-bar mr-2 w-4" aria-hidden="true"></i> Course Statistics
                             </a>
                             <a href="{% url 'instructor:analytics_student_progress' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'analytics_student_progress' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'analytics_student_progress' %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2 w-4" aria-hidden="true"></i> Student Progress
                             </a>
                             <a href="{% url 'instructor:analytics_reviews' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'analytics_reviews' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'analytics_reviews' %}bg-white/20{% endif %}">
                                 <i class="fas fa-star mr-2 w-4" aria-hidden="true"></i> Reviews & Ratings
                             </a>
                         </div>
@@ -1223,7 +1223,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'resources' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-folder w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Resources</span>
+                            <span class="ml-3 text-[17px] font-semibold">Resources</span>
                         </div>
                     </a>
 
@@ -1233,7 +1233,7 @@
                               {% if 'messages' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-envelope w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Messages</span>
+                            <span class="ml-3 text-[17px] font-semibold">Messages</span>
                         </div>
                     </a>
 
@@ -1243,7 +1243,7 @@
                               {% if 'notifications' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-bell w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Notifications</span>
+                            <span class="ml-3 text-[17px] font-semibold">Notifications</span>
                         </div>
                         {% if instructor_unread_notifications_count > 0 %}
                         <span class="badge-count inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
@@ -1257,7 +1257,7 @@
                     <!-- CONTENT MANAGER MENU (for future implementation) -->
                     <a href="{% url 'content:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
                         <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Dashboard</span>
+                        <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                     </a>
                     {% endif %}{# /content_manager menu block #}
 
@@ -1265,12 +1265,12 @@
                     <!-- SUPPORT STAFF MENU (for future implementation) -->
                     <a href="{% url 'support:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
                         <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Dashboard</span>
+                        <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                     </a>
                     {% endif %}{# /support menu block #} {% endcomment %}
 
                     {% if request.user.is_superuser or request.user.profile.role == 'finance' %}
-                    {% if request.user.is_superuser %}<div class="border-t border-white/10 my-4"></div><div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Finance Portal</div>{% endif %}
+                    {% if request.user.is_superuser %}<div class="border-t border-white/10 my-4"></div><div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Finance Portal</div>{% endif %}
                     <!-- ================================================ -->
                     <!-- FINANCE MANAGER MENU                             -->
                     <!-- ================================================ -->
@@ -1281,20 +1281,20 @@
                               {% if request.resolver_match.url_name == 'dashboard' and 'finance' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-chart-bar w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Dashboard</span>
+                            <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
 
                     <!-- Divider + label -->
                     <div class="border-t border-white/10 my-3"></div>
-                    <div class="sidebar-section-label py-1 px-4 text-xs uppercase font-semibold text-white/40 tracking-widest">Finance</div>
+                    <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Finance</div>
  
                     <!-- Payments submenu -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payments' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-credit-card w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Payments</span>
+                                <span class="ml-3 text-[17px] font-semibold">Payments</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'payments' in request.path %}rotate-180{% endif %}"
                                aria-hidden="true"></i>
@@ -1303,15 +1303,15 @@
                              class="mt-1 space-y-1 {% if 'payments' not in request.path %}hidden{% endif %}
                                     bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'payments:payment_management' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'payment_management' or request.resolver_match.url_name == 'application_payment_detail' or request.resolver_match.url_name == 'fee_payment_detail' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'payment_management' or request.resolver_match.url_name == 'application_payment_detail' or request.resolver_match.url_name == 'fee_payment_detail' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> All Payments
                             </a>
                             <a href="{% url 'payments:transaction_reports' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if request.resolver_match.url_name == 'transaction_reports' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'transaction_reports' %}bg-white/20{% endif %}">
                                 <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Transaction Reports
                             </a>
                             <a href="{% url 'payments:invoice_generation' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm {% if 'invoice' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'invoice' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-file-invoice mr-2" aria-hidden="true"></i> Invoices
                             </a>
                         </div>
@@ -1323,7 +1323,7 @@
                               {% if 'required-payments' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-receipt w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Required Payments</span>
+                            <span class="ml-3 text-[17px] font-semibold">Required Payments</span>
                         </div>
                     </a>
 
@@ -1333,7 +1333,7 @@
                               {% if 'subscription' in request.path %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-crown w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Subscriptions</span>
+                            <span class="ml-3 text-[17px] font-semibold">Subscriptions</span>
                         </div>
                     </a>
  
@@ -1343,7 +1343,7 @@
                                        {% if 'payroll' in request.path %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-money-bill-wave w-5 text-center" aria-hidden="true"></i>
-                                <span class="ml-3">Payroll</span>
+                                <span class="ml-3 text-[17px] font-semibold">Payroll</span>
                             </div>
                             <i class="fas fa-chevron-down menu-arrow transition-transform
                                       {% if 'payroll' in request.path %}rotate-180{% endif %}"
@@ -1353,7 +1353,7 @@
                              class="mt-1 space-y-1 {% if 'payroll' not in request.path %}hidden{% endif %}
                                     bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'finance:payroll_management' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
                                       {% if request.resolver_match.url_name == 'payroll_management' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> All Payrolls
                             </a>
@@ -1366,7 +1366,7 @@
                     <!-- QA REVIEWER MENU (for future implementation) -->
                     <a href="{% url 'qa:dashboard' %}" class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
                         <i class="fas fa-tachometer-alt w-5 text-center" aria-hidden="true"></i>
-                        <span class="ml-3">Dashboard</span>
+                        <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                     </a>
                     {% endif %}
 
@@ -1380,7 +1380,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'profile' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-user-circle w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">My Profile</span>
+                            <span class="ml-3 text-[17px] font-semibold">My Profile</span>
                         </div>
                     </a>
 
@@ -1390,7 +1390,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'system_config_list' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-cog w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Settings</span>
+                            <span class="ml-3 text-[17px] font-semibold">Settings</span>
                         </div>
                     </a>
                     {% endif %}
@@ -1400,7 +1400,7 @@
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'help_support' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-question-circle w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Help & Support</span>
+                            <span class="ml-3 text-[17px] font-semibold">Help & Support</span>
                         </div>
                     </a>
 
@@ -1409,7 +1409,7 @@
                         class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
                         <div class="flex items-center">
                             <i class="fas fa-sign-out-alt w-5 text-center" aria-hidden="true"></i>
-                            <span class="ml-3">Logout</span>
+                            <span class="ml-3 text-[17px] font-semibold">Logout</span>
                         </div>
                     </a>
                 </nav>
@@ -1427,8 +1427,8 @@
                         </div>
                         {% endif %}
                         <div class="flex-1">
-                            <p class="font-medium text-sm truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
-                            <p class="text-xs text-white/70">{{ request.user.profile.get_role_display }}</p>
+                            <p class="font-medium text-sm truncate capitalize">{{ request.user.get_full_name|default:request.user.username }}</p>
+                            <p class="text-xs text-white/70 capitalize">{{ request.user.profile.get_role_display }}</p>
                         </div>
                     </div>
                 </div>
@@ -1582,8 +1582,8 @@
                                 </div>
                                 {% endif %}
                                 <div class="hidden md:block text-left min-w-0">
-                                    <p class="font-medium text-gray-800 text-sm truncate max-w-[120px] lg:max-w-[160px]">{{ request.user.get_full_name|default:request.user.username }}</p>
-                                    <p class="text-xs text-gray-500 leading-snug">{{ request.user.profile.get_role_display }}</p>
+                                    <p class="font-medium text-gray-800 text-sm truncate max-w-[120px] lg:max-w-[160px] capitalize">{{ request.user.get_full_name|default:request.user.username }}</p>
+                                    <p class="text-xs text-gray-500 leading-snug capitalize">{{ request.user.profile.get_role_display }}</p>
                                 </div>
                                 <i class="fas fa-chevron-down text-gray-400 text-xs hidden md:block" aria-hidden="true"></i>
                             </button>

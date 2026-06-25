@@ -78,6 +78,10 @@ def student_required(view_func):
                 else 'eduweb:index'
             )
 
+        # Superuser bypasses application check entirely
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+
         # Block access if application hasn't been approved yet
         from eduweb.models import CourseApplication
         application = CourseApplication.objects.filter(user=request.user).first()

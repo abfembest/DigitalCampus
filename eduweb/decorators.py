@@ -36,7 +36,7 @@ def check_for_auth(view_func):
 
         role = request.user.profile.role
 
-        if role == 'admin' and not request.user.is_superuser:
+        if role == 'admin' or request.user.is_superuser:
             messages.info(
                 request, 
                 'Admin users should use the admin dashboard.'
@@ -119,7 +119,7 @@ def applicant_required(view_func):
 
         role = request.user.profile.role
 
-        if request.user.is_superuser and role == 'admin':
+        if request.user.is_superuser:
             return view_func(request, *args, **kwargs)
 
         elif role == 'instructor':
@@ -180,7 +180,7 @@ def smart_redirect_applicant(view_func):
 
         role = request.user.profile.role
 
-        if request.user.is_superuser and role == 'admin':
+        if request.user.is_superuser:
             return view_func(request, *args, **kwargs)
 
         elif role == 'instructor':

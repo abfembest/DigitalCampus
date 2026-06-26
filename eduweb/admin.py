@@ -2409,7 +2409,6 @@ from .models import StaffPermissionsMatrix
 @admin.register(StaffPermissionsMatrix)
 class StaffPermissionsMatrixAdmin(admin.ModelAdmin):
     list_display = (
-        "role",
         "user",
         "module",
         "can_view",

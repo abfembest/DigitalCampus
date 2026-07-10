@@ -1345,9 +1345,9 @@
                     <div class="border-t border-white/10 my-4"></div>
                     {% endif %} {% endcomment %}
 
-                    {% comment %} {% if request.user.profile.role == 'support' or request.user.profile.role == "admin" %} {% endcomment %}
+                    {% if request.user.profile.role == 'support' or request.user.profile.role == "admin" %}
                     {% include 'support/includes/sidebar_support_menu.html' %}
-                    {% comment %} {% endif %} {% endcomment %}
+                    {% endif %}
 
 
                     <!-- My Profile — single shared page, every role -->

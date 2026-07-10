@@ -1345,7 +1345,8 @@
                     <div class="border-t border-white/10 my-4"></div>
                     {% endif %} {% endcomment %}
 
-                    {% if request.user.profile.role == 'support' or request.user.profile.role == "admin" %}
+                    {% if request.user.is_superuser or request.user.profile.role == 'support' %}
+                    {% comment %} {% if request.user.profile.role == 'support' or request.user.profile.role == "admin" %} {% endcomment %}
                     {% include 'support/includes/sidebar_support_menu.html' %}
                     {% endif %}
 

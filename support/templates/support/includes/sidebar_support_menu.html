@@ -15,7 +15,7 @@
 
 {% if request.user.is_authenticated %}
 {% with role=request.user.profile.role %}
-{% if request.user.is_superuser or request.user.is_staff or role == 'admin' or role == 'support' %}
+{% if request.user.is_superuser or request.user.profile.role == 'support' %}
 
 {% comment %} <div class="border-t border-white/10 my-3"></div> {% endcomment %}
 {% if request.user.is_superuser %}

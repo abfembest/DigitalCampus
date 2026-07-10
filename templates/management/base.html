@@ -468,7 +468,21 @@
                 <!-- Navigation Menu - Scrollable -->
                 <nav class="flex-1 overflow-y-auto py-4 px-3" role="navigation" aria-label="Main navigation">
 
-                    {% if request.user.is_staff or request.user.is_superuser or request.user.profile.role in 'admin,support,finance' %}
+                    {% if request.user.is_superuser or request.user.profile.role == 'admin' %}
+                    {% comment %}
+                        Gate is role/superuser ONLY — deliberately NOT `is_staff`.
+                        is_staff can drift independently of role (Django's raw admin
+                        panel edits User.is_staff directly, without touching
+                        UserProfile at all, so it can't be kept in sync from the
+                        model layer alone). Trusting role here means a stale/edited
+                        is_staff can never leak this admin menu to the wrong role.
+                        'support' and 'finance' were previously included here too,
+                        but everything inside is separately gated by
+                        permissions.<module>.can_view, which is False by default for
+                        those roles — so they never saw any content from this block
+                        anyway. Excluding them at this outer gate just makes that
+                        boundary explicit instead of accidental.
+                    {% endcomment %}
                     <!-- ================================================ -->
                     <!-- ADMIN / MANAGEMENT MENU                          -->
                     <!-- ================================================ -->

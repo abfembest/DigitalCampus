@@ -2,14 +2,17 @@
   support/includes/sidebar_support_menu.html
   Drop-in support navigation block for base.html.
 
-  USAGE IN base.html — replace or augment the existing support block inside the
-  {% if request.user.is_staff or ... %} nav section:
+  Included from base.html, wrapped in the same gate repeated below:
 
-      {% if request.user.profile.role == 'support' or request.user.is_superuser or request.user.is_staff %}
+      {% if request.user.is_superuser or request.user.profile.role == 'support' %}
           {% include 'support/includes/sidebar_support_menu.html' %}
       {% endif %}
 
-  This block renders ONLY for: superuser, is_staff, role='admin', role='support'.
+  This block renders ONLY for: superuser, role='support'. Deliberately NOT
+  is_staff or role='admin' — admins manage support via their own portal
+  access, not through this agent-facing menu. is_staff is never trusted here
+  because it can drift independently of role (see the matching note further
+  down, on the "Admin-only items" gate).
   It auto-highlights the active page using request.path.
 {% endcomment %}
 
@@ -161,7 +164,14 @@
 </a>
 
 <!-- Admin-only items -->
-{% if request.user.is_superuser or request.user.is_staff or role == 'admin' %}
+{% comment %}
+    Gate is role/superuser ONLY — deliberately NOT is_staff. See the matching
+    note in templates/management/base.html for why: is_staff can drift
+    independently of role (e.g. edited directly via Django's raw admin panel),
+    so trusting role here is what keeps this from leaking to a support agent
+    whose is_staff happens to be stale.
+{% endcomment %}
+{% if request.user.is_superuser or role == 'admin' %}
 <div class="mb-1">
     <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all
         {% if 'support/sla' in request.path or 'support/departments' in request.path or 'support/agents' in request.path or 'support/audit' in request.path %}bg-white/20{% endif %}">

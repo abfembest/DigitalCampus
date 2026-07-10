@@ -414,6 +414,10 @@ class KBArticle(models.Model):
             return None
         return round((self.helpful_count / total) * 100)
 
+    @property
+    def tag_list(self):
+        return [t.strip() for t in self.tags.split(',') if t.strip()]
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FAQ

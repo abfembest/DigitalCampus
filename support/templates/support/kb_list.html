@@ -10,10 +10,10 @@
             <h1 class="text-2xl font-bold font-heading text-gray-900">Knowledge Base</h1>
             <p class="text-sm text-gray-500 mt-1">{{ total_published }} published · {{ total_draft }} drafts</p>
         </div>
-        <a href="{% url 'support:kb_article_create' %}"
+        <button onclick="$('#addArticleModal').removeClass('hidden')"
            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors">
             <i class="fas fa-plus" aria-hidden="true"></i> New Article
-        </a>
+        </button>
     </div>
 
     <!-- Filter -->
@@ -23,14 +23,14 @@
                    class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
             <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
                 <option value="">All Statuses</option>
-                <option value="published" {% if status_filter= ='published' %}selected{% endif %}>Published</option>
-                <option value="draft" {% if status_filter= ='draft' %}selected{% endif %}>Draft</option>
-                <option value="archived" {% if status_filter= ='archived' %}selected{% endif %}>Archived</option>
+                <option value="published" {% if status_filter == 'published' %}selected{% endif %}>Published</option>
+                <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Archived</option>
             </select>
             <select name="category" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
                 <option value="">All Categories</option>
                 {% for cat in categories %}
-                <option value="{{ cat.pk }}" {% if cat_filter= =cat.pk|stringformat:'s' %}selected{% endif %}>{{ cat.name }}</option>
+                <option value="{{ cat.pk }}" {% if cat_filter == cat.pk|stringformat:'s' %}selected{% endif %}>{{ cat.name }}</option>
                 {% endfor %}
             </select>
             <button type="submit" class="px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors">
@@ -107,6 +107,58 @@
     </div>
     {% endif %}
 
+</div>
+
+<!-- New Article Modal -->
+<div id="addArticleModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="font-semibold text-gray-900">New Article</h2>
+            <button onclick="$('#addArticleModal').addClass('hidden')" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+        </div>
+        <form method="post" action="{% url 'support:kb_article_create' %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Title <span class="text-red-500">*</span></label>
+                <input type="text" name="title" required maxlength="250" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Article title">
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Category <span class="text-red-500">*</span></label>
+                    <select name="category_id" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+                        {% for cat in categories %}
+                        <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Status</label>
+                    <select name="status" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Summary</label>
+                <input type="text" name="summary" maxlength="300" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Short description for article listing">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Body <span class="text-red-500">*</span></label>
+                <textarea name="body" required rows="6" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none resize-y font-mono" placeholder="Article content (supports Markdown)…"></textarea>
+            </div>
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tags</label>
+                <input type="text" name="tags" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Comma-separated tags">
+            </div>
+            <div class="flex gap-3">
+                <button type="submit" class="flex-1 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors">Save Article</button>
+                <button type="button" onclick="$('#addArticleModal').addClass('hidden')" class="flex-1 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
 {% block extra_js %}

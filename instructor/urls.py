@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 app_name = 'instructor'
@@ -80,9 +81,12 @@ urlpatterns = [
     path('resources/', views.resources, name='resources'),
 
     # ==================== PROFILE & SETTINGS ====================
-    path('profile/', views.instructor_profile, name='profile'),
-    path('settings/', views.instructor_settings, name='settings'),
-    path('help-support/', views.help_support, name='help_support'),
+    # "My Profile", "Settings" and "Help & Support" are now single shared
+    # pages for every role — these old URLs redirect there so nothing that
+    # still links here breaks.
+    path('profile/', RedirectView.as_view(pattern_name='eduweb:profile', permanent=False), name='profile'),
+    path('settings/', RedirectView.as_view(pattern_name='eduweb:settings', permanent=False), name='settings'),
+    path('help-support/', RedirectView.as_view(pattern_name='support:submit_ticket', permanent=False), name='help_support'),
 
     # ------------------------------------------------------------------
     # ANNOUNCEMENTS  (list / edit / delete — create already exists)

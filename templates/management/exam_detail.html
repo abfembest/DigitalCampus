@@ -424,7 +424,7 @@
                                     <span class="text-xs font-bold text-primary-700 uppercase tracking-wide">{{ log.to_status }}</span>
                                 </div>
                                 <div class="text-xs text-gray-600">
-                                    by <span class="font-semibold">{{ log.changed_by.get_full_name|default:log.changed_by.username|default:"System" }}</span>
+                                    by <span class="font-semibold">{% if log.changed_by %}{{ log.changed_by.get_full_name|default:log.changed_by.username }}{% else %}System{% endif %}</span>
                                 </div>
                                 {% if log.note %}
                                 <div class="text-xs text-gray-400 italic mt-0.5 bg-gray-50 rounded px-2 py-1 border border-gray-100">{{ log.note|truncatechars:80 }}</div>

@@ -802,6 +802,72 @@ def activities(request):
     return render(request, 'activities.html')
 
 
+@login_required
+def profile(request):
+    """
+    Central 'My Profile' page shared by every role (student, instructor,
+    finance, admin, support) — one page, one URL, instead of a per-app copy.
+    """
+    from student.forms import ProfileUpdateForm
+
+    user = request.user
+    user_profile = user.profile
+
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=user_profile)
+        if form.is_valid():
+            user.first_name = form.cleaned_data.get('first_name', '')
+            user.last_name = form.cleaned_data.get('last_name', '')
+            user.email = form.cleaned_data.get('email', '')
+            user.save()
+            form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('eduweb:profile')
+    else:
+        form = ProfileUpdateForm(
+            instance=user_profile,
+            initial={'first_name': user.first_name, 'last_name': user.last_name, 'email': user.email},
+        )
+
+    return render(request, 'account/profile.html', {'form': form, 'page_title': 'My Profile'})
+
+
+@login_required
+def settings(request):
+    """
+    Central 'Settings' page shared by every role — notification preferences
+    and password change, one page instead of a per-app copy.
+    """
+    from django.contrib.auth import update_session_auth_hash
+    from student.forms import SettingsForm
+    from instructor.forms import PasswordChangeForm
+
+    settings_form = SettingsForm(instance=request.user.profile)
+    password_form = PasswordChangeForm(user=request.user)
+
+    if request.method == 'POST':
+        if 'update_settings' in request.POST:
+            settings_form = SettingsForm(request.POST, instance=request.user.profile)
+            if settings_form.is_valid():
+                settings_form.save()
+                messages.success(request, 'Settings updated successfully!')
+                return redirect('eduweb:settings')
+        elif 'change_password' in request.POST:
+            password_form = PasswordChangeForm(user=request.user, data=request.POST)
+            if password_form.is_valid():
+                request.user.set_password(password_form.cleaned_data['new_password'])
+                request.user.save()
+                update_session_auth_hash(request, request.user)
+                messages.success(request, 'Your password has been changed successfully!')
+                return redirect('eduweb:settings')
+
+    return render(request, 'account/settings.html', {
+        'settings_form': settings_form,
+        'password_form': password_form,
+        'page_title': 'Settings',
+    })
+
+
 @check_for_auth
 def research(request):
     return render(request, 'research.html')

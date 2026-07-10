@@ -3,10 +3,10 @@
 {% block title %}FAQs — MIU Support{% endblock %}
 {% block content %}
 <div class="px-4 sm:px-6 lg:px-8 py-6 max-w-screen-xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 class="text-2xl font-bold font-heading text-gray-900">FAQ Management</h1>
         <button onclick="$('#addFaqModal').removeClass('hidden')"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors">
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors">
             <i class="fas fa-plus" aria-hidden="true"></i> Add FAQ
         </button>
     </div>
@@ -61,7 +61,7 @@
 
 <!-- Add FAQ Modal -->
 <div id="addFaqModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-5">
             <h2 class="font-semibold text-gray-900">Add FAQ</h2>
             <button onclick="$('#addFaqModal').addClass('hidden')" class="text-gray-400 hover:text-gray-600">

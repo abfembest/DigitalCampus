@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 app_name = 'students'
@@ -76,9 +77,12 @@ urlpatterns = [
     path('certificates/<str:certificate_id>/print/', views.certificate_print, name='certificate_print'),
 
     # ── Profile & Settings ───────────────────────────────────────────────────
-    path('profile/', views.profile, name='profile'),
-    path('settings/', views.settings, name='settings'),
-    path('help-support/', views.help_support, name='help_support'),
+    # "My Profile", "Settings" and "Help & Support" are now single shared pages
+    # for every role — these old URLs redirect there so nothing that still
+    # links here breaks.
+    path('profile/', RedirectView.as_view(pattern_name='eduweb:profile', permanent=False), name='profile'),
+    path('settings/', RedirectView.as_view(pattern_name='eduweb:settings', permanent=False), name='settings'),
+    path('help-support/', RedirectView.as_view(pattern_name='support:submit_ticket', permanent=False), name='help_support'),
 
     # ── Payments ─────────────────────────────────────────────────────────────
     path('payments/', views.my_payments, name='my_payments'),

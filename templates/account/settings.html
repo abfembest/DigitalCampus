@@ -1,10 +1,10 @@
 {% extends "management/base.html" %}
 {% load static %}
 
-{% block title %}{{ page_title }} - MIU Instructor Portal{% endblock %}
+{% block title %}{{ page_title }} - MIU Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto px-2 sm:px-4 lg:px-8">
 
     <!-- Page Header -->
     <div class="mb-6 sm:mb-8">
@@ -28,7 +28,7 @@
                 <div class="flex items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg gap-3">
                     <div class="flex-1">
                         <h3 class="font-semibold text-gray-900 text-sm sm:text-base">Email Notifications</h3>
-                        <p class="text-xs sm:text-sm text-gray-600 mt-0.5">Receive emails about course updates, student submissions, and important announcements</p>
+                        <p class="text-xs sm:text-sm text-gray-600 mt-0.5">Receive emails about updates, activity, and important announcements</p>
                     </div>
                     <div class="flex-shrink-0">{{ settings_form.email_notifications }}</div>
                 </div>
@@ -136,7 +136,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg gap-2 sm:gap-3">
                     <div>
                         <p class="text-xs sm:text-sm text-gray-600">Email Verification</p>
-                        <p class="font-semibold mt-0.5 text-sm sm:text-base {% if request.user.profile.email_verified %}text-green-600{% else %}text-yellow-600{% endif %}">
+                        <p id="emailVerifyStatus" class="font-semibold mt-0.5 text-sm sm:text-base {% if request.user.profile.email_verified %}text-green-600{% else %}text-yellow-600{% endif %}">
                             {% if request.user.profile.email_verified %}
                             <i class="fas fa-check-circle mr-1"></i>Verified
                             {% else %}
@@ -145,41 +145,10 @@
                         </p>
                     </div>
                     {% if not request.user.profile.email_verified %}
-                    <button class="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all whitespace-nowrap">
-                        Verify Email
+                    <button type="button" id="resendVerifyBtn" class="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all whitespace-nowrap">
+                        Resend Verification Email
                     </button>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Danger Zone -->
-        <div class="bg-white rounded-xl shadow-sm border border-red-200 p-4 sm:p-6">
-            <div class="flex items-start justify-between mb-3 sm:mb-4 gap-3">
-                <div>
-                    <h2 class="text-lg sm:text-xl font-bold text-red-600">Danger Zone</h2>
-                    <p class="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1">Irreversible and destructive actions</p>
-                </div>
-                <i class="fas fa-exclamation-triangle text-2xl sm:text-3xl text-red-300 flex-shrink-0 mt-0.5"></i>
-            </div>
-            <div class="space-y-2 sm:space-y-3">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-red-50 rounded-lg border border-red-100 gap-3">
-                    <div>
-                        <p class="font-semibold text-gray-900 text-sm sm:text-base">Deactivate Account</p>
-                        <p class="text-xs sm:text-sm text-gray-600 mt-0.5">Temporarily disable your account. You can reactivate it anytime.</p>
-                    </div>
-                    <button class="w-full sm:w-auto flex-shrink-0 px-4 py-2 text-sm bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-all font-medium">
-                        Deactivate
-                    </button>
-                </div>
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-red-50 rounded-lg border border-red-200 gap-3">
-                    <div>
-                        <p class="font-semibold text-red-600 text-sm sm:text-base">Delete Account</p>
-                        <p class="text-xs sm:text-sm text-gray-600 mt-0.5">Permanently delete your account and all associated data. This cannot be undone.</p>
-                    </div>
-                    <button class="w-full sm:w-auto flex-shrink-0 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-medium">
-                        Delete
-                    </button>
                 </div>
             </div>
         </div>
@@ -204,4 +173,30 @@
         input[type="checkbox"] { width: 1.125rem; height: 1.125rem; }
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function () {
+    lucide.createIcons();
+    $('#resendVerifyBtn').on('click', function () {
+        var $btn = $(this);
+        $btn.prop('disabled', true).text('Sending…');
+        $.ajax({
+            url: '{% url "eduweb:resend_verification" %}',
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            success: function (data) {
+                Swal.fire({ toast: true, position: 'top-end', icon: data.success ? 'success' : 'info', title: data.message, timer: 3500, showConfirmButton: false });
+                if (data.success) $btn.remove();
+                else $btn.prop('disabled', false).text('Resend Verification Email');
+            },
+            error: function () {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Failed to resend verification email', timer: 3000, showConfirmButton: false });
+                $btn.prop('disabled', false).text('Resend Verification Email');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

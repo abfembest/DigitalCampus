@@ -15,10 +15,10 @@
         <form method="get" class="flex items-center gap-2">
             <select name="period" onchange="this.form.submit()"
                     class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
-                <option value="7" {% if period= ='7' %}selected{% endif %}>Last 7 days</option>
-                <option value="14" {% if period= ='14' %}selected{% endif %}>Last 14 days</option>
-                <option value="30" {% if period= ='30' %}selected{% endif %}>Last 30 days</option>
-                <option value="90" {% if period= ='90' %}selected{% endif %}>Last 90 days</option>
+                <option value="7" {% if period == '7' %}selected{% endif %}>Last 7 days</option>
+                <option value="14" {% if period == '14' %}selected{% endif %}>Last 14 days</option>
+                <option value="30" {% if period == '30' %}selected{% endif %}>Last 30 days</option>
+                <option value="90" {% if period == '90' %}selected{% endif %}>Last 90 days</option>
             </select>
         </form>
     </div>
@@ -49,7 +49,7 @@
         </div>
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
             <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Avg per Day</p>
-            <p class="text-2xl font-bold text-primary-600 mt-1">{% if days %}{{ total_in_period|floatformat:0 }}{% endif %}</p>
+            <p class="text-2xl font-bold text-primary-600 mt-1">{% if days %}{{ avg_per_day }}{% endif %}</p>
         </div>
     </div>
 
@@ -217,7 +217,7 @@ $(document).ready(function () {
     // Priority doughnut
     var pCtx = document.getElementById('priorityChart');
     if (pCtx && byPriority.length) {
-        var pColors = { low: '#d1fae5', medium: '#fef3c7', high: '#fed7aa', critical: '#fecaca' };
+        var pColors = { low: '#d1fae5', normal: '#fef3c7', high: '#fed7aa', urgent: '#fecaca' };
         new Chart(pCtx, {
             type: 'doughnut',
             data: { labels: byPriority.map(d => d.priority), datasets: [{ data: byPriority.map(d => d.count), backgroundColor: byPriority.map(d => pColors[d.priority] || '#e5e7eb'), borderWidth: 2, borderColor: '#fff' }] },

@@ -96,7 +96,7 @@
             <div class="mt-2 text-xs text-gray-400">
               Published: {{ ann.publish_date|date:"M d, Y" }}
               {% if ann.expiry_date %} &nbsp;·&nbsp; Expires: {{ ann.expiry_date|date:"M d, Y" }}{% endif %}
-              &nbsp;·&nbsp; By {{ ann.created_by.get_full_name|default:ann.created_by.username|default:"System" }}
+              &nbsp;·&nbsp; By {% if ann.created_by %}{{ ann.created_by.get_full_name|default:ann.created_by.username }}{% else %}System{% endif %}
             </div>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">

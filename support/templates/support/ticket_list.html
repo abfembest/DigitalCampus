@@ -60,7 +60,7 @@
 
         <!-- Quick filters -->
         <div class="flex flex-wrap gap-2 mt-3">
-            <a href="{% url 'support:ticket_list' %}?mine=1"
+            <a href="{% url 'support:ticket_list' %}?quick=mine"
                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border {% if filters.mine %}bg-primary-100 border-primary-300 text-primary-700{% else %}bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100{% endif %} transition-colors">
                 <i class="fas fa-user" aria-hidden="true"></i> My Tickets
             </a>
@@ -68,15 +68,15 @@
                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border {% if filters.status == 'open' %}bg-blue-100 border-blue-300 text-blue-700{% else %}bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100{% endif %} transition-colors">
                 Open
             </a>
-            <a href="{% url 'support:ticket_list' %}?status=escalated"
-               class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border {% if filters.status  %}bg-red-100 border-red-300 text-red-700{% else %}bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100{% endif %} transition-colors">
+            <a href="{% url 'support:ticket_list' %}?quick=escalated"
+               class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border {% if filters.status == 'escalated' %}bg-red-100 border-red-300 text-red-700{% else %}bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100{% endif %} transition-colors">
                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Escalated
             </a>
-            <a href="{% url 'support:ticket_list' %}?sla=breached"
+            <a href="{% url 'support:ticket_list' %}?quick=sla"
                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border {% if filters.sla == 'breached' %}bg-red-100 border-red-300 text-red-700{% else %}bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100{% endif %} transition-colors">
                 <i class="fas fa-clock" aria-hidden="true"></i> SLA Breached
             </a>
-            <a href="{% url 'support:ticket_list' %}?priority=critical"
+            <a href="{% url 'support:ticket_list' %}?priority=urgent"
                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border {% if filters.priority == 'urgent' %}bg-red-100 border-red-300 text-red-700{% else %}bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100{% endif %} transition-colors">
                 Critical
             </a>
@@ -125,10 +125,8 @@
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                 {% if ticket.status == 'open' %}bg-blue-100 text-blue-700
                                 {% elif ticket.status == 'in_progress' %}bg-yellow-100 text-yellow-700
-                                {% elif ticket.status  %}bg-indigo-100 text-indigo-700
-                                {% elif ticket.status == 'resolved' or ticket.status == 'closed' %}bg-green-100 text-green-700
-                                {% elif ticket.status  %}bg-red-100 text-red-700
                                 {% elif ticket.status == 'waiting_response' %}bg-purple-100 text-purple-700
+                                {% elif ticket.status == 'resolved' or ticket.status == 'closed' %}bg-green-100 text-green-700
                                 {% else %}bg-gray-100 text-gray-600{% endif %}">
                                 {{ ticket.get_status_display }}
                             </span>

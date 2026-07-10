@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -122,12 +123,9 @@ urlpatterns = [
     path('broadcast/<slug:slug>/send/', views.broadcast_send, name='broadcast_send'),
     path('broadcast/<slug:slug>/delete/', views.broadcast_delete, name='broadcast_delete'),
 
-    # Tickets
-    path('tickets/', views.tickets_list, name='tickets_list'),
-    path('tickets/<int:pk>/', views.ticket_detail, name='ticket_detail'),
-    path('tickets/<int:pk>/reply/', views.ticket_reply, name='ticket_reply'),
-    path('tickets/<int:pk>/change-status/', views.ticket_change_status, name='ticket_change_status'),
-    path('tickets/<int:pk>/assign/', views.ticket_assign, name='ticket_assign'),
+    # Tickets — the real ticket console lives in the `support` app now;
+    # this used to be a thinner, buggier duplicate (support:ticket_list).
+    path('tickets/', RedirectView.as_view(pattern_name='support:ticket_list', permanent=False), name='tickets_list'),
 
     # Contact Messages
     path('contact-messages/', views.contact_messages_list, name='contact_messages_list'),

@@ -10,6 +10,9 @@ urlpatterns = [
     # Dashboard
     path('', views.dashboard, name='dashboard'),
 
+    # Self-service — the single "Help & Support" page shared by every role
+    path('submit/', views.submit_ticket, name='submit_ticket'),
+
     # Tickets
     path('tickets/', views.ticket_list, name='ticket_list'),
     path('tickets/create/', views.ticket_create, name='ticket_create'),
@@ -40,9 +43,11 @@ urlpatterns = [
     path('departments/', views.department_list, name='department_list'),
     path('departments/save/', views.department_save, name='department_save'),
     path('departments/<int:pk>/save/', views.department_save, name='department_save_edit'),
+    path('departments/<int:pk>/toggle-active/', views.department_toggle_active, name='department_toggle_active'),
 
     # Agents
     path('agents/', views.agent_list, name='agent_list'),
+    path('agents/<int:pk>/toggle-available/', views.agent_toggle_available, name='agent_toggle_available'),
 
     # Analytics
     path('analytics/', views.analytics, name='analytics'),

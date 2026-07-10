@@ -3410,9 +3410,20 @@ class UserProfile(models.Model):
     class Meta:
         verbose_name = 'User Profile'
         verbose_name_plural = 'User Profiles'
-    
+
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Enforce is_staff == (role == 'admin') at the model layer so this can
+        # never drift out of sync again, regardless of which code path changes
+        # the role — a custom view, the Django admin panel, a shell script, a
+        # data migration, anything. Views that also call _apply_role_staff_rule
+        # explicitly are now redundant but harmless (no-op once this runs).
+        should_be_staff = (self.role == 'admin')
+        if self.user_id and self.user.is_staff != should_be_staff:
+            User.objects.filter(pk=self.user_id).update(is_staff=should_be_staff)
 
     @property
     def current_level(self):

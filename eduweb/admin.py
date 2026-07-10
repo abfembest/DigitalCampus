@@ -2401,6 +2401,103 @@ class ExamStatusLogAdmin(admin.ModelAdmin):
         return False
 
 
+
+from django.contrib import admin
+from .models import StaffPermissionsMatrix
+
+
+@admin.register(StaffPermissionsMatrix)
+class StaffPermissionsMatrixAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "module",
+        "can_view",
+        "can_create",
+        "can_edit",
+        "can_delete",
+        "can_approve",
+        "can_export",
+        "updated_at",
+        "updated_by",
+    )
+
+    list_filter = (
+        "role",
+        "module",
+        "can_view",
+        "can_create",
+        "can_edit",
+        "can_delete",
+        "can_approve",
+        "can_export",
+    )
+
+    search_fields = (
+        "user__username",
+        "user__first_name",
+        "user__last_name",
+        "user__email",
+        "module",
+    )
+
+    readonly_fields = (
+        "updated_at",
+    )
+
+    autocomplete_fields = (
+        "user",
+        "updated_by",
+    )
+
+    ordering = (
+        "role",
+        "module",
+        "user",
+    )
+
+    fieldsets = (
+        (
+            "Permission Target",
+            {
+                "fields": (
+                    "role",
+                    "user",
+                    "module",
+                )
+            },
+        ),
+        (
+            "Permissions",
+            {
+                "fields": (
+                    (
+                        "can_view",
+                        "can_create",
+                        "can_edit",
+                    ),
+                    (
+                        "can_delete",
+                        "can_approve",
+                        "can_export",
+                    ),
+                )
+            },
+        ),
+        (
+            "Audit",
+            {
+                "fields": (
+                    "updated_at",
+                    "updated_by",
+                )
+            },
+        ),
+    )
+
+    def save_model(self, request, obj, form, change):
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
+
 # ==================== ADMIN SITE BRANDING ====================
 admin.site.site_header = "LMS Administration"
 admin.site.site_title = "LMS Admin Portal"

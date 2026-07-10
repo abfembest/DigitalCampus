@@ -44,7 +44,6 @@ sqlparse==0.5.0
 stix2==3.0.1
 stix2-patterns==2.0.0
 stripe==14.1.0
-scikit-learn==1.8.0
 taxii2-client==2.3.0
 tinycss2==1.4.0
 tinyhtml5==2.0.0
@@ -54,7 +53,7 @@ urllib3==2.2.1
 weasyprint==66.0
 webencodings==0.5.1
 zopfli==0.2.3.post1
-pycountry==24.6.1
-phonenumbers==8.13.55
-# Optional — geonamescache is a fallback, pycountry subdivisions work fine without it
-geonamescache==1.6.0
+
+
+
+/home/miuenecd/DigitalCampus/public_static

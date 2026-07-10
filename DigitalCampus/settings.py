@@ -60,6 +60,7 @@ INSTALLED_APPS = [
 
     "django.contrib.humanize",
     'chatbot',
+    'support',
 ]
 
 MIDDLEWARE = [
@@ -95,6 +96,7 @@ TEMPLATES = [
                 "eduweb.context.student_counts",
                 'eduweb.context.admin_counts',
                 'eduweb.context.permissions_context',
+                'support.context_processors.support_context',
             ],
         },
     },

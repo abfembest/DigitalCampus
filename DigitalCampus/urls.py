@@ -33,6 +33,8 @@ urlpatterns = [
     path('melbac/', include('melbac.urls')),
     path('library/', include('library.urls')),
 
+    path('support/', include('support.urls', namespace='support')),
+
 ]
 
 # Serve media files during development

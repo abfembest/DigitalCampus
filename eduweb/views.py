@@ -323,6 +323,8 @@ def auth_page(request):
                 return redirect('instructor:dashboard')
             elif role == 'finance':
                 return redirect('finance:dashboard')
+            elif role == 'support':
+                return redirect('support:dashboard')
             else:
                 return redirect('eduweb:apply')
 

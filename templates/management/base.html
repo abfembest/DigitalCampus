@@ -466,7 +466,6 @@
                     <!-- ================================================ -->
                     <!-- ADMIN / MANAGEMENT MENU                          -->
                     <!-- ================================================ -->
-
                     <!-- 1. Dashboard -->
                     {% if permissions.dashboard.can_view %}
                     <a href="{% url 'management:dashboard' %}"
@@ -541,29 +540,29 @@
                         <div id="academicMenu" class="mt-1 space-y-1 {% if 'faculties' not in request.path and 'departments' not in request.path and 'programs' not in request.path and 'academic-sessions' not in request.path and 'intakes' not in request.path and request.resolver_match.url_name != 'courses_list' %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <p class="px-4 text-[10px] uppercase tracking-widest text-white/40 font-semibold py-1">Structure</p>
                             <a href="{% url 'management:faculties_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'faculties' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'faculties' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-building mr-2" aria-hidden="true"></i>Faculties
                             </a>
                             <a href="{% url 'management:departments_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'departments' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'departments' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-sitemap mr-2" aria-hidden="true"></i>Departments
                             </a>
                             <a href="{% url 'management:programs_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'programs' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'programs' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i>Programs
                             </a>
                             <div class="border-t border-white/10 my-1"></div>
                             <p class="px-4 text-[10px] uppercase tracking-widest text-white/40 font-semibold py-1">Sessions & Courses</p>
                             <a href="{% url 'management:academic_sessions_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'academic-sessions' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'academic-sessions' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-calendar-alt mr-2" aria-hidden="true"></i>Academic Sessions
                             </a>
                             <a href="{% url 'management:courses_list' %}"
-                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'courses_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'courses_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-book mr-2" aria-hidden="true"></i>Course Catalog
                             </a>
                             {% comment %} <a href="{% url 'management:intakes_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'intakes' in request.path %}bg-white/20{% endif %}">
+                                             class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'intakes' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-door-open mr-2" aria-hidden="true"></i>Course Intakes
                             </a> {% endcomment %}
                         </div>
@@ -649,7 +648,7 @@
                                 <i class="fas fa-exchange-alt mr-2" aria-hidden="true"></i>Transactions
                             </a>
                             {% comment %} <a href="{% url 'management:payment_gateways_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'payment-gateways' in request.path %}bg-white/20{% endif %}">
+                                             class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'payment-gateways' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-credit-card mr-2" aria-hidden="true"></i>Payment Gateways
                             </a> {% endcomment %}
                         </div>
@@ -1099,7 +1098,6 @@
                     <!-- ================================================ -->
                     <!-- INSTRUCTOR MENU                                   -->
                     <!-- ================================================ -->
-
                     <!-- Dashboard -->
                     <a href="{% url 'instructor:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
@@ -1131,7 +1129,7 @@
 
                     <!-- Manage Course — auto-selects first course -->
                     <a href="{% url 'instructor:course_manage_default' %}"
-                    class="relative flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
+                       class="relative flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
                             {% if request.resolver_match.url_name == 'course_manage' and not request.GET.tab %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-th-large w-5 text-center" aria-hidden="true"></i>
@@ -1283,7 +1281,6 @@
                     <!-- ================================================ -->
                     <!-- FINANCE MANAGER MENU                             -->
                     <!-- ================================================ -->
- 
                     <!-- Dashboard -->
                     <a href="{% url 'finance:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
@@ -1341,7 +1338,7 @@
                             <span class="ml-3 text-[17px] font-semibold">Subscriptions</span>
                         </div>
                     </a>
- 
+
                     <!-- Payroll submenu -->
                     <div class="mb-1">
                         <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all
@@ -1375,10 +1372,17 @@
                     </a>
                     {% endif %}
 
+
+                    <!-- ── COMMON Main Support Links (all authenticated users) ── -->
                     <!-- ── COMMON FOOTER LINKS (all authenticated users) ── -->
                     {% if request.user.profile.role in 'student,instructor,admin,finance,support' or request.user.is_staff or request.user.is_superuser %}
                     <div class="border-t border-white/10 my-4"></div>
                     {% endif %} {% endcomment %}
+
+                    {% if request.user.profile.role == 'support' or request.user.profile.role == "admin" %}
+                    {% include 'support/includes/sidebar_support_menu.html' %}
+                    {% endif %}
+
 
                     <!-- My Profile — role-based URL, shown to all -->
                     <a href="{% if request.user.profile.role == 'student' %}{% url 'students:profile' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:profile' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' or request.user.profile.role == 'support' %}{% url 'management:tickets_list' %}{% else %}#{% endif %}"
@@ -1390,7 +1394,7 @@
                     </a>
 
                     <!-- Settings — role-based URL, shown to all -->
-                     {% if not request.user.profile.role == 'admin' %}
+                    {% if not request.user.profile.role == 'admin' %}
                     <a href="{% if request.user.profile.role == 'student' %}{% url 'students:settings' %}{% elif request.user.profile.role == 'instructor' %}{% url 'instructor:settings' %}{% elif request.user.is_staff or request.user.is_superuser or request.user.profile.role == 'admin' %}{% url 'management:system_config_list' %}{% elif request.user.profile.role == 'finance' %}{% url 'finance:dashboard' %}{% else %}#{% endif %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'system_config_list' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
@@ -1411,7 +1415,7 @@
 
                     <!-- Logout — same for all roles -->
                     <a href="#" onclick="portalLogout(event)"
-                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1">
                         <div class="flex items-center">
                             <i class="fas fa-sign-out-alt w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3 text-[17px] font-semibold">Logout</span>

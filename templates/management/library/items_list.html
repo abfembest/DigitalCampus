@@ -18,11 +18,13 @@
         </h1>
         <p class="text-gray-500 mt-1 text-xs sm:text-sm pl-0">Manage books, periodicals, references, and other resources.</p>
     </div>
+    {% if permissions.library.can_create %}
     <a href="{% url 'management:library_item_create' %}"
        class="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm whitespace-nowrap">
         <i class="fas fa-plus" aria-hidden="true"></i>
         Add Item
     </a>
+    {% endif %}
 </div>
 
 {# ── Stats strip — 2 cols on mobile, 4 on lg+ ─────────────────────────────── #}
@@ -235,6 +237,7 @@
                     </td>
 
                     <td class="py-3 px-3 text-center">
+                        {% if permissions.library.can_edit %}
                         <form method="post" action="{% url 'management:library_item_toggle_active' item.pk %}" class="inline">
                             {% csrf_token %}
                             <button type="submit"
@@ -246,6 +249,13 @@
                                 <span class="hidden xl:inline">{{ item.is_active|yesno:"Live,Draft" }}</span>
                             </button>
                         </form>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold
+                                    {% if item.is_active %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-500{% endif %}">
+                            <i class="fas {% if item.is_active %}fa-check-circle{% else %}fa-times-circle{% endif %}" aria-hidden="true"></i>
+                            <span class="hidden xl:inline">{{ item.is_active|yesno:"Live,Draft" }}</span>
+                        </span>
+                        {% endif %}
                     </td>
 
                     <td class="py-3 px-3 text-center">
@@ -258,17 +268,21 @@
 
                     <td class="py-3 px-3">
                         <div class="flex items-center justify-center gap-1.5">
+                            {% if permissions.library.can_edit %}
                             <a href="{% url 'management:library_item_edit' item.pk %}"
                                class="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                                title="Edit">
                                 <i class="fas fa-edit text-xs" aria-hidden="true"></i>
                             </a>
+                            {% endif %}
+                            {% if permissions.library.can_delete %}
                             <button type="button"
                                     onclick="confirmDelete('{{ item.title|escapejs }}', '{% url 'management:library_item_delete' item.pk %}')"
                                     class="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                     title="Delete">
                                 <i class="fas fa-trash text-xs" aria-hidden="true"></i>
                             </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -278,10 +292,12 @@
                         <div class="flex flex-col items-center gap-3 text-gray-400">
                             <i class="fas fa-book-open text-4xl" aria-hidden="true"></i>
                             <p class="font-medium">No library items found.</p>
+                            {% if permissions.library.can_create %}
                             <a href="{% url 'management:library_item_create' %}"
                                class="mt-1 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
                                 <i class="fas fa-plus" aria-hidden="true"></i> Add the first item
                             </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -335,6 +351,7 @@
             </div>
 
             <div class="flex gap-2">
+                {% if permissions.library.can_edit %}
                 <a href="{% url 'management:library_item_edit' item.pk %}"
                    class="flex-1 flex items-center justify-center gap-1.5 py-2 bg-blue-50 text-blue-700 text-xs font-semibold rounded-lg hover:bg-blue-100 transition-colors">
                     <i class="fas fa-edit" aria-hidden="true"></i> Edit
@@ -348,21 +365,26 @@
                         {{ item.is_active|yesno:"Unpublish,Publish" }}
                     </button>
                 </form>
+                {% endif %}
+                {% if permissions.library.can_delete %}
                 <button type="button"
                         onclick="confirmDelete('{{ item.title|escapejs }}', '{% url 'management:library_item_delete' item.pk %}')"
                         class="px-3 py-2 bg-red-50 text-red-500 text-xs rounded-lg hover:bg-red-100 transition-colors">
                     <i class="fas fa-trash" aria-hidden="true"></i>
                 </button>
+                {% endif %}
             </div>
         </div>
         {% empty %}
         <div class="py-16 text-center text-gray-400 px-4">
             <i class="fas fa-book-open text-4xl mb-3 block" aria-hidden="true"></i>
             <p class="font-medium text-sm">No library items found.</p>
+            {% if permissions.library.can_create %}
             <a href="{% url 'management:library_item_create' %}"
                class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
                 <i class="fas fa-plus" aria-hidden="true"></i> Add the first item
             </a>
+            {% endif %}
         </div>
         {% endfor %}
     </div>

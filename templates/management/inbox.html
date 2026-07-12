@@ -20,6 +20,7 @@
                 {% endif %}
             </p>
         </div>
+        {% if permissions.communications.can_create %}
         <a href="{% url 'management:admin_compose_message' %}"
            class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-blue-500 hover:bg-primary-blue-600
                   text-white text-sm font-semibold rounded-lg shadow-sm transition-all duration-200
@@ -27,6 +28,7 @@
             <i class="fas fa-pen-to-square text-sm" aria-hidden="true"></i>
             <span>Compose Message</span>
         </a>
+        {% endif %}
     </div>
 
     <!-- Tabs -->
@@ -92,11 +94,13 @@
                 <p class="text-xs sm:text-sm text-gray-400 max-w-xs mx-auto">
                     messages you send to students, instructors and staff will appear here.
                 </p>
+                {% if permissions.communications.can_create %}
                 <a href="{% url 'management:admin_compose_message' %}"
                    class="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-primary-blue-500 hover:bg-primary-blue-600
                           text-white text-sm font-semibold rounded-lg transition-all">
                     <i class="fas fa-pen-to-square" aria-hidden="true"></i> Compose Message
                 </a>
+                {% endif %}
             </div>
             {% endif %}
             {% endwith %}
@@ -149,11 +153,13 @@
                 <p class="text-xs sm:text-sm text-gray-400 max-w-xs mx-auto">
                     Messages from students, instructors and staff will appear here.
                 </p>
+                {% if permissions.communications.can_create %}
                 <a href="{% url 'management:admin_compose_message' %}"
                    class="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-primary-blue-500 hover:bg-primary-blue-600
                           text-white text-sm font-semibold rounded-lg transition-all">
                     <i class="fas fa-pen-to-square" aria-hidden="true"></i> Compose Message
                 </a>
+                {% endif %}
             </div>
             {% endif %}
         {% endif %}

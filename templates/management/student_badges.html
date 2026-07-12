@@ -83,6 +83,7 @@
               </td>
 
               <td class="px-4 py-3 text-right whitespace-nowrap">
+                {% if permissions.enrollments.can_delete %}
                 <form method="post"
                       action="{% url 'management:student_badge_delete' sb.pk %}"
                       class="inline"
@@ -97,6 +98,7 @@
                     <span class="hidden sm:inline">Revoke</span>
                   </button>
                 </form>
+                {% endif %}
               </td>
 
             </tr>
@@ -142,6 +144,7 @@
 
     </div>
 
+    {% if permissions.enrollments.can_create %}
     <div class="w-full lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-4">
       <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
 
@@ -234,6 +237,7 @@
         </form>
       </div>
     </div>
+    {% endif %}
 
   </div>
 </div>

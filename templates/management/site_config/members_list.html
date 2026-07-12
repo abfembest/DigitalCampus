@@ -18,10 +18,12 @@
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800 font-display">Leadership &amp; Staff</h1>
       <p class="text-gray-500 mt-1 text-sm">Board members and staff shown in the Leadership section on the About page.</p>
     </div>
+    {% if permissions.site_content.can_create %}
     <a href="{% url 'management:institution_member_create' %}"
        class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm flex-shrink-0 transition-colors">
       <i class="fas fa-plus"></i> Add Member
     </a>
+    {% endif %}
   </div>
 
   {# ── Stats bar ── #}
@@ -90,15 +92,19 @@
 
             {# Actions #}
             <div class="flex items-center gap-2 flex-shrink-0">
+              {% if permissions.site_content.can_edit %}
               <a href="{% url 'management:institution_member_edit' m.pk %}"
                  class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                 <i class="fas fa-edit"></i>
               </a>
+              {% endif %}
+              {% if permissions.site_content.can_delete %}
               <button type="button"
                       onclick="confirmDelete('{% url 'management:institution_member_delete' m.pk %}', '{{ m.name|escapejs }}')"
                       class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
                 <i class="fas fa-trash-alt"></i>
               </button>
+              {% endif %}
             </div>
 
           </div>
@@ -116,10 +122,12 @@
     </div>
     <p class="font-semibold text-gray-600 mb-1">No members yet</p>
     <p class="text-sm text-gray-400 mb-4">Add your first board member or staff to display them on the About page.</p>
+    {% if permissions.site_content.can_create %}
     <a href="{% url 'management:institution_member_create' %}"
        class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition-colors">
       <i class="fas fa-plus"></i> Add First Member
     </a>
+    {% endif %}
   </div>
   {% endif %}
 

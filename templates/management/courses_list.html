@@ -85,9 +85,11 @@
     <h1 class="text-2xl font-bold text-white">Course Catalog</h1>
     <p class="text-blue-200 text-sm mt-0.5">Define and manage all academic course units</p>
   </div>
+  {% if permissions.academics.can_create %}
   <button onclick="openModal('create')" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 rounded-xl font-semibold text-sm shadow-lg hover:bg-blue-50 transition flex-shrink-0">
     <i class="fas fa-plus"></i>Add New Course
   </button>
+  {% endif %}
 </div>
 
 <!-- Stats -->
@@ -134,8 +136,12 @@
         <td data-label="Status">{% if c.is_active %}<span class="sd sa"><span class="d"></span>Active</span>{% else %}<span class="sd sx"><span class="d"></span>Inactive</span>{% endif %}</td>
         <td class="td-a text-right">
           <div class="flex items-center justify-end gap-1">
+            {% if permissions.academics.can_edit %}
             <button class="ab ae" title="Edit" onclick="openModal('edit',{id:'{{ c.pk }}',code:'{{ c.code|escapejs }}',name:'{{ c.name|escapejs }}',program:'{{ c.program.pk }}',units:'{{ c.credit_units }}',year:'{{ c.year_of_study }}',semester:'{{ c.semester }}',course_type:'{{ c.course_type }}',description:`{{ c.description|escapejs }}`,is_active:'{{ c.is_active|yesno:"true,false" }}'})"><i class="fas fa-pencil-alt"></i></button>
+            {% endif %}
+            {% if permissions.academics.can_delete %}
             <button class="ab ad" title="Delete" onclick="openDel('{{ c.pk }}','{{ c.code|escapejs }} — {{ c.name|escapejs }}')"><i class="fas fa-trash-alt"></i></button>
+            {% endif %}
           </div>
         </td>
       </tr>

@@ -77,7 +77,7 @@
 
       {% comment %} Action buttons {% endcomment %}
       <div class="flex flex-wrap gap-3">
-        {% if application.status == 'under_review' %}
+        {% if application.status == 'under_review' and permissions.applications.can_edit %}
           <form method="post" action="{% url 'management:make_decision' application.id %}" id="acceptForm">
             {% csrf_token %}
             <input type="hidden" name="decision" value="approved">
@@ -196,12 +196,14 @@
           <p class="text-md text-yellow-700">Student accepted admission. Department approval needed to grant portal access.</p>
         </div>
       </div>
+      {% if permissions.applications.can_edit %}
       <form method="post" action="{% url 'management:approve_department' application.id %}">
         {% csrf_token %}
         <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold text-md">
           <i class="fas fa-stamp"></i> Approve Department Access
         </button>
       </form>
+      {% endif %}
     {% elif application.department_approved %}
       <div class="flex items-start gap-3 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
         <i class="fas fa-check-circle text-green-600 mt-0.5 flex-shrink-0"></i>

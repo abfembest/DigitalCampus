@@ -15,11 +15,13 @@
             </h1>
             <p class="text-gray-600 mt-1">Track all system activities and changes</p>
         </div>
-        <a href="{% url 'management:audit_logs_export' %}?{{ request.GET.urlencode }}" 
+        {% if permissions.security_audit.can_export %}
+        <a href="{% url 'management:audit_logs_export' %}?{{ request.GET.urlencode }}"
            class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-lg inline-flex items-center">
             <i class="fas fa-download mr-2"></i>
             Export CSV
         </a>
+        {% endif %}
     </div>
 
     <!-- Stats Cards -->

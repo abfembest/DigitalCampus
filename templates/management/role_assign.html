@@ -138,10 +138,12 @@
             {% endfor %}
           </select>
           <div class="flex items-center gap-2 flex-wrap">
+            {% if permissions.user_management.can_edit %}
             <button onclick="saveRole()"
                     class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg shadow transition-all text-sm whitespace-nowrap">
               <i class="fas fa-save"></i> Save Role
             </button>
+            {% endif %}
             <div id="roleMsg" class="hidden text-xs px-3 py-2 rounded-lg whitespace-nowrap"></div>
           </div>
         </div>
@@ -170,6 +172,7 @@
             <p class="text-xs text-gray-400 mt-0.5">User-level overrides — takes precedence over role defaults</p>
           </div>
           {# Bulk clear dropdown #}
+          {% if permissions.user_management.can_edit %}
           <div class="relative self-start sm:self-auto flex-shrink-0" id="bulkClearDropdownWrap">
             <button onclick="toggleBulkClearDropdown(event)"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
@@ -193,6 +196,7 @@
               </button>
             </div>
           </div>
+          {% endif %}
         </div>
 
         {# Error box #}
@@ -232,12 +236,14 @@
         </form>
 
         {# Matrix footer #}
+        {% if permissions.user_management.can_edit %}
         <div class="flex justify-end px-4 sm:px-5 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
           <button id="permSubmitBtn" onclick="submitPermissions()"
                   class="inline-flex items-center gap-2 px-4 sm:px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg shadow transition-all text-sm">
             <i class="fas fa-save"></i> Save Permissions
           </button>
         </div>
+        {% endif %}
 
       </div>
     </div>

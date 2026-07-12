@@ -95,6 +95,7 @@
             {% endfor %}
 
             <!-- Reply Box -->
+            {% if permissions.communications.can_create %}
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
                     <h3 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -137,6 +138,7 @@
                     </form>
                 </div>
             </div>
+            {% endif %}
 
         </div>
 
@@ -218,18 +220,39 @@
             </div>
 
             <!-- Quick Action -->
-            <a href="{% url 'management:admin_compose_message' %}?to={{ message.sender.pk if message.sender != request.user else message.recipient.pk }}"
-               class="flex items-center gap-3 px-5 py-4 bg-gradient-to-br from-primary-blue-500 to-secondary-700
-                      text-white rounded-xl shadow-sm hover:shadow-md transition-all group">
-                <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-pen-to-square text-white text-sm" aria-hidden="true"></i>
-                </div>
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold">New Message</p>
-                    <p class="text-xs text-white/70 truncate">Send a separate new thread</p>
-                </div>
-                <i class="fas fa-arrow-right text-xs text-white/60 ml-auto group-hover:translate-x-1 transition-transform" aria-hidden="true"></i>
-            </a>
+            {% if permissions.communications.can_create %}
+            {% if message.sender != request.user %}
+                {% with other_party_pk=message.sender.pk %}
+                <a href="{% url 'management:admin_compose_message' %}?to={{ other_party_pk }}"
+                   class="flex items-center gap-3 px-5 py-4 bg-gradient-to-br from-primary-blue-500 to-secondary-700
+                          text-white rounded-xl shadow-sm hover:shadow-md transition-all group">
+                    <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-pen-to-square text-white text-sm" aria-hidden="true"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold">New Message</p>
+                        <p class="text-xs text-white/70 truncate">Send a separate new thread</p>
+                    </div>
+                    <i class="fas fa-arrow-right text-xs text-white/60 ml-auto group-hover:translate-x-1 transition-transform" aria-hidden="true"></i>
+                </a>
+                {% endwith %}
+            {% else %}
+                {% with other_party_pk=message.recipient.pk %}
+                <a href="{% url 'management:admin_compose_message' %}?to={{ other_party_pk }}"
+                   class="flex items-center gap-3 px-5 py-4 bg-gradient-to-br from-primary-blue-500 to-secondary-700
+                          text-white rounded-xl shadow-sm hover:shadow-md transition-all group">
+                    <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-pen-to-square text-white text-sm" aria-hidden="true"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold">New Message</p>
+                        <p class="text-xs text-white/70 truncate">Send a separate new thread</p>
+                    </div>
+                    <i class="fas fa-arrow-right text-xs text-white/60 ml-auto group-hover:translate-x-1 transition-transform" aria-hidden="true"></i>
+                </a>
+                {% endwith %}
+            {% endif %}
+            {% endif %}
 
         </div>
     </div>

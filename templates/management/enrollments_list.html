@@ -13,10 +13,12 @@
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Enrollments</h1>
       <p class="text-gray-500 text-sm mt-0.5">Manage and monitor student course enrollments</p>
     </div>
+    {% if permissions.enrollments.can_create %}
     <a href="{% url 'management:enrollment_create' %}"
        class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium text-sm shadow-sm transition-colors self-start sm:self-auto">
       <i class="fas fa-plus"></i> New Enrollment
     </a>
+    {% endif %}
   </div>
 
   {# ── Stat Cards ── #}
@@ -161,7 +163,9 @@
             <td colspan="6" class="py-16 text-center text-gray-400">
               <i class="fas fa-user-graduate text-5xl mb-3 block"></i>
               <p class="font-medium text-gray-600">No enrollments found</p>
+              {% if permissions.enrollments.can_create %}
               <a href="{% url 'management:enrollment_create' %}" class="text-sm text-primary-600 hover:underline mt-1 block">Create the first enrollment</a>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}

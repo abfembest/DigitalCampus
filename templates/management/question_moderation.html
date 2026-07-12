@@ -332,6 +332,7 @@
 
                         {% comment %} ── Action ── {% endcomment %}
                         <td class="px-5 py-4 text-right whitespace-nowrap">
+                            {% if permissions.exams.can_edit %}
                             <form method="post" class="inline-block">
                                 {% csrf_token %}
                                 <input type="hidden" name="question_id" value="{{ q.pk }}">
@@ -354,6 +355,7 @@
                                 </button>
                                 {% endif %}
                             </form>
+                            {% endif %}
                         </td>
 
                     </tr>

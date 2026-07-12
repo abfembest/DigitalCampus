@@ -12,11 +12,13 @@
             <h1 class="text-3xl font-bold text-gray-900 font-display">Broadcast Center</h1>
             <p class="text-gray-600 mt-1">Send bulk emails to filtered recipients</p>
         </div>
-        <a href="{% url 'management:broadcast_create' %}" 
+        {% if permissions.communications.can_create %}
+        <a href="{% url 'management:broadcast_create' %}"
            class="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-lg hover:shadow-xl">
             <i class="fas fa-plus mr-2"></i>
             Create Broadcast
         </a>
+        {% endif %}
     </div>
 
     <!-- Statistics Cards -->
@@ -146,22 +148,26 @@
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 {% if broadcast.status == 'draft' %}
-                                <a href="{% url 'management:broadcast_edit' broadcast.slug %}" 
+                                {% if permissions.communications.can_edit %}
+                                <a href="{% url 'management:broadcast_edit' broadcast.slug %}"
                                    class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-all"
                                    title="Edit Broadcast">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button onclick="openSendModal('{{ broadcast.slug }}', '{{ broadcast.subject }}', {{ broadcast.recipient_count }})" 
+                                <button onclick="openSendModal('{{ broadcast.slug }}', '{{ broadcast.subject }}', {{ broadcast.recipient_count }})"
                                    class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-all"
                                    title="Send Broadcast">
                                     <i class="fas fa-paper-plane"></i>
                                 </button>
                                 {% endif %}
-                                <button onclick="openDeleteModal('{{ broadcast.slug }}', '{{ broadcast.subject }}', {{ broadcast.recipient_count }})" 
+                                {% endif %}
+                                {% if permissions.communications.can_delete %}
+                                <button onclick="openDeleteModal('{{ broadcast.slug }}', '{{ broadcast.subject }}', {{ broadcast.recipient_count }})"
                                    class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-all"
                                    title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -186,11 +192,13 @@
                     <p class="text-primary-100 text-sm mt-1">Complete broadcast information and analytics</p>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <button id="viewModalEditBtn" onclick="editFromModal()" 
+                    {% if permissions.communications.can_edit %}
+                    <button id="viewModalEditBtn" onclick="editFromModal()"
                             class="hidden px-4 py-2 bg-white text-primary-600 rounded-lg hover:bg-gray-100 transition-all font-medium shadow-lg">
                         <i class="fas fa-edit mr-2"></i>
                         Edit
                     </button>
+                    {% endif %}
                     <button onclick="closeViewModal()" class="text-white hover:text-gray-200 transition-colors">
                         <i class="fas fa-times text-2xl"></i>
                     </button>
@@ -579,6 +587,8 @@
 
 {% block extra_js %}
 <script>
+const CAN_EDIT_COMMS = {{ permissions.communications.can_edit|yesno:"true,false" }};
+
 // Store broadcast data for modals
 const broadcastsData = {
     {% for broadcast in broadcasts %}
@@ -659,10 +669,12 @@ function openViewModal(broadcastId) {
 
     // Show/hide edit button based on status
     const editBtn = document.getElementById('viewModalEditBtn');
-    if (broadcast.status === 'draft') {
-        editBtn.classList.remove('hidden');
-    } else {
-        editBtn.classList.add('hidden');
+    if (editBtn) {
+        if (broadcast.status === 'draft') {
+            editBtn.classList.remove('hidden');
+        } else {
+            editBtn.classList.add('hidden');
+        }
     }
 
     // Filter Values or All Users Notice
@@ -743,14 +755,14 @@ function openViewModal(broadcastId) {
     const actionsDiv = document.getElementById('viewModalActions');
     actionsDiv.innerHTML = '';
     
-    if (broadcast.status === 'draft') {
+    if (broadcast.status === 'draft' && CAN_EDIT_COMMS) {
         actionsDiv.innerHTML = `
-            <button onclick="editFromModal()" 
+            <button onclick="editFromModal()"
                     class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-lg">
                 <i class="fas fa-edit mr-2"></i>
                 Edit
             </button>
-            <button onclick="closeViewModal(); openSendModal('${broadcast.slug}', '${broadcast.subject.replace(/'/g, "\\'")}', ${broadcast.recipientCount})" 
+            <button onclick="closeViewModal(); openSendModal('${broadcast.slug}', '${broadcast.subject.replace(/'/g, "\\'")}', ${broadcast.recipientCount})"
                     class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-lg">
                 <i class="fas fa-paper-plane mr-2"></i>
                 Send Now

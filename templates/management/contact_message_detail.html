@@ -89,10 +89,12 @@
           </form>
           {% endif %}
         </div>
+        {% if permissions.communications.can_create %}
         <button type="submit"
                 class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm">
           <i class="fas fa-paper-plane mr-1.5" aria-hidden="true"></i>Send Response
         </button>
+        {% endif %}
       </div>
     </form>
   </div>

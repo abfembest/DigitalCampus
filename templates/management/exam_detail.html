@@ -106,6 +106,7 @@
 
             {% comment %} Action Buttons {% endcomment %}
             <div class="flex flex-wrap gap-2 shrink-0">
+                {% if permissions.exams.can_approve %}
                 {% if exam.status == 'submitted' %}
                 <button onclick="openModal('approveModal')"
                         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors shadow-sm">
@@ -121,6 +122,8 @@
                     <i class="fas fa-globe"></i> Publish
                 </button>
                 {% endif %}
+                {% endif %}
+                {% if permissions.exams.can_edit %}
                 <a href="{% url 'management:admin_exam_timetable_update' exam.slug %}"
                    class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
                     <i class="fas fa-calendar-alt text-gray-400"></i> Timetable
@@ -129,6 +132,7 @@
                    class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
                     <i class="fas fa-list-check text-gray-400"></i> Questions
                 </a>
+                {% endif %}
                 <a href="{% url 'management:admin_exam_responses' exam.slug %}"
                    class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 rounded-xl transition-colors">
                     <i class="fas fa-users text-gray-400"></i> Responses
@@ -146,8 +150,10 @@
         <div>
             <p class="text-sm font-semibold text-red-800">Scheduling Clash Detected</p>
             {% if exam.clash_notes %}<p class="text-xs text-red-600 mt-0.5">{{ exam.clash_notes }}</p>{% endif %}
+            {% if permissions.exams.can_edit %}
             <a href="{% url 'management:admin_exam_timetable_update' exam.slug %}"
                class="text-xs text-red-700 underline mt-1 inline-block hover:text-red-900 transition-colors">Update timetable to resolve →</a>
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -273,10 +279,12 @@
                         </span>
                         <h2 class="text-sm font-bold text-gray-800">Timetable</h2>
                     </div>
+                    {% if permissions.exams.can_edit %}
                     <a href="{% url 'management:admin_exam_timetable_update' exam.slug %}"
                        class="text-xs text-primary-600 hover:text-primary-800 font-semibold transition-colors">
                         Edit <i class="fas fa-pencil-alt ml-1 text-[10px]"></i>
                     </a>
+                    {% endif %}
                 </div>
                 <div class="p-5 grid grid-cols-2 sm:grid-cols-3 gap-5">
                     <div>
@@ -321,10 +329,12 @@
                         </span>
                         <h2 class="text-sm font-bold text-gray-800">Question Pool</h2>
                     </div>
+                    {% if permissions.exams.can_edit %}
                     <a href="{% url 'management:admin_question_moderation' exam.slug %}"
                        class="text-xs text-primary-600 hover:text-primary-800 font-semibold transition-colors">
                         Moderate <i class="fas fa-arrow-right ml-1 text-[10px]"></i>
                     </a>
+                    {% endif %}
                 </div>
                 <div class="p-5">
                     <div class="grid grid-cols-3 gap-4 mb-4">

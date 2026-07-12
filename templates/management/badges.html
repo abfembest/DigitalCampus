@@ -89,6 +89,7 @@
               </td>
 
               <td class="px-4 py-3 text-right whitespace-nowrap">
+                {% if permissions.enrollments.can_edit %}
                 <button type="button"
                         class="btn-edit inline-flex items-center gap-1 px-2.5 py-1.5 text-xs
                                font-medium text-primary-600 hover:bg-primary-50 rounded-lg
@@ -105,6 +106,8 @@
                   <i class="fas fa-pen-to-square" aria-hidden="true"></i>
                   <span class="hidden sm:inline">Edit</span>
                 </button>
+                {% endif %}
+                {% if permissions.enrollments.can_delete %}
                 <form method="post"
                       action="{% url 'management:badge_delete' badge.slug %}"
                       class="inline"
@@ -119,6 +122,7 @@
                     <span class="hidden sm:inline">Delete</span>
                   </button>
                 </form>
+                {% endif %}
               </td>
 
             </tr>
@@ -165,6 +169,7 @@
     </div>
 
     {% comment %} FORM COLUMN {% endcomment %}
+    {% if permissions.enrollments.can_create or permissions.enrollments.can_edit %}
     <div class="w-full lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-4">
       <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
 
@@ -286,6 +291,7 @@
         </form>
       </div>
     </div>
+    {% endif %}
 
   </div>
 </div>
@@ -334,7 +340,8 @@
     });
   });
 
-  document.getElementById('btn-reset').addEventListener('click', resetForm);
+  var resetBtn = document.getElementById('btn-reset');
+  if (resetBtn) { resetBtn.addEventListener('click', resetForm); }
 
 }());
 </script>

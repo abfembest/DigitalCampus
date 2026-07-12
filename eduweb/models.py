@@ -3518,6 +3518,9 @@ class StaffPermissionsMatrix(models.Model):
         ('instructor_analytics',     'Analytics'),
         ('instructor_resources',     'Resources'),
         ('instructor_communications', 'Communications'),
+        ('finance_payments',      'Payments'),
+        ('finance_subscriptions', 'Subscriptions'),
+        ('finance_payroll',       'Payroll'),
     ]
 
     # Role-level defaults — mirrors sidebar sections visible per role
@@ -3550,6 +3553,9 @@ class StaffPermissionsMatrix(models.Model):
         'finance':        {'can_view': True, 'can_edit': True, 'can_export': True},
         'enrollments':    {'can_view': True},
         'user_management':{'can_view': True},
+        'finance_payments':      {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True, 'can_export': True},
+        'finance_subscriptions': {'can_view': True},
+        'finance_payroll':       {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
     },
     'instructor': {
         'dashboard':                 {'can_view': True},

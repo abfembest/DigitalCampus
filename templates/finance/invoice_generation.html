@@ -169,6 +169,7 @@
               <input type="hidden" id="payment_ref_hidden">
             </div>
 
+            {% if permissions.finance_payments.can_export %}
             <button type="button"
                     onclick="generateInvoice()"
                     id="generateBtn"
@@ -181,6 +182,7 @@
               <i class="fas fa-download" aria-hidden="true"></i>
               Generate PDF Invoice
             </button>
+            {% endif %}
           </div>
 
           <div class="mt-5 p-3 sm:p-4 bg-indigo-50 rounded-lg border border-indigo-200
@@ -289,6 +291,7 @@
 
                   {# Invoice download button #}
                   <td>
+                    {% if permissions.finance_payments.can_export %}
                     <a href="{% url 'payments:generate_invoice_pdf' payment.payment_reference %}"
                        target="_blank"
                        rel="noopener noreferrer"
@@ -301,6 +304,7 @@
                       <i class="fas fa-file-pdf" aria-hidden="true"></i>
                       <span class="hidden xs:inline">PDF</span>
                     </a>
+                    {% endif %}
                   </td>
 
                 </tr>

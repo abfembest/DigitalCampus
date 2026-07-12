@@ -106,85 +106,12 @@ def payment_detail(request, payment_reference):
         payment_reference=payment_reference,
     )
 
-    refund_form = RefundForm(payment=payment)
-
     context = {
         'payment': payment,
-        'refund_form': refund_form,
         'can_refund': payment.status == 'success',
     }
 
     return render(request, 'finance/payment_detail.html', context)
-
-
-# ==================== REFUND ====================
-
-@login_required
-@user_passes_test(is_finance_manager)
-def refund_payment(request, payment_reference):
-    """
-    Process a refund for a successful payment.
-    - Only 'success' status payments are eligible.
-    - Validates refund amount does not exceed original.
-    - POST-only; redirects GET back to detail page.
-    """
-
-    if request.method != 'POST':
-        return redirect(
-            'payments:payment_detail',
-            payment_reference=payment_reference,
-        )
-
-    payment = get_object_or_404(
-        ApplicationPayment,
-        payment_reference=payment_reference,
-    )
-
-    # Guard: only successful payments can be refunded
-    if payment.status != 'success':
-        messages.error(
-            request,
-            f'Payment {payment_reference} cannot be refunded '
-            f'because its status is "{payment.get_status_display()}", '
-            f'not "Success".'
-        )
-        return redirect(
-            'payments:payment_detail',
-            payment_reference=payment_reference,
-        )
-
-    form = RefundForm(request.POST, payment=payment)
-
-    if form.is_valid():
-        reason = form.cleaned_data['reason']
-        notes = form.cleaned_data.get('notes', '')
-        refund_amount = form.cleaned_data['refund_amount']
-
-        # Mark as refunded and store audit trail
-        payment.status = 'refunded'
-        payment.failure_reason = (
-            f'Refunded ₦{refund_amount} — Reason: {reason}'
-            + (f' | Notes: {notes}' if notes else '')
-            + f' | By: {request.user.username}'
-            + f' | At: {timezone.now().strftime("%Y-%m-%d %H:%M")}'
-        )
-        payment.save(update_fields=['status', 'failure_reason'])
-
-        messages.success(
-            request,
-            f'Refund of ₦{refund_amount} processed successfully '
-            f'for payment {payment_reference}.'
-        )
-    else:
-        # Put errors back via session-like message
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(request, f'{field}: {error}')
-
-    return redirect(
-        'payments:payment_detail',
-        payment_reference=payment_reference,
-    )
 
 
 # ==================== TRANSACTION REPORTS ====================
@@ -314,88 +241,84 @@ def generate_invoice_pdf(request, payment_reference):
 @user_passes_test(is_finance_manager)
 def refund_payment(request, payment_reference):
     """
-    Process a refund for a successful payment.
+    View the refund confirmation page (GET) and process a refund (POST)
+    for a successful payment.
     - Only 'success' status payments are eligible.
-    - Issues actual Stripe refund if payment was via Stripe.
-    - Validates refund amount does not exceed original.
-    - POST-only; redirects GET back to detail page.
+    - Issues an actual Stripe refund if the payment was made via Stripe.
+    - Validates refund amount does not exceed the original.
     """
-
-    if request.method != 'POST':
-        return redirect(
-            'payments:payment_detail',
-            payment_reference=payment_reference,
-        )
-
     payment = get_object_or_404(
-        ApplicationPayment,
+        ApplicationPayment.objects.select_related('application'),
         payment_reference=payment_reference,
     )
 
-    # Guard: only successful payments can be refunded
-    if payment.status != 'success':
-        messages.error(
-            request,
-            f'Payment {payment_reference} cannot be refunded '
-            f'because its status is '
-            f'"{payment.get_status_display()}", not "Success".'
-        )
-        return redirect(
-            'payments:payment_detail',
-            payment_reference=payment_reference,
-        )
+    if request.method == 'POST':
+        # Guard: only successful payments can be refunded
+        if payment.status != 'success':
+            messages.error(
+                request,
+                f'Payment {payment_reference} cannot be refunded '
+                f'because its status is '
+                f'"{payment.get_status_display()}", not "Success".'
+            )
+            return redirect(
+                'payments:payment_detail',
+                payment_reference=payment_reference,
+            )
 
-    form = RefundForm(request.POST, payment=payment)
+        form = RefundForm(request.POST, payment=payment)
 
-    if form.is_valid():
-        reason = form.cleaned_data['reason']
-        notes = form.cleaned_data.get('notes', '')
-        refund_amount = form.cleaned_data['refund_amount']
+        if form.is_valid():
+            reason = form.cleaned_data['reason']
+            notes = form.cleaned_data.get('notes', '')
+            refund_amount = form.cleaned_data['refund_amount']
 
-        # If paid via Stripe, issue the actual refund on Stripe first
-        if payment.gateway_payment_id:
-            try:
-                import stripe
-                from django.conf import settings
-                stripe.api_key = settings.STRIPE_SECRET_KEY
+            # If paid via Stripe, issue the actual refund on Stripe first
+            if payment.gateway_payment_id:
+                try:
+                    import stripe
+                    from django.conf import settings
+                    stripe.api_key = settings.STRIPE_SECRET_KEY
 
-                stripe.Refund.create(
-                    payment_intent=payment.gateway_payment_id,
-                    amount=int(refund_amount * 100),  # convert to pence/cents
-                )
-            except Exception as e:
-                messages.error(
-                    request,
-                    f'Stripe refund failed: {e}. '
-                    f'Record not updated.'
-                )
-                return redirect(
-                    'payments:payment_detail',
-                    payment_reference=payment_reference,
-                )
+                    stripe.Refund.create(
+                        payment_intent=payment.gateway_payment_id,
+                        amount=int(refund_amount * 100),  # convert to pence/cents
+                    )
+                except Exception as e:
+                    messages.error(
+                        request,
+                        f'Stripe refund failed: {e}. '
+                        f'Record not updated.'
+                    )
+                    return redirect(
+                        'payments:payment_detail',
+                        payment_reference=payment_reference,
+                    )
 
-        # Update record only after Stripe succeeds (or no Stripe)
-        payment.status = 'refunded'
-        payment.failure_reason = (
-            f'Refunded {refund_amount} — Reason: {reason}'
-            + (f' | Notes: {notes}' if notes else '')
-            + f' | By: {request.user.username}'
-            + f' | At: {timezone.now().strftime("%Y-%m-%d %H:%M")}'
-        )
-        payment.save(update_fields=['status', 'failure_reason'])
+            # Update record only after Stripe succeeds (or no Stripe)
+            payment.status = 'refunded'
+            payment.failure_reason = (
+                f'Refunded {refund_amount} — Reason: {reason}'
+                + (f' | Notes: {notes}' if notes else '')
+                + f' | By: {request.user.username}'
+                + f' | At: {timezone.now().strftime("%Y-%m-%d %H:%M")}'
+            )
+            payment.save(update_fields=['status', 'failure_reason'])
 
-        messages.success(
-            request,
-            f'Refund of {refund_amount} processed successfully'
-            f'for payment {payment_reference}.'
-        )
-
+            messages.success(
+                request,
+                f'Refund of {refund_amount} processed successfully '
+                f'for payment {payment_reference}.'
+            )
+            return redirect(
+                'payments:payment_detail',
+                payment_reference=payment_reference,
+            )
     else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(request, f'{field}: {error}')
+        form = RefundForm(payment=payment)
 
-    return redirect(
-        'payments:payment_detail',
-        payment_reference=payment_reference,
-    )
+    return render(request, 'finance/refund.html', {
+        'payment': payment,
+        'form': form,
+        'application': payment.application,
+    })

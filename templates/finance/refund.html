@@ -15,9 +15,9 @@
         <nav class="flex items-center gap-1.5 text-xs text-gray-500 mb-1.5" aria-label="Breadcrumb">
           <a href="{% url 'finance:dashboard' %}" class="hover:text-primary-600 transition-colors">Finance</a>
           <i class="fas fa-chevron-right text-[10px]" aria-hidden="true"></i>
-          <a href="{% url 'finance:payment_management' %}" class="hover:text-primary-600 transition-colors">Payments</a>
+          <a href="{% url 'payments:payment_management' %}" class="hover:text-primary-600 transition-colors">Payments</a>
           <i class="fas fa-chevron-right text-[10px]" aria-hidden="true"></i>
-          <a href="{% url 'finance:payment_detail' payment.payment_reference %}"
+          <a href="{% url 'payments:payment_detail' payment.payment_reference %}"
              class="font-mono hover:text-primary-600 transition-colors">
             {{ payment.payment_reference }}
           </a>
@@ -33,7 +33,7 @@
         </h1>
       </div>
 
-      <a href="{% url 'finance:payment_detail' payment.payment_reference %}"
+      <a href="{% url 'payments:payment_detail' payment.payment_reference %}"
          class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium
                 border border-gray-300 text-gray-700 bg-white rounded-lg
                 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500
@@ -158,7 +158,7 @@
 
           {# Submit actions #}
           <div class="flex flex-col sm:flex-row gap-3 pt-2">
-            <a href="{% url 'finance:payment_detail' payment.payment_reference %}"
+            <a href="{% url 'payments:payment_detail' payment.payment_reference %}"
                class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium
                       rounded-lg hover:bg-gray-50 transition-colors text-center
                       focus:outline-none focus:ring-2 focus:ring-gray-300">

@@ -46,5 +46,4 @@ urlpatterns = [
         views.generate_invoice_pdf,
         name='generate_invoice_pdf',
     ),
-    path("refund/<str:payment_reference>/", views.refund_payment, name="refund_payment"),
 ]

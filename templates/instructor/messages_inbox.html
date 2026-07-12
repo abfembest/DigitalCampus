@@ -12,10 +12,12 @@
         <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Messages</h1>
         <p class="text-gray-500 mt-0.5 text-xs sm:text-sm">Communicate with your students</p>
     </div>
+    {% if permissions.instructor_communications.can_create %}
     <a href="{% url 'instructor:message_compose' %}"
        class="inline-flex items-center justify-center px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-600 text-white text-xs sm:text-sm font-semibold rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all whitespace-nowrap">
         <i class="fas fa-pen mr-1.5 sm:mr-2"></i>Compose
     </a>
+    {% endif %}
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -105,10 +107,12 @@
                 <p class="text-gray-400 text-xs sm:text-sm mb-4 sm:mb-5">
                     {% if active_folder == 'inbox' %}When students message you, they'll appear here.{% else %}Messages you send will appear here.{% endif %}
                 </p>
+                {% if permissions.instructor_communications.can_create %}
                 <a href="{% url 'instructor:message_compose' %}"
                    class="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors">
                     <i class="fas fa-pen mr-1.5 sm:mr-2"></i>Compose Message
                 </a>
+                {% endif %}
             </div>
             {% endif %}
         </div>

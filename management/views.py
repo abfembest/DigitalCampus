@@ -1625,12 +1625,15 @@ def user_permissions(request, pk):
     from eduweb.models import StaffPermissionsMatrix
 
     target = get_object_or_404(User.objects.select_related('profile'), pk=pk)
-    MODULES = [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
+    role = target.profile.role
+    role_defaults = StaffPermissionsMatrix.ROLE_DEFAULT_PERMISSIONS.get(role, {})
+    # Only the modules that actually apply to this user's role — an instructor
+    # never needs to see (or accidentally get overridden on) admin-only modules
+    # like 'academics', and vice versa.
+    MODULES = list(role_defaults.keys()) or [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
     ACTION_FIELDS = StaffPermissionsMatrix.ALL_ACTION_FIELDS
 
     if request.method == 'GET':
-        role = target.profile.role
-        role_defaults = StaffPermissionsMatrix.ROLE_DEFAULT_PERMISSIONS.get(role, {})
         user_rows = {r.module: r for r in StaffPermissionsMatrix.objects.filter(user=target, role=None)}
         role_rows = {r.module: r for r in StaffPermissionsMatrix.objects.filter(role=role, user=None)}
 

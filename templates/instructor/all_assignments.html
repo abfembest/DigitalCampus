@@ -152,12 +152,14 @@
                                     <i class="fas fa-clipboard-check text-xs"></i>
                                     <span class="hidden sm:inline">Submissions</span>
                                 </a>
+                                {% if permissions.instructor_assessments.can_edit %}
                                 <a href="{% url 'instructor:assignment_edit' assignment.lesson.course.slug assignment.lesson.slug assignment.slug %}"
                                    title="Edit Assignment"
                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-xs font-medium whitespace-nowrap">
                                     <i class="fas fa-edit text-xs"></i>
                                     <span class="hidden sm:inline">Edit</span>
                                 </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

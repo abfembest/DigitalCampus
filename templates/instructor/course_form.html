@@ -417,11 +417,13 @@
                         <i class="fas fa-users w-4 mr-2.5 text-blue-500 flex-shrink-0"></i>
                         View Students
                     </a>
+                    {% if permissions.instructor_communications.can_create %}
                     <a href="{% url 'instructor:announcement_create' course.slug %}"
                        class="flex items-center px-3 py-2 text-xs sm:text-sm text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                         <i class="fas fa-bullhorn w-4 mr-2.5 text-orange-500 flex-shrink-0"></i>
                         New Announcement
                     </a>
+                    {% endif %}
                     <a href="{% url 'instructor:course_objectives' course.slug %}"
                        class="flex items-center px-3 py-2 text-xs sm:text-sm text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                         <i class="fas fa-list-check w-4 mr-2.5 text-green-500 flex-shrink-0"></i>

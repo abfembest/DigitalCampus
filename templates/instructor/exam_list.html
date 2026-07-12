@@ -29,10 +29,12 @@
                 Manage exams across all statuses — draft, submitted, approved, rejected and published.
             </p>
         </div>
+        {% if permissions.instructor_assessments.can_create %}
         <a href="{% url 'instructor:create_assessment' %}?type=exam"
            class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold shadow-sm flex-shrink-0 self-start sm:self-auto">
             <i class="fas fa-plus"></i> New Exam
         </a>
+        {% endif %}
     </div>
 
     <!-- Flash Messages -->
@@ -362,6 +364,7 @@
                             {% if s == 'published' %}View{% elif s == 'rejected' %}Fix &amp; Re-submit{% elif s == 'cancelled' %}View{% else %}Open{% endif %}
                         </a>
 
+                        {% if permissions.instructor_assessments.can_edit %}
                         {% if s == 'draft' %}
                         <form method="post" action="{% url 'instructor:exam_submit' slug=exam.slug %}">
                             {% csrf_token %}
@@ -391,6 +394,7 @@
                             </button>
                         </form>
                         {% endif %}
+                        {% endif %}
                     </div>
 
                 </div>
@@ -419,10 +423,12 @@
             </div>
             <h3 class="text-base font-semibold text-gray-800 mb-1">No exams yet</h3>
             <p class="text-gray-500 text-sm max-w-sm mb-5">You haven't created any exams. Get started by creating your first exam.</p>
+            {% if permissions.instructor_assessments.can_create %}
             <a href="{% url 'instructor:create_assessment' %}?type=exam"
                class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold">
                 <i class="fas fa-plus"></i> Create Your First Exam
             </a>
+            {% endif %}
         </div>
         {% endif %}
     </div>

@@ -263,6 +263,9 @@
     lms_courses:'LMS Courses', applications:'Applications', exams:'Exams',
     enrollments:'Enrollments', finance:'Finance', communications:'Communications',
     blog:'Blog', library:'Library', site_content:'Site Content', security_audit:'Security & Audit',
+    instructor_courses:'My Courses', instructor_assessments:'Assessments',
+    instructor_analytics:'Analytics', instructor_resources:'Resources',
+    instructor_communications:'Communications',
   };
 
   let _userId = null;
@@ -361,6 +364,7 @@
       .then(r => r.json())
       .then(data => {
         if (!data.success) { matrix.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-red-400 text-sm">Failed to load permissions.</td></tr>'; return; }
+        if (!data.modules.length) { matrix.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400 text-sm">This role has no manageable modules.</td></tr>'; return; }
         matrix.innerHTML = data.modules.map(mod => {
           const perms = data.permissions[mod] || {};
           const cells = data.actions.map(action =>

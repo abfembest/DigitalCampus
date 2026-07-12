@@ -28,6 +28,7 @@ View comprehensive course statistics including enrollment trends, completion rat
                 <i class="fas fa-print mr-2" aria-hidden="true"></i>
                 Print Report
             </button>
+            {% if permissions.instructor_analytics.can_export %}
             <button onclick="exportData()"
                     class="inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-primary-600 text-white
                            rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base font-medium"
@@ -35,6 +36,7 @@ View comprehensive course statistics including enrollment trends, completion rat
                 <i class="fas fa-download mr-2" aria-hidden="true"></i>
                 Export Data
             </button>
+            {% endif %}
         </div>
     </div>
 </header>
@@ -141,11 +143,15 @@ View comprehensive course statistics including enrollment trends, completion rat
                                 <i class="fas fa-book text-white text-xs sm:text-sm" aria-hidden="true"></i>
                             </div>
                             <div class="min-w-0">
+                                {% if permissions.instructor_courses.can_edit %}
                                 <a href="{% url 'instructor:course_edit' course.slug %}"
                                    class="text-xs sm:text-sm font-semibold text-gray-900 hover:text-primary-600 transition-colors
                                           block truncate max-w-[160px] sm:max-w-[220px] md:max-w-none">
                                     {{ course.title }}
                                 </a>
+                                {% else %}
+                                <span class="text-xs sm:text-sm font-semibold text-gray-900 block truncate max-w-[160px] sm:max-w-[220px] md:max-w-none">{{ course.title }}</span>
+                                {% endif %}
                                 <p class="text-xs text-gray-500">{{ course.code }}</p>
                             </div>
                         </div>

@@ -632,12 +632,14 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
 
     {% comment %} Action bar {% endcomment %}
     <div class="flex flex-wrap gap-3 mb-6">
+        {% if permissions.instructor_courses.can_create %}
         <button onclick="openModal('modal-add-section')" class="btn-primary">
             <i class="fas fa-folder-plus"></i>Add Section
         </button>
         <button onclick="openModal('modal-add-lesson')" class="btn-outline">
             <i class="fas fa-plus-circle"></i>Add Lesson
         </button>
+        {% endif %}
         <button onclick="showTips()" class="btn-ghost" style="color:#2563eb; border-color:#bfdbfe; background:#eff6ff;">
             <i class="fas fa-lightbulb text-blue-600"></i>Content Tips
         </button>
@@ -663,14 +665,18 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
+                    {% if permissions.instructor_courses.can_edit %}
                     <button onclick="openEditSectionModal({{ section.id }},'{{ section.title|escapejs }}','{{ section.description|default:''|escapejs }}',{{ section.display_order|default:0 }})"
                             class="btn-ghost btn-sm">
                         <i class="fas fa-edit"></i>Edit
                     </button>
+                    {% endif %}
+                    {% if permissions.instructor_courses.can_delete %}
                     <button onclick="confirmDeleteSection({{ section.id }},'{{ section.title|escapejs }}')"
                             class="btn-danger btn-sm">
                         <i class="fas fa-trash"></i>Delete
                     </button>
+                    {% endif %}
                 </div>
             </div>
 
@@ -699,12 +705,16 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
+                        {% if permissions.instructor_courses.can_edit %}
                         <a href="{% url 'instructor:lesson_edit' course.slug lesson.slug %}" class="btn-ghost btn-sm">
                             <i class="fas fa-edit"></i>Edit
                         </a>
+                        {% endif %}
+                        {% if permissions.instructor_courses.can_delete %}
                         <button onclick="confirmDeleteLesson('{{ lesson.slug }}','{{ lesson.title|escapejs }}')" class="btn-danger btn-sm">
                             <i class="fas fa-trash"></i>Delete
                         </button>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -712,9 +722,11 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
             {% else %}
             <div class="px-5 py-8 text-center">
                 <p class="text-base text-gray-400 mb-3">No lessons in this section yet.</p>
+                {% if permissions.instructor_courses.can_create %}
                 <button onclick="openModal('modal-add-lesson')" class="btn-primary btn-sm">
                     <i class="fas fa-plus"></i>Add Lesson
                 </button>
+                {% endif %}
             </div>
             {% endif %}
         </div>
@@ -727,9 +739,11 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
         </div>
         <h3 class="text-lg font-bold text-gray-900 mb-2 lg:text-xl">No Sections Yet</h3>
         <p class="text-base text-gray-500 mb-6 max-w-sm mx-auto">Create sections first to organise your lessons into logical modules.</p>
+        {% if permissions.instructor_courses.can_create %}
         <button onclick="openModal('modal-add-section')" class="btn-primary">
             <i class="fas fa-folder-plus"></i>Create First Section
         </button>
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -761,10 +775,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                 </span>
                 Quiz Lessons
             </h3>
+            {% if permissions.instructor_assessments.can_create %}
             <button onclick="openModal('modal-add-lesson'); setLessonType('quiz')"
                     class="btn-primary" style="background:#f59e0b;">
                 <i class="fas fa-plus"></i>New Quiz Lesson
             </button>
+            {% endif %}
         </div>
         {% if quiz_lessons %}
         <div class="space-y-4">
@@ -775,10 +791,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                         <p class="font-bold text-gray-900 text-base lg:text-lg">{{ lesson.title }}</p>
                         <p class="text-base text-gray-500 mt-0.5">{{ lesson.quizzes.count }} quiz{{ lesson.quizzes.count|pluralize:"zes" }}</p>
                     </div>
+                    {% if permissions.instructor_assessments.can_create %}
                     <button onclick="openCreateQuizModal('{{ lesson.slug }}','{{ lesson.title|escapejs }}')"
                             class="btn-primary btn-sm self-start sm:self-auto" style="background:#f59e0b;">
                         <i class="fas fa-plus"></i>Add Quiz
                     </button>
+                    {% endif %}
                 </div>
                 {% if lesson.quizzes.all %}
                 <div class="divide-y divide-gray-100">
@@ -795,6 +813,7 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                             </div>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+                            {% if permissions.instructor_assessments.can_edit %}
                             <button onclick="openEditQuizModal('{{ lesson.slug }}','{{ quiz.slug }}','{{ quiz.title|escapejs }}',{{ quiz.passing_score }},{{ quiz.max_attempts }},{% if quiz.time_limit_minutes %}{{ quiz.time_limit_minutes }}{% else %}''{% endif %},{{ quiz.display_order|default:0 }})"
                                     class="btn-ghost btn-sm">
                                 <i class="fas fa-cog"></i>Settings
@@ -803,6 +822,7 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                                     class="btn-primary btn-sm">
                                 <i class="fas fa-list"></i>Questions
                             </button>
+                            {% endif %}
                             <a href="{% url 'instructor:quiz_results' course.slug lesson.slug quiz.slug %}"
                                class="btn-ghost btn-sm" style="color:#2563eb; border-color:#bfdbfe; background:#eff6ff;">
                                 <i class="fas fa-chart-bar"></i>Results
@@ -821,10 +841,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
         <div class="p-10 bg-yellow-50 border border-yellow-200 rounded-2xl text-center">
             <p class="text-base text-yellow-700 mb-2 font-semibold">No quiz-type lessons found.</p>
             <p class="text-base text-yellow-600 mb-5">Create a lesson with type "Quiz" first, then add quizzes to it.</p>
+            {% if permissions.instructor_assessments.can_create %}
             <button onclick="openModal('modal-add-lesson'); setLessonType('quiz')"
                     class="btn-primary" style="background:#f59e0b;">
                 <i class="fas fa-plus"></i>Create Quiz Lesson
             </button>
+            {% endif %}
         </div>
         {% endif %}
     </div>
@@ -838,10 +860,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                 </span>
                 Assignment Lessons
             </h3>
+            {% if permissions.instructor_assessments.can_create %}
             <button onclick="openModal('modal-add-lesson'); setLessonType('assignment')"
                     class="btn-primary" style="background:#f97316;">
                 <i class="fas fa-plus"></i>New Assignment Lesson
             </button>
+            {% endif %}
         </div>
         {% if assignment_lessons %}
         <div class="space-y-4">
@@ -852,10 +876,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                         <p class="font-bold text-gray-900 text-base lg:text-lg">{{ lesson.title }}</p>
                         <p class="text-base text-gray-500 mt-0.5">{{ lesson.assignments.count }} assignment{{ lesson.assignments.count|pluralize }}</p>
                     </div>
+                    {% if permissions.instructor_assessments.can_create %}
                     <button onclick="openCreateAssignmentModal('{{ lesson.slug }}','{{ lesson.title|escapejs }}')"
                             class="btn-primary btn-sm self-start sm:self-auto" style="background:#f97316;">
                         <i class="fas fa-plus"></i>Add Assignment
                     </button>
+                    {% endif %}
                 </div>
                 {% if lesson.assignments.all %}
                 <div class="divide-y divide-gray-100">
@@ -870,10 +896,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                             </div>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0">
+                            {% if permissions.instructor_assessments.can_edit %}
                             <button onclick="openEditAssignmentModal('{{ lesson.slug }}','{{ assignment.slug }}','{{ assignment.title|escapejs }}')"
                                     class="btn-ghost btn-sm">
                                 <i class="fas fa-edit"></i>Edit
                             </button>
+                            {% endif %}
                             <a href="{% url 'instructor:assignment_submissions' course.slug assignment.slug %}"
                                class="btn-ghost btn-sm" style="color:#c2410c; border-color:#fed7aa; background:#fff7ed;">
                                 <i class="fas fa-inbox"></i>Submissions
@@ -892,10 +920,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
         <div class="p-10 bg-orange-50 border border-orange-200 rounded-2xl text-center">
             <p class="text-base text-orange-700 mb-2 font-semibold">No assignment-type lessons found.</p>
             <p class="text-base text-orange-600 mb-5">Create a lesson with type "Assignment" first.</p>
+            {% if permissions.instructor_assessments.can_create %}
             <button onclick="openModal('modal-add-lesson'); setLessonType('assignment')"
                     class="btn-primary" style="background:#f97316;">
                 <i class="fas fa-plus"></i>Create Assignment Lesson
             </button>
+            {% endif %}
         </div>
         {% endif %}
     </div>
@@ -909,9 +939,11 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                 </span>
                 Course Exams
             </h3>
+            {% if permissions.instructor_assessments.can_create %}
             <a href="{% url 'instructor:create_assessment' %}?type=exam&course={{ course.slug }}" class="btn-primary" style="background:#4f46e5;">
                 <i class="fas fa-plus"></i>New Exam
             </a>
+            {% endif %}
         </div>
         {% if course_exams %}
         <div class="space-y-3">
@@ -927,10 +959,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                         {% if exam.duration_minutes %}<span class="text-base text-gray-400"><i class="fas fa-clock mr-1"></i>{{ exam.duration_minutes }}min</span>{% endif %}
                     </div>
                 </div>
+                {% if permissions.instructor_assessments.can_edit %}
                 <a href="{% url 'instructor:exam_detail' exam.slug %}"
                    class="btn-primary btn-sm flex-shrink-0" style="background:#4f46e5;">
                     <i class="fas fa-edit"></i>Manage
                 </a>
+                {% endif %}
             </div>
             {% endwith %}{% endfor %}
         </div>
@@ -938,10 +972,12 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
         <div class="p-10 bg-indigo-50 border border-indigo-200 rounded-2xl text-center">
             <p class="text-base text-indigo-700 mb-2 font-semibold">No exams yet for this course.</p>
             <p class="text-base text-indigo-600 mb-5">Create formal exams to assess student knowledge.</p>
+            {% if permissions.instructor_assessments.can_create %}
             <a href="{% url 'instructor:create_assessment' %}?type=exam&course={{ course.slug }}"
                class="btn-primary" style="background:#4f46e5;">
                 <i class="fas fa-plus"></i>Create First Exam
             </a>
+            {% endif %}
         </div>
         {% endif %}
     </div>
@@ -975,9 +1011,11 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
     {% comment %} Students header + enroll button {% endcomment %}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
         <h3 class="text-lg font-bold text-gray-800 lg:text-xl">Enrolled Students</h3>
+        {% if permissions.instructor_courses.can_create %}
         <button onclick="openModal('modal-enroll')" class="btn-primary self-start sm:self-auto">
             <i class="fas fa-user-plus"></i>Enrol Student
         </button>
+        {% endif %}
     </div>
 
     {% if enrollments %}
@@ -1037,9 +1075,11 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
         </div>
         <h3 class="text-lg font-bold text-gray-900 mb-2 lg:text-xl">No Students Yet</h3>
         <p class="text-base text-gray-500 mb-6 max-w-xs mx-auto">Publish your course or manually enrol a student to get started.</p>
+        {% if permissions.instructor_courses.can_create %}
         <button onclick="openModal('modal-enroll')" class="btn-primary">
             <i class="fas fa-user-plus"></i>Enrol Student
         </button>
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -1050,9 +1090,11 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
 <div class="tab-pane {% if active_tab == 'announcements' %}active{% endif %}" id="tab-announcements">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h3 class="text-lg font-bold text-gray-800 lg:text-xl">Course Announcements</h3>
+        {% if permissions.instructor_communications.can_create %}
         <button onclick="openModal('modal-announcement')" class="btn-primary self-start sm:self-auto">
             <i class="fas fa-plus"></i>New Announcement
         </button>
+        {% endif %}
     </div>
     {% if announcements %}
     <div class="space-y-4">
@@ -1075,13 +1117,17 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                     <p class="text-base text-gray-400"><i class="fas fa-calendar mr-1.5"></i>{{ a.publish_date|date:"M d, Y" }}</p>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
+                    {% if permissions.instructor_communications.can_edit %}
                     <a href="{% url 'instructor:announcement_edit' course.slug a.slug %}" class="btn-ghost btn-sm">
                         <i class="fas fa-pen"></i>Edit
                     </a>
+                    {% endif %}
+                    {% if permissions.instructor_communications.can_delete %}
                     <button onclick="confirmDeleteAnnouncement('{% url 'instructor:announcement_delete' course.slug a.slug %}','{{ a.title|escapejs }}')"
                             class="btn-danger btn-sm">
                         <i class="fas fa-trash"></i>Delete
                     </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -1094,9 +1140,11 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
         </div>
         <h3 class="text-lg font-bold text-gray-900 mb-2 lg:text-xl">No Announcements Yet</h3>
         <p class="text-base text-gray-500 mb-6 max-w-xs mx-auto">Keep students informed by creating your first announcement.</p>
+        {% if permissions.instructor_communications.can_create %}
         <button onclick="openModal('modal-announcement')" class="btn-primary">
             <i class="fas fa-plus"></i>Create Announcement
         </button>
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -1138,6 +1186,7 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+                        {% if permissions.instructor_communications.can_edit %}
                         <form method="post" action="{% url 'instructor:discussion_toggle_pin' course.slug d.slug %}">{% csrf_token %}
                             <button type="submit" class="btn-ghost btn-sm {% if d.is_pinned %}text-blue-700 border-blue-200 bg-blue-50{% endif %}">
                                 <i class="fas fa-thumbtack"></i>{% if d.is_pinned %}Unpin{% else %}Pin{% endif %}
@@ -1148,6 +1197,7 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
                                 <i class="fas fa-{% if d.is_locked %}unlock{% else %}lock{% endif %}"></i>{% if d.is_locked %}Unlock{% else %}Lock{% endif %}
                             </button>
                         </form>
+                        {% endif %}
                         <a href="{% url 'instructor:discussion_detail' course.slug d.slug %}" class="btn-primary btn-sm">
                             <i class="fas fa-arrow-right"></i>Open
                         </a>

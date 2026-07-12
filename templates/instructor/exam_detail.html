@@ -62,6 +62,7 @@
                     <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
                     Review the feedback above, make corrections in the Edit tab, then re-submit for approval.
                 </p>
+                {% if permissions.instructor_assessments.can_edit %}
                 <form method="post" action="{% url 'instructor:exam_submit' slug=exam.slug %}">
                     {% csrf_token %}
                     <button type="submit"
@@ -69,6 +70,7 @@
                         <i class="fas fa-paper-plane"></i> Re-submit for Approval
                     </button>
                 </form>
+                {% endif %}
                 {% if exam.submission_count > 1 %}
                 <div class="mt-4 pt-4 border-t border-red-200">
                     <p class="text-xs text-red-500">
@@ -140,6 +142,7 @@
 
             <!-- Action button — right aligned -->
             <div class="ml-auto flex gap-2 flex-shrink-0">
+                {% if permissions.instructor_assessments.can_edit %}
                 {% if exam.status == 'draft' %}
                 <form method="post" action="{% url 'instructor:exam_submit' slug=exam.slug %}">
                     {% csrf_token %}
@@ -164,7 +167,9 @@
                         <i class="fas fa-globe"></i> Publish Now
                     </button>
                 </form>
-                {% elif exam.status == 'published' %}
+                {% endif %}
+                {% endif %}
+                {% if exam.status == 'published' %}
                 <span class="inline-flex items-center gap-1.5 px-3 py-2 bg-green-100 text-green-800 rounded-lg text-xs font-semibold">
                     <i class="fas fa-check-circle"></i> Live to Students
                 </span>
@@ -180,7 +185,7 @@
                     class="exam-tab-btn flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all border-primary-600 text-primary-600">
                 <i class="fas fa-info-circle text-xs"></i> <span class="hidden xs:inline">Overview</span><span class="xs:hidden">Info</span>
             </button>
-            {% if exam.status != 'published' %}
+            {% if exam.status != 'published' and permissions.instructor_assessments.can_edit %}
             <button onclick="switchTab('edit')" id="tab-btn-edit"
                     class="exam-tab-btn flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap transition-all border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300">
                 <i class="fas fa-edit text-xs"></i> <span>Edit</span>
@@ -673,7 +678,7 @@
                     <p class="text-xl font-bold text-gray-900 leading-tight">{{ exam.total_marks }}</p>
                 </div>
             </div>
-            {% if exam.status != 'published' %}
+            {% if exam.status != 'published' and permissions.instructor_assessments.can_create %}
             <a href="{% url 'instructor:exam_question_create' slug=exam.slug %}"
                class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold shadow-sm flex-shrink-0 self-start sm:self-auto">
                 <i class="fas fa-plus"></i> Add Question
@@ -753,10 +758,13 @@
                     <!-- Actions -->
                     {% if exam.status != 'published' %}
                     <div class="flex-shrink-0 flex sm:flex-col gap-2 self-start">
+                        {% if permissions.instructor_assessments.can_edit %}
                         <a href="{% url 'instructor:exam_question_edit' slug=exam.slug question_id=q.pk %}"
                            class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-xs font-medium">
                             <i class="fas fa-edit"></i> Edit
                         </a>
+                        {% endif %}
+                        {% if permissions.instructor_assessments.can_delete %}
                         <form method="post" action="{% url 'instructor:exam_question_delete' slug=exam.slug question_id=q.pk %}"
                               onsubmit="return confirm('Deactivate this question? It will be excluded from student draws.')">
                             {% csrf_token %}
@@ -765,6 +773,7 @@
                                 <i class="fas fa-trash"></i> Remove
                             </button>
                         </form>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
@@ -780,10 +789,12 @@
             <h3 class="font-semibold text-gray-800 mb-1">No questions yet</h3>
             {% if exam.status != 'published' %}
             <p class="text-sm text-gray-500 mb-4 max-w-xs">Start building the question pool for this exam.</p>
+            {% if permissions.instructor_assessments.can_create %}
             <a href="{% url 'instructor:exam_question_create' slug=exam.slug %}"
                class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-semibold">
                 <i class="fas fa-plus"></i> Add First Question
             </a>
+            {% endif %}
             {% else %}
             <p class="text-sm text-gray-500 max-w-xs">This exam is published and cannot be modified.</p>
             {% endif %}
@@ -791,7 +802,7 @@
         {% endif %}
 
         <!-- Import Questions from File -->
-        {% if exam.status != 'published' %}
+        {% if exam.status != 'published' and permissions.instructor_assessments.can_create %}
         <div class="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5">
             <h4 class="text-sm font-semibold text-gray-700 mb-1">
                 <i class="fas fa-upload text-gray-400 mr-2"></i>Import Questions from File
@@ -918,6 +929,7 @@
                                 {% if resp.submitted_at %}{{ resp.submitted_at|date:"M j, H:i" }}{% else %}—{% endif %}
                             </td>
                             <td class="px-3 sm:px-4 py-3.5 text-right">
+                                {% if permissions.instructor_assessments.can_edit %}
                                 <a href="{% url 'instructor:exam_grade_response' slug=exam.slug response_id=resp.id %}"
    class="text-primary-600 hover:text-primary-700 text-xs font-medium whitespace-nowrap">
     {% if resp.pending_manual_count %}
@@ -928,6 +940,7 @@
         Review <i class="fas fa-arrow-right text-xs ml-0.5"></i>
     {% endif %}
 </a>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -952,7 +965,7 @@
             <p class="text-sm text-gray-500 max-w-sm">
                 Results are only visible after the exam is published and students begin submitting responses.
             </p>
-            {% if exam.status == 'approved' %}
+            {% if exam.status == 'approved' and permissions.instructor_assessments.can_edit %}
             <form method="post" action="{% url 'instructor:exam_publish' slug=exam.slug %}" class="mt-4">
                 {% csrf_token %}
                 <button type="submit"

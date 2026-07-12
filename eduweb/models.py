@@ -3483,8 +3483,8 @@ class UserProfile(models.Model):
 class StaffPermissionsMatrix(models.Model):
     """
     Flat permission table — one row per (role OR user) × module.
-    Only applies to internal staff roles: admin, content_manager, support,
-    qa, finance. Students and instructors are never looked up here.
+    Applies to internal staff roles (admin, content_manager, support, qa,
+    finance) and to instructors. Students are never looked up here.
 
     role set, user null  → role-level default
     user set, role null  → user-level override (supersedes role row)
@@ -3496,6 +3496,7 @@ class StaffPermissionsMatrix(models.Model):
         ('support',         'Support Staff'),
         # ('qa',              'QA Reviewer'),
         ('finance',         'Finance Manager'),
+        ('instructor',      'Instructor'),
     ]
 
     MODULE_CHOICES = [
@@ -3512,6 +3513,11 @@ class StaffPermissionsMatrix(models.Model):
         ('library',          'Library'),
         ('site_content',     'Site Content'),
         ('security_audit',   'Security & Audit'),
+        ('instructor_courses',        'My Courses'),
+        ('instructor_assessments',    'Assessments'),
+        ('instructor_analytics',     'Analytics'),
+        ('instructor_resources',     'Resources'),
+        ('instructor_communications', 'Communications'),
     ]
 
     # Role-level defaults — mirrors sidebar sections visible per role
@@ -3544,6 +3550,14 @@ class StaffPermissionsMatrix(models.Model):
         'finance':        {'can_view': True, 'can_edit': True, 'can_export': True},
         'enrollments':    {'can_view': True},
         'user_management':{'can_view': True},
+    },
+    'instructor': {
+        'dashboard':                 {'can_view': True},
+        'instructor_courses':        {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'instructor_assessments':    {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'instructor_analytics':      {'can_view': True, 'can_export': True},
+        'instructor_resources':      {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'instructor_communications': {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
     },
 }
 

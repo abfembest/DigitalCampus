@@ -24,10 +24,12 @@
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-display">Assignment Submissions</h1>
                 <p class="text-sm sm:text-base text-gray-600 mt-1">{{ assignment.title }}</p>
             </div>
+            {% if permissions.instructor_assessments.can_edit %}
             <a href="{% url 'instructor:assignment_edit' course.slug assignment.lesson.slug assignment.slug %}"
                class="inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium whitespace-nowrap">
                 <i class="fas fa-edit mr-2"></i> Edit Assignment
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -124,9 +126,11 @@
                         </td>
                         <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium">
                             <div class="flex items-center gap-2">
+                                {% if permissions.instructor_assessments.can_edit %}
                                 <a href="{% url 'instructor:grade_submission' course.slug submission.id %}" class="text-primary-600 hover:text-primary-900">
                                     <i class="fas fa-edit mr-0.5"></i> Grade
                                 </a>
+                                {% endif %}
                                 {% if submission.attachment %}
                                 <a href="{{ submission.attachment.url }}" target="_blank" class="text-gray-600 hover:text-gray-900">
                                     <i class="fas fa-download mr-0.5"></i> File
@@ -191,10 +195,12 @@
                    class="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors text-center">
                     <i class="fas fa-arrow-left mr-2"></i> Back to Assignments
                 </a>
+                {% if permissions.instructor_assessments.can_edit %}
                 <a href="{% url 'instructor:assignment_edit' course.slug assignment.lesson.slug assignment.slug %}"
                    class="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all text-center">
                     <i class="fas fa-edit mr-2"></i> Edit Assignment
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>

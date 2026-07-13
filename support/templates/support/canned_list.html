@@ -4,7 +4,9 @@
 <div class="px-4 sm:px-6 lg:px-8 py-6 max-w-screen-xl mx-auto">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 class="text-2xl font-bold font-heading text-gray-900">Canned Responses</h1>
+        {% if permissions.support_communications.can_create %}
         <button onclick="$('#addCannedModal').removeClass('hidden')" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors"><i class="fas fa-plus" aria-hidden="true"></i> New Response</button>
+        {% endif %}
     </div>
     <form method="get" class="mb-6 flex gap-3">
         <input type="text" name="search" value="{{ search }}" placeholder="Search canned responses…" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
@@ -17,10 +19,12 @@
                 <div class="flex items-center gap-2 mb-1"><span class="font-semibold text-gray-800 text-sm">{{ cr.title }}</span>{% if cr.category %}<span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">{{ cr.category }}</span>{% endif %}<span class="text-xs text-gray-400">Used {{ cr.use_count }}x</span></div>
                 <p class="text-sm text-gray-600 line-clamp-2">{{ cr.body|truncatechars:200 }}</p>
             </div>
+            {% if permissions.support_communications.can_delete %}
             <form method="post" action="{% url 'support:canned_delete' cr.pk %}" class="flex-shrink-0">
                 {% csrf_token %}
                 <button type="submit" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" onclick="return confirm('Delete this canned response?')"><i class="fas fa-trash text-xs" aria-hidden="true"></i></button>
             </form>
+            {% endif %}
         </div>
         {% empty %}
         <div class="p-10 text-center text-gray-400"><i class="fas fa-reply text-4xl mb-3 block opacity-20" aria-hidden="true"></i><p>No canned responses yet. Create one to speed up ticket replies.</p></div>

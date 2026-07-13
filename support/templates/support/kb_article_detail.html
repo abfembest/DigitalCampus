@@ -19,7 +19,9 @@
                     <span>Updated {{ article.updated_at|timesince }} ago</span>
                 </div>
             </div>
+            {% if permissions.support_knowledge_base.can_edit %}
             <a href="{% url 'support:kb_article_edit' article.slug %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 text-sm font-medium rounded-lg hover:bg-primary-100 transition-colors flex-shrink-0"><i class="fas fa-edit" aria-hidden="true"></i> Edit</a>
+            {% endif %}
         </div>
         {% if article.summary %}<p class="text-gray-500 italic mb-4">{{ article.summary }}</p>{% endif %}
         {% if article.tags %}<div class="flex flex-wrap gap-2 mb-5">{% for tag in article.tag_list %}<span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">{{ tag }}</span>{% endfor %}</div>{% endif %}

@@ -4,7 +4,9 @@
 <div class="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 class="text-2xl font-bold font-heading text-gray-900">SLA Policies</h1>
+        {% if permissions.support_config.can_create %}
         <button onclick="$('#slaModal').removeClass('hidden')" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors"><i class="fas fa-plus" aria-hidden="true"></i> New SLA</button>
+        {% endif %}
     </div>
     <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">

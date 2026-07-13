@@ -14,10 +14,12 @@
                 {% if total_count %}{{ total_count }} ticket{{ total_count|pluralize }} found{% else %}No tickets match current filters{% endif %}
             </p>
         </div>
+        {% if permissions.support_tickets.can_create %}
         <a href="{% url 'support:ticket_create' %}"
            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors shadow-sm">
             <i class="fas fa-plus" aria-hidden="true"></i> Create Ticket
         </a>
+        {% endif %}
     </div>
 
     <!-- Filter Bar -->
@@ -177,7 +179,7 @@
                         <td colspan="9" class="px-4 py-16 text-center text-gray-400">
                             <i class="fas fa-ticket-alt text-4xl mb-3 block opacity-20" aria-hidden="true"></i>
                             <p class="font-medium text-gray-500">No tickets found</p>
-                            <p class="text-sm mt-1">Try adjusting your filters or <a href="{% url 'support:ticket_create' %}" class="text-primary-600 hover:underline">create a new ticket</a>.</p>
+                            <p class="text-sm mt-1">Try adjusting your filters{% if permissions.support_tickets.can_create %} or <a href="{% url 'support:ticket_create' %}" class="text-primary-600 hover:underline">create a new ticket</a>{% endif %}.</p>
                         </td>
                     </tr>
                     {% endfor %}

@@ -27,6 +27,7 @@
 {% endif %}
 
 <!-- Support Dashboard -->
+{% if permissions.dashboard.can_view %}
 <a href="{% url 'support:dashboard' %}"
    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.app_name == 'support' %}bg-white/20{% endif %}"
    aria-label="Support Dashboard">
@@ -40,8 +41,10 @@
     </span>
     {% endif %}
 </a>
+{% endif %}
 
 <!-- Tickets -->
+{% if permissions.support_tickets.can_view %}
 <div class="mb-1">
     <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all
         {% if 'support/tickets' in request.path %}bg-white/20{% endif %}"
@@ -86,15 +89,19 @@
            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium">
             <i class="fas fa-hourglass-half mr-2 text-purple-400" aria-hidden="true"></i>Pending User
         </a>
+        {% if permissions.support_tickets.can_create %}
         <div class="border-t border-white/10 my-1"></div>
         <a href="{% url 'support:ticket_create' %}"
            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium text-green-300">
             <i class="fas fa-plus mr-2" aria-hidden="true"></i>Create Ticket
         </a>
+        {% endif %}
     </div>
 </div>
+{% endif %}{# /support_tickets #}
 
 <!-- Knowledge Base -->
+{% if permissions.support_knowledge_base.can_view %}
 <div class="mb-1">
     <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all
         {% if 'support/kb' in request.path or 'support/faq' in request.path %}bg-white/20{% endif %}"
@@ -111,10 +118,12 @@
            {% if request.resolver_match.url_name == 'kb_list' %}bg-white/20{% endif %}">
             <i class="fas fa-book mr-2" aria-hidden="true"></i>Articles
         </a>
+        {% if permissions.support_knowledge_base.can_create %}
         <a href="{% url 'support:kb_list' %}"
            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium">
             <i class="fas fa-plus mr-2" aria-hidden="true"></i>New Article
         </a>
+        {% endif %}
         <a href="{% url 'support:faq_list' %}"
            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
            {% if 'support/faq' in request.path %}bg-white/20{% endif %}">
@@ -122,8 +131,10 @@
         </a>
     </div>
 </div>
+{% endif %}{# /support_knowledge_base #}
 
 <!-- Communications -->
+{% if permissions.support_communications.can_view %}
 <div class="mb-1">
     <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all
         {% if 'support/chats' in request.path or 'support/announcements' in request.path %}bg-white/20{% endif %}">
@@ -152,8 +163,10 @@
         </a>
     </div>
 </div>
+{% endif %}{# /support_communications #}
 
 <!-- Analytics -->
+{% if permissions.support_analytics.can_view %}
 <a href="{% url 'support:analytics' %}"
    class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
    {% if request.resolver_match.url_name == 'analytics' and request.resolver_match.app_name == 'support' %}bg-white/20{% endif %}">
@@ -162,6 +175,7 @@
         <span class="ml-3 text-[17px] font-semibold">Analytics</span>
     </div>
 </a>
+{% endif %}
 
 <!-- Admin-only items -->
 {% comment %}
@@ -172,6 +186,7 @@
     whose is_staff happens to be stale.
 {% endcomment %}
 {% if request.user.is_superuser or role == 'admin' %}
+{% if permissions.support_config.can_view %}
 <div class="mb-1">
     <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all
         {% if 'support/sla' in request.path or 'support/departments' in request.path or 'support/agents' in request.path or 'support/audit' in request.path %}bg-white/20{% endif %}">
@@ -204,6 +219,7 @@
         </a>
     </div>
 </div>
+{% endif %}{# /support_config #}
 {% endif %}
 
 {% endif %}

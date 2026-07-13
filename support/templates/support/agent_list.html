@@ -27,6 +27,7 @@
                 {% if agent.avg_csat %}
                 <div class="flex justify-between"><dt class="text-gray-500">CSAT</dt><dd class="font-semibold text-yellow-600"><i class="fas fa-star text-yellow-400 text-xs" aria-hidden="true"></i> {{ agent.avg_csat|floatformat:1 }}</dd></div>{% endif %}
             </dl>
+            {% if permissions.support_config.can_edit %}
             <div class="flex gap-2 mt-4">
                 <form method="post" action="{% url 'support:agent_toggle_available' agent.pk %}" class="flex-1">
                     {% csrf_token %}
@@ -35,6 +36,7 @@
                     </button>
                 </form>
             </div>
+            {% endif %}
             <a href="{% url 'support:ticket_list' %}?assigned_to={{ agent.pk }}" class="mt-2 block text-center text-xs text-primary-600 hover:underline font-medium">View assigned tickets</a>
         </div>
         {% empty %}

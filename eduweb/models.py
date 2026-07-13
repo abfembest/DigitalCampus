@@ -3521,6 +3521,11 @@ class StaffPermissionsMatrix(models.Model):
         ('finance_payments',      'Payments'),
         ('finance_subscriptions', 'Subscriptions'),
         ('finance_payroll',       'Payroll'),
+        ('support_tickets',         'Tickets'),
+        ('support_knowledge_base',  'Knowledge Base'),
+        ('support_communications',  'Communications'),
+        ('support_analytics',       'Analytics'),
+        ('support_config',          'Support Config'),
     ]
 
     # Role-level defaults — mirrors sidebar sections visible per role
@@ -3539,6 +3544,7 @@ class StaffPermissionsMatrix(models.Model):
         'library':         {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
         'site_content':    {'can_view': True, 'can_edit': True},
         'security_audit':  {'can_view': True},
+        'support_config':  {'can_view': True, 'can_create': True, 'can_edit': True},
     },
     'support': {
         'dashboard':      {'can_view': True},
@@ -3547,6 +3553,10 @@ class StaffPermissionsMatrix(models.Model):
         'applications':   {'can_view': True},
         'communications': {'can_view': True, 'can_create': True},
         'exams':          {'can_view': True},
+        'support_tickets':        {'can_view': True, 'can_create': True, 'can_edit': True},
+        'support_knowledge_base': {'can_view': True, 'can_create': True, 'can_edit': True},
+        'support_communications': {'can_view': True, 'can_create': True},
+        'support_analytics':      {'can_view': True},
     },
     'finance': {
         'dashboard':      {'can_view': True},

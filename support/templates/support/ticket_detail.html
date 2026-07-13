@@ -61,6 +61,7 @@
                 </div>
             </div>
             <!-- Quick Actions -->
+            {% if permissions.support_tickets.can_edit %}
             <div class="flex flex-wrap items-center gap-2">
                 <!-- Update Status -->
                 <div class="relative" x-data="{open:false}">
@@ -82,6 +83,7 @@
                 </button>
                 {% endif %}
             </div>
+            {% endif %}
         </div>
     </div>
 
@@ -169,6 +171,7 @@
 
             <!-- Reply Form -->
             {% if ticket.status != 'closed' %}
+            {% if permissions.support_tickets.can_create %}
             <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
                 <h3 class="font-semibold text-gray-800 mb-4">Post a Reply</h3>
                 <form method="post" enctype="multipart/form-data" action="{% url 'support:ticket_detail' ticket.ticket_id %}">
@@ -223,13 +226,17 @@
                     </div>
                 </form>
             </div>
+            {% endif %}
             {% else %}
             <div class="bg-gray-50 rounded-xl border border-gray-200 p-4 text-center text-sm text-gray-500">
-                <i class="fas fa-lock mr-2" aria-hidden="true"></i> This ticket is closed. <a href="{% url 'support:ticket_detail' ticket.ticket_id %}" onclick="event.preventDefault(); document.getElementById('reopenForm').submit();" class="text-primary-600 hover:underline font-medium">Reopen ticket</a> to reply.
+                <i class="fas fa-lock mr-2" aria-hidden="true"></i> This ticket is closed.
+                {% if permissions.support_tickets.can_edit %}
+                <a href="{% url 'support:ticket_detail' ticket.ticket_id %}" onclick="event.preventDefault(); document.getElementById('reopenForm').submit();" class="text-primary-600 hover:underline font-medium">Reopen ticket</a> to reply.
                 <form id="reopenForm" method="post" action="{% url 'support:ticket_detail' ticket.ticket_id %}">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="reopen">
                 </form>
+                {% endif %}
             </div>
             {% endif %}
 
@@ -353,6 +360,7 @@
             {% endif %}
 
             <!-- Quick Update Priority Form -->
+            {% if permissions.support_tickets.can_edit %}
             <form method="post" action="{% url 'support:ticket_detail' ticket.ticket_id %}" class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="update_priority">
@@ -366,6 +374,7 @@
                     Update Priority
                 </button>
             </form>
+            {% endif %}
 
             <!-- History -->
             <div class="bg-white rounded-xl border border-gray-100 shadow-sm">

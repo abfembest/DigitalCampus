@@ -2,16 +2,18 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.db.models import Q, Count, Avg, Prefetch, Max, Sum, F, FloatField
 from django.utils import timezone
 from django.core.paginator import Paginator
 from functools import wraps
 from datetime import timedelta
 from decimal import Decimal
-from django.db import models
+from django.db import models, transaction, IntegrityError
+from django.core.exceptions import ValidationError
 import json
 import random
+import logging
 
 from eduweb.models import (
     LMSCourse, Enrollment, Lesson, LessonProgress,
@@ -29,6 +31,8 @@ from .forms import AssignmentSubmissionForm, ReplyCreateForm, ThreadCreateForm, 
 
 from django.core.mail import send_mail
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 # maps international/alias term keys → the canonical semester keys used on course.semester.
@@ -87,10 +91,16 @@ def student_required(view_func):
         from eduweb.models import CourseApplication
         application = CourseApplication.objects.filter(user=request.user).first()
         if not application or not application.can_access_student_portal():
-            messages.warning(
-                request,
-                'Your application is still being processed. You cannot access the student portal yet.'
-            )
+            if application and not application.is_paid:
+                messages.warning(
+                    request,
+                    'Please complete your application fee payment to access the student portal.'
+                )
+            else:
+                messages.warning(
+                    request,
+                    'Your application is still being processed. You cannot access the student portal yet.'
+                )
             if application:
                 return redirect('eduweb:application_status')
             return redirect('eduweb:apply')
@@ -302,6 +312,7 @@ def dashboard(request):
         }
 
     except Exception:
+        logger.exception('Failed to load dashboard data for user=%s', user.pk)
         messages.error(
             request,
             'An error occurred loading the dashboard. Please try again.'
@@ -330,6 +341,10 @@ def dashboard(request):
             else getattr(_first, 'currency', 'USD')
         ) if _first else 'USD'
     except Exception:
+        # Defaulting to "nothing owed" on failure is a deliberate choice to
+        # keep the dashboard usable, but a wrong balance is a real financial
+        # risk, so this must never fail silently server-side.
+        logger.exception('Failed to compute outstanding fees for user=%s', user.pk)
         outstanding_count    = 0
         outstanding_total    = Decimal('0.00')
         outstanding_currency = 'USD'
@@ -359,9 +374,9 @@ def dashboard(request):
     )
 
     # ── Progression snapshot (cumulative GPA + open carry-overs) ──────────────
-    cgpa_grades = CourseGrade.objects.filter(student=user).exclude(grade='').exclude(grade='W')
-    cgpa_total_units = sum(g.credit_units for g in cgpa_grades)
-    cgpa = round(sum(g.weighted_points for g in cgpa_grades) / cgpa_total_units, 2) if cgpa_total_units else None
+    # Uses the same canonical CourseGrade.compute_cgpa as Academic Records and
+    # the progression decision logic, so the CGPA shown here never disagrees.
+    cgpa = CourseGrade.compute_cgpa(user)
     open_carry_overs = CourseCarryOver.objects.filter(student=user, is_cleared=False).select_related('course')
 
     context = {
@@ -479,6 +494,11 @@ def my_courses(request):
     if profile and profile.program and selected_session and selected_term:
         normalised_term = term_normalisation_map.get(selected_term, selected_term)
 
+        # Courses already passed shouldn't be offered again for re-registration.
+        passed_course_ids = set(
+            CourseGrade.objects.filter(student=user, is_passed=True).values_list('course_id', flat=True)
+        )
+
         semester_courses = list(
             Course.objects
             .filter(
@@ -487,6 +507,7 @@ def my_courses(request):
                 is_active=True,
             )
             .filter(Q(semester=normalised_term) | Q(semester='annual'))
+            .exclude(pk__in=passed_course_ids)
             .prefetch_related('prerequisites')
             .order_by('course_type', 'name')
         )
@@ -532,6 +553,7 @@ def my_courses(request):
                 is_active=True,
             )
             .exclude(pk__in=[c.id for c in semester_courses])
+            .exclude(pk__in=passed_course_ids)
             .filter(Q(semester=normalised_term) | Q(semester='annual'))
             .prefetch_related('prerequisites')
         )
@@ -612,15 +634,18 @@ def my_courses(request):
                     to_attr='active_lessons',
                 )
             )
+            .annotate(
+                completed_lessons_count=Count(
+                    'lesson_progress',
+                    filter=Q(lesson_progress__is_completed=True),
+                    distinct=True,
+                )
+            )
             .order_by('-enrolled_at')
         )
 
-        for enrollment in enrollments:
-            enrollment.completed_lessons_count = LessonProgress.objects.filter(
-                enrollment=enrollment, is_completed=True
-            ).count()
-
     except Exception:
+        logger.exception('Failed to load enrolled courses for user=%s', user.pk)
         messages.error(request, 'Error loading your enrolled courses. Please try again.')
         enrollments = []
 
@@ -732,13 +757,30 @@ def register_semester_course(request, course_slug):
         )
         return redirect('students:my_courses')
 
-    reg, created = CourseRegistration.objects.get_or_create(
-        student=request.user,
-        course=course,
-        session=current_session,
-        term=current_term,
-        defaults={'status': 'pending'},
-    )
+    # transaction.atomic() + IntegrityError guard closes the double-submit
+    # race window (double-click, two tabs) — CourseRegistration's
+    # unique_together=('student','course','session','term') means a
+    # concurrent duplicate INSERT now degrades to a friendly message
+    # instead of an unhandled 500.
+    try:
+        with transaction.atomic():
+            reg, created = CourseRegistration.objects.get_or_create(
+                student=request.user,
+                course=course,
+                session=current_session,
+                term=current_term,
+                defaults={'status': 'pending'},
+            )
+    except ValidationError as e:
+        messages.error(request, f'Cannot register for "{course.name}": {"; ".join(e.messages)}')
+        return redirect('students:my_courses')
+    except IntegrityError:
+        logger.warning(
+            'Concurrent duplicate registration attempt: user=%s course=%s session=%s term=%s',
+            request.user.pk, course.pk, current_session.pk, current_term,
+        )
+        messages.info(request, f'You are already registered for "{course.name}".')
+        return redirect('students:my_courses')
 
     if created:
         messages.success(request, f'✅ "{course.name}" ({course.credit_units} CU) added.')
@@ -1031,6 +1073,24 @@ def retry_lms_enrollment(request, course_slug):
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'POST required.'}, status=405)
 
+    try:
+        return _retry_lms_enrollment(request, course_slug)
+    except Http404:
+        raise
+    except Exception:
+        # This is an AJAX/JSON endpoint — an unhandled exception must never
+        # surface as an HTML 500 page, which the calling JS can't parse.
+        logger.exception(
+            'retry_lms_enrollment failed for user=%s course_slug=%s',
+            request.user.pk, course_slug,
+        )
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Something went wrong. Please try again.',
+        }, status=500)
+
+
+def _retry_lms_enrollment(request, course_slug):
     session_id    = request.POST.get('session_id', '').strip()
     term_override = request.POST.get('term_override', '').strip()
 
@@ -1117,6 +1177,22 @@ def course_catalog(request):
     current_session = AcademicSession.get_current()
     search_query    = request.GET.get('q', '').strip()
     term_filter     = request.GET.get('term', '').strip()
+
+    if not profile or not profile.program:
+        messages.warning(
+            request,
+            'Your program has not been assigned yet — please contact your department.'
+        )
+        context = {
+            'page_title':              'Course Catalog',
+            'courses':                 Paginator([], 12).get_page(1),
+            'enrolled_ids':            set(),
+            'registered_academic_ids': set(),
+            'search_query':            search_query,
+            'term_filter':             term_filter,
+            'term_choices':            LMSCourse._meta.get_field('term').choices,
+        }
+        return render(request, 'students/course_catalog.html', context)
 
     courses = LMSCourse.objects.filter(
         is_published=True,
@@ -1220,29 +1296,24 @@ def course_detail(request, course_slug):
         
         # Calculate progress for enrolled students
         if enrollment:
-            completed_count = LessonProgress.objects.filter(
-                enrollment=enrollment,
-                is_completed=True
-            ).count()
-            enrollment.completed_lessons_count = completed_count
-            
+            completed_lesson_ids = set(
+                LessonProgress.objects.filter(
+                    enrollment=enrollment,
+                    is_completed=True
+                ).values_list('lesson_id', flat=True)
+            )
+            enrollment.completed_lessons_count = len(completed_lesson_ids)
+
             # Get the first incomplete lesson for "Continue Learning" button
             first_incomplete_lesson = None
             for section in sections:
                 for lesson in section.filtered_lessons:
-                    # Check if lesson is not completed
-                    is_completed = LessonProgress.objects.filter(
-                        enrollment=enrollment,
-                        lesson=lesson,
-                        is_completed=True
-                    ).exists()
-                    
-                    if not is_completed:
+                    if lesson.id not in completed_lesson_ids:
                         first_incomplete_lesson = lesson
                         break
                 if first_incomplete_lesson:
                     break
-            
+
             enrollment.next_lesson = first_incomplete_lesson
         
         existing_review = None
@@ -1370,18 +1441,34 @@ def enroll_course(request, course_slug):
             messages.error(request, 'Enrollment is closed — this course belongs to a past session.')
             return redirect('students:course_detail', course_slug=course_slug)
 
-    # Enroll directly (standalone LMS course or registration confirmed above)
+    # Enroll directly (standalone LMS course or registration confirmed above).
+    # get_or_create + IntegrityError guard closes the race window between the
+    # `existing` check above and this write — Enrollment's
+    # unique_together=('student','course') means a double-submit (double
+    # click, two tabs) can no longer create duplicate enrollment rows or
+    # surface a misleading "error" for what was actually a successful enroll.
     try:
-        Enrollment.objects.create(
-            student=request.user,
-            course=course,
-            enrolled_by=request.user,
-            status='active',
+        with transaction.atomic():
+            enrollment, created = Enrollment.objects.get_or_create(
+                student=request.user,
+                course=course,
+                defaults={'enrolled_by': request.user, 'status': 'active'},
+            )
+    except IntegrityError:
+        logger.warning(
+            'Concurrent duplicate enrollment attempt: user=%s course=%s',
+            request.user.pk, course.pk,
         )
-        messages.success(
-            request,
-            f'Successfully enrolled in {course.title}!'
+        created = False
+    except Exception:
+        logger.exception(
+            'Enrollment failed for user=%s course=%s', request.user.pk, course.pk
         )
+        messages.error(request, 'An error occurred during enrollment. Please try again.')
+        return redirect('students:course_detail', course_slug=course_slug)
+
+    if created:
+        messages.success(request, f'Successfully enrolled in {course.title}!')
         _notify(
             user=request.user,
             notification_type='enrollment',
@@ -1389,12 +1476,9 @@ def enroll_course(request, course_slug):
             message=f'You have successfully enrolled in "{course.title}". Start learning now!',
             link=f'/student/courses/{course.slug}/',
         )
-    except Exception as e:
-        messages.error(
-            request,
-            'An error occurred during enrollment. Please try again.'
-        )
-    
+    else:
+        messages.info(request, 'You are already enrolled in this course.')
+
     return redirect('students:course_detail', course_slug=course_slug)
 
 @login_required
@@ -1493,94 +1577,25 @@ def lesson_view(request, course_slug, lesson_slug):
 
     return render(request, 'students/lesson.html', context)
 
-def _score_to_grade(percentage):
-    """Convert numeric percentage to letter grade."""
-    if percentage >= 70:   return 'A'
-    elif percentage >= 60: return 'B'
-    elif percentage >= 50: return 'C'
-    elif percentage >= 45: return 'D'
-    else:                  return 'F'
-
-
 def _record_academic_grade(user, enrollment, lms_course):
     """
-    Automatically record a CourseGrade when a linked LMS course is completed.
-    Derives score from quiz attempts and graded assignment submissions
-    in this course. Falls back to 0 if no assessments exist yet.
-    Uses the current active AcademicSession.
+    Recompute this student's official CourseGrade when a linked LMS course
+    is completed, via the shared weighted exam/quiz/assignment blend.
     """
-    from eduweb.models import AcademicSession, CourseApplication
+    from eduweb.models import AcademicSession
 
     academic_course = lms_course.academic_course
     session = AcademicSession.get_current()
     if not session:
         return  # No active session — grade cannot be pinned to a session yet
 
-    # ── Quiz score: best attempt percentage per quiz in this course ───────
-    quiz_attempts = (
-        QuizAttempt.objects
-        .filter(
-            student=user,
-            quiz__lesson__course=lms_course,
-            is_completed=True,
+    try:
+        CourseGrade.recompute_for_student_course(user, academic_course, session)
+    except Exception:
+        logger.exception(
+            'Failed to recompute CourseGrade for user=%s course=%s session=%s',
+            user.pk, academic_course.pk, session.pk,
         )
-        .values('quiz_id')
-        .annotate(best=Max('percentage'))
-    )
-    quiz_scores = [float(row['best']) for row in quiz_attempts]
-
-    # ── Assignment score: graded submissions as percentage of max_score ───
-    assignment_scores_qs = (
-        AssignmentSubmission.objects
-        .filter(
-            student=user,
-            assignment__lesson__course=lms_course,
-            status='graded',
-            score__isnull=False,
-        )
-        .annotate(
-            pct=F('score') * 100.0 / F('assignment__max_score')
-        )
-        .values_list('pct', flat=True)
-    )
-    assignment_scores = [float(s) for s in assignment_scores_qs]
-
-    # ── Combined average ──────────────────────────────────────────────────
-    all_scores = quiz_scores + assignment_scores
-    if all_scores:
-        avg_score = sum(all_scores) / len(all_scores)
-    else:
-        # No assessments graded yet — use lesson completion as proxy (100%)
-        avg_score = float(enrollment.progress_percentage)
-
-    letter_grade = _score_to_grade(avg_score)
-    is_passed = avg_score >= 50  # configurable threshold
-
-    # ── Link to CourseApplication if available ────────────────────────────
-    application = (
-        CourseApplication.objects
-        .filter(user=user, program=academic_course.program)
-        .first()
-    )
-
-    # ── Create or update CourseGrade ──────────────────────────────────────
-    CourseGrade.objects.update_or_create(
-        student=user,
-        course=academic_course,
-        session=session,
-        defaults={
-            'score':        round(avg_score, 2),
-            'grade':        letter_grade,
-            'credit_units': academic_course.credit_units,
-            'is_passed':    is_passed,
-            'application':  application,
-            'recorded_by':  None,
-        }
-    )
-
-    # Check if student has now completed all core courses in the program
-    if application:
-        application.award_program_certificate()
 
 @login_required
 @student_required
@@ -1933,18 +1948,22 @@ def submit_assignment(request, course_slug, assignment_slug):
         
         if form.is_valid():
             try:
-                # Create or update submission
-                submission, created = AssignmentSubmission.objects.get_or_create(
-                    assignment=assignment,
-                    student=request.user,
-                    defaults={
-                        'submission_text': form.cleaned_data['submission_text'],
-                        'status': 'submitted',
-                        'submitted_at': timezone.now(),
-                        'is_late': is_overdue,
-                    }
-                )
-                
+                # Create or update submission. transaction.atomic() +
+                # unique_together=('assignment','student') on the model
+                # means a double-submit (double-click, two tabs) can't
+                # create duplicate submission rows.
+                with transaction.atomic():
+                    submission, created = AssignmentSubmission.objects.get_or_create(
+                        assignment=assignment,
+                        student=request.user,
+                        defaults={
+                            'submission_text': form.cleaned_data['submission_text'],
+                            'status': 'submitted',
+                            'submitted_at': timezone.now(),
+                            'is_late': is_overdue,
+                        }
+                    )
+
                 # If not created, update existing draft
                 if not created:
                     submission.submission_text = (
@@ -1991,16 +2010,27 @@ def submit_assignment(request, course_slug, assignment_slug):
                     assignment_slug=assignment_slug
                 )
                 
-            except Exception as e:
+            except IntegrityError:
+                logger.warning(
+                    'Concurrent duplicate assignment submission: user=%s assignment=%s',
+                    request.user.pk, assignment.pk,
+                )
+                messages.info(request, 'You have already submitted this assignment.')
+            except Exception:
+                logger.exception(
+                    'Assignment submission failed for user=%s assignment=%s',
+                    request.user.pk, assignment.pk,
+                )
                 messages.error(
                     request,
                     'Error submitting assignment. Please try again.'
                 )
         else:
-            messages.error(
-                request,
-                'Please correct the errors in the form.'
-            )
+            # Surface the actual validation reasons (e.g. "file too large",
+            # "submission text too short") instead of a generic message.
+            for field_errors in form.errors.values():
+                for error in field_errors:
+                    messages.error(request, error)
     else:
         # GET request - redirect to detail page
         return redirect(
@@ -2437,6 +2467,9 @@ def community(request):
     try:
         threads = paginator.get_page(page_number)
     except Exception:
+        # get_page() already handles PageNotAnInteger/EmptyPage internally —
+        # reaching here means something unexpected (e.g. a DB error), so log it.
+        logger.exception('Failed to paginate community threads, page=%s', page_number)
         threads = paginator.get_page(1)
     
     context = {
@@ -2854,12 +2887,12 @@ def grades(request):
         )
     
     # Academic course grades (from program — recorded by lecturers)
-    # academic_grades = (
-    #     CourseGrade.objects
-    #     .filter(student=user)
-    #     .select_related('course', 'course__program', 'session')
-    #     .order_by('session__name', 'course__year_of_study', 'course__semester')
-    # )
+    academic_grades = (
+        CourseGrade.objects
+        .filter(student=user)
+        .select_related('course', 'course__program', 'session')
+        .order_by('-session__name', 'course__year_of_study', 'course__semester')
+    )
 
     # Quiz attempts — best attempt per quiz for graded display
     quiz_attempts = list(
@@ -2874,7 +2907,7 @@ def grades(request):
         'enrollments': enrollments,
         'submissions': submissions,
         'quiz_attempts': quiz_attempts,
-        # 'academic_grades': academic_grades,
+        'academic_grades': academic_grades,
     }
     
     return render(request, 'students/grades.html', context)
@@ -2948,29 +2981,41 @@ def progress(request):
     
     # Calculate learning activity for last 28 days
     from datetime import datetime, timedelta
+    from collections import Counter
     today = timezone.now().date()
     start_date = today - timedelta(days=27)  # 28 days including today
-    
+
+    lesson_counts = Counter(
+        LessonProgress.objects.filter(
+            enrollment__student=user,
+            completed_at__date__gte=start_date,
+            completed_at__date__lte=today,
+        ).values_list('completed_at__date', flat=True)
+    )
+    assignment_counts = Counter(
+        AssignmentSubmission.objects.filter(
+            student=user,
+            submitted_at__date__gte=start_date,
+            submitted_at__date__lte=today,
+        ).values_list('submitted_at__date', flat=True)
+    )
+    quiz_counts = Counter(
+        QuizAttempt.objects.filter(
+            student=user,
+            started_at__date__gte=start_date,
+            started_at__date__lte=today,
+        ).values_list('started_at__date', flat=True)
+    )
+
     activity_data = []
     for i in range(28):
         date = start_date + timedelta(days=i)
-        
+
         # Count activities for this day
-        lessons_completed = LessonProgress.objects.filter(
-            enrollment__student=user,
-            completed_at__date=date
-        ).count()
-        
-        assignments_submitted = AssignmentSubmission.objects.filter(
-            student=user,
-            submitted_at__date=date
-        ).count()
-        
-        quizzes_taken = QuizAttempt.objects.filter(
-            student=user,
-            started_at__date=date
-        ).count()
-        
+        lessons_completed = lesson_counts.get(date, 0)
+        assignments_submitted = assignment_counts.get(date, 0)
+        quizzes_taken = quiz_counts.get(date, 0)
+
         # Calculate activity level (0-3)
         total_activities = (
             lessons_completed + 
@@ -3283,7 +3328,8 @@ def compose_message(request):
             try:
                 from django.contrib.auth.models import User as AuthUser
                 initial['recipient'] = AuthUser.objects.get(pk=to_id)
-            except Exception:
+            except (AuthUser.DoesNotExist, ValueError, TypeError):
+                # Invalid/unknown ?to= — just skip the pre-fill, not a real error.
                 pass
         form = MessageComposeForm(initial=initial)
 
@@ -3534,90 +3580,30 @@ def academic_records(request):
     other_courses    = [c for c in program_courses if c.course_type not in ('core', 'elective')]
     total_credits_required = program.credits_required if program else 0
 
-    # ── 3. End-of-semester exam responses (submitted + graded only) ───────────
-    #
-    # SOURCE OF TRUTH: StudentExamResponse where:
-    #   • exam.exam_type == 'end_of_semester'
-    #   • status == 'graded'   (fully graded — total_score is set)
-    #
-    # Each response is enriched with display helpers so the template
-    # can treat it identically to the old CourseGrade objects.
-    # ─────────────────────────────────────────────────────────────────────────
-    GRADE_POINTS = {'A': 5.0, 'B': 4.0, 'C': 3.0, 'D': 2.0, 'F': 0.0, 'I': 0.0, 'W': 0.0}
-
-    def score_to_grade(pct):
-        """Nigerian grading: score_percentage → letter grade."""
-        if pct is None:
-            return ''
-        pct = float(pct)
-        if pct >= 70:   return 'A'
-        if pct >= 60:   return 'B'
-        if pct >= 50:   return 'C'
-        if pct >= 45:   return 'D'
-        return 'F'
-
-    exam_responses = list(
-        StudentExamResponse.objects
-        .filter(
-            student=user,
-            status=StudentExamResponse.GRADED,
-            exam__exam_type=Exam.END_OF_SEMESTER,
-            exam__show_result_immediately=True,      # admin must release results
-        )
-        .select_related(
-            'exam',
-            'exam__course',
-            'exam__course__academic_course',
-            'exam__course__academic_course__program',
-            'exam__course__session',
-        )
-        .order_by(
-            'exam__course__session__name',
-            'exam__course__term',
-            'exam__course__academic_course__year_of_study',
-        )
+    # ── 3. Official course grades — real CourseGrade rows ─────────────────────
+    # Unified via CourseGrade.recompute_for_student_course, blending exam/quiz/
+    # assignment scores per the course's configured weights. Superseded the old
+    # StudentExamResponse-only proxy, which disagreed with the dashboard and
+    # "Grades & Performance" pages.
+    grades_qs = list(
+        CourseGrade.objects
+        .filter(student=user)
+        .select_related('course', 'course__program', 'session')
+        .order_by('-session__name', 'course__semester', 'course__year_of_study')
     )
 
-    # Build synthetic grade-like objects the template can consume
-    class ExamGradeProxy:
-        """Wraps a StudentExamResponse to look like a CourseGrade row."""
-        def __init__(self, response):
-            self._r = response
-            lms   = response.exam.course          # LMSCourse
-            acad  = lms.academic_course           # Course or None
+    for g in grades_qs:
+        g.display_code = g.course.code
+        g.display_name = g.course.name
+        g.sess_key = g.session.name if g.session else 'Unassigned'
+        # Grouped by level + semester, not semester alone — a session can
+        # legitimately contain a lower-level carry-over course registered
+        # alongside the student's current-level courses, and merging them
+        # under one bare "First Semester" label would misrepresent which
+        # level each grade actually belongs to.
+        g.sem_key = f'Level {g.course.level} — {g.course.get_semester_display()}'
 
-            # ── Display fields ────────────────────────────────────────────
-            self.display_name  = acad.name if acad else lms.title
-            self.display_code  = lms.code or (acad.code if acad else '')
-            self.credit_units  = acad.credit_units if acad else 3
-            self.score         = response.score_percentage  # shown as %
-            self.grade         = score_to_grade(response.score_percentage)
-            self.grade_points  = GRADE_POINTS.get(self.grade, 0)
-            self.weighted_points = self.grade_points * self.credit_units
-            self.is_passed     = self.grade not in ('F', 'I', 'W', '')
-            self.result_status = 'released'        # graded = released to student
-
-            # ── Grouping keys ─────────────────────────────────────────────
-            sess = lms.session
-            self.sess_key = sess.name if sess else 'Unassigned'
-
-            # Semester label
-            if acad and acad.semester:
-                self.sem_key = acad.get_semester_display()
-            elif lms.term:
-                self.sem_key = lms.get_term_display()
-            else:
-                self.sem_key = 'Unknown'
-
-            # ── Exam meta (for tooltip / detail) ─────────────────────────
-            self.exam_title    = response.exam.title
-            self.exam_ref      = response.exam.reference_code
-            self.total_score   = response.total_score
-            self.max_score     = response.exam.total_marks if hasattr(response.exam, 'total_marks') else None
-            self.graded_at     = response.graded_at
-            self.submitted_at  = response.submitted_at
-
-    proxies = [ExamGradeProxy(r) for r in exam_responses]
+    proxies = grades_qs
 
     # ── 4. Credits ────────────────────────────────────────────────────────────
     credits_earned    = sum(p.credit_units for p in proxies if p.is_passed)
@@ -3628,15 +3614,18 @@ def academic_records(request):
     )
 
     # ── 5. Cumulative GPA — Nigerian 5-point scale ────────────────────────────
-    weighted_sum    = sum(p.grade_points * p.credit_units for p in proxies if p.grade)
-    total_gpa_units = sum(p.credit_units for p in proxies if p.grade and p.grade != 'W')
-    gpa = round(weighted_sum / total_gpa_units, 2) if total_gpa_units > 0 else None
+    # Canonical computation shared with the dashboard and progression logic
+    # (see CourseGrade.compute_cgpa) so this figure can never disagree with
+    # what's shown elsewhere.
+    gpa = CourseGrade.compute_cgpa(user)
 
-    if gpa is None:       gpa_class = None
-    elif gpa >= 4.5:      gpa_class = 'First Class'
-    elif gpa >= 3.5:      gpa_class = 'Second Class Upper'
-    elif gpa >= 2.4:      gpa_class = 'Second Class Lower'
-    elif gpa >= 1.5:      gpa_class = 'Third Class'
+    # gpa is a Decimal (from compute_cgpa) — Python raises TypeError comparing
+    # Decimal to a bare float, so thresholds must be Decimal too.
+    if gpa is None:               gpa_class = None
+    elif gpa >= Decimal('4.5'):   gpa_class = 'First Class'
+    elif gpa >= Decimal('3.5'):   gpa_class = 'Second Class Upper'
+    elif gpa >= Decimal('2.4'):   gpa_class = 'Second Class Lower'
+    elif gpa >= Decimal('1.5'):   gpa_class = 'Third Class'
     else:                 gpa_class = 'Pass'
 
     # ── 6. Group by session → semester ───────────────────────────────────────
@@ -3693,7 +3682,6 @@ def academic_records(request):
         .order_by('-issued_date')
     )
 
-    # academic_grades kept for backward compat with any other template refs
     academic_grades = proxies
 
     context = {
@@ -3815,8 +3803,16 @@ def exam_list(request):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@student_required
 def exam_instructions(request, slug):
-    exam = get_object_or_404(Exam, slug=slug)
+    exam = get_object_or_404(
+        Exam.objects.filter(
+            is_active=True,
+            course__enrollments__student=request.user,
+            course__enrollments__status__in=['active', 'completed'],
+        ).distinct(),
+        slug=slug,
+    )
     now  = timezone.now()
 
     if now < exam.instructions_open_at:
@@ -3860,8 +3856,16 @@ def exam_instructions(request, slug):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@student_required
 def start_exam(request, slug):
-    exam = get_object_or_404(Exam, slug=slug)
+    exam = get_object_or_404(
+        Exam.objects.filter(
+            is_active=True,
+            course__enrollments__student=request.user,
+            course__enrollments__status__in=['active', 'completed'],
+        ).distinct(),
+        slug=slug,
+    )
     now  = timezone.now()
 
     if now < exam.start_datetime:
@@ -3914,8 +3918,16 @@ def start_exam(request, slug):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @login_required
+@student_required
 def get_exam_data(request, slug):
-    exam     = get_object_or_404(Exam, slug=slug)
+    exam     = get_object_or_404(
+        Exam.objects.filter(
+            is_active=True,
+            course__enrollments__student=request.user,
+            course__enrollments__status__in=['active', 'completed'],
+        ).distinct(),
+        slug=slug,
+    )
     response, _ = StudentExamResponse.objects.get_or_create(
     exam=exam,
     student=request.user,
@@ -4006,15 +4018,27 @@ def flag_tab_switch(request, slug):
     if request.method != 'POST':
         return JsonResponse({'ok': False}, status=405)
     try:
-        data     = json.loads(request.body)
-        response = StudentExamResponse.objects.filter(
-            exam__slug=slug, student=request.user
-        ).first()
-        if response:
-            response.tab_switch_count = data.get('count', response.tab_switch_count + 1)
-            response.save(update_fields=['tab_switch_count'])
+        # Always increment server-side, atomically — never trust the
+        # client-supplied count. This field is shown to staff on the exam
+        # integrity review page (management/exam_responses.html) as an
+        # authoritative violation count, so a student's own browser must
+        # never be able to set or suppress it directly.
+        updated = (
+            StudentExamResponse.objects
+            .filter(exam__slug=slug, student=request.user)
+            .update(tab_switch_count=F('tab_switch_count') + 1)
+        )
+        if not updated:
+            logger.warning(
+                'flag_tab_switch: no StudentExamResponse for user=%s exam_slug=%s',
+                request.user.pk, slug,
+            )
     except Exception:
-        pass
+        logger.exception(
+            'flag_tab_switch failed for user=%s exam_slug=%s', request.user.pk, slug
+        )
+    # Deliberately always returns ok — the client (a student mid-exam) must
+    # never learn whether server-side tracking succeeded or failed.
     return JsonResponse({'ok': True})
 
 
@@ -4145,6 +4169,18 @@ def submit_exam(request, slug):
         'pending_manual_count', 'submitted_at', 'status',
         'passed', 'graded_at', 'graded_by', 'time_spent_seconds',
     ])
+
+    if is_fully_graded:
+        academic_course = exam.course.academic_course
+        session = exam.course.session
+        if academic_course and session:
+            try:
+                CourseGrade.recompute_for_student_course(request.user, academic_course, session)
+            except Exception:
+                logger.exception(
+                    'Failed to recompute CourseGrade after exam submission for user=%s exam=%s',
+                    request.user.pk, exam.pk,
+                )
 
     return JsonResponse({
         'status':           'submitted',

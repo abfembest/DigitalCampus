@@ -59,30 +59,55 @@ class AssignmentSubmissionForm(forms.ModelForm):
         
         return text.strip()
     
+    # Magic-byte signatures for the extensions we accept. A renamed file
+    # (e.g. malware.exe → malware.pdf) has the right extension but the
+    # wrong header, so this catches what extension-checking alone can't.
+    # 'txt' has no reliable signature and is intentionally left content-unchecked.
+    _MAGIC_SIGNATURES = {
+        'pdf':  [b'%PDF'],
+        'zip':  [b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08'],
+        'docx': [b'PK\x03\x04'],  # .docx is a zip container
+        'doc':  [b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'],  # legacy OLE format
+    }
+
     def clean_attachment(self):
-        """Validate file attachment"""
+        """Validate file attachment: size, extension, and actual content."""
         attachment = self.cleaned_data.get('attachment')
-        
-        if attachment:
-            # Check file size (10MB max)
-            max_size = 10 * 1024 * 1024
-            if attachment.size > max_size:
+
+        if not attachment:
+            return attachment
+
+        # Check file size (10MB max)
+        max_size = 10 * 1024 * 1024
+        if attachment.size > max_size:
+            raise ValidationError(
+                'File size cannot exceed 10MB.'
+            )
+
+        # Check file extension
+        allowed_extensions = [
+            'pdf', 'doc', 'docx', 'txt', 'zip'
+        ]
+        ext = attachment.name.split('.')[-1].lower()
+
+        if ext not in allowed_extensions:
+            raise ValidationError(
+                f'File type not allowed. '
+                f'Accepted: {", ".join(allowed_extensions)}'
+            )
+
+        # Verify the file's actual content matches its claimed extension.
+        signatures = self._MAGIC_SIGNATURES.get(ext)
+        if signatures:
+            attachment.seek(0)
+            header = attachment.read(8)
+            attachment.seek(0)
+            if not any(header.startswith(sig) for sig in signatures):
                 raise ValidationError(
-                    'File size cannot exceed 10MB.'
+                    f'This file does not look like a valid .{ext} file — '
+                    f'please check it isn\'t corrupted or mislabeled.'
                 )
-            
-            # Check file extension
-            allowed_extensions = [
-                'pdf', 'doc', 'docx', 'txt', 'zip'
-            ]
-            ext = attachment.name.split('.')[-1].lower()
-            
-            if ext not in allowed_extensions:
-                raise ValidationError(
-                    f'File type not allowed. '
-                    f'Accepted: {", ".join(allowed_extensions)}'
-                )
-        
+
         return attachment
 
 

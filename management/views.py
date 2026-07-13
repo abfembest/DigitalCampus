@@ -5,9 +5,13 @@
 # Standard library
 import csv
 import json
+import logging
+import secrets
+import string
 import threading
 import uuid
-from datetime import timedelta
+import zoneinfo
+from datetime import datetime, timedelta
 
 # Django
 from django.conf import settings
@@ -23,6 +27,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date, parse_time
 from django.views.decorators.http import require_POST
 
 # Models
@@ -69,15 +74,17 @@ from eduweb.models import (
     Transaction,
     UserProfile,
     Message,
-        Exam,
-        ExamQuestion,
-        StudentExamResponse,
-        ExamStatusLog,
-    )
+    Exam,
+    ExamQuestion,
+    StudentExamResponse,
+    ExamStatusLog,
+    StaffPermissionsMatrix,
+)
 
 # Forms
 from management.forms import (
     AcademicSessionForm,
+    AdminMessageComposeForm,
     AllRequiredPaymentsForm,
     AnnouncementForm,
     AuditLogFilterForm,
@@ -123,10 +130,16 @@ from eduweb.emailservices import (
     send_overdue_payment_reminder_email,
     send_payroll_payment_notification_email,
     send_admin_created_user_email,
+    send_new_message_email,
 )
 
 # Academic progression
-from management.progression import compute_progression_decision, apply_progression_decision
+from management.progression import (
+    compute_progression_decision, apply_progression_decision,
+    apply_manual_override, already_processed_student_ids,
+)
+
+logger = logging.getLogger('melbac')
 
 
 def _notify(user, title, message, notif_type='system', link=''):
@@ -141,6 +154,53 @@ def _notify(user, title, message, notif_type='system', link=''):
     )
     if old_ids:
         Notification.objects.filter(id__in=list(old_ids)).delete()
+
+
+def _permission_modules_for_role(role):
+    """
+    Modules + action fields relevant to a given staff role — filters out
+    modules that don't apply (e.g. an instructor never needs 'academics',
+    an instructor-only module never applies to a finance user), falling
+    back to every module for a role with no defaults configured.
+    """
+    role_defaults = StaffPermissionsMatrix.ROLE_DEFAULT_PERMISSIONS.get(role, {})
+    modules = list(role_defaults.keys()) or [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
+    return modules, StaffPermissionsMatrix.ALL_ACTION_FIELDS, role_defaults
+
+
+def _effective_permissions_for_user(user):
+    """
+    Effective StaffPermissionsMatrix snapshot for a user — user-level
+    override row, else role-level default row, else hardcoded
+    ROLE_DEFAULT_PERMISSIONS — scoped to only the modules relevant to
+    this user's actual role, so every caller (permissions modal, role
+    assignment page, user snapshot) sees the same role-peculiar set.
+    """
+    role = user.profile.role
+    modules, actions, role_defaults = _permission_modules_for_role(role)
+
+    user_rows = {r.module: r for r in StaffPermissionsMatrix.objects.filter(user=user, role=None)}
+    role_rows = {r.module: r for r in StaffPermissionsMatrix.objects.filter(role=role, user=None)}
+
+    result = {}
+    for module in modules:
+        row = user_rows.get(module) or role_rows.get(module)
+        if row:
+            result[module] = {f: getattr(row, f) for f in actions}
+        else:
+            result[module] = {f: role_defaults.get(module, {}).get(f, False) for f in actions}
+    return modules, actions, result
+
+
+def _has_permission(request, module, action):
+    """
+    True if the acting user may perform `action` on `module`. Superuser
+    always bypasses; otherwise reads the StaffPermissionsMatrix snapshot
+    SessionSecurityMiddleware attaches to the request as `request.permissions`.
+    """
+    if request.user.is_superuser:
+        return True
+    return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
 
 
 # ===========================================================================
@@ -194,8 +254,6 @@ def admin_compose_message(request):
     Admin compose — send a new message to any user.
     Supports ?to=<user_id> query param to pre-fill recipient.
     """
-    from .forms import AdminMessageComposeForm
-
     if request.method == 'POST':
         form = AdminMessageComposeForm(request.POST)
         if form.is_valid():
@@ -211,10 +269,9 @@ def admin_compose_message(request):
                 link=f'/management/inbox/{msg.id}/',
             )
             try:
-                from eduweb.emailservices import send_new_message_email
                 send_new_message_email(msg.recipient, request.user, msg)
             except Exception:
-                pass
+                logger.exception('Failed to send new-message email to %s', msg.recipient)
             messages.success(request, 'Message sent successfully!')
             return redirect('management:admin_inbox')
         messages.error(request, 'Please fix the errors below.')
@@ -223,9 +280,8 @@ def admin_compose_message(request):
         to_id = request.GET.get('to')
         if to_id:
             try:
-                from django.contrib.auth.models import User as AuthUser
-                initial['recipient'] = AuthUser.objects.get(pk=to_id)
-            except Exception:
+                initial['recipient'] = User.objects.get(pk=to_id)
+            except (User.DoesNotExist, ValueError):
                 pass
         form = AdminMessageComposeForm(initial=initial)
 
@@ -282,10 +338,9 @@ def admin_message_thread(request, message_id):
                 link=f'/management/inbox/{msg.id}/',
             )
             try:
-                from eduweb.emailservices import send_new_message_email
                 send_new_message_email(reply_to, request.user, msg)
             except Exception:
-                pass
+                logger.exception('Failed to send reply-notification email to %s', reply_to)
             messages.success(request, 'Reply sent!')
             return redirect('management:admin_message_thread', message_id=message_id)
         messages.error(request, 'Reply must be at least 5 characters.')
@@ -340,9 +395,13 @@ def mark_notification_read(request, notification_id):
 
 
 def is_admin(user):
-    """Check if user is staff, superuser, or has admin role."""
+    """
+    The one admin gate for this app. is_staff and is_superuser each act as
+    a full bypass on their own (equivalent to role='admin'); is_superuser
+    additionally bypasses every StaffPermissionsMatrix check downstream.
+    """
     return (
-        user.is_authenticated and (
+        user.is_authenticated and user.is_active and (
             user.is_staff or
             user.is_superuser or
             (hasattr(user, 'profile') and user.profile.role == 'admin')
@@ -566,8 +625,7 @@ def make_decision(request, pk):
                     'admission_session', 'year_of_study',
                 ])
             except Exception:
-                import logging
-                logging.getLogger(__name__).exception(
+                logger.exception(
                     "make_decision — failed to sync profile for application %s",
                     application.application_id,
                 )
@@ -643,8 +701,6 @@ def issue_transcript(request, pk):
         
         messages.success(request, f'Transcript issued for {application.application_id}. Email sent to applicant.')
     except Exception as e:
-        import logging
-        logger = logging.getLogger('melbac')
         logger.error(f'Failed to issue transcript for {application.application_id}: {str(e)}')
         messages.error(request, 'Failed to issue transcript. Please try again.')
     
@@ -746,8 +802,8 @@ def send_application_submission_email(application):
         email.send(fail_silently=False)
         return True
         
-    except Exception as e:
-        print(f"Error sending submission email: {str(e)}")
+    except Exception:
+        logger.exception('Error sending submission email for application %s', application.application_id)
         return False
 
 def send_decision_email(application):
@@ -829,8 +885,8 @@ def send_decision_email(application):
         email.attach_alternative(html_content, "text/html")
         email.send(fail_silently=False)
         return True
-    except Exception as e:
-        print(f"Error sending decision email: {str(e)}")
+    except Exception:
+        logger.exception('Error sending decision email for application %s', application.application_id)
         return False
     
 
@@ -888,6 +944,19 @@ def faculty_edit(request, pk):
 def faculty_delete(request, pk):
     faculty = get_object_or_404(Faculty, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete faculties.')
+            return redirect('management:faculties_list')
+
+        dept_count = faculty.departments.count()
+        if dept_count:
+            messages.error(
+                request,
+                f'Cannot delete "{faculty.name}" — it still has {dept_count} '
+                f'department(s). Delete or reassign them first.'
+            )
+            return redirect('management:faculties_list')
+
         name = faculty.name
         faculty.delete()
         messages.success(request, f'Faculty "{name}" deleted successfully!')
@@ -1027,13 +1096,30 @@ def course_edit(request, pk):
 def course_delete(request, pk):
     """Delete a course"""
     course = get_object_or_404(Course, pk=pk)
-    
+
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete courses.')
+            return redirect('management:courses')
+
+        dependents = (
+            course.registrations.count()
+            + course.student_grades.count()
+            + course.carry_over_records.count()
+        )
+        if dependents:
+            messages.error(
+                request,
+                f'Cannot delete "{course.name}" — it has {dependents} linked '
+                f'registration/grade/carry-over record(s). Archive it instead.'
+            )
+            return redirect('management:courses')
+
         course_name = course.name
         course.delete()
         messages.success(request, f'Course "{course_name}" deleted successfully!')
         return redirect('management:courses')
-    
+
     return redirect('management:courses')
 
 
@@ -1213,33 +1299,7 @@ def blog_category_delete(request, pk):
     
     return redirect('management:blog_categories_list')
 
-import secrets
-import string
- 
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User
-from django.core.paginator import Paginator
-from django.db import transaction
-from django.db.models import Q
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
- 
-from eduweb.models import UserProfile
-from management.forms import (
-    QuickRoleChangeForm,
-    UserCreateForm,
-    UserEditForm,
-    UserProfileForm,
-    UserSearchForm,
-)
 
-
-def _is_admin(user):
-    return user.is_authenticated and (user.is_staff or user.is_superuser)
- 
- 
 def _generate_password(length=12):
     """Generate a secure random password."""
     alphabet = string.ascii_letters + string.digits + string.punctuation
@@ -1272,7 +1332,7 @@ def _apply_role_staff_rule(user_obj, role):
 # ---------------------------------------------------------------------------
  
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 def users_list(request):
     """
     Main user management page.
@@ -1319,7 +1379,6 @@ def users_list(request):
     paginator = Paginator(qs, 25)
     users_page = paginator.get_page(request.GET.get('page'))
  
-    from management.forms import UserCreateForm, UserEditForm, UserProfileForm
     return render(request, 'management/user_management.html', {
         'users':        users_page,
         'search_form':  search_form,
@@ -1366,7 +1425,7 @@ def _handle_bulk_action(request):
 # ---------------------------------------------------------------------------
  
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 def user_create(request):
     """
     AJAX POST — creates a user, generates a secure password, marks account as
@@ -1435,7 +1494,7 @@ def user_create(request):
 # ---------------------------------------------------------------------------
  
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 def user_edit(request, pk):
     """
     AJAX POST — updates User + UserProfile in one atomic transaction.
@@ -1485,7 +1544,7 @@ def user_edit(request, pk):
 # ---------------------------------------------------------------------------
  
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 @require_POST
 def user_toggle_active(request, pk):
     user = get_object_or_404(User, pk=pk)
@@ -1507,9 +1566,15 @@ def user_toggle_active(request, pk):
  
  
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 @require_POST
 def user_change_role(request, pk):
+    if not _has_permission(request, 'user_management', 'can_edit'):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+        messages.error(request, 'You do not have permission to change user roles.')
+        return redirect('management:users_list')
+
     user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
     form = QuickRoleChangeForm(request.POST)
  
@@ -1533,41 +1598,15 @@ def user_change_role(request, pk):
  
  
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 def user_quick_info(request, pk):
     """AJAX GET — returns JSON snapshot for view/edit modals."""
     user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
     profile = user.profile
- 
-    from eduweb.models import StaffPermissionsMatrix
 
-    # Build permissions snapshot: user overrides → role defaults → zeros
-    MODULES = [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
-    ACTION_FIELDS = StaffPermissionsMatrix.ALL_ACTION_FIELDS
-
-    role = profile.role
-    role_defaults = StaffPermissionsMatrix.ROLE_DEFAULT_PERMISSIONS.get(role, {})
-
-    # Fetch any user-level overrides
-    user_rows = {
-        r.module: r
-        for r in StaffPermissionsMatrix.objects.filter(user=user, role=None)
-    }
-    # Fetch role-level defaults from DB (may differ from hardcoded if manually edited)
-    role_rows = {
-        r.module: r
-        for r in StaffPermissionsMatrix.objects.filter(role=role, user=None)
-    }
-
-    permissions_data = {}
-    for module in MODULES:
-        row = user_rows.get(module) or role_rows.get(module)
-        if row:
-            permissions_data[module] = {f: getattr(row, f) for f in ACTION_FIELDS}
-        else:
-            # Fall back to hardcoded role defaults
-            defaults = role_defaults.get(module, {})
-            permissions_data[module] = {f: defaults.get(f, False) for f in ACTION_FIELDS}
+    # Permissions snapshot — scoped to this user's actual role, matching
+    # the permissions modal and the role-assignment page exactly.
+    _, _, permissions_data = _effective_permissions_for_user(user)
 
     return JsonResponse({
         'id':          user.id,
@@ -1596,16 +1635,13 @@ def user_quick_info(request, pk):
     })
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 def role_assign(request):
     """
     Standalone role-assign + permissions page.
     GET  → render page (optionally pre-select user via ?user_id=<pk>)
     POST → handled via AJAX to existing user_change_role / user_permissions endpoints.
     """
-    from django.contrib.auth.models import User
-    from eduweb.models import UserProfile
-
     selected_user = None
     user_id = request.GET.get('user_id')
     if user_id:
@@ -1629,38 +1665,26 @@ def role_assign(request):
     }) 
  
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 def user_permissions(request, pk):
     """
     GET  → JSON: current effective permissions for this user (user override or role default).
     POST → save/upsert user-level overrides for all modules..
     """
-    from eduweb.models import StaffPermissionsMatrix
-
     target = get_object_or_404(User.objects.select_related('profile'), pk=pk)
-    role = target.profile.role
-    role_defaults = StaffPermissionsMatrix.ROLE_DEFAULT_PERMISSIONS.get(role, {})
-    # Only the modules that actually apply to this user's role — an instructor
-    # never needs to see (or accidentally get overridden on) admin-only modules
-    # like 'academics', and vice versa.
-    MODULES = list(role_defaults.keys()) or [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
-    ACTION_FIELDS = StaffPermissionsMatrix.ALL_ACTION_FIELDS
 
     if request.method == 'GET':
-        user_rows = {r.module: r for r in StaffPermissionsMatrix.objects.filter(user=target, role=None)}
-        role_rows = {r.module: r for r in StaffPermissionsMatrix.objects.filter(role=role, user=None)}
-
-        result = {}
-        for module in MODULES:
-            row = user_rows.get(module) or role_rows.get(module)
-            if row:
-                result[module] = {f: getattr(row, f) for f in ACTION_FIELDS}
-            else:
-                defaults = role_defaults.get(module, {})
-                result[module] = {f: defaults.get(f, False) for f in ACTION_FIELDS}
-        return JsonResponse({'success': True, 'permissions': result, 'modules': MODULES, 'actions': ACTION_FIELDS})
+        modules, actions, result = _effective_permissions_for_user(target)
+        return JsonResponse({'success': True, 'permissions': result, 'modules': modules, 'actions': actions})
 
     # POST — upsert user-level rows for every submitted module
+    if not _has_permission(request, 'user_management', 'can_edit'):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+        messages.error(request, 'You do not have permission to edit user permissions.')
+        return redirect('management:users_list')
+
+    MODULES, ACTION_FIELDS, _ = _permission_modules_for_role(target.profile.role)
     with transaction.atomic():
         for module in MODULES:
             prefix = f'perm_{module}_'
@@ -1681,7 +1705,7 @@ def user_permissions(request, pk):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_admin)
+@user_passes_test(is_admin)
 @require_POST
 def bulk_user_action(request):
     """Standalone bulk action endpoint (also handled in users_list POST)."""
@@ -3068,8 +3092,8 @@ def send_department_approval_email(application):
         email.send(fail_silently=False)
         return True
         
-    except Exception as e:
-        print(f"Error sending approval email: {str(e)}")
+    except Exception:
+        logger.exception('Error sending approval email for application %s', application.application_id)
         return False
 
 
@@ -3155,11 +3179,24 @@ def department_edit(request, pk):
 def department_delete(request, pk):
     dept = get_object_or_404(Department, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete departments.')
+            return redirect('management:departments_list')
+
+        program_count = dept.programs.count()
+        if program_count:
+            messages.error(
+                request,
+                f'Cannot delete "{dept.name}" — it still has {program_count} '
+                f'program(s). Delete or reassign them first.'
+            )
+            return redirect('management:departments_list')
+
         dept_name = dept.name
         dept.delete()
         messages.success(request, f'Department "{dept_name}" deleted successfully.')
         return redirect('management:departments_list')
-    
+
     return render(request, 'management/department_delete.html', {'department': dept})
 
 
@@ -3244,11 +3281,26 @@ def program_detail(request, pk):
 def program_delete(request, pk):
     program = get_object_or_404(Program, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete programs.')
+            return redirect('management:programs_list')
+
+        course_count = program.courses.count()
+        student_count = program.program_students.count()
+        if course_count or student_count:
+            messages.error(
+                request,
+                f'Cannot delete "{program.name}" — it still has {course_count} '
+                f'course(s) and {student_count} student(s) attached. '
+                f'Reassign or archive them first.'
+            )
+            return redirect('management:programs_list')
+
         program_name = program.name
         program.delete()
         messages.success(request, f'Program "{program_name}" deleted successfully.')
         return redirect('management:programs_list')
-    
+
     return render(request, 'management/program_delete.html', {'program': program})
 
 
@@ -3297,7 +3349,6 @@ def academic_sessions_list(request):
 @user_passes_test(is_admin)
 @require_POST
 def academic_session_set_current(request, pk):
-    from django.utils import timezone
     session = get_object_or_404(AcademicSession, pk=pk)
 
     today = timezone.now().date()
@@ -3362,8 +3413,8 @@ def academic_progression(request):
     session = get_object_or_404(AcademicSession, pk=session_id) if session_id else None
 
     if request.method == 'POST':
-        can_approve = request.permissions.get('academic_progression', {}).get('can_approve', False) if hasattr(request, 'permissions') else False
-        if not (request.user.is_superuser or can_approve):
+        action = request.POST.get('action', 'confirm')
+        if not _has_permission(request, 'academic_progression', 'can_approve'):
             messages.error(request, 'You do not have permission to confirm progression decisions.')
             return redirect(f"{reverse('management:academic_progression')}?program_id={program_id}&session_id={session_id}")
 
@@ -3371,36 +3422,96 @@ def academic_progression(request):
             messages.error(request, 'Program and session are required.')
             return redirect('management:academic_progression')
 
+        redirect_url = f"{reverse('management:academic_progression')}?program_id={program.pk}&session_id={session.pk}"
+
+        # ── Manual, per-student override — bypasses the computed decision for
+        # appeals/one-off corrections. Not restricted to a closed session:
+        # it's a deliberate single-student action with a written reason, not
+        # the bulk automatic run the closed-session check below protects.
+        if action == 'manual_override':
+            student_id = request.POST.get('override_student_id')
+            reason = request.POST.get('override_reason', '').strip()
+            profile = get_object_or_404(
+                UserProfile.objects.select_related('user'),
+                user_id=student_id, role='student', program=program,
+            )
+
+            try:
+                new_year_of_study = int(request.POST.get('override_year_of_study', ''))
+            except (TypeError, ValueError):
+                new_year_of_study = None
+            new_status = request.POST.get('override_status', '')
+
+            errors = []
+            if new_year_of_study is None or not (1 <= new_year_of_study <= 8):
+                errors.append('Enter a valid level (1–8).')
+            if new_status not in dict(UserProfile.PROGRESSION_STATUS_CHOICES):
+                errors.append('Select a valid status.')
+            if not reason:
+                errors.append('A reason is required for a manual override.')
+            if errors:
+                for e in errors:
+                    messages.error(request, e)
+                return redirect(redirect_url)
+
+            apply_manual_override(profile, program, session, new_year_of_study, new_status, reason, request.user)
+            messages.success(request, f"Manually updated {profile.user.get_full_name() or profile.user.username}.")
+            return redirect(redirect_url)
+
+        # ── Bulk automatic run — only ever against a closed session, so the
+        # decision reflects a session's final grades, not ones still in flux.
+        if session.status != 'closed':
+            messages.error(request, 'Automatic progression can only be run against a closed session.')
+            return redirect(redirect_url)
+
         student_ids_raw = request.POST.get('student_ids', '')
         try:
             student_ids = [int(pid) for pid in student_ids_raw.split(',') if pid.strip()]
         except ValueError:
             messages.error(request, 'Invalid student selection.')
-            return redirect(f"{reverse('management:academic_progression')}?program_id={program.pk}&session_id={session.pk}")
+            return redirect(redirect_url)
 
-        profiles = UserProfile.objects.filter(
+        profiles = list(UserProfile.objects.filter(
             role='student', program=program, user_id__in=student_ids,
             progression_status__in=['active', 'repeated', 'probation'],
-        ).select_related('user')
+        ).select_related('user'))
+
+        # Idempotency guard: skip anyone already processed for this session,
+        # so a resubmitted POST (double-click, back-button) can't advance the
+        # same student twice.
+        processed_ids = already_processed_student_ids(session, [p.user_id for p in profiles])
 
         applied = 0
-        for profile in profiles:
-            decision = compute_progression_decision(profile, program, session)
-            apply_progression_decision(decision, request.user)
-            applied += 1
+        with transaction.atomic():
+            for profile in profiles:
+                if profile.user_id in processed_ids:
+                    continue
+                decision = compute_progression_decision(profile, program, session)
+                apply_progression_decision(decision, request.user)
+                applied += 1
 
-        messages.success(request, f'Progression processed for {applied} student(s).')
+        skipped = len(profiles) - applied
+        msg = f'Progression processed for {applied} student(s).'
+        if skipped:
+            msg += f' Skipped {skipped} already processed for this session.'
+        messages.success(request, msg)
         return redirect('management:academic_progression')
 
     # GET — render picker, and a preview if both program + session are selected
+    if not _has_permission(request, 'academic_progression', 'can_view'):
+        messages.error(request, 'You do not have permission to view academic progression.')
+        return redirect('management:dashboard')
+
     preview_rows = []
     if program and session:
-        profiles = UserProfile.objects.filter(
+        profiles = list(UserProfile.objects.filter(
             role='student', program=program,
             progression_status__in=['active', 'repeated', 'probation'],
-        ).select_related('user').order_by('year_of_study', 'user__first_name')
+        ).select_related('user').order_by('year_of_study', 'user__first_name'))
+        processed_ids = already_processed_student_ids(session, [p.user_id for p in profiles])
         for profile in profiles:
             decision = compute_progression_decision(profile, program, session)
+            decision['already_processed'] = profile.user_id in processed_ids
             preview_rows.append(decision)
 
     return render(request, 'management/academic_progression.html', {
@@ -3409,6 +3520,7 @@ def academic_progression(request):
         'selected_program': program,
         'selected_session': session,
         'preview_rows': preview_rows,
+        'progression_statuses': UserProfile.PROGRESSION_STATUS_CHOICES,
     })
 
 
@@ -3416,8 +3528,7 @@ def academic_progression(request):
 @user_passes_test(is_admin)
 def carry_over_list(request):
     if request.method == 'POST':
-        can_edit = request.permissions.get('academic_progression', {}).get('can_edit', False) if hasattr(request, 'permissions') else False
-        if not (request.user.is_superuser or can_edit):
+        if not _has_permission(request, 'academic_progression', 'can_edit'):
             messages.error(request, 'You do not have permission to modify carry-over records.')
             return redirect('management:carry_over_list')
 
@@ -3478,9 +3589,27 @@ def courses_list(request):
  
         # ── DELETE ──────────────────────────────────────────────────────────
         elif action == 'delete':
+            if not _has_permission(request, 'academics', 'can_delete'):
+                messages.error(request, 'You do not have permission to delete courses.')
+                return redirect('management:courses_list')
+
             course_id = request.POST.get('course_id')
             course    = get_object_or_404(Course, pk=course_id)
-            code      = course.code
+
+            dependents = (
+                course.registrations.count()
+                + course.student_grades.count()
+                + course.carry_over_records.count()
+            )
+            if dependents:
+                messages.error(
+                    request,
+                    f'Cannot delete "{course.code}" — it has {dependents} linked '
+                    f'registration/grade/carry-over record(s). Archive it instead.'
+                )
+                return redirect('management:courses_list')
+
+            code = course.code
             course.delete()
             messages.success(request, f'Course "{code}" deleted successfully.')
  
@@ -3705,14 +3834,25 @@ def contact_message_respond(request, pk):
                     recipient_list=[msg.email],
                     fail_silently=False,
                 )
+                email_sent = True
             except Exception:
-                pass  # Log in production
+                logger.exception('Failed to send contact-message response to %s (msg id=%s)', msg.email, msg.pk)
+                email_sent = False
+
             msg.responded = True
             msg.responded_at = timezone.now()
             msg.responded_by = request.user
             msg.is_read = True
             msg.save(update_fields=['responded', 'responded_at', 'responded_by', 'is_read'])
-            messages.success(request, f'Response sent to {msg.email}.')
+
+            if email_sent:
+                messages.success(request, f'Response sent to {msg.email}.')
+            else:
+                messages.error(
+                    request,
+                    f'Response saved, but the email to {msg.email} failed to send. '
+                    f'Please retry or contact them directly.'
+                )
         else:
             messages.error(request, 'Response cannot be empty.')
     return redirect('management:contact_message_detail', pk=pk)
@@ -4396,7 +4536,6 @@ def transactions_list(request):
 
     # Export CSV of filtered results
     if request.GET.get('export') == 'csv':
-        import csv
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
         writer = csv.writer(response)
@@ -4549,8 +4688,6 @@ def send_overdue_payment_reminders(request):
         return redirect('management:required_payments_list')
     
     try:
-        from django.utils import timezone
-        
         # Find all overdue fees that haven't been paid yet
         today = timezone.now().date()
         overdue_fees = FeePayment.objects.filter(
@@ -4568,8 +4705,6 @@ def send_overdue_payment_reminders(request):
                 send_overdue_payment_reminder_email(fee.user, fee)
                 reminder_count += 1
             except Exception as e:
-                import logging
-                logger = logging.getLogger('melbac')
                 logger.error(f'Failed to send overdue reminder for fee {fee.id}: {str(e)}')
                 error_count += 1
         
@@ -4583,8 +4718,6 @@ def send_overdue_payment_reminders(request):
     except ImportError:
         messages.error(request, 'FeePayment model not found.')
     except Exception as e:
-        import logging
-        logger = logging.getLogger('melbac')
         logger.error(f'Failed to send overdue payment reminders: {str(e)}')
         messages.error(request, 'An error occurred while sending reminders.')
     
@@ -4595,6 +4728,8 @@ def send_overdue_payment_reminders(request):
 # FINANCIAL ANALYTICS DASHBOARD
 # ---------------------------------------------------------------------------
 
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
 def financial_analytics(request):
     """Financial analytics — all student payment records."""
 
@@ -4840,6 +4975,10 @@ def staff_payroll_edit(request, payroll_reference):
     if request.method != 'POST':
         return redirect('management:staff_payroll_list')
 
+    if not _has_permission(request, 'finance_payroll', 'can_edit'):
+        messages.error(request, 'You do not have permission to edit payroll records.')
+        return redirect('management:staff_payroll_list')
+
     payroll = get_object_or_404(StaffPayroll, payroll_reference=payroll_reference)
     form    = StaffPayrollForm(request.POST, instance=payroll)
     if form.is_valid():
@@ -4863,8 +5002,6 @@ def staff_payroll_edit(request, payroll_reference):
             try:
                 send_payroll_payment_notification_email(updated_payroll)
             except Exception as e:
-                import logging
-                logger = logging.getLogger('melbac')
                 logger.error(f'Failed to send payroll notification email for {updated_payroll.payroll_reference}: {str(e)}')
     else:
         msg = next(
@@ -4880,6 +5017,10 @@ def staff_payroll_edit(request, payroll_reference):
 def staff_payroll_delete(request, payroll_reference):
 
     if request.method != 'POST':
+        return redirect('management:staff_payroll_list')
+
+    if not _has_permission(request, 'finance_payroll', 'can_delete'):
+        messages.error(request, 'You do not have permission to delete payroll records.')
         return redirect('management:staff_payroll_list')
 
     payroll = get_object_or_404(StaffPayroll, payroll_reference=payroll_reference)
@@ -5314,12 +5455,8 @@ def library_item_toggle_active(request, pk):
 # EXAM MANAGEMENT — SUPERADMIN VIEWS
 # =============================================================================
 
-def _is_staff(user):
-    return user.is_active and user.is_staff
-
-
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 def admin_exam_list(request):
     STATUS_CHOICES = Exam.STATUS_CHOICES
     status_filter = request.GET.get('status', '')
@@ -5359,7 +5496,7 @@ def admin_exam_list(request):
     })
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 @require_POST
 def admin_exam_toggle_active(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
@@ -5370,7 +5507,7 @@ def admin_exam_toggle_active(request, slug):
     return redirect('management:admin_exam_list')
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 def admin_exam_detail(request, slug):
     exam = get_object_or_404(
         Exam.objects.select_related('course', 'course__academic_course', 'instructor', 'submitted_by', 'approved_by', 'rejected_by', 'published_by'),
@@ -5384,7 +5521,7 @@ def admin_exam_detail(request, slug):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 @require_POST
 def admin_exam_approve(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
@@ -5419,7 +5556,7 @@ def admin_exam_approve(request, slug):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 @require_POST
 def admin_exam_reject(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
@@ -5460,7 +5597,7 @@ def admin_exam_reject(request, slug):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 @require_POST
 def admin_exam_publish(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
@@ -5495,7 +5632,7 @@ def admin_exam_publish(request, slug):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 def admin_question_moderation(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
     questions = exam.questions.order_by('created_at')
@@ -5521,14 +5658,11 @@ def admin_question_moderation(request, slug):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 def admin_exam_timetable_update(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
 
     if request.method == 'POST':
-        from django.utils.dateparse import parse_date, parse_time
-
-        from datetime import datetime, timezone as dt_timezone
         exam_date = parse_date(request.POST.get('exam_date', ''))
         start_time = parse_time(request.POST.get('start_time', ''))
         end_time = parse_time(request.POST.get('end_time', ''))
@@ -5544,11 +5678,9 @@ def admin_exam_timetable_update(request, slug):
             errors.append('End time must be after start time.')
 
         if not errors:
-            from django.utils import timezone as dj_timezone
-            import zoneinfo
             tz = zoneinfo.ZoneInfo('Africa/Lagos')
-            start_datetime = dj_timezone.make_aware(datetime.combine(exam_date, start_time), tz)
-            end_datetime = dj_timezone.make_aware(datetime.combine(exam_date, end_time), tz)
+            start_datetime = timezone.make_aware(datetime.combine(exam_date, start_time), tz)
+            end_datetime = timezone.make_aware(datetime.combine(exam_date, end_time), tz)
 
             # Clash detection: overlapping start_datetime/end_datetime window
             clash_qs = Exam.objects.filter(
@@ -5580,7 +5712,7 @@ def admin_exam_timetable_update(request, slug):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 def admin_exam_responses(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
     ATTEMPT_STATUS_CHOICES = StudentExamResponse.ATTEMPT_STATUS_CHOICES
@@ -5643,7 +5775,7 @@ def admin_exam_responses(request, slug):
     })
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(_is_staff)
+@user_passes_test(is_admin)
 @require_POST
 def admin_exam_release_results(request, slug):
     """

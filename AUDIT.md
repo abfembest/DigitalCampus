@@ -1,211 +1,222 @@
 # DigitalCampus — Cross-App Audit
 
-Prepared 2026-07-08. Scope: `eduweb`, `management`, `instructor`, `student`, `finance`, `payment`, `library`. The `parent` app is excluded pending a decision on whether to scrap it. None of the seven apps audited have automated tests (every `tests.py` is the untouched Django stub) — worth weighing how much manual QA each fix below will need.
+Updated 2026-07-13 (supersedes the 2026-07-08 pass — every finding below was re-verified against current code; nothing here is carried over unchecked). Scope: `eduweb`, `management`, `instructor`, `student`, `finance`, `payment`, `library`, plus `support` (new since the last pass, wired into `urls.py` but never previously audited). `parent` remains excluded — still an unwired stub. Still no automated tests anywhere (every `tests.py` is the untouched Django stub) — every fix below needs manual QA.
 
-Shareable version with nicer formatting: https://claude.ai/code/artifact/5c7bdd46-3a97-4bf4-8215-22db10206515
+Five commits landed since the last pass: end-of-session progression/carry-over (new feature), a refund-flow rewrite, and per-module permission gating for the finance and support portals. This pass verifies what those actually changed vs. what they claimed to change — the short version is **two of the three "gating" commits are template-level only**, and the new progression feature has several correctness gaps serious enough to matter before it's relied on.
 
 ## Scorecard
 
 | App | Route | Verdict |
 |---|---|---|
-| eduweb | `/` (shared kernel) | Core is solid; two guaranteed 500s and a currency mess sit right at the payment edge. |
-| management | `/management/` | Back office works day-to-day; one public analytics leak and zero end-of-session logic. |
-| instructor | `/instructor/` | Best-built app in the codebase; the exam lifecycle is genuinely production-grade. |
-| student | `/student/` | Largest surface area; grading has three sources of truth that disagree with each other. |
-| finance | `/finance/` | Good dashboarding, but payroll and subscriptions are record-keeping, not real processing. |
-| payment | `/payment/` | Real Stripe refunds, but a dead duplicate function and a state-integrity bug on refund. |
-| library | `/library/` | The cleanest app of the seven — does one job, does it correctly, no surprises. |
+| eduweb | `/` (shared kernel) | Two guaranteed 500s from last pass are still live; refund/webhook plumbing is solid; settings fail open to `DEBUG=True` if `.env` is missing. |
+| management | `/management/` | New progression feature is arithmetically sound but has real double-run, session-timing, and escalation-avoidance holes. Permission matrix still decorative. |
+| instructor | `/instructor/` | Still the best-built app; the two previously-flagged bugs (exam-import crash, unvalidated grade score) are both still live. |
+| student | `/student/` | Grade fragmentation is no longer just a cosmetic disagreement — it now silently corrupts the new progression feature's CGPA/pass computation. Exam endpoints still under-gated. |
+| finance | `/finance/` | "Gated by per-module permission" commit only hid buttons in templates — no view enforces the matrix. |
+| payment | `/payment/` | Refund flow is genuinely fixed and Stripe-ordered correctly, but doesn't revert application payment state, and its own permission gate is also template-only despite the commit message. |
+| library | `/library/` | Unchanged since the last pass — still the cleanest app, still binary access control. |
+| support | `/support/` (new, unaudited before) | Well-built ticket/helpdesk console, real IDOR protections on self-service replies. Same template-only permission gating as finance. |
 
 ## Cross-cutting themes
 
-These span two or more apps and matter more than any single bug below.
+1. **"Gated by permission X" now means three different things, and two of them are false.** Commits 363585b (finance) and e128fed (support) both only touched templates — they hide buttons/links based on `StaffPermissionsMatrix`, but neither `finance/views.py` nor `support/views.py` reads the matrix at all. A finance user with `can_delete=False` can still POST directly to the delete URL and it succeeds. This is the same problem the original audit flagged in `management` (finding #4), now confirmed in two more apps by commits whose own messages claim otherwise. **This is the single most important fix to prioritize** — it's a false sense of security, which is worse than a documented gap.
 
-1. **Student progression is not built, anywhere.** `UserProfile.year_of_study` is written exactly once, at admission (`management.make_decision`). `progression_status` defaults to `'active'` at seed time and is never touched again by any view, command, or job in any of the seven apps. There is no carry-over/repeat tracking at all — `'repeated'` exists as an enum value with nothing behind it. `management` is the natural home (it already owns `AcademicSession`, `CourseRegistration`, `CourseGrade`) but has zero code toward this today.
+2. **Grade fragmentation has gone from a UX inconsistency to a data-integrity bug.** `CourseGrade` is still fed only by `QuizAttempt`/`AssignmentSubmission` (`student/views.py:_record_academic_grade`), never by `StudentExamResponse` (the CBT exam engine). The new progression feature computes CGPA and pass/fail entirely from `CourseGrade` (`management/progression.py`). Net effect: **a student who passed a course via the exam engine has no `CourseGrade` row, so they read as failed, and can be stuck in `repeated` status indefinitely with no course of action except an admin manually inserting a grade row.** This must be fixed before progression is trusted for real decisions.
 
-2. **Grades have three sources of truth that disagree.** The student dashboard reads real `CourseGrade` rows. The "Grades & Performance" page has its `CourseGrade` query commented out and shows quiz/assignment stats instead. "Academic Records" fabricates a third, separate proxy from `StudentExamResponse`. Worse: the function that actually writes `CourseGrade` (`_record_academic_grade`) only reads `QuizAttempt` and `AssignmentSubmission` — it never reads `StudentExamResponse`, so scores from the CBT exam engine (the most polished grading system in the app) never reach a student's official record.
+3. **The new progression feature has no double-run protection, no session-timing check, and a real escalation-avoidance loophole.** No idempotency guard means re-submitting the confirm POST (double-click, back-button resubmit) can advance the same student twice. Progression can be run against a session that hasn't closed. A student can indefinitely dodge probation/withdrawal by simply not re-registering for a failed core course (`failed_courses` only counts *current-session* registrations). None of this is exploited maliciously today, but all three are one careless admin click away from a real transcript error.
 
-3. **Money doesn't gate anything.** `AllRequiredPayments`, `Invoice`, and outstanding-balance totals are surfaced for display in `student`, `finance`, and `payment` — but nothing blocks course registration, LMS enrollment, or portal access on an unpaid balance. Combined with the refund bug in `payment` (below), a refunded application still reads as fully paid.
+4. **Two guaranteed 500s from the last audit are still exactly where they were.** `get_student_fee_summary` (`eduweb/views.py:1827-1829,1840`) still calls `.select_related()` on two `@property` methods and still references a settings key that doesn't exist. Zero-line-of-code fix, still not done.
 
-4. **The permission matrix is decorative.** `StaffPermissionsMatrix` — the granular per-role `can_view`/`can_edit`/`can_export` model — is fully editable through `management`'s UI, but no view in `management` ever reads it. Every destructive action there is gated by one of three near-duplicate coarse booleans instead.
+5. **Role-gating is still copy-pasted, not shared**, now in five places instead of three: `management` (`is_admin`/`_is_admin`/`_is_staff`), `finance` (`is_finance_manager`), `payment` (`is_finance_manager` again, separately defined), `support` (`support_required`/`support_admin_required`), none importing `eduweb.decorators`.
 
-5. **Role gating is copy-pasted, not shared.** `eduweb/decorators.py` defines the canonical `instructor_required` / `admin_required` / `finance_required`. `management`, `finance`, and `payment` each define their own local gate instead — with subtly different behavior (no superuser-bypass, no `is_active`/`email_verified` check). A policy fix to the shared decorators today would not reach three of the seven apps.
+6. **Settings fail open, not closed.** `DigitalCampus/settings.py` defaults `SECRET_KEY` to the literal string `"django-insecure-change-this-in-production"` and `DEBUG` to `True` when `.env` is absent or misread. A missing/misconfigured `.env` on a real deploy doesn't crash loudly — it silently serves stack traces with a known secret key. This is new since the last pass wasn't looking at settings.py specifically.
 
-6. **Currency handling has no single source of truth.** `USD`, `NGN`, and literal `'usd'`/`'gbp'` Stripe amounts all appear hardcoded across `eduweb`'s payment views, independently of each other, despite `AllRequiredPayments.currency` and `SiteConfig` already existing for exactly this.
+---
 
-7. **Zero automated tests, anywhere.** Every app's `tests.py` is the untouched Django stub. Nearly every runtime bug below (several are guaranteed 500s on first hit) would have been caught by one view-level test.
+## Remediation plan (tracked)
+
+Work is sequenced app-by-app, not by severity alone — **`student` goes first and is fully closed out before moving to the next app**, since it's the surface students touch daily and it's what the new progression feature depends on. Checkboxes are updated in place as work lands; this section is the live source of truth for "what's actually done," the sections below it stay as point-in-time findings.
+
+Three product decisions were made on 2026-07-13 and are now binding on the fixes below:
+- **Grade computation**: a course's `CourseGrade` is a weighted blend — **Exam 70% / Quiz 15% / Assignment 15%** by default, overridable per course, with any missing component's weight redistributed proportionally across whatever assessment types the course actually has (e.g., an exam-only course is 100% exam).
+- **Fee gating**: course/LMS enrollment itself stays free by design — the payment gate belongs at portal-access/admission, before a student ever reaches the dashboard. This pass verifies that gate is real (the original audit found nothing currently blocks portal access on an unpaid balance) rather than assuming it.
+- **Prerequisites**: hard block at registration — a student cannot register for a course whose prerequisite they haven't passed (`CourseGrade.is_passed=True`).
+
+### Phase 1 — `student` (complete, 2026-07-13)
+
+**1. Unify the three grade sources into one real `CourseGrade`**
+- [x] Added per-course assessment weight fields (`exam_weight_pct`, `quiz_weight_pct`, `assignment_weight_pct`, default 70/15/15) to `Course` + migration `0040_course_assessment_weights`.
+- [x] Added `CourseGrade.recompute_for_student_course(student, course, session, term='')` (`eduweb/models.py`) — weighted blend across `StudentExamResponse` (end-of-semester, graded), `QuizAttempt`, and `AssignmentSubmission`, re-normalizing weights across whichever components exist. `_record_academic_grade` in `student/views.py` is now a thin wrapper around it.
+- [x] Wired the recompute into all three trigger points: lesson completion (`_record_academic_grade`), student-side auto-grading (`submit_exam`), and instructor manual grading (`instructor/views.py exam_grade_response`) — each only fires once a response is fully `GRADED`, wrapped in try/except with logging.
+- [x] "Grades & Performance" now queries real `CourseGrade` rows instead of the commented-out query.
+- [x] "Academic Records" now reads the same `CourseGrade` rows instead of its separate `StudentExamResponse`-only `ExamGradeProxy`.
+- [x] Fixed a latent bug surfaced during verification: the assignment-percentage annotation (`F('score') * 100.0 / F('assignment__max_score')`) needs an explicit `ExpressionWrapper(..., output_field=FloatField())` — Django can't infer the output type across Decimal/float otherwise. This bug existed in the original `_record_academic_grade` too (any course with a graded assignment would have crashed it); fixed as part of this rewrite.
+- Backfilling pre-existing `CourseGrade` rows created under the old exam-blind logic was not done — they'll self-correct the next time any trigger point fires for that student/course.
+
+**2. Close the exam-endpoint authorization gap**
+- [x] `exam_instructions`, `start_exam`, `get_exam_data` now carry `@student_required` and scope the `Exam` queryset to the requester's own active/completed enrollment, matching the pattern already used by `exam_list`. Verified via test client: a non-enrolled user gets 404, an enrolled user proceeds normally.
+
+**3. Registration correctness**
+- [x] `my_courses` now excludes courses the student already has a passing `CourseGrade` for from both the semester listing and the carry-over listing.
+- [x] `register_semester_course`'s `CourseRegistration.objects.get_or_create(...)` is now wrapped in `try/except ValidationError`, turning the prerequisite-violation crash into a friendly `messages.error` + redirect. `CourseRegistration.clean()`'s existing prerequisite check (unchanged) now actually surfaces to the user.
+
+**4. Payment gate**
+- [x] `can_access_student_portal()` now also requires `self.is_paid` (application-fee clearance). No backfill/grandfather clause — applies immediately to all students, including previously-approved ones, per product decision. Verified via test client: flipping `payment_status` to `pending` correctly redirects an otherwise-approved student to `application_status`; reverted after the test.
+- [x] `student_required`'s message now distinguishes "please pay your application fee" from the generic "still being processed" case.
+
+**5. Performance**
+- [x] `course_detail`'s per-lesson N+1 replaced with a single up-front `LessonProgress` query building a `set` of completed lesson IDs.
+- [x] `progress`'s 28-day activity heatmap replaced the 84-query per-day loop with 3 `Counter`-bucketed queries covering the whole window.
+
+**Verification performed**: `python manage.py check` and `makemigrations --check` both clean; `CourseGrade.recompute_for_student_course` exercised directly against real enrollment data and confirmed compatible with `management.progression.compute_cgpa`; `/student/grades/`, `/student/academic-records/`, `/student/courses/`, `/student/progress/` all return 200 via Django test client; exam-endpoint gating and the payment gate both verified to behave correctly for both allowed and blocked cases.
+
+### Phase 2 — next apps (order to be finalized once Phase 1 closes)
+- `eduweb`: the two guaranteed 500s, duplicate `clean_email`, currency hardcoding, verification-token expiry, `SECRET_KEY`/`DEBUG` fail-open settings.
+- `payment` + `finance` + `support`: wire real `StaffPermissionsMatrix` enforcement into the view/decorator layer (currently template-only in all three); `payment` refund → `CourseApplication.payment_status` revert; `required_payments_list` stub.
+- `management`: progression feature hardening (idempotency guard, session-closed check, `transaction.atomic()`, cross-session failed-course counting to close the escalation-avoidance loophole), `financial_analytics` access control, delete-cascade safety net, real transcript generation.
+- `instructor`: exam-import crash in `create_assessment`, unvalidated `grade_submission` score, instructor course create/delete.
+- Cross-app: consolidate five hand-rolled auth-gate copies onto `eduweb.decorators`.
 
 ---
 
 ## eduweb
 
-Route `/` · views.py ~2168 lines · models.py ~6096 lines · shared by every other app. The shared kernel — public site, auth/OTP, the admissions pipeline, and the model layer everything else imports.
+**Fixed since last pass**
+- `get_payment_summary` now correctly uses `settings.STRIPE_PUBLIC_KEY` (was previously also broken here).
 
-**Working**
-- Public site (index/about/programs/faculty/blog) — proper `select_related`/`prefetch_related` and pagination, uniformly gated by `@check_for_auth`. `views.py:733–1047`
-- Auth/OTP — signup with math captcha + password-strength validation, 6-digit OTP login with 10-minute expiry, 5-attempt lockout, single-device session enforcement. `views.py:449–621`
-- Admissions pipeline end-to-end — apply → draft → submit → review → approve → accept → admission number all connect; `accept_admission` correctly syncs `UserProfile.program/department/faculty/year_of_study/admission_session`. `views.py:1441–1461`
-- Email service — 24 distinct notification functions, HTML+text, exception-safe, dynamic branding. `emailservices.py:13–45`
-- Stripe webhook — really exists and really verifies the signature (`stripe.Webhook.construct_event`), so async payment confirmation is real. It lives here rather than in `payment`. `views.py:2086–2101`
+**Still broken**
+- `get_student_fee_summary` — both guaranteed crashes remain: `.select_related('faculty','department')` on `AllRequiredPayments` (`views.py:1827-1829`), where both are `@property` methods (`models.py:1777-1782`) → `FieldError`; and a reference to `settings.STRIPE_PUBLISHABLE_KEY`, which still doesn't exist (`views.py:1840`; only `STRIPE_PUBLIC_KEY` is defined, `settings.py:220`) → `AttributeError`.
+- `SignUpForm.clean_email` still defined twice (`forms.py:55-59` dead, `98-102` wins).
+- Email-verification token still never expires — `generate_verification_token()` (`models.py:3460-3463`) stores no timestamp and `verify_email` never checks age, unlike the password-reset token which has a real 1-hour `is_reset_token_valid()` check right next to it.
+- Currency still hardcoded in four places with no single source of truth: `'USD'` (`views.py:1791,1806`), `'NGN'` (`1839`), Stripe `currency='usd'`/`'USD'` (`1884,1898`) — none read `AllRequiredPayments.currency`/`SiteConfig`.
 
-**Broken now**
-- `get_student_fee_summary` will 500 on every hit — calls `.select_related('faculty','department')` on `AllRequiredPayments`, but those are Python `@property` methods, not FK fields → `FieldError`. `views.py:1779–1797`
-- Same view references `settings.STRIPE_PUBLISHABLE_KEY`, which doesn't exist (only `STRIPE_PUBLIC_KEY` is defined). Second guaranteed crash on the same endpoint. `views.py:1795`
-
-**Missing / gaps**
-- No expiry check on the email-verification token, despite the email claiming "expires in 24 hours". `emailservices.py:150`
-- `accept_admission`'s `UserProfile` sync is wrapped in a bare `try/except: logger.exception(...)` with no user-facing failure signal.
-- No `Enrollment` is ever created on admission — a student who clears `can_access_student_portal()` still has zero course enrollments.
-- Four hardcoded currencies on one payment surface — `'USD'`, `'NGN'`, literal Stripe `'usd'`/`'gbp'` intents, none read from `AllRequiredPayments.currency` or `SiteConfig`. `views.py:1746,1762,1794,1839,1888,1899`
-- Dead code worth deleting: `SignUpForm.clean_email` defined twice (`forms.py:55,98`); commented-out duplicate Stripe routes in `urls.py:91–97`.
-
-**Cross-app note:** every other app imports these models directly rather than redefining them — confirmed via grep, no drift. Fragile only at the two broken views above and the exam-lock middleware's hardcoded `/student/exam/` path assumption.
+**New findings**
+- `DigitalCampus/settings.py:24,26` — `SECRET_KEY` and `DEBUG` both fail open to insecure defaults if `.env` is missing/misconfigured, rather than failing to start.
+- `BlogPost.increment_views` (`models.py:918-921`) does a plain read-modify-write (`self.views_count += 1; self.save()`) instead of `F('views_count') + 1` — undercounts under concurrent traffic. Notably inconsistent: the `library` view/download counters right next to it in the same file do use `F()` correctly.
+- Stripe webhook (`views.py:2130-2145`) remains solid — signature verified via `stripe.Webhook.construct_event`, the only legitimate `@csrf_exempt` in the repo, fails closed before touching DB state.
+- No raw SQL, `eval`/`exec`/`pickle.loads`, or additional `csrf_exempt` usage found anywhere in the repo.
 
 ---
 
 ## management
 
-Route `/management/` · views.py ~5686 lines · urls.py ~244 lines. The admin/back-office portal.
+**New: end-of-session progression/carry-over (`management/progression.py`, wired at `views.py:3339-3439`)**
 
-**Working**
-- Application review & decisions — filters, pagination, correct auto-transition to `under_review`, `make_decision` syncs the approved student's `UserProfile`. `views.py:413,463,493`
-- Faculty / Department / Program / Course CRUD — functional (see cascade risk below). `views.py:846–3383`
-- Academic session management — create/edit plus a "set current" action that recomputes other sessions' status from term dates. `views.py:3245,3283`
-- Staff & user management — list/create/edit/toggle-active/change-role/bulk actions all complete. `views.py:1269–1704`
-- Exam approval workflow — the best-built feature in this app: enforces `SUBMITTED → APPROVED → PUBLISHED`, rejects wrong-state transitions, writes an immutable audit log, notifies the instructor. `views.py:5397,5432,5473`
-- Permission-matrix editor — reads/writes `StaffPermissionsMatrix` correctly as a data-entry screen. `views.py:1620`
+The feature the last audit's cross-cutting theme #1 asked for now exists, and the CGPA math itself is correct — `compute_cgpa` properly weights grade points by `credit_units`. But four issues need fixing before it should be trusted for real academic decisions:
 
-**Broken / risky now**
-- `financial_analytics` has no access control at all — no login check, no admin check. Reachable by anyone, including an unauthenticated visitor. `views.py:4606`
-- Delete cascades have no safety net — Faculty → Department → Program → Course, and Course → CourseRegistration/CourseGrade/CourseIntake/CourseApplication are all `on_delete=CASCADE`. Delete views call `.delete()` directly with no dependent-count check and no server-side confirmation.
+- **Inherits the `CourseGrade` unreliability** described in cross-cutting theme #2 above — exam-only courses never get a `CourseGrade` row, so `core_passed` is permanently `False` for them.
+- **No idempotency guard.** `apply_progression_decision` never checks for an existing `ProgressionDecisionLog` before mutating; the eligibility filter (`progression_status__in=['active','repeated','probation']`) still includes a student immediately after they're promoted, so a resubmitted POST (double-click, back-button, retry) can advance them twice. Client-side `confirm()` dialog only — no server-side dedup.
+- **No session-state check.** Every `AcademicSession` is offered for progression, including ones that are `'upcoming'` or still `'active'` — nothing restricts the action to a `'closed'` session.
+- **Escalation-avoidance loophole.** `failed_courses` only counts courses the student is registered for *in the current session*. A student who simply doesn't re-register for a previously-failed core course keeps `core_passed=False` (blocked from promotion) but never shows up in `failed_courses`, so `new_status` stays `'repeated'` forever and never escalates to `'probation'`/`'withdrawn'` no matter how many sessions pass.
+- **No `transaction.atomic()`** around the per-student batch loop (`views.py:3376-3379`) — a mid-batch exception leaves an inconsistent mix of fully-applied, partially-applied, and untouched students with no rollback.
+- Permission gating is inconsistent even within this one feature: GET has no `can_view` check at all (gated only by the coarse hand-rolled `is_admin`); the two POST mutation branches do consult `StaffPermissionsMatrix` (`can_approve`/`can_edit`) — the only two `StaffPermissionsMatrix` reads that exist anywhere in `management/views.py`.
+- Student-side gap: course-registration queries (`student/views.py:482-492,703-710`) filter by `year_of_study` only, with no exclusion for courses the student already has a passing grade for — a repeating student can see and re-register for courses at that level they already passed, since only *failed* courses get a `CourseCarryOver` row.
 
-**Missing / gaps**
-- The permission matrix is never actually enforced — `StaffPermissionsMatrix`/`request.permissions` has zero read-references anywhere in `management/views.py`. Real gating relies on three near-duplicate coarse gates (`is_admin`, `_is_admin`, `_is_staff`), none importing the shared `eduweb.decorators.admin_required`.
-- Exam approval is gated more loosely than it looks — commented "SUPERADMIN VIEWS" but actually gated by plain Django `is_staff`. `views.py:5322,5325`
-- Confirmed dead code — a full second `course_create/detail/edit/delete` implementation exists but is unreachable (routes commented out); same for course-category CRUD. `views.py:916–1033`, `urls.py:55–65`
-- `issue_transcript` issues nothing — flips a boolean, sends an email, no document is ever generated. `views.py:601`
-- **Confirmed directly: end-of-session processing does not exist.** Grepped for `bulk`, `process_result`, `end_of_session`, `cohort`, `promote`, `graduate`, `probation`, `repeat`, `carry-over`, `next_level` — only "bulk" hits are user activate/deactivate. No management command package exists in this app. The one and only `year_of_study` write is the one-time set in `make_decision`.
-
-**Cross-app note:** approval → `UserProfile` sync is real and correct. But Course/Program deletion cascades silently break what `student` shows as registered courses and what `instructor` shows as a teaching list, with no warning to the admin performing the delete.
+**Still broken (re-verified)**
+- `financial_analytics` (`views.py:4598`) — still zero auth decorators, reachable by an unauthenticated visitor.
+- `StaffPermissionsMatrix` still functionally decorative — only the two progression POST branches read it; every other view still gates via `is_admin`/`_is_admin`/`_is_staff`, none importing `eduweb.decorators.admin_required`.
+- Delete cascades (`faculty_delete:888`, `course_delete:1027`, `department_delete:3155`, `program_delete:3244`) still bare `.delete()` with no dependent-count confirmation.
+- `issue_transcript` (`views.py:608-631`) still just flips a boolean and sends an email — no document is generated.
+- The role-assign fix (92a2d97) is **cosmetic, not a closed hole**: it only excludes `role='student'` from the dropdown in `role_assign` (`views.py:1600`). The actual mutating endpoints, `user_change_role` (`views.py:1512`) and `user_permissions` (`views.py:1633`), still accept any `pk` with no role exclusion — reachable only by an already-`_is_admin`-gated user, so not a privilege-escalation path, but the fix doesn't prevent an admin from directly POSTing a student into a staff role outside the picker UI.
 
 ---
 
 ## instructor
 
-Route `/instructor/` · views.py ~3413 lines · urls.py ~288 lines. Course/section/lesson/quiz/assignment CRUD and grading — the closest of the seven apps to "done."
+**Still broken (re-verified, both are the same as last pass, neither touched)**
+- Exam-question file-import still constructs `ExamQuestion.objects.create()` with removed fields (`difficulty`, `order`, `import_row_number`, confirmed removed in `eduweb/models.py:5465-5646`) at `instructor/views.py:3032-3037` (xlsx) and `3052-3057` (docx). The standalone import view still catches this (`views.py:2833-2840`, fails gracefully). The inline call inside `create_assessment` (`views.py:2441`) still has **no try/except** — uploading a question file while creating a new exam still 500s.
+- `grade_submission` (`views.py:1074-1082`) still writes `request.POST.get('score')` straight to `.save()` with no `full_clean()` — negative/out-of-range/non-numeric scores still get through.
+- `course_create`/`course_delete` still disabled (redirect to "contact an admin" / unconditional `PermissionDenied`); "send welcome email" checkbox still a no-op TODO (`views.py:1198-1200`).
 
-**Working**
-- Course/section/lesson CRUD — clean ownership chain (`instructor=request.user`) enforced at every level; every route maps to a real view. `views.py:325–620`
-- Quiz engine — complete CRUD plus correctly read-only instructor review of auto-graded attempts. `views.py:668–2058`
-- Assignment grading — verifies the submission belongs to the instructor's own course before allowing a grade. `views.py:1055,1071–1072`
-- Exam lifecycle (DRAFT → SUBMITTED → APPROVED → PUBLISHED) — the strongest feature in the whole codebase. Correct state-transition guards, immutable status log, published exams frozen against edits, genuinely connects end-to-end to management's approval views. `views.py:2770–3105`
-- Permission gating — all ~85 views checked carry both `@login_required` and `@instructor_required`, scoped correctly; no cross-instructor authorization gap found.
-
-**Broken now**
-- Exam question file-import uses removed model fields — constructs `ExamQuestion.objects.create()` with `difficulty`/`order`/`import_row_number`, all deliberately removed from the model. The standalone import view catches this (feature just doesn't work); the same call inline inside `create_assessment` has **no** try/except — uploading a question file while creating a new exam will 500 the request. `views.py:3239,2693–2696,3287–3312`
-- Assignment scores bypass validation — `grade_submission` writes `submission.score = request.POST.get('score')` straight to `.save()` without `full_clean()`. Negative scores, scores above `max_score`, and non-numeric input all get through (the last raises an uncaught error), and this pollutes the auto-computed grade average downstream. `views.py:1078–1083`
-
-**Missing / gaps**
-- Instructors cannot create or delete their own courses — `course_create` always redirects to "contact an admin" (route commented out); `course_delete` unconditionally raises `PermissionDenied`. `views.py:317,414`
-- "Send welcome email" checkbox is a silent no-op (TODO, never implemented). `views.py:1200–1202`
-- Stale help content — FAQ tells instructors how to create a course, contradicting the fact it's disabled; four "quick links" point to `#`. `views.py:1811,1920–1945`
-
-**Cross-app note:** instructor quiz/assignment grading feeds `CourseGrade` automatically through `student`'s `_record_academic_grade` — but that function never reads `StudentExamResponse`, so the careful exam work here currently never reaches a student's official grade record.
+**Confirmed healthy:** ~85 views spot-checked, all still carry `@login_required` + `@instructor_required` with correct `instructor=request.user` ownership scoping. No new gaps found. Stale FAQ/quick-links content from the last audit is gone — that section of the file was refactored away, not fixed in place.
 
 ---
 
 ## student
 
-Route `/student/` · views.py ~4412 lines · urls.py ~107 lines. Largest app by view count — dashboard, registration, enrollment, lessons, assignments, quizzes, and a second, newer CBT exam engine running in parallel.
+**Still broken (re-verified)**
+- The three-way grade disagreement is unchanged: dashboard reads real `CourseGrade`; "Grades & Performance" still has its query commented out; "Academic Records" still builds a third proxy from `StudentExamResponse` directly. See cross-cutting theme #2 for why this now matters beyond cosmetics.
+- Exam endpoints still under-gated: `exam_instructions` (3818), `start_exam` (3863), `get_exam_data` (3917) carry only `@login_required` — no student-role check, no re-verification that the requester is enrolled in that exam's course. Exam slugs are plain `slugify()`, not random tokens, so a logged-in user who derives/guesses a slug can create a response row and pull exam data for a course they're not enrolled in.
+- No fee gate on `enroll_course` (comment "All LMS courses are free" still at `views.py:1323`); prerequisites still display-only, never enforced at registration; N+1 patterns in `course_detail` (per-lesson queries in a loop) and the 28-day activity heatmap (per-day queries) both unchanged.
 
-**Working**
-- Course registration — checks the registration window and session status, pulls the credit-unit cap dynamically from `Program.max_credits_per_semester`, enforces all-core-courses-selected, does real LMS auto-enrollment matching. `views.py:631,722,782`
-- Enrollment / lesson progress — access verified before granting content, progress tracked correctly, completion triggers grading, certificates, notifications. `views.py:1359,1576`
-- Assignments — complete: prefetch-optimized, late-penalty handling, overdue checks. `views.py:1677,1835`
-- Notifications / inbox / study groups — implemented and functional, correct ownership checks. `views.py:2510–3609`
-- CBT exam engine — question shuffling, auto-grading by question type, manual-grade queue for essay/short-answer, tab-switch flagging. The more polished of the two grading systems in this app. `views.py:4008–4284`
+**Fixed since last pass**
+- Support tickets now actually reach staff: `submit_ticket` (student-facing, routed through the new `support` app) creates a real `SupportTicket` row via `StudentSupportTicketForm` — the old plain-`forms.Form`, email-only dead end is gone.
 
-**Broken now**
-- Three "what's my grade" pages disagree — dashboard reads real `CourseGrade`; "Grades & Performance" has its `CourseGrade` query commented out and shows quiz/assignment stats only; "Academic Records" builds a third, disconnected proxy from `StudentExamResponse`. `views.py:354,2814–2834,3840`
-- Exam start/data endpoints are under-gated — `exam_instructions`, `start_exam`, `get_exam_data` carry only `@login_required` (siblings also check student role), and none re-verify the requester is enrolled in that exam's course. `views.py:4074,4120,4174`
-- Student support tickets vanish — the "help & support" form is a plain `forms.Form`, not a `ModelForm`; it only sends an email and never creates a `SupportTicket` row, so tickets never reach the staff queue in `management`. `views.py:3154`
-
-**Missing / gaps**
-- No prerequisite enforcement at registration — `Course.prerequisites` is fetched for display only.
-- No fee gate on enrollment — `enroll_course`'s own comment states "All LMS courses are free — enrollment is immediate." `views.py:1277,1280`
-- Duplicated, drifting query logic — `UserProfile.get_current_courses()` exists for exactly this, but three views hand-roll the same filter independently.
-- Real N+1 performance issues — `course_detail` queries per lesson in a loop; the progress page issues ~84 queries per request for a 28-day activity heatmap regardless of course count. `views.py:1188–1199,2911–2954`
-
-**Cross-app note:** registration/enrollment correctly respect `AcademicSession`/`Program` config owned by `eduweb`/`management`. But grade fragmentation means `instructor`'s exam work doesn't reach the official record, and payment status from `finance`/`payment` gates nothing here.
+**New finding:** `my_courses.html` correctly flags carry-over courses to the student (orange row, "failed Nx previously") — the display side is good. The gap is upstream, in the registration query noted under `management` above (passed courses at the repeated level aren't excluded from what's offered).
 
 ---
 
 ## finance
 
-Route `/finance/` · views.py ~521 lines · urls.py ~39 lines. Finance-staff dashboard: payroll and subscription oversight — honest about being a reporting layer, not a payments engine.
+**The "gated by per-module permission" commit (363585b) is template-only.** `finance/views.py` never imports or checks `StaffPermissionsMatrix` — every view is still gated solely by the local `is_finance_manager()` (`views.py:27-33`, unchanged, still not using `eduweb.decorators.finance_required`). The matrix flags (`can_edit`/`can_delete`/`can_export`) only control whether a button renders in the template. A finance user can still POST directly to any finance action (e.g. `payroll_delete`) regardless of their matrix row for that module.
 
-**Working**
-- Finance dashboard — real KPI aggregation (revenue, refunds, success rate, payment-method mix, daily revenue, top programs), date-range picker, graceful degradation on import failure. `views.py:38–287`
-- Payroll CRUD — complete: create/list, status workflow with audit-stamped `approved_by`/`approved_at`, delete gated by `payroll.can_delete()`, per-attachment delete. `views.py:344–522`
-- Subscription list — filterable, with a live MRR calculation. `views.py:294–338`
-
-**Missing / gaps**
-- Payroll is record-keeping, not payment processing — no payout API anywhere; marking payroll "paid" is a manual status flip.
-- Subscription management is display-only — no create/upgrade/cancel view exists; the only `Subscription` rows anywhere were fabricated by the seed command, and `student` never reads the model.
-- Local, divergent auth gate — every view uses its own `is_finance_manager()` rather than the shared `finance_required` decorator; skips the superuser/admin bypass and `is_active`/`email_verified` checks. `views.py:27–33`
-
-Minor: `except (ImportError, Exception): pass` appears three times — `Exception` already covers `ImportError`, silently swallowing any error as "model unavailable." `views.py:196,219,239`
+Everything else from the last pass (payroll CRUD, dashboard KPIs, subscription list as display-only, the `except (ImportError, Exception): pass` redundancy) is unchanged — not re-litigated here.
 
 ---
 
 ## payment
 
-Route `/payment/` · views.py ~400 lines · urls.py ~49 lines. Payment records, refunds, invoices, transaction reports, Stripe SDK calls. Smallest app by line count, but carries the most state-integrity risk.
+**Fixed since last pass**
+- The duplicate `refund_payment` definition and duplicate URL registration are both gone — one function, one route.
+- Refund ordering is correct and was already: Stripe `stripe.Refund.create` (`views.py:283-286`) runs and is confirmed successful before any local `payment.save()` (`views.py:306`); a Stripe error aborts cleanly with no local state change.
 
-**Working**
-- List/detail/reports/invoice-PDF views — functional, degrade cleanly if the PDF library is missing. `views.py:33–309`
-- The surviving refund path is correctly ordered — calls real `stripe.Refund.create` before writing local state, aborts cleanly on a Stripe error. `views.py:356–376`
-- Async confirmation is real — the Stripe webhook exists and verifies `STRIPE_WEBHOOK_SECRET`, but it lives in `eduweb`, not here.
-
-**Broken now**
-- `refund_payment` is defined twice in the same file — the dead first copy never calls Stripe at all; would have shipped a fake refund had it been the surviving definition. `views.py:124–187,315–401`
-- The route name `refund_payment` is registered twice, at two different URL paths, both resolving to the same view. `urls.py:24–27,49`
-- Refunding doesn't undo the application's paid state — only updates `ApplicationPayment.status`, never reverts `CourseApplication.payment_status`. Since `CourseApplication.is_paid` reads that field, **a refunded application still reports as fully paid** and keeps document upload/submission unlocked. `views.py:378–385`, `eduweb/models.py:1991–2015`
-
-**Missing / gaps**
-- `required_payments_list` is a two-line stub — renders a template with zero context, no query against `AllRequiredPayments` at all. `views.py:229–230`
-- Two disconnected ledgers for the same money — this app builds all reporting/invoicing on `ApplicationPayment`; `Invoice` and `Transaction` are only created by the seed command and only read by `management`. No reconciliation between what Stripe/the webhook recorded and what these models say.
-- Hardcoded institution details on generated invoices — company name/address/email/phone hardcoded rather than pulled from `SystemConfig`. `views.py:284–292`
-
-**Cross-app note:** sharpest evidence for cross-cutting theme 3 — `AllRequiredPayments` is confirmed unenforced anywhere in `student`, and the refund bug means payment state and application state can now openly disagree.
+**Still broken**
+- Refund still does **not** revert `CourseApplication` payment state — only `ApplicationPayment.status`/`.failure_reason` are updated (`views.py:298-306`); `CourseApplication.payment_status` (which `is_paid` reads, `models.py:1998-2011`) is never touched. A refunded application still reports as fully paid.
+- **The commit's own claim of "gated by `finance_payments.can_edit`" is false at the enforcement layer.** `refund_payment` is gated only by `@user_passes_test(is_finance_manager)` (`views.py:20-26,240-241`) — i.e., `role == 'finance'`, full stop. `StaffPermissionsMatrix`/`finance_payments.can_edit` is referenced only in `templates/finance/payment_detail.html` to hide the refund button. Any finance-role user can POST to the refund endpoint and process a real Stripe refund regardless of their matrix setting.
+- `required_payments_list` (`views.py:156-157`) is still a two-line stub with no query.
 
 ---
 
 ## library
 
-Route `/library/` · views.py ~339 lines · urls.py ~20 lines. Digital library browsing — smallest app audited, fewest surprises.
+No changes since the last pass (last commit to this app predates 2026-07-08). Access control is still binary `public`/`members`, no program/department/course-level granularity. Still the cleanest app of the eight.
 
-**Working**
-- Fully DB-driven taxonomy and browsing — dynamic categories, featured/recent items, detail view with view-count tracking, download endpoint with counter, genuine multi-field search (title, author, subcategory, description, tags, publisher) with sorting and pagination. `views.py:80–340`
-- CRUD correctly lives elsewhere — this app has no create/update/delete views by design; full item CRUD is in `management`, properly gated there.
+---
 
-**Missing / gaps**
-- Access control is binary only — items are `public` or `members`, nothing finer; no program/department/course-level restriction. `eduweb/models.py:4414–4417`
+## support (new — first audit)
+
+Not mentioned in `CLAUDE.md`'s app map; wired into `DigitalCampus/urls.py` under `/support/`. Worth adding to `CLAUDE.md`'s app-map table.
+
+A genuinely solid helpdesk console: tickets (list/detail/create/reply/assign/escalate/reopen) with SLA policies, departments, agents (with availability/load tracking), a Markdown knowledge base with voting, FAQs, canned responses, an announcements system, and an immutable `SupportAuditLog`. A `ChatSession`/`ChatMessage` model exists but has no view wired up beyond a bare list.
+
+- **Same cosmetic-gating problem as finance.** The e128fed commit only touched templates. `support/views.py` gates purely via `support_required`/`support_admin_required` (`support/permissions.py:36-59`), which check `role in ('admin','support')`/`is_staff` — nothing module-specific. A support user with `can_edit=False` on the knowledge-base module can still POST to `kb_article_edit` and it succeeds.
+- **No IDOR found.** The self-service reply path correctly scopes by owner: `get_object_or_404(SupportTicket, ticket_id=..., user=request.user)` (`views.py:83`) — a student can't reply to someone else's ticket. Staff-console visibility (any agent sees any ticket) is by design, not a bug.
+- No raw SQL, no `|safe` on user-submitted ticket/reply content (uses `linebreaks`/`linebreaksbr`, which still escape).
+- Minor: several staff-side create actions (`sla_save`, `department_save`, `announcement_create`) skip `ModelForm` validation in favor of `.strip()` checks — a data-quality gap, not a security one.
+
+---
+
+## Frontend-wide template sweep (new this pass)
+
+- **CSRF:** every template with `method="post"` (95 top-level, 12 under `support/`) also contains `{% csrf_token %}`. No gaps found.
+- **`|safe` usage:** every hit reviewed traces back to admin/staff-authored content (`SiteConfig` embeds, blog post bodies, lesson content, icon/JSON strings) or server-side `json.dumps()` feeding a chart script — none renders arbitrary end-user input. The one point worth a policy decision: `lesson.video_url`/`lesson.content` (`templates/students/lesson.html:44,90`) are instructor-authored, a broader trust boundary than pure-admin content — if instructor accounts are ever considered semi-trusted, this is stored-XSS-capable.
+- **One JS-string interpolation inconsistency:** `templates/applications/admission_letter.html:462` interpolates `{{ application.application_id }}` into a JS string literal without `|escapejs`, while the line directly above it does use `|escapejs`. Low risk (the value is a server-generated ID, not free text) but worth fixing for consistency.
 
 ---
 
 ## Recommended next steps
 
-### Quick wins — do first (isolated, one-file fixes)
-1. `eduweb`: fix `get_student_fee_summary`'s `select_related` on non-FK properties, and its reference to a Stripe setting that doesn't exist — two guaranteed 500s on one endpoint.
-2. `payment`: delete the dead first `refund_payment` definition and its duplicate URL registration; make refund also revert `CourseApplication.payment_status`.
-3. `instructor`: wrap the inline exam-question-import call in `create_assessment` in the same try/except the standalone import view already has, and drop the removed `difficulty`/`order`/`import_row_number` kwargs from the `ExamQuestion.objects.create()` call.
-4. `instructor`: route `grade_submission`'s incoming score through `full_clean()` or a form.
-5. `management`: add an admin-only decorator to `financial_analytics` — currently open to the public internet.
-6. `eduweb`: delete the duplicate `SignUpForm.clean_email`.
+### Quick wins — same file, isolated, still undone from last pass
+1. `eduweb`: fix `get_student_fee_summary`'s two guaranteed crashes (bad `select_related`, nonexistent settings key).
+2. `eduweb`: delete the dead first `SignUpForm.clean_email`.
+3. `instructor`: wrap the inline exam-import call in `create_assessment` in the same try/except the standalone view already has; drop the removed `difficulty`/`order`/`import_row_number` kwargs.
+4. `instructor`: route `grade_submission`'s score through `full_clean()` or a form.
+5. `management`: add a real decorator to `financial_analytics`.
+6. `payment`: revert `CourseApplication.payment_status` inside `refund_payment`; make `required_payments_list` query `AllRequiredPayments`.
+7. `eduweb`: fix `SECRET_KEY`/`DEBUG` to fail closed (raise) rather than fail open when `.env` is missing.
+8. `eduweb`: switch `BlogPost.increment_views` to `F('views_count') + 1`.
 
-### Bigger builds — roughly in priority order
-1. **End-of-session progression in `management`** — compute pass/fail from `CourseGrade`, advance `year_of_study`, set `progression_status`, track carry-over/repeat courses. The feature that started this audit, and the one with the least existing code to build on.
-2. **Unify the grade sources** — decide whether `StudentExamResponse`, `QuizAttempt`/`AssignmentSubmission`, or both feed `CourseGrade`, and make the dashboard, grades page, and academic records agree with each other and with progression above.
-3. **Make required payments actually gate something** — registration and enrollment in `student`, and fix the refund/application-state disagreement in `payment`.
-4. **Decide the fate of `StaffPermissionsMatrix`** — wire it into `management`'s real view checks, or remove the editor if it isn't going to be the permission model.
-5. **Consolidate role-gating decorators** — point `finance`, `payment`, and `management` at `eduweb.decorators` instead of their local copies.
+### The one thing to fix before trusting any "permission-gated" claim
+Wire `StaffPermissionsMatrix` checks into the actual view/decorator layer in `finance`, `payment`, and `support` — not just templates. Right now three separate commits describe themselves as adding permission gating, and none of the three enforce anything server-side. This is worse than having no gating claim at all, because it reads as done.
+
+### Before the progression feature is used for real decisions
+1. Feed `StudentExamResponse` into `CourseGrade` (or otherwise unify the three grade sources) — progression math is only as good as its input, and right now exam-only courses can never register a pass.
+2. Add a `ProgressionDecisionLog` existence check before `apply_progression_decision` mutates (idempotency), restrict the session picker to `status='closed'`, wrap the batch loop in `transaction.atomic()`, and change `failed_courses` to look across all sessions a core course was attempted in, not just the current one (closes the probation/withdrawal avoidance loophole).
+3. Exclude already-passed courses from the semester registration listing for repeating students.
+
+### Bigger builds still open from last pass
+1. Unify the three grade sources (now higher priority — see above).
+2. Make required payments actually gate registration/enrollment.
+3. Consolidate role-gating decorators — five hand-rolled copies now (`management` x3, `finance`, `payment`, `support`) instead of the shared `eduweb.decorators`.
+4. Gate `student` exam endpoints by role + enrollment, not just login.
+5. Give instructors real course create/delete, or remove the dead UI that implies they can.

@@ -2,14 +2,14 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from django.core.exceptions import ValidationError
-from django.db.models import Avg
+from django.db.models import Avg, Max, F, FloatField, ExpressionWrapper
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.text import slugify
 import uuid
 import os
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 
 DEGREE_LEVEL_CHOICES = [
@@ -1598,6 +1598,28 @@ class Course(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(12)],
         help_text="Credit units this course carries"
     )
+
+    # ── Assessment weighting ───────────────────────────────────────────────────
+    # Used to blend exam/quiz/assignment scores into one CourseGrade. Weights
+    # of assessment types with no recorded data for a student are dropped and
+    # the remaining weights re-normalized, so an exam-only course still grades
+    # out of 100% from its exam component alone.
+    exam_weight_pct = models.PositiveSmallIntegerField(
+        default=70,
+        validators=[MaxValueValidator(100)],
+        help_text="Weight of the end-of-semester exam in the final course grade (%)"
+    )
+    quiz_weight_pct = models.PositiveSmallIntegerField(
+        default=15,
+        validators=[MaxValueValidator(100)],
+        help_text="Weight of quiz scores in the final course grade (%)"
+    )
+    assignment_weight_pct = models.PositiveSmallIntegerField(
+        default=15,
+        validators=[MaxValueValidator(100)],
+        help_text="Weight of assignment scores in the final course grade (%)"
+    )
+
     year_of_study = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(8)],
         help_text="Which year of the program this course is taught in (e.g., 1, 2, 3)"
@@ -2062,7 +2084,8 @@ class CourseApplication(models.Model):
             self.status == 'approved' and
             self.admission_accepted and
             self.admission_number and
-            self.department_approved
+            self.department_approved and
+            self.is_paid
         )
 
     def get_full_name(self):
@@ -3539,7 +3562,7 @@ class StaffPermissionsMatrix(models.Model):
     # Role-level defaults — mirrors sidebar sections visible per role
     ROLE_DEFAULT_PERMISSIONS = {
     'admin': {
-        'dashboard':       {'can_view': True},
+        # 'dashboard':     {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
         'user_management': {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
         'academics':       {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
         'lms_courses':     {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
@@ -3556,7 +3579,7 @@ class StaffPermissionsMatrix(models.Model):
         'academic_progression': {'can_view': True, 'can_edit': True, 'can_approve': True},
     },
     'support': {
-        'dashboard':      {'can_view': True},
+        # 'dashboard':    {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
         'user_management':{'can_view': True},
         'enrollments':    {'can_view': True},
         'applications':   {'can_view': True},
@@ -3568,7 +3591,7 @@ class StaffPermissionsMatrix(models.Model):
         'support_analytics':      {'can_view': True},
     },
     'finance': {
-        'dashboard':      {'can_view': True},
+        # 'dashboard':    {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
         'finance':        {'can_view': True, 'can_edit': True, 'can_export': True},
         'enrollments':    {'can_view': True},
         'user_management':{'can_view': True},
@@ -3577,7 +3600,7 @@ class StaffPermissionsMatrix(models.Model):
         'finance_payroll':       {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
     },
     'instructor': {
-        'dashboard':                 {'can_view': True},
+        # 'dashboard':               {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
         'instructor_courses':        {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
         'instructor_assessments':    {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
         'instructor_analytics':      {'can_view': True, 'can_export': True},
@@ -4733,6 +4756,15 @@ class CourseRegistration(models.Model):
         return f"{self.student.username} | {self.course.code} | {self.session} {self.term}"
 
 
+def _score_to_grade(percentage):
+    """Convert a numeric percentage to a Nigerian-scale letter grade."""
+    if percentage >= 70:   return 'A'
+    elif percentage >= 60: return 'B'
+    elif percentage >= 50: return 'C'
+    elif percentage >= 45: return 'D'
+    else:                  return 'F'
+
+
 class CourseGrade(models.Model):
     GRADE_CHOICES = [
         ('A', 'A'), ('B', 'B'), ('C', 'C'),
@@ -4786,6 +4818,168 @@ class CourseGrade(models.Model):
     @property
     def weighted_points(self):
         return self.grade_points * self.credit_units
+
+    @classmethod
+    def compute_cgpa(cls, student):
+        """
+        Cumulative GPA (Nigerian 5-point scale) across every graded,
+        non-withdrawn CourseGrade row for this student.
+
+        This is the single canonical CGPA computation — the dashboard,
+        Academic Records, and the end-of-session progression decision
+        must all call this rather than each hand-rolling the same sum,
+        so they can never silently disagree (e.g. via different rounding
+        rules). Returns None if the student has no gradable records yet.
+        """
+        grades = cls.objects.filter(student=student).exclude(grade='').exclude(grade='W')
+        total_units = sum(g.credit_units for g in grades)
+        if not total_units:
+            return None
+        weighted_sum = sum(g.weighted_points for g in grades)
+        return (Decimal(weighted_sum) / Decimal(total_units)).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
+
+    EXAM_COMPONENT = 'exam'
+    QUIZ_COMPONENT = 'quiz'
+    ASSIGNMENT_COMPONENT = 'assignment'
+
+    @classmethod
+    def recompute_for_student_course(cls, student, course, session, term=''):
+        """
+        Recompute and persist this student's grade for `course` in `session`,
+        blending exam/quiz/assignment scores using the course's configured
+        weights (Course.exam_weight_pct/quiz_weight_pct/assignment_weight_pct).
+
+        Assessment types with no recorded data for this student are dropped
+        and the remaining weights re-normalized to sum to 100%, so e.g. an
+        exam-only course grades entirely off its exam component. Safe to call
+        repeatedly from any grading trigger point (lesson completion, exam
+        grading, assignment grading) — always upserts a single row per
+        (student, course, session, term).
+
+        Returns the CourseGrade row, or None if the student has no active/
+        completed enrollment in a delivery of this course for this session.
+        """
+        enrollment = (
+            Enrollment.objects
+            .filter(
+                student=student,
+                course__academic_course=course,
+                course__session=session,
+                status__in=['active', 'completed'],
+            )
+            .select_related('course')
+            .first()
+        )
+        if not enrollment:
+            return None
+
+        lms_course = enrollment.course
+        components = {}
+
+        # ── Exam component: average of graded end-of-semester exam scores ──────
+        exam_avg = (
+            StudentExamResponse.objects
+            .filter(
+                student=student,
+                exam__course=lms_course,
+                exam__exam_type=Exam.END_OF_SEMESTER,
+                status=StudentExamResponse.GRADED,
+                score_percentage__isnull=False,
+            )
+            .aggregate(avg=Avg('score_percentage'))['avg']
+        )
+        if exam_avg is not None:
+            components[cls.EXAM_COMPONENT] = float(exam_avg)
+
+        # ── Quiz component: best attempt percentage per quiz, averaged ─────────
+        quiz_attempts = (
+            QuizAttempt.objects
+            .filter(student=student, quiz__lesson__course=lms_course, is_completed=True)
+            .values('quiz_id')
+            .annotate(best=Max('percentage'))
+        )
+        quiz_scores = [float(row['best']) for row in quiz_attempts]
+        if quiz_scores:
+            components[cls.QUIZ_COMPONENT] = sum(quiz_scores) / len(quiz_scores)
+
+        # ── Assignment component: graded submissions as % of max_score ─────────
+        assignment_scores_qs = (
+            AssignmentSubmission.objects
+            .filter(
+                student=student,
+                assignment__lesson__course=lms_course,
+                status='graded',
+                score__isnull=False,
+            )
+            .annotate(
+                pct=ExpressionWrapper(
+                    F('score') * 100.0 / F('assignment__max_score'),
+                    output_field=FloatField(),
+                )
+            )
+            .values_list('pct', flat=True)
+        )
+        assignment_scores = [float(s) for s in assignment_scores_qs]
+        if assignment_scores:
+            components[cls.ASSIGNMENT_COMPONENT] = sum(assignment_scores) / len(assignment_scores)
+
+        # ── Weighted blend, re-normalized over whichever components exist ──────
+        if components:
+            raw_weights = {
+                cls.EXAM_COMPONENT: course.exam_weight_pct,
+                cls.QUIZ_COMPONENT: course.quiz_weight_pct,
+                cls.ASSIGNMENT_COMPONENT: course.assignment_weight_pct,
+            }
+            present_weight_sum = sum(raw_weights[c] for c in components)
+            if present_weight_sum > 0:
+                avg_score = sum(
+                    components[c] * (raw_weights[c] / present_weight_sum)
+                    for c in components
+                )
+            else:
+                # Present components are all weighted 0 — split evenly instead.
+                avg_score = sum(components.values()) / len(components)
+        else:
+            # No assessments graded yet — use lesson completion as a proxy.
+            avg_score = float(enrollment.progress_percentage)
+
+        letter_grade = _score_to_grade(avg_score)
+        is_passed = avg_score >= 50  # configurable threshold
+
+        application = (
+            CourseApplication.objects
+            .filter(user=student, program=course.program)
+            .first()
+        )
+
+        row_exists = cls.objects.filter(
+            student=student, course=course, session=session, term=term
+        ).exists()
+
+        defaults = {
+            'score': round(avg_score, 2),
+            'grade': letter_grade,
+            'credit_units': course.credit_units,
+            'is_passed': is_passed,
+            'application': application,
+            'lms_course': lms_course,
+        }
+        if not row_exists:
+            # Only stamp recorded_by on first creation — never clobber a
+            # human-recorded grade's ownership on subsequent auto-recomputes.
+            defaults['recorded_by'] = None
+
+        grade, _ = cls.objects.update_or_create(
+            student=student, course=course, session=session, term=term,
+            defaults=defaults,
+        )
+
+        if application:
+            application.award_program_certificate()
+
+        return grade
 
 
 class CourseCarryOver(models.Model):

@@ -1,38 +1,44 @@
 import json
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Count, Avg, Sum, Q, F
-from django.contrib.auth.models import User
-from django.utils import timezone
-from datetime import timedelta
-from django.db.models.functions import TruncDate, TruncMonth
-from django.core.mail import send_mail
+import logging
+import re
+import uuid
+from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
+from io import BytesIO
+
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
-from django.views.decorators.http import require_POST
+from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models.functions import TruncDate, TruncMonth
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from django.views.decorators.http import require_POST
 
-from eduweb.models import (
-    LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
-    QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
-    Announcement, Review, Notification, Course, CourseGrade, ExamQuestion,
-)
-from .forms import (
-    CourseForm, CourseObjectivesForm, LessonForm, SectionForm,
-    QuizForm, QuizQuestionForm, QuizAnswerForm, AssignmentForm,
-    AnnouncementForm, ExamForm
-)
 from eduweb.decorators import instructor_required
-
+from eduweb.emailservices import send_assignment_graded_email, send_new_message_email
 from eduweb.models import (
-    LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
-    QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
-    Announcement, Review, Notification,
-    QuizAttempt, QuizResponse, Message, Discussion, DiscussionReply, Exam
+    Announcement, Assignment, AssignmentSubmission, Course, CourseGrade,
+    Discussion, DiscussionReply, Enrollment, Exam, ExamQuestion, ExamStatusLog,
+    LMSCourse, Lesson, LessonSection, Message, Notification, Quiz,
+    QuizAnswer, QuizAttempt, QuizQuestion, QuizResponse, Review,
+    StudentExamResponse,
 )
+
+from .forms import (
+    AnnouncementForm, AssignmentForm, CourseForm, CourseObjectivesForm,
+    ExamForm, LessonForm, QuizAnswerForm, QuizForm, QuizQuestionForm,
+    SectionForm,
+)
+
+logger = logging.getLogger(__name__)
 
 # ── Notification helper ────────────────────────────────────────────────────
 def _notify_instructor(instructor, title, message, notif_type='system', link=''):
@@ -59,7 +65,7 @@ def _notify_instructor(instructor, title, message, notif_type='system', link='')
         if old_ids:
             Notification.objects.filter(id__in=list(old_ids)).delete()
     except Exception:
-        pass
+        logger.exception('Failed to notify instructor=%s (%s)', instructor.pk, title)
 
 # ==================== DASHBOARD ====================
 @login_required(login_url='eduweb:auth_page')
@@ -262,7 +268,6 @@ def course_manage(request, slug=None):
     discussions_count = discussions_qs.count()
  
     # ── Today's date for enrol-student modal default ───────────────────────
-    from datetime import date
     today = date.today().isoformat()
  
     context = {
@@ -1071,9 +1076,25 @@ def grade_submission(request, course_slug, submission_id):
         raise PermissionDenied("This submission does not belong to your course.")
     
     if request.method == 'POST':
-        score = request.POST.get('score')
+        raw_score = request.POST.get('score', '').strip()
         feedback = request.POST.get('feedback', '')
-        
+
+        try:
+            score = Decimal(raw_score)
+        except (InvalidOperation, ValueError):
+            score = None
+
+        if score is None or score < 0 or score > assignment.max_score:
+            messages.error(
+                request,
+                f'Enter a valid score between 0 and {assignment.max_score}.'
+            )
+            return render(request, 'instructor/grade_submission.html', {
+                'course': course,
+                'assignment': assignment,
+                'submission': submission,
+            })
+
         submission.score = score
         submission.feedback = feedback
         submission.status = 'graded'
@@ -1090,7 +1111,6 @@ def grade_submission(request, course_slug, submission_id):
             notif_type='grade',
             link=f'/student/courses/{course.slug}/assignments/{assignment.slug}/',
         )
-        from eduweb.emailservices import send_assignment_graded_email
         send_assignment_graded_email(submission.student, submission)
         return redirect(
             'instructor:assignment_submissions',
@@ -1587,8 +1607,6 @@ def resources(request):
     that already have content (lessons) created for them.
     Supports tab-based pagination via ?videos_page=, ?docs_page=, ?assignments_page=
     """
-    import re
-
     ITEMS_PER_PAGE = 10
 
     # Only courses assigned to this instructor that have at least one lesson
@@ -1770,7 +1788,6 @@ def announcement_delete(request, course_slug, announcement_slug):
 @instructor_required
 def quiz_results(request, course_slug, lesson_slug, quiz_slug):
     """Show all student attempts for a quiz."""
-    from eduweb.models import Lesson, Quiz
     course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
@@ -1802,7 +1819,6 @@ def quiz_results(request, course_slug, lesson_slug, quiz_slug):
 @instructor_required
 def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id):
     """Detailed breakdown of a single student's quiz attempt."""
-    from eduweb.models import Lesson, Quiz
     course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
@@ -1941,17 +1957,15 @@ def instructor_notification_read(request, notif_id):
 @instructor_required
 def message_compose(request):
     """Compose and send a new message."""
-    from .forms import MessageForm
     initial = {}
 
     # Pre-fill if coming from a student profile link: ?recipient=<id>&subject=...
     recipient_id = request.GET.get('recipient')
     subject      = request.GET.get('subject', '')
     if recipient_id:
-        from django.contrib.auth.models import User as AuthUser
         try:
-            initial['recipient'] = AuthUser.objects.get(pk=recipient_id)
-        except AuthUser.DoesNotExist:
+            initial['recipient'] = User.objects.get(pk=recipient_id)
+        except User.DoesNotExist:
             pass
     if subject:
         initial['subject'] = subject
@@ -1970,15 +1984,13 @@ def message_compose(request):
                 notif_type='message',
                 link='/instructor/messages/',
             )
-            from eduweb.emailservices import send_new_message_email
             send_new_message_email(msg.recipient, request.user, msg)
             return redirect('instructor:messages_inbox')
     else:
         form = MessageForm(initial=initial)
 
     # Build recipients list for the searchable UI (all active users except self)
-    from django.contrib.auth.models import User as AuthUser
-    recipients = AuthUser.objects.filter(
+    recipients = User.objects.filter(
         is_active=True
     ).exclude(
         id=request.user.id
@@ -2019,7 +2031,6 @@ def message_reply(request, message_id):
                 notif_type='message',
                 link=f'/instructor/messages/{root.id}/',
             )
-            from eduweb.emailservices import send_new_message_email
             send_new_message_email(other, request.user, root)
         else:
             messages.error(request, 'Reply cannot be empty.')
@@ -2196,10 +2207,7 @@ def reply_delete(request, course_slug, discussion_slug, reply_id):
     return redirect('instructor:discussion_detail',
                     course_slug=course.slug, discussion_slug=discussion.slug)
 
-# ── JSON helper ───────────────────────────────────────────────────────────────
-from django.http import JsonResponse
- 
- 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AJAX: return course details (code, academic session) for a given course pk
 # Used by the Create Assessment page to auto-populate locked fields.
@@ -2295,10 +2303,9 @@ def create_assessment(request):
                 quiz.lesson = lesson
                 quiz.save()
 
-                import json as _json
                 questions_raw = request.POST.get('questions_data', '[]')
                 try:
-                    questions_list = _json.loads(questions_raw)
+                    questions_list = json.loads(questions_raw)
                 except ValueError:
                     questions_list = []
 
@@ -2404,27 +2411,25 @@ def create_assessment(request):
                 exam.save()
 
                 # ── Save manually entered exam questions from JSON ─────────────
-                import json as _json
-                from eduweb.models import ExamQuestion
                 eq_raw = request.POST.get('exam_questions_data', '[]')
                 try:
-                    eq_list = _json.loads(eq_raw)
+                    eq_list = json.loads(eq_raw)
                 except (ValueError, TypeError):
                     eq_list = []
 
-                for idx, eq_data in enumerate(eq_list):
+                for eq_data in eq_list:
                     q_text = (eq_data.get('question_text') or '').strip()
                     if not q_text:
                         continue
-                    import uuid as _uuid
                     raw_options = eq_data.get('options', [])
-                    options_with_ids = []
-                    for opt in raw_options:
-                        options_with_ids.append({
-                            'id':         f'opt-{_uuid.uuid4().hex[:8]}',
+                    options_with_ids = [
+                        {
+                            'id':         f'opt-{uuid.uuid4().hex[:8]}',
                             'text':       opt.get('text', ''),
                             'is_correct': bool(opt.get('is_correct', False)),
-                        })
+                        }
+                        for opt in raw_options
+                    ]
                     ExamQuestion.objects.create(
                         exam          = exam,
                         question_text = q_text,
@@ -2435,10 +2440,23 @@ def create_assessment(request):
                         created_by    = request.user,
                     )
 
-                # ── Parse uploaded question file (docx / xlsx) ────────────────
+                # ── Parse uploaded question file (docx / xlsx) ─────────────────
+                # Same try/except the standalone exam_import_questions view uses —
+                # a bad file must not crash exam creation after the exam row (and
+                # any manually entered questions above) are already committed.
                 import_file = request.FILES.get('question_import_file')
                 if import_file:
-                    _parse_exam_questions_from_file(import_file, exam, request.user)
+                    try:
+                        _parse_exam_questions_from_file(import_file, exam, request.user)
+                    except Exception as e:
+                        logger.exception(
+                            'Question-file import failed during create_assessment for exam %s',
+                            exam.pk,
+                        )
+                        messages.warning(
+                            request,
+                            f'Exam "{exam.title}" was created, but the question file import failed: {e}'
+                        )
 
                 messages.success(
                     request,
@@ -2503,10 +2521,7 @@ def ajax_course_lessons(request):
     )
     return JsonResponse({'lessons': lessons})
 
-import json as _json
-import uuid as _uuid
- 
- 
+
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM LIST
 # ──────────────────────────────────────────────────────────────────────────────
@@ -2640,7 +2655,6 @@ def exam_update(request, slug):
  
     # Combined datetime fields — replace the old exam_date / start_time / end_time split
     # REMOVED: separate 'exam_date', 'start_time', 'end_time' parsing
-    from django.utils.dateparse import parse_datetime
     raw_start = request.POST.get('start_datetime', '').strip()
     raw_end   = request.POST.get('end_datetime',   '').strip()
     if raw_start:
@@ -2655,8 +2669,7 @@ def exam_update(request, slug):
     # show_answers_after
     raw_saa = request.POST.get('show_answers_after', '').strip()
     if raw_saa:
-        from django.utils.dateparse import parse_datetime as _pd
-        parsed_saa = _pd(raw_saa)
+        parsed_saa = parse_datetime(raw_saa)
         if parsed_saa:
             exam.show_answers_after = parsed_saa
     elif 'show_answers_after' in request.POST and not raw_saa:
@@ -2668,10 +2681,10 @@ def exam_update(request, slug):
     try:
         exam.save()
         messages.success(request, f'Exam "{exam.title}" updated successfully.')
-    except Exception as e:
-        messages.error(request, f'Could not save changes: {e}')
- 
-    from django.urls import reverse
+    except Exception:
+        logger.exception('Failed to save exam %s during edit', exam.pk)
+        messages.error(request, 'Could not save changes — please check your input and try again.')
+
     return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=edit')
  
  
@@ -2691,7 +2704,6 @@ def exam_submit(request, slug):
  
     if exam.active_question_count == 0:
         messages.error(request, 'Please add at least one question before submitting.')
-        from django.urls import reverse
         return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     old_status           = exam.status
@@ -2753,7 +2765,6 @@ def exam_question_create(request, slug):
             messages.error(request, error)
             return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': None})
         messages.success(request, 'Question added successfully.')
-        from django.urls import reverse
         if request.POST.get('_save_back'):
             return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
         return redirect(reverse('instructor:exam_question_create', kwargs={'slug': exam.slug}))
@@ -2781,7 +2792,6 @@ def exam_question_edit(request, slug, question_id):
             messages.error(request, error)
             return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': question})
         messages.success(request, 'Question updated successfully.')
-        from django.urls import reverse
         return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': question})
@@ -2805,7 +2815,6 @@ def exam_question_delete(request, slug, question_id):
     question.is_active = False
     question.save(update_fields=['is_active'])
     messages.success(request, 'Question removed from the active pool.')
-    from django.urls import reverse
     return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
  
@@ -2827,7 +2836,6 @@ def exam_import_questions(request, slug):
  
     if not import_file:
         messages.error(request, 'Please select a file to upload.')
-        from django.urls import reverse
         return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     try:
@@ -2839,7 +2847,6 @@ def exam_import_questions(request, slug):
         exam.save(update_fields=['import_status', 'import_error_log'])
         messages.error(request, f'Import failed: {e}')
  
-    from django.urls import reverse
     return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
  
@@ -2849,7 +2856,6 @@ def exam_import_questions(request, slug):
  
 def _write_exam_log(exam, from_status, to_status, changed_by, note=''):
     """Write an immutable ExamStatusLog entry."""
-    from eduweb.models import ExamStatusLog
     try:
         ExamStatusLog.objects.create(
             exam        = exam,
@@ -2859,7 +2865,7 @@ def _write_exam_log(exam, from_status, to_status, changed_by, note=''):
             note        = note,
         )
     except Exception:
-        pass  # Never crash the main action
+        logger.exception('Failed to write exam status log for exam=%s (%s -> %s)', exam.pk, from_status, to_status)
  
  
 def _save_exam_question(request, exam, question=None):
@@ -2889,8 +2895,8 @@ def _save_exam_question(request, exam, question=None):
     if q_type == 'true_false':
         correct_val = request.POST.get('tf_correct', 'true')
         options = [
-            {'id': f'opt-{_uuid.uuid4().hex[:8]}', 'text': 'True',  'is_correct': correct_val == 'true'},
-            {'id': f'opt-{_uuid.uuid4().hex[:8]}', 'text': 'False', 'is_correct': correct_val == 'false'},
+            {'id': f'opt-{uuid.uuid4().hex[:8]}', 'text': 'True',  'is_correct': correct_val == 'true'},
+            {'id': f'opt-{uuid.uuid4().hex[:8]}', 'text': 'False', 'is_correct': correct_val == 'false'},
         ]
     elif q_type in ('mcq', 'multi_select'):
         options_count_raw = request.POST.get('options_count', '0').strip()
@@ -2908,7 +2914,7 @@ def _save_exam_question(request, exam, question=None):
             # Try to keep existing option IDs intact
             opt_id = (request.POST.get(f'option_id_{i}') or '').strip()
             if not opt_id:
-                opt_id = f'opt-{_uuid.uuid4().hex[:8]}'
+                opt_id = f'opt-{uuid.uuid4().hex[:8]}'
  
             if q_type == 'multi_select':
                 is_correct = f'option_correct_{i}' in request.POST
@@ -2986,7 +2992,6 @@ def _parse_exam_questions_from_file(import_file, exam, user):
     Parse uploaded .docx or .xlsx file into ExamQuestion rows.
     This is a minimal implementation — extend as needed.
     """
-    import os
     name = import_file.name.lower()
  
     exam.import_status    = Exam.IMPORT_PROCESSING
@@ -3013,7 +3018,8 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                     continue
                 q_type = str(row[1]).strip().lower() if len(row) > 1 and row[1] else 'mcq'
                 marks  = float(row[2]) if len(row) > 2 and row[2] else 1.0
-                diff   = str(row[3]).strip().lower() if len(row) > 3 and row[3] else 'medium'
+                # Column D (row[3]) was historically "difficulty" — field removed from
+                # the model (see ExamQuestion), column position kept for template compat.
                 # Options in columns E–J (index 4–9), correct answer column K (index 10)
                 raw_opts = [str(row[i]).strip() for i in range(4, 9) if i < len(row) and row[i]]
                 correct_idx_raw = str(row[9]).strip() if len(row) > 9 and row[9] else '1'
@@ -3023,7 +3029,7 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                     correct_idx = 0
                 options = [
                     {
-                        'id': f'opt-{_uuid.uuid4().hex[:8]}',
+                        'id': f'opt-{uuid.uuid4().hex[:8]}',
                         'text': opt,
                         'is_correct': i == correct_idx,
                     }
@@ -3031,9 +3037,8 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                 ]
                 ExamQuestion.objects.create(
                     exam=exam, question_text=q_text, question_type=q_type,
-                    difficulty=diff, marks=marks, options=options,
-                    order=idx, created_by=user, imported_from_file=import_file.name,
-                    import_row_number=idx,
+                    marks=marks, options=options,
+                    created_by=user, imported_from_file=import_file.name,
                 )
                 created += 1
  
@@ -3042,20 +3047,16 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                 import docx as python_docx
             except ImportError:
                 raise RuntimeError('python-docx is not installed. Run: pip install python-docx')
-            from io import BytesIO
             doc = python_docx.Document(BytesIO(import_file.read()))
-            order = 0
             for para in doc.paragraphs:
                 text = para.text.strip()
                 if not text:
                     continue
                 ExamQuestion.objects.create(
                     exam=exam, question_text=text, question_type='essay',
-                    difficulty='medium', marks=1, options=[],
-                    order=order, created_by=user, imported_from_file=import_file.name,
-                    import_row_number=order,
+                    marks=1, options=[],
+                    created_by=user, imported_from_file=import_file.name,
                 )
-                order += 1
                 created += 1
         else:
             raise RuntimeError(f'Unsupported file type: {name}')
@@ -3075,7 +3076,6 @@ def _parse_exam_questions_from_file(import_file, exam, user):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 def exam_grade_response(request, slug, response_id):
-    from eduweb.models import StudentExamResponse
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
     response = get_object_or_404(StudentExamResponse, pk=response_id, exam=exam)
 
@@ -3127,6 +3127,18 @@ def exam_grade_response(request, slug, response_id):
             'question_scores', 'total_score', 'score_percentage',
             'pending_manual_count', 'status', 'passed', 'graded_at', 'graded_by',
         ])
+
+        if pending_manual == 0:
+            academic_course = exam.course.academic_course
+            session = exam.course.session
+            if academic_course and session:
+                try:
+                    CourseGrade.recompute_for_student_course(response.student, academic_course, session)
+                except Exception:
+                    logger.exception(
+                        'Failed to recompute CourseGrade after manual exam grading for student=%s exam=%s',
+                        response.student.pk, exam.pk,
+                    )
 
         if pending_manual == 0:
             messages.success(request, f"Fully graded — {response.student.get_full_name() or response.student.username} scored {score_pct}%.")

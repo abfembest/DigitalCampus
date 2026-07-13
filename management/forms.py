@@ -1,34 +1,82 @@
+import json
+
 from django import forms
-from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+
 from eduweb.models import (
-    Faculty,
-    Department,
-    Program,
-    Course,
-    BlogPost,
-    BlogCategory,
-    BroadcastMessage,
-    LMSCourse,
-    CourseApplication,
-    Enrollment,
-    UserProfile,
-    SystemConfiguration,
-    CourseCategory,
-    StaffPayroll,
-    Review,
-    Certificate,
-    Badge,
-    StudentBadge,
-    PaymentGateway,
-    Transaction,
-    Invoice,
+    AcademicSession,
     AllRequiredPayments,
     Announcement,
-    SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember, LibraryItem
+    Badge,
+    BlogCategory,
+    BlogPost,
+    BroadcastMessage,
+    Certificate,
+    Course,
+    CourseApplication,
+    CourseCategory,
+    CourseIntake,
+    Department,
+    Enrollment,
+    Faculty,
+    InstitutionMember,
+    Invoice,
+    LMSCourse,
+    LibraryItem,
+    PaymentGateway,
+    Program,
+    Review,
+    SiteConfig,
+    SiteHistoryMilestone,
+    StaffPayroll,
+    StudentBadge,
+    SystemConfiguration,
+    Testimonial,
+    Transaction,
+    UserProfile,
+    validate_file_size,
 )
-import json
+
+
+def _clean_unique_email(email, instance=None, message='This email is already registered.'):
+    """Shared clean_email body for UserCreateForm/UserEditForm — normalizes
+    to lowercase and checks uniqueness, excluding `instance` itself on edit."""
+    email = (email or '').lower()
+    qs = User.objects.filter(email=email)
+    if instance is not None and instance.pk:
+        qs = qs.exclude(pk=instance.pk)
+    if qs.exists():
+        raise ValidationError(message)
+    return email
+
+
+def _clean_code_field(code):
+    """Shared clean_code body for DepartmentForm/ProgramForm."""
+    return (code or '').strip().upper()
+
+
+IMAGE_EXTENSIONS = ('jpg', 'jpeg', 'png', 'webp', 'gif')
+DOCUMENT_EXTENSIONS = ('pdf', 'jpg', 'jpeg', 'png')
+
+
+def _validate_upload(file, extensions, max_size_mb=10):
+    """
+    Server-side backstop for upload fields whose templates only hint at
+    allowed types via `accept=` (client-side, trivially bypassed): enforces
+    an extension whitelist and a size cap. No-op if no file was submitted,
+    so it's safe to use on optional fields.
+    """
+    if not file:
+        return file
+    ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
+    if ext not in extensions:
+        raise ValidationError(
+            f'Unsupported file type ".{ext}". Allowed: {", ".join(extensions)}.'
+        )
+    validate_file_size(file, max_size_mb=max_size_mb)
+    return file
 
 
 # ==============================================================================
@@ -219,6 +267,12 @@ class FacultyForm(forms.ModelForm):
                         description = feature.get('description', '')
                         lines.append(f"{icon}|{title}|{description}")
                 self.fields['special_features_text'].initial = '\n'.join(lines)
+
+    def clean_hero_image(self):
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS)
+
+    def clean_about_image(self):
+        return _validate_upload(self.cleaned_data.get('about_image'), IMAGE_EXTENSIONS)
 
     def clean_special_features_text(self):
         text = self.cleaned_data.get('special_features_text', '').strip()
@@ -529,6 +583,9 @@ class BlogPostForm(forms.ModelForm):
             raise forms.ValidationError('Excerpt must be 500 characters or less.')
         return excerpt
 
+    def clean_featured_image(self):
+        return _validate_upload(self.cleaned_data.get('featured_image'), IMAGE_EXTENSIONS)
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.tags = self.cleaned_data.get('tags_text', [])
@@ -622,11 +679,8 @@ class UserCreateForm(forms.ModelForm):
         }
  
     def clean_email(self):
-        email = self.cleaned_data.get('email', '').lower()
-        if User.objects.filter(email=email).exists():
-            raise ValidationError('This email is already registered.')
-        return email
- 
+        return _clean_unique_email(self.cleaned_data.get('email', ''))
+
     def save(self, commit=True, raw_password=None):
         """
         Save the User instance.
@@ -671,10 +725,11 @@ class UserEditForm(forms.ModelForm):
         }
  
     def clean_email(self):
-        email = self.cleaned_data.get('email', '').lower()
-        if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
-            raise ValidationError('This email is already in use.')
-        return email
+        return _clean_unique_email(
+            self.cleaned_data.get('email', ''),
+            instance=self.instance,
+            message='This email is already in use.',
+        )
 
 
 class UserProfileForm(forms.ModelForm):
@@ -734,6 +789,9 @@ class UserProfileForm(forms.ModelForm):
                 'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
             })
         }
+
+    def clean_avatar(self):
+        return _validate_upload(self.cleaned_data.get('avatar'), IMAGE_EXTENSIONS)
 
 
 class QuickRoleChangeForm(forms.Form):
@@ -878,6 +936,18 @@ class SiteConfigGeneralForm(forms.ModelForm):
             'tiktok':                forms.URLInput(attrs=_SC_I),
         }
 
+    def clean_logo(self):
+        return _validate_upload(self.cleaned_data.get('logo'), IMAGE_EXTENSIONS)
+
+    def clean_logo_dark(self):
+        return _validate_upload(self.cleaned_data.get('logo_dark'), IMAGE_EXTENSIONS)
+
+    def clean_favicon(self):
+        return _validate_upload(self.cleaned_data.get('favicon'), IMAGE_EXTENSIONS)
+
+    def clean_og_image(self):
+        return _validate_upload(self.cleaned_data.get('og_image'), IMAGE_EXTENSIONS)
+
 
 class SiteConfigIndexForm(forms.ModelForm):
     """
@@ -984,6 +1054,9 @@ class TestimonialForm(forms.ModelForm):
             'order':       forms.NumberInput(attrs=_SC_I),
         }
 
+    def clean_avatar(self):
+        return _validate_upload(self.cleaned_data.get('avatar'), IMAGE_EXTENSIONS)
+
 
 class InstitutionMemberForm(forms.ModelForm):
     class Meta:
@@ -996,6 +1069,10 @@ class InstitutionMemberForm(forms.ModelForm):
             'bio':           forms.Textarea(attrs={**_SC_T, 'rows': 4}),
             'display_order': forms.NumberInput(attrs=_SC_I),
         }
+
+    def clean_photo(self):
+        return _validate_upload(self.cleaned_data.get('photo'), IMAGE_EXTENSIONS)
+
 
 class BrandingConfigForm(forms.Form):
     site_name = forms.CharField(
@@ -1033,6 +1110,12 @@ class BrandingConfigForm(forms.Form):
             'class': 'h-12 w-24 rounded-lg border border-gray-300'
         })
     )
+
+    def clean_logo(self):
+        return _validate_upload(self.cleaned_data.get('logo'), IMAGE_EXTENSIONS)
+
+    def clean_favicon(self):
+        return _validate_upload(self.cleaned_data.get('favicon'), IMAGE_EXTENSIONS)
 
 
 class EmailConfigForm(forms.Form):
@@ -1291,12 +1374,6 @@ class BroadcastMessageForm(forms.ModelForm):
 
         return cleaned_data
 
-from django import forms
-from eduweb.models import (
-    Department, Program, AcademicSession, CourseIntake,
-    Announcement, LMSCourse, CourseCategory
-)
-
 
 class DepartmentForm(forms.ModelForm):
     class Meta:
@@ -1304,8 +1381,7 @@ class DepartmentForm(forms.ModelForm):
         fields = ['faculty', 'name', 'code', 'description', 'display_order', 'is_active']
 
     def clean_code(self):
-        code = self.cleaned_data.get('code', '').strip().upper()
-        return code
+        return _clean_code_field(self.cleaned_data.get('code', ''))
 
 
 class ProgramForm(forms.ModelForm):
@@ -1405,7 +1481,7 @@ class ProgramForm(forms.ModelForm):
         }
 
     def clean_code(self):
-        return self.cleaned_data.get('code', '').strip().upper()
+        return _clean_code_field(self.cleaned_data.get('code', ''))
 
 
 class AcademicSessionForm(forms.ModelForm):
@@ -1675,6 +1751,12 @@ class LMSCourseForm(forms.ModelForm):
             instance.save()
         return instance
 
+    def clean_hero_image(self):
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS)
+
+    def clean_thumbnail(self):
+        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS)
+
 
 # ==============================================================================
 # ENROLLMENT FORM
@@ -1856,6 +1938,9 @@ class CertificateForm(forms.ModelForm):
                 'class': 'w-5 h-5 text-primary-600 rounded cursor-pointer',
             }),
         }
+
+    def clean_certificate_file(self):
+        return _validate_upload(self.cleaned_data.get('certificate_file'), DOCUMENT_EXTENSIONS)
 
 
 # ==============================================================================
@@ -2328,6 +2413,17 @@ class LibraryItemForm(forms.ModelForm):
             'Button label shown on the front-end, default: "Read / Download".'
         )
 
+    def clean_cover_image(self):
+        return _validate_upload(self.cleaned_data.get('cover_image'), IMAGE_EXTENSIONS)
+
+    def clean_file(self):
+        """Extension is already whitelisted at the model level
+        (FileExtensionValidator) — this only adds the missing size cap."""
+        file = self.cleaned_data.get('file')
+        if file:
+            validate_file_size(file, max_size_mb=25)
+        return file
+
 
 # ==================== ADMIN MESSAGING FORMS ====================
 class AdminMessageComposeForm(forms.ModelForm):
@@ -2336,8 +2432,6 @@ class AdminMessageComposeForm(forms.ModelForm):
     Unlike the student version, recipient is a visible dropdown
     covering all active users.
     """
-    from eduweb.models import Message as _Msg
-
     recipient = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True)
             .select_related('profile')

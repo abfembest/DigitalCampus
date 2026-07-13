@@ -17,25 +17,32 @@ Two entry points:
       one immutable ProgressionDecisionLog row, and a notification.
 """
 import math
-from decimal import Decimal, ROUND_HALF_UP
 
 from eduweb.models import Course, CourseGrade, CourseRegistration, CourseCarryOver, ProgressionDecisionLog
 
 
 def compute_cgpa(user):
     """
-    Cumulative GPA across every CourseGrade ever recorded for this user
-    (all attempts count, matching the existing academic_records GPA
-    calc in student/views.py), excluding withdrawn ('W') grades.
-    Reuses CourseGrade.weighted_points. Returns None if the student has
-    no gradable records yet.
+    Cumulative GPA for this user. Thin wrapper around the canonical
+    CourseGrade.compute_cgpa — kept here so existing callers of
+    management.progression.compute_cgpa don't need to change, but the
+    dashboard and Academic Records now call the same underlying model
+    method directly, so all three can never disagree.
     """
-    grades = CourseGrade.objects.filter(student=user).exclude(grade='').exclude(grade='W')
-    total_units = sum(g.credit_units for g in grades)
-    if not total_units:
-        return None
-    weighted_sum = sum(g.weighted_points for g in grades)
-    return (Decimal(weighted_sum) / Decimal(total_units)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    return CourseGrade.compute_cgpa(user)
+
+
+def already_processed_student_ids(session, user_ids):
+    """
+    Student IDs that already have a ProgressionDecisionLog for this
+    session — used to skip double-processing on a resubmitted confirm
+    POST (double-click, back-button resubmit) since progression_status
+    alone can't tell "not yet run" apart from "just ran".
+    """
+    return set(
+        ProgressionDecisionLog.objects.filter(session=session, student_id__in=list(user_ids))
+        .values_list('student_id', flat=True)
+    )
 
 
 def compute_progression_decision(profile, program, session):
@@ -57,20 +64,26 @@ def compute_progression_decision(profile, program, session):
     cgpa = compute_cgpa(profile.user)
     cgpa_ok = cgpa is not None and cgpa >= program.min_cgpa_to_progress
 
+    # A course counts as "failed this run" if either (a) the student registered
+    # for it this session and didn't pass, or (b) it's still an open carry-over
+    # from a prior session — (b) closes the loophole where a student dodges
+    # probation/withdrawal indefinitely by simply not re-registering for a
+    # course they've already failed.
     prior_attempts = {}
     failed_courses = []
     for course in current_level_courses:
+        passed = CourseGrade.objects.filter(student=profile.user, course=course, is_passed=True).exists()
+        if passed:
+            continue
         registered = CourseRegistration.objects.filter(
             student=profile.user, course=course, session=session,
             status__in=['pending', 'approved'],
         ).exists()
-        if not registered:
+        existing = CourseCarryOver.objects.filter(student=profile.user, course=course, is_cleared=False).first()
+        if not registered and not existing:
             continue
-        passed = CourseGrade.objects.filter(student=profile.user, course=course, is_passed=True).exists()
-        if not passed:
-            failed_courses.append(course)
-            existing = CourseCarryOver.objects.filter(student=profile.user, course=course).first()
-            prior_attempts[course.id] = existing.attempts if existing else 0
+        failed_courses.append(course)
+        prior_attempts[course.id] = existing.attempts if existing else 0
 
     promote = core_passed and cgpa_ok
     previous_year_of_study = profile.year_of_study
@@ -190,5 +203,50 @@ def apply_progression_decision(decision, admin_user):
     }
     title, message = messages_by_status.get(decision['new_status'], ('Academic Status Updated', 'Your academic status has been updated.'))
     _notify(user=profile.user, title=title, message=message, notif_type='system', link='/student/courses/')
+
+    return log
+
+
+def apply_manual_override(profile, program, session, new_year_of_study, new_status, reason, admin_user):
+    """
+    Directly sets one student's level/status for a session, bypassing
+    the automatic calculation — for appeals or one-off corrections.
+    Does not touch CourseCarryOver (use the Carry-Over page for that);
+    still writes one ProgressionDecisionLog row, tagged as manual, so
+    every progression change — computed or overridden — has one audit
+    trail. Records what the automatic calculation would have decided,
+    for context.
+    """
+    reference = compute_progression_decision(profile, program, session)
+
+    profile.year_of_study = new_year_of_study
+    profile.progression_status = new_status
+    profile.save(update_fields=['year_of_study', 'progression_status'])
+
+    system_decision = f"promote to {reference['new_year_of_study']}L" if reference['promote'] else reference['new_status']
+    note = f"[Manual override by {admin_user.username}] {reason} (system-computed decision was: {system_decision})"
+
+    log = ProgressionDecisionLog.objects.create(
+        student=profile.user,
+        session=session,
+        previous_year_of_study=reference['previous_year_of_study'],
+        new_year_of_study=new_year_of_study,
+        previous_status=reference['previous_status'],
+        new_status=new_status,
+        cgpa=reference['cgpa'],
+        core_courses_passed=reference['core_passed'],
+        changed_by=admin_user,
+        note=note,
+    )
+
+    from management.views import _notify  # local import avoids a module-load circular import
+    _notify(
+        user=profile.user,
+        title='Academic Status Updated',
+        message='Your academic status has been manually reviewed and updated by the academic office. '
+                'Contact the academic office if you have questions.',
+        notif_type='system',
+        link='/student/courses/',
+    )
 
     return log

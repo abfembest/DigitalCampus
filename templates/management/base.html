@@ -486,8 +486,7 @@
                     <!-- ================================================ -->
                     <!-- ADMIN / MANAGEMENT MENU                          -->
                     <!-- ================================================ -->
-                    <!-- 1. Dashboard -->
-                    {% if permissions.dashboard.can_view %}
+                    <!-- 1. Dashboard — always shown, not matrix-gated (see ROLE_DEFAULT_PERMISSIONS) -->
                     <a href="{% url 'management:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
@@ -495,7 +494,6 @@
                             <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
-                    {% endif %}
 
                     <!-- 2. User Management -->
                     {% if permissions.user_management.can_view %}
@@ -1090,8 +1088,7 @@
                     <!-- ================================================ -->
                     <!-- INSTRUCTOR MENU                                   -->
                     <!-- ================================================ -->
-                    <!-- Dashboard -->
-                    {% if permissions.dashboard.can_view %}
+                    <!-- Dashboard — always shown, not matrix-gated -->
                     <a href="{% url 'instructor:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
@@ -1099,7 +1096,6 @@
                             <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
-                    {% endif %}
 
                     {% if permissions.instructor_courses.can_view %}
                     <!-- My Courses — single link (create is disabled) -->
@@ -1292,8 +1288,7 @@
                     <!-- ================================================ -->
                     <!-- FINANCE MANAGER MENU                             -->
                     <!-- ================================================ -->
-                    <!-- Dashboard -->
-                    {% if permissions.dashboard.can_view %}
+                    <!-- Dashboard — always shown, not matrix-gated -->
                     <a href="{% url 'finance:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
                               {% if request.resolver_match.url_name == 'dashboard' and 'finance' in request.path %}bg-white/20{% endif %}">
@@ -1302,7 +1297,6 @@
                             <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
-                    {% endif %}
 
                     {% if permissions.finance_payments.can_view %}
                     <!-- Payments submenu -->

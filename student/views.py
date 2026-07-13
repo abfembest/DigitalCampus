@@ -22,7 +22,7 @@ from eduweb.models import (
     StudentBadge, LessonSection,
     Message, Notification, Review, StudyGroupMessage,
     FeePayment, CourseGrade, CourseApplication, Exam, StudentExamResponse,
-    Course, AcademicSession, CourseRegistration,
+    Course, AcademicSession, CourseRegistration, CourseCarryOver,
 )
 
 from .forms import AssignmentSubmissionForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm
@@ -358,6 +358,12 @@ def dashboard(request):
         .order_by('-recorded_at')[:5]
     )
 
+    # ── Progression snapshot (cumulative GPA + open carry-overs) ──────────────
+    cgpa_grades = CourseGrade.objects.filter(student=user).exclude(grade='').exclude(grade='W')
+    cgpa_total_units = sum(g.credit_units for g in cgpa_grades)
+    cgpa = round(sum(g.weighted_points for g in cgpa_grades) / cgpa_total_units, 2) if cgpa_total_units else None
+    open_carry_overs = CourseCarryOver.objects.filter(student=user, is_cleared=False).select_related('course')
+
     context = {
         'page_title':               'My Dashboard',
         # LMS enrolled courses
@@ -385,6 +391,9 @@ def dashboard(request):
         # Exams & grades
         'upcoming_exams':           upcoming_exams,
         'recent_grades':            recent_grades,
+        # Progression
+        'cgpa':                     cgpa,
+        'open_carry_overs':         open_carry_overs,
     }
 
     return render(request, 'students/dashboard.html', context)
@@ -504,9 +513,37 @@ def my_courses(request):
         for course in semester_courses:
             course.is_registered = course.id in registered_course_ids
             course.is_core       = course.course_type == 'core'
+            course.is_carry_over = False
             course.registration_status = reg_status_map.get(course.id, '')  # 'pending' | 'approved' | ''
             if course.course_type == 'core':
                 core_credit_total += course.credit_units
+
+        # Carry-over courses (failed at a lower level) register alongside
+        # current-level courses, counting toward the same credit cap.
+        carry_over_attempts = {
+            co.course_id: co.attempts
+            for co in CourseCarryOver.objects.filter(student=user, is_cleared=False)
+        }
+        carry_over_courses = list(
+            Course.objects
+            .filter(
+                pk__in=carry_over_attempts.keys(),
+                program=profile.program,
+                is_active=True,
+            )
+            .exclude(pk__in=[c.id for c in semester_courses])
+            .filter(Q(semester=normalised_term) | Q(semester='annual'))
+            .prefetch_related('prerequisites')
+        )
+        for course in carry_over_courses:
+            course.is_registered = course.id in registered_course_ids
+            course.is_core       = course.course_type == 'core'
+            course.is_carry_over = True
+            course.carry_over_attempts = carry_over_attempts.get(course.id, 1)
+            course.registration_status = reg_status_map.get(course.id, '')
+            if course.course_type == 'core':
+                core_credit_total += course.credit_units
+        semester_courses += carry_over_courses
 
         registered_credit_total = sum(
             c.credit_units for c in semester_courses if c.is_registered
@@ -659,11 +696,16 @@ def register_semester_course(request, course_slug):
         messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration opens: {window_str}.')
         return redirect('students:my_courses')
 
+    open_carry_over_course_ids = CourseCarryOver.objects.filter(
+        student=request.user, is_cleared=False
+    ).values_list('course_id', flat=True)
+
     course = get_object_or_404(
-        Course,
+        Course.objects.filter(
+            Q(year_of_study=profile.year_of_study) | Q(pk__in=open_carry_over_course_ids)
+        ),
         slug=course_slug,
         program=profile.program,
-        year_of_study=profile.year_of_study,
         is_active=True,
     )
 

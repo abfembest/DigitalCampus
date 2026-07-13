@@ -1,0 +1,168 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Academic Progression - MIU Admin Portal{% endblock %}
+{% block meta_description %}End-of-session student progression and carry-over processing{% endblock %}
+
+{% block content %}
+<div class="max-w-full relative">
+
+  {# ─── Page Header ─────────────────────────────────────────────────────────── #}
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-800 font-display">Academic Progression</h1>
+      <p class="text-gray-500 mt-1">Compute end-of-session promotion, carry-over, and probation decisions</p>
+    </div>
+    {% if permissions.academic_progression.can_view %}
+    <a href="{% url 'management:carry_over_list' %}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+      <i class="fas fa-list" aria-hidden="true"></i> Manage Carry-Overs
+    </a>
+    {% endif %}
+  </div>
+
+  {# ─── Picker Form ─────────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+    <form method="get" class="flex flex-col sm:flex-row gap-3 items-end">
+      <div class="flex-1">
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Program</label>
+        <select name="program_id" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+          <option value="">— Select a program —</option>
+          {% for p in programs %}
+          <option value="{{ p.pk }}" {% if selected_program.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Session</label>
+        <select name="session_id" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+          <option value="">— Select a session —</option>
+          {% for s in sessions %}
+          <option value="{{ s.pk }}" {% if selected_session.pk == s.pk %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors">
+        <i class="fas fa-search mr-1" aria-hidden="true"></i> Load Preview
+      </button>
+    </form>
+  </div>
+
+  {# ─── Preview ──────────────────────────────────────────────────────────────── #}
+  {% if selected_program and selected_session %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-800">
+        Preview — {{ selected_program.name }} · {{ selected_session.name }}
+        <span class="text-sm font-normal text-gray-400 ml-1">({{ preview_rows|length }} student{{ preview_rows|length|pluralize }})</span>
+      </h2>
+    </div>
+
+    {% if not preview_rows %}
+    <div class="p-12 text-center text-gray-400">
+      <i class="fas fa-users text-4xl mb-3 block opacity-20" aria-hidden="true"></i>
+      <p>No active students found for this program.</p>
+    </div>
+    {% else %}
+    <form method="post" id="progressionForm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="confirm">
+      <input type="hidden" name="program_id" value="{{ selected_program.pk }}">
+      <input type="hidden" name="session_id" value="{{ selected_session.pk }}">
+      <input type="hidden" name="student_ids" id="studentIdsField" value="">
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
+            <tr>
+              <th class="py-3 px-5 text-left font-semibold">
+                <input type="checkbox" id="selectAllRows" checked onclick="toggleAllRows(this)">
+              </th>
+              <th class="py-3 px-5 text-left font-semibold">Student</th>
+              <th class="py-3 px-5 text-left font-semibold">Level</th>
+              <th class="py-3 px-5 text-left font-semibold">CGPA</th>
+              <th class="py-3 px-5 text-left font-semibold">Core Passed</th>
+              <th class="py-3 px-5 text-left font-semibold">Carry-Over Courses</th>
+              <th class="py-3 px-5 text-left font-semibold">Decision</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for row in preview_rows %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="py-3 px-5">
+                <input type="checkbox" class="row-checkbox" value="{{ row.profile.user_id }}" checked>
+              </td>
+              <td class="py-3 px-5">
+                <div class="font-medium text-gray-800">{{ row.profile.user.get_full_name|default:row.profile.user.username }}</div>
+                <div class="text-xs text-gray-400">{{ row.profile.user.username }}</div>
+              </td>
+              <td class="py-3 px-5">{% widthratio row.previous_year_of_study 1 100 %}L</td>
+              <td class="py-3 px-5">{{ row.cgpa|default:"—" }}</td>
+              <td class="py-3 px-5">
+                {% if row.core_passed %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Yes</span>
+                {% else %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">No</span>
+                {% endif %}
+              </td>
+              <td class="py-3 px-5">
+                {% if row.failed_courses %}
+                <span class="text-xs text-gray-600">
+                  {% for c in row.failed_courses %}{{ c.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </span>
+                {% else %}
+                <span class="text-xs text-gray-400">None</span>
+                {% endif %}
+              </td>
+              <td class="py-3 px-5">
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                  {% if row.new_status == 'active' %}bg-green-100 text-green-700
+                  {% elif row.new_status == 'graduated' %}bg-purple-100 text-purple-700
+                  {% elif row.new_status == 'repeated' %}bg-yellow-100 text-yellow-700
+                  {% elif row.new_status == 'probation' %}bg-orange-100 text-orange-700
+                  {% else %}bg-red-100 text-red-700{% endif %}">
+                  {% if row.promote %}Promote to {% widthratio row.new_year_of_study 1 100 %}L{% else %}{{ row.new_status|title }}{% endif %}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if permissions.academic_progression.can_approve %}
+      <div class="p-5 border-t border-gray-100 flex justify-end">
+        <button type="submit" onclick="return confirmSubmit()"
+                class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-sm">
+          <i class="fas fa-check" aria-hidden="true"></i> Confirm &amp; Apply
+        </button>
+      </div>
+      {% else %}
+      <div class="p-5 border-t border-gray-100 text-sm text-gray-400">
+        You have view-only access to this preview — confirming requires approval permission.
+      </div>
+      {% endif %}
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAllRows(master) {
+  document.querySelectorAll('.row-checkbox').forEach(cb => { cb.checked = master.checked; });
+}
+function confirmSubmit() {
+  const ids = [...document.querySelectorAll('.row-checkbox:checked')].map(c => c.value).join(',');
+  if (!ids) {
+    alert('Select at least one student.');
+    return false;
+  }
+  document.getElementById('studentIdsField').value = ids;
+  return confirm('Apply progression decisions for ' + document.querySelectorAll('.row-checkbox:checked').length + ' selected student(s)? This cannot be undone.');
+}
+</script>
+{% endblock %}

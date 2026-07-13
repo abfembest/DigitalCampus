@@ -43,6 +43,10 @@ urlpatterns = [
     path('academic-sessions/', views.academic_sessions_list, name='academic_sessions_list'),
     path('academic-sessions/<int:pk>/set-current/', views.academic_session_set_current, name='academic_session_set_current'),
 
+    # Academic Progression / Carry-Over
+    path('progression/', views.academic_progression, name='academic_progression'),
+    path('progression/carry-overs/', views.carry_over_list, name='carry_over_list'),
+
     path('courses/', views.courses_list, name='courses_list'),
     path('exams/<slug:slug>/toggle-active/', views.admin_exam_toggle_active, name='admin_exam_toggle_active'),
 

@@ -130,12 +130,17 @@
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     {% for course in semester_courses %}
-                    <tr class="hover:bg-gray-50 transition-colors {% if course.is_registered %}bg-green-50/40{% endif %}">
+                    <tr class="hover:bg-gray-50 transition-colors {% if course.is_registered %}bg-green-50/40{% elif course.is_carry_over %}bg-orange-50/40{% endif %}">
 
                         <td class="px-5 py-3 font-mono font-semibold text-gray-700 text-xs whitespace-nowrap">{{ course.code }}</td>
 
                         <td class="px-3 py-3 text-gray-800 font-medium">
                             <span class="line-clamp-2">{{ course.name }}</span>
+                            {% if course.is_carry_over %}
+                            <span class="inline-flex items-center gap-1 mt-0.5 text-xs text-orange-600 font-semibold">
+                                <i class="fas fa-history text-xs"></i> Carry-over — failed {{ course.carry_over_attempts }}x previously
+                            </span>
+                            {% endif %}
                             {% if course.prerequisites.exists %}
                             <span class="inline-flex items-center gap-1 mt-0.5 text-xs text-amber-600">
                                 <i class="fas fa-code-branch text-xs"></i> Prereq

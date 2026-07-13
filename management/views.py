@@ -40,8 +40,11 @@ from eduweb.models import (
     ContactMessage,
     Course,
     CourseApplication,
+    CourseCarryOver,
     CourseCategory,
+    CourseGrade,
     CourseIntake,
+    CourseRegistration,
     Department,
     Enrollment,
     Faculty,
@@ -52,6 +55,7 @@ from eduweb.models import (
     Notification,
     PaymentGateway,
     Program,
+    ProgressionDecisionLog,
     Review,
     SiteConfig,
     SiteHistoryMilestone,
@@ -120,6 +124,9 @@ from eduweb.emailservices import (
     send_payroll_payment_notification_email,
     send_admin_created_user_email,
 )
+
+# Academic progression
+from management.progression import compute_progression_decision, apply_progression_decision
 
 
 def _notify(user, title, message, notif_type='system', link=''):
@@ -3331,6 +3338,108 @@ def academic_session_set_current(request, pk):
 
     messages.success(request, f'✓ {session.name} is now the current active session.')
     return redirect('management:academic_sessions_list')
+
+
+# ===========================================================================
+# ACADEMIC PROGRESSION / CARRY-OVER
+# ===========================================================================
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def academic_progression(request):
+    programs = Program.objects.filter(is_active=True).order_by('name')
+    sessions = AcademicSession.objects.all().order_by('-name')
+
+    program_id = request.GET.get('program_id') or request.POST.get('program_id')
+    session_id = request.GET.get('session_id') or request.POST.get('session_id')
+    program = get_object_or_404(Program, pk=program_id) if program_id else None
+    session = get_object_or_404(AcademicSession, pk=session_id) if session_id else None
+
+    if request.method == 'POST':
+        can_approve = request.permissions.get('academic_progression', {}).get('can_approve', False) if hasattr(request, 'permissions') else False
+        if not (request.user.is_superuser or can_approve):
+            messages.error(request, 'You do not have permission to confirm progression decisions.')
+            return redirect(f"{reverse('management:academic_progression')}?program_id={program_id}&session_id={session_id}")
+
+        if not program or not session:
+            messages.error(request, 'Program and session are required.')
+            return redirect('management:academic_progression')
+
+        student_ids_raw = request.POST.get('student_ids', '')
+        try:
+            student_ids = [int(pid) for pid in student_ids_raw.split(',') if pid.strip()]
+        except ValueError:
+            messages.error(request, 'Invalid student selection.')
+            return redirect(f"{reverse('management:academic_progression')}?program_id={program.pk}&session_id={session.pk}")
+
+        profiles = UserProfile.objects.filter(
+            role='student', program=program, user_id__in=student_ids,
+            progression_status__in=['active', 'repeated', 'probation'],
+        ).select_related('user')
+
+        applied = 0
+        for profile in profiles:
+            decision = compute_progression_decision(profile, program, session)
+            apply_progression_decision(decision, request.user)
+            applied += 1
+
+        messages.success(request, f'Progression processed for {applied} student(s).')
+        return redirect('management:academic_progression')
+
+    # GET — render picker, and a preview if both program + session are selected
+    preview_rows = []
+    if program and session:
+        profiles = UserProfile.objects.filter(
+            role='student', program=program,
+            progression_status__in=['active', 'repeated', 'probation'],
+        ).select_related('user').order_by('year_of_study', 'user__first_name')
+        for profile in profiles:
+            decision = compute_progression_decision(profile, program, session)
+            preview_rows.append(decision)
+
+    return render(request, 'management/academic_progression.html', {
+        'programs': programs,
+        'sessions': sessions,
+        'selected_program': program,
+        'selected_session': session,
+        'preview_rows': preview_rows,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def carry_over_list(request):
+    if request.method == 'POST':
+        can_edit = request.permissions.get('academic_progression', {}).get('can_edit', False) if hasattr(request, 'permissions') else False
+        if not (request.user.is_superuser or can_edit):
+            messages.error(request, 'You do not have permission to modify carry-over records.')
+            return redirect('management:carry_over_list')
+
+        record_id = request.POST.get('record_id')
+        record = get_object_or_404(CourseCarryOver, pk=record_id)
+        record.is_cleared = True
+        record.save(update_fields=['is_cleared', 'updated_at'])
+        messages.success(request, f'Marked {record.course.code} cleared for {record.student.username}.')
+        return redirect('management:carry_over_list')
+
+    program_id = request.GET.get('program_id', '').strip()
+    status_filter = request.GET.get('status', 'open')
+
+    records = CourseCarryOver.objects.select_related('student', 'course', 'course__program', 'first_failed_session')
+    if program_id:
+        records = records.filter(course__program_id=program_id)
+    if status_filter == 'open':
+        records = records.filter(is_cleared=False)
+    elif status_filter == 'cleared':
+        records = records.filter(is_cleared=True)
+
+    return render(request, 'management/carry_over_list.html', {
+        'records': records,
+        'programs': Program.objects.filter(is_active=True).order_by('name'),
+        'program_id': program_id,
+        'status_filter': status_filter,
+    })
+
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)

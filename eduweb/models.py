@@ -1251,6 +1251,13 @@ class Program(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(30)],
         help_text="Maximum total credit units a student can register in ONE semester for this program"
     )
+    min_cgpa_to_progress = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=1.00,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        help_text="Minimum cumulative GPA (5-point scale) required to advance to the next year of study"
+    )
     available_study_modes = models.JSONField(
         default=list,
         blank=True,
@@ -3526,6 +3533,7 @@ class StaffPermissionsMatrix(models.Model):
         ('support_communications',  'Communications'),
         ('support_analytics',       'Analytics'),
         ('support_config',          'Support Config'),
+        ('academic_progression',    'Academic Progression'),
     ]
 
     # Role-level defaults — mirrors sidebar sections visible per role
@@ -3545,6 +3553,7 @@ class StaffPermissionsMatrix(models.Model):
         'site_content':    {'can_view': True, 'can_edit': True},
         'security_audit':  {'can_view': True},
         'support_config':  {'can_view': True, 'can_create': True, 'can_edit': True},
+        'academic_progression': {'can_view': True, 'can_edit': True, 'can_approve': True},
     },
     'support': {
         'dashboard':      {'can_view': True},
@@ -4777,6 +4786,90 @@ class CourseGrade(models.Model):
     @property
     def weighted_points(self):
         return self.grade_points * self.credit_units
+
+
+class CourseCarryOver(models.Model):
+    """
+    One row per student per course currently owed as a carry-over.
+    Re-evaluated by the end-of-session progression run each time it
+    executes — cleared automatically once a passing CourseGrade exists,
+    rather than being hooked into every grade-writing code path.
+    """
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carry_overs')
+    course  = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='carry_over_records')
+    first_failed_session = models.ForeignKey(
+        'AcademicSession', on_delete=models.SET_NULL, null=True, related_name='+',
+        help_text="Session in which this course was first failed."
+    )
+    first_failed_term = models.CharField(max_length=20, blank=True)
+    attempts = models.PositiveSmallIntegerField(
+        default=1, help_text="Number of times this course has been attempted and failed."
+    )
+    is_cleared = models.BooleanField(default=False)
+    cleared_session = models.ForeignKey(
+        'AcademicSession', on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+        help_text="Session in which a passing grade finally cleared this carry-over."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['student', 'course']]
+        ordering = ['-updated_at']
+        verbose_name = 'Course Carry-Over'
+        verbose_name_plural = 'Course Carry-Overs'
+        indexes = [
+            models.Index(fields=['student', 'is_cleared']),
+        ]
+
+    def __str__(self):
+        status = 'cleared' if self.is_cleared else f'open (attempt {self.attempts})'
+        return f"{self.student.username} | {self.course.code} | {status}"
+
+
+class ProgressionDecisionLog(ImmutableMixin, models.Model):
+    """
+    Immutable audit trail — one row per student per end-of-session
+    progression run. Mirrors ExamStatusLog's ImmutableMixin pattern.
+    """
+    slug = models.SlugField(unique=True, max_length=220)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='progression_logs')
+    session = models.ForeignKey('AcademicSession', on_delete=models.CASCADE, related_name='progression_logs')
+
+    previous_year_of_study = models.PositiveSmallIntegerField()
+    new_year_of_study       = models.PositiveSmallIntegerField()
+    previous_status = models.CharField(max_length=20)
+    new_status      = models.CharField(max_length=20)
+
+    cgpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    core_courses_passed = models.BooleanField(default=False)
+
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='progression_decisions_made')
+    note = models.TextField(blank=True, help_text="Carried-over courses, attempt counts, and other decision context.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Progression Decision Log'
+        verbose_name_plural = 'Progression Decision Logs'
+        indexes = [
+            models.Index(fields=['student', 'session']),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student.username} | {self.session} | "
+            f"{self.previous_status}→{self.new_status} "
+            f"({self.previous_year_of_study}L→{self.new_year_of_study}L)"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slug(
+                ProgressionDecisionLog,
+                f"pdl-{self.student_id}-{secrets.token_hex(4)}",
+            )
+        super().save(*args, **kwargs)
 
 # =============================================================================
 # EXAM MODULE — append to the bottom of eduweb/models.py

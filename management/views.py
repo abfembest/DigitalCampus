@@ -1614,7 +1614,13 @@ def role_assign(request):
         except (User.DoesNotExist, ValueError):
             pass
 
-    users = User.objects.select_related('profile').order_by('first_name', 'last_name', 'username')
+    # Only staff roles are ever looked up in StaffPermissionsMatrix — students
+    # have no permission rows and this page has nothing to show/change for them.
+    users = (
+        User.objects.select_related('profile')
+        .exclude(profile__role='student')
+        .order_by('first_name', 'last_name', 'username')
+    )
 
     return render(request, 'management/role_assign.html', {
         'users': users,

@@ -3358,6 +3358,23 @@ def academic_session_set_current(request, pk):
     session.status = 'active'
     session.save()  # AcademicSession.save() already flips is_current=False on all others
 
+    # A session is often activated (e.g. right after an end-of-session
+    # progression run) some time after its term_dates were configured —
+    # by which point the automatic 3-week registration window for the
+    # running term may have already elapsed, which would otherwise lock
+    # every student out of registration with no way to recover short of
+    # an admin editing term_dates. Auto-open registration in that case so
+    # newly-promoted students can register the moment the session goes live.
+    if session.registration_override == 'auto' and not session.is_registration_open:
+        session.registration_override = 'open'
+        session.save(update_fields=['registration_override'])
+        messages.info(
+            request,
+            f'Registration for "{session.name}" was auto-opened — its computed '
+            f'3-week window had already elapsed. Use "Close Registration" below if '
+            f'you need to lock it again.'
+        )
+
     # Now update statuses on the remaining sessions based on their dates
     other_sessions = AcademicSession.objects.exclude(pk=pk)
     for s in other_sessions:
@@ -3394,6 +3411,30 @@ def academic_session_set_current(request, pk):
             s.save(update_fields=['status'])
 
     messages.success(request, f'✓ {session.name} is now the current active session.')
+    return redirect('management:academic_sessions_list')
+
+
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def academic_session_registration_override(request, pk):
+    """
+    Manual escape hatch for AcademicSession.is_registration_open: lets an
+    admin force registration open/closed regardless of the computed 3-week
+    window, or hand control back to that automatic computation. Needed
+    because the automatic window is date-math only — an admin has no other
+    way to recover if it elapses before a session is actually put to use.
+    """
+    session = get_object_or_404(AcademicSession, pk=pk)
+    value = request.POST.get('registration_override')
+    valid_values = dict(AcademicSession.REGISTRATION_OVERRIDE_CHOICES)
+    if value not in valid_values:
+        messages.error(request, 'Invalid registration override value.')
+        return redirect('management:academic_sessions_list')
+
+    session.registration_override = value
+    session.save(update_fields=['registration_override'])
+    messages.success(request, f'Registration for "{session.name}" set to: {valid_values[value]}.')
     return redirect('management:academic_sessions_list')
 
 

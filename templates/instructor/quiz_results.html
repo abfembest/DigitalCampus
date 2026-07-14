@@ -139,6 +139,10 @@
                         <span class="px-2 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700 inline-flex items-center">
                             <i class="fas fa-spinner mr-1 text-xs"></i><span class="hidden sm:inline">In Progress</span><span class="sm:hidden">…</span>
                         </span>
+                        {% elif attempt.pending_manual_grading %}
+                        <span class="px-2 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 inline-flex items-center">
+                            <i class="fas fa-hourglass-half mr-1 text-xs"></i><span class="hidden sm:inline">Needs Grading</span><span class="sm:hidden">!</span>
+                        </span>
                         {% elif attempt.passed %}
                         <span class="px-2 py-0.5 sm:py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 inline-flex items-center">
                             <i class="fas fa-check-circle mr-1 text-xs"></i>Passed

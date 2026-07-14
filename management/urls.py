@@ -42,6 +42,7 @@ urlpatterns = [
     # Academic Sessions
     path('academic-sessions/', views.academic_sessions_list, name='academic_sessions_list'),
     path('academic-sessions/<int:pk>/set-current/', views.academic_session_set_current, name='academic_session_set_current'),
+    path('academic-sessions/<int:pk>/registration-override/', views.academic_session_registration_override, name='academic_session_registration_override'),
 
     # Academic Progression / Carry-Over
     path('progression/', views.academic_progression, name='academic_progression'),

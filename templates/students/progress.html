@@ -83,7 +83,7 @@
                             {% endif %}
                         </div>
                         <p class="text-gray-600 mb-2">
-                            {{ enrollment.course.instructor_name|default:"MIU Staff" }}
+                            {{ enrollment.course.instructor.get_full_name|default:"MIU Staff" }}
                         </p>
                         <div class="flex flex-wrap items-center gap-4 text-xs md:text-sm text-gray-500">
                             <span>

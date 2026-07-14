@@ -24,7 +24,7 @@ from django.template import Library
 from .models import (
     Faculty, Program, CourseApplication,
     Message, Notification, SupportTicket, ContactMessage,
-    SiteConfig, AcademicSession
+    SiteConfig, AcademicSession, StudentExamResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -213,15 +213,25 @@ def instructor_counts(request):
             is_read=False,
         ).order_by('-created_at')
 
+        # Exam responses submitted but still awaiting manual grading (short-
+        # answer/essay questions) — surfaced as the "My Exams" sidebar badge.
+        pending_exam_count = StudentExamResponse.objects.filter(
+            exam__instructor=request.user,
+            status=StudentExamResponse.SUBMITTED,
+            pending_manual_count__gt=0,
+        ).count()
+
         return {
             'instructor_unread_notifications_count': unread_notifs_qs.count(),
             'instructor_nav_notifications': list(unread_notifs_qs[:5]),
+            'instructor_pending_exam_count': pending_exam_count,
         }
     except Exception:
         logger.exception('instructor_counts: failed to fetch counts')
         return {
             'instructor_unread_notifications_count': 0,
             'instructor_nav_notifications': [],
+            'instructor_pending_exam_count': 0,
         }
 
 

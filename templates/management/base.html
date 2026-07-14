@@ -7,6 +7,7 @@
     <meta name="description" content="{% block meta_description %}MIU Portal - Manage your learning journey{% endblock %}">
     <meta name="keywords" content="{% block meta_keywords %}portal, dashboard, university, management{% endblock %}">
     <meta name="author" content="MIU Administration">
+    {% block meta_tags %}{% endblock %}
 
     <title>{% block title %}Dashboard - MIU Portal{% endblock %}</title>
 
@@ -936,8 +937,19 @@
                     </a>
 
                     <!-- My Courses -->
+                    {% with active=request.resolver_match.url_name|default:'' %}
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'courses' in request.path %}bg-white/20{% endif %}">
+                        {% if active == 'my_courses' or active == 'course_catalog' or active == 'course_detail' or active == 'register_semester_course' or active == 'drop_semester_course' or active == 'register_all_semester_courses' or active == 'enroll_course' or active == 'retry_lms_enrollment' or active == 'lesson_view' or active == 'mark_lesson_complete' or active == 'submit_review' %}
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all bg-white/20">
+                            <div class="flex items-center">
+                                <i class="fas fa-book w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3 text-[17px] font-semibold">Course Registration</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform rotate-180" aria-hidden="true"></i>
+                        </button>
+                        <div id="coursesMenu" class="mt-1 space-y-1 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% else %}
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
                             <div class="flex items-center">
                                 <i class="fas fa-book w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3 text-[17px] font-semibold">Course Registration</span>
@@ -945,12 +957,13 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="coursesMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% endif %}
                             <a href="{% url 'students:my_courses' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'my_courses' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'my_courses' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> Register Courses
                             </a>
                             <a href="{% url 'students:course_catalog' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'course_catalog' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'course_catalog' %}bg-white/20{% endif %}">
                                 <i class="fas fa-search mr-2" aria-hidden="true"></i> Session / Semester Courses
                             </a>
                         </div>
@@ -958,7 +971,17 @@
 
                     <!-- Tasks -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'assignments' in request.path or 'quizzes' in request.path %}bg-white/20{% endif %}">
+                        {% if active == 'assignments' or active == 'assignment_detail' or active == 'submit_assignment' or active == 'quiz_list' or active == 'quiz_detail' or active == 'quiz_take' or active == 'quiz_submit' or active == 'quiz_result' or active == 'exam_list' or active == 'exam_instructions' or active == 'start_exam' or active == 'get_exam_data' or active == 'save_answer' or active == 'flag_tab_switch' or active == 'submit_exam' %}
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all bg-white/20">
+                            <div class="flex items-center">
+                                <i class="fas fa-tasks w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3 text-[17px] font-semibold">Assessment</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform rotate-180" aria-hidden="true"></i>
+                        </button>
+                        <div id="tasksMenu" class="mt-1 space-y-1 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% else %}
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
                             <div class="flex items-center">
                                 <i class="fas fa-tasks w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3 text-[17px] font-semibold">Assessment</span>
@@ -966,16 +989,17 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="tasksMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% endif %}
                             <a href="{% url 'students:assignments' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'assignments' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'assignments' or active == 'assignment_detail' or active == 'submit_assignment' %}bg-white/20{% endif %}">
                                 <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Assignments
                             </a>
                             <a href="{% url 'students:quiz_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'quiz_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'quiz_list' or active == 'quiz_detail' or active == 'quiz_take' or active == 'quiz_submit' or active == 'quiz_result' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2" aria-hidden="true"></i> Quizzes
                             </a>
                             <a href="{% url 'students:exam_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'exam_list' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'exam_list' or active == 'exam_instructions' or active == 'start_exam' or active == 'get_exam_data' or active == 'save_answer' or active == 'flag_tab_switch' or active == 'submit_exam' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2" aria-hidden="true"></i>Examinations
                             </a>
                         </div>
@@ -983,7 +1007,17 @@
 
                     <!-- Performance -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if request.resolver_match.url_name in 'grades,progress,achievements,certificates' %}bg-white/20{% endif %}">
+                        {% if active == 'grades' or active == 'progress' or active == 'achievements' or active == 'certificates' or active == 'certificate_print' %}
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all bg-white/20">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3 text-[17px] font-semibold">Performance</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform rotate-180" aria-hidden="true"></i>
+                        </button>
+                        <div id="performanceMenu" class="mt-1 space-y-1 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% else %}
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
                             <div class="flex items-center">
                                 <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3 text-[17px] font-semibold">Performance</span>
@@ -991,20 +1025,21 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="performanceMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% endif %}
                             <a href="{% url 'students:grades' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'grades' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'grades' %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2" aria-hidden="true"></i> Grades
                             </a>
                             <a href="{% url 'students:progress' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'progress' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'progress' %}bg-white/20{% endif %}">
                                 <i class="fas fa-chart-bar mr-2" aria-hidden="true"></i> Progress
                             </a>
                             <a href="{% url 'students:achievements' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'achievements' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'achievements' %}bg-white/20{% endif %}">
                                 <i class="fas fa-trophy mr-2" aria-hidden="true"></i> Achievements
                             </a>
                             <a href="{% url 'students:certificates' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'certificates' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'certificates' or active == 'certificate_print' %}bg-white/20{% endif %}">
                                 <i class="fas fa-certificate mr-2" aria-hidden="true"></i> Certificates
                             </a>
                         </div>
@@ -1012,7 +1047,7 @@
 
                     <!-- Academic Record -->
                     <a href="{% url 'students:academic_records' %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'academic_records' %}bg-white/20{% endif %}">
+                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if active == 'academic_records' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-graduation-cap w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3 text-[17px] font-semibold">Academic Records</span>
@@ -1021,7 +1056,17 @@
 
                     <!-- Community -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'community' in request.path or 'study-groups' in request.path %}bg-white/20{% endif %}">
+                        {% if active == 'community' or active == 'thread_detail' or active == 'create_thread' or active == 'study_groups' or active == 'create_study_group' or active == 'study_group_detail' or active == 'join_study_group' %}
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all bg-white/20">
+                            <div class="flex items-center">
+                                <i class="fas fa-comments w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3 text-[17px] font-semibold">Community</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform rotate-180" aria-hidden="true"></i>
+                        </button>
+                        <div id="communityMenu" class="mt-1 space-y-1 bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% else %}
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
                             <div class="flex items-center">
                                 <i class="fas fa-comments w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3 text-[17px] font-semibold">Community</span>
@@ -1029,16 +1074,18 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform" aria-hidden="true"></i>
                         </button>
                         <div id="communityMenu" class="mt-1 space-y-1 hidden bg-white/20 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% endif %}
                             <a href="{% url 'students:community' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'community' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'community' or active == 'thread_detail' or active == 'create_thread' %}bg-white/20{% endif %}">
                                 <i class="fas fa-comment-dots mr-2" aria-hidden="true"></i> Discussions
                             </a>
                             <a href="{% url 'students:study_groups' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'study-groups' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'study_groups' or active == 'create_study_group' or active == 'study_group_detail' or active == 'join_study_group' %}bg-white/20{% endif %}">
                                 <i class="fas fa-users mr-2" aria-hidden="true"></i> Study Groups
                             </a>
                         </div>
                     </div>
+                    {% endwith %}{# /active #}
 
                     <!-- Inbox -->
                     <a href="{% url 'students:inbox' %}"
@@ -1070,7 +1117,7 @@
 
                     <!-- Payments -->
                     <a href="{% url 'students:my_payments' %}"
-                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payments' in request.path %}bg-white/20{% endif %}">
+                       class="flex items-center py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if 'payments' in request.path or request.resolver_match.url_name == 'stddebt_by_id' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-credit-card w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3 text-[17px] font-semibold">Payments</span>
@@ -1097,11 +1144,12 @@
                         </div>
                     </a>
 
+                    {% with active=request.resolver_match.url_name|default:'' %}
                     {% if permissions.instructor_courses.can_view %}
                     <!-- My Courses — single link (create is disabled) -->
                     <a href="{% url 'instructor:course_list' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
-                              {% if 'courses' in request.path and request.resolver_match.url_name == 'course_list' %}bg-white/20{% endif %}">
+                              {% if active == 'course_list' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-book-open w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3 text-[17px] font-semibold">My Courses</span>
@@ -1118,10 +1166,12 @@
                     </div>
                     {% endif %}
 
-                    <!-- Manage Course — auto-selects first course -->
+                    <!-- Manage Course — auto-selects first course. Also covers the
+                         legacy dedicated course-admin views reachable from its
+                         overview/students/announcements/discussions tabs. -->
                     <a href="{% url 'instructor:course_manage_default' %}"
                        class="relative flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
-                            {% if request.resolver_match.url_name == 'course_manage' and not request.GET.tab %}bg-white/20{% endif %}">
+                            {% if active == 'course_manage' and request.GET.tab != 'content' or active == 'course_edit' or active == 'course_objectives' or active == 'students_list' or active == 'student_progress' or active == 'enroll_student' or active == 'announcement_list' or active == 'announcement_create' or active == 'announcement_edit' or active == 'announcement_delete' or active == 'discussions' or active == 'discussion_detail' or active == 'discussion_reply' or active == 'discussion_toggle_pin' or active == 'discussion_toggle_lock' or active == 'discussion_delete' or active == 'reply_toggle_solution' or active == 'reply_delete' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-th-large w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3 text-[17px] font-semibold">Manage Course</span>
@@ -1131,7 +1181,7 @@
                     <!-- Lessons & Sections — single link, no orphaned section label -->
                     <a href="{% url 'instructor:course_manage_default' %}?tab=content"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
-                              {% if request.resolver_match.url_name == 'course_manage' and request.GET.tab == 'content' %}bg-white/20{% endif %}">
+                              {% if active == 'course_manage' and request.GET.tab == 'content' or active == 'lesson_list' or active == 'lesson_create' or active == 'lesson_edit' or active == 'lesson_delete' or active == 'section_create' or active == 'section_edit' or active == 'section_delete' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-layer-group w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3 text-[17px] font-semibold">Lessons & Sections</span>
@@ -1146,7 +1196,17 @@
 
                     <!-- Assessments -->
                     <div class="mb-1">
-                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'assessments' in request.path or 'quizzes' in request.path or 'assignments' in request.path or 'exams' in request.path %}bg-white/20{% endif %}">
+                        {% if active == 'create_assessment' or active == 'all_quizzes' or active == 'quiz_list' or active == 'quiz_create' or active == 'quiz_edit' or active == 'quiz_questions' or active == 'question_create' or active == 'question_answers' or active == 'delete_answer' or active == 'delete_question' or active == 'quiz_results' or active == 'quiz_attempt_detail' or active == 'all_assignments' or active == 'assignment_list' or active == 'assignment_create' or active == 'assignment_edit' or active == 'assignment_submissions' or active == 'grade_submission' or active == 'exam_list' or active == 'exam_detail' or active == 'exam_update' or active == 'exam_submit' or active == 'exam_publish' or active == 'exam_question_create' or active == 'exam_question_edit' or active == 'exam_question_delete' or active == 'exam_import_questions' or active == 'exam_grade_response' %}
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all bg-white/20">
+                            <div class="flex items-center">
+                                <i class="fas fa-clipboard-check w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3 text-[17px] font-semibold">Assessments</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform text-sm rotate-180" aria-hidden="true"></i>
+                        </button>
+                        <div id="assessmentsMenu" class="mt-1 space-y-1 bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% else %}
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
                             <div class="flex items-center">
                                 <i class="fas fa-clipboard-check w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3 text-[17px] font-semibold">Assessments</span>
@@ -1154,10 +1214,11 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
                         <div id="assessmentsMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% endif %}
                             {% if permissions.instructor_assessments.can_create %}
                             <a href="{% url 'instructor:create_assessment' %}"
                                class="flex items-center py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
-                                      {% if request.resolver_match.url_name == 'create_assessment' %}bg-white/20{% endif %}">
+                                      {% if active == 'create_assessment' %}bg-white/20{% endif %}">
                                 <i class="fas fa-plus-circle mr-2 w-4 text-yellow-300" aria-hidden="true"></i>
                                 <span class="font-semibold">Create Assessment</span>
                             </a>
@@ -1165,17 +1226,17 @@
                             {% endif %}
                             <a href="{% url 'instructor:all_quizzes' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
-                                      {% if request.resolver_match.url_name == 'all_quizzes' %}bg-white/20{% endif %}">
+                                      {% if active == 'all_quizzes' or active == 'quiz_list' or active == 'quiz_create' or active == 'quiz_edit' or active == 'quiz_questions' or active == 'question_create' or active == 'question_answers' or active == 'delete_answer' or active == 'delete_question' or active == 'quiz_results' or active == 'quiz_attempt_detail' %}bg-white/20{% endif %}">
                                 <i class="fas fa-question-circle mr-2 w-4" aria-hidden="true"></i> All Quizzes
                             </a>
                             <a href="{% url 'instructor:all_assignments' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
-                                      {% if request.resolver_match.url_name == 'all_assignments' %}bg-white/20{% endif %}">
+                                      {% if active == 'all_assignments' or active == 'assignment_list' or active == 'assignment_create' or active == 'assignment_edit' or active == 'assignment_submissions' or active == 'grade_submission' %}bg-white/20{% endif %}">
                                 <i class="fas fa-tasks mr-2 w-4" aria-hidden="true"></i> All Assignments
                             </a>
                             <a href="{% url 'instructor:exam_list' %}"
                                class="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-sm
-                                      {% if 'exams' in request.path %}bg-white/20{% endif %}">
+                                      {% if active == 'exam_list' or active == 'exam_detail' or active == 'exam_update' or active == 'exam_submit' or active == 'exam_publish' or active == 'exam_question_create' or active == 'exam_question_edit' or active == 'exam_question_delete' or active == 'exam_import_questions' or active == 'exam_grade_response' %}bg-white/20{% endif %}">
                                 <div class="flex items-center">
                                     <i class="fas fa-file-alt mr-2 w-4" aria-hidden="true"></i> My Exams
                                 </div>
@@ -1196,7 +1257,17 @@
 
                     <!-- Analytics -->
                     <div class="mb-1">
-                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'analytics' in request.path %}bg-white/20{% endif %}">
+                        {% if active == 'analytics_course_stats' or active == 'analytics_student_progress' or active == 'analytics_reviews' %}
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all bg-white/20">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
+                                <span class="ml-3 text-[17px] font-semibold">Analytics</span>
+                            </div>
+                            <i class="fas fa-chevron-down menu-arrow transition-transform text-sm rotate-180" aria-hidden="true"></i>
+                        </button>
+                        <div id="analyticsMenu" class="mt-1 space-y-1 bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% else %}
+                        <button class="menu-toggle w-full flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all">
                             <div class="flex items-center">
                                 <i class="fas fa-chart-line w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3 text-[17px] font-semibold">Analytics</span>
@@ -1204,35 +1275,36 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform text-sm" aria-hidden="true"></i>
                         </button>
                         <div id="analyticsMenu" class="mt-1 space-y-1 hidden bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                        {% endif %}
                             <a href="{% url 'instructor:analytics_course_stats' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'analytics_course_stats' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'analytics_course_stats' %}bg-white/20{% endif %}">
                                 <i class="fas fa-chart-bar mr-2 w-4" aria-hidden="true"></i> Course Statistics
                             </a>
                             <a href="{% url 'instructor:analytics_student_progress' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'analytics_student_progress' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'analytics_student_progress' %}bg-white/20{% endif %}">
                                 <i class="fas fa-graduation-cap mr-2 w-4" aria-hidden="true"></i> Student Progress
                             </a>
                             <a href="{% url 'instructor:analytics_reviews' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'analytics_reviews' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if active == 'analytics_reviews' %}bg-white/20{% endif %}">
                                 <i class="fas fa-star mr-2 w-4" aria-hidden="true"></i> Reviews & Ratings
                             </a>
                         </div>
                     </div>
                     {% endif %}{# /instructor_analytics #}
 
+                    {% if permissions.instructor_resources.can_view %}
                     <!-- Divider -->
                     <div class="border-t border-white/10 my-3"></div>
-
-                    {% if permissions.instructor_resources.can_view %}
                     <!-- Resources -->
                     <a href="{% url 'instructor:resources' %}"
-                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'resources' %}bg-white/20{% endif %}">
+                       class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if active == 'resources' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-folder w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3 text-[17px] font-semibold">Resources</span>
                         </div>
                     </a>
                     {% endif %}
+                    {% endwith %}{# /active #}
 
                     {% if permissions.instructor_communications.can_view %}
                     <!-- Messages -->

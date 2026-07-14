@@ -2001,6 +2001,105 @@ The {site.school_short_name} Team
         return False
 
 
+def send_course_enrollment_email(user, course):
+    """
+    Sent when an instructor manually enrolls a student in an LMS course
+    (the "send welcome email" checkbox on the Enroll Student form).
+
+    Trigger: Call after Enrollment.objects.create(...) in
+             instructor.views.enroll_student, when the instructor opted in.
+    Recipients: Student
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+
+        subject = f'Welcome to {course.title} — {site.school_short_name}'
+
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .course-box {{ background: #DBEAFE; padding: 15px;
+                              border-left: 4px solid #3B82F6;
+                              margin: 20px 0; border-radius: 5px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎓 You're Enrolled!</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <p>
+                        You have been enrolled in a new course on the {site.school_short_name}
+                        learning portal.
+                    </p>
+                    <div class="course-box">
+                        <strong>Course:</strong> {course.title}<br>
+                        {f'<strong>Code:</strong> {course.code}<br>' if course.code else ''}
+                    </div>
+                    <p>
+                        Log in to your student portal to start learning right away.
+                    </p>
+                    <p style="font-size:13px; color:#666;">
+                        Questions? Contact us at
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+Welcome to {course.title} — {site.school_name}
+
+Dear {user.get_full_name() or user.username},
+
+You have been enrolled in a new course on the {site.school_short_name} learning portal.
+
+Course: {course.title}
+{f'Code: {course.code}' if course.code else ''}
+
+Log in to your student portal to start learning right away.
+
+Questions? Contact us at {contact}
+
+Best regards,
+The {site.school_short_name} Team
+        """
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Course enrollment email failed for %s: %s",
+            user.email, e, exc_info=True,
+        )
+        return False
+
+
 #######################################################
 # NEW MESSAGE RECEIVED — SENT TO RECIPIENT
 #######################################################

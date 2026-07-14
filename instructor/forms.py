@@ -135,6 +135,22 @@ class CourseForm(forms.ModelForm):
         # # certificate_fee has a model default of 0.00 — never block submission on it
         # self.fields['certificate_fee'].required = False
 
+    def clean_academic_course(self):
+        # The edit template re-submits the existing academic_course as a
+        # hidden, non-editable field once it's set (see course_form.html) —
+        # under normal use the posted value always matches what's already
+        # saved. Enforcing that here server-side closes the gap where a
+        # raw POST could relink an already-provisioned LMSCourse to a
+        # different Course the instructor has no relationship to.
+        new_value = self.cleaned_data.get('academic_course')
+        current_value = getattr(self.instance, 'academic_course_id', None)
+        if current_value and new_value and new_value.pk != current_value:
+            raise forms.ValidationError(
+                'This course is already linked to an academic course and cannot be relinked. '
+                'Contact an administrator if this needs to change.'
+            )
+        return new_value
+
     def clean(self):
         cleaned = super().clean()
         academic_course = cleaned.get('academic_course')

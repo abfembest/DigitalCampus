@@ -25,6 +25,7 @@ from eduweb.models import (
     Message, Notification, Review, StudyGroupMessage,
     FeePayment, CourseGrade, CourseApplication, Exam, StudentExamResponse,
     Course, AcademicSession, CourseRegistration, CourseCarryOver,
+    ProgressionDecisionLog,
 )
 
 from .forms import AssignmentSubmissionForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm
@@ -51,6 +52,37 @@ term_normalisation_map = {
     'summer': 'annual',
     'autumn': 'first',    # autumn = fall = first semester
 }
+
+
+def _registrable_course_ids(profile):
+    """
+    Course IDs a student is allowed to be registering for right now:
+    everything at their *current* year_of_study, plus any course still
+    open as a carry-over from a level they've already moved past.
+
+    Single source of truth for "does this registration belong to the
+    student's active registration cycle" — used both to decide which
+    courses `my_courses` offers and to scope the credit-unit cap check
+    in `register_semester_course`/`register_all_semester_courses`. Before
+    this existed, the cap check summed *every* pending/approved
+    CourseRegistration row for the session/term with no level filter, so
+    a stale registration left over from a level the student already
+    passed (e.g. from before they were promoted) silently consumed their
+    credit cap forever and blocked all new registrations with no
+    indication of why.
+    """
+    if not profile or not profile.program:
+        return Course.objects.none().values_list('id', flat=True)
+
+    open_carry_over_course_ids = CourseCarryOver.objects.filter(
+        student=profile.user, is_cleared=False
+    ).values_list('course_id', flat=True)
+
+    return Course.objects.filter(
+        Q(year_of_study=profile.year_of_study) | Q(pk__in=open_carry_over_course_ids),
+        program=profile.program,
+        is_active=True,
+    ).values_list('id', flat=True)
 
 
 def student_required(view_func):
@@ -217,12 +249,17 @@ def dashboard(request):
             course.is_registered = course.id in registered_course_ids
             course.is_core       = course.course_type == 'core'
 
+        # Scoped by term (not just session — a session has multiple terms)
+        # and to the student's current-level/carry-over courses, matching
+        # my_courses exactly so the two pages can never disagree.
         registered_credit_total = (
             CourseRegistration.objects
             .filter(
                 student=user,
                 session=current_session,
+                term__in=[current_term, normalised_term],
                 status__in=['pending', 'approved'],
+                course_id__in=_registrable_course_ids(profile),
             )
             .aggregate(total=Sum('course__credit_units'))['total'] or 0
         )
@@ -721,14 +758,10 @@ def register_semester_course(request, course_slug):
         messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration opens: {window_str}.')
         return redirect('students:my_courses')
 
-    open_carry_over_course_ids = CourseCarryOver.objects.filter(
-        student=request.user, is_cleared=False
-    ).values_list('course_id', flat=True)
+    registrable_course_ids = _registrable_course_ids(profile)
 
     course = get_object_or_404(
-        Course.objects.filter(
-            Q(year_of_study=profile.year_of_study) | Q(pk__in=open_carry_over_course_ids)
-        ),
+        Course.objects.filter(pk__in=registrable_course_ids),
         slug=course_slug,
         program=profile.program,
         is_active=True,
@@ -739,11 +772,16 @@ def register_semester_course(request, course_slug):
 
     normalised_term = current_term.lower().replace(' semester', '').strip() if current_term else current_term
 
+    # Scoped to registrable_course_ids so a stale registration left over
+    # from a level the student has already passed (e.g. from before they
+    # were promoted) can never silently consume their credit cap and
+    # block new registrations at their current level.
     current_total = CourseRegistration.objects.filter(
         student=request.user,
         session=current_session,
         term__in=[current_term, normalised_term],
         status__in=['pending', 'approved'],
+        course_id__in=registrable_course_ids,
     ).exclude(course=course).aggregate(
         total=Sum('course__credit_units')
     )['total'] or 0
@@ -852,9 +890,24 @@ def drop_semester_course(request, course_slug):
     ).first()
 
     if reg:
+        was_approved = reg.status == 'approved'
         reg.status = 'dropped'
         reg.dropped_at = timezone.now()
         reg.save(update_fields=['status', 'dropped_at'], skip_clean=True)
+
+        # An approved registration may already have an active LMS Enrollment
+        # (created by register_all_semester_courses/retry_lms_enrollment) —
+        # drop it too, otherwise the student keeps lesson/quiz/exam access
+        # for a course they no longer have an academic registration for.
+        if was_approved and course.code:
+            lms_course = LMSCourse.objects.filter(
+                Q(academic_course=course) | Q(academic_course__isnull=True, code__iexact=course.code)
+            ).filter(Q(session=current_session) | Q(session__isnull=True)).first()
+            if lms_course:
+                Enrollment.objects.filter(
+                    student=request.user, course=lms_course, status='active',
+                ).update(status='dropped')
+
         messages.success(request, f'"{course.name}" removed from your semester registration.')
     else:
         messages.warning(request, 'Registration record not found.')
@@ -906,12 +959,17 @@ def register_all_semester_courses(request):
 
     MAX_CU = profile.program.max_credits_per_semester
 
-    # Get all pending/approved registrations for this session/term
+    # Get all pending/approved registrations for this session/term, scoped to
+    # courses at the student's current level (or an open carry-over) — the
+    # same scoping used in register_semester_course, so a stale registration
+    # from a level the student already passed can't inflate the CU total or
+    # get enrolled/approved by mistake.
     registered_regs = CourseRegistration.objects.filter(
         student=request.user,
         session=current_session,
         term__in=[current_term, normalised_term],
         status__in=['pending', 'approved'],
+        course_id__in=_registrable_course_ids(profile),
     ).select_related('course')
 
     # Validate: check credit total doesn't exceed max
@@ -1194,13 +1252,25 @@ def course_catalog(request):
         }
         return render(request, 'students/course_catalog.html', context)
 
+    # Courses the student is already enrolled in must always appear here,
+    # regardless of their current level/session — otherwise a promoted
+    # student's now-completed prior-level courses (and any course from a
+    # past session) silently vanish from their own catalog the moment their
+    # year_of_study advances past what the course was offered at.
+    enrolled_course_ids = set(
+        Enrollment.objects
+        .filter(student=request.user, status__in=['active', 'completed'])
+        .values_list('course_id', flat=True)
+    )
+
     courses = LMSCourse.objects.filter(
-        is_published=True,
-        academic_course__program=profile.program,
-        academic_course__year_of_study=profile.year_of_study,
-        academic_course__is_active=True,
-    ).filter(
-        Q(session=current_session) | Q(session__isnull=True)
+        Q(
+            is_published=True,
+            academic_course__program=profile.program,
+            academic_course__year_of_study=profile.year_of_study,
+            academic_course__is_active=True,
+        ) & (Q(session=current_session) | Q(session__isnull=True))
+        | Q(id__in=enrolled_course_ids)
     )
 
     if term_filter:
@@ -1210,11 +1280,6 @@ def course_catalog(request):
 
     courses = courses.select_related('academic_course', 'instructor', 'session').distinct()
 
-    enrolled_course_ids = set(
-        Enrollment.objects
-        .filter(student=request.user, status__in=['active', 'completed'])
-        .values_list('course_id', flat=True)
-    )
     registered_academic_ids = set(
         CourseRegistration.objects
         .filter(student=request.user, session=current_session, status__in=['pending', 'approved'])
@@ -1376,9 +1441,13 @@ def course_detail(request, course_slug):
         }
         
         return render(request, 'students/course_detail.html', context)
-        
-    except Exception as e:
-        # Log error in production
+
+    except Http404:
+        # A missing/unpublished course must actually 404, not get swallowed
+        # into the generic handler below and mis-reported as a transient error.
+        raise
+    except Exception:
+        logger.exception('Failed to load course detail for slug=%s user=%s', course_slug, request.user.pk)
         messages.error(
             request,
             'An error occurred loading the course. Please try again.'
@@ -1662,7 +1731,17 @@ def mark_lesson_complete(request, course_slug, lesson_slug):
     if not enrollment and not lesson.is_preview:
         messages.error(request, 'You must be enrolled to access this lesson.')
         return redirect('students:course_detail', course_slug=course_slug)
-    
+
+    if not enrollment:
+        # Preview access with no enrollment — LessonProgress.enrollment is a
+        # required FK, so there's nothing to track completion against yet.
+        # (Previously this fell through to get_or_create(enrollment=None,...),
+        # which always raised IntegrityError and surfaced as a generic 500.)
+        return JsonResponse({
+            'success': False,
+            'message': 'Enroll in this course to track your lesson progress.',
+        }, status=400)
+
     try:
         # Get or create progress
         progress, created = LessonProgress.objects.get_or_create(
@@ -1723,7 +1802,11 @@ def mark_lesson_complete(request, course_slug, lesson_slug):
             'progress': float(enrollment.progress_percentage),
         })
         
-    except Exception as e:
+    except Exception:
+        logger.exception(
+            'mark_lesson_complete failed for user=%s lesson=%s/%s',
+            request.user.pk, course_slug, lesson_slug,
+        )
         return JsonResponse({
             'success': False,
             'message': 'An error occurred. Please try again.'
@@ -1813,10 +1896,14 @@ def assignments(request):
                 else None
             )
             
+            # Django templates silently refuse to resolve underscore-prefixed
+            # attributes, and Assignment.is_overdue is a read-only @property
+            # (no setter) — so this must be a differently-named, non-
+            # underscore attribute for the template to actually see it.
             if not assignment.submission or assignment.submission.status == 'draft':
-                assignment._is_overdue_override = timezone.now() > assignment.due_date
+                assignment.overdue_status = timezone.now() > assignment.due_date
             else:
-                assignment._is_overdue_override = False
+                assignment.overdue_status = False
                 
     except Exception as e:
         messages.error(
@@ -1973,9 +2060,11 @@ def submit_assignment(request, course_slug, assignment_slug):
                     submission.submitted_at = timezone.now()
                     submission.is_late = is_overdue
                 
-                # Handle file upload
-                if 'attachment' in request.FILES:
-                    submission.attachment = request.FILES['attachment']
+                # Handle file upload — use the form's cleaned_data, not the
+                # raw request.FILES, so any validation/normalisation done in
+                # AssignmentSubmissionForm.clean_attachment is actually honored.
+                if form.cleaned_data.get('attachment'):
+                    submission.attachment = form.cleaned_data['attachment']
                 
                 submission.save()
                 
@@ -2294,67 +2383,131 @@ def quiz_submit(request, attempt_id):
     total_score = Decimal('0.00')
     max_score = Decimal('0.00')
 
-    for key, value in request.POST.items():
-        if key.startswith('question_'):
-            try:
-                question_id = int(key.split('_')[1])
-                question = attempt.quiz.questions.get(
-                    id=question_id
-                )
-                max_score += question.points
+    try:
+        with transaction.atomic():
+            # Re-check under the transaction — a concurrent double-submit
+            # (double-click, duplicate tab) could both pass the is_completed
+            # check above before either write lands.
+            attempt = QuizAttempt.objects.select_for_update().get(pk=attempt.pk)
+            if attempt.is_completed:
+                messages.warning(request, 'Quiz already submitted.')
+                return redirect('students:quiz_result', attempt_id=attempt_id)
 
-                # Get selected answer
-                selected_answer = QuizAnswer.objects.get(
-                    id=int(value)
-                )
+            has_pending_manual_grading = False
 
-                # Calculate points
-                points_earned = (
-                    question.points
-                    if selected_answer.is_correct
-                    else Decimal('0.00')
-                )
+            for key, value in request.POST.items():
+                if key.startswith('question_'):
+                    try:
+                        question_id = int(key.split('_')[1])
+                        question = attempt.quiz.questions.get(
+                            id=question_id
+                        )
+                    except (QuizQuestion.DoesNotExist, ValueError):
+                        continue
 
-                # Create response record
-                QuizResponse.objects.create(
-                    attempt=attempt,
-                    question=question,
-                    selected_answer=selected_answer,
-                    is_correct=selected_answer.is_correct,
-                    points_earned=points_earned
-                )
+                    max_score += question.points
 
-                # Add to total score
-                if selected_answer.is_correct:
-                    total_score += question.points
+                    if question.question_type in ('short_answer', 'essay'):
+                        # No automatic "correct answer" concept for free text —
+                        # record it for an instructor to grade manually. Counted
+                        # into max_score (the quiz's true total) but not yet
+                        # into total_score, so the percentage understates the
+                        # result until graded rather than silently dropping
+                        # these questions and their points from the quiz.
+                        text_value = str(value).strip()
+                        if not text_value:
+                            continue
+                        QuizResponse.objects.create(
+                            attempt=attempt,
+                            question=question,
+                            text_response=text_value,
+                            is_correct=False,
+                            points_earned=Decimal('0.00'),
+                            needs_grading=True,
+                        )
+                        has_pending_manual_grading = True
+                        continue
 
-            except (
-                QuizAnswer.DoesNotExist,
-                QuizQuestion.DoesNotExist,
-                ValueError
-            ):
-                continue
+                    try:
+                        # Scope the answer lookup to this question — otherwise a
+                        # student could submit any QuizAnswer id from any question
+                        # in the system (e.g. one they know is correct on a
+                        # different quiz) and be awarded full points for it here.
+                        selected_answer = question.answers.get(
+                            id=int(value)
+                        )
+                    except (QuizAnswer.DoesNotExist, ValueError):
+                        continue
 
-    # Calculate percentage
-    percentage = (
-        (total_score / max_score * 100)
-        if max_score > 0
-        else Decimal('0.00')
-    )
+                    # Calculate points
+                    points_earned = (
+                        question.points
+                        if selected_answer.is_correct
+                        else Decimal('0.00')
+                    )
 
-    # Calculate time taken
-    time_delta = timezone.now() - attempt.started_at
-    time_taken = int(time_delta.total_seconds() / 60)
+                    # Create response record
+                    QuizResponse.objects.create(
+                        attempt=attempt,
+                        question=question,
+                        selected_answer=selected_answer,
+                        is_correct=selected_answer.is_correct,
+                        points_earned=points_earned
+                    )
 
-    # Update attempt
-    attempt.score = total_score
-    attempt.max_score = max_score
-    attempt.percentage = percentage
-    attempt.passed = percentage >= attempt.quiz.passing_score
-    attempt.is_completed = True
-    attempt.completed_at = timezone.now()
-    attempt.time_taken_minutes = time_taken
-    attempt.save()
+                    # Add to total score
+                    if selected_answer.is_correct:
+                        total_score += question.points
+
+            # Calculate percentage
+            percentage = (
+                (total_score / max_score * 100)
+                if max_score > 0
+                else Decimal('0.00')
+            )
+
+            # Calculate time taken
+            time_delta = timezone.now() - attempt.started_at
+            time_taken = int(time_delta.total_seconds() / 60)
+
+            # Update attempt. passed/percentage are provisional while any
+            # response still needs manual grading — quiz_result.html shows a
+            # "pending" banner and instructor grading recomputes both once
+            # every short-answer/essay response has a score.
+            attempt.score = total_score
+            attempt.max_score = max_score
+            attempt.percentage = percentage
+            attempt.passed = percentage >= attempt.quiz.passing_score
+            attempt.pending_manual_grading = has_pending_manual_grading
+            attempt.is_completed = True
+            attempt.completed_at = timezone.now()
+            attempt.time_taken_minutes = time_taken
+            attempt.save()
+    except IntegrityError:
+        logger.warning(
+            'Concurrent duplicate quiz submission: attempt=%s user=%s',
+            attempt_id, request.user.pk,
+        )
+        messages.warning(request, 'Quiz already submitted.')
+        return redirect('students:quiz_result', attempt_id=attempt_id)
+
+    # This attempt's percentage feeds the quiz component of the student's
+    # unified CourseGrade (CourseGrade.recompute_for_student_course) — the
+    # other three trigger points (lesson completion, exam auto-grading,
+    # instructor grading) all recompute immediately, so a quiz shouldn't be
+    # the one score type that only updates whenever some unrelated lesson
+    # later happens to be marked complete in the same course.
+    lms_course = attempt.quiz.lesson.course
+    academic_course = lms_course.academic_course
+    session = lms_course.session
+    if academic_course and session:
+        try:
+            CourseGrade.recompute_for_student_course(request.user, academic_course, session)
+        except Exception:
+            logger.exception(
+                'Failed to recompute CourseGrade after quiz submission for user=%s quiz=%s',
+                request.user.pk, attempt.quiz_id,
+            )
 
     passed_label = 'Passed ✓' if attempt.passed else 'Not passed'
     _notify(
@@ -2394,7 +2547,8 @@ def quiz_result(request, attempt_id):
     # Calculate statistics
     total_questions = answers.count()
     correct_answers = answers.filter(is_correct=True).count()
-    incorrect_answers = total_questions - correct_answers
+    pending_grading_count = answers.filter(needs_grading=True).count()
+    incorrect_answers = total_questions - correct_answers - pending_grading_count
 
     context = {
         'page_title': 'Quiz Results',
@@ -2403,6 +2557,7 @@ def quiz_result(request, attempt_id):
         'total_questions': total_questions,
         'correct_answers': correct_answers,
         'incorrect_answers': incorrect_answers,
+        'pending_grading_count': pending_grading_count,
         'course_slug': attempt.quiz.lesson.course.slug,
         'lesson_slug': attempt.quiz.lesson.slug,
         'quiz_slug': attempt.quiz.slug,
@@ -2823,49 +2978,54 @@ def grades(request):
     user = request.user
     
     # Get all enrollments with optimized queries
-    enrollments = (
+    enrollments = list(
         Enrollment.objects
         .filter(student=user)
         .select_related('course', 'course__instructor')
         .prefetch_related('course__lessons')
         .order_by('-enrolled_at')
     )
-    
-    # Add progress data to each enrollment
+
+    # Bulk-computed per enrollment/course — replaces what used to be 3
+    # queries run inside the per-enrollment loop below (N+1).
+    enrollment_ids = [e.id for e in enrollments]
+    course_ids = {e.course_id for e in enrollments}
+
+    completed_by_enrollment = dict(
+        LessonProgress.objects
+        .filter(enrollment_id__in=enrollment_ids, is_completed=True)
+        .values_list('enrollment_id')
+        .annotate(c=Count('id'))
+    )
+    total_lessons_by_course = dict(
+        Lesson.objects
+        .filter(course_id__in=course_ids, is_active=True)
+        .values_list('course_id')
+        .annotate(c=Count('id'))
+    )
+    avg_score_by_course = dict(
+        AssignmentSubmission.objects
+        .filter(
+            student=user,
+            assignment__lesson__course_id__in=course_ids,
+            status='graded',
+            score__isnull=False,
+        )
+        .values_list('assignment__lesson__course_id')
+        .annotate(avg=Avg(F('score') * 100.0 / F('assignment__max_score'), output_field=FloatField()))
+    )
+
     for enrollment in enrollments:
-        # Get completed lessons count
-        completed_count = LessonProgress.objects.filter(
-            enrollment=enrollment,
-            is_completed=True
-        ).count()
-        
-        total_lessons = enrollment.course.lessons.filter(
-            is_active=True
-        ).count()
-        
-        # Calculate progress percentage
+        completed_count = completed_by_enrollment.get(enrollment.id, 0)
+        total_lessons = total_lessons_by_course.get(enrollment.course_id, 0)
+
         enrollment.completed_lessons = completed_count
         enrollment.progress_percentage = (
-            (completed_count / total_lessons * 100) 
-            if total_lessons > 0 
+            (completed_count / total_lessons * 100)
+            if total_lessons > 0
             else 0
         )
-        
-        # Get current grade (average of graded assignments)
-        from django.db.models import FloatField
-        grade_data = AssignmentSubmission.objects.filter(
-            student=user,
-            assignment__lesson__course=enrollment.course,
-            status='graded',
-            score__isnull=False
-        ).aggregate(
-            avg_score=Avg(
-                F('score') * 100.0 / F('assignment__max_score'),
-                output_field=FloatField()
-            )
-        )
-        
-        enrollment.current_grade = grade_data['avg_score']
+        enrollment.current_grade = avg_score_by_course.get(enrollment.course_id)
     
     # Get graded assignment submissions — evaluate to list so .passed sticks
     submissions = list(
@@ -2902,14 +3062,20 @@ def grades(request):
         .order_by('-completed_at')
     )
 
+    # Canonical CGPA — same CourseGrade.compute_cgpa used by the dashboard,
+    # Academic Records, and progression logic, so this page can't disagree
+    # with any of them.
+    cgpa = CourseGrade.compute_cgpa(user)
+
     context = {
         'page_title': 'Grades & Performance',
         'enrollments': enrollments,
         'submissions': submissions,
         'quiz_attempts': quiz_attempts,
         'academic_grades': academic_grades,
+        'cgpa': cgpa,
     }
-    
+
     return render(request, 'students/grades.html', context)
 
 
@@ -2922,62 +3088,90 @@ def progress(request):
     """
     user = request.user
     
-    # Get all enrollments with related data
-    enrollments = (
+    # Get all enrollments with related data. The section/lesson prefetches use
+    # to_attr with an is_active filter baked in so the per-section loop below
+    # can read the prefetch cache instead of re-querying per section (Django
+    # only serves .all() from cache — any further .filter() call bypasses it).
+    enrollments = list(
         Enrollment.objects
         .filter(student=user)
         .select_related('course', 'course__instructor')
         .prefetch_related(
-            'course__sections',
-            'course__sections__lessons',
-            'course__lessons'
+            Prefetch(
+                'course__sections',
+                queryset=LessonSection.objects.order_by('display_order'),
+            ),
+            Prefetch(
+                'course__sections__lessons',
+                queryset=Lesson.objects.filter(is_active=True),
+                to_attr='active_lessons_list',
+            ),
         )
         .order_by('-enrolled_at')
     )
-    
+
+    enrollment_ids = [e.id for e in enrollments]
+    course_ids = {e.course_id for e in enrollments}
+
+    # Bulk-computed replacements for what used to be several queries per
+    # enrollment (lesson totals, completed lessons, assignment/quiz counts)
+    # plus a query per course section — all N+1 patterns.
+    completed_lesson_ids_by_enrollment = {}
+    for enrollment_id, lesson_id in (
+        LessonProgress.objects
+        .filter(enrollment_id__in=enrollment_ids, is_completed=True)
+        .values_list('enrollment_id', 'lesson_id')
+    ):
+        completed_lesson_ids_by_enrollment.setdefault(enrollment_id, set()).add(lesson_id)
+
+    total_lessons_by_course = dict(
+        Lesson.objects
+        .filter(course_id__in=course_ids, is_active=True)
+        .values_list('course_id')
+        .annotate(c=Count('id'))
+    )
+    assignment_count_by_course = dict(
+        Assignment.objects
+        .filter(lesson__course_id__in=course_ids)
+        .values_list('lesson__course_id')
+        .annotate(c=Count('id'))
+    )
+    quiz_count_by_course = dict(
+        Quiz.objects
+        .filter(lesson__course_id__in=course_ids)
+        .values_list('lesson__course_id')
+        .annotate(c=Count('id'))
+    )
+
     # Add detailed progress data to each enrollment
     for enrollment in enrollments:
-        # Get completed lessons
-        completed_progress = LessonProgress.objects.filter(
-            enrollment=enrollment,
-            is_completed=True
-        ).values_list('lesson_id', flat=True)
-        
-        enrollment.completed_lesson_ids = set(completed_progress)
-        
-        # Count completed lessons
-        enrollment.completed_lessons = len(completed_progress)
-        
-        # Calculate progress percentage
-        total_lessons = enrollment.course.lessons.filter(
-            is_active=True
-        ).count()
-        
+        completed_lesson_ids = completed_lesson_ids_by_enrollment.get(enrollment.id, set())
+        enrollment.completed_lesson_ids = completed_lesson_ids
+        enrollment.completed_lessons = len(completed_lesson_ids)
+
+        total_lessons = total_lessons_by_course.get(enrollment.course_id, 0)
         enrollment.progress_percentage = (
-            (enrollment.completed_lessons / total_lessons * 100) 
-            if total_lessons > 0 
+            (enrollment.completed_lessons / total_lessons * 100)
+            if total_lessons > 0
             else 0
         )
-        
-        # Add section progress
+
+        # Add section progress — reads the prefetched, already-filtered
+        # active_lessons_list, no additional query per section.
         for section in enrollment.course.sections.all():
-            section_lessons = section.lessons.filter(is_active=True)
-            total = section_lessons.count()
+            section_lessons = section.active_lessons_list
+            total = len(section_lessons)
             completed = sum(
-                1 for lesson in section_lessons 
-                if lesson.id in enrollment.completed_lesson_ids
+                1 for lesson in section_lessons
+                if lesson.id in completed_lesson_ids
             )
             section.progress_percentage = (
                 (completed / total * 100) if total > 0 else 0
             )
             section.total_lessons = total
 
-        enrollment.assignment_count = Assignment.objects.filter(
-            lesson__course=enrollment.course
-        ).count()
-        enrollment.quiz_count = Quiz.objects.filter(
-            lesson__course=enrollment.course
-        ).count()
+        enrollment.assignment_count = assignment_count_by_course.get(enrollment.course_id, 0)
+        enrollment.quiz_count = quiz_count_by_course.get(enrollment.course_id, 0)
     
     # Calculate learning activity for last 28 days
     from datetime import datetime, timedelta
@@ -3684,6 +3878,19 @@ def academic_records(request):
 
     academic_grades = proxies
 
+    # ── 10. Progression history — level/status changes over time ────────────
+    # ProgressionDecisionLog is the only record of *when* a student moved
+    # from one level/status to another and what their CGPA was at that
+    # point — previously only visible to admins in the management app.
+    # Surfaced here (read-only) so a student can always see their own
+    # level history, not just their current standing.
+    progression_history = list(
+        ProgressionDecisionLog.objects
+        .filter(student=user)
+        .select_related('session')
+        .order_by('-created_at')
+    )
+
     context = {
         'page_title':              'Academic Records',
         'application':             application,
@@ -3702,6 +3909,7 @@ def academic_records(request):
         'gpa_class':               gpa_class,
         'lms_enrollments':         lms_enrollments,
         'certificates':            certificates,
+        'progression_history':     progression_history,
     }
     return render(request, 'students/academic_records.html', context)
 
@@ -3994,12 +4202,22 @@ def save_answer(request, slug):
     if 'question_id' not in data or 'answer' not in data:
         return JsonResponse({'error': 'Missing question_id or answer'}, status=400)
 
-    response = get_object_or_404(StudentExamResponse, exam__slug=slug, student=request.user)
+    response = get_object_or_404(
+        StudentExamResponse.objects.select_related('exam'),
+        exam__slug=slug, student=request.user,
+    )
 
     if response.status not in (
         StudentExamResponse.INSTRUCTIONS, StudentExamResponse.IN_PROGRESS
     ):
         return JsonResponse({'error': 'Exam not in progress'}, status=400)
+
+    # Server-authoritative deadline — the client's own countdown timer (which
+    # triggers the auto-submit) can be blocked, delayed, or tampered with, so
+    # answer edits must also be rejected here once the exam has genuinely
+    # ended, not just when the client believes it has.
+    if timezone.now() >= response.exam.end_datetime:
+        return JsonResponse({'error': 'The exam time window has ended.'}, status=400)
 
     response.answers[str(data['question_id'])] = data['answer']
     response.last_autosave_at = timezone.now()

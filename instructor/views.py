@@ -2,7 +2,7 @@ import json
 import logging
 import re
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 
@@ -10,9 +10,10 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import TruncDate, TruncMonth
 from django.http import JsonResponse
@@ -23,7 +24,9 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_POST
 
 from eduweb.decorators import instructor_required
-from eduweb.emailservices import send_assignment_graded_email, send_new_message_email
+from eduweb.emailservices import (
+    send_assignment_graded_email, send_course_enrollment_email, send_new_message_email,
+)
 from eduweb.models import (
     Announcement, Assignment, AssignmentSubmission, Course, CourseGrade,
     Discussion, DiscussionReply, Enrollment, Exam, ExamQuestion, ExamStatusLog,
@@ -487,6 +490,7 @@ def section_edit(request, course_slug, section_id):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_POST
 def section_delete(request, course_slug, section_id):
     """Delete section using course slug"""
     course = get_object_or_404(
@@ -499,7 +503,7 @@ def section_delete(request, course_slug, section_id):
         id=section_id,
         course=course
     )
-    
+
     section_title = section.title
     section.delete()
     messages.success(request, f'Section "{section_title}" deleted successfully!')
@@ -621,8 +625,14 @@ def lesson_edit(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_POST
 def lesson_delete(request, course_slug, lesson_slug):
-    """Delete lesson using course slug"""
+    """
+    Delete lesson using course slug — blocked once any student has
+    interacted with it (progress, quiz attempts, assignment submissions),
+    since Lesson/Quiz/Assignment all cascade-delete on their FKs and would
+    silently destroy that student history otherwise.
+    """
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -633,7 +643,21 @@ def lesson_delete(request, course_slug, lesson_slug):
         slug=lesson_slug,
         course=course
     )
-    
+
+    has_dependents = (
+        lesson.student_progress.exists()
+        or QuizAttempt.objects.filter(quiz__lesson=lesson).exists()
+        or AssignmentSubmission.objects.filter(assignment__lesson=lesson).exists()
+    )
+    if has_dependents:
+        messages.error(
+            request,
+            f'"{lesson.title}" has student progress, quiz attempts, or assignment '
+            f'submissions attached and cannot be deleted. Uncheck "Active" instead '
+            f'to hide it from students.'
+        )
+        return redirect('instructor:lesson_list', course_slug=course.slug)
+
     lesson_title = lesson.title
     lesson.delete()
     messages.success(request, f'Lesson "{lesson_title}" deleted successfully!')
@@ -1101,7 +1125,23 @@ def grade_submission(request, course_slug, submission_id):
         submission.graded_by = request.user
         submission.graded_at = timezone.now()
         submission.save()
-        
+
+        # Keep the student's unified CourseGrade in sync the moment an
+        # instructor grades an assignment — otherwise this score is invisible
+        # to Grades & Performance / Academic Records / progression until the
+        # student happens to trigger a recompute themselves (e.g. completing
+        # another lesson), which may never happen for a course they're done with.
+        academic_course = course.academic_course
+        session = course.session
+        if academic_course and session:
+            try:
+                CourseGrade.recompute_for_student_course(submission.student, academic_course, session)
+            except Exception:
+                logger.exception(
+                    'Failed to recompute CourseGrade after grading assignment=%s student=%s',
+                    assignment.pk, submission.student.pk,
+                )
+
         messages.success(request, 'Submission graded successfully!')
         # Notify the student that their submission was graded
         _notify_instructor(
@@ -1201,7 +1241,6 @@ def enroll_student(request, course_slug):
                 )
             else:
                 # Create enrollment
-                from datetime import datetime
                 parsed_date = None
                 if enrollment_date:
                     try:
@@ -1217,8 +1256,7 @@ def enroll_student(request, course_slug):
                 
                 # Send welcome email if requested
                 if send_welcome:
-                    # TODO: Implement email sending functionality
-                    pass
+                    send_course_enrollment_email(student, course)
                 
                 messages.success(
                     request,
@@ -1333,38 +1371,56 @@ def all_assignments(request):
 @instructor_required
 @require_POST
 def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, answer_id):
-    """Delete a quiz answer"""
+    """Delete a quiz answer — blocked once a student has actually picked it."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
     question = get_object_or_404(QuizQuestion, id=question_id, quiz=quiz)
     answer = get_object_or_404(QuizAnswer, id=answer_id, question=question)
-    
-    answer.delete()
-    messages.success(request, 'Answer deleted successfully!')
-    
-    return redirect('instructor:question_answers', 
-                    course_slug=course.slug, 
-                    lesson_slug=lesson.slug, 
-                    quiz_slug=quiz.slug, 
+
+    # QuizResponse.selected_answer cascades on delete — removing an answer a
+    # student already chose would silently erase their submitted response.
+    if answer.selected_in_responses.exists():
+        messages.error(
+            request,
+            'This answer has already been selected by a student and cannot be deleted. '
+            'Deactivate the question instead if it needs to be retired.'
+        )
+    else:
+        answer.delete()
+        messages.success(request, 'Answer deleted successfully!')
+
+    return redirect('instructor:question_answers',
+                    course_slug=course.slug,
+                    lesson_slug=lesson.slug,
+                    quiz_slug=quiz.slug,
                     question_id=question.id)
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
 def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
-    """Delete a quiz question"""
+    """Delete a quiz question — blocked once a student has answered it."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
     question = get_object_or_404(QuizQuestion, id=question_id, quiz=quiz)
-    
-    question.delete()
-    messages.success(request, 'Question deleted successfully!')
-    
-    return redirect('instructor:quiz_questions', 
-                    course_slug=course.slug, 
-                    lesson_slug=lesson.slug, 
+
+    # QuizResponse cascades on delete — removing an answered question would
+    # silently erase every student's response and points for it.
+    if question.responses.exists():
+        messages.error(
+            request,
+            'This question already has student responses and cannot be deleted. '
+            'Uncheck "Active" instead to hide it from future attempts.'
+        )
+    else:
+        question.delete()
+        messages.success(request, 'Question deleted successfully!')
+
+    return redirect('instructor:quiz_questions',
+                    course_slug=course.slug,
+                    lesson_slug=lesson.slug,
                     quiz_slug=quiz.slug)
 
 @login_required(login_url='eduweb:auth_page')
@@ -1374,17 +1430,34 @@ def course_statistics(request):
     Course statistics overview
     Shows enrollment trends, completion rates, and performance metrics
     """
-    courses = LMSCourse.objects.filter(
-        instructor=request.user
-    ).annotate(
-        enrollment_count=Count('enrollments'),
-        avg_rating=Avg('reviews__rating'),
-        completion_count=Count(
-            'enrollments',
-            filter=Q(enrollments__status='completed')
-        )
-    ).order_by('-created_at')
-    
+    # enrollments and reviews are two independent reverse relations off
+    # LMSCourse — annotating Count('enrollments') and Avg('reviews__rating')
+    # in the same call joins both tables first, so each enrollment row gets
+    # cross-multiplied by every review row (and vice versa), inflating the
+    # counts for any course that has more than one of each. distinct=True
+    # fixes the two Count()s (they dedupe by enrollment pk regardless of the
+    # review join); the average needs a genuinely separate query since
+    # Avg(distinct=True) would dedupe by rating *value*, not by row.
+    courses = list(
+        LMSCourse.objects.filter(
+            instructor=request.user
+        ).annotate(
+            enrollment_count=Count('enrollments', distinct=True),
+            completion_count=Count(
+                'enrollments',
+                filter=Q(enrollments__status='completed'),
+                distinct=True,
+            ),
+        ).order_by('-created_at')
+    )
+    avg_rating_by_course = dict(
+        Review.objects.filter(course__instructor=request.user, is_approved=True)
+        .values_list('course_id')
+        .annotate(avg=Avg('rating'))
+    )
+    for course in courses:
+        course.avg_rating = avg_rating_by_course.get(course.id)
+
     # Overall statistics
     total_enrollments = Enrollment.objects.filter(
         course__instructor=request.user
@@ -1818,11 +1891,80 @@ def quiz_results(request, course_slug, lesson_slug, quiz_slug):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id):
-    """Detailed breakdown of a single student's quiz attempt."""
+    """
+    Detailed breakdown of a single student's quiz attempt. Also handles
+    manually grading any short-answer/essay QuizResponse rows (needs_grading
+    =True) — those are never auto-scored at submission time since there's no
+    "correct answer" concept for free text.
+    """
     course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
     attempt = get_object_or_404(QuizAttempt, id=attempt_id, quiz=quiz)
+
+    if request.method == 'POST':
+        pending_responses = attempt.responses.filter(needs_grading=True).select_related('question')
+        with transaction.atomic():
+            for response in pending_responses:
+                raw_score = request.POST.get(f'points_{response.id}', '').strip()
+                if not raw_score:
+                    continue
+                try:
+                    awarded = Decimal(raw_score)
+                except InvalidOperation:
+                    messages.error(request, f'Invalid score entered for one question — skipped.')
+                    continue
+                awarded = max(Decimal('0.00'), min(awarded, response.question.points))
+                response.points_earned = awarded
+                response.is_correct = awarded > 0
+                response.needs_grading = False
+                response.graded_by = request.user
+                response.graded_at = timezone.now()
+                response.save(update_fields=['points_earned', 'is_correct', 'needs_grading', 'graded_by', 'graded_at'])
+
+            # Recompute the attempt's totals now that some responses may have
+            # just been scored — mirrors the same score/max_score/percentage
+            # fields quiz_submit sets, so this attempt is never left showing
+            # a stale provisional score once grading is done.
+            all_responses = list(attempt.responses.select_related('question'))
+            attempt.score = sum((r.points_earned for r in all_responses), Decimal('0.00'))
+            attempt.max_score = sum((r.question.points for r in all_responses), Decimal('0.00'))
+            attempt.percentage = (
+                (attempt.score / attempt.max_score * 100) if attempt.max_score > 0 else Decimal('0.00')
+            )
+            attempt.passed = attempt.percentage >= quiz.passing_score
+            attempt.pending_manual_grading = any(r.needs_grading for r in all_responses)
+            attempt.save(update_fields=['score', 'max_score', 'percentage', 'passed', 'pending_manual_grading'])
+
+        # This attempt's percentage feeds the quiz component of the
+        # student's unified CourseGrade — recompute now so a just-graded
+        # essay/short-answer response is reflected immediately rather than
+        # waiting on some unrelated future trigger.
+        academic_course = course.academic_course
+        session = course.session
+        if academic_course and session:
+            try:
+                CourseGrade.recompute_for_student_course(attempt.student, academic_course, session)
+            except Exception:
+                logger.exception(
+                    'Failed to recompute CourseGrade after grading quiz attempt=%s student=%s',
+                    attempt.pk, attempt.student.pk,
+                )
+
+        if not attempt.pending_manual_grading:
+            _notify_instructor(
+                instructor=attempt.student,
+                title=f'Quiz Fully Graded: {quiz.title}',
+                message=f'Your quiz "{quiz.title}" has been fully graded. Final score: {attempt.percentage:.1f}%.',
+                notif_type='grade',
+                link=f'/student/quizzes/attempt/{attempt.id}/result/',
+            )
+
+        messages.success(request, 'Grades saved.')
+        return redirect(
+            'instructor:quiz_attempt_detail',
+            course_slug=course.slug, lesson_slug=lesson.slug, quiz_slug=quiz.slug, attempt_id=attempt.id,
+        )
 
     responses       = attempt.responses.select_related(
         'question', 'selected_answer'
@@ -2681,6 +2823,13 @@ def exam_update(request, slug):
     try:
         exam.save()
         messages.success(request, f'Exam "{exam.title}" updated successfully.')
+    except ValidationError as e:
+        # exam.save() runs full_clean() internally (e.g. pass_mark <= total_marks,
+        # end_datetime after start_datetime) — surface the actual reason instead
+        # of a generic message so the instructor knows what to fix.
+        for field_errors in e.message_dict.values():
+            for msg in field_errors:
+                messages.error(request, msg)
     except Exception:
         logger.exception('Failed to save exam %s during edit', exam.pk)
         messages.error(request, 'Could not save changes — please check your input and try again.')
@@ -2889,7 +3038,9 @@ def _save_exam_question(request, exam, question=None):
         marks = float(marks_raw)
     except ValueError:
         marks = 1.0
- 
+    if marks < 0:
+        return 'Marks cannot be negative.'
+
     # Build options list
     options = []
     if q_type == 'true_false':
@@ -3141,6 +3292,13 @@ def exam_grade_response(request, slug, response_id):
                     )
 
         if pending_manual == 0:
+            _notify_instructor(
+                instructor=response.student,
+                title=f'Exam Graded: {exam.title}',
+                message=f'Your exam "{exam.title}" has been fully graded. You scored {score_pct}%.',
+                notif_type='grade',
+                link='/student/exam/',
+            )
             messages.success(request, f"Fully graded — {response.student.get_full_name() or response.student.username} scored {score_pct}%.")
         else:
             messages.success(request, f"Saved. {pending_manual} question(s) still awaiting marks.")

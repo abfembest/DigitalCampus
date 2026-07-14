@@ -1459,6 +1459,22 @@ class AcademicSession(models.Model):
         help_text="Mark this as the current running session"
     )
 
+    REGISTRATION_OVERRIDE_CHOICES = [
+        ('auto',   'Automatic (3-week window from term start)'),
+        ('open',   'Force Open'),
+        ('closed', 'Force Closed'),
+    ]
+    registration_override = models.CharField(
+        max_length=10,
+        choices=REGISTRATION_OVERRIDE_CHOICES,
+        default='auto',
+        help_text=(
+            "Overrides the automatic 3-week registration window. Use 'Force Open' "
+            "when a session is activated after its term's computed window has "
+            "already elapsed (e.g. after end-of-session progression runs late)."
+        )
+    )
+
     # ── Timestamps ─────────────────────────────────────────────────────────
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1533,18 +1549,29 @@ class AcademicSession(models.Model):
     @property
     def is_registration_open(self):
         """
-        True when today falls inside the 3-week registration window
-        of whichever term is currently running.
+        True when today falls inside the 3-week registration window of
+        whichever term is currently running, unless an admin has set an
+        explicit `registration_override`.
 
-        The window is computed from term_dates — no separate DB fields
-        required.  Works for any term key the admin configures
-        (first, second, third, fall, spring, summer, …).
+        The computed window alone has a real operational gap: a session
+        is often activated (`is_current=True`) some time after its
+        term_dates were originally configured — e.g. right after an
+        end-of-session progression run — by which point the computed
+        3-week window may have already elapsed, permanently locking out
+        registration for the whole term with no way to recover short of
+        editing term_dates. `registration_override` gives admins (and
+        `academic_session_set_current`, which auto-opens it when needed)
+        an explicit escape hatch that takes precedence over the date math.
         """
-        from datetime import date
-        today = timezone.now().date()
+        if self.registration_override == 'open':
+            return True
+        if self.registration_override == 'closed':
+            return False
+
         reg_open, reg_close = self.get_registration_window()
         if reg_open is None:
             return False
+        today = timezone.now().date()
         return reg_open <= today <= reg_close
 
     def registration_window_for_term(self, term):
@@ -3104,7 +3131,11 @@ class QuizAttempt(models.Model):
     # Status
     is_completed = models.BooleanField(default=False)
     passed = models.BooleanField(default=False)
-    
+    pending_manual_grading = models.BooleanField(
+        default=False,
+        help_text="True while this attempt has short-answer/essay responses an instructor hasn't graded yet."
+    )
+
     # Timestamps
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -3149,6 +3180,12 @@ class QuizResponse(models.Model):
     text_response = models.TextField(blank=True)
     is_correct = models.BooleanField(default=False)
     points_earned = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    needs_grading = models.BooleanField(
+        default=False,
+        help_text="True for short-answer/essay responses awaiting an instructor's manual score."
+    )
+    graded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='quiz_responses_graded')
+    graded_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         verbose_name = 'Quiz Response'

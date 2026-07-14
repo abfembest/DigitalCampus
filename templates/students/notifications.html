@@ -39,7 +39,8 @@
                 role="button"
                 tabindex="0"
                 onkeydown="if(event.key==='Enter'||event.key===' ')markRead({{ notif.id }})"
-                class="border-l-4 cursor-pointer select-none transition-all duration-200 outline-none
+                class="border-l-4 cursor-pointer select-none transition-all duration-200
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset
                        {% if not notif.is_read %}bg-gray-50 border-l-primary-500 hover:bg-gray-100
                        {% else %}bg-white border-l-transparent hover:bg-gray-50{% endif %}">
 

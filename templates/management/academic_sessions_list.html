@@ -90,6 +90,11 @@
             {# Registration Window — 3 weeks from each term's start date #}
             <td class="py-4 px-5 text-xs">
               <div class="space-y-1">
+                {% if session.registration_override == 'open' %}
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 mb-1">FORCED OPEN</span>
+                {% elif session.registration_override == 'closed' %}
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 mb-1">FORCED CLOSED</span>
+                {% endif %}
                 {% for td in session.term_dates %}
                   {% if session.is_registration_open and session.get_current_term == td.term %}
                   <div class="whitespace-nowrap text-green-600 font-semibold">
@@ -155,6 +160,17 @@
                   </button>
                 </form>
                 {% endif %}
+
+                <form method="post" action="{% url 'management:academic_session_registration_override' session.pk %}" class="inline">
+                  {% csrf_token %}
+                  <select name="registration_override" onchange="this.form.submit()"
+                          title="Override the automatic 3-week registration window"
+                          class="px-2 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary-500">
+                    <option value="auto"   {% if session.registration_override == 'auto' %}selected{% endif %}>Auto window</option>
+                    <option value="open"   {% if session.registration_override == 'open' %}selected{% endif %}>Force Open</option>
+                    <option value="closed" {% if session.registration_override == 'closed' %}selected{% endif %}>Force Closed</option>
+                  </select>
+                </form>
 
                 <button type="button"
                         onclick="openSessionModal('edit', this)"

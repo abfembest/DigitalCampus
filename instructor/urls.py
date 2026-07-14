@@ -8,13 +8,12 @@ urlpatterns = [
     # Dashboard
     path('', views.dashboard, name='dashboard'),
     
-    # Course Management
+    # Course Management — create/delete are admin-only (management's courses_list
+    # CRUD); instructors only edit courses already assigned to them.
     path('courses/', views.course_list, name='course_list'),
-    # path('courses/create/', views.course_create, name='course_create'),
     path('courses/<slug:slug>/edit/', views.course_edit, name='course_edit'),
     path('courses/<slug:slug>/objectives/', views.course_objectives, name='course_objectives'),
-    path('courses/<slug:slug>/delete/', views.course_delete, name='course_delete'),
-    
+
     # Section Management
     path('courses/<slug:course_slug>/sections/create/', views.section_create, name='section_create'),
     path('courses/<slug:course_slug>/sections/<int:section_id>/edit/', views.section_edit, name='section_edit'),

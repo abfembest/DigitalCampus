@@ -1,5 +1,7 @@
 {% extends "management/base.html" %}
 {% load static %}{% block title %}{{ article.title }} — KB{% endblock %}
+{% block breadcrumb %}Support › Knowledge Base › {{ article.title|truncatechars:30 }}{% endblock %}
+{% block breadcrumb_title %}{{ article.title }}{% endblock %}
 {% block content %}
 <div class="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto">
     <nav class="flex items-center gap-2 text-sm text-gray-500 mb-5"><a href="{% url 'support:kb_list' %}" class="hover:text-primary-600">Knowledge Base</a><i class="fas fa-chevron-right text-xs" aria-hidden="true"></i><span class="text-gray-800 font-semibold">{{ article.title|truncatechars:40 }}</span></nav>

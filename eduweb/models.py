@@ -918,8 +918,8 @@ class BlogPost(models.Model):
     
     def increment_views(self):
         """Increment view count"""
-        self.views_count += 1
-        self.save(update_fields=['views_count'])
+        BlogPost.objects.filter(pk=self.pk).update(views_count=models.F('views_count') + 1)
+        self.refresh_from_db(fields=['views_count'])
     
     def get_related_posts(self, limit=3):
         """Get related posts from same category"""
@@ -2124,6 +2124,54 @@ class CourseApplication(models.Model):
             self.save(update_fields=['admission_number'])
             return True
         return False
+
+    # ── Matric number format — CHANGE THE FORMAT HERE, NOWHERE ELSE ─────────
+    # Computed on the fly from admission_number (never stored), so editing
+    # these two constants + the matric_number property below instantly
+    # changes what every student sees, with no migration/backfill needed.
+    MATRIC_NUMBER_MAX_LENGTH = 15
+    MATRIC_NUMBER_MIN_UNIQUE_CHARS = 4  # never shrink the unique tail below this
+
+    @property
+    def matric_number(self):
+        """
+        Student matriculation number: '{DEPT_CODE}-{YEAR}-{UNIQUE}', derived
+        from admission_number (e.g. 'ADM-2026-10DEBA33') by swapping the
+        'ADM' prefix for the student's department code, capped at
+        MATRIC_NUMBER_MAX_LENGTH characters total.
+
+        Reuses the year and unique hex tail already embedded in
+        admission_number rather than generating new ones, so this always
+        matches the admission record it's derived from and never needs its
+        own DB column. Returns None until admission_number exists.
+
+        An unusually long department code eats into the unique tail first
+        down to MATRIC_NUMBER_MIN_UNIQUE_CHARS (keeping numbers readable),
+        and only truncates the whole string as a last-resort safety net.
+        """
+        if not self.admission_number:
+            return None
+
+        department = self.program.department if self.program_id else None
+        dept_code = ((department.code if department else '') or 'GEN').strip().upper()
+
+        parts = self.admission_number.split('-')
+        if len(parts) >= 3:
+            year, unique = parts[1], parts[-1]
+        else:
+            # Unexpected admission_number shape — fall back gracefully
+            # rather than raising.
+            year, unique = str(timezone.now().year), self.admission_number[-8:]
+
+        fixed_length = len(dept_code) + len(year) + 2  # +2 for the two hyphens
+        unique_budget = max(
+            self.MATRIC_NUMBER_MIN_UNIQUE_CHARS,
+            self.MATRIC_NUMBER_MAX_LENGTH - fixed_length,
+        )
+        unique = unique[:unique_budget]
+
+        matric = f"{dept_code}-{year}-{unique}"
+        return matric[:self.MATRIC_NUMBER_MAX_LENGTH]
 
     def can_access_student_portal(self):
         """Check if student can access student dashboard"""
@@ -3428,6 +3476,7 @@ class UserProfile(models.Model):
     # Verification
     email_verified = models.BooleanField(default=False)
     verification_token = models.UUIDField(default=uuid.uuid4, editable=False)
+    verification_token_created = models.DateTimeField(default=timezone.now)
 
     # Password Reset
     password_reset_token = models.UUIDField(null=True, blank=True, editable=False)
@@ -3539,9 +3588,24 @@ class UserProfile(models.Model):
     
     def generate_verification_token(self):
         self.verification_token = uuid.uuid4()
-        self.save()
+        self.verification_token_created = timezone.now()
+        self.save(update_fields=['verification_token', 'verification_token_created'])
         return self.verification_token
-    
+
+    def is_verification_token_valid(self):
+        """
+        Token expires after 7 days. Deliberately far longer than the 1-hour
+        password-reset window: there's currently no self-service "resend"
+        entry point for a user who isn't active yet (resend_verification
+        requires login, which an unverified/inactive account can't do), so
+        an expired link is a real dead-end requiring manual support — a
+        generous window keeps that rare rather than routine.
+        """
+        from datetime import timedelta
+        if not self.verification_token_created:
+            return False
+        return timezone.now() < self.verification_token_created + timedelta(days=7)
+
     def generate_password_reset_token(self):
         import uuid
         from django.utils import timezone

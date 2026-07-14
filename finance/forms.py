@@ -1,132 +1,20 @@
+import os
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from eduweb.models import (
-    ApplicationPayment,
-    Subscription, 
-    CourseApplication,
-    StaffPayroll,
-)
+from eduweb.models import StaffPayroll
 from decimal import Decimal
 
+# Matches the widget's accept= hint — that hint is client-side only and
+# trivially bypassed, so it must be enforced again server-side.
+ALLOWED_ATTACHMENT_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png'}
+MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
 
-# ==================== PAYMENT FORMS ====================
-
-class PaymentFilterForm(forms.Form):
-    """Filter form for payment management"""
-    
-    STATUS_CHOICES = [
-        ('', 'All Statuses'),
-        ('pending', 'Pending'),
-        ('processing', 'Processing'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
-        ('refunded', 'Refunded'),
-    ]
-    
-    METHOD_CHOICES = [
-        ('', 'All Methods'),
-        ('paystack', 'Paystack'),
-        ('bank_transfer', 'Bank Transfer'),
-        ('cash', 'Cash'),
-    ]
-    
-    status = forms.ChoiceField(
-        choices=STATUS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500 bg-white'
-            )
-        })
-    )
-    
-    method = forms.ChoiceField(
-        choices=METHOD_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500 bg-white'
-            )
-        })
-    )
-    
-    search = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500'
-            ),
-            'placeholder': 'Search by reference or name...'
-        })
-    )
-    
-    date_from = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500'
-            ),
-            'type': 'date'
-        })
-    )
-    
-    date_to = forms.DateField(
-        required=False,
-        widget=forms.DateInput(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500'
-            ),
-            'type': 'date'
-        })
-    )
-
-
-class RefundForm(forms.Form):
-    """Form for processing refunds"""
-    
-    reason = forms.CharField(
-        widget=forms.Textarea(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500'
-            ),
-            'rows': 3,
-            'placeholder': 'Reason for refund...'
-        })
-    )
-    
-    refund_amount = forms.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500'
-            ),
-            'placeholder': 'Refund amount'
-        })
-    )
-    
-    def __init__(self, *args, payment=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if payment:
-            self.fields['refund_amount'].initial = payment.amount
-            self.fields['refund_amount'].widget.attrs['max'] = (
-                float(payment.amount)
-            )
+# Payment/refund/invoice filtering lives in payment.forms (PaymentFilterForm,
+# RefundForm, InvoiceGenerateForm) — those views own the payment_management,
+# refund_payment and invoice_generation pages, so their forms belong there.
+# Duplicating them here was dead code; nothing in this app ever imported them.
 
 
 # ==================== SUBSCRIPTION FORMS ====================
@@ -170,20 +58,27 @@ class SubscriptionFilterForm(forms.Form):
 # ==================== REPORT FORMS ====================
 
 class DateRangeForm(forms.Form):
-    """Date range filter for reports"""
-    
+    """
+    Date range filter backing the finance dashboard's auto-submitting
+    range picker (templates/finance/dashboard.html). The field name and
+    choices must match that <select name="range_type"> exactly.
+    """
+
     RANGE_CHOICES = [
-        ('7', 'Last 7 days'),
-        ('30', 'Last 30 days'),
-        ('90', 'Last 90 days'),
-        ('365', 'Last year'),
-        ('custom', 'Custom range'),
+        ('today', 'Today'),
+        ('yesterday', 'Yesterday'),
+        ('this_week', 'This Week'),
+        ('last_week', 'Last Week'),
+        ('this_month', 'This Month'),
+        ('last_month', 'Last Month'),
+        ('this_year', 'This Year'),
+        ('custom', 'Custom Range'),
     ]
-    
-    range = forms.ChoiceField(
+
+    range_type = forms.ChoiceField(
         choices=RANGE_CHOICES,
         required=False,
-        initial='30',
+        initial='this_month',
         widget=forms.Select(attrs={
             'class': (
                 'w-full px-4 py-2.5 border border-gray-300 '
@@ -217,28 +112,13 @@ class DateRangeForm(forms.Form):
         })
     )
 
-
-# ==================== INVOICE FORMS ====================
-
-class InvoiceGenerateForm(forms.Form):
-    """Form to select payment for invoice generation"""
-    
-    payment = forms.ModelChoiceField(
-        queryset=ApplicationPayment.objects.filter(
-            status='completed'
-        ).select_related(
-            'application__user',
-            'application__course'
-        ),
-        widget=forms.Select(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500 bg-white'
-            )
-        }),
-        empty_label="Select a payment..."
-    )
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and start_date > end_date:
+            raise ValidationError('Start date must be before end date.')
+        return cleaned_data
 
 
 # ==================== PAYROLL FORMS ====================
@@ -522,22 +402,41 @@ class PayrollCreateForm(forms.ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
-        
+
         # Validate salary amounts
         base_salary = cleaned_data.get('base_salary', Decimal('0'))
         allowances = cleaned_data.get('allowances', Decimal('0'))
         bonuses = cleaned_data.get('bonuses', Decimal('0'))
         tax = cleaned_data.get('tax_deduction', Decimal('0'))
         other_ded = cleaned_data.get('other_deductions', Decimal('0'))
-        
+
         gross = base_salary + allowances + bonuses
         net = gross - tax - other_ded
-        
+
         if net < 0:
             raise ValidationError(
                 'Total deductions cannot exceed gross salary'
             )
-        
+
+        # Validate each optional attachment: extension + size. The widget's
+        # accept= hint is client-side only and trivially bypassed.
+        for i in range(1, 6):
+            uploaded = cleaned_data.get(f'attachment_file_{i}')
+            if not uploaded:
+                continue
+            ext = os.path.splitext(uploaded.name)[1].lower()
+            if ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
+                self.add_error(
+                    f'attachment_file_{i}',
+                    f'Unsupported file type "{ext}". Allowed: '
+                    f'{", ".join(sorted(ALLOWED_ATTACHMENT_EXTENSIONS))}.'
+                )
+            elif uploaded.size > MAX_ATTACHMENT_SIZE_BYTES:
+                self.add_error(
+                    f'attachment_file_{i}',
+                    'File exceeds the 10MB size limit.'
+                )
+
         return cleaned_data
 
 

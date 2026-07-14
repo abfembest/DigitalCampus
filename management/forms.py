@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError
 
 from eduweb.models import (
     AcademicSession,
-    AllRequiredPayments,
     Announcement,
     Badge,
     BlogCategory,
@@ -2175,66 +2174,9 @@ class TransactionForm(forms.ModelForm):
         self.fields['gateway'].required = False
 
 
-# ==============================================================================
-# ALL REQUIRED PAYMENTS FORM
-# ==============================================================================
-
-class AllRequiredPaymentsForm(forms.ModelForm):
-    """Form for managing required payments"""
-    
-    class Meta:
-        model = AllRequiredPayments
-        fields = [
-            'program', 'course', 'academic_session', 'semester',
-            'purpose', 'who_to_pay', 'amount', 'currency', 'due_date', 'is_active'
-        ]
-        widgets = {
-            'program': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'course': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'list': 'course-list',
-            }),
-            'academic_session': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'semester': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'purpose': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'e.g., Tuition, Library Fees, Registration'
-            }),
-            'who_to_pay': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'amount': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'currency': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 uppercase',
-                'placeholder': 'e.g. USD, GBP, EUR',
-                'maxlength': '3',
-            }),
-            'due_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-            }),
-            'is_active': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 rounded'
-            }),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['program'].empty_label = '— Select Program —'
-        self.fields['course'].empty_label = '— Select Course (Optional) —'
-        self.fields['academic_session'].empty_label = '— Select Session (Optional) —'
-        self.fields['course'].required = False
-        self.fields['academic_session'].required = False
+# AllRequiredPaymentsForm removed — required-payments CRUD collapsed into
+# payment.forms.RequiredPaymentForm (payment/views.py), the one canonical
+# surface both admins and finance staff now use.
 
 class LibraryItemForm(forms.ModelForm):
     """

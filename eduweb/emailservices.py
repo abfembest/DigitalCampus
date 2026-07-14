@@ -486,8 +486,7 @@ def send_application_admin_notification(application):
                 </p>
                 <p>
                     <strong>Intake:</strong>
-                    {application.intake.get_intake_period_display()}
-                    {application.intake.year}
+                    {f"{application.intake.get_intake_period_display()} {application.intake.year}" if application.intake else "Not yet assigned"}
                 </p>
                 <p>
                     <strong>Study Mode:</strong>
@@ -2832,8 +2831,10 @@ def send_otp_email(user, otp_code):
         )
         msg.attach_alternative(html_message, "text/html")
         msg.send(fail_silently=False)
+        return True
     except Exception as e:
         logger.error("OTP email failed for %s: %s", user.email, e)
+        return False
 
 def send_password_changed_email(user):
     """

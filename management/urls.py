@@ -179,11 +179,9 @@ urlpatterns = [
     path('transactions/<str:transaction_id>/', views.transaction_detail, name='transaction_detail'),
 
     # Required Payments — pk kept (no natural unique identifier on model)
+    # Collapsed into payments:required_payments_list (see management/views.py) —
+    # this one route stays as a redirect for any existing bookmark/link.
     path('required-payments/', views.required_payments_list, name='required_payments_list'),
-    path('required-payments/create/', views.required_payment_create, name='required_payment_create'),
-    path('required-payments/<int:pk>/edit/', views.required_payment_edit, name='required_payment_edit'),
-    path('required-payments/<int:pk>/delete/', views.required_payment_delete, name='required_payment_delete'),
-    path('required-payments/send-overdue-reminders/', views.send_overdue_payment_reminders, name='send_overdue_payment_reminders'),
 
     # Financial Analytics Dashboard
     path('analytics/financial/', views.financial_analytics, name='financial_analytics'),

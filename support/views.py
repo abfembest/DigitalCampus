@@ -17,6 +17,7 @@ from django.http import JsonResponse
 import json
 from django.db.models import Q, Count, Avg, F
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.core.paginator import Paginator
 from datetime import timedelta
 
@@ -35,6 +36,18 @@ from .permissions import support_required, support_admin_required, get_client_ip
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _has_permission(request, module, action):
+    """
+    True if the acting user may perform `action` on `module`. Superuser
+    always bypasses; otherwise reads the StaffPermissionsMatrix snapshot
+    SessionSecurityMiddleware attaches to the request as `request.permissions`.
+    Mirrors management/views.py's helper of the same name.
+    """
+    if request.user.is_superuser:
+        return True
+    return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
+
+
 def _log(request, action, target_type='', target_id='', description=''):
     SupportAuditLog.objects.create(
         actor=request.user,
@@ -50,6 +63,18 @@ def _log(request, action, target_type='', target_id='', description=''):
 def _get_or_create_extra(ticket):
     extra, _ = SupportTicketExtra.objects.get_or_create(ticket=ticket)
     return extra
+
+
+def _parse_pk(value):
+    """
+    Safely coerce a POSTed id to int for use as a queryset pk lookup.
+    Returns None on missing/non-numeric input instead of letting a raw
+    ValueError from the ORM's pk-type coercion bubble up as a 500.
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 OPEN_STATUSES = ['open', 'in_progress', 'waiting_response']
@@ -356,6 +381,14 @@ def ticket_detail(request, ticket_id):
     if request.method == 'POST':
         action = request.POST.get('action')
 
+        # Reply is a "create" action, everything else here mutates the
+        # ticket's own fields ("edit") — matches ticket_detail.html's
+        # permissions.support_tickets.can_create/can_edit button gating.
+        required_action = 'can_create' if action == 'reply' else 'can_edit'
+        if not _has_permission(request, 'support_tickets', required_action):
+            messages.error(request, 'You do not have permission to perform that action on this ticket.')
+            return redirect('support:ticket_detail', ticket_id=ticket_id)
+
         if action == 'reply':
             body = request.POST.get('body', '').strip()
             is_internal = request.POST.get('is_internal') == '1'
@@ -427,10 +460,10 @@ def ticket_detail(request, ticket_id):
             return redirect('support:ticket_detail', ticket_id=ticket_id)
 
         elif action == 'assign':
-            agent_id = request.POST.get('agent_id')
+            agent_pk = _parse_pk(request.POST.get('agent_id'))
             old_agent = ticket.assigned_to
-            if agent_id:
-                agent = get_object_or_404(User, pk=agent_id)
+            if agent_pk is not None:
+                agent = get_object_or_404(User, pk=agent_pk)
                 ticket.assigned_to = agent
                 if ticket.status == 'open':
                     ticket.status = 'in_progress'
@@ -450,8 +483,8 @@ def ticket_detail(request, ticket_id):
         elif action == 'escalate':
             reason = request.POST.get('reason', 'other')
             notes = request.POST.get('notes', '')
-            escalated_to_id = request.POST.get('escalated_to_id')
-            escalated_to = User.objects.filter(pk=escalated_to_id).first() if escalated_to_id else None
+            escalated_to_pk = _parse_pk(request.POST.get('escalated_to_id'))
+            escalated_to = User.objects.filter(pk=escalated_to_pk).first() if escalated_to_pk is not None else None
             TicketEscalation.objects.create(
                 ticket=ticket, escalated_by=request.user,
                 escalated_to=escalated_to,
@@ -542,6 +575,10 @@ def ticket_detail(request, ticket_id):
 @support_required
 def ticket_create(request):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_tickets', 'can_create'):
+            messages.error(request, 'You do not have permission to create tickets.')
+            return redirect('support:ticket_create')
+
         user_id = request.POST.get('user_id')
         subject = request.POST.get('subject', '').strip()
         description = request.POST.get('description', '').strip()
@@ -555,12 +592,14 @@ def ticket_create(request):
             messages.error(request, 'Subject and description are required.')
         else:
             created_user = request.user
-            if user_id:
-                created_user = get_object_or_404(User, pk=user_id)
+            user_pk = _parse_pk(user_id)
+            if user_pk is not None:
+                created_user = get_object_or_404(User, pk=user_pk)
 
             assigned_to = None
-            if assigned_to_id:
-                assigned_to = User.objects.filter(pk=assigned_to_id).first()
+            assigned_pk = _parse_pk(assigned_to_id)
+            if assigned_pk is not None:
+                assigned_to = User.objects.filter(pk=assigned_pk).first()
 
             ticket = SupportTicket.objects.create(
                 user=created_user,
@@ -576,8 +615,9 @@ def ticket_create(request):
                 source=source,
                 tags=request.POST.get('tags', ''),
             )
-            if department_id:
-                dept = SupportDepartment.objects.filter(pk=department_id).first()
+            department_pk = _parse_pk(department_id)
+            if department_pk is not None:
+                dept = SupportDepartment.objects.filter(pk=department_pk).first()
                 if dept:
                     extra.department = dept
                     extra.save(update_fields=['department'])
@@ -653,10 +693,20 @@ def kb_article_detail(request, slug):
 def kb_article_create(request):
     """Created via the 'New Article' modal on kb_list.html (POST-only)."""
     if request.method == 'POST':
-        cat = get_object_or_404(KBCategory, pk=request.POST.get('category_id'))
+        if not _has_permission(request, 'support_knowledge_base', 'can_create'):
+            messages.error(request, 'You do not have permission to create knowledge base articles.')
+            return redirect('support:kb_list')
+
+        title = request.POST.get('title', '').strip()
+        cat_pk = _parse_pk(request.POST.get('category_id'))
+        if not title or cat_pk is None:
+            messages.error(request, 'A title and a valid category are required.')
+            return redirect('support:kb_list')
+        cat = get_object_or_404(KBCategory, pk=cat_pk)
+
         article = KBArticle.objects.create(
             category=cat,
-            title=request.POST.get('title', '').strip(),
+            title=title,
             summary=request.POST.get('summary', '').strip(),
             body=request.POST.get('body', '').strip(),
             status=request.POST.get('status', 'draft'),
@@ -675,9 +725,19 @@ def kb_article_create(request):
 def kb_article_edit(request, slug):
     article = get_object_or_404(KBArticle, slug=slug)
     if request.method == 'POST':
-        cat = get_object_or_404(KBCategory, pk=request.POST.get('category_id'))
+        if not _has_permission(request, 'support_knowledge_base', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit knowledge base articles.')
+            return redirect('support:kb_article_detail', slug=slug)
+
+        title = request.POST.get('title', '').strip()
+        cat_pk = _parse_pk(request.POST.get('category_id'))
+        if not title or cat_pk is None:
+            messages.error(request, 'A title and a valid category are required.')
+            return redirect('support:kb_article_edit', slug=slug)
+        cat = get_object_or_404(KBCategory, pk=cat_pk)
+
         article.category = cat
-        article.title = request.POST.get('title', '').strip()
+        article.title = title
         article.summary = request.POST.get('summary', '').strip()
         article.body = request.POST.get('body', '').strip()
         article.status = request.POST.get('status', 'draft')
@@ -714,12 +774,24 @@ def faq_list(request):
 @support_required
 def faq_create(request):
     if request.method == 'POST':
-        cat = get_object_or_404(FAQCategory, pk=request.POST.get('category_id'))
+        if not _has_permission(request, 'support_knowledge_base', 'can_create'):
+            messages.error(request, 'You do not have permission to create FAQs.')
+            return redirect('support:faq_list')
+
+        question = request.POST.get('question', '').strip()
+        answer = request.POST.get('answer', '').strip()
+        cat_pk = _parse_pk(request.POST.get('category_id'))
+        if not question or not answer or cat_pk is None:
+            messages.error(request, 'A category, question and answer are required.')
+            return redirect('support:faq_list')
+        cat = get_object_or_404(FAQCategory, pk=cat_pk)
+        order = _parse_pk(request.POST.get('order', 0)) or 0
+
         FAQ.objects.create(
             category=cat,
-            question=request.POST.get('question', '').strip(),
-            answer=request.POST.get('answer', '').strip(),
-            order=int(request.POST.get('order', 0)),
+            question=question,
+            answer=answer,
+            order=order,
             created_by=request.user,
         )
         messages.success(request, 'FAQ added.')
@@ -727,9 +799,12 @@ def faq_create(request):
 
 
 @login_required
-@support_admin_required
+@support_required
 def faq_delete(request, pk):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_knowledge_base', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete FAQs.')
+            return redirect('support:faq_list')
         FAQ.objects.filter(pk=pk).delete()
         messages.success(request, 'FAQ deleted.')
     return redirect('support:faq_list')
@@ -757,6 +832,9 @@ def canned_list(request):
 @support_required
 def canned_create(request):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_communications', 'can_create'):
+            messages.error(request, 'You do not have permission to create canned responses.')
+            return redirect('support:canned_list')
         CannedResponse.objects.create(
             title=request.POST.get('title', '').strip(),
             body=request.POST.get('body', '').strip(),
@@ -768,9 +846,12 @@ def canned_create(request):
 
 
 @login_required
-@support_admin_required
+@support_required
 def canned_delete(request, pk):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_communications', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete canned responses.')
+            return redirect('support:canned_list')
         CannedResponse.objects.filter(pk=pk).delete()
         messages.success(request, 'Canned response deleted.')
     return redirect('support:canned_list')
@@ -793,13 +874,31 @@ def sla_list(request):
 @support_admin_required
 def sla_save(request):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_config', 'can_create'):
+            messages.error(request, 'You do not have permission to manage SLA policies.')
+            return redirect('support:sla_list')
+
+        priority = request.POST.get('priority')
+        valid_priorities = [p[0] for p in SupportTicket.PRIORITY_CHOICES]
+        if priority not in valid_priorities:
+            messages.error(request, 'Please select a valid priority.')
+            return redirect('support:sla_list')
+
+        try:
+            first_response_hours = int(request.POST.get('first_response_hours', 4))
+            resolution_hours = int(request.POST.get('resolution_hours', 24))
+            escalation_hours = int(request.POST.get('escalation_hours', 8))
+        except (TypeError, ValueError):
+            messages.error(request, 'SLA hours must be whole numbers.')
+            return redirect('support:sla_list')
+
         SLAPolicy.objects.update_or_create(
-            priority=request.POST.get('priority'),
+            priority=priority,
             defaults={
                 'name': request.POST.get('name', '').strip(),
-                'first_response_hours': int(request.POST.get('first_response_hours', 4)),
-                'resolution_hours': int(request.POST.get('resolution_hours', 24)),
-                'escalation_hours': int(request.POST.get('escalation_hours', 8)),
+                'first_response_hours': first_response_hours,
+                'resolution_hours': resolution_hours,
+                'escalation_hours': escalation_hours,
                 'is_active': True,
             }
         )
@@ -830,9 +929,18 @@ def department_list(request):
 @support_admin_required
 def department_save(request, pk=None):
     if request.method == 'POST':
+        required_action = 'can_edit' if pk else 'can_create'
+        if not _has_permission(request, 'support_config', required_action):
+            messages.error(request, 'You do not have permission to manage support departments.')
+            return redirect('support:department_list')
+
         name = request.POST.get('name', '').strip()
-        head_id = request.POST.get('head_id')
-        head = User.objects.filter(pk=head_id).first() if head_id else None
+        if not name:
+            messages.error(request, 'Department name is required.')
+            return redirect('support:department_list')
+
+        head_pk = _parse_pk(request.POST.get('head_id'))
+        head = User.objects.filter(pk=head_pk).first() if head_pk is not None else None
         is_active = 'is_active' in request.POST
 
         if pk:
@@ -862,6 +970,9 @@ def department_save(request, pk=None):
 @support_admin_required
 def department_toggle_active(request, pk):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_config', 'can_edit'):
+            messages.error(request, 'You do not have permission to manage support departments.')
+            return redirect('support:department_list')
         dept = get_object_or_404(SupportDepartment, pk=pk)
         dept.is_active = not dept.is_active
         dept.save(update_fields=['is_active'])
@@ -891,6 +1002,9 @@ def agent_list(request):
 @support_admin_required
 def agent_toggle_available(request, pk):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_config', 'can_edit'):
+            messages.error(request, 'You do not have permission to manage agents.')
+            return redirect('support:agent_list')
         agent = get_object_or_404(User, pk=pk)
         profile, _ = AgentProfile.objects.get_or_create(user=agent)
         profile.is_available = not profile.is_available
@@ -1012,12 +1126,32 @@ def announcement_list(request):
 @support_required
 def announcement_create(request):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_communications', 'can_create'):
+            messages.error(request, 'You do not have permission to publish announcements.')
+            return redirect('support:announcement_list')
+
+        title = request.POST.get('title', '').strip()
+        body = request.POST.get('body', '').strip()
+        if not title or not body:
+            messages.error(request, 'Title and body are required.')
+            return redirect('support:announcement_list')
+
+        expires_raw = request.POST.get('expires_at', '').strip()
+        expires_at = None
+        if expires_raw:
+            expires_at = parse_datetime(expires_raw)
+            if expires_at is None:
+                messages.error(request, 'Invalid expiry date/time.')
+                return redirect('support:announcement_list')
+            if timezone.is_naive(expires_at):
+                expires_at = timezone.make_aware(expires_at)
+
         SupportAnnouncement.objects.create(
-            title=request.POST.get('title', '').strip(),
-            body=request.POST.get('body', '').strip(),
+            title=title,
+            body=body,
             target_role=request.POST.get('target_role', ''),
             is_pinned='is_pinned' in request.POST,
-            expires_at=request.POST.get('expires_at') or None,
+            expires_at=expires_at,
             created_by=request.user,
         )
         messages.success(request, 'Announcement published.')
@@ -1025,9 +1159,12 @@ def announcement_create(request):
 
 
 @login_required
-@support_admin_required
+@support_required
 def announcement_delete(request, pk):
     if request.method == 'POST':
+        if not _has_permission(request, 'support_communications', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete announcements.')
+            return redirect('support:announcement_list')
         SupportAnnouncement.objects.filter(pk=pk).delete()
         messages.success(request, 'Announcement deleted.')
     return redirect('support:announcement_list')

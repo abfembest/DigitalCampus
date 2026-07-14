@@ -33,7 +33,6 @@ from django.views.decorators.http import require_POST
 # Models
 from eduweb.models import (
     AcademicSession,
-    AllRequiredPayments,
     Announcement,
     ApplicationPayment,
     AuditLog,
@@ -85,7 +84,6 @@ from eduweb.models import (
 from management.forms import (
     AcademicSessionForm,
     AdminMessageComposeForm,
-    AllRequiredPaymentsForm,
     AnnouncementForm,
     AuditLogFilterForm,
     BadgeForm,
@@ -127,7 +125,6 @@ from management.forms import (
 from eduweb.emailservices import (
     send_certificate_ready_email,
     send_transcript_generated_email,
-    send_overdue_payment_reminder_email,
     send_payroll_payment_notification_email,
     send_admin_created_user_email,
     send_new_message_email,
@@ -4682,162 +4679,21 @@ def transaction_detail(request, transaction_id):
 
 # ---------------------------------------------------------------------------
 # REQUIRED PAYMENTS
+#
+# This used to be a full, separate CRUD (list/create/edit/delete/reminders)
+# duplicating the one in payment/views.py over the same AllRequiredPayments
+# model — one for admin oversight, one for the finance portal. Collapsed
+# into a single canonical surface (the finance-portal one, which has the
+# fuller UI) per product decision; these just forward there now so any
+# existing bookmark/link to the old management: URLs keeps working. The
+# canonical view already grants admins/superusers access alongside finance
+# staff (see payment/views.py's can_manage_required_payments).
 # ---------------------------------------------------------------------------
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def required_payments_list(request):
-
-    qs = AllRequiredPayments.objects.select_related(
-        'program', 'course', 'academic_session'
-    ).order_by('-due_date')
-
-    search = request.GET.get('search', '').strip()
-    if search:
-        qs = qs.filter(
-            Q(purpose__icontains=search)        |
-            Q(program__name__icontains=search)  |
-            Q(program__code__icontains=search)
-        )
-
-    active_filter = request.GET.get('active', '').strip()
-    if active_filter == '1':
-        qs = qs.filter(is_active=True)
-    elif active_filter == '0':
-        qs = qs.filter(is_active=False)
-
-    paginator = Paginator(qs, 20)
-    page_obj  = paginator.get_page(request.GET.get('page'))
-
-    programs = Program.objects.filter(is_active=True).order_by('name')
-    courses  = Course.objects.filter(is_active=True).order_by('code', 'name')
-    form     = AllRequiredPaymentsForm()
-
-    return render(request, 'management/required_payments.html', {
-        'payments':  page_obj,
-        'programs':  programs,
-        'courses':   courses,
-        'form':      form,
-    })
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def required_payment_create(request):
-
-    if request.method != 'POST':
-        return redirect('management:required_payments_list')
-
-    if not _has_permission(request, 'finance', 'can_create'):
-        messages.error(request, 'You do not have permission to create required payments.')
-        return redirect('management:required_payments_list')
-
-    form = AllRequiredPaymentsForm(request.POST)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Required payment created.')
-    else:
-        msg = next(
-            (e for errs in form.errors.values() for e in errs),
-            'Please fix the errors.'
-        )
-        messages.error(request, msg)
-    return redirect('management:required_payments_list')
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def required_payment_edit(request, pk):
-
-    if request.method != 'POST':
-        return redirect('management:required_payments_list')
-
-    if not _has_permission(request, 'finance', 'can_edit'):
-        messages.error(request, 'You do not have permission to edit required payments.')
-        return redirect('management:required_payments_list')
-
-    payment = get_object_or_404(AllRequiredPayments, pk=pk)
-    form    = AllRequiredPaymentsForm(request.POST, instance=payment)
-    if form.is_valid():
-        form.save()
-        messages.success(request, 'Payment updated.')
-    else:
-        msg = next(
-            (e for errs in form.errors.values() for e in errs),
-            'Please fix the errors.'
-        )
-        messages.error(request, msg)
-    return redirect('management:required_payments_list')
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def required_payment_delete(request, pk):
-
-    if request.method != 'POST':
-        return redirect('management:required_payments_list')
-
-    if not _has_permission(request, 'finance', 'can_delete'):
-        messages.error(request, 'You do not have permission to delete required payments.')
-        return redirect('management:required_payments_list')
-
-    payment = get_object_or_404(AllRequiredPayments, pk=pk)
-    payment_count = payment.payments.count()
-    if payment_count:
-        messages.error(
-            request,
-            f'Cannot delete "{payment}" — {payment_count} student payment record(s) reference it.'
-        )
-        return redirect('management:required_payments_list')
-
-    payment.delete()
-    messages.success(request, 'Payment deleted.')
-    return redirect('management:required_payments_list')
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def send_overdue_payment_reminders(request):
-    """Send overdue payment reminder emails to students with unpaid fees"""
-    
-    if request.method != 'POST':
-        return redirect('management:required_payments_list')
-    
-    try:
-        # Find all overdue fees that haven't been paid yet
-        today = timezone.now().date()
-        overdue_fees = FeePayment.objects.filter(
-            fee__due_date__lt=today,
-            status__in=['pending', 'failed'],
-            user__isnull=False
-        ).select_related('user', 'fee')
-        
-        reminder_count = 0
-        error_count = 0
-        
-        for fee in overdue_fees:
-            try:
-                # Send reminder email
-                send_overdue_payment_reminder_email(fee.user, fee)
-                reminder_count += 1
-            except Exception as e:
-                logger.error(f'Failed to send overdue reminder for fee {fee.id}: {str(e)}')
-                error_count += 1
-        
-        if reminder_count > 0:
-            messages.success(
-                request,
-                f'Sent {reminder_count} overdue payment reminder(s). {error_count} failed if any.'
-            )
-        else:
-            messages.info(request, 'No overdue payments found.')
-    except ImportError:
-        messages.error(request, 'FeePayment model not found.')
-    except Exception as e:
-        logger.error(f'Failed to send overdue payment reminders: {str(e)}')
-        messages.error(request, 'An error occurred while sending reminders.')
-    
-    return redirect('management:required_payments_list')
+    return redirect('payments:required_payments_list')
 
 
 # ---------------------------------------------------------------------------

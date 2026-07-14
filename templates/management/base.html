@@ -670,8 +670,8 @@
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'payroll' in request.path %}bg-white/20{% endif %}">
                                 <i class="fas fa-wallet mr-2" aria-hidden="true"></i>Staff Payroll
                             </a>
-                            <a href="{% url 'management:required_payments_list' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'required-payments' in request.path %}bg-white/20{% endif %}">
+                            <a href="{% url 'payments:required_payments_list' %}"
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'required_payments_list' %}bg-white/20{% endif %}">
                                 <i class="fas fa-receipt mr-2" aria-hidden="true"></i>Required Payments
                             </a>
                             <a href="{% url 'management:transactions_list' %}"
@@ -1377,19 +1377,19 @@
                     {% if permissions.finance_payments.can_view %}
                     <!-- Payments submenu -->
                     <div class="mb-1">
-                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if 'payments' in request.path %}bg-white/20{% endif %}">
+                        <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all {% if request.resolver_match.app_name == 'payments' %}bg-white/20{% endif %}">
                             <div class="flex items-center">
                                 <i class="fas fa-credit-card w-5 text-center" aria-hidden="true"></i>
                                 <span class="ml-3 text-[17px] font-semibold">Payments</span>
                             </div>
-                            <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'payments' in request.path %}rotate-180{% endif %}"
+                            <i class="fas fa-chevron-down menu-arrow transition-transform {% if request.resolver_match.app_name == 'payments' %}rotate-180{% endif %}"
                                aria-hidden="true"></i>
                         </button>
                         <div id="paymentsMenu"
-                             class="mt-1 space-y-1 {% if 'payments' not in request.path %}hidden{% endif %}
+                             class="mt-1 space-y-1 {% if request.resolver_match.app_name != 'payments' %}hidden{% endif %}
                                     bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
                             <a href="{% url 'payments:payment_management' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'payment_management' or request.resolver_match.url_name == 'application_payment_detail' or request.resolver_match.url_name == 'fee_payment_detail' %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'payment_management' or request.resolver_match.url_name == 'payment_detail' %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i> All Payments
                             </a>
                             <a href="{% url 'payments:transaction_reports' %}"
@@ -1397,7 +1397,7 @@
                                 <i class="fas fa-file-alt mr-2" aria-hidden="true"></i> Transaction Reports
                             </a>
                             <a href="{% url 'payments:invoice_generation' %}"
-                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'invoice' in request.path %}bg-white/20{% endif %}">
+                               class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'invoice_generation' or request.resolver_match.url_name == 'generate_invoice_pdf' %}bg-white/20{% endif %}">
                                 <i class="fas fa-file-invoice mr-2" aria-hidden="true"></i> Invoices
                             </a>
                         </div>
@@ -1406,7 +1406,7 @@
                     <!-- Required Payments -->
                     <a href="{% url 'payments:required_payments_list' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
-                              {% if 'required-payments' in request.path %}bg-white/20{% endif %}">
+                              {% if request.resolver_match.url_name == 'required_payments_list' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
                             <i class="fas fa-receipt w-5 text-center" aria-hidden="true"></i>
                             <span class="ml-3 text-[17px] font-semibold">Required Payments</span>
@@ -1532,6 +1532,9 @@
                         <div class="flex-1">
                             <p class="font-medium text-sm truncate capitalize">{{ request.user.get_full_name|default:request.user.username }}</p>
                             <p class="text-xs text-white/70 capitalize">{{ request.user.profile.get_role_display }}</p>
+                            {% if request.user.profile.role == 'student' and matric_number %}
+                            <p class="text-xs text-white/50 font-mono tracking-wide mt-0.5">{{ matric_number }}</p>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -1744,6 +1747,14 @@
                 {% with profile=request.user.profile %}
                 {% if profile and profile.program %}
                 <div class="mb-4 sm:mb-5 rounded-xl border border-blue-100 bg-blue-50 px-3 sm:px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm text-blue-800">
+
+                    {# Matric Number — see CourseApplication.matric_number for the format #}
+                    {% if matric_number %}
+                    <span class="inline-flex items-center gap-1.5 font-semibold bg-blue-900 text-white rounded-lg px-2.5 py-1 font-mono tracking-wide">
+                        <i class="fas fa-id-card text-blue-300 text-[11px]" aria-hidden="true"></i>
+                        {{ matric_number }}
+                    </span>
+                    {% endif %}
 
                     <span class="inline-flex items-center gap-1.5 font-semibold bg-blue-100 text-blue-900 rounded-lg px-2.5 py-1 border border-blue-200">
                         <i class="fas fa-layer-group text-blue-500 text-[11px]" aria-hidden="true"></i>

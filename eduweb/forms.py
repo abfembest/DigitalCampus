@@ -52,12 +52,6 @@ class SignUpForm(UserCreationForm):
         self.fields['password1'].widget.attrs.update({'class': _INPUT, 'placeholder': 'Create a strong password', 'autocomplete': 'new-password'})
         self.fields['password2'].widget.attrs.update({'class': _INPUT, 'placeholder': 'Confirm your password', 'autocomplete': 'new-password'})
 
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if User.objects.filter(email=email).exists():
-            raise ValidationError('This email address is already registered.')
-        return email
-
     def clean_captcha(self):
         captcha = self.cleaned_data.get('captcha')
         if self.captcha_answer is None:
@@ -385,13 +379,14 @@ class PasswordResetRequestForm(forms.Form):
     )
 
     def clean_email(self):
-        email = self.cleaned_data.get('email', '').strip().lower()
-        if not User.objects.filter(email=email, is_active=True).exists():
-            # Deliberate vague error — don't reveal if email exists
-            raise ValidationError(
-                'If this email is registered, you will receive a reset link shortly.'
-            )
-        return email
+        # Deliberately does NOT check whether the email exists. It used to,
+        # raising a ValidationError (and so failing form.is_valid()) only
+        # for unregistered emails — which let anyone enumerate real accounts
+        # simply by watching whether the "check your email" success screen
+        # appeared or a field error did. The view (forgot_password) already
+        # does the existence check itself and always renders the same
+        # success screen either way; this form must stay silent on it.
+        return self.cleaned_data.get('email', '').strip().lower()
 
 
 class SetNewPasswordForm(forms.Form):

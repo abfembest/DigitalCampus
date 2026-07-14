@@ -177,19 +177,35 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   resendBtn.addEventListener('click', async () => {
+    // Disable immediately — the request takes a couple of seconds (it emails
+    // a fresh code server-side), and without this a second click before the
+    // response lands fires a duplicate send.
+    resendBtn.disabled = true;
+    resendBtn.classList.add('opacity-40', 'cursor-not-allowed');
+    const originalLabel = resendBtn.textContent;
+    resendBtn.textContent = 'Sending…';
+
     try {
       const res  = await fetch('{% url "eduweb:otp_verify" %}?resend=1', {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
       });
       const data = await res.json();
+      resendBtn.textContent = originalLabel;
       if (data.success) {
         if (window.showToast) window.showToast('success', data.message);
         startCooldown(60);
         digits.forEach(d => d.value = '');
         digits[0].focus();
         updateHidden();
+      } else {
+        if (window.showToast) window.showToast('error', data.message || 'Could not resend code.');
+        resendBtn.disabled = false;
+        resendBtn.classList.remove('opacity-40', 'cursor-not-allowed');
       }
     } catch {
+      resendBtn.textContent = originalLabel;
+      resendBtn.disabled = false;
+      resendBtn.classList.remove('opacity-40', 'cursor-not-allowed');
       if (window.showToast) window.showToast('error', 'Could not resend code.');
     }
   });

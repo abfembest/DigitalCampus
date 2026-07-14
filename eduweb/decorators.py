@@ -5,6 +5,21 @@ from django.contrib.auth import logout
 from .models import CourseApplication
 
 
+def is_finance_manager(user):
+    """
+    Allow only authenticated finance-role users. Shared by `finance` and
+    `payment` (previously two byte-for-byte-identical local copies) —
+    deliberately narrower than `finance_required` below: no superuser/
+    is_staff bypass, since finance data access is scoped strictly to the
+    finance role here.
+    """
+    return (
+        user.is_authenticated
+        and hasattr(user, 'profile')
+        and user.profile.role == 'finance'
+    )
+
+
 def check_for_auth(view_func):
     """
     Prevents authenticated users from accessing public pages.

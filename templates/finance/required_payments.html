@@ -2,6 +2,8 @@
 {% load static humanize %}
 
 {% block title %}Required Payments — {{ site_config.school_short_name|default:"Portal" }}{% endblock %}
+{% block breadcrumb %}Finance › Required Payments{% endblock %}
+{% block breadcrumb_title %}Required Payments{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
@@ -248,15 +250,30 @@
                 </h1>
                 <p class="text-sm text-gray-500 mt-0.5">Manage all programme fee obligations</p>
             </div>
-            {% if permissions.finance_payments.can_create %}
-            <button type="button" onclick="openModal('create')"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700
-                           text-white text-sm font-semibold rounded-xl shadow transition-all
-                           focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                <i class="fas fa-plus"></i>
-                <span>New Payment</span>
-            </button>
-            {% endif %}
+            <div class="flex items-center gap-2 flex-wrap">
+                {% if permissions.finance_payments.can_edit %}
+                <form method="post" action="{% url 'payments:required_payment_send_reminders' %}"
+                      onsubmit="return confirm('Send an overdue-payment reminder email to every student with a pending or failed fee past its due date?');">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300
+                                   hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl transition-all
+                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <i class="fas fa-bell"></i>
+                        <span>Send Overdue Reminders</span>
+                    </button>
+                </form>
+                {% endif %}
+                {% if permissions.finance_payments.can_create %}
+                <button type="button" onclick="openModal('create')"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700
+                               text-white text-sm font-semibold rounded-xl shadow transition-all
+                               focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    <i class="fas fa-plus"></i>
+                    <span>New Payment</span>
+                </button>
+                {% endif %}
+            </div>
         </div>
     </div>
 
@@ -325,8 +342,8 @@
                         data-amount="{{ payment.amount }}"
                         data-due="{{ payment.due_date|date:'Y-m-d' }}"
                         data-active="{{ payment.is_active|yesno:'true,false' }}"
-                        data-toggle-url="{% url 'finance:required_payment_toggle' payment.pk %}"
-                        data-delete-url="{% url 'finance:required_payment_delete' payment.pk %}"
+                        data-toggle-url="{% url 'payments:required_payment_toggle' payment.pk %}"
+                        data-delete-url="{% url 'payments:required_payment_delete' payment.pk %}"
                         class="border-b border-gray-100 transition-colors{% if payment.is_active and payment.due_date < today %} status-overdue{% endif %}">
 
                         <td class="px-4 py-3">
@@ -766,7 +783,7 @@
             title.textContent      = 'New Required Payment';
             subtitle.textContent   = 'Create a new fee obligation';
             submitText.textContent = 'Create Payment';
-            form.action = "{ url 'finance:required_payment_create' %}";
+            form.action = "{% url 'payments:required_payment_create' %}";
             document.getElementById('fieldIsActive').checked = true;
 
         } else if (mode === 'edit' && pk) {
@@ -776,7 +793,7 @@
             title.textContent      = 'Edit Required Payment';
             subtitle.textContent   = 'Update payment details';
             submitText.textContent = 'Update Payment';
-            form.action = "{ url 'finance:required_payment_update' pk=0 %}".replace('/0/', '/' + pk + '/');
+            form.action = "{% url 'payments:required_payment_update' pk=0 %}".replace('/0/', '/' + pk + '/');
 
             /* Purpose */
             document.getElementById('fieldPurpose').value = row.dataset.purpose;

@@ -14,7 +14,7 @@ import logging
 import random
 from datetime import datetime
 from decimal import Decimal
-from threading import Thread
+from functools import lru_cache
 
 # ─── Third-party ─────────────────────────────────────────────────────────────
 import stripe
@@ -139,27 +139,6 @@ def application_status_context(request):
     return {'has_pending_application': has_pending}
 
 
-def redirect_after_login(user):
-    """Return the correct redirect response based on the user's role/status."""
-    if user.is_staff or user.is_superuser:
-        return redirect('management:dashboard')
-
-    accepted = CourseApplication.objects.filter(
-        user=user,
-        status='approved',
-        admission_accepted=True,
-        admission_number__isnull=False,
-        department_approved=True,
-    ).first()
-    if accepted:
-        return redirect('student:dashboard')
-
-    if CourseApplication.objects.filter(user=user).exists():
-        return redirect('eduweb:application_status')
-
-    return redirect('eduweb:index')
-
-
 def generate_captcha():
     """Return a (question_str, answer_int) math captcha pair."""
     num1 = random.randint(1, 10)
@@ -181,24 +160,32 @@ def generate_captcha():
 def verify_email(request, token):
     """Verify a user's email address via the one-time token link."""
     try:
-        profile = UserProfile.objects.get(verification_token=token)
-        user = profile.user
-
-        if not user.is_active:
-            user.is_active = True
-            user.save()
-            profile.email_verified = True
-            profile.save()
-            messages.success(request, 'Your email has been verified! You can now log in.')
-            send_verification_success_email(user)
-        else:
-            messages.info(request, 'Your email is already verified.')
-
-        return redirect('eduweb:auth_page')
-
+        profile = UserProfile.objects.select_related('user').get(verification_token=token)
     except UserProfile.DoesNotExist:
         messages.error(request, 'Invalid verification link.')
         return redirect('eduweb:auth_page')
+
+    user = profile.user
+
+    if user.is_active:
+        messages.info(request, 'Your email is already verified.')
+        return redirect('eduweb:auth_page')
+
+    if not profile.is_verification_token_valid():
+        messages.error(
+            request,
+            'This verification link has expired. Please request a new one below.',
+        )
+        return redirect('eduweb:auth_page')
+
+    user.is_active = True
+    user.save(update_fields=['is_active'])
+    profile.email_verified = True
+    profile.save(update_fields=['email_verified'])
+    messages.success(request, 'Your email has been verified! You can now log in.')
+    send_verification_success_email(user)
+
+    return redirect('eduweb:auth_page')
 
 @login_required(login_url='eduweb:auth_page')
 def force_change_password(request):
@@ -459,12 +446,24 @@ def auth_page(request):
             profile.otp_attempts   = 0
             profile.save(update_fields=['_otp_code', 'otp_created_at', 'otp_attempts'])
 
-            # Store pending user in session — actual login() fires after OTP
-            request.session['otp_user_id']     = user.pk
-            request.session['otp_remember_me'] = request.POST.get('remember_me') == 'on'
-            request.session.pop('captcha_answer', None)
+            if not send_otp_email(user, otp):
+                # Don't claim success and strand the user on a page waiting for
+                # a code that was never sent — send_otp_email already logged
+                # the underlying SMTP error. Sent synchronously (not
+                # backgrounded) so we know for certain before responding —
+                # EMAIL_TIMEOUT bounds the worst case instead of hanging.
+                return _fresh_captcha_error(
+                    'username',
+                    'Could not send your verification code right now. Please try again shortly.',
+                )
 
-            send_otp_email(user, otp)
+            # Store pending user in session — actual login() fires after OTP
+            # Checkbox is named "remember" in auth.html (not "remember_me") —
+            # this was reading the wrong POST key, so "Remember me" silently
+            # never took effect; every login got the short 15-minute session.
+            request.session['otp_user_id']     = user.pk
+            request.session['otp_remember_me'] = request.POST.get('remember') == 'on'
+            request.session.pop('captcha_answer', None)
 
             return JsonResponse({
                 'success': True,
@@ -499,12 +498,22 @@ def otp_verify(request):
     if request.method == 'GET' and request.GET.get('resend') == '1':
         otp = str(random.randint(100000, 999999))
         profile = user.profile
+        previous_code, previous_created_at = profile.otp_code, profile.otp_created_at
         profile.otp_code       = otp      # encrypted via setter
         profile.otp_created_at = timezone.now()
         profile.otp_attempts   = 0
         profile.save(update_fields=['_otp_code', 'otp_created_at', 'otp_attempts'])
 
-        send_otp_email(user, otp)
+        if not send_otp_email(user, otp):
+            # Roll back to the previous code rather than leaving the DB
+            # pointing at one the user was never actually sent.
+            profile.otp_code       = previous_code
+            profile.otp_created_at = previous_created_at
+            profile.save(update_fields=['_otp_code', 'otp_created_at'])
+            return JsonResponse({
+                'success': False,
+                'message': 'Could not send a new code right now. Please try again shortly.',
+            }, status=502)
 
         return JsonResponse({
             'success': True,
@@ -590,6 +599,8 @@ def otp_verify(request):
             redirect_url = reverse('instructor:dashboard')
         elif role == 'finance':
             redirect_url = reverse('finance:dashboard')
+        elif role == 'support':
+            redirect_url = reverse('support:dashboard')
         else:
             redirect_url = reverse('eduweb:apply')
 
@@ -833,10 +844,19 @@ def profile(request):
 
 
 @login_required
-def settings(request):
+def account_settings(request):
     """
     Central 'Settings' page shared by every role — notification preferences
     and password change, one page instead of a per-app copy.
+
+    Named account_settings, not settings — a view literally named `settings`
+    shadows the `from django.conf import settings` import for the rest of
+    this module (Python resolves module globals at call time, not def time,
+    so every settings.SOMETHING reference anywhere else in this file —
+    regardless of source position — silently broke once this function
+    existed: Stripe key/webhook-secret lookups included). URL name stays
+    'settings' (see eduweb/urls.py) so `{% url 'eduweb:settings' %}` is
+    unaffected.
     """
     from django.contrib.auth import update_session_auth_hash
     from student.forms import SettingsForm
@@ -984,7 +1004,7 @@ def blog_category(request, slug):
 @check_for_auth
 def contact_submit(request):
     if request.method != 'POST':
-        return redirect('index')
+        return redirect('eduweb:index')
 
     referer = request.POST.get('next') or request.META.get('HTTP_REFERER', '/')
     # ── CAPTCHA verification ──────────────────────────────────────────────────
@@ -1109,10 +1129,15 @@ EXCLUDED_TERRITORIES = {
     'VG', 'VI', 'WF', 'IM', 'BL',  # IM=Isle of Man, BL=Saint Barthélemy
 }
 
+@lru_cache(maxsize=1)
 def _build_countries_list():
     """
     Returns a list of dicts: {code, name, phone_code, nationality}
     Sorted by name. pycountry → country list; phonenumbers → dial code.
+
+    Cached (pure function, no arguments, static reference data — safe to
+    compute once per process) since the `apply` page was rebuilding this
+    ~200-entry list, phone codes included, from scratch on every single GET.
     
     FILTERS OUT: Territories and dependencies (GG, JE, IM, etc.) to prevent
     duplicate phone codes. Only returns independent sovereign countries.
@@ -1333,10 +1358,15 @@ def apply(request):
                             file_size=f.size,
                         )
 
-                def _send_emails():
-                    send_application_confirmation_email(application)
-                    send_application_admin_notification(application)
-                Thread(target=_send_emails, daemon=True).start()
+                # Was backgrounded via a daemon Thread — matches the same
+                # failure mode already hit in production for other emails on
+                # Passenger/shared hosting (the worker process can be
+                # recycled before a detached thread finishes sending, so the
+                # email silently never goes out). Sent synchronously instead,
+                # same as every other email in this file; EMAIL_TIMEOUT (see
+                # settings.py) bounds the worst-case wait to 15s.
+                send_application_confirmation_email(application)
+                send_application_admin_notification(application)
 
                 if is_ajax:
                     return JsonResponse({
@@ -1351,11 +1381,15 @@ def apply(request):
                 )
                 return redirect('eduweb:application_status')
 
-            except Exception as exc:
+            except Exception:
+                # Log the real exception server-side; never echo it back —
+                # it can leak internal details (field/table names, file
+                # paths) and previously showed up verbatim in the UI.
                 logger.exception("apply view — error saving application")
+                generic_message = 'Something went wrong while saving your application. Please try again.'
                 if is_ajax:
-                    return JsonResponse({'success': False, 'error': str(exc)}, status=500)
-                messages.error(request, f'An error occurred: {exc}')
+                    return JsonResponse({'success': False, 'error': generic_message}, status=500)
+                messages.error(request, generic_message)
 
         else:
             if is_ajax:
@@ -1475,36 +1509,45 @@ def accept_admission(request, application_id):
         messages.error(request, 'Application not found or you do not have permission to access it.')
         return redirect('eduweb:application_status')
 
-    if application.status != 'approved':
-        messages.error(request, 'Only approved applications can be accepted.')
-        return redirect('eduweb:application_status')
+    # Re-check under a row lock inside the transaction — the plain checks
+    # above are just a fast-path for the common case; without this, two
+    # near-simultaneous submits (double-click, double tab) could both pass
+    # the admission_accepted check above and both issue an admission number.
+    with transaction.atomic():
+        application = CourseApplication.objects.select_for_update().get(pk=application.pk)
 
-    if application.admission_accepted:
-        messages.info(request, 'You have already accepted this admission offer.')
-        return redirect('eduweb:application_status')
+        if application.status != 'approved':
+            messages.error(request, 'Only approved applications can be accepted.')
+            return redirect('eduweb:application_status')
 
-    if application.accept_admission():
-        application.issue_admission_number()
+        if application.admission_accepted:
+            messages.info(request, 'You have already accepted this admission offer.')
+            return redirect('eduweb:application_status')
 
-        # Sync academic session and entry level to the student's UserProfile
-        try:
-            profile = application.user.profile
-            if application.academic_session:
-                profile.admission_session = application.academic_session
-            if application.entry_level:
-                # entry_level is e.g. 100, 200 ... convert to year_of_study (1, 2 ...)
-                profile.year_of_study = application.entry_level // 100
-            if application.program:
-                profile.program    = application.program
-                profile.department = application.program.department
-                profile.faculty    = application.program.department.faculty
-            profile.save(update_fields=[
-                'admission_session', 'year_of_study',
-                'program', 'department', 'faculty',
-            ])
-        except Exception:
-            logger.exception("accept_admission — failed to sync profile fields")
+        accepted = application.accept_admission()
+        if accepted:
+            application.issue_admission_number()
 
+            # Sync academic session and entry level to the student's UserProfile
+            try:
+                profile = application.user.profile
+                if application.academic_session:
+                    profile.admission_session = application.academic_session
+                if application.entry_level:
+                    # entry_level is e.g. 100, 200 ... convert to year_of_study (1, 2 ...)
+                    profile.year_of_study = application.entry_level // 100
+                if application.program:
+                    profile.program    = application.program
+                    profile.department = application.program.department
+                    profile.faculty    = application.program.department.faculty
+                profile.save(update_fields=[
+                    'admission_session', 'year_of_study',
+                    'program', 'department', 'faculty',
+                ])
+            except Exception:
+                logger.exception("accept_admission — failed to sync profile fields")
+
+    if accepted:
         send_admission_offer_accepted_email(application)
         messages.success(
             request,
@@ -1675,11 +1718,12 @@ def save_application_draft(request):
 
         return redirect('eduweb:application_status')
 
-    except Exception as exc:
+    except Exception:
         logger.exception("save_application_draft failed")
+        generic_message = 'Could not save your application right now. Please try again.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
-        messages.error(request, f'Could not save your application: {exc}')
+            return JsonResponse({'success': False, 'error': generic_message}, status=400)
+        messages.error(request, generic_message)
         return redirect('eduweb:apply')
 
 
@@ -1825,7 +1869,7 @@ def get_student_fee_summary(request, fee_pk):
     """Return JSON summary for a single student fee (used by the payment modal)."""
     try:
         fee = AllRequiredPayments.objects.select_related(
-            'faculty', 'department'
+            'program__department__faculty'
         ).get(pk=fee_pk, is_active=True)
     except AllRequiredPayments.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Fee not found'}, status=404)
@@ -1836,8 +1880,8 @@ def get_student_fee_summary(request, fee_pk):
             'full_name':         request.user.get_full_name() or request.user.username,
             'purpose':           fee.purpose,
             'amount':            float(fee.amount),
-            'currency':          'NGN',
-            'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
+            'currency':          fee.currency,
+            'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
         },
     })
 
@@ -1930,8 +1974,22 @@ def create_payment_intent(request):
 
                 intent = stripe.PaymentIntent.create(
                     amount=amount_pence,
-                    currency='gbp',
+                    # Was 'gbp' while the ApplicationPayment row below always
+                    # recorded currency='USD' — a real mismatch between what
+                    # Stripe actually charged and what got recorded, which
+                    # would corrupt any future refund/reporting math. Aligned
+                    # to 'usd' to match both the recorded currency and the
+                    # student-fee branch above.
+                    currency='usd',
                     metadata={
+                        # Required for the Stripe webhook (stripe_webhook
+                        # below) to recognize this as an application payment —
+                        # without it, 'type' is never set and the webhook's
+                        # `elif payment_type == 'application':` branch can
+                        # never match, so a payment confirmed by Stripe but
+                        # never confirmed by confirm_payment (e.g. the user
+                        # closes the tab right after paying) has no fallback.
+                        'type':           'application',
                         'application_id': application.application_id,
                         'user_id':        request.user.id,
                     },

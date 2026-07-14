@@ -2,6 +2,8 @@
 {% load static humanize %}
 
 {% block title %}Process Refund — {{ payment.payment_reference }} | Finance{% endblock %}
+{% block breadcrumb %}Finance › Payments › Refund{% endblock %}
+{% block breadcrumb_title %}Process Refund — {{ payment.payment_reference }}{% endblock %}
 
 {% block content %}
 {% with st=payment.status %}

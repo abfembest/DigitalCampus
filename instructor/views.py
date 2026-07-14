@@ -321,14 +321,6 @@ def course_manage(request, slug=None):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
-def course_create(request):
-    """Course creation is reserved for admins only."""
-    messages.error(request, "Courses are created and assigned by the administration. Contact an admin to have a course assigned to you.")
-    return redirect('instructor:course_list')
-
-
-@login_required(login_url='eduweb:auth_page')
-@instructor_required
 def course_edit(request, slug):
     """Edit course using slug"""
     course = get_object_or_404(
@@ -414,13 +406,6 @@ def course_objectives(request, slug):
         'form': form,
         'course': course,
     })
-
-
-@login_required(login_url='eduweb:auth_page')
-@instructor_required
-def course_delete(request, slug):
-    """Course deletion is not permitted for instructors."""
-    raise PermissionDenied
 
 
 # ==================== SECTION MANAGEMENT ====================

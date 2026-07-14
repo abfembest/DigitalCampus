@@ -180,6 +180,19 @@ def student_counts(request):
             result['student_department']  = department
             result['student_faculty']     = faculty
 
+            # Matric number — derived property on CourseApplication (see
+            # CourseApplication.matric_number for the actual format/logic).
+            accepted_application = (
+                request.user.applications
+                .filter(admission_number__isnull=False)
+                .select_related('program__department')
+                .order_by('-admission_accepted_at')
+                .first()
+            )
+            result['matric_number'] = (
+                accepted_application.matric_number if accepted_application else None
+            )
+
         return result
 
     except Exception:

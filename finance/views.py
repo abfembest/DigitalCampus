@@ -1,36 +1,47 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from django.db.models import Sum, Count, Q
-from django.utils import timezone
-from datetime import timedelta, datetime
-from decimal import Decimal
-from django.core.paginator import Paginator
 import json
+import logging
+from decimal import Decimal
 
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
+from django.db.models import Count, Q, Sum
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from datetime import datetime, timedelta
+
+from eduweb.decorators import is_finance_manager
 from eduweb.models import (
+    AllRequiredPayments,
     ApplicationPayment,
-    Subscription,
     CourseApplication,
+    FeePayment,
     StaffPayroll,
+    Subscription,
 )
 
 from .forms import (
-    SubscriptionFilterForm,
     DateRangeForm,
     PayrollCreateForm,
     PayrollFilterForm,
     PayrollStatusForm,
+    SubscriptionFilterForm,
 )
 
+logger = logging.getLogger(__name__)
 
-def is_finance_manager(user):
-    """Allow only authenticated finance-role users"""
-    return (
-        user.is_authenticated
-        and hasattr(user, 'profile')
-        and user.profile.role == 'finance'
-    )
+
+def _has_permission(request, module, action):
+    """
+    True if the acting user may perform `action` on `module`. Superuser
+    always bypasses; otherwise reads the StaffPermissionsMatrix snapshot
+    SessionSecurityMiddleware attaches to the request as `request.permissions`.
+    Mirrors management/views.py's helper of the same name.
+    """
+    if request.user.is_superuser:
+        return True
+    return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
 
 
 # ==================== DASHBOARD ====================
@@ -176,48 +187,30 @@ def finance_dashboard(request):
     )
     subscription_revenue = sum(sub.plan.price for sub in active_subs_in_range)
 
-    # ── Fee payments (FeePayment model — guarded import) ──────────────────
-    fee_revenue = Decimal('0.00')
-    recent_fee_payments = []
-    try:
-        from eduweb.models import FeePayment
-        fee_qs = FeePayment.objects.filter(
-            created_at__range=[start_date, end_date]
-        )
-        fee_revenue = (
-            fee_qs.filter(status='success')
-            .aggregate(Sum('amount'))['amount__sum']
-            or Decimal('0.00')
-        )
-        recent_fee_payments = (
-            fee_qs.select_related('user', 'fee')
-            .order_by('-created_at')[:15]
-        )
-    except (ImportError, Exception):
-        pass  # FeePayment model not available — degrade gracefully
+    # ── Fee payments ────────────────────────────────────────────────────────
+    fee_qs = FeePayment.objects.filter(created_at__range=[start_date, end_date])
+    fee_revenue = (
+        fee_qs.filter(status='success')
+        .aggregate(Sum('amount'))['amount__sum']
+        or Decimal('0.00')
+    )
+    recent_fee_payments = (
+        fee_qs.select_related('user', 'fee')
+        .order_by('-created_at')[:15]
+    )
 
-    # ── Required / outstanding payments (AllRequiredPayments model) ───────
-    required_payments_count = 0
-    required_payments_total = Decimal('0.00')
-    overdue_required_count = 0
-    all_required_payments = []
-    try:
-        from eduweb.models import AllRequiredPayments
-        req_qs = AllRequiredPayments.objects.filter(
-            is_active=True
-        ).select_related('program', 'course', 'academic_session')
+    # ── Required / outstanding payments ────────────────────────────────────
+    req_qs = AllRequiredPayments.objects.filter(
+        is_active=True
+    ).select_related('program', 'course', 'academic_session')
 
-        required_payments_count = req_qs.count()
-        required_payments_total = (
-            req_qs.aggregate(Sum('amount'))['amount__sum']
-            or Decimal('0.00')
-        )
-        overdue_required_count = req_qs.filter(
-            due_date__lt=today
-        ).count()
-        all_required_payments = req_qs.order_by('due_date')
-    except (ImportError, Exception):
-        pass  # Model not available — degrade gracefully
+    required_payments_count = req_qs.count()
+    required_payments_total = (
+        req_qs.aggregate(Sum('amount'))['amount__sum']
+        or Decimal('0.00')
+    )
+    overdue_required_count = req_qs.filter(due_date__lt=today).count()
+    all_required_payments = req_qs.order_by('due_date')
 
     # ── Recent application payments ───────────────────────────────────────
     recent_app_payments = (
@@ -229,15 +222,10 @@ def finance_dashboard(request):
         .order_by('-created_at')[:15]
     )
 
-    # ── Currency symbol from system config ────────────────────────────────
+    # No institution-wide currency-symbol setting exists yet (SiteConfig and
+    # SystemConfiguration both lack one) — see AUDIT.md cross-cutting theme #4.
+    # '$' is an explicit placeholder default, not a lookup that silently fails.
     currency_symbol = '$'
-    try:
-        from eduweb.models import SystemConfig
-        cfg = SystemConfig.objects.first()
-        if cfg and hasattr(cfg, 'currency_symbol') and cfg.currency_symbol:
-            currency_symbol = cfg.currency_symbol
-    except (ImportError, Exception):
-        pass
 
     context = {
         # Date range
@@ -294,6 +282,10 @@ def finance_dashboard(request):
 def subscription_list(request):
     """List all subscriptions with filtering"""
 
+    if not _has_permission(request, 'finance_subscriptions', 'can_view'):
+        messages.error(request, 'You do not have permission to view subscriptions.')
+        return redirect('finance:dashboard')
+
     filter_form = SubscriptionFilterForm(request.GET or None)
 
     subscriptions = Subscription.objects.select_related(
@@ -345,12 +337,19 @@ def subscription_list(request):
 def payroll_management(request):
     """Payroll list + create modal"""
 
+    if not _has_permission(request, 'finance_payroll', 'can_view'):
+        messages.error(request, 'You do not have permission to view payroll.')
+        return redirect('finance:dashboard')
+
     if request.method == 'POST':
+        if not _has_permission(request, 'finance_payroll', 'can_create'):
+            messages.error(request, 'You do not have permission to create payroll records.')
+            return redirect('finance:payroll_management')
+
         form = PayrollCreateForm(request.POST, request.FILES)
         if form.is_valid():
             payroll = form.save(commit=False)
             payroll.created_by = request.user
-            payroll.save()
 
             for i in range(1, 6):
                 file = request.FILES.get(f'attachment_file_{i}')
@@ -360,12 +359,20 @@ def payroll_management(request):
                     if name:
                         setattr(payroll, f'attachment_{i}_name', name)
 
-            payroll.save()
-
-            messages.success(
-                request,
-                f'Payroll created: {payroll.payroll_reference}'
-            )
+            try:
+                with transaction.atomic():
+                    payroll.save()
+            except IntegrityError:
+                messages.error(
+                    request,
+                    f'A payroll record for {form.cleaned_data["staff"]} in '
+                    f'{form.cleaned_data["month"]}/{form.cleaned_data["year"]} already exists.'
+                )
+            else:
+                messages.success(
+                    request,
+                    f'Payroll created: {payroll.payroll_reference}'
+                )
             return redirect('finance:payroll_management')
     else:
         form = PayrollCreateForm()
@@ -427,6 +434,10 @@ def payroll_management(request):
 def payroll_detail(request, payroll_reference):
     """View + update a single payroll record"""
 
+    if not _has_permission(request, 'finance_payroll', 'can_view'):
+        messages.error(request, 'You do not have permission to view payroll.')
+        return redirect('finance:dashboard')
+
     payroll = get_object_or_404(
         StaffPayroll.objects.select_related(
             'staff', 'created_by', 'approved_by'
@@ -435,16 +446,24 @@ def payroll_detail(request, payroll_reference):
     )
 
     if request.method == 'POST':
+        if not _has_permission(request, 'finance_payroll', 'can_edit'):
+            messages.error(request, 'You do not have permission to update payroll status.')
+            return redirect(
+                'finance:payroll_detail',
+                payroll_reference=payroll_reference,
+            )
+
         status_form = PayrollStatusForm(request.POST, instance=payroll)
         if status_form.is_valid():
-            updated = status_form.save(commit=False)
-            if (
-                updated.payment_status == 'paid'
-                and payroll.payment_status != 'paid'
-            ):
-                updated.approved_by = request.user
-                updated.approved_at = timezone.now()
-            updated.save()
+            with transaction.atomic():
+                updated = status_form.save(commit=False)
+                if (
+                    updated.payment_status == 'paid'
+                    and payroll.payment_status != 'paid'
+                ):
+                    updated.approved_by = request.user
+                    updated.approved_at = timezone.now()
+                updated.save()
             messages.success(request, 'Payroll status updated.')
             return redirect(
                 'finance:payroll_detail',
@@ -467,6 +486,13 @@ def payroll_detail(request, payroll_reference):
 def payroll_delete(request, payroll_reference):
     """Delete a payroll record (only if not paid)"""
 
+    if not _has_permission(request, 'finance_payroll', 'can_delete'):
+        messages.error(request, 'You do not have permission to delete payroll records.')
+        return redirect(
+            'finance:payroll_detail',
+            payroll_reference=payroll_reference,
+        )
+
     payroll = get_object_or_404(
         StaffPayroll,
         payroll_reference=payroll_reference,
@@ -480,11 +506,12 @@ def payroll_delete(request, payroll_reference):
         )
 
     if request.method == 'POST':
-        for i in range(1, 6):
-            f = getattr(payroll, f'attachment_{i}')
-            if f:
-                f.delete(save=False)
-        payroll.delete()
+        with transaction.atomic():
+            for i in range(1, 6):
+                f = getattr(payroll, f'attachment_{i}')
+                if f:
+                    f.delete(save=False)
+            payroll.delete()
         messages.success(
             request,
             f'Payroll {payroll_reference} deleted.'
@@ -501,6 +528,13 @@ def payroll_delete(request, payroll_reference):
 @user_passes_test(is_finance_manager)
 def payroll_attachment_delete(request, payroll_reference, attachment_number):
     """Delete one attachment from a payroll record"""
+
+    if not _has_permission(request, 'finance_payroll', 'can_delete'):
+        messages.error(request, 'You do not have permission to delete payroll attachments.')
+        return redirect(
+            'finance:payroll_detail',
+            payroll_reference=payroll_reference,
+        )
 
     payroll = get_object_or_404(
         StaffPayroll,

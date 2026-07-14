@@ -86,6 +86,26 @@ def _registrable_course_ids(profile):
     ).values_list('id', flat=True)
 
 
+def _overdue_required_fees(user):
+    """
+    Overdue, unpaid AllRequiredPayments for this student (program/level-scoped,
+    via the same _get_outstanding_for_student used by the "My Payments" page —
+    single source of truth for "what does this student owe"). Excludes
+    auto-generated certificate fees: those are earned post-completion and
+    have nothing to do with registration eligibility.
+
+    Used to gate *new* course registration only (register_semester_course) —
+    per product decision, already-registered courses and finalizing/enrolling
+    in courses already added stay unaffected, and portal access itself is
+    gated separately (see can_access_student_portal / student_required).
+    """
+    outstanding, _paid = _get_outstanding_for_student(user)
+    return [
+        item for item in outstanding
+        if item['is_overdue'] and not item['is_certificate_fee']
+    ]
+
+
 def student_required(view_func):
     """Decorator to ensure only students with approved portal access can access"""
     @wraps(view_func)
@@ -758,6 +778,16 @@ def register_semester_course(request, course_slug):
         window_str = current_session.registration_window_for_term(current_session.get_current_term())
         messages.error(request, f'Course registration for "{current_session}" is currently closed. Registration opens: {window_str}.')
         return redirect('students:my_courses')
+
+    overdue_fees = _overdue_required_fees(request.user)
+    if overdue_fees:
+        owed = ', '.join(f"{item['payment'].purpose} ({item['payment'].currency} {item['payment'].amount})" for item in overdue_fees)
+        messages.error(
+            request,
+            f'You have overdue required payment(s): {owed}. '
+            f'Please clear these before registering for new courses.'
+        )
+        return redirect('students:my_payments')
 
     registrable_course_ids = _registrable_course_ids(profile)
 

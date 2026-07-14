@@ -5,6 +5,8 @@
   {% if payment_type == 'application' %}Application{% else %}Fee{% endif %} Payment — {{ payment.payment_reference }} | Finance Portal
 {% endblock %}
 {% block meta_description %}View detailed payment information and transaction history{% endblock %}
+{% block breadcrumb %}Finance › Payments › {{ payment.payment_reference }}{% endblock %}
+{% block breadcrumb_title %}{% if payment_type == 'application' %}Application{% else %}Fee{% endif %} Payment — {{ payment.payment_reference }}{% endblock %}
 
 {% block content %}
 

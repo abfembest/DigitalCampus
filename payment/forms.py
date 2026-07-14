@@ -1,5 +1,5 @@
 from django import forms
-from eduweb.models import ApplicationPayment
+from eduweb.models import ApplicationPayment, AllRequiredPayments
 
 
 # ==================== PAYMENT FORMS ====================
@@ -154,3 +154,36 @@ class InvoiceGenerateForm(forms.Form):
         }),
         empty_label="Select a payment..."
     )
+
+
+# ==================== REQUIRED PAYMENTS ====================
+
+class RequiredPaymentForm(forms.ModelForm):
+    """
+    Backs the create/edit modal on templates/finance/required_payments.html.
+    Field names match the modal's <input name="..."> attributes exactly —
+    do not rename without updating that template's JS (openModal/populate).
+    """
+
+    class Meta:
+        model = AllRequiredPayments
+        fields = [
+            'purpose', 'program', 'course', 'academic_session',
+            'semester', 'who_to_pay', 'amount', 'due_date', 'is_active',
+        ]
+
+    def clean_amount(self):
+        amount = self.cleaned_data['amount']
+        if amount <= 0:
+            raise forms.ValidationError('Amount must be greater than zero.')
+        return amount
+
+    def clean(self):
+        cleaned_data = super().clean()
+        course = cleaned_data.get('course')
+        program = cleaned_data.get('program')
+        if course and program and course.program_id != program.pk:
+            raise forms.ValidationError(
+                'The selected course does not belong to the selected programme.'
+            )
+        return cleaned_data

@@ -224,6 +224,56 @@
   </section>
   {% endif %}
 
+  {% comment %} ── TRANSCRIPT ── {% endcomment %}
+  {% if application.status == 'approved' %}
+  <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2">
+      <i class="fas fa-file-alt text-primary-600"></i> Transcript
+    </h2>
+
+    {% if application.transcript_issued %}
+      <div class="flex items-start gap-3 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
+        <i class="fas fa-certificate text-green-600 mt-0.5 flex-shrink-0"></i>
+        <div>
+          <p class="font-semibold text-green-800 text-md">Transcript Issued</p>
+          <p class="text-md text-green-700">
+            Issued {{ application.transcript_issued_at|date:"M d, Y g:i A" }}
+            {% if application.transcript_issued_by %}by {{ application.transcript_issued_by.get_full_name|default:application.transcript_issued_by.username }}{% endif %}.
+            The locked transcript is visible on the student's Academic Records page.
+          </p>
+        </div>
+      </div>
+    {% elif application.transcript_requested %}
+      <div class="flex items-start gap-3 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg mb-4">
+        <i class="fas fa-clock text-yellow-600 mt-0.5 flex-shrink-0"></i>
+        <div>
+          <p class="font-semibold text-yellow-800 text-md">Transcript Requested</p>
+          <p class="text-md text-yellow-700">
+            The student's grade record has been locked as of their request. Review it on their
+            Academic Records page, then issue it below to notify them it's ready.
+          </p>
+        </div>
+      </div>
+      {% if permissions.applications.can_edit %}
+      <form method="post" action="{% url 'management:issue_transcript' application.id %}">
+        {% csrf_token %}
+        <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold text-md">
+          <i class="fas fa-stamp"></i> Issue Transcript
+        </button>
+      </form>
+      {% endif %}
+    {% else %}
+      <div class="flex items-start gap-3 p-4 bg-gray-50 border-l-4 border-gray-400 rounded-r-lg">
+        <i class="fas fa-info-circle text-gray-500 mt-0.5 flex-shrink-0"></i>
+        <div>
+          <p class="font-semibold text-gray-700 text-md">Not Yet Requested</p>
+          <p class="text-md text-gray-600">This student has not requested their transcript from their Academic Records page yet.</p>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
   {% comment %} ── INLINE ACCEPT / REJECT PANELS ── {% endcomment %}
   <div id="acceptPanel" class="hidden bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
     <h3 class="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">

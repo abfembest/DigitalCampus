@@ -53,9 +53,10 @@
 
         <div class="flex items-center justify-between">
           <div class="text-xs text-gray-500">
-            <span class="font-medium text-primary-600">{{ category.lms_courses.count }}</span> courses
             {% if category.subcategories.count %}
-            &nbsp;·&nbsp; <span class="font-medium text-blue-600">{{ category.subcategories.count }}</span> subcats
+            <span class="font-medium text-blue-600">{{ category.subcategories.count }}</span> subcategories
+            {% else %}
+            <span class="text-gray-400">No subcategories</span>
             {% endif %}
           </div>
           <div class="flex gap-1">
@@ -103,7 +104,6 @@
           <tr>
             <th class="py-3 px-5 text-left font-semibold">Name</th>
             <th class="py-3 px-5 text-left font-semibold">Parent</th>
-            <th class="py-3 px-5 text-left font-semibold">Courses</th>
             <th class="py-3 px-5 text-left font-semibold">Order</th>
             <th class="py-3 px-5 text-left font-semibold">Status</th>
             <th class="py-3 px-5 text-left font-semibold">Actions</th>
@@ -121,7 +121,6 @@
               </div>
             </td>
             <td class="py-3 px-5 text-gray-500">{{ category.parent.name|default:"—" }}</td>
-            <td class="py-3 px-5 font-medium text-primary-600">{{ category.lms_courses.count }}</td>
             <td class="py-3 px-5 text-gray-500">{{ category.display_order }}</td>
             <td class="py-3 px-5">
               {% if category.is_active %}

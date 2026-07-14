@@ -795,8 +795,12 @@ class UserProfileForm(forms.ModelForm):
 
 
 class QuickRoleChangeForm(forms.Form):
+    # 'student' excluded server-side, not just in the role_assign.html dropdown —
+    # this endpoint only ever targets existing staff accounts (students are
+    # excluded from the picker queryset in views.role_assign), so a raw POST
+    # must not be able to demote a staff user into a student role either.
     role = forms.ChoiceField(
-        choices=UserProfile.ROLE_CHOICES,
+        choices=[c for c in UserProfile.ROLE_CHOICES if c[0] != 'student'],
         widget=forms.Select(attrs={
             'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white'
         })

@@ -81,7 +81,8 @@
       <input type="hidden" name="student_ids" id="studentIdsField" value="">
 
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <div id="progressionTableButtons" class="mb-3"></div>
+        <table id="progressionTable" class="w-full text-sm">
           <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
             <tr>
               <th class="py-3 px-5 text-left font-semibold">
@@ -169,6 +170,76 @@
     </form>
     {% endif %}
   </div>
+
+  {# ─── Analytics ─────────────────────────────────────────────────────────── #}
+  {% if analytics and preview_rows %}
+  <div class="mt-8">
+    <h2 class="text-lg font-bold text-gray-800 font-display mb-4">
+      Progression Analytics
+      <span class="text-sm font-normal text-gray-400 ml-1">— {{ selected_program.name }} · {{ selected_session.name }}</span>
+    </h2>
+
+    {# Stat cards #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-start gap-4">
+        <div class="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+          <i class="fas fa-users text-indigo-600 text-lg" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 font-medium">Total Students</p>
+          <p class="text-2xl font-bold text-gray-800">{{ analytics.total }}</p>
+          <p class="text-xs text-gray-400 font-medium mt-1">Evaluated for progression</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-start gap-4">
+        <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+          <i class="fas fa-check-circle text-green-600 text-lg" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 font-medium">Qualified</p>
+          <p class="text-2xl font-bold text-gray-800">{{ analytics.qualified }}</p>
+          <p class="text-xs text-green-600 font-medium mt-1">Pass rate {{ analytics.pass_rate }}%</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-start gap-4">
+        <div class="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+          <i class="fas fa-times-circle text-red-500 text-lg" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 font-medium">Not Qualified</p>
+          <p class="text-2xl font-bold text-gray-800">{{ analytics.not_qualified }}</p>
+          <p class="text-xs text-red-600 font-medium mt-1">Fail rate {{ analytics.fail_rate }}%</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-start gap-4">
+        <div class="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+          <i class="fas fa-triangle-exclamation text-amber-600 text-lg" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 font-medium">Non-Qualification Reasons</p>
+          <p class="text-2xl font-bold text-gray-800">{{ analytics.core_fail_count }}</p>
+          <p class="text-xs text-amber-600 font-medium mt-1">core course{{ analytics.core_fail_count|pluralize }} failed &bull; {{ analytics.cgpa_fail_count }} below min. CGPA</p>
+        </div>
+      </div>
+    </div>
+
+    {# Charts #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-base font-bold text-gray-800 mb-4 font-display">Pass vs. Fail Rate</h3>
+        <div style="min-height:250px"><canvas id="passFailChart"></canvas></div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-base font-bold text-gray-800 mb-4 font-display">Outcome Breakdown</h3>
+        <div style="min-height:250px"><canvas id="statusBreakdownChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
   {% endif %}
 
 </div>
@@ -228,17 +299,57 @@
 
 {% block extra_js %}
 <script>
+let progressionTable = null;
+
+$(function () {
+  const tableEl = document.getElementById('progressionTable');
+  if (tableEl) {
+    progressionTable = $('#progressionTable').DataTable({
+      pageLength: 10,
+      responsive: true,
+      order: [[1, 'asc']],
+      columnDefs: [{ orderable: false, targets: [0, 7] }],
+      dom: '<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4"Bf>rt<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4 pt-4 border-t"ip>',
+      buttons: [
+        { extend: 'copy',  text: '<i class="fas fa-copy mr-1"></i>Copy' },
+        { extend: 'excel', text: '<i class="fas fa-file-excel mr-1"></i>Excel', title: 'Progression Preview', exportOptions: { columns: [1, 2, 3, 4, 5, 6] } },
+        { extend: 'csv',   text: '<i class="fas fa-file-csv mr-1"></i>CSV',   title: 'Progression Preview', exportOptions: { columns: [1, 2, 3, 4, 5, 6] } },
+        { extend: 'pdf',   text: '<i class="fas fa-file-pdf mr-1"></i>PDF',   title: 'Progression Preview', exportOptions: { columns: [1, 2, 3, 4, 5, 6] } },
+        { extend: 'print', text: '<i class="fas fa-print mr-1"></i>Print',   title: 'Progression Preview', exportOptions: { columns: [1, 2, 3, 4, 5, 6] } }
+      ],
+      language: {
+        search: '_INPUT_', searchPlaceholder: 'Search students…',
+        lengthMenu: 'Show _MENU_', info: '_START_–_END_ of _TOTAL_',
+        paginate: { previous: '<i class="fas fa-chevron-left"></i>', next: '<i class="fas fa-chevron-right"></i>' }
+      },
+    });
+    progressionTable.buttons().container().appendTo('#progressionTableButtons');
+  }
+});
+
+// Row checkboxes must be gathered via the DataTables API, not plain
+// querySelectorAll — with paging enabled, only the current page's rows are
+// in the DOM at any moment, so a document-wide selector would silently
+// submit progression decisions for only the visible page.
+function allRowCheckboxes(selector) {
+  if (progressionTable) {
+    return $(progressionTable.rows().nodes()).find(selector);
+  }
+  return $(selector);
+}
+
 function toggleAllRows(master) {
-  document.querySelectorAll('.row-checkbox').forEach(cb => { cb.checked = master.checked; });
+  allRowCheckboxes('.row-checkbox').prop('checked', master.checked);
 }
 function confirmSubmit() {
-  const ids = [...document.querySelectorAll('.row-checkbox:checked')].map(c => c.value).join(',');
+  const checked = allRowCheckboxes('.row-checkbox:checked');
+  const ids = checked.map(function () { return this.value; }).get().join(',');
   if (!ids) {
     alert('Select at least one student.');
     return false;
   }
   document.getElementById('studentIdsField').value = ids;
-  return confirm('Apply progression decisions for ' + document.querySelectorAll('.row-checkbox:checked').length + ' selected student(s)? This cannot be undone.');
+  return confirm('Apply progression decisions for ' + checked.length + ' selected student(s)? This cannot be undone.');
 }
 function openOverride(studentId, studentName, suggestedYear, suggestedStatus) {
   document.getElementById('overrideStudentId').value = studentId;
@@ -250,5 +361,62 @@ function openOverride(studentId, studentName, suggestedYear, suggestedStatus) {
 function closeOverride() {
   document.getElementById('overridePanel').classList.add('hidden');
 }
+
+{% if analytics_json %}
+const progressionAnalytics = {{ analytics_json|safe }};
+
+new Chart(document.getElementById('passFailChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Qualified', 'Not Qualified'],
+    datasets: [{
+      data: [progressionAnalytics.qualified, progressionAnalytics.not_qualified],
+      backgroundColor: ['#16a34a', '#dc2626'],
+      borderColor: '#fff',
+      borderWidth: 3,
+    }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 14, font: { size: 12 } } },
+      tooltip: {
+        callbacks: {
+          label: function (ctx) {
+            const v = ctx.parsed || 0;
+            const t = ctx.dataset.data.reduce((a, b) => a + b, 0);
+            return `${ctx.label}: ${v} (${t > 0 ? ((v / t) * 100).toFixed(1) : 0}%)`;
+          }
+        }
+      }
+    },
+  },
+});
+
+new Chart(document.getElementById('statusBreakdownChart'), {
+  type: 'bar',
+  data: {
+    labels: progressionAnalytics.status_labels,
+    datasets: [{
+      label: 'Students',
+      data: progressionAnalytics.status_data,
+      backgroundColor: ['#16a34a', '#7c3aed', '#eab308', '#f97316', '#dc2626'],
+      borderRadius: 4,
+    }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(0,0,0,0.05)' },
+        ticks: { precision: 0 },
+      },
+      x: { grid: { display: false } },
+    },
+  },
+});
+{% endif %}
 </script>
 {% endblock %}

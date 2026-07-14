@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.http import JsonResponse, Http404
 from django.db.models import Q, Count, Avg, Prefetch, Max, Sum, F, FloatField
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.core.paginator import Paginator
 from functools import wraps
 from datetime import timedelta
@@ -3736,13 +3737,17 @@ def academic_records(request):
     user = request.user
 
     # ── Transcript request (POST, once only) ─────────────────────────────────
+    # Freezes a snapshot of the current grade record at request time — the UI
+    # promises requesting locks the transcript so later-recorded results can't
+    # silently change an already-requested document.
     if request.method == 'POST' and request.POST.get('action') == 'request_transcript':
         application_qs = CourseApplication.objects.filter(user=user, status='approved')
         if application_qs.exists():
             app = application_qs.order_by('-created_at').first()
             if not app.transcript_requested:
                 app.transcript_requested = True
-                app.save(update_fields=['transcript_requested'])
+                app.transcript_snapshot = CourseGrade.build_transcript_snapshot(user)
+                app.save(update_fields=['transcript_requested', 'transcript_snapshot'])
                 messages.success(request, 'Your transcript request has been submitted successfully.')
             else:
                 messages.info(request, 'You have already requested your transcript.')
@@ -3774,91 +3779,28 @@ def academic_records(request):
     other_courses    = [c for c in program_courses if c.course_type not in ('core', 'elective')]
     total_credits_required = program.credits_required if program else 0
 
-    # ── 3. Official course grades — real CourseGrade rows ─────────────────────
+    # ── 3. Official course grades — locked snapshot once requested, else live ─
     # Unified via CourseGrade.recompute_for_student_course, blending exam/quiz/
     # assignment scores per the course's configured weights. Superseded the old
     # StudentExamResponse-only proxy, which disagreed with the dashboard and
     # "Grades & Performance" pages.
-    grades_qs = list(
-        CourseGrade.objects
-        .filter(student=user)
-        .select_related('course', 'course__program', 'session')
-        .order_by('-session__name', 'course__semester', 'course__year_of_study')
-    )
+    if application and application.transcript_requested and application.transcript_snapshot:
+        snapshot = application.transcript_snapshot
+    else:
+        snapshot = CourseGrade.build_transcript_snapshot(user)
 
-    for g in grades_qs:
-        g.display_code = g.course.code
-        g.display_name = g.course.name
-        g.sess_key = g.session.name if g.session else 'Unassigned'
-        # Grouped by level + semester, not semester alone — a session can
-        # legitimately contain a lower-level carry-over course registered
-        # alongside the student's current-level courses, and merging them
-        # under one bare "First Semester" label would misrepresent which
-        # level each grade actually belongs to.
-        g.sem_key = f'Level {g.course.level} — {g.course.get_semester_display()}'
-
-    proxies = grades_qs
+    session_summaries = snapshot['session_summaries']
+    gpa               = snapshot['gpa']
+    gpa_class         = snapshot['gpa_class']
+    credits_earned    = snapshot['credits_earned']
+    grade_count       = snapshot['grade_count']
 
     # ── 4. Credits ────────────────────────────────────────────────────────────
-    credits_earned    = sum(p.credit_units for p in proxies if p.is_passed)
     credits_remaining = max(0, total_credits_required - credits_earned)
     graduation_pct    = (
         round(credits_earned / total_credits_required * 100, 1)
         if total_credits_required > 0 else 0
     )
-
-    # ── 5. Cumulative GPA — Nigerian 5-point scale ────────────────────────────
-    # Canonical computation shared with the dashboard and progression logic
-    # (see CourseGrade.compute_cgpa) so this figure can never disagree with
-    # what's shown elsewhere.
-    gpa = CourseGrade.compute_cgpa(user)
-
-    # gpa is a Decimal (from compute_cgpa) — Python raises TypeError comparing
-    # Decimal to a bare float, so thresholds must be Decimal too.
-    if gpa is None:               gpa_class = None
-    elif gpa >= Decimal('4.5'):   gpa_class = 'First Class'
-    elif gpa >= Decimal('3.5'):   gpa_class = 'Second Class Upper'
-    elif gpa >= Decimal('2.4'):   gpa_class = 'Second Class Lower'
-    elif gpa >= Decimal('1.5'):   gpa_class = 'Third Class'
-    else:                 gpa_class = 'Pass'
-
-    # ── 6. Group by session → semester ───────────────────────────────────────
-    sessions_raw = {}
-    for p in proxies:
-        sessions_raw.setdefault(p.sess_key, {}).setdefault(p.sem_key, []).append(p)
-
-    session_summaries = []
-    for sess_name, semesters in sorted(sessions_raw.items(), reverse=True):
-        semester_blocks = []
-        sess_total_weighted = 0.0
-        sess_total_units    = 0
-        sess_credits_earned = 0
-
-        for sem_label, grades_list in semesters.items():
-            sem_weighted = sum(p.grade_points * p.credit_units for p in grades_list if p.grade)
-            sem_units    = sum(p.credit_units for p in grades_list if p.grade and p.grade != 'W')
-            sem_gpa      = round(sem_weighted / sem_units, 2) if sem_units > 0 else None
-            sem_credits  = sum(p.credit_units for p in grades_list if p.is_passed)
-
-            semester_blocks.append({
-                'label':          sem_label,
-                'grades':         grades_list,
-                'gpa':            sem_gpa,
-                'credits':        sem_credits,
-                'total_cu':       sem_units,
-                'total_weighted': round(sem_weighted, 0),
-            })
-            sess_total_weighted += sem_weighted
-            sess_total_units    += sem_units
-            sess_credits_earned += sem_credits
-
-        sess_gpa = round(sess_total_weighted / sess_total_units, 2) if sess_total_units > 0 else None
-        session_summaries.append({
-            'name':      sess_name,
-            'semesters': semester_blocks,
-            'gpa':       sess_gpa,
-            'credits':   sess_credits_earned,
-        })
 
     # ── 8. LMS enrollments (informational only) ───────────────────────────────
     lms_enrollments = (
@@ -3875,8 +3817,6 @@ def academic_records(request):
         .select_related('course', 'program')
         .order_by('-issued_date')
     )
-
-    academic_grades = proxies
 
     # ── 10. Progression history — level/status changes over time ────────────
     # ProgressionDecisionLog is the only record of *when* a student moved
@@ -3903,13 +3843,15 @@ def academic_records(request):
         'credits_earned':          credits_earned,
         'credits_remaining':       credits_remaining,
         'graduation_pct':          graduation_pct,
-        'academic_grades':         academic_grades,
+        'grade_count':             grade_count,
         'session_summaries':       session_summaries,
         'gpa':                     gpa,
         'gpa_class':               gpa_class,
         'lms_enrollments':         lms_enrollments,
         'certificates':            certificates,
         'progression_history':     progression_history,
+        'transcript_locked':       bool(application and application.transcript_requested and application.transcript_snapshot),
+        'transcript_generated_at': parse_datetime(snapshot['generated_at']) if snapshot.get('generated_at') else None,
     }
     return render(request, 'students/academic_records.html', context)
 

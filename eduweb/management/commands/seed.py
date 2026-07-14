@@ -296,7 +296,7 @@ class Command(BaseCommand):
         self.stdout.write("👥 Creating users...")
         users = {
             'students': [], 'instructors': [], 'admins': [],
-            'support': [], 'content_managers': [], 'finance': [], 'qa': [],
+            'support': [], 'finance': [],
         }
 
         def make_users(username_prefix, role_key, count=6, is_staff=False):
@@ -335,10 +335,8 @@ class Command(BaseCommand):
         users['students'] = make_users('student', 'student', 8)
         users['instructors'] = make_users('instructor', 'instructor', 6)
         users['admins'] = make_users('admin', 'admin', 4, is_staff=True)
-        users['content_managers'] = make_users('content_mgr', 'content_manager', 4)
         users['support'] = make_users('support', 'support', 4)
         users['finance'] = make_users('finance', 'finance', 4)
-        users['qa'] = make_users('qa', 'qa', 4)
 
         all_users = sum(users.values(), [])
         verified_students = [u for u in users['students'] if u.profile.email_verified]
@@ -346,11 +344,10 @@ class Command(BaseCommand):
         verified_admins = [u for u in users['admins'] if u.profile.email_verified]
         verified_support = [u for u in users['support'] if u.profile.email_verified]
         verified_finance = [u for u in users['finance'] if u.profile.email_verified]
-        verified_content = [u for u in users['content_managers'] if u.profile.email_verified]
         verified_all = [u for u in all_users if u.profile.email_verified]
         staff_users = (
             users['instructors'] + users['admins'] +
-            users['support'] + users['finance'] + users['content_managers']
+            users['support'] + users['finance']
         )
         self.stdout.write(self.style.SUCCESS(f"   ✅ {len(all_users)} users created"))
 
@@ -386,7 +383,7 @@ class Command(BaseCommand):
             ('registration_open', 'true', 'boolean', True),
             ('smtp_host', 'smtp.gmail.com', 'text', False),
         ]
-        cfg_editors = users['admins'] + users['content_managers']
+        cfg_editors = users['admins']
         for key, val, stype, is_pub in cfg_data:
             SystemConfiguration.objects.create(
                 key=key, value=val, setting_type=stype,
@@ -2367,7 +2364,7 @@ class Command(BaseCommand):
 
         # ── 36. BLOG POSTS ────────────────────────────────────────────────────
         self.stdout.write("✍️  Creating blog posts...")
-        authors = users['instructors'] + users['content_managers'] + users['admins']
+        authors = users['instructors'] + users['admins']
         for author in authors:
             for _ in range(random.randint(1, 3)):
                 status = random.choice(['published', 'published', 'draft', 'archived'])
@@ -2614,7 +2611,7 @@ class Command(BaseCommand):
 
         # ── 45. BROADCAST MESSAGES ────────────────────────────────────────────
         self.stdout.write("📡 Creating broadcast messages...")
-        broadcast_creators = verified_admins + verified_content
+        broadcast_creators = verified_admins
         for subject, ftype, fvals, status in [
             ('Welcome to the New Academic Year!', 'all_users', {}, 'sent'),
             ('Important: Upcoming System Maintenance', 'all_users', {}, 'sent'),

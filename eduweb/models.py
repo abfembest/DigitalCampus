@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Avg, Max, F, FloatField, ExpressionWrapper
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -1901,6 +1902,10 @@ class CourseApplication(models.Model):
     # Course & Session & Level
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='applications')
     academic_session = models.ForeignKey('AcademicSession', on_delete=models.SET_NULL, null=True, blank=True, related_name='applications')
+    intake = models.ForeignKey(
+        'CourseIntake', on_delete=models.SET_NULL, null=True, blank=True, related_name='applications',
+        help_text="Which intake period this application is for, if known."
+    )
     entry_level = models.IntegerField(
         null=True, blank=True,
         help_text="Entry level e.g. 100, 200, 300 etc."
@@ -2026,6 +2031,21 @@ class CourseApplication(models.Model):
     transcript_issued_at = models.DateTimeField(
         null=True, blank=True,
         help_text="When the transcript was issued"
+    )
+    transcript_issued_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='transcripts_issued',
+        help_text="Staff member who issued this transcript"
+    )
+    transcript_snapshot = models.JSONField(
+        null=True, blank=True, encoder=DjangoJSONEncoder,
+        help_text=(
+            "Frozen copy of the student's grade record, captured the moment "
+            "transcript_requested is set. Once requested, the transcript view "
+            "renders this locked snapshot instead of live CourseGrade data, so "
+            "results recorded afterwards can't silently change an already-"
+            "requested transcript."
+        )
     )
 
     class Meta:
@@ -3550,8 +3570,8 @@ class UserProfile(models.Model):
 class StaffPermissionsMatrix(models.Model):
     """
     Flat permission table — one row per (role OR user) × module.
-    Applies to internal staff roles (admin, content_manager, support, qa,
-    finance) and to instructors. Students are never looked up here.
+    Applies to internal staff roles (admin, support, finance) and to
+    instructors. Students are never looked up here.
 
     role set, user null  → role-level default
     user set, role null  → user-level override (supersedes role row)
@@ -3939,6 +3959,7 @@ class BroadcastMessage(models.Model):
     
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('sending', 'Sending'),
         ('sent', 'Sent'),
         ('failed', 'Failed'),
     ]
@@ -4063,7 +4084,6 @@ class StaffPayroll(models.Model):
                 'instructor',
                 'support',
                 'admin',
-                'content_manager',
                 'finance'
             ]
         },
@@ -4876,6 +4896,104 @@ class CourseGrade(models.Model):
         return (Decimal(weighted_sum) / Decimal(total_units)).quantize(
             Decimal('0.01'), rounding=ROUND_HALF_UP
         )
+
+    @classmethod
+    def build_transcript_snapshot(cls, student):
+        """
+        Compute this student's full grade transcript from live CourseGrade
+        rows: per-session/semester GPA summaries plus cumulative GPA/class.
+        Returns a plain-dict, JSON-safe structure so the exact same shape can
+        either be rendered live or frozen verbatim into
+        CourseApplication.transcript_snapshot once a student requests their
+        transcript — shared between `student` (renders it, freezes it on
+        request) and `management` (issues it) so neither app hand-rolls its
+        own copy of this logic.
+        """
+        grades_qs = list(
+            cls.objects
+            .filter(student=student)
+            .select_related('course', 'course__program', 'session')
+            .order_by('-session__name', 'course__semester', 'course__year_of_study')
+        )
+
+        sessions_raw = {}
+        for g in grades_qs:
+            sess_key = g.session.name if g.session else 'Unassigned'
+            # Grouped by level + semester, not semester alone — a session can
+            # legitimately contain a lower-level carry-over course registered
+            # alongside the student's current-level courses, and merging them
+            # under one bare "First Semester" label would misrepresent which
+            # level each grade actually belongs to.
+            sem_key = f'Level {g.course.level} — {g.course.get_semester_display()}'
+            sessions_raw.setdefault(sess_key, {}).setdefault(sem_key, []).append(g)
+
+        session_summaries = []
+        for sess_name, semesters in sorted(sessions_raw.items(), reverse=True):
+            semester_blocks = []
+            sess_total_weighted = 0.0
+            sess_total_units    = 0
+            sess_credits_earned = 0
+
+            for sem_label, grades_list in semesters.items():
+                sem_weighted = sum(g.grade_points * g.credit_units for g in grades_list if g.grade)
+                sem_units    = sum(g.credit_units for g in grades_list if g.grade and g.grade != 'W')
+                sem_gpa      = round(sem_weighted / sem_units, 2) if sem_units > 0 else None
+                sem_credits  = sum(g.credit_units for g in grades_list if g.is_passed)
+
+                semester_blocks.append({
+                    'label':          sem_label,
+                    'gpa':            sem_gpa,
+                    'credits':        sem_credits,
+                    'total_cu':       sem_units,
+                    'total_weighted': round(sem_weighted, 0),
+                    'grades': [
+                        {
+                            'display_code':    g.course.code,
+                            'display_name':    g.course.name,
+                            'credit_units':    g.credit_units,
+                            # Cast Decimal -> float so this matches what comes
+                            # back out of JSONField after a DB round-trip
+                            # (Decimal isn't JSON-native; storing it raw would
+                            # make a *live* score a Decimal but a *locked
+                            # snapshot* score a string, subtly changing
+                            # {% if g.score %} truthiness for 0.00).
+                            'score':           float(g.score) if g.score is not None else None,
+                            'grade':           g.grade,
+                            'grade_points':    g.grade_points,
+                            'weighted_points': g.weighted_points,
+                            'is_passed':       g.is_passed,
+                        }
+                        for g in grades_list
+                    ],
+                })
+                sess_total_weighted += sem_weighted
+                sess_total_units    += sem_units
+                sess_credits_earned += sem_credits
+
+            sess_gpa = round(sess_total_weighted / sess_total_units, 2) if sess_total_units > 0 else None
+            session_summaries.append({
+                'name':      sess_name,
+                'semesters': semester_blocks,
+                'gpa':       sess_gpa,
+                'credits':   sess_credits_earned,
+            })
+
+        gpa = cls.compute_cgpa(student)
+        if gpa is None:               gpa_class = None
+        elif gpa >= Decimal('4.5'):   gpa_class = 'First Class'
+        elif gpa >= Decimal('3.5'):   gpa_class = 'Second Class Upper'
+        elif gpa >= Decimal('2.4'):   gpa_class = 'Second Class Lower'
+        elif gpa >= Decimal('1.5'):   gpa_class = 'Third Class'
+        else:                         gpa_class = 'Pass'
+
+        return {
+            'generated_at':      timezone.now().isoformat(),
+            'session_summaries': session_summaries,
+            'gpa':               float(gpa) if gpa is not None else None,
+            'gpa_class':         gpa_class,
+            'credits_earned':    sum(g.credit_units for g in grades_qs if g.is_passed),
+            'grade_count':       len(grades_qs),
+        }
 
     EXAM_COMPONENT = 'exam'
     QUIZ_COMPONENT = 'quiz'

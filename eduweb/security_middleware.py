@@ -29,7 +29,7 @@ INACTIVITY_TIMEOUT_MINUTES = getattr(settings, 'SESSION_INACTIVITY_TIMEOUT', 15)
 INACTIVITY_TIMEOUT_SECONDS = INACTIVITY_TIMEOUT_MINUTES * 60
 
 # Roles that get permissions loaded — students excluded
-STAFF_ROLES = {'admin', 'content_manager', 'support', 'qa', 'finance', 'instructor'}
+STAFF_ROLES = {'admin', 'support', 'finance', 'instructor'}
 
 _PASSTHROUGH_EXACT = {
     '/auth/', '/logout/', '/verify-email/', '/resend-verification/',

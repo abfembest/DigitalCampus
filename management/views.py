@@ -11,7 +11,7 @@ import string
 import threading
 import uuid
 import zoneinfo
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 # Django
 from django.conf import settings
@@ -203,11 +203,46 @@ def _has_permission(request, module, action):
     return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
 
 
+# Internal back-office roles that share the /management/ inbox + notifications
+# pages. Students and instructors each have their own dedicated inbox/notification
+# pages (students:notifications_view, instructor:messages_inbox etc.) and don't
+# need — or use — these; everyone else lands here per the navbar's role routing.
+_STAFF_ROLES = {'admin', 'support', 'finance'}
+
+
+def is_staff_member(user):
+    """Any authenticated internal staff user — broader than is_admin(), used for
+    pages shared across the whole back office (inbox, notifications)."""
+    return (
+        user.is_authenticated and user.is_active and (
+            user.is_staff or
+            user.is_superuser or
+            (hasattr(user, 'profile') and user.profile.role in _STAFF_ROLES)
+        )
+    )
+
+
+def is_admin(user):
+    """
+    The one admin gate for this app. is_staff and is_superuser each act as
+    a full bypass on their own (equivalent to role='admin'); is_superuser
+    additionally bypasses every StaffPermissionsMatrix check downstream.
+    """
+    return (
+        user.is_authenticated and user.is_active and (
+            user.is_staff or
+            user.is_superuser or
+            (hasattr(user, 'profile') and user.profile.role == 'admin')
+        )
+    )
+
+
 # ===========================================================================
 # ADMIN INBOX / MESSAGING
 # ===========================================================================
 
 @login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_staff_member)
 def admin_inbox(request):
     """
     Admin/staff inbox — shows all received and sent messages.
@@ -249,6 +284,7 @@ def admin_inbox(request):
 
 
 @login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_staff_member)
 def admin_compose_message(request):
     """
     Admin compose — send a new message to any user.
@@ -292,6 +328,7 @@ def admin_compose_message(request):
 
 
 @login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_staff_member)
 def admin_message_thread(request, message_id):
     """
     View a full message thread and reply.
@@ -353,14 +390,12 @@ def admin_message_thread(request, message_id):
 
 
 @login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_staff_member)
 def notifications_view(request):
     """
     Notifications page for admin and staff roles.
     Marks all as read if ?mark_all=1. Paginated at 15 per page.
     """
-    if not request.user.is_authenticated:
-        return redirect('eduweb:auth_page')
-
     if request.GET.get('mark_all') == '1':
         Notification.objects.filter(
             user=request.user, is_read=False
@@ -383,6 +418,7 @@ def notifications_view(request):
 
 
 @login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_staff_member)
 def mark_notification_read(request, notification_id):
     """Mark a single notification as read — AJAX GET."""
     notif = get_object_or_404(
@@ -392,21 +428,6 @@ def mark_notification_read(request, notification_id):
     )
     notif.mark_as_read()
     return JsonResponse({'success': True})
-
-
-def is_admin(user):
-    """
-    The one admin gate for this app. is_staff and is_superuser each act as
-    a full bypass on their own (equivalent to role='admin'); is_superuser
-    additionally bypasses every StaffPermissionsMatrix check downstream.
-    """
-    return (
-        user.is_authenticated and user.is_active and (
-            user.is_staff or
-            user.is_superuser or
-            (hasattr(user, 'profile') and user.profile.role == 'admin')
-        )
-    )
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -479,7 +500,7 @@ def dashboard(request):
 def applications_list(request):
     """List all applications with filtering and pagination"""
     
-    applications = CourseApplication.objects.select_related('user').order_by('-created_at')
+    applications = CourseApplication.objects.select_related('user', 'program').order_by('-created_at')
     
     # Get filter parameters
     search_query = request.GET.get('search', '')
@@ -665,12 +686,16 @@ def make_decision(request, pk):
 @user_passes_test(is_admin)
 def issue_transcript(request, pk):
     """Issue a transcript for an approved application"""
-    
+
     if request.method != 'POST':
         return redirect('management:applications_list')
-    
+
     application = get_object_or_404(CourseApplication, pk=pk)
-    
+
+    if not _has_permission(request, 'applications', 'can_edit'):
+        messages.error(request, 'You do not have permission to issue transcripts.')
+        return redirect('management:application_detail', application_id=application.application_id)
+
     # Only issue transcripts for approved applications
     if application.status != 'approved':
         messages.error(request, 'Can only issue transcripts for approved applications.')
@@ -680,14 +705,32 @@ def issue_transcript(request, pk):
     if application.transcript_issued:
         messages.info(request, 'Transcript has already been issued for this application.')
         return redirect('management:application_detail', application_id=application.application_id)
-    
+
+    # The student must request their transcript first — that's the moment the
+    # grade snapshot gets locked (see CourseGrade.build_transcript_snapshot).
+    # Issuing without a request would show "Official Transcript Issued" next
+    # to a page that's still rendering live, unlocked grades.
+    if not application.transcript_requested:
+        messages.error(
+            request,
+            'This student has not requested their transcript yet — it cannot be issued until they do.'
+        )
+        return redirect('management:application_detail', application_id=application.application_id)
+
     try:
         # Mark transcript as issued
         application.transcript_issued = True
         application.transcript_issued_at = timezone.now()
         application.transcript_issued_by = request.user
-        application.save(update_fields=['transcript_issued', 'transcript_issued_at', 'transcript_issued_by'])
-        
+        if not application.transcript_snapshot and application.user:
+            # Defensive fallback — should already exist from the request step.
+            application.transcript_snapshot = CourseGrade.build_transcript_snapshot(application.user)
+            application.save(update_fields=[
+                'transcript_issued', 'transcript_issued_at', 'transcript_issued_by', 'transcript_snapshot'
+            ])
+        else:
+            application.save(update_fields=['transcript_issued', 'transcript_issued_at', 'transcript_issued_by'])
+
         # Send notification email to student
         if application.user:
             send_transcript_generated_email(application.user, application)
@@ -914,6 +957,10 @@ def faculties_list(request):
 @user_passes_test(is_admin)
 def faculty_create(request):
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_create'):
+            messages.error(request, 'You do not have permission to create faculties.')
+            return redirect('management:faculties_list')
+
         form = FacultyForm(request.POST, request.FILES)
         if form.is_valid():
             faculty = form.save()
@@ -929,6 +976,10 @@ def faculty_create(request):
 def faculty_edit(request, pk):
     faculty = get_object_or_404(Faculty, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit faculties.')
+            return redirect('management:faculties_list')
+
         form = FacultyForm(request.POST, request.FILES, instance=faculty)
         if form.is_valid():
             faculty = form.save()
@@ -963,164 +1014,6 @@ def faculty_delete(request, pk):
     return redirect('management:faculties_list')
 
 
-# def courses(request):
-#     """
-#     Unified courses management page with tabs for programs and categories
-#     """
-    
-#     # Get all programs with related data
-#     programs = Program.objects.select_related(
-#         'department',
-#         'department__faculty'
-#     ).order_by('display_order', 'name')
-    
-#     # Get all categories with course counts
-#     categories = CourseCategory.objects.annotate(
-#         course_count=Count('lms_courses')
-#     ).order_by('display_order', 'name')
-    
-#     context = {
-#         'courses': programs,  # Keep variable name as 'courses' for template compatibility
-#         'categories': categories,
-#     }
-    
-#     return render(request, 'management/course/courses.html', context)
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def course_create(request):
-    """Create a new course"""
-    if request.method == 'POST':
-        form = CourseForm(request.POST, request.FILES)
-        if form.is_valid():
-            course = form.save()
-            messages.success(request, f'Course "{course.name}" created successfully!')
-            return redirect('management:courses')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = CourseForm()
-    
-    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
-    
-    context = {
-        'form': form,
-        'pending_count': pending_count,
-        'action': 'Create',
-    }
-    
-    return render(request, 'management/course/course_form.html', context)
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def course_detail(request, pk):
-    """
-    Display detailed information about a specific course/program
-    """
-    course = get_object_or_404(
-        Course.objects.select_related('faculty'),
-        pk=pk
-    )
-    
-    # Get statistics
-    application_count = CourseApplication.objects.filter(
-        course=course
-    ).count()
-    
-    active_applications = CourseApplication.objects.filter(
-        course=course,
-        status__in=['payment_complete', 'documents_uploaded', 'under_review']
-    ).count()
-    
-    accepted_applications = CourseApplication.objects.filter(
-        course=course,
-        status='accepted'
-    ).count()
-    
-    # Get recent applications for this course
-    recent_applications = CourseApplication.objects.filter(
-        course=course
-    ).select_related('user').order_by('-created_at')[:10]
-    
-    pending_count = CourseApplication.objects.filter(
-        status__in=['payment_complete', 'documents_uploaded', 'under_review']
-    ).count()
-    
-    context = {
-        'course': course,
-        'application_count': application_count,
-        'active_applications': active_applications,
-        'accepted_applications': accepted_applications,
-        'recent_applications': recent_applications,
-        'pending_count': pending_count,
-    }
-    
-    return render(
-        request, 
-        'management/course/detail.html', 
-        context
-    )
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def course_edit(request, pk):
-    """Edit an existing course"""
-    course = get_object_or_404(Course, pk=pk)
-    
-    if request.method == 'POST':
-        form = CourseForm(request.POST, request.FILES, instance=course)
-        if form.is_valid():
-            course = form.save()
-            messages.success(request, f'Course "{course.name}" updated successfully!')
-            return redirect('management:courses')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = CourseForm(instance=course)
-    
-    pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
-    
-    context = {
-        'form': form,
-        'course': course,
-        'pending_count': pending_count,
-        'action': 'Edit',
-    }
-    
-    return render(request, 'management/course/course_form.html', context)
-
-
-@login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
-def course_delete(request, pk):
-    """Delete a course"""
-    course = get_object_or_404(Course, pk=pk)
-
-    if request.method == 'POST':
-        if not _has_permission(request, 'academics', 'can_delete'):
-            messages.error(request, 'You do not have permission to delete courses.')
-            return redirect('management:courses')
-
-        dependents = (
-            course.registrations.count()
-            + course.student_grades.count()
-            + course.carry_over_records.count()
-        )
-        if dependents:
-            messages.error(
-                request,
-                f'Cannot delete "{course.name}" — it has {dependents} linked '
-                f'registration/grade/carry-over record(s). Archive it instead.'
-            )
-            return redirect('management:courses')
-
-        course_name = course.name
-        course.delete()
-        messages.success(request, f'Course "{course_name}" deleted successfully!')
-        return redirect('management:courses')
-
-    return redirect('management:courses')
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -1148,6 +1041,10 @@ def blog_posts_list(request):
 def blog_post_create(request):
     """Create a new blog post"""
     if request.method == 'POST':
+        if not _has_permission(request, 'blog', 'can_create'):
+            messages.error(request, 'You do not have permission to create blog posts.')
+            return redirect('management:blog_posts_list')
+
         form = BlogPostForm(request.POST, request.FILES)
         if form.is_valid():
             post = form.save(commit=False)
@@ -1176,8 +1073,12 @@ def blog_post_create(request):
 def blog_post_edit(request, pk):
     """Edit an existing blog post"""
     post = get_object_or_404(BlogPost, pk=pk)
-    
+
     if request.method == 'POST':
+        if not _has_permission(request, 'blog', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit blog posts.')
+            return redirect('management:blog_posts_list')
+
         form = BlogPostForm(request.POST, request.FILES, instance=post)
         if form.is_valid():
             post = form.save()
@@ -1205,13 +1106,17 @@ def blog_post_edit(request, pk):
 def blog_post_delete(request, pk):
     """Delete a blog post"""
     post = get_object_or_404(BlogPost, pk=pk)
-    
+
     if request.method == 'POST':
+        if not _has_permission(request, 'blog', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete blog posts.')
+            return redirect('management:blog_posts_list')
+
         post_title = post.title
         post.delete()
         messages.success(request, f'Blog post "{post_title}" deleted successfully!')
         return redirect('management:blog_posts_list')
-    
+
     return redirect('management:blog_posts_list')
 
 
@@ -1235,6 +1140,10 @@ def blog_categories_list(request):
 def blog_category_create(request):
     """Create a new blog category"""
     if request.method == 'POST':
+        if not _has_permission(request, 'blog', 'can_create'):
+            messages.error(request, 'You do not have permission to create blog categories.')
+            return redirect('management:blog_categories_list')
+
         form = BlogCategoryForm(request.POST)
         if form.is_valid():
             category = form.save()
@@ -1261,8 +1170,12 @@ def blog_category_create(request):
 def blog_category_edit(request, pk):
     """Edit an existing blog category"""
     category = get_object_or_404(BlogCategory, pk=pk)
-    
+
     if request.method == 'POST':
+        if not _has_permission(request, 'blog', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit blog categories.')
+            return redirect('management:blog_categories_list')
+
         form = BlogCategoryForm(request.POST, instance=category)
         if form.is_valid():
             category = form.save()
@@ -1290,13 +1203,25 @@ def blog_category_edit(request, pk):
 def blog_category_delete(request, pk):
     """Delete a blog category"""
     category = get_object_or_404(BlogCategory, pk=pk)
-    
+
     if request.method == 'POST':
+        if not _has_permission(request, 'blog', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete blog categories.')
+            return redirect('management:blog_categories_list')
+
+        post_count = category.blog_posts.count()
+        if post_count:
+            messages.error(
+                request,
+                f'Cannot delete "{category.name}" — {post_count} blog post(s) are still linked to it.'
+            )
+            return redirect('management:blog_categories_list')
+
         category_name = category.name
         category.delete()
         messages.success(request, f'Category "{category_name}" deleted successfully!')
         return redirect('management:blog_categories_list')
-    
+
     return redirect('management:blog_categories_list')
 
 
@@ -1577,13 +1502,30 @@ def user_change_role(request, pk):
 
     user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
     form = QuickRoleChangeForm(request.POST)
- 
+
     if form.is_valid():
+        old_role = user.profile.role
         role = form.cleaned_data['role']
-        user.profile.role = role
-        user.profile.save(update_fields=['role'])
-        _apply_role_staff_rule(user, role)
- 
+        with transaction.atomic():
+            user.profile.role = role
+            user.profile.save(update_fields=['role'])
+            _apply_role_staff_rule(user, role)
+            if old_role != role:
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='permission_change',
+                    model_name='UserProfile',
+                    object_id=str(user.pk),
+                    description=f'Changed role for {user.username} from "{old_role}" to "{role}".',
+                )
+        if old_role != role:
+            _notify(
+                user=user,
+                title='Your account role has changed',
+                message=f'Your role was changed from {old_role} to {user.profile.get_role_display()} by an administrator.',
+                notif_type='system',
+            )
+
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
@@ -1661,8 +1603,12 @@ def role_assign(request):
     return render(request, 'management/role_assign.html', {
         'users': users,
         'selected_user': selected_user,
-        'role_choices': UserProfile.ROLE_CHOICES,
-    }) 
+        # 'student' excluded — this page only ever targets staff roles (see
+        # the queryset exclusion above); offering it here would let an admin
+        # switch a staff account down into a student, which has its own
+        # dedicated flow (admission) and isn't what this page is for.
+        'role_choices': [c for c in UserProfile.ROLE_CHOICES if c[0] != 'student'],
+    })
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
@@ -1696,6 +1642,20 @@ def user_permissions(request, pk):
                 user=target, module=module, role=None,
                 defaults={**row_data, 'updated_by': request.user},
             )
+        AuditLog.objects.create(
+            user=request.user,
+            action='permission_change',
+            model_name='StaffPermissionsMatrix',
+            object_id=str(target.pk),
+            description=f'Updated user-level permission overrides for {target.username}.',
+        )
+
+    _notify(
+        user=target,
+        title='Your permissions have changed',
+        message='An administrator updated your account permissions.',
+        notif_type='system',
+    )
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True, 'message': f'Permissions updated for {target.username}.'})
@@ -1985,131 +1945,6 @@ def notification_config(request):
     
     return render(request, 'management/system_config/notifications.html', {'form': form})
 
-
-# @login_required(login_url='eduweb:auth_page')
-# @user_passes_test(is_admin)
-# def course_categories_list(request):
-#     """List all course categories"""
-#     # Add course counts to categories
-#     categories = CourseCategory.objects.annotate(
-#         course_count=Count('lms_courses')
-#     ).order_by('display_order', 'name')
-    
-#     # Search functionality
-#     search_query = request.GET.get('search', '')
-#     if search_query:
-#         categories = categories.filter(
-#             Q(name__icontains=search_query) | 
-#             Q(description__icontains=search_query)
-#         )
-    
-#     # Status filter
-#     status = request.GET.get('status', '')
-#     if status == 'active':
-#         categories = categories.filter(is_active=True)
-#     elif status == 'inactive':
-#         categories = categories.filter(is_active=False)
-    
-#     # Pagination
-#     paginator = Paginator(categories, 15)
-#     page = request.GET.get('page', 1)
-#     categories_page = paginator.get_page(page)
-    
-#     context = {
-#         'categories': categories_page,
-#         'search_query': search_query,
-#         'status': status,
-#         'total_categories': categories.count()
-#     }
-#     return render(request, 'management/course/list.html', context)
-
-
-# @login_required(login_url='eduweb:auth_page')
-# @user_passes_test(is_admin)
-# def course_category_create(request):
-#     """Create new course category"""
-#     if request.method == 'POST':
-#         form = CourseCategoryForm(request.POST)
-#         if form.is_valid():
-#             category = form.save()
-            
-#             # Create audit log
-#             AuditLog.objects.create(
-#                 user=request.user,
-#                 action='create',
-#                 model_name='CourseCategory',
-#                 object_id=category.id,
-#                 description=f'Created course category: {category.name}'
-#             )
-            
-#             messages.success(request, f'Category "{category.name}" created successfully.')
-#             return redirect('management:course_categories_list')
-#     else:
-#         form = CourseCategoryForm()
-    
-#     return render(request, 'management/course/create.html', {'form': form})
-
-
-# @login_required(login_url='eduweb:auth_page')
-# @user_passes_test(is_admin)
-# def course_category_edit(request, pk):
-#     """Edit course category"""
-#     category = get_object_or_404(CourseCategory, pk=pk)
-    
-#     if request.method == 'POST':
-#         form = CourseCategoryForm(request.POST, instance=category)
-#         if form.is_valid():
-#             category = form.save()
-            
-#             # Create audit log
-#             AuditLog.objects.create(
-#                 user=request.user,
-#                 action='update',
-#                 model_name='CourseCategory',
-#                 object_id=category.id,
-#                 description=f'Updated course category: {category.name}'
-#             )
-            
-#             messages.success(request, f'Category "{category.name}" updated successfully.')
-#             return redirect('management:course_categories_list')
-#     else:
-#         form = CourseCategoryForm(instance=category)
-    
-#     return render(request, 'management/course/edit.html', {
-#         'form': form,
-#         'category': category
-#     })
-
-
-# @login_required(login_url='eduweb:auth_page')
-# @user_passes_test(is_admin)
-# def course_category_delete(request, pk):
-#     """Delete course category"""
-#     category = get_object_or_404(CourseCategory, pk=pk)
-    
-#     # Check if category has courses
-#     course_count = category.lmscourse_set.count()
-    
-#     if request.method == 'POST':
-#         category_name = category.name
-        
-#         # Create audit log before deletion
-#         AuditLog.objects.create(
-#             user=request.user,
-#             action='delete',
-#             model_name='CourseCategory',
-#             object_id=category.id,
-#             description=f'Deleted course category: {category_name}'
-#         )
-        
-#         category.delete()
-#         messages.success(request, f'Category "{category_name}" deleted successfully.')
-#         return redirect('management:course_categories_list')
-    
-#     return render(request, 'management/course/delete.html', {
-#         'category': category,
-#         'course_count': course_count
-#     })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2832,55 +2667,67 @@ def broadcast_edit(request, slug):
 @user_passes_test(lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin')
 def broadcast_send(request, slug):
     """Send broadcast email - POST only"""
-    broadcast = get_object_or_404(BroadcastMessage, slug=slug)
-    
-    if broadcast.status == 'sent':
-        messages.warning(request, 'This broadcast has already been sent.')
+    if request.method != 'POST':
         return redirect('management:broadcast_center')
-    
-    if request.method == 'POST':
-        
-        def send_emails_background():
-            """Background thread to send emails"""
-            try:
-                # Send emails in smaller batches for better performance
-                batch_size = 50
-                email_list = broadcast.recipient_emails
-                
-                for i in range(0, len(email_list), batch_size):
-                    batch = email_list[i:i + batch_size]
-                    email_messages = [
-                        (
-                            broadcast.subject,
-                            broadcast.message,
-                            settings.DEFAULT_FROM_EMAIL,
-                            [email],
-                        )
-                        for email in batch
-                    ]
-                    send_mass_mail(email_messages, fail_silently=False)
-                
-                # Update status after all sent
-                broadcast.status = 'sent'
-                broadcast.sent_at = timezone.now()
-                broadcast.save()
-                
-            except Exception as e:
-                broadcast.status = 'failed'
-                broadcast.error_message = str(e)
-                broadcast.save()
-        
-        # Start background thread
-        thread = threading.Thread(target=send_emails_background)
-        thread.daemon = True
-        thread.start()
-        
-        # Immediate response to user
-        messages.success(
-            request, 
-            f'Sending broadcast to {broadcast.recipient_count} recipients...'
+
+    # Atomically claim the send: lock the row and flip draft/failed -> sending
+    # in one transaction, so a double-click/retry racing this same request
+    # sees status already 'sending' (or 'sent') and bails out instead of
+    # spawning a second background thread that re-emails everyone.
+    with transaction.atomic():
+        broadcast = get_object_or_404(
+            BroadcastMessage.objects.select_for_update(), slug=slug
         )
-    
+        if broadcast.status in ('sent', 'sending'):
+            messages.warning(request, 'This broadcast is already sent or in progress.')
+            return redirect('management:broadcast_center')
+
+        broadcast.status = 'sending'
+        broadcast.save(update_fields=['status'])
+
+    def send_emails_background():
+        """Background thread to send emails"""
+        batch_size = 50
+        email_list = broadcast.recipient_emails
+        failed_batches = []
+
+        for i in range(0, len(email_list), batch_size):
+            batch = email_list[i:i + batch_size]
+            email_messages = [
+                (
+                    broadcast.subject,
+                    broadcast.message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                )
+                for email in batch
+            ]
+            try:
+                send_mass_mail(email_messages, fail_silently=False)
+            except Exception as e:
+                # One bad batch doesn't abort the rest — keep sending, and
+                # report which batches failed instead of losing everything
+                # already delivered.
+                logger.exception('Broadcast %s: batch starting at %d failed', broadcast.slug, i)
+                failed_batches.append(f'recipients {i}-{i + len(batch) - 1}: {e}')
+
+        broadcast.sent_at = timezone.now()
+        if failed_batches:
+            broadcast.status = 'failed' if len(failed_batches) * batch_size >= len(email_list) else 'sent'
+            broadcast.error_message = 'Some batches failed:\n' + '\n'.join(failed_batches)
+        else:
+            broadcast.status = 'sent'
+            broadcast.error_message = ''
+        broadcast.save(update_fields=['status', 'sent_at', 'error_message'])
+
+    thread = threading.Thread(target=send_emails_background)
+    thread.daemon = True
+    thread.start()
+
+    messages.success(
+        request,
+        f'Sending broadcast to {broadcast.recipient_count} recipients...'
+    )
     return redirect('management:broadcast_center')
 
 @login_required
@@ -3149,6 +2996,10 @@ def departments_list(request):
 @user_passes_test(is_admin)
 def department_create(request):
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_create'):
+            messages.error(request, 'You do not have permission to create departments.')
+            return redirect('management:departments_list')
+
         form = DepartmentForm(request.POST)
         if form.is_valid():
             form.save()
@@ -3164,6 +3015,10 @@ def department_create(request):
 def department_edit(request, pk):
     dept = get_object_or_404(Department, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit departments.')
+            return redirect('management:departments_list')
+
         form = DepartmentForm(request.POST, instance=dept)
         if form.is_valid():
             form.save()
@@ -3241,6 +3096,10 @@ def programs_list(request):
 @user_passes_test(is_admin)
 def program_create(request):
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_create'):
+            messages.error(request, 'You do not have permission to create programs.')
+            return redirect('management:programs_list')
+
         form = ProgramForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
@@ -3256,6 +3115,10 @@ def program_create(request):
 def program_edit(request, pk):
     program = get_object_or_404(Program, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit programs.')
+            return redirect('management:programs_list')
+
         form = ProgramForm(request.POST, request.FILES, instance=program)
         if form.is_valid():
             form.save()
@@ -3349,67 +3212,70 @@ def academic_sessions_list(request):
 @user_passes_test(is_admin)
 @require_POST
 def academic_session_set_current(request, pk):
-    session = get_object_or_404(AcademicSession, pk=pk)
-
     today = timezone.now().date()
 
-    # Set this session as current + active
-    session.is_current = True
-    session.status = 'active'
-    session.save()  # AcademicSession.save() already flips is_current=False on all others
+    with transaction.atomic():
+        session = get_object_or_404(AcademicSession.objects.select_for_update(), pk=pk)
 
-    # A session is often activated (e.g. right after an end-of-session
-    # progression run) some time after its term_dates were configured —
-    # by which point the automatic 3-week registration window for the
-    # running term may have already elapsed, which would otherwise lock
-    # every student out of registration with no way to recover short of
-    # an admin editing term_dates. Auto-open registration in that case so
-    # newly-promoted students can register the moment the session goes live.
-    if session.registration_override == 'auto' and not session.is_registration_open:
-        session.registration_override = 'open'
-        session.save(update_fields=['registration_override'])
+        # Set this session as current + active
+        session.is_current = True
+        session.status = 'active'
+        session.save()  # AcademicSession.save() already flips is_current=False on all others
+
+        # A session is often activated (e.g. right after an end-of-session
+        # progression run) some time after its term_dates were configured —
+        # by which point the automatic 3-week registration window for the
+        # running term may have already elapsed, which would otherwise lock
+        # every student out of registration with no way to recover short of
+        # an admin editing term_dates. Auto-open registration in that case so
+        # newly-promoted students can register the moment the session goes live.
+        auto_opened = session.registration_override == 'auto' and not session.is_registration_open
+        if auto_opened:
+            session.registration_override = 'open'
+            session.save(update_fields=['registration_override'])
+
+        # Now update statuses on the remaining sessions based on their dates
+        other_sessions = AcademicSession.objects.select_for_update().exclude(pk=pk)
+        for s in other_sessions:
+            term_dates = s.term_dates or []
+            if not term_dates:
+                # No dates configured — leave as-is or mark closed
+                if s.status == 'active':
+                    s.status = 'closed'
+                    s.save(update_fields=['status'])
+                continue
+
+            # Determine earliest start and latest end across all terms
+            try:
+                starts = [date.fromisoformat(t['start']) for t in term_dates if t.get('start')]
+                ends   = [date.fromisoformat(t['end'])   for t in term_dates if t.get('end')]
+            except (ValueError, KeyError):
+                continue
+
+            if not starts or not ends:
+                continue
+
+            session_start = min(starts)
+            session_end   = max(ends)
+
+            if today < session_start:
+                new_status = 'upcoming'
+            elif today > session_end:
+                new_status = 'closed'
+            else:
+                new_status = 'closed'  # It's in range but we just made another session current
+
+            if s.status != new_status:
+                s.status = new_status
+                s.save(update_fields=['status'])
+
+    if auto_opened:
         messages.info(
             request,
             f'Registration for "{session.name}" was auto-opened — its computed '
             f'3-week window had already elapsed. Use "Close Registration" below if '
             f'you need to lock it again.'
         )
-
-    # Now update statuses on the remaining sessions based on their dates
-    other_sessions = AcademicSession.objects.exclude(pk=pk)
-    for s in other_sessions:
-        term_dates = s.term_dates or []
-        if not term_dates:
-            # No dates configured — leave as-is or mark closed
-            if s.status == 'active':
-                s.status = 'closed'
-                s.save(update_fields=['status'])
-            continue
-
-        # Determine earliest start and latest end across all terms
-        try:
-            starts = [__import__('datetime').date.fromisoformat(t['start']) for t in term_dates if t.get('start')]
-            ends   = [__import__('datetime').date.fromisoformat(t['end'])   for t in term_dates if t.get('end')]
-        except (ValueError, KeyError):
-            continue
-
-        if not starts or not ends:
-            continue
-
-        session_start = min(starts)
-        session_end   = max(ends)
-
-        if today < session_start:
-            new_status = 'upcoming'
-        elif today > session_end:
-            new_status = 'closed'
-        else:
-            new_status = 'closed'  # It's in range but we just made another session current
-
-        if s.status != new_status:
-            s.status = new_status
-            s.save(update_fields=['status'])
-
     messages.success(request, f'✓ {session.name} is now the current active session.')
     return redirect('management:academic_sessions_list')
 
@@ -3544,6 +3410,7 @@ def academic_progression(request):
         return redirect('management:dashboard')
 
     preview_rows = []
+    analytics = None
     if program and session:
         profiles = list(UserProfile.objects.filter(
             role='student', program=program,
@@ -3555,6 +3422,29 @@ def academic_progression(request):
             decision['already_processed'] = profile.user_id in processed_ids
             preview_rows.append(decision)
 
+        total = len(preview_rows)
+        qualified = sum(1 for r in preview_rows if r['promote'])
+        not_qualified = total - qualified
+
+        status_counts = {}
+        for r in preview_rows:
+            status_counts[r['new_status']] = status_counts.get(r['new_status'], 0) + 1
+        status_order = ['active', 'graduated', 'repeated', 'probation', 'withdrawn']
+        status_labels = [dict(UserProfile.PROGRESSION_STATUS_CHOICES).get(s, s.title()) for s in status_order if status_counts.get(s)]
+        status_data = [status_counts[s] for s in status_order if status_counts.get(s)]
+
+        analytics = {
+            'total': total,
+            'qualified': qualified,
+            'not_qualified': not_qualified,
+            'pass_rate': round(qualified / total * 100, 1) if total else 0,
+            'fail_rate': round(not_qualified / total * 100, 1) if total else 0,
+            'core_fail_count': sum(1 for r in preview_rows if not r['core_passed']),
+            'cgpa_fail_count': sum(1 for r in preview_rows if not r['cgpa_ok']),
+            'status_labels': status_labels,
+            'status_data': status_data,
+        }
+
     return render(request, 'management/academic_progression.html', {
         'programs': programs,
         'sessions': sessions,
@@ -3562,6 +3452,8 @@ def academic_progression(request):
         'selected_session': session,
         'preview_rows': preview_rows,
         'progression_statuses': UserProfile.PROGRESSION_STATUS_CHOICES,
+        'analytics': analytics,
+        'analytics_json': json.dumps(analytics) if analytics else None,
     })
 
 
@@ -3607,6 +3499,10 @@ def courses_list(request):
  
         # ── CREATE ──────────────────────────────────────────────────────────
         if action == 'create':
+            if not _has_permission(request, 'academics', 'can_create'):
+                messages.error(request, 'You do not have permission to create courses.')
+                return redirect('management:courses_list')
+
             form = CourseForm(request.POST)
             if form.is_valid():
                 form.save()
@@ -3615,9 +3511,13 @@ def courses_list(request):
                 # Surface first field error so the user knows what went wrong
                 for field, errs in form.errors.items():
                     messages.error(request, f'{field.replace("_"," ").title()}: {errs[0]}')
- 
+
         # ── EDIT ────────────────────────────────────────────────────────────
         elif action == 'edit':
+            if not _has_permission(request, 'academics', 'can_edit'):
+                messages.error(request, 'You do not have permission to edit courses.')
+                return redirect('management:courses_list')
+
             course_id = request.POST.get('course_id')
             course    = get_object_or_404(Course, pk=course_id)
             form      = CourseForm(request.POST, instance=course)
@@ -3720,6 +3620,10 @@ def intakes_list(request):
 def intake_create(request):
     """AJAX-only: create a new intake, redirect back to list."""
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_create'):
+            messages.error(request, 'You do not have permission to create intakes.')
+            return redirect('management:intakes_list')
+
         form = CourseIntakeForm(request.POST)
         if form.is_valid():
             form.save()
@@ -3737,6 +3641,10 @@ def intake_edit(request, pk):
     """AJAX GET returns JSON for the modal; POST saves changes."""
     intake = get_object_or_404(CourseIntake, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit intakes.')
+            return redirect('management:intakes_list')
+
         form = CourseIntakeForm(request.POST, instance=intake)
         if form.is_valid():
             form.save()
@@ -3768,6 +3676,18 @@ def intake_delete(request, pk):
     """POST-only delete; all confirmations happen client-side."""
     intake = get_object_or_404(CourseIntake, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'academics', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete intakes.')
+            return redirect('management:intakes_list')
+
+        app_count = intake.applications.count()
+        if app_count:
+            messages.error(
+                request,
+                f'Cannot delete "{intake}" — {app_count} application(s) reference it.'
+            )
+            return redirect('management:intakes_list')
+
         intake_name = str(intake)
         intake.delete()
         messages.success(request, f'Intake "{intake_name}" deleted.')
@@ -3782,9 +3702,88 @@ def intake_delete(request, pk):
 @user_passes_test(is_admin)
 def course_categories_list(request):
     categories = CourseCategory.objects.prefetch_related(
-        'lms_courses', 'subcategories'
+        'subcategories'
     ).select_related('parent').order_by('display_order', 'name')
     return render(request, 'management/course_categories_list.html', {'categories': categories})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_category_create(request):
+    if request.method == 'POST':
+        form = CourseCategoryForm(request.POST)
+        if form.is_valid():
+            category = form.save()
+            AuditLog.objects.create(
+                user=request.user,
+                action='create',
+                model_name='CourseCategory',
+                object_id=category.id,
+                description=f'Created course category: {category.name}'
+            )
+            messages.success(request, f'Category "{category.name}" created successfully.')
+            return redirect('management:course_categories_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CourseCategoryForm()
+
+    return render(request, 'management/course_category_form.html', {'form': form, 'action': 'Create'})
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_category_edit(request, pk):
+    category = get_object_or_404(CourseCategory, pk=pk)
+
+    if request.method == 'POST':
+        form = CourseCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            category = form.save()
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='CourseCategory',
+                object_id=category.id,
+                description=f'Updated course category: {category.name}'
+            )
+            messages.success(request, f'Category "{category.name}" updated successfully.')
+            return redirect('management:course_categories_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CourseCategoryForm(instance=category)
+
+    return render(request, 'management/course_category_form.html', {
+        'form': form, 'category': category, 'action': 'Edit',
+    })
+
+
+@require_POST
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def course_category_delete(request, pk):
+    category = get_object_or_404(CourseCategory, pk=pk)
+
+    dependent_count = category.subcategories.count()
+    if dependent_count:
+        messages.error(
+            request,
+            f'Cannot delete "{category.name}" — {dependent_count} subcategory(ies) are still linked to it.'
+        )
+        return redirect('management:course_categories_list')
+
+    category_name = category.name
+    AuditLog.objects.create(
+        user=request.user,
+        action='delete',
+        model_name='CourseCategory',
+        object_id=category.id,
+        description=f'Deleted course category: {category_name}'
+    )
+    category.delete()
+    messages.success(request, f'Category "{category_name}" deleted successfully.')
+    return redirect('management:course_categories_list')
 
 
 # ===========================================================================
@@ -3936,18 +3935,20 @@ def announcement_create(request):
             ann.created_by = request.user
             ann.save()
             messages.success(request, 'Announcement created.')
-            # Notify users based on announcement type
+            # Notify users based on announcement type. Uses bulk_create instead of
+            # one _notify() call per recipient (each of which is an INSERT + a
+            # prune-query) — fan-out to "all active users" could otherwise be
+            # thousands of queries in the request/response cycle.
             if ann.announcement_type == 'system':
-                # Notify all active users
                 recipients = User.objects.filter(is_active=True).exclude(id=request.user.id)
-                for u in recipients:
-                    _notify(
-                        user=u,
+                Notification.objects.bulk_create([
+                    Notification(
+                        user=u, notification_type='announcement',
                         title=f'Announcement: {ann.title}',
-                        message=ann.content[:200],
-                        notif_type='announcement',
-                        link='/',
+                        message=ann.content[:200], link='/',
                     )
+                    for u in recipients
+                ])
             elif ann.announcement_type == 'course' and ann.course:
                 # Notify only students enrolled in this specific course
                 enrolled_users = User.objects.filter(
@@ -3955,29 +3956,26 @@ def announcement_create(request):
                     enrollments__status='active',
                     is_active=True,
                 ).exclude(id=request.user.id).distinct()
-                for u in enrolled_users:
-                    _notify(
-                        user=u,
+                Notification.objects.bulk_create([
+                    Notification(
+                        user=u, notification_type='announcement',
                         title=f'Course Announcement: {ann.title}',
-                        message=ann.content[:200],
-                        notif_type='announcement',
-                        link=f'/courses/{ann.course.slug}/',
+                        message=ann.content[:200], link=f'/courses/{ann.course.slug}/',
                     )
+                    for u in enrolled_users
+                ])
             elif ann.announcement_type == 'category' and ann.category:
-                # Notify students enrolled in any course under this category
-                enrolled_users = User.objects.filter(
-                    enrollments__course__category=ann.category,
-                    enrollments__status='active',
-                    is_active=True,
-                ).exclude(id=request.user.id).distinct()
-                for u in enrolled_users:
-                    _notify(
-                        user=u,
-                        title=f'Announcement: {ann.title}',
-                        message=ann.content[:200],
-                        notif_type='announcement',
-                        link='/',
-                    )
+                # NOTE: LMSCourse has no live `category` FK (commented out in
+                # eduweb/models.py) — there is currently no way to resolve
+                # "students enrolled in a course under this category" at all.
+                # Filtering on it crashes with FieldError. Until that FK is
+                # wired up (flagged separately, see course_categories_list),
+                # skip the fan-out rather than 500 the whole announcement.
+                messages.warning(
+                    request,
+                    'Announcement saved, but category-targeted notifications were '
+                    'not sent: courses aren\'t linked to categories yet.'
+                )
             return redirect('management:announcements_list')
     else:
         form = AnnouncementForm()
@@ -4126,9 +4124,22 @@ def enrollment_edit(request, pk):
 @user_passes_test(is_admin)
 def enrollment_delete(request, pk):
     """Delete enrollment"""
-    
+
     enrollment = get_object_or_404(Enrollment, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'enrollments', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete enrollments.')
+            return redirect('management:enrollments_list')
+
+        progress_count = enrollment.lesson_progress.count()
+        if progress_count:
+            messages.error(
+                request,
+                f'Cannot delete this enrollment — the student has {progress_count} '
+                f'lesson-progress record(s) for "{enrollment.course.title}".'
+            )
+            return redirect('management:enrollments_list')
+
         _notify(
             user=enrollment.student,
             title=f'Enrollment Removed — {enrollment.course.title}',
@@ -4223,6 +4234,10 @@ def certificate_delete(request, certificate_id):
     """Delete a certificate — POST only, guarded by confirm() on the client."""
     certificate = get_object_or_404(Certificate, certificate_id=certificate_id)
     if request.method == 'POST':
+        if not _has_permission(request, 'enrollments', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete certificates.')
+            return redirect('management:certificates_list')
+
         certificate.delete()
         messages.success(request, 'Certificate deleted.')
     return redirect('management:certificates_list')
@@ -4314,6 +4329,10 @@ def review_delete(request, pk):
 
     review = get_object_or_404(Review, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'enrollments', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete reviews.')
+            return redirect('management:reviews_list')
+
         review.delete()
         messages.success(request, 'Review deleted.')
     return redirect('management:reviews_list')
@@ -4385,6 +4404,18 @@ def badge_delete(request, slug):
 
     badge = get_object_or_404(Badge, slug=slug)
     if request.method == 'POST':
+        if not _has_permission(request, 'enrollments', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete badges.')
+            return redirect('management:badges_list')
+
+        awarded_count = badge.awarded_to.count()
+        if awarded_count:
+            messages.error(
+                request,
+                f'Cannot delete "{badge.name}" — it has already been awarded to {awarded_count} student(s).'
+            )
+            return redirect('management:badges_list')
+
         badge.delete()
         messages.success(request, 'Badge deleted.')
     return redirect('management:badges_list')
@@ -4462,6 +4493,10 @@ def student_badge_delete(request, pk):
 
     student_badge = get_object_or_404(StudentBadge, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'enrollments', 'can_delete'):
+            messages.error(request, 'You do not have permission to revoke badges.')
+            return redirect('management:student_badges_list')
+
         student_badge.delete()
         messages.success(request, 'Badge revoked.')
     return redirect('management:student_badges_list')
@@ -4489,6 +4524,10 @@ def payment_gateway_create(request):
     if request.method != 'POST':
         return redirect('management:payment_gateways_list')
 
+    if not _has_permission(request, 'finance', 'can_create'):
+        messages.error(request, 'You do not have permission to add payment gateways.')
+        return redirect('management:payment_gateways_list')
+
     form = PaymentGatewayForm(request.POST)
     if form.is_valid():
         form.save()
@@ -4507,6 +4546,10 @@ def payment_gateway_create(request):
 def payment_gateway_edit(request, slug):
 
     if request.method != 'POST':
+        return redirect('management:payment_gateways_list')
+
+    if not _has_permission(request, 'finance', 'can_edit'):
+        messages.error(request, 'You do not have permission to edit payment gateways.')
         return redirect('management:payment_gateways_list')
 
     gateway = get_object_or_404(PaymentGateway, slug=slug)
@@ -4538,7 +4581,19 @@ def payment_gateway_delete(request, slug):
     if request.method != 'POST':
         return redirect('management:payment_gateways_list')
 
+    if not _has_permission(request, 'finance', 'can_delete'):
+        messages.error(request, 'You do not have permission to delete payment gateways.')
+        return redirect('management:payment_gateways_list')
+
     gateway = get_object_or_404(PaymentGateway, slug=slug)
+    txn_count = Transaction.objects.filter(gateway=gateway).count()
+    if txn_count:
+        messages.error(
+            request,
+            f'Cannot delete "{gateway.name}" — {txn_count} transaction(s) reference it.'
+        )
+        return redirect('management:payment_gateways_list')
+
     gateway.delete()
     messages.success(request, 'Gateway deleted.')
     return redirect('management:payment_gateways_list')
@@ -4673,6 +4728,10 @@ def required_payment_create(request):
     if request.method != 'POST':
         return redirect('management:required_payments_list')
 
+    if not _has_permission(request, 'finance', 'can_create'):
+        messages.error(request, 'You do not have permission to create required payments.')
+        return redirect('management:required_payments_list')
+
     form = AllRequiredPaymentsForm(request.POST)
     if form.is_valid():
         form.save()
@@ -4691,6 +4750,10 @@ def required_payment_create(request):
 def required_payment_edit(request, pk):
 
     if request.method != 'POST':
+        return redirect('management:required_payments_list')
+
+    if not _has_permission(request, 'finance', 'can_edit'):
+        messages.error(request, 'You do not have permission to edit required payments.')
         return redirect('management:required_payments_list')
 
     payment = get_object_or_404(AllRequiredPayments, pk=pk)
@@ -4714,7 +4777,19 @@ def required_payment_delete(request, pk):
     if request.method != 'POST':
         return redirect('management:required_payments_list')
 
+    if not _has_permission(request, 'finance', 'can_delete'):
+        messages.error(request, 'You do not have permission to delete required payments.')
+        return redirect('management:required_payments_list')
+
     payment = get_object_or_404(AllRequiredPayments, pk=pk)
+    payment_count = payment.payments.count()
+    if payment_count:
+        messages.error(
+            request,
+            f'Cannot delete "{payment}" — {payment_count} student payment record(s) reference it.'
+        )
+        return redirect('management:required_payments_list')
+
     payment.delete()
     messages.success(request, 'Payment deleted.')
     return redirect('management:required_payments_list')
@@ -4942,7 +5017,7 @@ def financial_analytics(request):
 @user_passes_test(is_admin)
 def staff_payroll_list(request):
 
-    STAFF_ROLES = ['instructor', 'support', 'admin', 'content_manager', 'finance']
+    STAFF_ROLES = ['instructor', 'support', 'admin', 'finance']
 
     qs = StaffPayroll.objects.select_related('staff').order_by('-year', '-month')
 
@@ -4985,6 +5060,10 @@ def staff_payroll_list(request):
 def staff_payroll_create(request):
 
     if request.method != 'POST':
+        return redirect('management:staff_payroll_list')
+
+    if not _has_permission(request, 'finance_payroll', 'can_create'):
+        messages.error(request, 'You do not have permission to create payroll records.')
         return redirect('management:staff_payroll_list')
 
     form = StaffPayrollForm(request.POST)
@@ -5405,6 +5484,10 @@ def library_items_list(request):
 def library_item_create(request):
     """Create a new LibraryItem. Records created_by from request.user."""
     if request.method == 'POST':
+        if not _has_permission(request, 'library', 'can_create'):
+            messages.error(request, 'You do not have permission to add library items.')
+            return redirect('management:library_items_list')
+
         form = LibraryItemForm(request.POST, request.FILES)
         if form.is_valid():
             item = form.save(commit=False)
@@ -5433,8 +5516,12 @@ def library_item_create(request):
 def library_item_edit(request, pk):
     """Edit an existing LibraryItem. pk is a UUID."""
     item = get_object_or_404(LibraryItem, pk=pk)
- 
+
     if request.method == 'POST':
+        if not _has_permission(request, 'library', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit library items.')
+            return redirect('management:library_items_list')
+
         form = LibraryItemForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
             form.save()
@@ -5461,6 +5548,10 @@ def library_item_delete(request, pk):
     """Hard-delete a LibraryItem (POST only). pk is a UUID."""
     item = get_object_or_404(LibraryItem, pk=pk)
     if request.method == 'POST':
+        if not _has_permission(request, 'library', 'can_delete'):
+            messages.error(request, 'You do not have permission to delete library items.')
+            return redirect('management:library_items_list')
+
         title = item.title
         item.delete()
         messages.success(request, f'"{title}" removed from the library.')
@@ -5571,18 +5662,19 @@ def admin_exam_approve(request, slug):
         return redirect('management:admin_exam_detail', slug=slug)
 
     prev = exam.status
-    exam.status = Exam.APPROVED
-    exam.approved_by = request.user
-    exam.approved_at = timezone.now()
-    exam.save(update_fields=['status', 'approved_by', 'approved_at'])
+    with transaction.atomic():
+        exam.status = Exam.APPROVED
+        exam.approved_by = request.user
+        exam.approved_at = timezone.now()
+        exam.save(update_fields=['status', 'approved_by', 'approved_at'])
 
-    ExamStatusLog.objects.create(
-        exam=exam,
-        from_status=prev,
-        to_status=Exam.APPROVED,
-        changed_by=request.user,
-        note=request.POST.get('note', ''),
-    )
+        ExamStatusLog.objects.create(
+            exam=exam,
+            from_status=prev,
+            to_status=Exam.APPROVED,
+            changed_by=request.user,
+            note=request.POST.get('note', ''),
+        )
 
     if exam.instructor:
         _notify(
@@ -5611,19 +5703,20 @@ def admin_exam_reject(request, slug):
         return redirect('management:admin_exam_detail', slug=slug)
 
     prev = exam.status
-    exam.status = Exam.REJECTED
-    exam.rejected_by = request.user
-    exam.rejected_at = timezone.now()
-    exam.rejection_reason = reason
-    exam.save(update_fields=['status', 'rejected_by', 'rejected_at', 'rejection_reason'])
+    with transaction.atomic():
+        exam.status = Exam.REJECTED
+        exam.rejected_by = request.user
+        exam.rejected_at = timezone.now()
+        exam.rejection_reason = reason
+        exam.save(update_fields=['status', 'rejected_by', 'rejected_at', 'rejection_reason'])
 
-    ExamStatusLog.objects.create(
-        exam=exam,
-        from_status=prev,
-        to_status=Exam.REJECTED,
-        changed_by=request.user,
-        note=reason,
-    )
+        ExamStatusLog.objects.create(
+            exam=exam,
+            from_status=prev,
+            to_status=Exam.REJECTED,
+            changed_by=request.user,
+            note=reason,
+        )
 
     if exam.instructor:
         _notify(
@@ -5647,18 +5740,19 @@ def admin_exam_publish(request, slug):
         return redirect('management:admin_exam_detail', slug=slug)
 
     prev = exam.status
-    exam.status = Exam.PUBLISHED
-    exam.published_by = request.user
-    exam.published_at = timezone.now()
-    exam.save(update_fields=['status', 'published_by', 'published_at'])
+    with transaction.atomic():
+        exam.status = Exam.PUBLISHED
+        exam.published_by = request.user
+        exam.published_at = timezone.now()
+        exam.save(update_fields=['status', 'published_by', 'published_at'])
 
-    ExamStatusLog.objects.create(
-        exam=exam,
-        from_status=prev,
-        to_status=Exam.PUBLISHED,
-        changed_by=request.user,
-        note=request.POST.get('note', ''),
-    )
+        ExamStatusLog.objects.create(
+            exam=exam,
+            from_status=prev,
+            to_status=Exam.PUBLISHED,
+            changed_by=request.user,
+            note=request.POST.get('note', ''),
+        )
 
     if exam.instructor:
         _notify(
@@ -5679,6 +5773,10 @@ def admin_question_moderation(request, slug):
     questions = exam.questions.order_by('created_at')
 
     if request.method == 'POST':
+        if not _has_permission(request, 'exams', 'can_edit'):
+            messages.error(request, 'You do not have permission to moderate exam questions.')
+            return redirect('management:admin_question_moderation', slug=slug)
+
         q_id = request.POST.get('question_id')
         action = request.POST.get('action')
         question = get_object_or_404(ExamQuestion, pk=q_id, exam=exam)
@@ -5704,6 +5802,10 @@ def admin_exam_timetable_update(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
 
     if request.method == 'POST':
+        if not _has_permission(request, 'exams', 'can_edit'):
+            messages.error(request, 'You do not have permission to edit exam timetables.')
+            return redirect('management:admin_exam_detail', slug=slug)
+
         exam_date = parse_date(request.POST.get('exam_date', ''))
         start_time = parse_time(request.POST.get('start_time', ''))
         end_time = parse_time(request.POST.get('end_time', ''))

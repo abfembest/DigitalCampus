@@ -4,6 +4,7 @@ import re
 import uuid
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from functools import wraps
 from io import BytesIO
 
 from django.conf import settings
@@ -42,6 +43,46 @@ from .forms import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ── Permission helper ──────────────────────────────────────────────────────
+# Mirrors management/finance/payment/support's helper of the same name —
+# instructor_required only checks role, not the per-module StaffPermissionsMatrix
+# flags, so mutating views must check this too or a narrowed-down instructor
+# account (e.g. can_delete revoked as a disciplinary/probation measure) can
+# still bypass the restriction with a direct POST.
+def _has_permission(request, module, action):
+    if request.user.is_superuser:
+        return True
+    return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
+
+
+def require_permission(module, action, redirect_to='instructor:dashboard', skip_get=True):
+    """
+    Decorator for instructor views that mutate state — denies the request
+    unless _has_permission(request, module, action) is True. Only guards
+    non-GET requests by default (GET still renders the page/form); pass
+    skip_get=False for a view whose privileged action runs on GET itself
+    (e.g. a plain-link export/download with no separate POST step).
+    `redirect_to` is a URL name with no required args, or a callable
+    `(request, *args, **kwargs) -> HttpResponse` for targets that need the
+    view's own URL kwargs (e.g. a detail page keyed by pk/slug).
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            guarded = not skip_get or request.method != 'GET'
+            if guarded and not _has_permission(request, module, action):
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+                messages.error(request, 'You do not have permission to perform this action.')
+                if callable(redirect_to):
+                    return redirect_to(request, *args, **kwargs)
+                return redirect(redirect_to)
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator
+
 
 # ── Notification helper ────────────────────────────────────────────────────
 def _notify_instructor(instructor, title, message, notif_type='system', link=''):
@@ -321,6 +362,7 @@ def course_manage(request, slug=None):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_edit')
 def course_edit(request, slug):
     """Edit course using slug"""
     course = get_object_or_404(
@@ -365,6 +407,7 @@ def course_edit(request, slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_edit')
 def course_objectives(request, slug):
     """Manage course objectives using slug"""
     course = get_object_or_404(
@@ -411,6 +454,7 @@ def course_objectives(request, slug):
 # ==================== SECTION MANAGEMENT ====================
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_create')
 def section_create(request, course_slug):
     """Create section using course slug"""
     course = get_object_or_404(
@@ -441,6 +485,7 @@ def section_create(request, course_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_edit')
 def section_edit(request, course_slug, section_id):
     """Edit section using course slug"""
     course = get_object_or_404(
@@ -476,6 +521,7 @@ def section_edit(request, course_slug, section_id):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_courses', 'can_delete', redirect_to=lambda request, course_slug, **kw: redirect('instructor:lesson_list', course_slug=course_slug))
 def section_delete(request, course_slug, section_id):
     """Delete section using course slug"""
     course = get_object_or_404(
@@ -527,6 +573,7 @@ def lesson_list(request, course_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_create')
 def lesson_create(request, course_slug):
     """Create lesson using course slug"""
     course = get_object_or_404(
@@ -571,6 +618,7 @@ def lesson_create(request, course_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_edit')
 def lesson_edit(request, course_slug, lesson_slug):
     """Edit lesson using course slug"""
     course = get_object_or_404(
@@ -611,6 +659,7 @@ def lesson_edit(request, course_slug, lesson_slug):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_courses', 'can_delete', redirect_to=lambda request, course_slug, **kw: redirect('instructor:lesson_list', course_slug=course_slug))
 def lesson_delete(request, course_slug, lesson_slug):
     """
     Delete lesson using course slug — blocked once any student has
@@ -678,6 +727,7 @@ def quiz_list(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def quiz_create(request, course_slug, lesson_slug):
     """Create quiz using slugs"""
     course = get_object_or_404(
@@ -729,6 +779,7 @@ def quiz_create(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     """Edit quiz using slugs"""
     course = get_object_or_404(
@@ -804,6 +855,7 @@ def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
 # ==================== QUESTION MANAGEMENT ====================
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def question_create(request, course_slug, lesson_slug, quiz_slug):
     """Create question using slugs"""
     course = get_object_or_404(
@@ -857,6 +909,7 @@ def question_create(request, course_slug, lesson_slug, quiz_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
     """Manage question answers using slugs"""
     course = get_object_or_404(
@@ -936,6 +989,7 @@ def assignment_list(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def assignment_create(request, course_slug, lesson_slug):
     """Create assignment using slugs"""
     course = get_object_or_404(
@@ -987,6 +1041,7 @@ def assignment_create(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     """Edit assignment using slugs"""
     course = get_object_or_404(
@@ -1065,6 +1120,7 @@ def assignment_submissions(request, course_slug, assignment_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def grade_submission(request, course_slug, submission_id):
     """Grade submission using course slug and submission ID"""
     # Get the submission first
@@ -1199,6 +1255,7 @@ def student_progress(request, course_slug, student_id):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_create')
 def enroll_student(request, course_slug):
     """Manually enroll a student in a course"""
     course = get_object_or_404(
@@ -1270,6 +1327,7 @@ def enroll_student(request, course_slug):
 # ==================== ANNOUNCEMENTS ====================
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_create')
 def announcement_create(request, course_slug):
     """Create announcement using course slug"""
     course = get_object_or_404(
@@ -1355,6 +1413,7 @@ def all_assignments(request):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_delete')
 def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, answer_id):
     """Delete a quiz answer — blocked once a student has actually picked it."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -1384,6 +1443,7 @@ def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, ans
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_delete')
 def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
     """Delete a quiz question — blocked once a student has answered it."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -1796,6 +1856,7 @@ def announcement_list(request, course_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_edit')
 def announcement_edit(request, course_slug, announcement_slug):
     """Edit an existing announcement."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -1827,6 +1888,7 @@ def announcement_edit(request, course_slug, announcement_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_delete', redirect_to=lambda request, course_slug, **kw: redirect('instructor:announcement_list', course_slug=course_slug))
 def announcement_delete(request, course_slug, announcement_slug):
     """Delete an announcement (POST only)."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -1875,6 +1937,7 @@ def quiz_results(request, course_slug, lesson_slug, quiz_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id):
     """
     Detailed breakdown of a single student's quiz attempt. Also handles
@@ -2082,6 +2145,7 @@ def instructor_notification_read(request, notif_id):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_create')
 def message_compose(request):
     """Compose and send a new message."""
     initial = {}
@@ -2132,6 +2196,7 @@ def message_compose(request):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_create')
 def message_reply(request, message_id):
     """Post a reply to an existing thread (POST only)."""
     root = get_object_or_404(Message, id=message_id)
@@ -2217,6 +2282,7 @@ def discussion_detail(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_create', redirect_to=lambda request, course_slug, discussion_slug, **kw: redirect('instructor:discussion_detail', course_slug=course_slug, discussion_slug=discussion_slug))
 def discussion_reply(request, course_slug, discussion_slug):
     """Instructor posts a reply to a discussion (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2249,6 +2315,7 @@ def discussion_reply(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_edit', redirect_to=lambda request, course_slug, **kw: redirect('instructor:discussions', course_slug=course_slug))
 def discussion_toggle_pin(request, course_slug, discussion_slug):
     """Toggle pinned status (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2265,6 +2332,7 @@ def discussion_toggle_pin(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_edit', redirect_to=lambda request, course_slug, **kw: redirect('instructor:discussions', course_slug=course_slug))
 def discussion_toggle_lock(request, course_slug, discussion_slug):
     """Toggle locked status (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2281,6 +2349,7 @@ def discussion_toggle_lock(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_delete', redirect_to=lambda request, course_slug, **kw: redirect('instructor:discussions', course_slug=course_slug))
 def discussion_delete(request, course_slug, discussion_slug):
     """Delete a discussion and all replies (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2295,6 +2364,7 @@ def discussion_delete(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_edit', redirect_to=lambda request, course_slug, discussion_slug, **kw: redirect('instructor:discussion_detail', course_slug=course_slug, discussion_slug=discussion_slug))
 def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
     """Mark / unmark a reply as the solution (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2321,6 +2391,7 @@ def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_delete', redirect_to=lambda request, course_slug, discussion_slug, **kw: redirect('instructor:discussion_detail', course_slug=course_slug, discussion_slug=discussion_slug))
 def reply_delete(request, course_slug, discussion_slug, reply_id):
     """Delete a specific reply (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2390,6 +2461,7 @@ def ajax_course_details(request):
 # ─────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def create_assessment(request):
     """
     Unified page that lets an instructor create a Quiz, Assignment, or Exam.
@@ -2732,6 +2804,7 @@ def exam_detail(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_update(request, slug):
     """Handle POST from the Edit Details tab on exam_detail."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2828,6 +2901,7 @@ def exam_update(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_submit(request, slug):
     """Submit an exam for admin approval."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2860,6 +2934,7 @@ def exam_submit(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_publish(request, slug):
     """Publish an approved exam so students can see it."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2885,6 +2960,7 @@ def exam_publish(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_question_create(request, slug):
     """Add a new question to the exam question pool."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2911,6 +2987,7 @@ def exam_question_create(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_question_edit(request, slug, question_id):
     """Edit an existing exam question."""
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2937,6 +3014,7 @@ def exam_question_edit(request, slug, question_id):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_delete', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_question_delete(request, slug, question_id):
     """Soft-delete (deactivate) an exam question."""
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2958,6 +3036,7 @@ def exam_question_delete(request, slug, question_id):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_create', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_import_questions(request, slug):
     """Accept a .docx or .xlsx upload and parse questions into the DB."""
     exam        = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -3211,6 +3290,7 @@ def _parse_exam_questions_from_file(import_file, exam, user):
 # ──────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def exam_grade_response(request, slug, response_id):
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
     response = get_object_or_404(StudentExamResponse, pk=response_id, exam=exam)

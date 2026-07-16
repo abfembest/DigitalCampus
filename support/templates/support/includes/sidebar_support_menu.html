@@ -177,13 +177,15 @@
 
 <!-- Admin-only items -->
 {% comment %}
-    Gate is role/superuser ONLY — deliberately NOT is_staff. See the matching
-    note in templates/management/base.html for why: is_staff can drift
-    independently of role (e.g. edited directly via Django's raw admin panel),
-    so trusting role here is what keeps this from leaking to a support agent
-    whose is_staff happens to be stale.
+    Gate is role/superuser/is_staff. is_staff is an independent,
+    deliberately-granted flag meaning "full access to the admin/management
+    portal's own modules" (support_config is one of them — see
+    StaffPermissionsMatrix.ADMIN_PORTAL_MODULES) — see the matching note in
+    templates/management/base.html. It does not grant the rest of the
+    support portal (support_tickets/knowledge_base/etc. still require the
+    support role and matrix rows), just this admin-config section.
 {% endcomment %}
-{% if request.user.is_superuser or role == 'admin' %}
+{% if request.user.is_superuser or role == 'admin' or request.user.is_staff %}
 {% if permissions.support_config.can_view %}
 <div class="mb-1">
     <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all

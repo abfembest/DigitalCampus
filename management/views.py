@@ -12,6 +12,7 @@ import threading
 import uuid
 import zoneinfo
 from datetime import date, datetime, timedelta
+from functools import wraps
 
 # Django
 from django.conf import settings
@@ -155,13 +156,14 @@ def _notify(user, title, message, notif_type='system', link=''):
 
 def _permission_modules_for_role(role):
     """
-    Modules + action fields relevant to a given staff role — filters out
-    modules that don't apply (e.g. an instructor never needs 'academics',
-    an instructor-only module never applies to a finance user), falling
-    back to every module for a role with no defaults configured.
+    All modules + action fields, for any given staff role. Deliberately NOT
+    filtered down to the role's own defaults — the permissions modal and
+    role-assignment page show every module for every user, so an admin can
+    grant a user access outside their nominal role's usual scope (e.g. give
+    a support agent a finance module) rather than being limited to it.
     """
     role_defaults = StaffPermissionsMatrix.ROLE_DEFAULT_PERMISSIONS.get(role, {})
-    modules = list(role_defaults.keys()) or [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
+    modules = [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
     return modules, StaffPermissionsMatrix.ALL_ACTION_FIELDS, role_defaults
 
 
@@ -169,9 +171,9 @@ def _effective_permissions_for_user(user):
     """
     Effective StaffPermissionsMatrix snapshot for a user — user-level
     override row, else role-level default row, else hardcoded
-    ROLE_DEFAULT_PERMISSIONS — scoped to only the modules relevant to
-    this user's actual role, so every caller (permissions modal, role
-    assignment page, user snapshot) sees the same role-peculiar set.
+    ROLE_DEFAULT_PERMISSIONS — covers every module, not just the ones
+    nominally tied to this user's role, so the permissions modal always
+    shows and can edit the full matrix for any user.
     """
     role = user.profile.role
     modules, actions, role_defaults = _permission_modules_for_role(role)
@@ -198,6 +200,58 @@ def _has_permission(request, module, action):
     if request.user.is_superuser:
         return True
     return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
+
+
+def _clear_stale_permission_overrides(user):
+    """
+    Delete every StaffPermissionsMatrix user-level override row for this
+    user. Call this whenever a user's role actually changes.
+
+    Those rows aren't scoped to the role they were created under —
+    eduweb.security_middleware._load_permissions applies
+    StaffPermissionsMatrix.objects.filter(user=user) unconditionally, with
+    no role filter — so a row saved while someone was e.g. 'support' would
+    silently keep suppressing/altering modules after they're switched to
+    'admin' or any other role, with no indication anything is wrong. Wiping
+    them on role change gives the user a clean slate of the new role's
+    defaults; an admin can re-customize via the permissions modal from there.
+    """
+    StaffPermissionsMatrix.objects.filter(user=user).delete()
+
+
+def require_permission(module, action, redirect_to='management:users_list', skip_get=True):
+    """
+    Decorator for management views that mutate state or export data — denies
+    the request unless _has_permission(request, module, action) is True, so
+    the server-side check can't be skipped just because the corresponding
+    template button happens to be hidden. AJAX requests get a 403 JSON
+    response; everything else gets an error message and a redirect.
+
+    `skip_get` (default True) leaves GET requests unguarded, matching the
+    common convention in this file of gating only the POST/mutation branch
+    while GET just renders the page/form. Pass `skip_get=False` for views
+    that perform the privileged action itself on GET (e.g. a CSV/PDF export
+    triggered by a plain link, with no separate POST step to gate).
+
+    `redirect_to` is either a URL name with no required args (e.g.
+    'management:users_list'), or a callable `(request, *args, **kwargs) ->
+    HttpResponse` for views whose redirect target needs the same URL kwargs
+    the view itself received (e.g. a detail page keyed by slug/pk).
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            guarded = not skip_get or request.method != 'GET'
+            if guarded and not _has_permission(request, module, action):
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+                messages.error(request, 'You do not have permission to perform this action.')
+                if callable(redirect_to):
+                    return redirect_to(request, *args, **kwargs)
+                return redirect(redirect_to)
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator
 
 
 # Internal back-office roles that share the /management/ inbox + notifications
@@ -576,9 +630,14 @@ def application_detail(request, application_id):
 @user_passes_test(is_admin)
 def make_decision(request, pk):
     """Make admission decision on an application"""
-    
+
     if request.method == 'POST':
         application = get_object_or_404(CourseApplication, pk=pk)
+
+        if not _has_permission(request, 'applications', 'can_edit'):
+            messages.error(request, 'You do not have permission to make admission decisions.')
+            return redirect('management:application_detail', application_id=application.application_id)
+
         decision = request.POST.get('decision')
         decision_notes = request.POST.get('decision_notes', '')
         
@@ -1236,25 +1295,15 @@ def _generate_password(length=12):
  
 # _send_new_user_credentials removed — logic moved to
 # eduweb.emailservices.send_admin_created_user_email
- 
- 
-def _apply_role_staff_rule(user_obj, role):
-    """
-    Enforce: only 'admin' role → is_staff=True. All others → False.
-    Always call after saving role to UserProfile.
-    """
-    should_be_staff = (role == 'admin')
-    if user_obj.is_staff != should_be_staff:
-        user_obj.is_staff = should_be_staff
-        user_obj.save(update_fields=['is_staff'])
- 
- 
+
+
 # ---------------------------------------------------------------------------
 # VIEW 1 — users_list  (GET: list + stats; POST bulk actions handled here)
 # ---------------------------------------------------------------------------
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('user_management', 'can_edit')
 def users_list(request):
     """
     Main user management page.
@@ -1361,6 +1410,9 @@ def user_create(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
 
+    if not _has_permission(request, 'user_management', 'can_create'):
+        return JsonResponse({'success': False, 'message': 'You do not have permission to create users.'}, status=403)
+
     raw_password = _generate_password()
     post_data = request.POST.copy()
     post_data['password1'] = raw_password
@@ -1375,12 +1427,15 @@ def user_create(request):
         user = form.save(commit=False)
         role = form.cleaned_data.get('role', 'student')
 
+        # is_staff (full admin-portal bypass) may only be granted by a true
+        # superuser — user_management.can_create alone isn't enough to hand
+        # out that tier to someone else.
+        if not request.user.is_superuser:
+            user.is_staff = False
+
         # Enforce capitalization on names
         user.first_name = user.first_name.strip().title()
         user.last_name = user.last_name.strip().title()
-
-        # Role rule: only 'admin' → is_staff=True
-        user.is_staff = (role == 'admin')
 
         # Set the password correctly so it is hashed in the database
         user.set_password(raw_password)
@@ -1428,31 +1483,56 @@ def user_edit(request, pk):
     if request.method == 'GET':
         return redirect('management:users_list')
 
+    if not _has_permission(request, 'user_management', 'can_edit'):
+        return JsonResponse({'success': False, 'message': 'You do not have permission to edit users.'}, status=403)
+
     # Deletion is disabled — reject any attempt explicitly
     if request.POST.get('action') == 'delete':
         return JsonResponse({'success': False, 'message': 'User deletion is not permitted.'}, status=403)
 
+    original_is_staff = user.is_staff
+    original_role = user.profile.role
+
     # ── Edit action ──────────────────────────────────────────────────────────
     user_form    = UserEditForm(request.POST, instance=user)
     profile_form = UserProfileForm(request.POST, request.FILES, instance=user.profile)
- 
+
     if not (user_form.is_valid() and profile_form.is_valid()):
         errors = {**user_form.errors, **profile_form.errors}
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'errors': errors}, status=400)
         messages.error(request, 'Please fix the errors below.')
         return redirect('management:users_list')
- 
+
     with transaction.atomic():
         updated_user    = user_form.save(commit=False)
         updated_profile = profile_form.save(commit=False)
- 
-        role = updated_profile.role
- 
-        # Role rule: admin → staff, others → not staff
-        updated_user.is_staff = (role == 'admin')
+
+        # is_staff (full admin-portal bypass) may only be granted/revoked by
+        # a true superuser — user_management.can_edit alone isn't enough,
+        # and this also blocks a non-superuser admin from unlocking
+        # themselves via their own user_edit request.
+        if not request.user.is_superuser:
+            updated_user.is_staff = original_is_staff
+
         updated_user.save()
         updated_profile.save()
+
+        # Role can also change from this form's role dropdown, not just via
+        # user_change_role — clear stale overrides here too so the user
+        # starts clean on whatever role they were just switched to.
+        if updated_profile.role != original_role:
+            _clear_stale_permission_overrides(updated_user)
+            AuditLog.objects.create(
+                user=request.user,
+                action='permission_change',
+                model_name='UserProfile',
+                object_id=str(updated_user.pk),
+                description=(
+                    f'Changed role for {updated_user.username} from "{original_role}" '
+                    f'to "{updated_profile.role}" via user edit. Prior permission overrides were cleared.'
+                ),
+            )
  
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True, 'message': f'User {user.username} updated.'})
@@ -1468,6 +1548,7 @@ def user_edit(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('user_management', 'can_edit')
 def user_toggle_active(request, pk):
     user = get_object_or_404(User, pk=pk)
  
@@ -1497,6 +1578,12 @@ def user_change_role(request, pk):
         messages.error(request, 'You do not have permission to change user roles.')
         return redirect('management:users_list')
 
+    if int(pk) == request.user.id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'You cannot change your own role.'}, status=403)
+        messages.error(request, 'You cannot change your own role.')
+        return redirect('management:users_list')
+
     user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
     form = QuickRoleChangeForm(request.POST)
 
@@ -1506,14 +1593,17 @@ def user_change_role(request, pk):
         with transaction.atomic():
             user.profile.role = role
             user.profile.save(update_fields=['role'])
-            _apply_role_staff_rule(user, role)
             if old_role != role:
+                _clear_stale_permission_overrides(user)
                 AuditLog.objects.create(
                     user=request.user,
                     action='permission_change',
                     model_name='UserProfile',
                     object_id=str(user.pk),
-                    description=f'Changed role for {user.username} from "{old_role}" to "{role}".',
+                    description=(
+                        f'Changed role for {user.username} from "{old_role}" to "{role}". '
+                        f'Prior permission overrides were cleared.'
+                    ),
                 )
         if old_role != role:
             _notify(
@@ -1585,26 +1675,28 @@ def role_assign(request):
     user_id = request.GET.get('user_id')
     if user_id:
         try:
-            selected_user = User.objects.select_related('profile').get(pk=int(user_id))
+            candidate = User.objects.select_related('profile').get(pk=int(user_id))
+            if candidate.pk != request.user.pk:
+                selected_user = candidate
         except (User.DoesNotExist, ValueError):
             pass
 
-    # Only staff roles are ever looked up in StaffPermissionsMatrix — students
-    # have no permission rows and this page has nothing to show/change for them.
+    # All roles/users display here now — no role-based filtering. The
+    # logged-in user is still excluded: this page is for assigning roles/
+    # permissions to *other* accounts; letting an admin select themselves
+    # here is exactly the self-escalation path user_change_role/
+    # user_permissions guard against server-side, so it stays out of the
+    # picker regardless of role.
     users = (
         User.objects.select_related('profile')
-        .exclude(profile__role='student')
+        .exclude(pk=request.user.pk)
         .order_by('first_name', 'last_name', 'username')
     )
 
     return render(request, 'management/role_assign.html', {
         'users': users,
         'selected_user': selected_user,
-        # 'student' excluded — this page only ever targets staff roles (see
-        # the queryset exclusion above); offering it here would let an admin
-        # switch a staff account down into a student, which has its own
-        # dedicated flow (admission) and isn't what this page is for.
-        'role_choices': [c for c in UserProfile.ROLE_CHOICES if c[0] != 'student'],
+        'role_choices': list(UserProfile.ROLE_CHOICES),
     })
  
 @login_required(login_url='eduweb:auth_page')
@@ -1625,6 +1717,12 @@ def user_permissions(request, pk):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
         messages.error(request, 'You do not have permission to edit user permissions.')
+        return redirect('management:users_list')
+
+    if target.pk == request.user.id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'You cannot edit your own permissions.'}, status=403)
+        messages.error(request, 'You cannot edit your own permissions.')
         return redirect('management:users_list')
 
     MODULES, ACTION_FIELDS, _ = _permission_modules_for_role(target.profile.role)
@@ -1664,6 +1762,7 @@ def user_permissions(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('user_management', 'can_edit')
 def bulk_user_action(request):
     """Standalone bulk action endpoint (also handled in users_list POST)."""
     action   = request.POST.get('action')
@@ -2080,7 +2179,11 @@ def lms_course_save(request):
                  not needed because inline Select2 forms don't need re-population
                  from the server on validation failure in this design).
     """
-    mode      = request.POST.get('_mode', 'create')
+    mode = request.POST.get('_mode', 'create')
+    required_action = 'can_create' if mode == 'create' else 'can_edit'
+    if not _has_permission(request, 'lms_courses', required_action):
+        messages.error(request, 'You do not have permission to save LMS courses.')
+        return redirect('management:lms_courses_list')
     course_id = request.POST.get('course_id', '').strip()
  
     if mode == 'edit' and course_id.isdigit():
@@ -2257,6 +2360,7 @@ def lms_course_detail(request, pk):
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('lms_courses', 'can_delete', redirect_to='management:lms_courses_list')
 def lms_course_delete(request, pk):
     """
     POST → validate safety guards, then delete and redirect to list.
@@ -2378,6 +2482,7 @@ def audit_log_detail(request, pk):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('security_audit', 'can_export', redirect_to='management:audit_logs_list', skip_get=False)
 def audit_logs_export(request):
     """Export audit logs to CSV"""
     logs = AuditLog.objects.select_related('user').order_by('-timestamp')
@@ -2479,6 +2584,7 @@ def broadcast_center(request):
 @user_passes_test(
     lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin'
 )
+@require_permission('communications', 'can_create', redirect_to='management:broadcast_center')
 def broadcast_create(request):
     """Create new broadcast"""
     if request.method == 'POST':
@@ -2548,18 +2654,19 @@ def broadcast_create(request):
 @user_passes_test(
     lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin'
 )
+@require_permission('communications', 'can_edit', redirect_to='management:broadcast_center')
 def broadcast_edit(request, slug):
     """Edit draft broadcast"""
     broadcast = get_object_or_404(BroadcastMessage, slug=slug)
-    
+
     # Only allow editing drafts
     if broadcast.status != 'draft':
         messages.error(
-            request, 
+            request,
             'Only draft broadcasts can be edited.'
         )
         return redirect('management:broadcast_center')
-    
+
     if request.method == 'POST':
         form = BroadcastMessageForm(request.POST, instance=broadcast)
         if form.is_valid():
@@ -2662,6 +2769,7 @@ def broadcast_edit(request, slug):
 
 @login_required
 @user_passes_test(lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin')
+@require_permission('communications', 'can_edit', redirect_to='management:broadcast_center')
 def broadcast_send(request, slug):
     """Send broadcast email - POST only"""
     if request.method != 'POST':
@@ -2729,10 +2837,11 @@ def broadcast_send(request, slug):
 
 @login_required
 @user_passes_test(lambda u: u.is_staff or u.is_superuser or u.profile.role == 'admin')
+@require_permission('communications', 'can_delete', redirect_to='management:broadcast_center')
 def broadcast_delete(request, slug):
     """Delete broadcast - POST only"""
     broadcast = get_object_or_404(BroadcastMessage, slug=slug)
-    
+
     if request.method == 'POST':
         broadcast.delete()
         messages.success(request, 'Broadcast deleted successfully.')
@@ -3173,16 +3282,22 @@ def program_delete(request, pk):
 def academic_sessions_list(request):
     if request.method == 'POST':
         action = request.POST.get('action')
-        
+
         if action == 'create':
+            if not _has_permission(request, 'academics', 'can_create'):
+                messages.error(request, 'You do not have permission to create academic sessions.')
+                return redirect('management:academic_sessions_list')
             form = AcademicSessionForm(request.POST)
             if form.is_valid():
                 form.save()
                 messages.success(request, 'Academic session created successfully.')
             else:
                 messages.error(request, 'Error creating session. Check form data.')
-                
+
         elif action == 'edit':
+            if not _has_permission(request, 'academics', 'can_edit'):
+                messages.error(request, 'You do not have permission to edit academic sessions.')
+                return redirect('management:academic_sessions_list')
             session_id = request.POST.get('session_id')
             session = get_object_or_404(AcademicSession, pk=session_id)
             form = AcademicSessionForm(request.POST, instance=session)
@@ -3191,7 +3306,7 @@ def academic_sessions_list(request):
                 messages.success(request, 'Academic session updated.')
             else:
                 messages.error(request, 'Error updating session.')
-        
+
         return redirect('management:academic_sessions_list')
 
     # GET logic
@@ -3208,6 +3323,7 @@ def academic_sessions_list(request):
 @login_required
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('academics', 'can_edit')
 def academic_session_set_current(request, pk):
     today = timezone.now().date()
 
@@ -3280,6 +3396,7 @@ def academic_session_set_current(request, pk):
 @login_required
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('academics', 'can_edit', redirect_to='management:academic_sessions_list')
 def academic_session_registration_override(request, pk):
     """
     Manual escape hatch for AcademicSession.is_registration_open: lets an
@@ -3706,6 +3823,7 @@ def course_categories_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('academics', 'can_create', redirect_to='management:course_categories_list')
 def course_category_create(request):
     if request.method == 'POST':
         form = CourseCategoryForm(request.POST)
@@ -3730,6 +3848,7 @@ def course_category_create(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('academics', 'can_edit', redirect_to='management:course_categories_list')
 def course_category_edit(request, pk):
     category = get_object_or_404(CourseCategory, pk=pk)
 
@@ -3759,6 +3878,7 @@ def course_category_edit(request, pk):
 @require_POST
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('academics', 'can_delete', redirect_to='management:course_categories_list')
 def course_category_delete(request, pk):
     category = get_object_or_404(CourseCategory, pk=pk)
 
@@ -3858,6 +3978,7 @@ def contact_message_mark_read(request, pk):
 
 @login_required
 @user_passes_test(is_admin)
+@require_permission('communications', 'can_create', redirect_to=lambda request, pk, **kw: redirect('management:contact_message_detail', pk=pk))
 def contact_message_respond(request, pk):
     if request.method == 'POST':
         msg = get_object_or_404(ContactMessage, pk=pk)
@@ -3924,6 +4045,7 @@ def announcements_list(request):
 
 @login_required
 @user_passes_test(is_admin)
+@require_permission('communications', 'can_create', redirect_to='management:announcements_list')
 def announcement_create(request):
     if request.method == 'POST':
         form = AnnouncementForm(request.POST)
@@ -3981,6 +4103,7 @@ def announcement_create(request):
 
 @login_required
 @user_passes_test(is_admin)
+@require_permission('communications', 'can_edit', redirect_to='management:announcements_list')
 def announcement_edit(request, pk):
     announcement = get_object_or_404(Announcement, pk=pk)
     if request.method == 'POST':
@@ -3999,6 +4122,7 @@ def announcement_edit(request, pk):
 
 @login_required
 @user_passes_test(is_admin)
+@require_permission('communications', 'can_delete', redirect_to='management:announcements_list')
 def announcement_delete(request, pk):
     announcement = get_object_or_404(Announcement, pk=pk)
     if request.method == 'POST':
@@ -4043,9 +4167,10 @@ def enrollments_list(request):
 
 @login_required
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_create', redirect_to='management:enrollments_list')
 def enrollment_create(request):
     """Create new enrollment"""
-    
+
     if request.method == 'POST':
         form = EnrollmentForm(request.POST)
         if form.is_valid():
@@ -4080,6 +4205,7 @@ def enrollment_create(request):
 
 @login_required
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_edit', redirect_to='management:enrollments_list')
 def enrollment_edit(request, pk):
     """Edit enrollment"""
 
@@ -4182,6 +4308,7 @@ def certificates_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_create', redirect_to='management:certificates_list')
 def certificate_create(request):
     """Issue a new certificate (POST only from the combined page)."""
     if request.method == 'POST':
@@ -4208,6 +4335,7 @@ def certificate_create(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_edit', redirect_to='management:certificates_list')
 def certificate_edit(request, certificate_id):
     """Update an existing certificate (POST only from the combined page)."""
     certificate = get_object_or_404(Certificate, certificate_id=certificate_id)
@@ -4285,6 +4413,7 @@ def reviews_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_create', redirect_to='management:reviews_list')
 def review_create(request):
 
     if request.method == 'POST':
@@ -4303,6 +4432,7 @@ def review_create(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_edit', redirect_to='management:reviews_list')
 def review_edit(request, pk):
 
     review = get_object_or_404(Review, pk=pk)
@@ -4360,6 +4490,7 @@ def badges_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_create', redirect_to='management:badges_list')
 def badge_create(request):
 
     if request.method == 'POST':
@@ -4378,6 +4509,7 @@ def badge_create(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_edit', redirect_to='management:badges_list')
 def badge_edit(request, slug):
 
     badge = get_object_or_404(Badge, slug=slug)
@@ -4459,6 +4591,7 @@ def student_badges_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('enrollments', 'can_create', redirect_to='management:student_badges_list')
 def student_badge_assign(request):
 
     if request.method == 'POST':
@@ -4629,6 +4762,9 @@ def transactions_list(request):
 
     # Export CSV of filtered results
     if request.GET.get('export') == 'csv':
+        if not _has_permission(request, 'finance', 'can_export'):
+            messages.error(request, 'You do not have permission to export transactions.')
+            return redirect('management:transactions_list')
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
         writer = csv.writer(response)
@@ -5008,6 +5144,7 @@ def staff_payroll_delete(request, payroll_reference):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_edit', redirect_to='management:site_config_general')
 def site_config_general(request):
     """Edit base.html / global fields: identity, logos, SEO, footer, social, contact."""
     site = SiteConfig.objects.first()
@@ -5029,6 +5166,7 @@ def site_config_general(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_edit', redirect_to='management:site_config_index')
 def site_config_index(request):
     """Edit index.html fields: hero slides, promo video, campus map."""
     site = SiteConfig.objects.first()
@@ -5050,6 +5188,7 @@ def site_config_index(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_edit', redirect_to='management:site_config_about')
 def site_config_about(request):
     """Edit about.html fields: mission, vision, values, virtual tour."""
     site = SiteConfig.objects.first()
@@ -5082,6 +5221,7 @@ def site_milestones_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_create', redirect_to='management:site_milestones_list')
 def site_milestone_create(request):
     if request.method == 'POST':
         form = SiteHistoryMilestoneForm(request.POST)
@@ -5105,6 +5245,7 @@ def site_milestone_create(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_edit', redirect_to='management:site_milestones_list')
 def site_milestone_edit(request, pk):
     milestone = get_object_or_404(SiteHistoryMilestone, pk=pk)
     if request.method == 'POST':
@@ -5127,6 +5268,7 @@ def site_milestone_edit(request, pk):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_delete', redirect_to='management:site_milestones_list')
 def site_milestone_delete(request, pk):
     milestone = get_object_or_404(SiteHistoryMilestone, pk=pk)
     if request.method == 'POST':
@@ -5149,6 +5291,7 @@ def testimonials_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_create', redirect_to='management:testimonials_list')
 def testimonial_create(request):
     if request.method == 'POST':
         form = TestimonialForm(request.POST, request.FILES)
@@ -5170,6 +5313,7 @@ def testimonial_create(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_edit', redirect_to='management:testimonials_list')
 def testimonial_edit(request, pk):
     testimonial = get_object_or_404(Testimonial, pk=pk)
     if request.method == 'POST':
@@ -5192,6 +5336,7 @@ def testimonial_edit(request, pk):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_delete', redirect_to='management:testimonials_list')
 def testimonial_delete(request, pk):
     testimonial = get_object_or_404(Testimonial, pk=pk)
     if request.method == 'POST':
@@ -5217,6 +5362,7 @@ def institution_members_list(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_create', redirect_to='management:institution_members_list')
 def institution_member_create(request):
     if request.method == 'POST':
         form = InstitutionMemberForm(request.POST, request.FILES)
@@ -5238,6 +5384,7 @@ def institution_member_create(request):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_edit', redirect_to='management:institution_members_list')
 def institution_member_edit(request, pk):
     member = get_object_or_404(InstitutionMember, pk=pk)
     if request.method == 'POST':
@@ -5268,6 +5415,7 @@ def institution_member_edit(request, pk):
 
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('site_content', 'can_delete', redirect_to='management:institution_members_list')
 def institution_member_delete(request, pk):
     member = get_object_or_404(InstitutionMember, pk=pk)
     if request.method == 'POST':
@@ -5418,6 +5566,7 @@ def library_item_delete(request, pk):
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('library', 'can_edit', redirect_to='management:library_items_list')
 def library_item_toggle_active(request, pk):
     """
     Quick-toggle is_active on a LibraryItem.
@@ -5483,9 +5632,14 @@ def admin_exam_list(request):
         'status_counts': status_counts,
     })
 
+def _redirect_to_exam_detail(request, slug, **kwargs):
+    return redirect('management:admin_exam_detail', slug=slug)
+
+
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('exams', 'can_edit', redirect_to='management:admin_exam_list')
 def admin_exam_toggle_active(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
     exam.is_active = not exam.is_active
@@ -5511,6 +5665,7 @@ def admin_exam_detail(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('exams', 'can_approve', redirect_to=_redirect_to_exam_detail)
 def admin_exam_approve(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
     if exam.status != Exam.SUBMITTED:
@@ -5547,6 +5702,7 @@ def admin_exam_approve(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('exams', 'can_approve', redirect_to=_redirect_to_exam_detail)
 def admin_exam_reject(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
     if exam.status != Exam.SUBMITTED:
@@ -5589,6 +5745,7 @@ def admin_exam_reject(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('exams', 'can_approve', redirect_to=_redirect_to_exam_detail)
 def admin_exam_publish(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
     if exam.status != Exam.APPROVED:
@@ -5776,6 +5933,7 @@ def admin_exam_responses(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 @require_POST
+@require_permission('exams', 'can_approve', redirect_to=lambda request, slug, **kw: redirect('management:admin_exam_responses', slug=slug))
 def admin_exam_release_results(request, slug):
     """
     Toggle show_result_immediately on the Exam.

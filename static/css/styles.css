@@ -1223,6 +1223,9 @@
   .max-h-\[30rem\] {
     max-height: 30rem;
   }
+  .max-h-\[50vh\] {
+    max-height: 50vh;
+  }
   .max-h-\[90vh\] {
     max-height: 90vh;
   }
@@ -2687,6 +2690,9 @@
   }
   .bg-blue-800 {
     background-color: var(--color-blue-800);
+  }
+  .bg-blue-900 {
+    background-color: var(--color-blue-900);
   }
   .bg-cyan-500 {
     background-color: var(--color-cyan-500);
@@ -8533,6 +8539,11 @@
   .sm\:max-h-96 {
     @media (width >= 40rem) {
       max-height: calc(var(--spacing) * 96);
+    }
+  }
+  .sm\:max-h-\[90dvh\] {
+    @media (width >= 40rem) {
+      max-height: 90dvh;
     }
   }
   .sm\:w-1\.5 {

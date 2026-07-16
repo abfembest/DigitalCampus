@@ -347,6 +347,9 @@ def payroll_management(request):
             return redirect('finance:payroll_management')
 
         form = PayrollCreateForm(request.POST, request.FILES)
+        if form.is_valid() and form.cleaned_data['staff'] == request.user:
+            messages.error(request, 'You cannot create a payroll record for yourself.')
+            return redirect('finance:payroll_management')
         if form.is_valid():
             payroll = form.save(commit=False)
             payroll.created_by = request.user
@@ -448,6 +451,13 @@ def payroll_detail(request, payroll_reference):
     if request.method == 'POST':
         if not _has_permission(request, 'finance_payroll', 'can_edit'):
             messages.error(request, 'You do not have permission to update payroll status.')
+            return redirect(
+                'finance:payroll_detail',
+                payroll_reference=payroll_reference,
+            )
+
+        if payroll.staff_id == request.user.id:
+            messages.error(request, 'You cannot approve or edit your own payroll record.')
             return redirect(
                 'finance:payroll_detail',
                 payroll_reference=payroll_reference,

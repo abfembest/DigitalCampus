@@ -420,6 +420,10 @@ def invoice_generation(request):
 def generate_invoice_pdf(request, payment_reference):
     """Generate and stream a PDF invoice for a successful payment"""
 
+    if not _has_permission(request, 'finance_payments', 'can_export'):
+        messages.error(request, 'You do not have permission to export invoices.')
+        return redirect('payments:invoice_generation')
+
     try:
         from xhtml2pdf import pisa
     except ImportError:

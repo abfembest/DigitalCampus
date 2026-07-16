@@ -131,15 +131,19 @@
             </td>
             <td class="py-3 px-5">
               <div class="flex gap-2">
+                {% if permissions.academics.can_edit %}
                 <a href="{% url 'management:course_category_edit' category.pk %}"
                    class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors">
                   <i class="fas fa-edit text-xs" aria-hidden="true"></i>
                 </a>
+                {% endif %}
+                {% if permissions.academics.can_delete %}
                 <button type="button"
                         onclick="confirmDelete('{% url 'management:course_category_delete' category.pk %}', '{{ category.name|escapejs }}')"
                         class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors">
                   <i class="fas fa-trash-alt text-xs" aria-hidden="true"></i>
                 </button>
+                {% endif %}
               </div>
             </td>
           </tr>

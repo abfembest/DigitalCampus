@@ -666,10 +666,21 @@ class UserCreateForm(forms.ModelForm):
         }),
         help_text='User can log in immediately after creation.'
     )
- 
+    is_staff = forms.BooleanField(
+        required=False, initial=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500',
+        }),
+        help_text=(
+            'Full unrestricted access to every admin-portal module, '
+            'independent of role permissions. Does not grant access to the '
+            'Instructor, Finance, or Support portals.'
+        )
+    )
+
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff')
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
@@ -695,12 +706,26 @@ class UserCreateForm(forms.ModelForm):
 
 class UserEditForm(forms.ModelForm):
     """
-    Edit basic User fields. is_staff is NOT included — the view derives
-    it from UserProfile.role to enforce the admin-only staff rule.
+    Edit basic User fields, including is_staff — an independent,
+    admin-managed flag (not derived from role) granting unrestricted
+    access to every admin-portal module. See StaffPermissionsMatrix.
+    ADMIN_PORTAL_MODULES for exactly which modules that covers.
     """
+    is_staff = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500',
+        }),
+        help_text=(
+            'Full unrestricted access to every admin-portal module, '
+            'independent of role permissions. Does not grant access to the '
+            'Instructor, Finance, or Support portals.'
+        )
+    )
+
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff')
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-md text-gray-500 cursor-not-allowed',

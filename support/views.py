@@ -8,6 +8,8 @@ Field mapping from old support.Ticket → eduweb.SupportTicket:
   priority values: low, normal, high, urgent  (no 'medium' / 'critical')
   category values: technical, account, course, payment, other
 """
+from functools import wraps
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
@@ -46,6 +48,31 @@ def _has_permission(request, module, action):
     if request.user.is_superuser:
         return True
     return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
+
+
+def require_permission(module, action, redirect_to='support:dashboard', skip_get=True):
+    """
+    Decorator mirroring management/instructor's helper of the same name.
+    Denies the request unless _has_permission(request, module, action) is
+    True. skip_get=True (default) only guards non-GET requests — pass
+    skip_get=False for a read-only list/detail page whose sidebar link is
+    already hidden by permissions.<module>.can_view, so the page itself
+    must enforce it too rather than being reachable by direct URL.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            guarded = not skip_get or request.method != 'GET'
+            if guarded and not _has_permission(request, module, action):
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+                messages.error(request, 'You do not have permission to view this page.')
+                if callable(redirect_to):
+                    return redirect_to(request, *args, **kwargs)
+                return redirect(redirect_to)
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator
 
 
 def _log(request, action, target_type='', target_id='', description=''):
@@ -289,6 +316,7 @@ def dashboard(request):
 
 @login_required
 @support_required
+@require_permission('support_tickets', 'can_view', skip_get=False)
 def ticket_list(request):
     qs = SupportTicket.objects.select_related('user', 'assigned_to', 'extra').order_by('-created_at')
 
@@ -371,6 +399,7 @@ def ticket_list(request):
 
 @login_required
 @support_required
+@require_permission('support_tickets', 'can_view', skip_get=False)
 def ticket_detail(request, ticket_id):
     ticket = get_object_or_404(SupportTicket.objects.select_related('user', 'assigned_to'), ticket_id=ticket_id)
     extra = _get_or_create_extra(ticket)
@@ -655,6 +684,7 @@ def ticket_create(request):
 
 @login_required
 @support_required
+@require_permission('support_knowledge_base', 'can_view', skip_get=False)
 def kb_list(request):
     qs = KBArticle.objects.select_related('category', 'author').all()
     search = request.GET.get('search', '')
@@ -681,6 +711,7 @@ def kb_list(request):
 
 @login_required
 @support_required
+@require_permission('support_knowledge_base', 'can_view', skip_get=False)
 def kb_article_detail(request, slug):
     article = get_object_or_404(KBArticle, slug=slug)
     KBArticle.objects.filter(pk=article.pk).update(view_count=article.view_count + 1)
@@ -760,6 +791,7 @@ def kb_article_edit(request, slug):
 
 @login_required
 @support_required
+@require_permission('support_knowledge_base', 'can_view', skip_get=False)
 def faq_list(request):
     search = request.GET.get('search', '')
     categories = FAQCategory.objects.filter(is_active=True).prefetch_related('faqs')
@@ -816,6 +848,7 @@ def faq_delete(request, pk):
 
 @login_required
 @support_required
+@require_permission('support_communications', 'can_view', skip_get=False)
 def canned_list(request):
     search = request.GET.get('search', '')
     qs = CannedResponse.objects.filter(is_active=True)
@@ -863,6 +896,7 @@ def canned_delete(request, pk):
 
 @login_required
 @support_admin_required
+@require_permission('support_config', 'can_view', skip_get=False)
 def sla_list(request):
     return render(request, 'support/sla_list.html', {
         'slas': SLAPolicy.objects.all(),
@@ -912,6 +946,7 @@ def sla_save(request):
 
 @login_required
 @support_admin_required
+@require_permission('support_config', 'can_view', skip_get=False)
 def department_list(request):
     departments = SupportDepartment.objects.prefetch_related('members').annotate(
         ticket_count=Count('dept_tickets', filter=Q(dept_tickets__ticket__status__in=OPEN_STATUSES))
@@ -987,6 +1022,7 @@ def department_toggle_active(request, pk):
 
 @login_required
 @support_admin_required
+@require_permission('support_config', 'can_view', skip_get=False)
 def agent_list(request):
     agents = User.objects.filter(
         Q(is_staff=True) | Q(profile__role__in=['admin', 'support'])
@@ -1020,6 +1056,7 @@ def agent_toggle_available(request, pk):
 
 @login_required
 @support_required
+@require_permission('support_analytics', 'can_view', skip_get=False)
 def analytics(request):
     period = request.GET.get('period', '30')
     days = int(period) if str(period).isdigit() else 30
@@ -1096,6 +1133,7 @@ def analytics(request):
 
 @login_required
 @support_required
+@require_permission('support_communications', 'can_view', skip_get=False)
 def chat_list(request):
     status_filter = request.GET.get('status', '')
     qs = ChatSession.objects.select_related('student', 'agent').order_by('-started_at')
@@ -1116,6 +1154,7 @@ def chat_list(request):
 
 @login_required
 @support_required
+@require_permission('support_communications', 'can_view', skip_get=False)
 def announcement_list(request):
     return render(request, 'support/announcement_list.html', {
         'announcements': SupportAnnouncement.objects.select_related('created_by').all(),
@@ -1176,6 +1215,7 @@ def announcement_delete(request, pk):
 
 @login_required
 @support_admin_required
+@require_permission('support_config', 'can_view', skip_get=False)
 def audit_log(request):
     qs = SupportAuditLog.objects.select_related('actor').all()
     search = request.GET.get('search', '')

@@ -3552,14 +3552,6 @@ class UserProfile(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # Enforce is_staff == (role == 'admin') at the model layer so this can
-        # never drift out of sync again, regardless of which code path changes
-        # the role — a custom view, the Django admin panel, a shell script, a
-        # data migration, anything. Views that also call _apply_role_staff_rule
-        # explicitly are now redundant but harmless (no-op once this runs).
-        should_be_staff = (self.role == 'admin')
-        if self.user_id and self.user.is_staff != should_be_staff:
-            User.objects.filter(pk=self.user_id).update(is_staff=should_be_staff)
 
     @property
     def current_level(self):
@@ -3734,6 +3726,17 @@ class StaffPermissionsMatrix(models.Model):
         'can_view', 'can_create', 'can_edit', 'can_delete',
         'can_approve', 'can_export',
     ]
+
+    # Core admin/management-portal modules — as opposed to the role-specific
+    # instructor_*/finance_*/support_* modules, which belong to those roles'
+    # own portals. Used by is_staff's full-bypass tier: is_staff unlocks every
+    # module here unconditionally, but never the other roles' portal modules.
+    ADMIN_PORTAL_MODULES = {
+        'dashboard', 'user_management', 'academics', 'lms_courses',
+        'applications', 'exams', 'enrollments', 'finance', 'communications',
+        'blog', 'library', 'site_content', 'security_audit', 'support_config',
+        'academic_progression',
+    }
 
     role   = models.CharField(max_length=30, choices=STAFF_ROLES, null=True, blank=True)
     user   = models.ForeignKey(

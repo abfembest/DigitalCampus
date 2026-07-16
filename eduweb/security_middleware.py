@@ -4,10 +4,15 @@ eduweb/security_middleware.py
 SessionSecurityMiddleware  +  PermissionService (internal staff only)
 
 Permission loading runs once per request, after session validation.
-Students and instructors are skipped — permissions only apply to:
-  admin | content_manager | support | qa | finance
-
-Superusers get all permissions on all modules unconditionally.
+Students are skipped entirely unless is_staff is set. Three tiers:
+  - is_superuser: full access to every module, unconditionally.
+  - is_staff: full access to every module in
+    StaffPermissionsMatrix.ADMIN_PORTAL_MODULES only (the core admin/
+    management portal) — an independent, deliberately-granted flag, not
+    derived from role. Any additional modules (instructor_*/finance_*/
+    support_* portals) still come from the user's own role/user rows below.
+  - Everyone else (admin | support | finance | instructor): matrix-gated
+    per role-default row, then per user-level override row.
 
 Template usage:
   {{ permissions.dashboard.can_view }}
@@ -58,26 +63,27 @@ def _load_permissions(user) -> dict:
     profile = getattr(user, 'profile', None)
     role = getattr(profile, 'role', None)
 
-    # Skip non-staff roles entirely
-    if not user.is_superuser and role not in STAFF_ROLES:
+    # Skip entirely for students/unrecognised roles — unless is_staff or
+    # is_superuser grants access independent of role.
+    if not user.is_superuser and not user.is_staff and role not in STAFF_ROLES:
         return {}
 
     # Import here to avoid circular import at module load
     from eduweb.models import StaffPermissionsMatrix
 
-    # Superuser bypass — full access on every known module
+    full = {
+        'can_view': True, 'can_create': True, 'can_edit': True,
+        'can_delete': True, 'can_approve': True, 'can_export': True,
+    }
+
+    # Superuser bypass — full access on every known module, unconditionally.
     if user.is_superuser:
-        full = {
-            'can_view': True, 'can_create': True, 'can_edit': True,
-            'can_delete': True, 'can_approve': True, 'can_export': True,
-        }
         modules = StaffPermissionsMatrix.objects.values_list('module', flat=True).distinct()
         return {m: full.copy() for m in modules}
 
     # Initialize all known modules with False permissions
     # so templates never fall through "or not permissions"
-    from eduweb.models import StaffPermissionsMatrix as _SPM
-    all_modules = [m[0] for m in _SPM.MODULE_CHOICES]
+    all_modules = [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
     permissions = {
         mod: {
             'can_view': False, 'can_create': False, 'can_edit': False,
@@ -85,6 +91,14 @@ def _load_permissions(user) -> dict:
         }
         for mod in all_modules
     }
+
+    # is_staff bypass — full access, but scoped to the admin/management
+    # portal's own modules only. It never unlocks the instructor/finance/
+    # support/student-specific modules; those still come from role rows
+    # below, so is_staff alone can't see other roles' portals.
+    if user.is_staff:
+        for mod in StaffPermissionsMatrix.ADMIN_PORTAL_MODULES:
+            permissions[mod] = full.copy()
 
     # Step 1: role defaults
     for row in StaffPermissionsMatrix.objects.filter(role=role, user__isnull=True):

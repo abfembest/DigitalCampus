@@ -37,7 +37,6 @@ urlpatterns = [
     # SLA
     path('sla/', views.sla_list, name='sla_list'),
     path('sla/save/', views.sla_save, name='sla_save'),
-    path('sla/<int:pk>/save/', views.sla_save, name='sla_save_edit'),
 
     # Departments
     path('departments/', views.department_list, name='department_list'),

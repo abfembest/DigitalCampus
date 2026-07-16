@@ -7,17 +7,18 @@ from .models import CourseApplication
 
 def is_finance_manager(user):
     """
-    Allow only authenticated finance-role users. Shared by `finance` and
-    `payment` (previously two byte-for-byte-identical local copies) —
-    deliberately narrower than `finance_required` below: no superuser/
-    is_staff bypass, since finance data access is scoped strictly to the
-    finance role here.
+    Allow authenticated finance-role users, superusers, or anyone granted
+    can_view on a finance_* module via StaffPermissionsMatrix (e.g. a
+    support agent given cross-department access through
+    /management/role-assign/). Shared by `finance` and `payment`
+    (previously two byte-for-byte-identical local copies).
     """
-    return (
-        user.is_authenticated
-        and hasattr(user, 'profile')
-        and user.profile.role == 'finance'
-    )
+    if not (user.is_authenticated and hasattr(user, 'profile')):
+        return False
+    if user.is_superuser or user.profile.role == 'finance':
+        return True
+    from .models import StaffPermissionsMatrix
+    return StaffPermissionsMatrix.user_can_view_any(user, StaffPermissionsMatrix.FINANCE_PORTAL_MODULES)
 
 
 def check_for_auth(view_func):
@@ -286,12 +287,16 @@ def instructor_required(view_func):
 
         role = request.user.profile.role
 
-        if role != 'instructor' and not (request.user.is_superuser and role == 'admin'):
-            messages.warning(
-                request, 
-                'Access denied. Instructor role required.'
-            )
-            return redirect('eduweb:auth_page')
+        if role != 'instructor' and not request.user.is_superuser:
+            from .models import StaffPermissionsMatrix
+            if not StaffPermissionsMatrix.user_can_view_any(
+                request.user, StaffPermissionsMatrix.INSTRUCTOR_PORTAL_MODULES
+            ):
+                messages.warning(
+                    request,
+                    'Access denied. Instructor role required.'
+                )
+                return redirect('eduweb:auth_page')
 
         return view_func(request, *args, **kwargs)
 

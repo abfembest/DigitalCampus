@@ -3738,6 +3738,22 @@ class StaffPermissionsMatrix(models.Model):
         'academic_progression',
     }
 
+    # Mirrors ADMIN_PORTAL_MODULES for the other three staff portals — used by
+    # the view-level role gates (eduweb.decorators.is_finance_manager/
+    # instructor_required, management.views.is_admin, support.permissions.
+    # is_support_staff) so a user granted can_view on any module here via a
+    # StaffPermissionsMatrix user-level override can actually open that
+    # portal's views, not just see the link in the sidebar.
+    INSTRUCTOR_PORTAL_MODULES = {
+        'instructor_courses', 'instructor_assessments', 'instructor_analytics',
+        'instructor_resources', 'instructor_communications',
+    }
+    FINANCE_PORTAL_MODULES = {'finance_payments', 'finance_subscriptions', 'finance_payroll'}
+    SUPPORT_PORTAL_MODULES = {
+        'support_tickets', 'support_knowledge_base', 'support_communications',
+        'support_analytics', 'support_config',
+    }
+
     role   = models.CharField(max_length=30, choices=STAFF_ROLES, null=True, blank=True)
     user   = models.ForeignKey(
         User, null=True, blank=True,
@@ -3772,6 +3788,43 @@ class StaffPermissionsMatrix(models.Model):
                 role=role_name, module=module_key, user=None,
                 defaults=field_values,
             )
+
+    @classmethod
+    def user_can_view_any(cls, user, modules):
+        """
+        True if `user` has can_view=True on at least one module in `modules`
+        — checking a user-level override row first, else their role's row,
+        else the hardcoded ROLE_DEFAULT_PERMISSIONS. Does NOT special-case
+        is_superuser/is_staff — callers check those bypasses themselves
+        first. Used by the coarse per-portal view gates (is_admin,
+        is_finance_manager, instructor_required, is_support_staff) so a
+        cross-department grant made via /management/role-assign/ actually
+        unlocks that portal's views, not just its sidebar link.
+        """
+        if not modules or not getattr(user, 'is_authenticated', False):
+            return False
+        profile = getattr(user, 'profile', None)
+        role = getattr(profile, 'role', None)
+
+        user_rows = {
+            r.module: r.can_view
+            for r in cls.objects.filter(user=user, module__in=modules)
+        }
+        role_rows = {
+            r.module: r.can_view
+            for r in cls.objects.filter(role=role, user__isnull=True, module__in=modules)
+        } if role else {}
+
+        for m in modules:
+            if m in user_rows:
+                if user_rows[m]:
+                    return True
+            elif m in role_rows:
+                if role_rows[m]:
+                    return True
+            elif cls.ROLE_DEFAULT_PERMISSIONS.get(role, {}).get(m, {}).get('can_view'):
+                return True
+        return False
 
     class Meta:
         constraints = [

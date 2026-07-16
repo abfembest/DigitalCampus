@@ -278,14 +278,18 @@ def is_admin(user):
     The one admin gate for this app. is_staff and is_superuser each act as
     a full bypass on their own (equivalent to role='admin'); is_superuser
     additionally bypasses every StaffPermissionsMatrix check downstream.
+    Also lets in a non-admin (support/finance/instructor) user who's been
+    granted can_view on at least one admin-portal module via
+    /management/role-assign/ — otherwise the sidebar link that permission
+    unlocks would 404/redirect the moment they click it.
     """
-    return (
-        user.is_authenticated and user.is_active and (
-            user.is_staff or
-            user.is_superuser or
-            (hasattr(user, 'profile') and user.profile.role == 'admin')
-        )
-    )
+    if not (user.is_authenticated and user.is_active):
+        return False
+    if user.is_staff or user.is_superuser:
+        return True
+    if hasattr(user, 'profile') and user.profile.role == 'admin':
+        return True
+    return StaffPermissionsMatrix.user_can_view_any(user, StaffPermissionsMatrix.ADMIN_PORTAL_MODULES)
 
 
 # ===========================================================================

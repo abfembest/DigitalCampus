@@ -9,16 +9,24 @@ from django.contrib import messages
 
 
 def is_support_staff(user):
-    """Returns True if user can access support management."""
+    """
+    Returns True if user can access support management: role admin/support,
+    is_staff/is_superuser, or a user granted can_view on a support_* module
+    via StaffPermissionsMatrix (e.g. a finance/instructor agent given
+    cross-department access through /management/role-assign/).
+    """
     if not user.is_authenticated:
         return False
     if user.is_superuser or user.is_staff:
         return True
     try:
         role = user.profile.role
-        return role in ('admin', 'support')
+        if role in ('admin', 'support'):
+            return True
     except Exception:
         return False
+    from eduweb.models import StaffPermissionsMatrix
+    return StaffPermissionsMatrix.user_can_view_any(user, StaffPermissionsMatrix.SUPPORT_PORTAL_MODULES)
 
 
 def is_support_admin(user):

@@ -469,24 +469,28 @@
                 <!-- Navigation Menu - Scrollable -->
                 <nav class="flex-1 overflow-y-auto py-4 px-3" role="navigation" aria-label="Main navigation">
 
-                    {% if request.user.is_superuser or request.user.is_staff or permissions.user_management.can_view or permissions.academics.can_view or permissions.lms_courses.can_view or permissions.applications.can_view or permissions.exams.can_view or permissions.enrollments.can_view or permissions.finance.can_view or permissions.communications.can_view or permissions.blog.can_view or permissions.library.can_view or permissions.site_content.can_view or permissions.security_audit.can_view or permissions.support_config.can_view or permissions.academic_progression.can_view %}
+                    {% if request.user.is_superuser or request.user.profile.role == 'admin' or request.user.is_staff %}
                     {% comment %}
-                        Gate is "does this user have can_view on ANY module
-                        that belongs to this portal" rather than a role check
-                        — so an admin can grant a finance/support/instructor
-                        user access to a specific admin-portal module (e.g.
-                        user_management) via a per-user StaffPermissionsMatrix
-                        override on the Roles & Permissions page, and this
-                        whole block opens up for them without their role
-                        changing. Every item inside is still separately gated
-                        by permissions.<module>.can_view, same as before.
+                        Gate is role/superuser/is_staff. is_staff is now an
+                        independent, deliberately-granted flag (not derived
+                        from role — see StaffPermissionsMatrix.ADMIN_PORTAL_MODULES
+                        and eduweb.security_middleware._load_permissions) meaning
+                        "full unrestricted access to this admin/management portal
+                        only" — so trusting it here is intentional, not a leak.
+                        Every item inside is still separately gated by
+                        permissions.<module>.can_view, which _load_permissions
+                        populates as fully-True for is_staff on exactly the
+                        admin-portal modules, and as real matrix rows otherwise.
+                        A support/finance-role user WITH is_staff does see this
+                        block (that's the point — is_staff unconditionally grants
+                        this portal's modules regardless of role), but their own
+                        support_*/finance_* portal modules stay untouched by this
+                        bypass since those aren't in ADMIN_PORTAL_MODULES.
                     {% endcomment %}
                     <!-- ================================================ -->
                     <!-- ADMIN / MANAGEMENT MENU                          -->
                     <!-- ================================================ -->
-                    <!-- 1. Dashboard — shown only to actual admin/staff, not to someone who
-                         merely has a granted permission into one admin module -->
-                    {% if request.user.is_superuser or request.user.is_staff or request.user.profile.role == 'admin' %}
+                    <!-- 1. Dashboard — always shown, not matrix-gated (see ROLE_DEFAULT_PERMISSIONS) -->
                     <a href="{% url 'management:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
@@ -494,7 +498,6 @@
                             <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
-                    {% endif %}
 
                     <!-- 2. User Management -->
                     {% if permissions.user_management.can_view %}
@@ -1130,22 +1133,16 @@
 
                     {% endif %}{# /student menu block #}
 
-                    {% if request.user.is_superuser or permissions.instructor_courses.can_view or permissions.instructor_assessments.can_view or permissions.instructor_analytics.can_view or permissions.instructor_resources.can_view or permissions.instructor_communications.can_view %}
+                    {% if request.user.is_superuser or request.user.profile.role == 'instructor' %}
                     {% comment %}
-                        Outer gate is "can_view on any instructor_* module"
-                        rather than role=='instructor' — mirrors the admin
-                        menu block above, so an admin can grant e.g. a support
-                        agent into instructor_courses without a role change.
-                        Everything inside is separately gated by
-                        permissions.<module>.can_view.
+                        Outer gate is role/superuser ONLY, mirroring the admin menu block above —
+                        everything inside is separately gated by permissions.<module>.can_view.
                     {% endcomment %}
                     {% if request.user.is_superuser %}<div class="border-t border-white/10 my-4"></div><div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Instructor Portal</div>{% endif %}
                     <!-- ================================================ -->
                     <!-- INSTRUCTOR MENU                                   -->
                     <!-- ================================================ -->
-                    <!-- Dashboard — shown only to actual instructors, not to someone who
-                         merely has a granted permission into one instructor module -->
-                    {% if request.user.is_superuser or request.user.profile.role == 'instructor' %}
+                    <!-- Dashboard — always shown, not matrix-gated -->
                     <a href="{% url 'instructor:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1 {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20{% endif %}">
                         <div class="flex items-center">
@@ -1153,7 +1150,6 @@
                             <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
-                    {% endif %}
 
                     {% with active=request.resolver_match.url_name|default:'' %}
                     {% if permissions.instructor_courses.can_view %}
@@ -1361,22 +1357,17 @@
                     </a>
                     {% endif %}{# /support menu block #} {% endcomment %}
 
-                    {% if request.user.is_superuser or permissions.finance_payments.can_view or permissions.finance_subscriptions.can_view or permissions.finance_payroll.can_view %}
+                    {% if request.user.is_superuser or request.user.profile.role == 'finance' %}
                     {% comment %}
-                        Outer gate is "can_view on any finance_* module"
-                        rather than role=='finance' — mirrors the admin/
-                        instructor menu blocks above, so an admin can grant
-                        e.g. a support agent into finance_payments without a
-                        role change. Everything inside is separately gated by
+                        Outer gate is role/superuser ONLY, mirroring the admin/instructor menu
+                        blocks — everything inside is separately gated by
                         permissions.finance_*.can_view.
                     {% endcomment %}
                     {% if request.user.is_superuser %}<div class="border-t border-white/10 my-4"></div><div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">Finance Portal</div>{% endif %}
                     <!-- ================================================ -->
                     <!-- FINANCE MANAGER MENU                             -->
                     <!-- ================================================ -->
-                    <!-- Dashboard — shown only to actual finance staff, not to someone who
-                         merely has a granted permission into one finance module -->
-                    {% if request.user.is_superuser or request.user.profile.role == 'finance' %}
+                    <!-- Dashboard — always shown, not matrix-gated -->
                     <a href="{% url 'finance:dashboard' %}"
                        class="flex items-center justify-between py-3 px-4 rounded-lg hover:bg-white/10 transition-all mb-1
                               {% if request.resolver_match.url_name == 'dashboard' and 'finance' in request.path %}bg-white/20{% endif %}">
@@ -1385,7 +1376,6 @@
                             <span class="ml-3 text-[17px] font-semibold">Dashboard</span>
                         </div>
                     </a>
-                    {% endif %}
 
                     {% if permissions.finance_payments.can_view %}
                     <!-- Payments submenu -->
@@ -1481,13 +1471,8 @@
                     <div class="border-t border-white/10 my-4"></div>
                     {% endif %} {% endcomment %}
 
-                    {% if request.user.is_superuser or permissions.support_tickets.can_view or permissions.support_knowledge_base.can_view or permissions.support_communications.can_view or permissions.support_analytics.can_view or permissions.support_config.can_view %}
-                    {% comment %}
-                        Outer gate is "can_view on any support_* module"
-                        rather than role=='support' — so an admin can grant
-                        e.g. an instructor into support_tickets without a
-                        role change.
-                    {% endcomment %}
+                    {% if request.user.is_superuser or request.user.profile.role == 'support' %}
+                    {% comment %} {% if request.user.profile.role == 'support' or request.user.profile.role == "admin" %} {% endcomment %}
                     {% include 'support/includes/sidebar_support_menu.html' %}
                     {% endif %}
 

@@ -3381,6 +3381,32 @@ class Subscription(models.Model):
         return self.status == 'active' and self.end_date >= timezone.now().date()
 
 
+class InstitutionalSubscription(models.Model):
+    """
+    A third-party/organizational subscription the institution itself pays
+    for (software licenses, hosting, tools, etc.) — unrelated to the
+    student-facing SubscriptionPlan/Subscription pair above. Superuser-only.
+    """
+    purpose = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    start_date = models.DateField()
+    expiry_date = models.DateField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-start_date']
+        verbose_name = 'Institutional Subscription'
+        verbose_name_plural = 'Institutional Subscriptions'
+
+    def __str__(self):
+        return self.purpose
+
+    @property
+    def is_active(self):
+        return self.expiry_date >= timezone.now().date()
+
+
 # ==================== SYSTEM CONFIGURATION ====================
 class SystemConfiguration(models.Model):
     """System-wide configuration settings"""

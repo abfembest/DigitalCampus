@@ -3,7 +3,7 @@ import os
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from eduweb.models import StaffPayroll
+from eduweb.models import InstitutionalSubscription, StaffPayroll
 from decimal import Decimal
 
 # Matches the widget's accept= hint — that hint is client-side only and
@@ -19,40 +19,55 @@ MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
 
 # ==================== SUBSCRIPTION FORMS ====================
 
-class SubscriptionFilterForm(forms.Form):
-    """Filter form for subscriptions"""
-    
-    STATUS_CHOICES = [
-        ('', 'All Statuses'),
-        ('active', 'Active'),
-        ('cancelled', 'Cancelled'),
-        ('expired', 'Expired'),
-        ('pending', 'Pending'),
-    ]
-    
-    status = forms.ChoiceField(
-        choices=STATUS_CHOICES,
-        required=False,
-        widget=forms.Select(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500 bg-white'
-            )
-        })
-    )
-    
-    search = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': (
-                'w-full px-4 py-2.5 border border-gray-300 '
-                'rounded-lg focus:ring-2 focus:ring-primary-500 '
-                'focus:border-primary-500'
-            ),
-            'placeholder': 'Search by user name or email...'
-        })
-    )
+class InstitutionalSubscriptionForm(forms.ModelForm):
+    """Add form for the institution's own paid subscriptions (superuser-only)."""
+
+    class Meta:
+        model = InstitutionalSubscription
+        fields = ['purpose', 'amount', 'start_date', 'expiry_date']
+        widgets = {
+            'purpose': forms.TextInput(attrs={
+                'class': (
+                    'w-full px-4 py-2.5 border border-gray-300 '
+                    'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                    'focus:border-primary-500'
+                ),
+                'placeholder': 'e.g. Zoom Pro, Canva, AWS hosting'
+            }),
+            'amount': forms.NumberInput(attrs={
+                'class': (
+                    'w-full px-4 py-2.5 border border-gray-300 '
+                    'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                    'focus:border-primary-500'
+                ),
+                'step': '0.01',
+                'min': '0',
+            }),
+            'start_date': forms.DateInput(attrs={
+                'class': (
+                    'w-full px-4 py-2.5 border border-gray-300 '
+                    'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                    'focus:border-primary-500'
+                ),
+                'type': 'date',
+            }),
+            'expiry_date': forms.DateInput(attrs={
+                'class': (
+                    'w-full px-4 py-2.5 border border-gray-300 '
+                    'rounded-lg focus:ring-2 focus:ring-primary-500 '
+                    'focus:border-primary-500'
+                ),
+                'type': 'date',
+            }),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        expiry_date = cleaned_data.get('expiry_date')
+        if start_date and expiry_date and expiry_date <= start_date:
+            raise ValidationError('Expiry date must be after the start date.')
+        return cleaned_data
 
 
 # ==================== REPORT FORMS ====================

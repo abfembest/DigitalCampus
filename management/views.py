@@ -292,6 +292,16 @@ def is_admin(user):
     return StaffPermissionsMatrix.user_can_view_any(user, StaffPermissionsMatrix.ADMIN_PORTAL_MODULES)
 
 
+def is_superuser_only(user):
+    """
+    Stricter gate for pages that must stay off-limits even to staff granted
+    narrow StaffPermissionsMatrix access to unrelated admin modules (SMTP
+    credentials, raw config key/value store, branding, notifications).
+    Add `or user.is_staff` here to extend access to any is_staff account.
+    """
+    return user.is_authenticated and user.is_active and user.is_superuser
+
+
 # ===========================================================================
 # ADMIN INBOX / MESSAGING
 # ===========================================================================
@@ -1802,7 +1812,7 @@ def bulk_user_action(request):
 
 # ==================== SYSTEM CONFIGURATION VIEWS ====================
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def system_config_list(request):
     """List all system configurations"""
     configs = SystemConfiguration.objects.all().order_by('key')
@@ -1829,7 +1839,7 @@ def system_config_list(request):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def system_config_create(request):
     """Create new system configuration"""
     if request.method == 'POST':
@@ -1857,7 +1867,7 @@ def system_config_create(request):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def system_config_edit(request, pk):
     """Edit system configuration"""
     config = get_object_or_404(SystemConfiguration, pk=pk)
@@ -1890,7 +1900,7 @@ def system_config_edit(request, pk):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def system_config_delete(request, pk):
     """Delete system configuration"""
     config = get_object_or_404(SystemConfiguration, pk=pk)
@@ -1915,7 +1925,7 @@ def system_config_delete(request, pk):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def branding_config(request):
     """Manage branding configuration"""
     if request.method == 'POST':
@@ -1962,7 +1972,7 @@ def branding_config(request):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def email_config(request):
     """Manage email configuration"""
     if request.method == 'POST':
@@ -2008,7 +2018,7 @@ def email_config(request):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def notification_config(request):
     """Manage notification settings"""
     if request.method == 'POST':
@@ -4640,7 +4650,7 @@ def student_badge_delete(request, pk):
 # ---------------------------------------------------------------------------
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def payment_gateways_list(request):
 
     gateways = PaymentGateway.objects.order_by('name')
@@ -4652,7 +4662,7 @@ def payment_gateways_list(request):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def payment_gateway_create(request):
 
     if request.method != 'POST':
@@ -4676,7 +4686,7 @@ def payment_gateway_create(request):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def payment_gateway_edit(request, slug):
 
     if request.method != 'POST':
@@ -4709,7 +4719,7 @@ def payment_gateway_edit(request, slug):
 
 
 @login_required(login_url='eduweb:auth_page')
-@user_passes_test(is_admin)
+@user_passes_test(is_superuser_only)
 def payment_gateway_delete(request, slug):
 
     if request.method != 'POST':

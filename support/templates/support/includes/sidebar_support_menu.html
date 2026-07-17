@@ -66,30 +66,35 @@
     <div id="supportTicketsMenu" class="mt-1 space-y-1 {% if 'support/tickets' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
         <a href="{% url 'support:ticket_list' %}"
            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
-           {% if request.resolver_match.url_name == 'ticket_list' %}bg-white/20{% endif %}">
+           {% if request.resolver_match.url_name == 'ticket_list' and not request.GET.status and not request.GET.quick %}bg-white/20{% endif %}">
             <i class="fas fa-list mr-2" aria-hidden="true"></i>All Tickets
             {% if support_stats.total_open %}<span class="float-right badge-count bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ support_stats.total_open }}</span>{% endif %}
         </a>
         <a href="{% url 'support:ticket_list' %}?status=open"
-           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium">
+           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
+           {% if request.GET.status == 'open' %}bg-white/20{% endif %}">
             <i class="fas fa-folder-open mr-2 text-green-400" aria-hidden="true"></i>Open
         </a>
-        <a href="{% url 'support:ticket_list' %}?mine=1"
-           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium">
+        <a href="{% url 'support:ticket_list' %}?quick=mine"
+           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
+           {% if request.GET.quick == 'mine' %}bg-white/20{% endif %}">
             <i class="fas fa-user mr-2 text-blue-400" aria-hidden="true"></i>My Tickets
         </a>
         <a href="{% url 'support:ticket_list' %}?quick=escalated"
-           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium">
+           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
+           {% if request.GET.quick == 'escalated' %}bg-white/20{% endif %}">
             <i class="fas fa-exclamation-triangle mr-2 text-red-400" aria-hidden="true"></i>Escalated
             {% if support_stats.escalated %}<span class="float-right badge-count bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ support_stats.escalated }}</span>{% endif %}
         </a>
         <a href="{% url 'support:ticket_list' %}?quick=sla"
-           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium">
+           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
+           {% if request.GET.quick == 'sla' %}bg-white/20{% endif %}">
             <i class="fas fa-clock mr-2 text-yellow-400" aria-hidden="true"></i>SLA Breached
             {% if support_stats.sla_breached %}<span class="float-right badge-count bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{{ support_stats.sla_breached }}</span>{% endif %}
         </a>
         <a href="{% url 'support:ticket_list' %}?quick=waiting"
-           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium">
+           class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
+           {% if request.GET.quick == 'waiting' %}bg-white/20{% endif %}">
             <i class="fas fa-hourglass-half mr-2 text-purple-400" aria-hidden="true"></i>Pending User
         </a>
         {% if permissions.support_tickets.can_create %}
@@ -140,14 +145,14 @@
 {% if permissions.support_communications.can_view %}
 <div class="mb-1">
     <button class="menu-toggle flex items-center justify-between w-full py-3 px-4 rounded-lg hover:bg-white/10 transition-all
-        {% if 'support/chats' in request.path or 'support/announcements' in request.path %}bg-white/20{% endif %}">
+        {% if 'support/chats' in request.path or 'support/announcements' in request.path or 'support/canned' in request.path %}bg-white/20{% endif %}">
         <div class="flex items-center">
             <i class="fas fa-comments w-5 text-center" aria-hidden="true"></i>
             <span class="ml-3 text-[17px] font-semibold">Communications</span>
         </div>
-        <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'support/chats' in request.path or 'support/announcements' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
+        <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'support/chats' in request.path or 'support/announcements' in request.path or 'support/canned' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
     </button>
-    <div id="supportCommsMenu" class="mt-1 space-y-1 {% if 'support/chats' not in request.path and 'support/announcements' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+    <div id="supportCommsMenu" class="mt-1 space-y-1 {% if 'support/chats' not in request.path and 'support/announcements' not in request.path and 'support/canned' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
         <a href="{% url 'support:chat_list' %}"
            class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium
            {% if 'support/chats' in request.path %}bg-white/20{% endif %}">

@@ -12,11 +12,16 @@ urlpatterns = [
     # namespace 'payments') — the sidebar's {% url 'payments:...' %} links resolve
     # there, not here. Nothing reverses the 'finance' namespace for payment URLs.
 
-    # Subscriptions
+    # Subscriptions (institutional — superuser-only)
     path(
         'subscriptions/',
         views.subscription_list,
         name='subscription_list',
+    ),
+    path(
+        'subscriptions/add/',
+        views.subscription_create,
+        name='subscription_create',
     ),
 
     # Payroll

@@ -17,16 +17,16 @@ from eduweb.models import (
     ApplicationPayment,
     CourseApplication,
     FeePayment,
+    InstitutionalSubscription,
     StaffPayroll,
-    Subscription,
 )
 
 from .forms import (
     DateRangeForm,
+    InstitutionalSubscriptionForm,
     PayrollCreateForm,
     PayrollFilterForm,
     PayrollStatusForm,
-    SubscriptionFilterForm,
 )
 
 logger = logging.getLogger(__name__)
@@ -179,14 +179,6 @@ def finance_dashboard(request):
         .order_by('-revenue')[:5]
     )
 
-    # ── Subscriptions ─────────────────────────────────────────────────────
-    active_subscriptions = Subscription.objects.filter(status='active').count()
-    active_subs_in_range = Subscription.objects.filter(
-        status='active',
-        start_date__range=[start_date, end_date],
-    )
-    subscription_revenue = sum(sub.plan.price for sub in active_subs_in_range)
-
     # ── Fee payments ────────────────────────────────────────────────────────
     fee_qs = FeePayment.objects.filter(created_at__range=[start_date, end_date])
     fee_revenue = (
@@ -243,7 +235,6 @@ def finance_dashboard(request):
         'fee_revenue': fee_revenue,
         'pending_revenue': pending_revenue,
         'refunded_amount': refunded_amount,
-        'subscription_revenue': subscription_revenue,
 
         # Transaction KPIs
         'total_transactions': total_transactions,
@@ -257,9 +248,6 @@ def finance_dashboard(request):
 
         # Top programs
         'top_courses': top_courses,
-
-        # Subscriptions
-        'active_subscriptions': active_subscriptions,
 
         # Required payments
         'required_payments_count': required_payments_count,
@@ -276,57 +264,51 @@ def finance_dashboard(request):
 
 
 # ==================== SUBSCRIPTIONS ====================
+# Institutional subscriptions (software/hosting/tools the school itself pays
+# for) — superuser-only, unrelated to the student-facing SubscriptionPlan.
 
-@login_required
-@user_passes_test(is_finance_manager)
-def subscription_list(request):
-    """List all subscriptions with filtering"""
+def _is_superuser(user):
+    return user.is_authenticated and user.is_active and user.is_superuser
 
-    if not _has_permission(request, 'finance_subscriptions', 'can_view'):
-        messages.error(request, 'You do not have permission to view subscriptions.')
-        return redirect('finance:dashboard')
 
-    filter_form = SubscriptionFilterForm(request.GET or None)
-
-    subscriptions = Subscription.objects.select_related(
-        'user', 'plan'
-    ).order_by('-start_date')
-
-    if filter_form.is_valid():
-        cd = filter_form.cleaned_data
-
-        if cd.get('status'):
-            subscriptions = subscriptions.filter(status=cd['status'])
-
-        if cd.get('plan'):
-            subscriptions = subscriptions.filter(plan=cd['plan'])
-
-        if cd.get('search'):
-            term = cd['search']
-            subscriptions = subscriptions.filter(
-                Q(user__username__icontains=term)
-                | Q(user__email__icontains=term)
-                | Q(user__first_name__icontains=term)
-                | Q(user__last_name__icontains=term)
-            )
-
-    active_subs = subscriptions.filter(status='active')
-    mrr = sum(sub.plan.price for sub in active_subs)
-
-    context = {
-        'filter_form': filter_form,
+def _subscription_list_context(form=None):
+    subscriptions = InstitutionalSubscription.objects.all()
+    today = timezone.now().date()
+    return {
         'subscriptions': subscriptions,
         'total_subscriptions': subscriptions.count(),
-        'active_subscriptions': active_subs.count(),
-        'cancelled_subscriptions': subscriptions.filter(
-            status='cancelled'
-        ).count(),
-        'expired_subscriptions': subscriptions.filter(
-            status='expired'
-        ).count(),
-        'mrr': mrr,
+        'active_subscriptions': subscriptions.filter(expiry_date__gte=today).count(),
+        'expired_subscriptions': subscriptions.filter(expiry_date__lt=today).count(),
+        'total_amount': subscriptions.aggregate(total=Sum('amount'))['total'] or Decimal('0.00'),
+        'form': form or InstitutionalSubscriptionForm(),
     }
 
+
+@login_required
+@user_passes_test(_is_superuser)
+def subscription_list(request):
+    """List the institution's own paid subscriptions."""
+    return render(request, 'finance/subscription_list.html', _subscription_list_context())
+
+
+@login_required
+@user_passes_test(_is_superuser)
+def subscription_create(request):
+    """Add a new institutional subscription record."""
+    if request.method != 'POST':
+        return redirect('finance:subscription_list')
+
+    form = InstitutionalSubscriptionForm(request.POST)
+    if form.is_valid():
+        subscription = form.save(commit=False)
+        subscription.created_by = request.user
+        subscription.save()
+        messages.success(request, f'Subscription "{subscription.purpose}" added.')
+        return redirect('finance:subscription_list')
+
+    messages.error(request, 'Please correct the errors below.')
+    context = _subscription_list_context(form=form)
+    context['show_add_modal'] = True
     return render(request, 'finance/subscription_list.html', context)
 
 

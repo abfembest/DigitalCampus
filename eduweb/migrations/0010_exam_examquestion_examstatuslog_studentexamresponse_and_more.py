@@ -192,7 +192,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='exam',
-            constraint=models.CheckConstraint(condition=models.Q(('end_time__gt', models.F('start_time'))), name='exam_end_after_start'),
+            constraint=models.CheckConstraint(check=models.Q(('end_time__gt', models.F('start_time'))), name='exam_end_after_start'),
         ),
         migrations.AddIndex(
             model_name='examquestion',

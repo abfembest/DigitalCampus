@@ -83,8 +83,10 @@ from .models import (
     FeePayment,
     ListOfCountry,
     AllRequiredPayments,
+    PaymentGateway,
     Program,
     UserProfile,
+    decrypt_secret,
 )
 
 # ─── Location libs ────────────────────────────────────────────────────────────
@@ -98,10 +100,30 @@ except ImportError:
     GEONAMES_AVAILABLE = False
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Module-level logger & Stripe initialisation
+# Module-level logger & Stripe key resolution
 # ─────────────────────────────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
-stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+def _active_stripe_gateway() -> "PaymentGateway | None":
+    return PaymentGateway.objects.filter(gateway_type='stripe', is_active=True).first()
+
+
+def get_stripe_secret_key() -> str:
+    gw = _active_stripe_gateway()
+    decrypted = decrypt_secret(gw.api_secret) if gw else ''
+    return decrypted or settings.STRIPE_SECRET_KEY
+
+
+def get_stripe_public_key() -> str:
+    gw = _active_stripe_gateway()
+    return (gw.api_key if gw and gw.api_key else settings.STRIPE_PUBLIC_KEY)
+
+
+def get_stripe_webhook_secret() -> str:
+    gw = _active_stripe_gateway()
+    decrypted = decrypt_secret(gw.webhook_secret) if gw else ''
+    return decrypted or settings.STRIPE_WEBHOOK_SECRET
 
 
 # =============================================================================
@@ -1836,7 +1858,7 @@ def get_payment_summary(request, application_id=None, student_fee_id=None):
                 'purpose':          fee.purpose,
                 'description':      fee.purpose,
                 'student_fee_id':   fee.id,
-                'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+                'stripe_public_key': get_stripe_public_key(),
             }
 
         elif application_id:
@@ -1849,7 +1871,7 @@ def get_payment_summary(request, application_id=None, student_fee_id=None):
                 'amount':           float(application.program.application_fee) if application.program else 0,
                 'currency':         'USD',
                 'description':      'Application Processing Fee',
-                'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+                'stripe_public_key': get_stripe_public_key(),
             }
 
         else:
@@ -1881,7 +1903,7 @@ def get_student_fee_summary(request, fee_pk):
             'purpose':           fee.purpose,
             'amount':            float(fee.amount),
             'currency':          fee.currency,
-            'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+            'stripe_public_key': get_stripe_public_key(),
         },
     })
 
@@ -1891,6 +1913,7 @@ def get_student_fee_summary(request, fee_pk):
 def create_payment_intent(request):
     """Create a Stripe PaymentIntent for either a student fee or an application."""
     try:
+        stripe.api_key = get_stripe_secret_key()
         payload = request.body.decode('utf-8')
         if not payload:
             return JsonResponse({'success': False, 'error': 'Empty request body'}, status=400)
@@ -2031,6 +2054,7 @@ def confirm_payment(request):
         return JsonResponse({'success': False, 'error': 'Missing payment_intent_id'}, status=400)
 
     try:
+        stripe.api_key = get_stripe_secret_key()
         intent = stripe.PaymentIntent.retrieve(payment_intent_id)
     except stripe.error.StripeError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
@@ -2197,7 +2221,7 @@ def stripe_webhook(request):
 
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+            payload, sig_header, get_stripe_webhook_secret()
         )
     except Exception as e:
         logger.warning("Stripe webhook verification failed: %s", e)

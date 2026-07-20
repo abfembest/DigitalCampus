@@ -518,8 +518,8 @@ def refund_payment(request, payment_reference):
             if payment.gateway_payment_id:
                 try:
                     import stripe
-                    from django.conf import settings
-                    stripe.api_key = settings.STRIPE_SECRET_KEY
+                    from eduweb.views import get_stripe_secret_key
+                    stripe.api_key = get_stripe_secret_key()
 
                     stripe.Refund.create(
                         payment_intent=payment.gateway_payment_id,

@@ -1,13 +1,53 @@
 import logging
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives, send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail, get_connection
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 
-from .models import SiteConfig
+from .models import SiteConfig, SystemConfiguration, decrypt_secret
 
 logger = logging.getLogger(__name__)
+
+
+def _get_category_connection(category):
+    """category: 'default' or 'admissions'. SMTP host/port are shared between both
+    accounts (stored under 'email_smtp_host'/'email_smtp_port'); username/password/
+    from-identity are per-account. Returns (connection, from_header), or (None, None)
+    if this account's username isn't configured in the DB yet."""
+    prefix = 'email_' if category == 'default' else f'email_{category}_'
+    keys = SystemConfiguration.get_values([
+        'email_smtp_host', 'email_smtp_port',
+        f'{prefix}smtp_username', f'{prefix}smtp_password',
+        f'{prefix}from_name', f'{prefix}from_email',
+    ])
+
+    host = keys.get('email_smtp_host')
+    username = keys.get(f'{prefix}smtp_username')
+    if not host or not username:
+        return None, None
+
+    connection = get_connection(
+        backend=settings.EMAIL_BACKEND,
+        host=host,
+        port=int(keys.get('email_smtp_port') or settings.EMAIL_PORT),
+        username=username,
+        password=decrypt_secret(keys.get(f'{prefix}smtp_password', '')),
+        use_tls=settings.EMAIL_USE_TLS,
+        timeout=settings.EMAIL_TIMEOUT,
+    )
+    from_name = keys.get(f'{prefix}from_name')
+    from_email = keys.get(f'{prefix}from_email') or username
+    return connection, (f'{from_name} <{from_email}>' if from_name else from_email)
+
+
+def _resolve_sender(category):
+    """Returns (connection, from_email) for a mail category, falling back
+    admissions -> default -> settings.DEFAULT_FROM_EMAIL/.env connection."""
+    connection, from_email = _get_category_connection(category)
+    if connection is None and category != 'default':
+        connection, from_email = _get_category_connection('default')
+    return connection, from_email or settings.DEFAULT_FROM_EMAIL
 
 
 def _site():
@@ -177,11 +217,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -298,11 +340,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -416,11 +460,13 @@ def send_application_confirmation_email(application):
             f"Best regards,\nThe {site.school_short_name} Admissions Team"
         )
 
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -501,11 +547,13 @@ def send_application_admin_notification(application):
         </html>
         """
 
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=f"New application from {application.get_full_name()}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[contact],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -654,11 +702,13 @@ Best regards,
 The {site.school_short_name} Admissions Team
         """
 
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -840,11 +890,13 @@ def send_document_upload_admin_notification(application, documents):
             f"for application {application.application_id}"
         )
 
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[contact],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -949,11 +1001,13 @@ Submitted at: {contact_message.created_at.strftime('%Y-%m-%d %H:%M:%S')}
         </html>
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[contact],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1053,11 +1107,13 @@ The {site.school_short_name} Admissions Team
         </html>
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[contact_message.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1326,11 +1382,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1474,11 +1532,13 @@ Best regards,
 The {site.school_short_name} Admissions Team
         """
  
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1647,11 +1707,13 @@ Best regards,
 The {site.school_short_name} Admissions Team
         """
  
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1982,11 +2044,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2081,11 +2145,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2186,11 +2252,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[recipient.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2293,11 +2361,13 @@ Best regards,
 The {site.school_short_name} Team
         """
         
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2408,11 +2478,13 @@ Best regards,
 The {site.school_short_name} Team
         """
         
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2526,11 +2598,13 @@ Best regards,
 The {site.school_short_name} Team
         """
         
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2641,11 +2715,13 @@ Best regards,
 The {site.school_short_name} Team
         """
         
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2774,11 +2850,13 @@ def send_admin_created_user_email(request, user, raw_password):
         </div>
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_body,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@portal.edu'),
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_body, 'text/html')
         msg.send(fail_silently=False)
@@ -2823,11 +2901,13 @@ def send_otp_email(user, otp_code):
     </div>
     """
     try:
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=f"Your login verification code is: {otp_code}. It expires in 10 minutes.",
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_message, "text/html")
         msg.send(fail_silently=False)
@@ -2902,7 +2982,8 @@ def send_password_changed_email(user):
     """
 
     try:
-        msg = EmailMultiAlternatives(subject, text_body, settings.DEFAULT_FROM_EMAIL, [user.email])
+        connection, from_email = _resolve_sender('default')
+        msg = EmailMultiAlternatives(subject, text_body, from_email, [user.email], connection=connection)
         msg.attach_alternative(html_body, 'text/html')
         msg.send()
         return True

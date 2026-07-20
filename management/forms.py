@@ -1146,7 +1146,8 @@ class BrandingConfigForm(forms.Form):
         return _validate_upload(self.cleaned_data.get('favicon'), IMAGE_EXTENSIONS)
 
 
-class EmailConfigForm(forms.Form):
+class EmailServerForm(forms.Form):
+    """Shared SMTP server settings (host/port), used by both outbound-email accounts."""
     smtp_host = forms.CharField(
         max_length=200,
         widget=forms.TextInput(attrs={
@@ -1160,6 +1161,10 @@ class EmailConfigForm(forms.Form):
             'placeholder': '587'
         })
     )
+
+
+class EmailAccountForm(forms.Form):
+    """Per-account credentials + sender identity (default or admissions)."""
     smtp_username = forms.CharField(
         max_length=200,
         widget=forms.TextInput(attrs={
@@ -1168,9 +1173,10 @@ class EmailConfigForm(forms.Form):
         })
     )
     smtp_password = forms.CharField(
+        required=False,
         widget=forms.PasswordInput(attrs={
             'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': '••••••••'
+            'placeholder': 'Leave blank to keep the current password'
         })
     )
     from_email = forms.EmailField(

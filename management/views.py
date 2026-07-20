@@ -21,7 +21,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.core.mail import EmailMultiAlternatives, send_mail, send_mass_mail
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models import Q, Count, Sum, Avg, F, Value, CharField, DecimalField
 from django.db.models.functions import Coalesce, TruncMonth, Cast
 from django.http import HttpResponse, JsonResponse
@@ -68,6 +68,7 @@ from eduweb.models import (
     StudentBadge,
     SupportTicket,
     SystemConfiguration,
+    encrypt_secret,
     Testimonial,
     TicketReply,
     Invoice,
@@ -97,7 +98,8 @@ from management.forms import (
     CourseForm,
     CourseIntakeForm,
     DepartmentForm,
-    EmailConfigForm,
+    EmailAccountForm,
+    EmailServerForm,
     EnrollmentForm,
     FacultyForm,
     InstitutionMemberForm,
@@ -129,6 +131,7 @@ from eduweb.emailservices import (
     send_payroll_payment_notification_email,
     send_admin_created_user_email,
     send_new_message_email,
+    _resolve_sender,
 )
 
 # Academic progression
@@ -989,11 +992,13 @@ def send_decision_email(application):
         </html>
         """
         
+        connection, from_email = _resolve_sender('admissions')
         email = EmailMultiAlternatives(
             subject=subject,
             body=f"Application Decision for {application.application_id}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         email.attach_alternative(html_content, "text/html")
         email.send(fail_silently=False)
@@ -1971,50 +1976,134 @@ def branding_config(request):
     return render(request, 'management/system_config/branding.html', {'form': form})
 
 
+# account name -> SystemConfiguration key prefix for that account's credentials/sender identity.
+# SMTP host/port are shared between accounts and stored under the bare 'email_' prefix.
+_EMAIL_ACCOUNTS = {'default': 'email_', 'admissions': 'email_admissions_'}
+_SERVER_FIELDS = ['smtp_host', 'smtp_port']
+_ACCOUNT_FIELDS = ['smtp_username', 'smtp_password', 'from_email', 'from_name']
+
+
+def _load_server_form():
+    initial = {}
+    for key in _SERVER_FIELDS:
+        val = SystemConfiguration.get_value(f'email_{key}')
+        if val:
+            initial[key] = val
+    return EmailServerForm(initial=initial)
+
+
+def _load_account_form(account):
+    db_prefix = _EMAIL_ACCOUNTS[account]
+    initial = {}
+    # smtp_password is intentionally never loaded back — it never round-trips to the browser.
+    for key in ['smtp_username', 'from_email', 'from_name']:
+        val = SystemConfiguration.get_value(f'{db_prefix}{key}')
+        if val:
+            initial[key] = val
+    return EmailAccountForm(initial=initial, prefix=account)
+
+
+def _save_config_keys(request, db_prefix, cleaned_data, encrypt_fields=()):
+    """Persists a group of SystemConfiguration rows as one unit — wrapped in a
+    transaction so a mid-loop failure can't leave some keys updated and others stale."""
+    with transaction.atomic():
+        for key, value in cleaned_data.items():
+            stored_value = encrypt_secret(value) if key in encrypt_fields else str(value)
+            config, created = SystemConfiguration.objects.get_or_create(
+                key=f'{db_prefix}{key}',
+                defaults={
+                    'setting_type': 'text',
+                    'is_public': False,
+                    'updated_by': request.user
+                }
+            )
+            config.value = stored_value
+            config.updated_by = request.user
+            config.save()
+
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='SystemConfiguration',
+            description=f'Updated {db_prefix}* email configuration'
+        )
+
+
+def _clear_config_keys(request, db_prefix, fields, description):
+    """Deletes a group of SystemConfiguration rows — used by the 'Clear' actions to
+    actually remove an account/server override so it falls back to .env again."""
+    SystemConfiguration.objects.filter(key__in=[f'{db_prefix}{f}' for f in fields]).delete()
+    AuditLog.objects.create(
+        user=request.user,
+        action='update',
+        model_name='SystemConfiguration',
+        description=description,
+    )
+
+
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_superuser_only)
 def email_config(request):
-    """Manage email configuration"""
-    if request.method == 'POST':
-        form = EmailConfigForm(request.POST)
-        if form.is_valid():
-            # Save email configuration
-            for key, value in form.cleaned_data.items():
-                config, created = SystemConfiguration.objects.get_or_create(
-                    key=f'email_{key}',
-                    defaults={
-                        'setting_type': 'text',
-                        'is_public': False,
-                        'updated_by': request.user
-                    }
-                )
-                config.value = str(value)
-                config.updated_by = request.user
-                config.save()
-            
-            # Create audit log
-            AuditLog.objects.create(
-                user=request.user,
-                action='update',
-                model_name='SystemConfiguration',
-                description='Updated email configuration'
-            )
-            
-            messages.success(request, 'Email settings updated successfully.')
+    """Manage the shared SMTP server plus both outbound-email accounts (default/general
+    and admissions) on one page. Three independent forms, saved independently, each with
+    its own Clear action to remove the override and fall back to .env again."""
+    target = request.POST.get('save') if request.method == 'POST' else None
+
+    if target == 'clear_server':
+        _clear_config_keys(request, 'email_', _SERVER_FIELDS, 'Cleared shared SMTP server settings')
+        messages.success(request, 'SMTP server settings cleared. Both accounts will fall back to .env until a server is configured again.')
+        return redirect('management:email_config')
+
+    if target and target.startswith('clear_') and target[len('clear_'):] in _EMAIL_ACCOUNTS:
+        account = target[len('clear_'):]
+        db_prefix = _EMAIL_ACCOUNTS[account]
+        _clear_config_keys(request, db_prefix, _ACCOUNT_FIELDS, f'Cleared {db_prefix}* email configuration')
+        account_label = 'Admissions' if account == 'admissions' else 'Default'
+        fallback = 'the default account' if account == 'admissions' else '.env'
+        messages.success(request, f'{account_label} account cleared. It will fall back to {fallback} until reconfigured.')
+        return redirect('management:email_config')
+
+    if target == 'server':
+        submitted = EmailServerForm(request.POST)
+        if submitted.is_valid():
+            _save_config_keys(request, 'email_', submitted.cleaned_data)
+            messages.success(request, 'SMTP server settings updated successfully.')
             return redirect('management:email_config')
+        messages.error(request, 'SMTP server settings were not saved — please fix the errors below.')
+        server_form = submitted
+        default_form = _load_account_form('default')
+        admissions_form = _load_account_form('admissions')
+
+    elif target in _EMAIL_ACCOUNTS:
+        db_prefix = _EMAIL_ACCOUNTS[target]
+        submitted = EmailAccountForm(request.POST, prefix=target)
+        if submitted.is_valid():
+            # Blank password means "keep the existing one" — never overwrite a real
+            # password with an empty value just because the admin didn't retype it.
+            to_save = dict(submitted.cleaned_data)
+            if not to_save.get('smtp_password'):
+                to_save.pop('smtp_password', None)
+            _save_config_keys(request, db_prefix, to_save, encrypt_fields={'smtp_password'})
+            account_label = 'Admissions' if target == 'admissions' else 'Default'
+            messages.success(request, f'{account_label} account settings updated successfully.')
+            return redirect('management:email_config')
+        account_label = 'Admissions' if target == 'admissions' else 'Default'
+        messages.error(request, f'{account_label} account settings were not saved — please fix the errors below.')
+        other_account = 'admissions' if target == 'default' else 'default'
+        server_form = _load_server_form()
+        account_forms = {target: submitted, other_account: _load_account_form(other_account)}
+        default_form, admissions_form = account_forms['default'], account_forms['admissions']
+
     else:
-        # Load existing values
-        initial_data = {}
-        for key in ['smtp_host', 'smtp_port', 'smtp_username', 'from_email', 'from_name']:
-            try:
-                config = SystemConfiguration.objects.get(key=f'email_{key}')
-                initial_data[key] = config.value
-            except SystemConfiguration.DoesNotExist:
-                pass
-        
-        form = EmailConfigForm(initial=initial_data)
-    
-    return render(request, 'management/system_config/email.html', {'form': form})
+        server_form = _load_server_form()
+        default_form = _load_account_form('default')
+        admissions_form = _load_account_form('admissions')
+
+    return render(request, 'management/system_config/email.html', {
+        'server_form': server_form,
+        'default_form': default_form,
+        'admissions_form': admissions_form,
+    })
 
 
 @login_required(login_url='eduweb:auth_page')
@@ -3049,16 +3138,18 @@ def send_department_approval_email(application):
         </html>
         """
         
+        connection, from_email = _resolve_sender('admissions')
         email = EmailMultiAlternatives(
             subject=subject,
             body=f"Portal Access Granted - {application.admission_number}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         email.attach_alternative(html_content, "text/html")
         email.send(fail_silently=False)
         return True
-        
+
     except Exception:
         logger.exception('Error sending approval email for application %s', application.application_id)
         return False
@@ -3999,12 +4090,14 @@ def contact_message_respond(request, pk):
         response_text = request.POST.get('response', '').strip()
         if response_text:
             try:
+                connection, from_email = _resolve_sender('default')
                 send_mail(
                     subject=f'Re: {msg.get_subject_display()} — MIU',
                     message=response_text,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    from_email=from_email,
                     recipient_list=[msg.email],
                     fail_silently=False,
+                    connection=connection,
                 )
                 email_sent = True
             except Exception:
@@ -4661,6 +4754,17 @@ def payment_gateways_list(request):
     })
 
 
+def _deactivate_other_gateways(gw):
+    """Ensures at most one active gateway per type. Locks that type's rows first
+    where the backend supports it (Postgres; SQLite has no row locking and is
+    skipped gracefully), so two concurrent activations can't interleave and
+    both end up active."""
+    same_type = PaymentGateway.objects.filter(gateway_type=gw.gateway_type)
+    if connection.features.has_select_for_update:
+        list(same_type.select_for_update())
+    same_type.filter(is_active=True).exclude(pk=gw.pk).update(is_active=False)
+
+
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_superuser_only)
 def payment_gateway_create(request):
@@ -4674,7 +4778,13 @@ def payment_gateway_create(request):
 
     form = PaymentGatewayForm(request.POST)
     if form.is_valid():
-        form.save()
+        gw = form.save(commit=False)
+        gw.api_secret = encrypt_secret(form.cleaned_data.get('api_secret', ''))
+        gw.webhook_secret = encrypt_secret(form.cleaned_data.get('webhook_secret', ''))
+        with transaction.atomic():
+            if gw.is_active:
+                _deactivate_other_gateways(gw)
+            gw.save()
         messages.success(request, 'Gateway added.')
     else:
         msg = next(
@@ -4699,15 +4809,22 @@ def payment_gateway_edit(request, slug):
     gateway = get_object_or_404(PaymentGateway, slug=slug)
     form    = PaymentGatewayForm(request.POST, instance=gateway)
     if form.is_valid():
-        # Preserve existing secrets when fields left blank
+        # Preserve existing secrets when fields left blank; encrypt when submitted
         gw = form.save(commit=False)
         if not request.POST.get('api_key'):
             gw.api_key = gateway.api_key
-        if not request.POST.get('api_secret'):
+        if request.POST.get('api_secret'):
+            gw.api_secret = encrypt_secret(request.POST.get('api_secret'))
+        else:
             gw.api_secret = gateway.api_secret
-        if not request.POST.get('webhook_secret'):
+        if request.POST.get('webhook_secret'):
+            gw.webhook_secret = encrypt_secret(request.POST.get('webhook_secret'))
+        else:
             gw.webhook_secret = gateway.webhook_secret
-        gw.save()
+        with transaction.atomic():
+            if gw.is_active:
+                _deactivate_other_gateways(gw)
+            gw.save()
         messages.success(request, 'Gateway updated.')
     else:
         msg = next(

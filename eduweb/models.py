@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from django.core.exceptions import ValidationError
@@ -8,9 +9,39 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.text import slugify
+from cryptography.fernet import Fernet, InvalidToken
+from functools import lru_cache
 import uuid
 import os
+import base64
+import hashlib
 from decimal import Decimal, ROUND_HALF_UP
+
+
+@lru_cache(maxsize=1)
+def _fernet() -> Fernet:
+    """Fernet cipher keyed off SECRET_KEY. Cached — the key can't change within
+    a running process, so re-deriving it on every call is wasted work."""
+    key = base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest())
+    return Fernet(key)
+
+
+def encrypt_secret(plain: str) -> str:
+    """Encrypts a credential for storage. Key is derived from SECRET_KEY."""
+    if not plain:
+        return ''
+    return _fernet().encrypt(plain.encode()).decode()
+
+
+def decrypt_secret(token: str) -> str:
+    """Decrypts a value stored via encrypt_secret(). Returns '' if blank or
+    undecryptable (e.g. SECRET_KEY rotated since it was encrypted)."""
+    if not token:
+        return ''
+    try:
+        return _fernet().decrypt(token.encode()).decode()
+    except InvalidToken:
+        return ''
 
 
 DEGREE_LEVEL_CHOICES = [
@@ -3429,9 +3460,24 @@ class SystemConfiguration(models.Model):
         verbose_name = 'System Configuration'
         verbose_name_plural = 'System Configurations'
         ordering = ['key']
-    
+
     def __str__(self):
         return self.key
+
+    @classmethod
+    def get_value(cls, key: str, default: str = '') -> str:
+        val = cls.objects.filter(key=key).values_list('value', flat=True).first()
+        return val if val else default
+
+    @classmethod
+    def get_values(cls, keys) -> dict:
+        """Batch lookup — one query for many keys, instead of one query per key.
+        Returns a dict of only the keys that exist; missing keys are simply absent."""
+        return dict(cls.objects.filter(key__in=keys).values_list('key', 'value'))
+
+    @classmethod
+    def get_secret(cls, key: str, default: str = '') -> str:
+        return decrypt_secret(cls.get_value(key)) or default
 
 
 # ==================== USER PROFILE ====================

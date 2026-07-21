@@ -79,8 +79,21 @@ def _registrable_course_ids(profile):
         student=profile.user, is_cleared=False
     ).values_list('course_id', flat=True)
 
+    # result_status='released' — an unpublished pass isn't confirmed to the
+    # student yet, so it must not silently drop the course from their
+    # registrable list while they're still waiting on the official result.
+    passed_course_ids = CourseGrade.objects.filter(
+        student=profile.user, is_passed=True, result_status='released'
+    ).values_list('course_id', flat=True)
+
+    # A passed course is only excluded from the current-level listing, never
+    # from the carry-over branch — CourseCarryOver.is_cleared is the
+    # authoritative "still needs retaking" signal, so a course flagged as an
+    # open carry-over stays registrable even in the (should-be-impossible)
+    # case where a stale CourseGrade also marks it passed.
     return Course.objects.filter(
-        Q(year_of_study=profile.year_of_study) | Q(pk__in=open_carry_over_course_ids),
+        (Q(year_of_study=profile.year_of_study) & ~Q(pk__in=passed_course_ids))
+        | Q(pk__in=open_carry_over_course_ids),
         program=profile.program,
         is_active=True,
     ).values_list('id', flat=True)
@@ -480,7 +493,8 @@ def my_courses(request):
     - All courses for their program/year/term load automatically.
     - Credit counter enforces program max from backend.
     - Finalize & Enroll only enabled when core credits are all selected
-      and total does not exceed program max_credits_per_semester.
+      and total does not exceed the program's per-term cap (see
+      Program.max_credits_for_term).
     - LMS course cards only appear after successful enrollment.
     """
     user = request.user
@@ -533,18 +547,22 @@ def my_courses(request):
     )
 
     # ── Semester courses ───────────────────────────────────────────────────
-    semester_courses        = []
-    registered_course_ids   = set()
-    registered_courses      = []
-    registration_submitted  = False
-    registration_finalized  = False
-    registered_credit_total = 0
-    core_credit_total       = 0
-    semester_courses_debug  = {}
+    semester_courses          = []
+    registered_course_ids     = set()
+    registered_courses        = []
+    registration_submitted    = False
+    registration_finalized    = False
+    registered_credit_total   = 0
+    core_credit_total         = 0
+    semester_courses_debug    = {}
+    regular_courses_complete  = True
 
-    # Pull max from Program model — never hardcoded
+    # Pull max from Program model — never hardcoded. Per-term, since a
+    # program can now set a different cap for first/second/annual via
+    # Program.credit_caps_by_term (falls back to max_credits_per_semester
+    # for any term without an override).
     max_credits_per_semester = (
-        profile.program.max_credits_per_semester
+        profile.program.max_credits_for_term(term_normalisation_map.get(selected_term, selected_term))
         if profile and profile.program
         else 24
     )
@@ -553,15 +571,36 @@ def my_courses(request):
         normalised_term = term_normalisation_map.get(selected_term, selected_term)
 
         # Courses already passed shouldn't be offered again for re-registration.
+        # result_status='released' — matches _registrable_course_ids: an
+        # unpublished pass isn't confirmed yet, so don't hide the course.
         passed_course_ids = set(
-            CourseGrade.objects.filter(student=user, is_passed=True).values_list('course_id', flat=True)
+            CourseGrade.objects.filter(
+                student=user, is_passed=True, result_status='released'
+            ).values_list('course_id', flat=True)
         )
 
+        carry_over_attempts = {
+            co.course_id: co.attempts
+            for co in CourseCarryOver.objects.filter(student=user, is_cleared=False)
+        }
+        open_carry_over_course_ids = set(carry_over_attempts.keys())
+
+        # One unified query — current-level courses (excluding anything
+        # already passed) UNION any open carry-over course regardless of
+        # level. Building this as two separate queries reconciled by
+        # exclusion (the original approach) let a carry-over that happens
+        # to share the student's *current* level — i.e. she's repeating it
+        # — slip through unflagged: it landed in the "regular" query, got
+        # is_carry_over=False, and was then excluded from the dedicated
+        # carry-over query for already being present. That silently hid its
+        # badge/lock and made regular_course_ids (below) require the course
+        # to be registered before itself — a permanent deadlock.
         semester_courses = list(
             Course.objects
             .filter(
+                (Q(year_of_study=profile.year_of_study) & ~Q(pk__in=passed_course_ids))
+                | Q(pk__in=open_carry_over_course_ids),
                 program=profile.program,
-                year_of_study=profile.year_of_study,
                 is_active=True,
             )
             .filter(Q(semester=normalised_term) | Q(semester='annual'))
@@ -592,38 +631,34 @@ def my_courses(request):
         for course in semester_courses:
             course.is_registered = course.id in registered_course_ids
             course.is_core       = course.course_type == 'core'
-            course.is_carry_over = False
+            # Membership in open_carry_over_course_ids is the sole signal —
+            # not "did this come from the level-match query or the
+            # carry-over query" — so a same-level repeat is still correctly
+            # flagged.
+            course.is_carry_over = course.id in open_carry_over_course_ids
+            course.carry_over_attempts = carry_over_attempts.get(course.id, 1)
             course.registration_status = reg_status_map.get(course.id, '')  # 'pending' | 'approved' | ''
             if course.course_type == 'core':
                 core_credit_total += course.credit_units
 
-        # Carry-over courses (failed at a lower level) register alongside
-        # current-level courses, counting toward the same credit cap.
-        carry_over_attempts = {
-            co.course_id: co.attempts
-            for co in CourseCarryOver.objects.filter(student=user, is_cleared=False)
-        }
-        carry_over_courses = list(
-            Course.objects
-            .filter(
-                pk__in=carry_over_attempts.keys(),
-                program=profile.program,
-                is_active=True,
-            )
-            .exclude(pk__in=[c.id for c in semester_courses])
-            .exclude(pk__in=passed_course_ids)
-            .filter(Q(semester=normalised_term) | Q(semester='annual'))
-            .prefetch_related('prerequisites')
-        )
-        for course in carry_over_courses:
-            course.is_registered = course.id in registered_course_ids
-            course.is_core       = course.course_type == 'core'
-            course.is_carry_over = True
-            course.carry_over_attempts = carry_over_attempts.get(course.id, 1)
-            course.registration_status = reg_status_map.get(course.id, '')
-            if course.course_type == 'core':
-                core_credit_total += course.credit_units
-        semester_courses += carry_over_courses
+        # Carry-over courses are locked until every *regular* course this
+        # term (core, elective, or any other type) is already registered —
+        # a student has to handle their current curriculum before touching
+        # what they still owe from a previous level. "Regular" excludes
+        # anything just flagged is_carry_over above, so a same-level
+        # carry-over never counts as its own prerequisite.
+        regular_course_ids = {c.id for c in semester_courses if not c.is_carry_over}
+        regular_courses_complete = regular_course_ids.issubset(registered_course_ids)
+
+        for course in semester_courses:
+            if course.is_carry_over:
+                course.locked_pending_regular = not regular_courses_complete and not course.is_registered
+
+        # Carry-over rows sorted after regular ones — a stable sort keeps
+        # the existing course_type/name ordering within each group — so the
+        # template's {% ifchanged course.is_carry_over %} divider still
+        # fires exactly once, at the real transition.
+        semester_courses.sort(key=lambda c: c.is_carry_over)
 
         registered_credit_total = sum(
             c.credit_units for c in semester_courses if c.is_registered
@@ -719,6 +754,8 @@ def my_courses(request):
         term_label_map = dict(AcademicSession.TERM_CHOICES)
         term_label = term_label_map.get(selected_term, selected_term.title())
 
+    has_carry_over_courses = any(getattr(c, 'is_carry_over', False) for c in semester_courses)
+
     context = {
         'page_title':               'My Courses',
         'all_sessions':             all_sessions,
@@ -730,6 +767,8 @@ def my_courses(request):
         'registration_open':        registration_open,
         'selected_term_is_active':  selected_term_is_active,
         'semester_courses':         semester_courses,
+        'has_carry_over_courses':   has_carry_over_courses,
+        'regular_courses_complete': regular_courses_complete,
         'registered_course_ids':    registered_course_ids,
         'registered_courses':       registered_courses,
         'registered_credit_total':  registered_credit_total,
@@ -798,10 +837,60 @@ def register_semester_course(request, course_slug):
         is_active=True,
     )
 
-    # Dynamic max from the Program model
-    MAX_CREDITS_PER_SEMESTER = getattr(profile.program, 'max_credits_per_semester', 24)
-
     normalised_term = current_term.lower().replace(' semester', '').strip() if current_term else current_term
+
+    # Dynamic max from the Program model — per-term, via Program.credit_caps_by_term
+    # (falls back to max_credits_per_semester for a term without an override).
+    MAX_CREDITS_PER_SEMESTER = profile.program.max_credits_for_term(normalised_term)
+
+    # Shared by both checks below: a course already passed can never be
+    # re-registered (see _registrable_course_ids), and a course that's
+    # itself an open carry-over must never count as one of the "regular"
+    # courses a carry-over has to wait behind — otherwise a carry-over that
+    # happens to share the student's current level (she's repeating it)
+    # would be required to wait for itself, a permanent deadlock.
+    passed_course_ids = set(
+        CourseGrade.objects.filter(
+            student=request.user, is_passed=True, result_status='released',
+        ).values_list('course_id', flat=True)
+    )
+    open_carry_over_course_ids = set(
+        CourseCarryOver.objects.filter(
+            student=request.user, is_cleared=False,
+        ).values_list('course_id', flat=True)
+    )
+
+    # Carry-over courses are locked until every regular course this term —
+    # core, elective, or any other type — is already registered. A student
+    # has to handle their current curriculum before touching what they
+    # still owe from a previous level; see my_courses's identical
+    # regular_courses_complete computation, which this mirrors so the "Add"
+    # button and this server-side check can never disagree.
+    if course.id in open_carry_over_course_ids:
+        regular_course_ids = set(
+            Course.objects.filter(
+                program=profile.program, year_of_study=profile.year_of_study, is_active=True,
+            )
+            .filter(Q(semester=normalised_term) | Q(semester='annual'))
+            .exclude(pk__in=passed_course_ids)
+            .exclude(pk__in=open_carry_over_course_ids)
+            .values_list('id', flat=True)
+        )
+        registered_regular_ids = set(
+            CourseRegistration.objects.filter(
+                student=request.user, session=current_session,
+                term__in=[current_term, normalised_term], status__in=['pending', 'approved'],
+                course_id__in=regular_course_ids,
+            ).values_list('course_id', flat=True)
+        )
+        missing_count = len(regular_course_ids - registered_regular_ids)
+        if missing_count:
+            messages.error(
+                request,
+                f'Register your {missing_count} remaining course(s) for this semester before adding '
+                f'carry-over course "{course.name}".'
+            )
+            return redirect('students:my_courses')
 
     # Scoped to registrable_course_ids so a stale registration left over
     # from a level the student has already passed (e.g. from before they
@@ -825,6 +914,39 @@ def register_semester_course(request, course_slug):
             f'(you currently have {current_total} CU).'
         )
         return redirect('students:my_courses')
+
+    # Mandatory current-semester core courses get first claim on the credit
+    # cap — a carry-over or elective can only take the space that's left
+    # over once every not-yet-registered core course for this term is
+    # accounted for, so a student can't box themselves out of a required
+    # course by greedily adding carry-overs/electives first.
+    if course.course_type != 'core':
+        registered_course_ids = CourseRegistration.objects.filter(
+            student=request.user,
+            session=current_session,
+            term__in=[current_term, normalised_term],
+            status__in=['pending', 'approved'],
+        ).values('course_id')
+        outstanding_core_cu = (
+            Course.objects.filter(
+                program=profile.program,
+                year_of_study=profile.year_of_study,
+                course_type='core',
+                is_active=True,
+            )
+            .filter(Q(semester=normalised_term) | Q(semester='annual'))
+            .exclude(pk__in=registered_course_ids)
+            .exclude(pk__in=passed_course_ids)
+            .aggregate(total=Sum('credit_units'))['total'] or 0
+        )
+        if current_total + course.credit_units + outstanding_core_cu > MAX_CREDITS_PER_SEMESTER:
+            messages.error(
+                request,
+                f'Cannot add "{course.name}" yet — {outstanding_core_cu} CU is still reserved for '
+                f'your required core course(s) this semester. Register those first, or drop a '
+                f'non-core course to free up room.'
+            )
+            return redirect('students:my_courses')
 
     # transaction.atomic() + IntegrityError guard closes the double-submit
     # race window (double-click, two tabs) — CourseRegistration's
@@ -988,7 +1110,7 @@ def register_all_semester_courses(request):
 
     normalised_term = term_normalisation_map.get(current_term, current_term)
 
-    MAX_CU = profile.program.max_credits_per_semester
+    MAX_CU = profile.program.max_credits_for_term(normalised_term)
 
     # Get all pending/approved registrations for this session/term, scoped to
     # courses at the student's current level (or an open carry-over) — the
@@ -3077,13 +3199,18 @@ def grades(request):
             else False
         )
     
-    # Academic course grades (from program — recorded by lecturers)
+    # Academic course grades (from program — recorded by lecturers).
+    # result_status='released' — a compiled-but-unapproved grade must not
+    # appear here; see CourseGrade.publish_results / management:results_publish.
     academic_grades = (
         CourseGrade.objects
-        .filter(student=user)
+        .filter(student=user, result_status='released')
         .select_related('course', 'course__program', 'session')
         .order_by('-session__name', 'course__year_of_study', 'course__semester')
     )
+    pending_results_count = CourseGrade.objects.filter(
+        student=user, result_status__in=['pending', 'withheld'],
+    ).count()
 
     # Quiz attempts — best attempt per quiz for graded display
     quiz_attempts = list(
@@ -3105,6 +3232,7 @@ def grades(request):
         'quiz_attempts': quiz_attempts,
         'academic_grades': academic_grades,
         'cgpa': cgpa,
+        'pending_results_count': pending_results_count,
     }
 
     return render(request, 'students/grades.html', context)

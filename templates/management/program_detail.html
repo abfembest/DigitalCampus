@@ -189,6 +189,18 @@
                     <p class="font-semibold text-gray-800">{{ program.max_students }}</p>
                 </div>
                 {% endif %}
+
+                <div>
+                    <p class="text-sm text-gray-600 mb-1">Default Max Credit Units / Semester</p>
+                    <p class="font-semibold text-gray-800">{{ program.max_credits_per_semester }} CU</p>
+                    {% if program.credit_caps_by_term %}
+                    <div class="flex flex-wrap gap-1.5 mt-1.5">
+                        {% for term, cap in program.credit_caps_by_term.items %}
+                        <span class="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-medium capitalize">{{ term }}: {{ cap }} CU</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
         

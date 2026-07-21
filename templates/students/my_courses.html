@@ -130,6 +130,21 @@
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     {% for course in semester_courses %}
+                    
+                    {% ifchanged course.is_carry_over %}
+                        {% if course.is_carry_over %}
+                        <tr class="bg-orange-50 border-t-2 border-orange-200">
+                            <td colspan="7" class="px-5 py-2.5 text-xs font-bold text-orange-700 uppercase tracking-wide">
+                                <i class="fas fa-history mr-1" aria-hidden="true"></i> Outstanding / Carry-Over Courses
+                                {% if not regular_courses_complete %}
+                                <span class="font-normal normal-case text-orange-600">— locked until every course above is registered</span>
+                                {% else %}
+                                <span class="font-normal normal-case text-orange-600">— register alongside your courses above if space remains</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% endifchanged %}
                     <tr class="hover:bg-gray-50 transition-colors {% if course.is_registered %}bg-green-50/40{% elif course.is_carry_over %}bg-orange-50/40{% endif %}">
 
                         <td class="px-5 py-3 font-mono font-semibold text-gray-700 text-xs whitespace-nowrap">{{ course.code }}</td>
@@ -213,6 +228,11 @@
                                     {% if course.is_core %}Required{% else %}Registered{% endif %}
                                 </span>
                                 {% endif %}
+
+                            {% elif course.locked_pending_regular %}
+                            <span class="inline-flex items-center gap-1 text-xs text-gray-400" title="Register all of this semester's own courses first.">
+                                <i class="fas fa-lock text-xs"></i> Locked
+                            </span>
 
                             {% elif registration_open %}
                             <form method="post" action="{% url 'students:register_semester_course' course.slug %}">

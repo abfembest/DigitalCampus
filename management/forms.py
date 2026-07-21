@@ -1419,11 +1419,38 @@ class DepartmentForm(forms.ModelForm):
 
 
 class ProgramForm(forms.ModelForm):
+    # Not model fields — a friendly front for Program.credit_caps_by_term
+    # (a JSONField) so the admin gets three plain number inputs instead of
+    # hand-editing raw JSON. __init__ populates them from the instance on
+    # edit; save() writes them back into the dict. Blank = no override for
+    # that term, falls back to max_credits_per_semester.
+    cu_first = forms.IntegerField(
+        required=False, min_value=1, max_value=30, label='Max CU — First Semester',
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+            'placeholder': 'Same as default',
+        }),
+    )
+    cu_second = forms.IntegerField(
+        required=False, min_value=1, max_value=30, label='Max CU — Second Semester',
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+            'placeholder': 'Same as default',
+        }),
+    )
+    cu_annual = forms.IntegerField(
+        required=False, min_value=1, max_value=30, label='Max CU — Annual',
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+            'placeholder': 'Same as default',
+        }),
+    )
+
     class Meta:
         model = Program
         fields = [
             'department', 'name', 'code', 'degree_level',
-            'duration_years', 'credits_required', 'max_students',
+            'duration_years', 'credits_required', 'max_credits_per_semester', 'max_students',
             'tagline', 'overview', 'description',
             'application_fee', 'tuition_fee', 'avg_starting_salary',
             'job_placement_rate',
@@ -1451,6 +1478,11 @@ class ProgramForm(forms.ModelForm):
             'credits_required': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'min': '0'
+            }),
+            'max_credits_per_semester': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'min': '1',
+                'max': '30'
             }),
             'max_students': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
@@ -1514,8 +1546,30 @@ class ProgramForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and isinstance(self.instance.credit_caps_by_term, dict):
+            caps = self.instance.credit_caps_by_term
+            self.fields['cu_first'].initial = caps.get('first')
+            self.fields['cu_second'].initial = caps.get('second')
+            self.fields['cu_annual'].initial = caps.get('annual')
+
     def clean_code(self):
         return _clean_code_field(self.cleaned_data.get('code', ''))
+
+    def save(self, commit=True):
+        program = super().save(commit=False)
+        caps = {}
+        if self.cleaned_data.get('cu_first') is not None:
+            caps['first'] = self.cleaned_data['cu_first']
+        if self.cleaned_data.get('cu_second') is not None:
+            caps['second'] = self.cleaned_data['cu_second']
+        if self.cleaned_data.get('cu_annual') is not None:
+            caps['annual'] = self.cleaned_data['cu_annual']
+        program.credit_caps_by_term = caps
+        if commit:
+            program.save()
+        return program
 
 
 class AcademicSessionForm(forms.ModelForm):

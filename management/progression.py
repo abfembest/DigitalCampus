@@ -56,8 +56,13 @@ def compute_progression_decision(profile, program, session):
     )
     core_courses = [c for c in current_level_courses if c.course_type == 'core']
 
+    # result_status='released' — progression must reflect approved,
+    # published results only; an un-released grade (still pending registrar
+    # sign-off) can't count toward a promotion decision.
     core_passed = all(
-        CourseGrade.objects.filter(student=profile.user, course=c, is_passed=True).exists()
+        CourseGrade.objects.filter(
+            student=profile.user, course=c, is_passed=True, result_status='released',
+        ).exists()
         for c in core_courses
     )
 
@@ -72,7 +77,9 @@ def compute_progression_decision(profile, program, session):
     prior_attempts = {}
     failed_courses = []
     for course in current_level_courses:
-        passed = CourseGrade.objects.filter(student=profile.user, course=course, is_passed=True).exists()
+        passed = CourseGrade.objects.filter(
+            student=profile.user, course=course, is_passed=True, result_status='released',
+        ).exists()
         if passed:
             continue
         registered = CourseRegistration.objects.filter(
@@ -138,9 +145,11 @@ def apply_progression_decision(decision, admin_user):
     profile = decision['profile']
     session = decision['session']
 
-    # Clear any open carry-over now covered by a passing grade (resits, etc.)
+    # Clear any open carry-over now covered by a passing, released grade (resits, etc.)
     for rec in CourseCarryOver.objects.filter(student=profile.user, is_cleared=False):
-        if CourseGrade.objects.filter(student=profile.user, course=rec.course, is_passed=True).exists():
+        if CourseGrade.objects.filter(
+            student=profile.user, course=rec.course, is_passed=True, result_status='released',
+        ).exists():
             rec.is_cleared = True
             rec.cleared_session = session
             rec.save(update_fields=['is_cleared', 'cleared_session', 'updated_at'])

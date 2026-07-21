@@ -8,7 +8,6 @@ import json
 import logging
 import secrets
 import string
-import threading
 import uuid
 import zoneinfo
 from datetime import date, datetime, timedelta
@@ -1744,6 +1743,17 @@ def user_permissions(request, pk):
         messages.error(request, 'You cannot edit your own permissions.')
         return redirect('management:users_list')
 
+    if target.profile.role == 'student':
+        # StaffPermissionsMatrix.user_can_view_any() already refuses to honor
+        # any override row for a student account (see its docstring), so a
+        # saved grant here would just be permanently inert — reject outright
+        # instead of letting an admin believe it took effect.
+        error = 'Permission overrides don\'t apply to student accounts — change their role first if they need staff access.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': error}, status=400)
+        messages.error(request, error)
+        return redirect('management:users_list')
+
     MODULES, ACTION_FIELDS, _ = _permission_modules_for_role(target.profile.role)
     with transaction.atomic():
         for module in MODULES:
@@ -2893,49 +2903,57 @@ def broadcast_send(request, slug):
         broadcast.status = 'sending'
         broadcast.save(update_fields=['status'])
 
-    def send_emails_background():
-        """Background thread to send emails"""
-        batch_size = 50
-        email_list = broadcast.recipient_emails
-        failed_batches = []
+    # Synchronous, not backgrounded — on Passenger/shared hosting a daemon
+    # thread can be killed mid-send when the worker process is recycled,
+    # silently dropping whatever recipients hadn't been reached yet, and
+    # leaving `status='sending'` permanently stuck with no retry path (the
+    # guard above treats 'sending' as already-in-progress forever). Every
+    # other email send in this codebase was already made synchronous for
+    # this exact reason (see AUDIT.md Phase 6/7) — this was the one gap.
+    # Bounded by settings.EMAIL_TIMEOUT (15s) per connection, same as
+    # everywhere else.
+    batch_size = 50
+    email_list = broadcast.recipient_emails
+    failed_batches = []
 
-        for i in range(0, len(email_list), batch_size):
-            batch = email_list[i:i + batch_size]
-            email_messages = [
-                (
-                    broadcast.subject,
-                    broadcast.message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                )
-                for email in batch
-            ]
-            try:
-                send_mass_mail(email_messages, fail_silently=False)
-            except Exception as e:
-                # One bad batch doesn't abort the rest — keep sending, and
-                # report which batches failed instead of losing everything
-                # already delivered.
-                logger.exception('Broadcast %s: batch starting at %d failed', broadcast.slug, i)
-                failed_batches.append(f'recipients {i}-{i + len(batch) - 1}: {e}')
+    for i in range(0, len(email_list), batch_size):
+        batch = email_list[i:i + batch_size]
+        email_messages = [
+            (
+                broadcast.subject,
+                broadcast.message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+            )
+            for email in batch
+        ]
+        try:
+            send_mass_mail(email_messages, fail_silently=False)
+        except Exception as e:
+            # One bad batch doesn't abort the rest — keep sending, and
+            # report which batches failed instead of losing everything
+            # already delivered.
+            logger.exception('Broadcast %s: batch starting at %d failed', broadcast.slug, i)
+            failed_batches.append(f'recipients {i}-{i + len(batch) - 1}: {e}')
 
-        broadcast.sent_at = timezone.now()
-        if failed_batches:
-            broadcast.status = 'failed' if len(failed_batches) * batch_size >= len(email_list) else 'sent'
-            broadcast.error_message = 'Some batches failed:\n' + '\n'.join(failed_batches)
-        else:
-            broadcast.status = 'sent'
-            broadcast.error_message = ''
-        broadcast.save(update_fields=['status', 'sent_at', 'error_message'])
+    broadcast.sent_at = timezone.now()
+    if failed_batches:
+        broadcast.status = 'failed' if len(failed_batches) * batch_size >= len(email_list) else 'sent'
+        broadcast.error_message = 'Some batches failed:\n' + '\n'.join(failed_batches)
+        messages.warning(
+            request,
+            f'Broadcast sent with some failures — {len(failed_batches)} batch(es) '
+            f'out of {(len(email_list) + batch_size - 1) // batch_size} did not go through.'
+        )
+    else:
+        broadcast.status = 'sent'
+        broadcast.error_message = ''
+        messages.success(
+            request,
+            f'Broadcast sent to {broadcast.recipient_count} recipients.'
+        )
+    broadcast.save(update_fields=['status', 'sent_at', 'error_message'])
 
-    thread = threading.Thread(target=send_emails_background)
-    thread.daemon = True
-    thread.start()
-
-    messages.success(
-        request,
-        f'Sending broadcast to {broadcast.recipient_count} recipients...'
-    )
     return redirect('management:broadcast_center')
 
 @login_required
@@ -3707,6 +3725,165 @@ def carry_over_list(request):
         'programs': Program.objects.filter(is_active=True).order_by('name'),
         'program_id': program_id,
         'status_filter': status_filter,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def results_publish(request):
+    """
+    Registrar's "compile & approve results" console. CourseGrade.result_status
+    (pending/released/withheld) gates every student-facing consumer of grade
+    data — Grades & Performance, Academic Records, transcripts, CGPA, and
+    academic progression (see CourseGrade.compute_cgpa/build_transcript_snapshot
+    and management.progression) — so nothing a lecturer/system has scored
+    reaches a student until an admin explicitly releases it here.
+
+    GET  → one row per (session, term[, program]) group with
+           pending/released/withheld counts, and bulk release/withhold/reset
+           actions. POST handles those bulk actions; per-student overrides
+           (e.g. withholding one student pending a discipline case) live on
+           results_publish_detail.
+    """
+    if request.method == 'POST':
+        if not _has_permission(request, 'results_publish', 'can_approve'):
+            messages.error(request, 'You do not have permission to publish results.')
+            return redirect('management:results_publish')
+
+        session = get_object_or_404(AcademicSession, pk=request.POST.get('session_id'))
+        term = request.POST.get('term', '').strip()
+        program_id = request.POST.get('program_id', '').strip()
+        program = get_object_or_404(Program, pk=program_id) if program_id else None
+
+        action_to_status = {'release': 'released', 'withhold': 'withheld', 'reset': 'pending'}
+        status = action_to_status.get(request.POST.get('action'))
+        if not status:
+            messages.error(request, 'Invalid action.')
+            return redirect('management:results_publish')
+
+        with transaction.atomic():
+            count = CourseGrade.publish_results(session, term=term, program=program, status=status)
+            scope = f'{session}' + (f' — {term.title()} term' if term else ' — no term recorded') + (f' ({program.name})' if program else '')
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='CourseGrade',
+                object_id=f'session={session.pk}|term={term or "(blank)"}|program={program.pk if program else "*"}',
+                description=f'Bulk-set result_status={status!r} on {count} CourseGrade row(s) for {scope}.',
+            )
+
+        messages.success(request, f'{count} result(s) marked "{status}" for {scope}.')
+        return redirect('management:results_publish')
+
+    if not _has_permission(request, 'results_publish', 'can_view'):
+        messages.error(request, 'You do not have permission to view results publication.')
+        return redirect('management:dashboard')
+
+    program_id = request.GET.get('program_id', '').strip()
+    selected_program = get_object_or_404(Program, pk=program_id) if program_id else None
+
+    groups_qs = CourseGrade.objects.all()
+    if selected_program:
+        groups_qs = groups_qs.filter(course__program=selected_program)
+
+    groups = list(
+        groups_qs
+        .values('session_id', 'session__name', 'term')
+        .annotate(
+            total=Count('id'),
+            released=Count('id', filter=Q(result_status='released')),
+            pending=Count('id', filter=Q(result_status='pending')),
+            withheld=Count('id', filter=Q(result_status='withheld')),
+        )
+        .order_by('-session__name', 'term')
+    )
+    # Precomputed here rather than a template `default` filter — that filter
+    # needs a quote-delimited argument, and this string is embedded inside an
+    # HTML attribute that's itself inside a JS string literal in the
+    # template, so nesting a third quoting layer there is just fragile.
+    for group in groups:
+        # 'no term recorded', never 'all terms' — this row is one exact
+        # (session, blank-term) bucket, not a wildcard over every term in
+        # the session. See CourseGrade.publish_results's docstring.
+        group['term_label'] = group['term'].title() if group['term'] else 'no term recorded'
+
+    return render(request, 'management/results_publish.html', {
+        'groups': groups,
+        'programs': Program.objects.filter(is_active=True).order_by('name'),
+        'selected_program': selected_program,
+        'program_id': program_id,
+    })
+
+
+@login_required(login_url='eduweb:auth_page')
+@user_passes_test(is_admin)
+def results_publish_detail(request, session_id):
+    """
+    Per-student drill-down for one (session, term[, program]) group — lets an
+    admin override an individual student's result_status (e.g. withholding
+    one result pending a discipline case) without touching the bulk status
+    of everyone else in that group.
+    """
+    session = get_object_or_404(AcademicSession, pk=session_id)
+
+    if request.method == 'POST':
+        term = request.POST.get('term', '').strip()
+        program_id = request.POST.get('program_id', '').strip()
+    else:
+        term = request.GET.get('term', '').strip()
+        program_id = request.GET.get('program_id', '').strip()
+    program = get_object_or_404(Program, pk=program_id) if program_id else None
+
+    grades_qs = CourseGrade.objects.filter(session=session)
+    if term:
+        grades_qs = grades_qs.filter(term=term)
+    if program:
+        grades_qs = grades_qs.filter(course__program=program)
+    grades_qs = grades_qs.select_related('student', 'course', 'course__program').order_by(
+        'student__username', 'course__code'
+    )
+
+    redirect_url = f"{reverse('management:results_publish_detail', args=[session.pk])}?term={term}&program_id={program_id}"
+
+    if request.method == 'POST':
+        if not _has_permission(request, 'results_publish', 'can_approve'):
+            messages.error(request, 'You do not have permission to publish results.')
+            return redirect(redirect_url)
+
+        valid_statuses = dict(CourseGrade.RESULT_STATUS_CHOICES)
+        changed = 0
+        with transaction.atomic():
+            for grade in grades_qs:
+                posted = request.POST.get(f'status_{grade.pk}')
+                if posted in valid_statuses and posted != grade.result_status:
+                    CourseGrade.objects.filter(pk=grade.pk).update(result_status=posted)
+                    changed += 1
+            if changed:
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='update',
+                    model_name='CourseGrade',
+                    object_id=f'session={session.pk}|term={term or "*"}',
+                    description=f'Individually overrode result_status on {changed} CourseGrade row(s) in {session}.',
+                )
+
+        if changed:
+            messages.success(request, f'Updated {changed} individual result(s).')
+        else:
+            messages.info(request, 'No changes made.')
+        return redirect(redirect_url)
+
+    if not _has_permission(request, 'results_publish', 'can_view'):
+        messages.error(request, 'You do not have permission to view results publication.')
+        return redirect('management:dashboard')
+
+    return render(request, 'management/results_publish_detail.html', {
+        'session': session,
+        'term': term,
+        'program': program,
+        'programs': Program.objects.filter(is_active=True).order_by('name'),
+        'grades': list(grades_qs),
+        'result_status_choices': CourseGrade.RESULT_STATUS_CHOICES,
     })
 
 

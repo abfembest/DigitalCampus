@@ -181,7 +181,7 @@
                         mr-3 flex-shrink-0 overflow-hidden border border-gray-200">
               {% if course.instructor.profile.avatar %}
               <img src="{{ course.instructor.profile.avatar.url }}"
-                   alt="{{ course.instructor_name }}"
+                   alt="{{ course.instructor.get_full_name|default:course.instructor.username }}"
                    itemprop="image"
                    class="w-full h-full object-cover"
                    loading="lazy">
@@ -193,7 +193,7 @@
               <p class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Instructor</p>
               <p class="font-semibold text-sm sm:text-base text-gray-900 truncate"
                  itemprop="name">
-                {{ course.instructor_name }}
+                {% if course.instructor %}{{ course.instructor.get_full_name|default:course.instructor.username }}{% else %}To be announced{% endif %}
               </p>
             </div>
           </div>

@@ -142,10 +142,49 @@
                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
         </div>
         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Default Max Credit Units / Semester</label>
+          <input type="number" name="{{ form.max_credits_per_semester.html_name }}" value="{{ form.max_credits_per_semester.value|default:'24' }}"
+                 min="1" max="30"
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+          <p class="text-xs text-gray-500 mt-1">Used for any term not overridden below.</p>
+        </div>
+        <div>
           <label class="block text-sm font-medium text-gray-700 mb-1.5">Placement Rate (%)</label>
           <input type="number" name="{{ form.job_placement_rate.html_name }}" value="{{ form.job_placement_rate.value|default:'0' }}"
                  min="0" max="100"
                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+        </div>
+      </div>
+
+      <div class="px-6 pb-6">
+        <div class="border border-dashed border-gray-300 rounded-lg p-4">
+          <p class="text-sm font-medium text-gray-700 mb-0.5">Per-Term Credit Unit Overrides <span class="font-normal text-gray-400">(optional)</span></p>
+          <p class="text-xs text-gray-500 mb-3">Give one term a different cap than the default above — e.g. a heavier first semester and a lighter second. Leave a field blank to just use the default.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">{{ form.cu_first.label }}</label>
+              <input type="number" name="{{ form.cu_first.html_name }}" value="{{ form.cu_first.value|default:'' }}"
+                     min="1" max="30" placeholder="Same as default"
+                     class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">{{ form.cu_second.label }}</label>
+              <input type="number" name="{{ form.cu_second.html_name }}" value="{{ form.cu_second.value|default:'' }}"
+                     min="1" max="30" placeholder="Same as default"
+                     class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">{{ form.cu_annual.label }}</label>
+              <input type="number" name="{{ form.cu_annual.html_name }}" value="{{ form.cu_annual.value|default:'' }}"
+                     min="1" max="30" placeholder="Same as default"
+                     class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+            </div>
+          </div>
+          {% if form.cu_first.errors or form.cu_second.errors or form.cu_annual.errors %}
+          <p class="text-xs text-red-600 mt-2">
+            {{ form.cu_first.errors|join:" " }} {{ form.cu_second.errors|join:" " }} {{ form.cu_annual.errors|join:" " }}
+          </p>
+          {% endif %}
         </div>
       </div>
     </div>

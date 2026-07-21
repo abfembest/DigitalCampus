@@ -1281,7 +1281,16 @@ class Program(models.Model):
     max_credits_per_semester = models.PositiveIntegerField(
         default=24,
         validators=[MinValueValidator(1), MaxValueValidator(30)],
-        help_text="Maximum total credit units a student can register in ONE semester for this program"
+        help_text="Default maximum credit units per term — used for any term not overridden in credit_caps_by_term below."
+    )
+    credit_caps_by_term = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Optional per-term overrides, e.g. {'first': 21, 'second': 18}. "
+            "A term key not present here falls back to max_credits_per_semester. "
+            "Use max_credits_for_term(term) rather than reading either field directly."
+        ),
     )
     min_cgpa_to_progress = models.DecimalField(
         max_digits=3,
@@ -1435,6 +1444,27 @@ class Program(models.Model):
         return self.courses.filter(is_active=True).aggregate(
             total=models.Sum('credit_units')
         )['total'] or 0
+
+    def max_credits_for_term(self, term):
+        """
+        The credit-unit cap for one specific term — the single source of
+        truth every registration-cap check should call instead of reading
+        max_credits_per_semester/credit_caps_by_term directly. Looks up
+        `term` in credit_caps_by_term (case-insensitive) and falls back to
+        max_credits_per_semester if that term has no override.
+
+        `term` is expected already normalised to this codebase's canonical
+        keys (first/second/annual — see student/views.py's
+        term_normalisation_map) since that's the format credit_caps_by_term
+        is keyed by; an un-normalised value (e.g. 'Fall') simply won't
+        match an override and will fall back to the default, same as an
+        empty/blank term would.
+        """
+        if term and isinstance(self.credit_caps_by_term, dict):
+            override = self.credit_caps_by_term.get(str(term).strip().lower())
+            if override is not None:
+                return override
+        return self.max_credits_per_semester
 
 # ==============================================================================
 # ACADEMIC SESSION
@@ -2227,10 +2257,14 @@ class CourseApplication(models.Model):
         if not required_courses.exists():
             return False
 
+        # result_status='released' — an unpublished pass shouldn't be able to
+        # auto-graduate a student (and issue a Certificate) before the
+        # registrar has actually approved that result. See publish_results().
         passed_course_ids = CourseGrade.objects.filter(
             student=self.user,
             course__program=self.program,
             is_passed=True,
+            result_status='released',
         ).values_list('course_id', flat=True)
 
         return all(c.id in passed_course_ids for c in required_courses)
@@ -3742,6 +3776,7 @@ class StaffPermissionsMatrix(models.Model):
         ('support_analytics',       'Analytics'),
         ('support_config',          'Support Config'),
         ('academic_progression',    'Academic Progression'),
+        ('results_publish',         'Results Publishing'),
     ]
 
     # Role-level defaults — mirrors sidebar sections visible per role
@@ -3762,6 +3797,11 @@ class StaffPermissionsMatrix(models.Model):
         'security_audit':  {'can_view': True},
         'support_config':  {'can_view': True, 'can_create': True, 'can_edit': True},
         'academic_progression': {'can_view': True, 'can_edit': True, 'can_approve': True},
+        # Kept separate from 'academic_progression' on purpose: releasing
+        # results to the whole student body is a distinct, higher-blast-
+        # radius action than running level-progression decisions, so a
+        # staff member granted one shouldn't automatically get the other.
+        'results_publish': {'can_view': True, 'can_edit': True, 'can_approve': True},
     },
     'support': {
         # 'dashboard':    {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
@@ -3807,7 +3847,7 @@ class StaffPermissionsMatrix(models.Model):
         'dashboard', 'user_management', 'academics', 'lms_courses',
         'applications', 'exams', 'enrollments', 'finance', 'communications',
         'blog', 'library', 'site_content', 'security_audit', 'support_config',
-        'academic_progression',
+        'academic_progression', 'results_publish',
     }
 
     # Mirrors ADMIN_PORTAL_MODULES for the other three staff portals — used by
@@ -3877,6 +3917,18 @@ class StaffPermissionsMatrix(models.Model):
             return False
         profile = getattr(user, 'profile', None)
         role = getattr(profile, 'role', None)
+
+        # 'student' can never use this bypass, no matter what override rows
+        # exist for them — this is the single choke point all four portal
+        # gates (is_admin, is_finance_manager, instructor_required,
+        # is_support_staff) route through, so this is enough to keep a
+        # student account out of every staff portal even if a permissions
+        # modal is ever used to grant them a module by mistake. Students are
+        # still shown in the user-management/role-assignment picker (they're
+        # ordinary accounts worth being able to view/manage there); this
+        # only stops a grant from ever being *effective*.
+        if role == 'student':
+            return False
 
         user_rows = {
             r.module: r.can_view
@@ -5072,15 +5124,22 @@ class CourseGrade(models.Model):
     def compute_cgpa(cls, student):
         """
         Cumulative GPA (Nigerian 5-point scale) across every graded,
-        non-withdrawn CourseGrade row for this student.
+        non-withdrawn, *released* CourseGrade row for this student.
 
         This is the single canonical CGPA computation — the dashboard,
         Academic Records, and the end-of-session progression decision
         must all call this rather than each hand-rolling the same sum,
         so they can never silently disagree (e.g. via different rounding
         rules). Returns None if the student has no gradable records yet.
+
+        Only `result_status='released'` rows count: a grade the registrar
+        hasn't published yet must not move a student's CGPA, trigger
+        progression/graduation, or appear on a transcript. See
+        `publish_results()` for the admin-side release workflow.
         """
-        grades = cls.objects.filter(student=student).exclude(grade='').exclude(grade='W')
+        grades = cls.objects.filter(
+            student=student, result_status='released',
+        ).exclude(grade='').exclude(grade='W')
         total_units = sum(g.credit_units for g in grades)
         if not total_units:
             return None
@@ -5100,10 +5159,15 @@ class CourseGrade(models.Model):
         transcript — shared between `student` (renders it, freezes it on
         request) and `management` (issues it) so neither app hand-rolls its
         own copy of this logic.
+
+        Only `result_status='released'` rows are included — a course a
+        student has completed but whose result the registrar hasn't
+        published yet must not appear on a live view, a locked transcript
+        snapshot, or an issued transcript. See `publish_results()`.
         """
         grades_qs = list(
             cls.objects
-            .filter(student=student)
+            .filter(student=student, result_status='released')
             .select_related('course', 'course__program', 'session')
             .order_by('-session__name', 'course__semester', 'course__year_of_study')
         )
@@ -5327,6 +5391,34 @@ class CourseGrade(models.Model):
             application.award_program_certificate()
 
         return grade
+
+    @classmethod
+    def publish_results(cls, session, term='', program=None, status='released', by=None):
+        """
+        Bulk-set result_status for every CourseGrade matching (session, term
+        [, program]) — the admin "compile & approve results" action.
+
+        `term` is always an exact match, including `''` (blank) — the
+        results_publish admin page lists one row per distinct (session, term)
+        pair, blank term included as its own row, so "release this row" must
+        only ever touch that exact term value. It must NEVER silently expand
+        to "every term in this session": CourseGrade.term is frequently blank
+        in this dataset, and treating blank as a wildcard would release an
+        entire session's results in one click regardless of what the admin
+        actually selected on the page.
+
+        Returns the number of rows updated. Deliberately a plain `.update()`
+        (no per-row recompute) — publishing is a visibility/approval action,
+        not a re-grading one; scores themselves are unaffected.
+        """
+        if status not in dict(cls.RESULT_STATUS_CHOICES):
+            raise ValueError(f'Invalid result_status: {status!r}')
+
+        qs = cls.objects.filter(session=session, term=term)
+        if program:
+            qs = qs.filter(course__program=program)
+
+        return qs.update(result_status=status)
 
 
 class CourseCarryOver(models.Model):

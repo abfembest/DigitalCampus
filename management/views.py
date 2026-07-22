@@ -128,6 +128,7 @@ from eduweb.emailservices import (
     send_admin_created_user_email,
     send_new_message_email,
     _resolve_sender,
+    send_test_email,
 )
 
 # Academic progression
@@ -1999,6 +2000,29 @@ def email_config(request):
     and admissions) on one page. Three independent forms, saved independently, each with
     its own Clear action to remove the override and fall back to .env again."""
     target = request.POST.get('save') if request.method == 'POST' else None
+
+    if target and target.startswith('test_') and target[len('test_'):] in _EMAIL_ACCOUNTS:
+        account = target[len('test_'):]
+        account_label = 'Admissions' if account == 'admissions' else 'Default'
+        to_email = request.user.email
+        if not to_email:
+            messages.error(request, 'Your account has no email address on file to send the test to.')
+            return redirect('management:email_config')
+
+        ok, detail, used_fallback, diagnostics = send_test_email(account, to_email)
+        auth_user = diagnostics.get('username') if diagnostics else None
+        auth_note = f' Authenticated SMTP user: {auth_user}.' if auth_user else ''
+        if ok:
+            note = (' — note: the admissions account has no override configured, '
+                     'so this actually went out via the default account.'
+                     ) if used_fallback else ''
+            messages.success(
+                request,
+                f'{account_label} account test succeeded — sent to {to_email} from {detail}.{note}{auth_note}'
+            )
+        else:
+            messages.error(request, f'{account_label} account test failed: {detail}.{auth_note}')
+        return redirect('management:email_config')
 
     if target == 'clear_server':
         _clear_config_keys(request, 'email_', _SERVER_FIELDS, 'Cleared shared SMTP server settings')

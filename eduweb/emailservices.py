@@ -51,6 +51,65 @@ def _resolve_sender(category):
     return connection, from_email or settings.DEFAULT_FROM_EMAIL
 
 
+def send_test_email(account, to_email):
+    """Send a minimal test email using the resolved connection for `account`
+    ('default' or 'admissions') — lets the email-config admin page confirm an
+    account actually sends mail, without needing to trigger a real signup/
+    reset/application flow. Does the same admissions -> default -> .env
+    fallback as real sends, and reports whether that fallback was used so the
+    admin isn't misled into thinking the admissions account itself is working.
+
+    Returns (success: bool, detail: str, used_fallback: bool, diagnostics: dict).
+    On success, `detail` is the from-address the email was actually sent from;
+    on failure, it's the error message. `diagnostics` reports the actual
+    host/port/username the connection authenticated with (read back off the
+    connection object itself, not re-derived), so a caller can tell whether
+    the DB values for this account were really picked up — this matters
+    because some SMTP hosts (common on shared cPanel hosting) silently rewrite
+    the message's From header to match the authenticated mailbox, which looks
+    identical to "fell back to the wrong account" unless you can see what
+    username actually authenticated.
+    """
+    used_fallback = False
+    diagnostics = {}
+    try:
+        connection, from_email = _get_category_connection(account)
+        if connection is None:
+            if account != 'default':
+                connection, from_email = _get_category_connection('default')
+                used_fallback = connection is not None
+            if connection is None:
+                # No DB override for this account (or its fallback) — fall back
+                # to the plain settings.EMAIL_*/.env connection, same as a bare
+                # django.core.mail.send_mail() call would use.
+                connection = get_connection(timeout=settings.EMAIL_TIMEOUT)
+                from_email = settings.DEFAULT_FROM_EMAIL
+
+        diagnostics = {
+            'host': getattr(connection, 'host', None),
+            'port': getattr(connection, 'port', None),
+            'username': getattr(connection, 'username', None),
+        }
+
+        account_label = 'Admissions' if account == 'admissions' else 'Default'
+        email = EmailMultiAlternatives(
+            subject=f'MIU Test Email — {account_label} Account',
+            body=(
+                f"This is a test email confirming the {account_label.lower()} "
+                f"account can send outbound mail.\n\nSent from: {from_email}\n"
+                f"Authenticated as: {diagnostics['username']}"
+            ),
+            from_email=from_email,
+            to=[to_email],
+            connection=connection,
+        )
+        email.send(fail_silently=False)
+        return True, from_email, used_fallback, diagnostics
+    except Exception as e:
+        logger.error("Test email failed for account=%s: %s", account, e, exc_info=True)
+        return False, str(e), used_fallback, diagnostics
+
+
 def _site():
     """
     Helper — returns the live SiteConfig row, or a safe fallback object

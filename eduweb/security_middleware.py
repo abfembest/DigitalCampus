@@ -40,7 +40,10 @@ _PASSTHROUGH_EXACT = {
     '/auth/', '/logout/', '/verify-email/', '/resend-verification/',
     '/forgot-password/', '/reset-password/', '/otp-verify/',
 }
-_PASSTHROUGH_PREFIX = {'/static/', '/media/', '/admin/', '__debug__/'}
+_PASSTHROUGH_PREFIX = {'/static/', '/media/', '__debug__/'}
+# NOTE: '/admin/' isn't listed here — it's handled explicitly at the top of
+# SessionSecurityMiddleware.process_request (the Django admin gate), which
+# returns before this passthrough set is ever consulted for that path.
 
 
 def _is_passthrough(path: str) -> bool:
@@ -129,16 +132,32 @@ def _load_permissions(user) -> dict:
 
 class SessionSecurityMiddleware(MiddlewareMixin):
     """
-    1. Inactivity timeout — hard logout at INACTIVITY_TIMEOUT_MINUTES
-    2. Suspension guard — admin can kill live sessions
-    3. Permission loading — attaches request.permissions for staff users
+    1. Django admin gate — /admin/ is restricted to superusers only
+    2. Inactivity timeout — hard logout at INACTIVITY_TIMEOUT_MINUTES
+    3. Suspension guard — admin can kill live sessions
+    4. Permission loading — attaches request.permissions for staff users
     """
 
     def process_request(self, request):
-        if not request.user.is_authenticated:
+        path = request.path_info
+
+        # ── Django admin gate ────────────────────────────────────────────
+        # /admin/ (the built-in Django admin site) is intentionally a
+        # passthrough for everything below — it manages its own session/
+        # login flow. But it should only ever be reachable by a true
+        # superuser, never by is_staff/StaffPermissionsMatrix-granted staff.
+        # An anonymous visitor is sent to the public homepage; a logged-in
+        # non-superuser is logged out and sent there too, rather than left
+        # sitting on Django's own "not authorized" admin login prompt.
+        if path.startswith('/admin/'):
+            if not request.user.is_authenticated:
+                return redirect('eduweb:index')
+            if not request.user.is_superuser:
+                return redirect('eduweb:logout')
             return None
 
-        path = request.path_info
+        if not request.user.is_authenticated:
+            return None
 
         if _is_passthrough(path):
             return None

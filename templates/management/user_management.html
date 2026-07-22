@@ -280,7 +280,7 @@
                   <i class="fas fa-eye"></i>
                 </button>
 
-                {% if permissions.user_management.can_edit %}
+                {% if permissions.user_management.can_edit and not u.is_superuser or permissions.user_management.can_edit and request.user.is_superuser %}
                 <button onclick="openEditModal({{ u.id }})"
                         class="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                         title="Edit user">
@@ -298,7 +298,7 @@
                   {% endif %}
                 {% endif %}
 
-                {% if permissions.user_management.can_edit %}
+                {% if permissions.user_management.can_edit and not u.is_superuser or permissions.user_management.can_edit and request.user.is_superuser %}
                 <button onclick="toggleActive({{ u.id }})"
                         class="p-2 rounded-lg transition-colors
                           {% if u.is_active %}text-gray-400 hover:text-orange-600 hover:bg-orange-50

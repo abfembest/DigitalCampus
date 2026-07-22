@@ -202,6 +202,19 @@ def _has_permission(request, module, action):
     return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
 
 
+def _is_superuser_protected(request, target_user):
+    """
+    True if `target_user` is a superuser and the acting request.user is not —
+    i.e. this action must be blocked. A superuser account may only be edited,
+    deactivated, or have its role changed by another superuser (including
+    itself). Ordinary admins/staff — even with full user_management
+    permissions — can never touch a superuser's account through these views.
+    Deletion of any user is already disallowed everywhere, so no separate
+    check is needed for that.
+    """
+    return bool(getattr(target_user, 'is_superuser', False)) and not request.user.is_superuser
+
+
 def _clear_stale_permission_overrides(user):
     """
     Delete every StaffPermissionsMatrix user-level override row for this
@@ -1319,12 +1332,18 @@ def _handle_bulk_action(request):
  
     # Never allow self-modification
     ids = [i for i in ids if i != request.user.id]
- 
+
     if not ids:
         messages.warning(request, 'No valid users selected.')
         return redirect('management:users_list')
- 
+
     affected = User.objects.filter(id__in=ids)
+
+    # Superuser accounts are never touched by a bulk action run by a
+    # non-superuser — silently drop them from the batch rather than failing
+    # the whole request, so the rest of the selection still goes through.
+    if not request.user.is_superuser:
+        affected = affected.filter(is_superuser=False)
  
     if action == 'activate':
         affected.update(is_active=True)
@@ -1437,6 +1456,10 @@ def user_edit(request, pk):
     if request.POST.get('action') == 'delete':
         return JsonResponse({'success': False, 'message': 'User deletion is not permitted.'}, status=403)
 
+    # Superuser accounts may only be edited by another superuser
+    if _is_superuser_protected(request, user):
+        return JsonResponse({'success': False, 'message': 'Superuser accounts cannot be edited by non-superuser staff.'}, status=403)
+
     original_is_staff = user.is_staff
     original_role = user.profile.role
 
@@ -1498,13 +1521,19 @@ def user_edit(request, pk):
 @require_permission('user_management', 'can_edit')
 def user_toggle_active(request, pk):
     user = get_object_or_404(User, pk=pk)
- 
+
     if user.id == request.user.id:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': 'Cannot deactivate your own account.'}, status=400)
         messages.error(request, 'You cannot deactivate your own account.')
         return redirect('management:users_list')
- 
+
+    if _is_superuser_protected(request, user):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'Superuser accounts cannot be activated or deactivated by non-superuser staff.'}, status=403)
+        messages.error(request, 'Superuser accounts cannot be activated or deactivated by non-superuser staff.')
+        return redirect('management:users_list')
+
     user.is_active = not user.is_active
     user.save(update_fields=['is_active'])
  
@@ -1532,6 +1561,13 @@ def user_change_role(request, pk):
         return redirect('management:users_list')
 
     user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
+
+    if _is_superuser_protected(request, user):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Superuser accounts cannot have their role changed by non-superuser staff.'}, status=403)
+        messages.error(request, 'Superuser accounts cannot have their role changed by non-superuser staff.')
+        return redirect('management:users_list')
+
     form = QuickRoleChangeForm(request.POST)
 
     if form.is_valid():
@@ -1634,7 +1670,7 @@ def role_assign(request):
     if user_id:
         try:
             candidate = User.objects.select_related('profile').get(pk=int(user_id))
-            if candidate.pk != request.user.pk:
+            if candidate.pk != request.user.pk and not _is_superuser_protected(request, candidate):
                 selected_user = candidate
         except (User.DoesNotExist, ValueError):
             pass
@@ -1650,6 +1686,14 @@ def role_assign(request):
         .exclude(pk=request.user.pk)
         .order_by('first_name', 'last_name', 'username')
     )
+
+    # Superuser accounts are completely off-limits to this page for anyone
+    # who isn't a superuser themselves — they shouldn't even appear in the
+    # picker, let alone be reachable via ?user_id=. The write endpoints
+    # (user_change_role / user_permissions) already reject this server-side
+    # too, so this is belt-and-braces, not the only line of defense.
+    if not request.user.is_superuser:
+        users = users.exclude(is_superuser=True)
 
     return render(request, 'management/role_assign.html', {
         'users': users,
@@ -1683,6 +1727,13 @@ def user_permissions(request, pk):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'error': 'You cannot edit your own permissions.'}, status=403)
         messages.error(request, 'You cannot edit your own permissions.')
+        return redirect('management:users_list')
+
+    if _is_superuser_protected(request, target):
+        error = 'Superuser accounts cannot have their permissions edited by non-superuser staff.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': error}, status=403)
+        messages.error(request, error)
         return redirect('management:users_list')
 
     if target.profile.role == 'student':

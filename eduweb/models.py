@@ -4070,7 +4070,7 @@ class StaffPermissionsMatrix(models.Model):
                 name='unique_staff_user_module'
             ),
             models.CheckConstraint(
-                condition=(
+                check=(
                     models.Q(role__isnull=False, user__isnull=True) |
                     models.Q(user__isnull=False, role__isnull=True)
                 ),
@@ -6101,7 +6101,7 @@ class Exam(models.Model):
             #     name="unique_exam_course_session_type",
             # ),
             models.CheckConstraint(
-                condition=models.Q(end_datetime__gt=models.F("start_datetime")),
+                check=models.Q(end_datetime__gt=models.F("start_datetime")),
                 name="exam_end_after_start",
             ),
         ]

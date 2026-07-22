@@ -739,6 +739,41 @@ def reset_password(request, token):
 
 
 # =============================================================================
+# ERROR HANDLERS
+# =============================================================================
+
+def custom_404(request, exception=None):
+    """
+    handler404 — registered in DigitalCampus/urls.py, used for any request
+    path that doesn't match a URL pattern.
+
+    A logged-in user hitting a stray/broken link (internal or external) is
+    far more likely to want their own dashboard than the public 404 page —
+    so they're redirected straight there, using the same role → dashboard
+    mapping already used by the portal sidebar/breadcrumb's "Home" link
+    (management/base.html). Anonymous visitors still get the normal
+    templates/404.html page.
+    """
+    if request.user.is_authenticated:
+        profile = getattr(request.user, 'profile', None)
+        role = getattr(profile, 'role', None)
+
+        if role == 'student':
+            return redirect('students:dashboard')
+        if role == 'instructor':
+            return redirect('instructor:dashboard')
+        if role == 'finance':
+            return redirect('finance:dashboard')
+        if role == 'support':
+            return redirect('support:dashboard')
+        # admin role, is_staff, is_superuser, or any other/unrecognised
+        # role — same fallback the sidebar's own "Home" link uses.
+        return redirect('management:dashboard')
+
+    return render(request, '404.html', status=404)
+
+
+# =============================================================================
 # PUBLIC PAGES
 # =============================================================================
 

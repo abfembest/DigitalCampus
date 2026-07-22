@@ -144,26 +144,29 @@ class SessionSecurityMiddleware(MiddlewareMixin):
         # ── Django admin gate ────────────────────────────────────────────
         # /admin/ (the built-in Django admin site) is intentionally a
         # passthrough for everything below — it manages its own session/
-        # login flow. But it should only ever be reachable by a true
-        # superuser, never by is_staff/StaffPermissionsMatrix-granted staff.
-        # An anonymous visitor is sent to the public homepage; a logged-in
-        # non-superuser is logged out and sent there too, rather than left
-        # sitting on Django's own "not authorized" admin login prompt.
+        # login flow. An anonymous visitor gets Django's own admin login
+        # page as normal, so they can still authenticate there directly.
+        # It's only restricted *after* authentication: a logged-in
+        # non-superuser (including is_staff/StaffPermissionsMatrix-granted
+        # staff) is logged out and sent to the homepage rather than left
+        # sitting on Django's own "not authorized" admin prompt.
         if path.startswith('/admin/'):
-            if not request.user.is_authenticated:
-                return redirect('eduweb:index')
-            if not request.user.is_superuser:
-                return redirect('eduweb:logout')
-            # Django's own admin site additionally requires is_staff=True
-            # (AdminSite.has_permission checks is_active AND is_staff, not
-            # is_superuser) — so a superuser account created/edited without
-            # that flag set would pass our check above but still get bounced
-            # by Django's admin login prompt. A superuser should never be
-            # blocked from /admin/ over this, so heal it here rather than
-            # leaving it as a confusing, hard-to-diagnose account state.
-            if not request.user.is_staff:
-                request.user.is_staff = True
-                request.user.save(update_fields=['is_staff'])
+            if request.user.is_authenticated:
+                if not request.user.is_superuser:
+                    return redirect('eduweb:logout')
+                # Django's own admin site additionally requires is_staff=True
+                # (AdminSite.has_permission checks is_active AND is_staff,
+                # not is_superuser) — so a superuser account created/edited
+                # without that flag set would pass the check above but still
+                # get bounced by Django's admin login prompt. A superuser
+                # should never be blocked from /admin/ over this, so heal it
+                # here rather than leaving it a confusing account state.
+                if not request.user.is_staff:
+                    request.user.is_staff = True
+                    request.user.save(update_fields=['is_staff'])
+            # Anonymous visitors fall through untouched — Django's own
+            # admin login page renders normally so they can authenticate
+            # directly at /admin/.
             return None
 
         if not request.user.is_authenticated:

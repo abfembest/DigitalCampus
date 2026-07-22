@@ -414,13 +414,6 @@
                             </div>
                         </td>
                     </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="9" class="px-4 py-12 text-center text-gray-400">
-                            <i class="fas fa-inbox text-4xl mb-3 block"></i>
-                            No required payments configured yet.
-                        </td>
-                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -670,7 +663,12 @@
             info: 'Showing _START_–_END_ of _TOTAL_',
             infoEmpty: 'No records',
             infoFiltered: '(filtered from _MAX_)',
-            paginate: { first: '«', last: '»', next: '›', previous: '‹' }
+            paginate: { first: '«', last: '»', next: '›', previous: '‹' },
+            /* DataTables renders this itself with a correctly-computed colspan —
+               replaces the old server-rendered <td colspan="9"> placeholder row,
+               which DataTables doesn't support in the tbody and was the cause of
+               the "Incorrect column count" warning when the table was empty. */
+            emptyTable: 'No required payments configured yet.'
         },
         columnDefs: [
             { responsivePriority: 1, targets: [0, 3, 8] },

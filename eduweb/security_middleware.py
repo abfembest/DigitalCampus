@@ -154,6 +154,16 @@ class SessionSecurityMiddleware(MiddlewareMixin):
                 return redirect('eduweb:index')
             if not request.user.is_superuser:
                 return redirect('eduweb:logout')
+            # Django's own admin site additionally requires is_staff=True
+            # (AdminSite.has_permission checks is_active AND is_staff, not
+            # is_superuser) — so a superuser account created/edited without
+            # that flag set would pass our check above but still get bounced
+            # by Django's admin login prompt. A superuser should never be
+            # blocked from /admin/ over this, so heal it here rather than
+            # leaving it as a confusing, hard-to-diagnose account state.
+            if not request.user.is_staff:
+                request.user.is_staff = True
+                request.user.save(update_fields=['is_staff'])
             return None
 
         if not request.user.is_authenticated:

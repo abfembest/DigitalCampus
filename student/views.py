@@ -18,7 +18,7 @@ import logging
 
 from eduweb.models import (
     LMSCourse, Enrollment, Lesson, LessonProgress,
-    CourseCategory, Assignment, AssignmentSubmission,
+    Assignment, AssignmentSubmission,
     Certificate, Announcement, Quiz, QuizAttempt,
     QuizAnswer, QuizQuestion, QuizResponse, StudyGroup, StudyGroupMember,
     Discussion, DiscussionReply, Badge,
@@ -26,36 +26,21 @@ from eduweb.models import (
     Message, Notification, Review, StudyGroupMessage,
     FeePayment, CourseGrade, CourseApplication, Exam, StudentExamResponse,
     Course, AcademicSession, CourseRegistration, CourseCarryOver,
-    ProgressionDecisionLog,
+    ProgressionDecisionLog, TERM_NORMALISATION_MAP,
 )
 
 from .forms import AssignmentSubmissionForm, ReplyCreateForm, ThreadCreateForm, StudyGroupMessageForm
 
-from django.core.mail import send_mail
-from django.conf import settings
-
 logger = logging.getLogger(__name__)
 
-
-# maps international/alias term keys → the canonical semester keys used on course.semester.
-# academicsession stores term_dates with keys from term_choices (first/second/third/fall/spring/summer/annual).
-# course.semester only uses first/second/annual.
-# this single map is the only place that relationship is defined.
-term_normalisation_map = {
-    # nigerian semester terms (already canonical — map to themselves)
-    'first':  'first',
-    'second': 'second',
-    'third':  'second',   # third semester/harmattan treated as second semester
-    'annual': 'annual',
-    # international semester equivalents
-    'fall':   'first',
-    'spring': 'second',
-    'summer': 'annual',
-    'autumn': 'first',    # autumn = fall = first semester
-}
+# The only place this mapping is defined is eduweb.models.TERM_NORMALISATION_MAP
+# (a model needs it too, for Program.max_credits_for_term's fallback tier, and
+# a model can't import from a view module) — this name is kept as a local
+# alias purely so every existing call site below didn't need touching.
+term_normalisation_map = TERM_NORMALISATION_MAP
 
 
-def _registrable_course_ids(profile):
+def _registrable_course_ids(profile, session=None):
     """
     Course IDs a student is allowed to be registering for right now:
     everything at their *current* year_of_study, plus any course still
@@ -71,9 +56,18 @@ def _registrable_course_ids(profile):
     passed (e.g. from before they were promoted) silently consumed their
     credit cap forever and blocked all new registrations with no
     indication of why.
+
+    `session`, when given, is excluded from the "already passed" filter
+    below — see that filter's comment for why.
     """
     if not profile or not profile.program:
         return Course.objects.none().values_list('id', flat=True)
+
+    # Reconcile before reading — a released passing grade may already exist
+    # for an open carry-over (e.g. a mid-session recompute) that no
+    # progression run has processed yet; without this, is_cleared can sit
+    # stale until the next admin-triggered progression batch.
+    CourseCarryOver.sync_cleared_for_student(profile.user)
 
     open_carry_over_course_ids = CourseCarryOver.objects.filter(
         student=profile.user, is_cleared=False
@@ -82,9 +76,25 @@ def _registrable_course_ids(profile):
     # result_status='released' — an unpublished pass isn't confirmed to the
     # student yet, so it must not silently drop the course from their
     # registrable list while they're still waiting on the official result.
-    passed_course_ids = CourseGrade.objects.filter(
-        student=profile.user, is_passed=True, result_status='released'
-    ).values_list('course_id', flat=True)
+    #
+    # Excludes the *current* session (when given): CourseGrade.recompute_
+    # for_student_course runs continuously off quiz/assignment/exam scores
+    # as they come in, so a course can legitimately already read as
+    # is_passed=True mid-session, before that session has closed — and if
+    # an admin has released results early, or in this session's seed data,
+    # that grade can carry result_status='released' too. A pass from the
+    # *same* session/term being registered for must not make an active,
+    # currently-registered course invisible to registrable_course_ids —
+    # that would silently drop it from the credit-cap total (undercounting
+    # what's actually registered) even though the registration is real and
+    # current, not stale. Only a pass from a genuinely *prior* session means
+    # the course is done and should stop being offered/counted.
+    passed_qs = CourseGrade.objects.filter(
+        student=profile.user, is_passed=True, result_status='released',
+    )
+    if session is not None:
+        passed_qs = passed_qs.exclude(session=session)
+    passed_course_ids = passed_qs.values_list('course_id', flat=True)
 
     # A passed course is only excluded from the current-level listing, never
     # from the carry-over branch — CourseCarryOver.is_cleared is the
@@ -194,36 +204,6 @@ def _notify(user, notification_type, title, message, link=''):
     except Exception:
         pass
 
-def _get_eligible_exams(user):
-    """
-    Returns published Exam queryset for exams the student is eligible to see.
-    Rules:
-      1. Exam must be PUBLISHED
-      2. Exam.course (LMSCourse) must belong to current academic session
-      3. Exam.course.term must match the current term of that session
-      4. Student must have an ACTIVE enrollment in that LMSCourse
-    """
-    current_session = AcademicSession.get_current()
-    if not current_session:
-        return Exam.objects.none()
-
-    current_term = current_session.get_current_term()
-
-    qs = Exam.objects.filter(
-        status=Exam.PUBLISHED,
-        course__session=current_session,          # LMSCourse.session
-        course__enrollments__student=user,        # Enrollment.student
-        course__enrollments__status='active',     # Enrollment.status
-    ).select_related('course').distinct()
-    # If the session has a current term, also filter by it
-    # (blank term on LMSCourse means it matches any term — don't exclude those)
-    if current_term:
-        qs = qs.filter(
-            models.Q(course__term=current_term) | models.Q(course__term='')
-        )
-
-    return qs
-
 @login_required
 @student_required
 def dashboard(request):
@@ -293,7 +273,7 @@ def dashboard(request):
                 session=current_session,
                 term__in=[current_term, normalised_term],
                 status__in=['pending', 'approved'],
-                course_id__in=_registrable_course_ids(profile),
+                course_id__in=_registrable_course_ids(profile, session=current_session),
             )
             .aggregate(total=Sum('course__credit_units'))['total'] or 0
         )
@@ -448,6 +428,7 @@ def dashboard(request):
     # Uses the same canonical CourseGrade.compute_cgpa as Academic Records and
     # the progression decision logic, so the CGPA shown here never disagrees.
     cgpa = CourseGrade.compute_cgpa(user)
+    CourseCarryOver.sync_cleared_for_student(user)
     open_carry_overs = CourseCarryOver.objects.filter(student=user, is_cleared=False).select_related('course')
 
     context = {
@@ -557,12 +538,14 @@ def my_courses(request):
     semester_courses_debug    = {}
     regular_courses_complete  = True
 
-    # Pull max from Program model — never hardcoded. Per-term, since a
-    # program can now set a different cap for first/second/annual via
-    # Program.credit_caps_by_term (falls back to max_credits_per_semester
-    # for any term without an override).
+    # Pull max from Program model — never hardcoded. Per (session, term):
+    # Program.max_credits_for_term checks a session-specific override first
+    # (ProgramSessionCreditCap), then a program-wide per-term default
+    # (credit_caps_by_term), then max_credits_per_semester. Pass the RAW
+    # selected_term here, not a pre-normalised one — the session-specific
+    # tier is keyed by whatever term name this session actually uses.
     max_credits_per_semester = (
-        profile.program.max_credits_for_term(term_normalisation_map.get(selected_term, selected_term))
+        profile.program.max_credits_for_term(selected_term, session=selected_session)
         if profile and profile.program
         else 24
     )
@@ -573,12 +556,18 @@ def my_courses(request):
         # Courses already passed shouldn't be offered again for re-registration.
         # result_status='released' — matches _registrable_course_ids: an
         # unpublished pass isn't confirmed yet, so don't hide the course.
+        # Excludes the *current* selected_session — see _registrable_course_ids'
+        # matching comment: a mid-session recompute can already read as
+        # is_passed=True (and, if released early, result_status='released')
+        # before the session closes, and that must not make an actively
+        # registered course disappear from its own term's own listing.
         passed_course_ids = set(
             CourseGrade.objects.filter(
                 student=user, is_passed=True, result_status='released'
-            ).values_list('course_id', flat=True)
+            ).exclude(session=selected_session).values_list('course_id', flat=True)
         )
 
+        CourseCarryOver.sync_cleared_for_student(user)
         carry_over_attempts = {
             co.course_id: co.attempts
             for co in CourseCarryOver.objects.filter(student=user, is_cleared=False)
@@ -828,7 +817,7 @@ def register_semester_course(request, course_slug):
         )
         return redirect('students:my_payments')
 
-    registrable_course_ids = _registrable_course_ids(profile)
+    registrable_course_ids = _registrable_course_ids(profile, session=current_session)
 
     course = get_object_or_404(
         Course.objects.filter(pk__in=registrable_course_ids),
@@ -839,9 +828,11 @@ def register_semester_course(request, course_slug):
 
     normalised_term = current_term.lower().replace(' semester', '').strip() if current_term else current_term
 
-    # Dynamic max from the Program model — per-term, via Program.credit_caps_by_term
-    # (falls back to max_credits_per_semester for a term without an override).
-    MAX_CREDITS_PER_SEMESTER = profile.program.max_credits_for_term(normalised_term)
+    # Dynamic max from the Program model — session-specific override first,
+    # then program-wide per-term default, then the flat fallback. RAW
+    # current_term is passed (not normalised_term) since the session-level
+    # tier is keyed by whatever term name this session actually uses.
+    MAX_CREDITS_PER_SEMESTER = profile.program.max_credits_for_term(current_term, session=current_session)
 
     # Shared by both checks below: a course already passed can never be
     # re-registered (see _registrable_course_ids), and a course that's
@@ -849,11 +840,16 @@ def register_semester_course(request, course_slug):
     # courses a carry-over has to wait behind — otherwise a carry-over that
     # happens to share the student's current level (she's repeating it)
     # would be required to wait for itself, a permanent deadlock.
+    # Excludes current_session — see _registrable_course_ids' matching
+    # comment: a mid-session recompute can already read as is_passed=True
+    # before the session closes, and that must not make an actively
+    # registered course invisible to this session's own cap/lock checks.
     passed_course_ids = set(
         CourseGrade.objects.filter(
             student=request.user, is_passed=True, result_status='released',
-        ).values_list('course_id', flat=True)
+        ).exclude(session=current_session).values_list('course_id', flat=True)
     )
+    CourseCarryOver.sync_cleared_for_student(request.user)
     open_carry_over_course_ids = set(
         CourseCarryOver.objects.filter(
             student=request.user, is_cleared=False,
@@ -1110,7 +1106,11 @@ def register_all_semester_courses(request):
 
     normalised_term = term_normalisation_map.get(current_term, current_term)
 
-    MAX_CU = profile.program.max_credits_for_term(normalised_term)
+    # RAW current_term (not normalised_term) — the session-specific tier of
+    # max_credits_for_term is keyed by whatever term name this session
+    # actually uses; normalised_term is still used below for matching
+    # against Course.semester's canonical first/second/annual values.
+    MAX_CU = profile.program.max_credits_for_term(current_term, session=current_session)
 
     # Get all pending/approved registrations for this session/term, scoped to
     # courses at the student's current level (or an open carry-over) — the
@@ -1122,7 +1122,7 @@ def register_all_semester_courses(request):
         session=current_session,
         term__in=[current_term, normalised_term],
         status__in=['pending', 'approved'],
-        course_id__in=_registrable_course_ids(profile),
+        course_id__in=_registrable_course_ids(profile, session=current_session),
     ).select_related('course')
 
     # Validate: check credit total doesn't exceed max
@@ -2316,28 +2316,35 @@ def quiz_list(request):
         'questions'
     ).order_by('-created_at')
 
-    # Annotate with attempt information
+    # Annotate with attempt information. Bulk-fetch every completed attempt
+    # for every quiz on this page in one query and group in Python — this
+    # used to run 4 separate queries per quiz in the loop below
+    # (.count()/.aggregate(Max)/.order_by().first()/.filter(passed=True)
+    # .exists()), invisible at low course-catalog volume but measured at 72
+    # of 95 total queries on this page for 18 quizzes post-reseed.
+    quizzes = list(quizzes)
+    all_attempts = (
+        QuizAttempt.objects
+        .filter(quiz_id__in=[q.id for q in quizzes], student=request.user, is_completed=True)
+        .order_by('quiz_id', '-completed_at')
+    )
+    attempts_by_quiz = {}
+    for a in all_attempts:
+        attempts_by_quiz.setdefault(a.quiz_id, []).append(a)
+
     quiz_list = []
     for quiz in quizzes:
-        # Get all attempts for this quiz
-        attempts = QuizAttempt.objects.filter(
-            quiz=quiz,
-            student=request.user,
-            is_completed=True
-        )
+        # All completed attempts for this quiz, most recent first (the
+        # ordering above is preserved per-group by insertion order).
+        attempts = attempts_by_quiz.get(quiz.id, [])
 
         # Calculate statistics
-        attempt_count = attempts.count()
-        best_score = (
-            attempts.aggregate(Max('percentage'))
-            ['percentage__max'] or 0
-        )
-        latest_attempt = attempts.order_by(
-            '-completed_at'
-        ).first()
+        attempt_count = len(attempts)
+        best_score = max((a.percentage for a in attempts), default=0) or 0
+        latest_attempt = attempts[0] if attempts else None
 
         # Determine status
-        has_passed = attempts.filter(passed=True).exists()
+        has_passed = any(a.passed for a in attempts)
         can_attempt = (
             quiz.max_attempts == 0 or
             attempt_count < quiz.max_attempts
@@ -3289,6 +3296,19 @@ def progress(request):
         .values_list('course_id')
         .annotate(c=Count('id'))
     )
+    # First active lesson per course (for the "Continue Learning" link) —
+    # bulk-computed in the same ordering the template used to get for free
+    # via enrollment.course.lessons.first (Lesson.Meta.ordering =
+    # ['course', 'section', 'display_order']), so this replaces a per-row
+    # `.first`/`.count` template call (an N+1 the view already eliminates
+    # everywhere else) rather than changing which lesson counts as "first".
+    first_lesson_by_course = {}
+    for lesson in (
+        Lesson.objects
+        .filter(course_id__in=course_ids, is_active=True)
+        .order_by('course_id', 'section_id', 'display_order')
+    ):
+        first_lesson_by_course.setdefault(lesson.course_id, lesson)
     assignment_count_by_course = dict(
         Assignment.objects
         .filter(lesson__course_id__in=course_ids)
@@ -3309,6 +3329,8 @@ def progress(request):
         enrollment.completed_lessons = len(completed_lesson_ids)
 
         total_lessons = total_lessons_by_course.get(enrollment.course_id, 0)
+        enrollment.total_lesson_count = total_lessons
+        enrollment.first_lesson = first_lesson_by_course.get(enrollment.course_id)
         enrollment.progress_percentage = (
             (enrollment.completed_lessons / total_lessons * 100)
             if total_lessons > 0
@@ -3452,11 +3474,6 @@ def certificates(request):
     }
 
     return render(request, 'students/certificates.html', context)
-
-
-def _cert_is_unlocked(cert):
-    """True if student can view/download this certificate."""
-    return cert.payment_status == 'paid'
 
 
 # NOTE: "My Profile" and "Settings" are now single shared pages for every

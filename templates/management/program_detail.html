@@ -200,6 +200,14 @@
                         {% endfor %}
                     </div>
                     {% endif %}
+                    {% if program.session_credit_caps.all %}
+                    <p class="text-xs text-gray-500 mt-2 mb-1">Session-specific overrides:</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for cap in program.session_credit_caps.all %}
+                        <span class="inline-block px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-medium capitalize">{{ cap.session.name }} — {{ cap.term }}: {{ cap.max_credit_units }} CU</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

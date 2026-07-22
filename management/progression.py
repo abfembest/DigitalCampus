@@ -145,14 +145,11 @@ def apply_progression_decision(decision, admin_user):
     profile = decision['profile']
     session = decision['session']
 
-    # Clear any open carry-over now covered by a passing, released grade (resits, etc.)
-    for rec in CourseCarryOver.objects.filter(student=profile.user, is_cleared=False):
-        if CourseGrade.objects.filter(
-            student=profile.user, course=rec.course, is_passed=True, result_status='released',
-        ).exists():
-            rec.is_cleared = True
-            rec.cleared_session = session
-            rec.save(update_fields=['is_cleared', 'cleared_session', 'updated_at'])
+    # Clear any open carry-over now covered by a passing, released grade
+    # (resits, etc.) — the single shared reconciliation also used live by
+    # student-facing registration pages, so progression doesn't hand-roll a
+    # second copy of the same clearing condition.
+    CourseCarryOver.sync_cleared_for_student(profile.user)
 
     # Open/increment carry-over for this run's failed courses
     for course in decision['failed_courses']:

@@ -51,6 +51,11 @@ def _has_permission(request, module, action):
 def finance_dashboard(request):
     """Finance dashboard — analytics and summary across all modules"""
 
+    # Consistent with management/dashboard() and instructor/dashboard(): the
+    # portal's own root dashboard isn't a StaffPermissionsMatrix module (see
+    # the commented-out 'dashboard' key in ROLE_DEFAULT_PERMISSIONS) — access
+    # is gated by is_finance_manager (role) alone, matching every other app.
+
     # ── Date range resolution ─────────────────────────────────────────────
     range_form = DateRangeForm(request.GET or None)
     end_date = timezone.now()

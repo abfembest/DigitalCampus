@@ -754,6 +754,10 @@ def kb_article_create(request):
 @login_required
 @support_required
 def kb_article_edit(request, slug):
+    if request.method == 'GET' and not _has_permission(request, 'support_knowledge_base', 'can_view'):
+        messages.error(request, 'You do not have permission to view knowledge base articles.')
+        return redirect('support:kb_list')
+
     article = get_object_or_404(KBArticle, slug=slug)
     if request.method == 'POST':
         if not _has_permission(request, 'support_knowledge_base', 'can_edit'):
@@ -1259,6 +1263,9 @@ def api_ticket_stats(request):
 @login_required
 @support_required
 def api_canned_response(request, pk):
+    if not _has_permission(request, 'support_communications', 'can_view'):
+        return JsonResponse({'ok': False, 'error': 'Permission denied.'}, status=403)
+
     cr = get_object_or_404(CannedResponse, pk=pk, is_active=True)
     CannedResponse.objects.filter(pk=pk).update(use_count=cr.use_count + 1)
     return JsonResponse({'ok': True, 'body': cr.body, 'title': cr.title})

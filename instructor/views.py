@@ -38,7 +38,7 @@ from eduweb.models import (
 
 from .forms import (
     AnnouncementForm, AssignmentForm, CourseForm, CourseObjectivesForm,
-    ExamForm, LessonForm, QuizAnswerForm, QuizForm, QuizQuestionForm,
+    ExamForm, LessonForm, MessageForm, QuizAnswerForm, QuizForm, QuizQuestionForm,
     SectionForm,
 )
 
@@ -165,6 +165,10 @@ def dashboard(request):
 @instructor_required
 def course_list(request):
     """List all instructor courses with statistics"""
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view your courses.')
+        return redirect('instructor:dashboard')
+
     courses = LMSCourse.objects.filter(
         instructor=request.user
     ).annotate(
@@ -206,6 +210,10 @@ def course_manage(request, slug=None):
     All forms POST to their existing dedicated URLs — this view only
     serves the GET and passes all the data needed to render every tab.
     """
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view course management.')
+        return redirect('instructor:dashboard')
+
     # Support ?course=<id> switcher from the dropdown on the manage page
     course_id = request.GET.get('course')
     if course_id:
@@ -365,12 +373,16 @@ def course_manage(request, slug=None):
 @require_permission('instructor_courses', 'can_edit')
 def course_edit(request, slug):
     """Edit course using slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view this course.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=slug,
         instructor=request.user
     )
-    
+
     if request.method == 'POST':
         form = CourseForm(
             request.POST,
@@ -410,6 +422,10 @@ def course_edit(request, slug):
 @require_permission('instructor_courses', 'can_edit')
 def course_objectives(request, slug):
     """Manage course objectives using slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view this course.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=slug,
@@ -546,6 +562,10 @@ def section_delete(request, course_slug, section_id):
 @instructor_required
 def lesson_list(request, course_slug):
     """List lessons using course slug"""
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view course content.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -576,6 +596,10 @@ def lesson_list(request, course_slug):
 @require_permission('instructor_courses', 'can_create')
 def lesson_create(request, course_slug):
     """Create lesson using course slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view course content.')
+        return redirect('instructor:lesson_list', course_slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -621,6 +645,10 @@ def lesson_create(request, course_slug):
 @require_permission('instructor_courses', 'can_edit')
 def lesson_edit(request, course_slug, lesson_slug):
     """Edit lesson using course slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view course content.')
+        return redirect('instructor:lesson_list', course_slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -703,6 +731,10 @@ def lesson_delete(request, course_slug, lesson_slug):
 @instructor_required
 def quiz_list(request, course_slug, lesson_slug):
     """List quizzes using slugs"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:lesson_list', course_slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -730,6 +762,10 @@ def quiz_list(request, course_slug, lesson_slug):
 @require_permission('instructor_assessments', 'can_create')
 def quiz_create(request, course_slug, lesson_slug):
     """Create quiz using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -782,6 +818,10 @@ def quiz_create(request, course_slug, lesson_slug):
 @require_permission('instructor_assessments', 'can_edit')
 def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     """Edit quiz using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -824,6 +864,10 @@ def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
 @instructor_required
 def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
     """Manage quiz questions using slugs"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -858,6 +902,10 @@ def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
 @require_permission('instructor_assessments', 'can_create')
 def question_create(request, course_slug, lesson_slug, quiz_slug):
     """Create question using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_questions', course_slug=course_slug, lesson_slug=lesson_slug, quiz_slug=quiz_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -912,6 +960,10 @@ def question_create(request, course_slug, lesson_slug, quiz_slug):
 @require_permission('instructor_assessments', 'can_create')
 def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
     """Manage question answers using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_questions', course_slug=course_slug, lesson_slug=lesson_slug, quiz_slug=quiz_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -967,6 +1019,10 @@ def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
 @instructor_required
 def assignment_list(request, course_slug, lesson_slug):
     """List assignments using slugs"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:lesson_list', course_slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -992,6 +1048,10 @@ def assignment_list(request, course_slug, lesson_slug):
 @require_permission('instructor_assessments', 'can_create')
 def assignment_create(request, course_slug, lesson_slug):
     """Create assignment using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:assignment_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1044,6 +1104,10 @@ def assignment_create(request, course_slug, lesson_slug):
 @require_permission('instructor_assessments', 'can_edit')
 def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     """Edit assignment using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:assignment_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1089,6 +1153,10 @@ def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
 @instructor_required
 def assignment_submissions(request, course_slug, assignment_slug):
     """View submissions using slugs"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1123,6 +1191,10 @@ def assignment_submissions(request, course_slug, assignment_slug):
 @require_permission('instructor_assessments', 'can_edit')
 def grade_submission(request, course_slug, submission_id):
     """Grade submission using course slug and submission ID"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:course_list')
+
     # Get the submission first
     submission = get_object_or_404(AssignmentSubmission, id=submission_id)
     
@@ -1211,6 +1283,10 @@ def grade_submission(request, course_slug, submission_id):
 @instructor_required
 def students_list(request, course_slug):
     """List students using course slug"""
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view students.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1231,6 +1307,10 @@ def students_list(request, course_slug):
 @instructor_required
 def student_progress(request, course_slug, student_id):
     """View student progress using course slug"""
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view students.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1330,6 +1410,10 @@ def enroll_student(request, course_slug):
 @require_permission('instructor_communications', 'can_create')
 def announcement_create(request, course_slug):
     """Create announcement using course slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view announcements.')
+        return redirect('instructor:course_edit', slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1379,6 +1463,10 @@ def announcement_create(request, course_slug):
 @instructor_required
 def all_quizzes(request):
     """View all quizzes across all instructor's courses"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:dashboard')
+
     courses = LMSCourse.objects.filter(instructor=request.user)
     quizzes = Quiz.objects.filter(
         lesson__course__in=courses
@@ -1397,6 +1485,10 @@ def all_quizzes(request):
 @instructor_required
 def all_assignments(request):
     """View all assignments across all instructor's courses"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:dashboard')
+
     courses = LMSCourse.objects.filter(instructor=request.user)
     assignments = Assignment.objects.filter(
         lesson__course__in=courses
@@ -1475,6 +1567,10 @@ def course_statistics(request):
     Course statistics overview
     Shows enrollment trends, completion rates, and performance metrics
     """
+    if not _has_permission(request, 'instructor_analytics', 'can_view'):
+        messages.error(request, 'You do not have permission to view analytics.')
+        return redirect('instructor:dashboard')
+
     # enrollments and reviews are two independent reverse relations off
     # LMSCourse — annotating Count('enrollments') and Avg('reviews__rating')
     # in the same call joins both tables first, so each enrollment row gets
@@ -1565,6 +1661,10 @@ def student_analytics_progress(request):
     Student progress tracking
     Shows individual student performance across all courses
     """
+    if not _has_permission(request, 'instructor_analytics', 'can_view'):
+        messages.error(request, 'You do not have permission to view analytics.')
+        return redirect('instructor:dashboard')
+
     # Get all courses taught by instructor
     instructor_courses = LMSCourse.objects.filter(
         instructor=request.user
@@ -1632,6 +1732,10 @@ def reviews_ratings(request):
     Course reviews and ratings analysis
     Shows detailed feedback and rating trends
     """
+    if not _has_permission(request, 'instructor_analytics', 'can_view'):
+        messages.error(request, 'You do not have permission to view analytics.')
+        return redirect('instructor:dashboard')
+
     # Get all reviews for instructor's courses
     reviews = Review.objects.filter(
         course__instructor=request.user,
@@ -1725,6 +1829,10 @@ def resources(request):
     that already have content (lessons) created for them.
     Supports tab-based pagination via ?videos_page=, ?docs_page=, ?assignments_page=
     """
+    if not _has_permission(request, 'instructor_resources', 'can_view'):
+        messages.error(request, 'You do not have permission to view resources.')
+        return redirect('instructor:dashboard')
+
     ITEMS_PER_PAGE = 10
 
     # Only courses assigned to this instructor that have at least one lesson
@@ -1841,6 +1949,10 @@ def resources(request):
 @instructor_required
 def announcement_list(request, course_slug):
     """List all announcements for a course."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view announcements.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     announcements_qs = course.announcements.all().order_by('-publish_date')
 
@@ -1859,6 +1971,10 @@ def announcement_list(request, course_slug):
 @require_permission('instructor_communications', 'can_edit')
 def announcement_edit(request, course_slug, announcement_slug):
     """Edit an existing announcement."""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view announcements.')
+        return redirect('instructor:announcement_list', course_slug=course_slug)
+
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     announcement = get_object_or_404(Announcement, slug=announcement_slug, course=course)
 
@@ -1908,6 +2024,10 @@ def announcement_delete(request, course_slug, announcement_slug):
 @instructor_required
 def quiz_results(request, course_slug, lesson_slug, quiz_slug):
     """Show all student attempts for a quiz."""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:course_list')
+
     course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
@@ -1945,6 +2065,10 @@ def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id
     =True) — those are never auto-scored at submission time since there's no
     "correct answer" concept for free text.
     """
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:course_list')
+
     course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
@@ -2039,6 +2163,10 @@ def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id
 @instructor_required
 def messages_inbox(request):
     """Show received messages (most recent per thread)."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view messages.')
+        return redirect('instructor:dashboard')
+
     received = Message.objects.filter(
         recipient=request.user, parent__isnull=True
     ).select_related('sender').order_by('-created_at')
@@ -2056,6 +2184,10 @@ def messages_inbox(request):
 @instructor_required
 def messages_sent(request):
     """Show sent messages."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view messages.')
+        return redirect('instructor:dashboard')
+
     sent = Message.objects.filter(
         sender=request.user, parent__isnull=True
     ).select_related('recipient').order_by('-created_at')
@@ -2071,6 +2203,10 @@ def messages_sent(request):
 @instructor_required
 def message_thread(request, message_id):
     """Display a full conversation thread."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view messages.')
+        return redirect('instructor:dashboard')
+
     root = get_object_or_404(
         Message, id=message_id
     )
@@ -2148,6 +2284,10 @@ def instructor_notification_read(request, notif_id):
 @require_permission('instructor_communications', 'can_create')
 def message_compose(request):
     """Compose and send a new message."""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view messages.')
+        return redirect('instructor:messages_inbox')
+
     initial = {}
 
     # Pre-fill if coming from a student profile link: ?recipient=<id>&subject=...
@@ -2249,6 +2389,10 @@ def messages_mark_all_read(request):
 @instructor_required
 def discussions(request, course_slug):
     """List all discussion threads for a course."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view discussions.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     discussions_qs = Discussion.objects.filter(course=course).select_related(
         'author'
@@ -2264,6 +2408,10 @@ def discussions(request, course_slug):
 @instructor_required
 def discussion_detail(request, course_slug, discussion_slug):
     """View a single discussion thread and its replies."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view discussions.')
+        return redirect('instructor:course_list')
+
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
 
@@ -2418,6 +2566,9 @@ def ajax_course_details(request):
     Returns JSON {code, academic_session_id, academic_session_name}
     for the instructor's own course only.
     """
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        return JsonResponse({'error': 'Permission denied.'}, status=403)
+
     course_id = request.GET.get('course_id')
     if not course_id:
         return JsonResponse({'error': 'No course_id provided'}, status=400)
@@ -2479,6 +2630,10 @@ def create_assessment(request):
     hidden fields (questions_data) so the instructor can add/remove them
     dynamically without a page reload, leveraging the existing jQuery on the page.
     """
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:dashboard')
+
     instructor_courses = LMSCourse.objects.filter(
         instructor=request.user
     ).select_related('academic_course').order_by('title')
@@ -2708,6 +2863,9 @@ def ajax_course_lessons(request):
     GET /instructor/assessments/course-lessons/?course_id=<pk>
     Returns JSON list of lessons for the instructor's course.
     """
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        return JsonResponse({'error': 'Permission denied.'}, status=403)
+
     course_id = request.GET.get('course_id')
     if not course_id:
         return JsonResponse({'lessons': []})
@@ -2728,6 +2886,10 @@ def ajax_course_lessons(request):
 @instructor_required
 def exam_list(request):
     """List all exams created by this instructor with filtering & search."""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:dashboard')
+
     qs = Exam.objects.filter(instructor=request.user).order_by('-created_at')
  
     active_status = request.GET.get('status', 'all')
@@ -2770,6 +2932,10 @@ def exam_list(request):
 @instructor_required
 def exam_detail(request, slug):
     """Single exam — tabbed view: overview, edit, questions, results."""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:exam_list')
+
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
  
     questions    = exam.questions.filter(is_active=True).order_by('created_at')
@@ -2963,6 +3129,10 @@ def exam_publish(request, slug):
 @require_permission('instructor_assessments', 'can_create', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_question_create(request, slug):
     """Add a new question to the exam question pool."""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:exam_detail', slug=slug)
+
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
 
     if exam.status == Exam.PUBLISHED:
@@ -2990,6 +3160,10 @@ def exam_question_create(request, slug):
 @require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_question_edit(request, slug, question_id):
     """Edit an existing exam question."""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:exam_detail', slug=slug)
+
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
     question = get_object_or_404(ExamQuestion, pk=question_id, exam=exam)
 
@@ -3292,6 +3466,10 @@ def _parse_exam_questions_from_file(import_file, exam, user):
 @instructor_required
 @require_permission('instructor_assessments', 'can_edit')
 def exam_grade_response(request, slug, response_id):
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:exam_detail', slug=slug)
+
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
     response = get_object_or_404(StudentExamResponse, pk=response_id, exam=exam)
 

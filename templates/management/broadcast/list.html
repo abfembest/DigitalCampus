@@ -102,7 +102,7 @@
                                 <i class="fas fa-envelope text-gray-400 mr-3"></i>
                                 <div>
                                     <p class="font-medium text-gray-900">{{ broadcast.subject }}</p>
-                                    <p class="text-sm text-gray-500">By {{ broadcast.created_by.get_full_name|default:broadcast.created_by.username }}</p>
+                                    <p class="text-sm text-gray-500">By {% if broadcast.created_by %}{{ broadcast.created_by.get_full_name|default:broadcast.created_by.username }}{% else %}System{% endif %}</p>
                                 </div>
                             </div>
                         </td>
@@ -607,7 +607,7 @@ const broadcastsData = {
         filterValues: {{ broadcast.filter_values|safe }},
         recipientCount: {{ broadcast.recipient_count }},
         recipientEmails: {{ broadcast.recipient_emails|safe }},
-        createdBy: '{{ broadcast.created_by.get_full_name|default:broadcast.created_by.username|escapejs }}',
+        createdBy: '{% if broadcast.created_by %}{{ broadcast.created_by.get_full_name|default:broadcast.created_by.username|escapejs }}{% else %}System{% endif %}',
         createdAt: '{{ broadcast.created_at|date:"M d, Y g:i A" }}',
         sentAt: '{{ broadcast.sent_at|date:"M d, Y g:i A"|default:"" }}',
         error: '{{ broadcast.error_message|escapejs }}'

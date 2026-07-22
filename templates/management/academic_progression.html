@@ -61,6 +61,16 @@
     </span>
   </div>
   {% endif %}
+  {% if analytics.unreleased_grades_count %}
+  <div class="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-2">
+    <i class="fas fa-triangle-exclamation mt-0.5" aria-hidden="true"></i>
+    <span>
+      <strong>{{ analytics.unreleased_grades_count }}</strong> result{{ analytics.unreleased_grades_count|pluralize }} for this program/session
+      {{ analytics.unreleased_grades_count|pluralize:"is,are" }} still pending or withheld release. Those courses will count as
+      "not passed" below until you release them — check <a href="{% url 'management:results_publish' %}" class="underline font-medium">Publish Results</a> first if that's not intended.
+    </span>
+  </div>
+  {% endif %}
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="p-5 border-b border-gray-100 flex items-center justify-between">
       <h2 class="font-semibold text-gray-800">

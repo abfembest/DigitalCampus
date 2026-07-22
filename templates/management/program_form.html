@@ -189,6 +189,39 @@
       </div>
     </div>
 
+    {% if sessions_with_terms %}
+    <!-- Section: Per-Session Credit Unit Overrides -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-800"><i class="fas fa-layer-group text-purple-500 mr-2" aria-hidden="true"></i>Per-Session Credit Unit Overrides</h2>
+        <p class="text-xs text-gray-500 mt-1">
+          The most specific cap tier — set a different max CU for this exact academic session's term(s), overriding both the per-term default above and the plain default.
+          Each session below only shows the term(s) it actually defines. Leave a field blank to fall back to the tiers above.
+        </p>
+      </div>
+      <div class="p-6 space-y-4">
+        {% for entry in sessions_with_terms %}
+        <div class="border border-gray-200 rounded-lg p-4">
+          <p class="text-sm font-semibold text-gray-800 mb-2">
+            {{ entry.session.name }}
+            {% if entry.session.is_current %}<span class="ml-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-[10px] font-semibold uppercase align-middle">Current</span>{% endif %}
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {% for t in entry.terms %}
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">{{ t.label }}</label>
+              <input type="number" name="session_cap_{{ entry.session.pk }}_{{ t.term }}" value="{{ t.value }}"
+                     min="1" max="30" placeholder="Use tiers above"
+                     class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Section: Financial -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">

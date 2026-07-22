@@ -1009,10 +1009,14 @@ function openEditModal(pk) {
     wireDatalist('edit-instr-search', 'edit-instr-pk', 'dl-instructors');
   })
   .catch(() => {
+    // No standalone full-page editor exists for LMS courses — the modal is
+    // the only edit surface (see lms_course_detail's own docstring). A link
+    // to '.../<pk>/edit/' 404s since that route doesn't exist; point back
+    // at the list instead, where the edit modal can be retried.
     loading.innerHTML = `
       <div class="text-center py-6">
         <i class="fas fa-exclamation-circle text-red-400 text-2xl mb-2"></i>
-        <p class="text-sm text-red-500">Failed to load course. <a href="/management/lms-courses/${pk}/edit/" class="underline">Open full-page editor</a></p>
+        <p class="text-sm text-red-500">Failed to load course details. Please close this dialog and try again.</p>
       </div>`;
   });
 }

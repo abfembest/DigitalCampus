@@ -9,6 +9,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.text import slugify
+from django.utils.functional import cached_property
 from cryptography.fernet import Fernet, InvalidToken
 from functools import lru_cache
 import uuid
@@ -173,6 +174,33 @@ def blog_image_upload_path(instance, filename):
     name, ext = os.path.splitext(filename)
     safe_filename = f"{slugify(name)}{ext}"
     return f'blog/{instance.slug}/{safe_filename}'
+
+
+# Maps international/alias term keys → the canonical semester keys used on
+# Course.semester. AcademicSession stores term_dates with keys from
+# AcademicSession.TERM_CHOICES (first/second/third/fall/spring/summer/
+# annual); Course.semester only uses first/second/annual. This is the only
+# place that relationship is defined — previously duplicated as a local
+# `term_normalisation_map` inside student/views.py; that copy now imports
+# this one instead of hand-rolling its own, since Program.max_credits_for_term
+# below needs the exact same mapping and a model can't import from a view
+# module. Used only for the *fallback* tier of the credit-cap lookup — the
+# most specific tier (ProgramSessionCreditCap) intentionally does NOT
+# normalise, since it's keyed by whatever raw term a session actually uses
+# (e.g. a real 'third' term gets its own cap there, not second's).
+TERM_NORMALISATION_MAP = {
+    # nigerian semester terms (already canonical — map to themselves)
+    'first':  'first',
+    'second': 'second',
+    'third':  'second',   # third semester/harmattan treated as second semester
+    'annual': 'annual',
+    # international semester equivalents
+    'fall':   'first',
+    'spring': 'second',
+    'summer': 'annual',
+    'autumn': 'first',    # autumn = fall = first semester
+}
+
 
 class SiteConfig(models.Model):
     """
@@ -1445,25 +1473,45 @@ class Program(models.Model):
             total=models.Sum('credit_units')
         )['total'] or 0
 
-    def max_credits_for_term(self, term):
+    def max_credits_for_term(self, term, session=None):
         """
-        The credit-unit cap for one specific term — the single source of
-        truth every registration-cap check should call instead of reading
-        max_credits_per_semester/credit_caps_by_term directly. Looks up
-        `term` in credit_caps_by_term (case-insensitive) and falls back to
-        max_credits_per_semester if that term has no override.
+        The credit-unit cap for one (term[, session]) pair — the single
+        source of truth every registration-cap check should call instead of
+        reading max_credits_per_semester/credit_caps_by_term/
+        ProgramSessionCreditCap directly. Three-tier fallback, most specific
+        first:
 
-        `term` is expected already normalised to this codebase's canonical
-        keys (first/second/annual — see student/views.py's
-        term_normalisation_map) since that's the format credit_caps_by_term
-        is keyed by; an un-normalised value (e.g. 'Fall') simply won't
-        match an override and will fall back to the default, same as an
-        empty/blank term would.
+          1. ProgramSessionCreditCap for this exact (program, session, term)
+             — pass `term` RAW here, exactly as the session itself names it
+             (e.g. a session that defines a real 'third' term must be looked
+             up as 'third', not pre-collapsed to 'second' — otherwise a cap
+             set for that specific session/term could never be found).
+          2. credit_caps_by_term[term] — a program-wide default for that
+             *canonical* term name (first/second/annual), shared across
+             every session that uses it. `term` is normalised via
+             TERM_NORMALISATION_MAP for this tier only, since that dict was
+             only ever keyed by the three canonical names.
+          3. max_credits_per_semester — the final fallback.
+
+        `session=None` skips tier 1 entirely (e.g. no specific session in
+        context yet) and falls straight to tiers 2/3.
         """
-        if term and isinstance(self.credit_caps_by_term, dict):
-            override = self.credit_caps_by_term.get(str(term).strip().lower())
+        if session is not None and term:
+            override = (
+                self.session_credit_caps
+                .filter(session=session, term=str(term).strip().lower())
+                .values_list('max_credit_units', flat=True)
+                .first()
+            )
             if override is not None:
                 return override
+
+        if term and isinstance(self.credit_caps_by_term, dict):
+            normalised = TERM_NORMALISATION_MAP.get(str(term).strip().lower(), str(term).strip().lower())
+            fallback = self.credit_caps_by_term.get(normalised)
+            if fallback is not None:
+                return fallback
+
         return self.max_credits_per_semester
 
 # ==============================================================================
@@ -1646,6 +1694,53 @@ class AcademicSession(models.Model):
         if reg_open and reg_close:
             return f"{reg_open.strftime('%d %b %Y')} – {reg_close.strftime('%d %b %Y')}"
         return "—"
+
+
+class ProgramSessionCreditCap(models.Model):
+    """
+    The most specific tier of the credit-unit cap hierarchy — one row per
+    (program, session, term), letting an admin set a genuinely different
+    cap for the same program in different academic sessions (e.g. a
+    curriculum that allows more CU per term starting a given year), and
+    following whatever term structure that particular session actually
+    has (two terms one year, three the next — the number of rows for a
+    session is however many terms its own `term_dates` defines, not a
+    fixed enum).
+
+    Lookup order (see Program.max_credits_for_term):
+      1. This model — most specific, per (program, session, term).
+      2. Program.credit_caps_by_term[term] — a program-wide default for
+         that term name, shared across every session that uses it.
+      3. Program.max_credits_per_semester — the final fallback.
+    """
+    program = models.ForeignKey(
+        'Program', on_delete=models.CASCADE, related_name='session_credit_caps',
+    )
+    session = models.ForeignKey(
+        'AcademicSession', on_delete=models.CASCADE, related_name='program_credit_caps',
+    )
+    term = models.CharField(
+        max_length=20,
+        help_text="Term key matching one of this session's term_dates entries (e.g. 'first', 'second', 'third').",
+    )
+    max_credit_units = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+    )
+
+    class Meta:
+        unique_together = [['program', 'session', 'term']]
+        ordering = ['session__name', 'term']
+        verbose_name = 'Program Session Credit Cap'
+        verbose_name_plural = 'Program Session Credit Caps'
+
+    def __str__(self):
+        return f"{self.program.code} — {self.session} — {self.term}: {self.max_credit_units} CU"
+
 
 class Course(models.Model):
 
@@ -1915,9 +2010,20 @@ class CourseIntake(models.Model):
         verbose_name_plural = 'Course Intakes'
         unique_together = [['program', 'intake_period', 'year']]
     
-    @property
+    @cached_property
     def accepted_count(self):
-        """number of approved applications for this intake."""
+        """
+        Number of approved applications for this intake. cached_property,
+        not plain @property: remaining_slots and is_full each read this too,
+        and intakes_list.html calls is_full twice per row — without caching
+        that's 4 separate COUNT queries per intake (measured: 80 queries for
+        a 20-row page). A filtered .count() also can't use the view's
+        .prefetch_related('applications') — that only helps a plain
+        .all() iteration, not an aggregate — so caching on the instance is
+        the fix here, not prefetching harder. Safe within a request: nothing
+        in this codebase creates an application against an intake and then
+        re-checks these on that same already-loaded instance.
+        """
         return self.applications.filter(status='approved').count()
 
     @property
@@ -5458,6 +5564,53 @@ class CourseCarryOver(models.Model):
     def __str__(self):
         status = 'cleared' if self.is_cleared else f'open (attempt {self.attempts})'
         return f"{self.student.username} | {self.course.code} | {status}"
+
+    @classmethod
+    def sync_cleared_for_student(cls, student):
+        """
+        Live reconciliation — clears any open carry-over the student
+        already has a released passing grade for, right now, rather than
+        waiting for the next progression batch run to notice.
+
+        Before this existed, `is_cleared` was a stored snapshot only ever
+        updated inside management.progression.apply_progression_decision —
+        so a student could already have a real, released passing grade for
+        a carry-over course and still see it as open/locked on their own
+        registration page (my_courses, register_semester_course) until an
+        admin next happened to run progression for them. The stored flag
+        and the live grade data it's supposed to reflect could silently
+        drift apart with no reconciliation between them.
+
+        Call this from every read path that checks is_cleared before using
+        it. apply_progression_decision now calls this too instead of
+        hand-rolling the same clearing condition a second time.
+
+        Returns the number of rows cleared.
+        """
+        open_recs = list(
+            cls.objects.filter(student=student, is_cleared=False).only('id', 'course_id')
+        )
+        if not open_recs:
+            return 0
+
+        passing_grade_sessions = {
+            g['course_id']: g['session_id']
+            for g in CourseGrade.objects.filter(
+                student=student,
+                course_id__in=[r.course_id for r in open_recs],
+                is_passed=True, result_status='released',
+            ).values('course_id', 'session_id')
+        }
+
+        cleared = 0
+        for rec in open_recs:
+            session_id = passing_grade_sessions.get(rec.course_id)
+            if session_id is not None:
+                cls.objects.filter(pk=rec.pk).update(
+                    is_cleared=True, cleared_session_id=session_id, updated_at=timezone.now(),
+                )
+                cleared += 1
+        return cleared
 
 
 class ProgressionDecisionLog(ImmutableMixin, models.Model):

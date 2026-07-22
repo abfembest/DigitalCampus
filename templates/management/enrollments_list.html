@@ -108,6 +108,9 @@
             <th class="py-3 px-4 text-left font-semibold">Progress</th>
             <th class="py-3 px-4 text-left font-semibold">Grade</th>
             <th class="py-3 px-4 text-left font-semibold">Enrolled</th>
+            {% if permissions.enrollments.can_edit or permissions.enrollments.can_delete %}
+            <th class="py-3 px-4 text-right font-semibold">Actions</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100" id="enrollBody">
@@ -157,10 +160,40 @@
               {% else %}<span class="text-gray-400">—</span>{% endif %}
             </td>
             <td class="py-3.5 px-4 text-gray-500 whitespace-nowrap">{{ e.enrolled_at|date:"M d, Y" }}</td>
+            {% if permissions.enrollments.can_edit or permissions.enrollments.can_delete %}
+            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+              {% if permissions.enrollments.can_edit %}
+              <a href="{% url 'management:enrollment_edit' e.pk %}"
+                 class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs
+                        font-medium text-primary-600 hover:bg-primary-50 rounded-lg
+                        transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400"
+                 aria-label="Edit enrollment for {{ e.student.get_full_name|default:e.student.username }}">
+                <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+                <span class="hidden sm:inline">Edit</span>
+              </a>
+              {% endif %}
+              {% if permissions.enrollments.can_delete %}
+              <form method="post"
+                    action="{% url 'management:enrollment_delete' e.pk %}"
+                    class="inline"
+                    onsubmit="return confirm('Delete this enrollment ({{ e.student.get_full_name|default:e.student.username|escapejs }} — {{ e.course.title|escapejs }})? This cannot be undone.');">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs
+                               font-medium text-red-500 hover:bg-red-50 rounded-lg
+                               transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+                        aria-label="Delete enrollment for {{ e.student.get_full_name|default:e.student.username }}">
+                  <i class="fas fa-trash" aria-hidden="true"></i>
+                  <span class="hidden sm:inline">Delete</span>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+            {% endif %}
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" class="py-16 text-center text-gray-400">
+            <td colspan="7" class="py-16 text-center text-gray-400">
               <i class="fas fa-user-graduate text-5xl mb-3 block"></i>
               <p class="font-medium text-gray-600">No enrollments found</p>
               {% if permissions.enrollments.can_create %}

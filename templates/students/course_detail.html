@@ -69,7 +69,7 @@
     },
     "instructor": {
       "@type": "Person",
-      "name": "{{ course.instructor_name|escapejs }}"
+      "name": "{% if course.instructor %}{{ course.instructor.get_full_name|default:course.instructor.username|escapejs }}{% else %}To be announced{% endif %}"
     }
     {% if course.average_rating %}
     ,"aggregateRating": {

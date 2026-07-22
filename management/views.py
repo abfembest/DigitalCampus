@@ -8,7 +8,6 @@ import json
 import logging
 import secrets
 import string
-import uuid
 import zoneinfo
 from datetime import date, datetime, timedelta
 from functools import wraps
@@ -21,8 +20,8 @@ from django.contrib.auth.models import User
 from django.core.mail import EmailMultiAlternatives, send_mail, send_mass_mail
 from django.core.paginator import Paginator
 from django.db import transaction, connection
-from django.db.models import Q, Count, Sum, Avg, F, Value, CharField, DecimalField
-from django.db.models.functions import Coalesce, TruncMonth, Cast
+from django.db.models import Q, Count, Sum, Avg, Value, DecimalField
+from django.db.models.functions import Coalesce, TruncMonth, TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -59,17 +58,16 @@ from eduweb.models import (
     Notification,
     PaymentGateway,
     Program,
+    ProgramSessionCreditCap,
     ProgressionDecisionLog,
     Review,
     SiteConfig,
     SiteHistoryMilestone,
     StaffPayroll,
     StudentBadge,
-    SupportTicket,
     SystemConfiguration,
     encrypt_secret,
     Testimonial,
-    TicketReply,
     Invoice,
     Transaction,
     UserProfile,
@@ -125,7 +123,6 @@ from management.forms import (
 
 # Email Services
 from eduweb.emailservices import (
-    send_certificate_ready_email,
     send_transcript_generated_email,
     send_payroll_payment_notification_email,
     send_admin_created_user_email,
@@ -511,21 +508,28 @@ def dashboard(request):
     # Get recent applications (last 10)
     recent_applications = CourseApplication.objects.select_related('user').order_by('-created_at')[:10]
     
-    # Prepare chart data for applications over time (last 7 days)
+    # Prepare chart data for applications over time (last 7 days) — one
+    # bucketed query instead of 7 separate .count() calls in a loop (same
+    # N+1 shape already fixed for the student 28-day heatmap in Phase 1).
     today = timezone.now().date()
     week_ago = today - timedelta(days=6)
-    
+
+    daily_counts = dict(
+        CourseApplication.objects.filter(created_at__date__gte=week_ago, created_at__date__lte=today)
+        .annotate(day=TruncDate('created_at'))
+        .values('day')
+        .annotate(count=Count('id'))
+        .values_list('day', 'count')
+    )
+
     applications_by_day = []
     labels = []
-    
+
     for i in range(7):
         date = week_ago + timedelta(days=i)
-        count = CourseApplication.objects.filter(
-            created_at__date=date
-        ).count()
-        applications_by_day.append(count)
+        applications_by_day.append(daily_counts.get(date, 0))
         labels.append(date.strftime('%a'))
-    
+
     applications_chart_data = json.dumps({
         'labels': labels,
         'data': applications_by_day
@@ -566,7 +570,11 @@ def dashboard(request):
 @user_passes_test(is_admin)
 def applications_list(request):
     """List all applications with filtering and pagination"""
-    
+
+    if not _has_permission(request, 'applications', 'can_view'):
+        messages.error(request, 'You do not have permission to view applications.')
+        return redirect('management:dashboard')
+
     applications = CourseApplication.objects.select_related('user', 'program').order_by('-created_at')
     
     # Get filter parameters
@@ -616,7 +624,11 @@ def applications_list(request):
 @user_passes_test(is_admin)
 def application_detail(request, application_id):
     """View detailed information about a specific application"""
-    
+
+    if not _has_permission(request, 'applications', 'can_view'):
+        messages.error(request, 'You do not have permission to view applications.')
+        return redirect('management:dashboard')
+
     application = get_object_or_404(
         CourseApplication.objects.prefetch_related('documents'),  # ✅ Correct related name
         application_id=application_id
@@ -822,105 +834,6 @@ def issue_transcript(request, pk):
     return redirect('management:application_detail', application_id=application.application_id)
 
 
-def send_application_submission_email(application):
-    """Send confirmation email when application is submitted"""
-    try:
-        subject = (
-            f'Application Received - {application.application_id}'
-        )
-        
-        program_name = (
-            f"{application.course.name} "
-            f"({application.course.get_degree_level_display()})"
-        )
-        
-        html_content = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; 
-                         line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; 
-                            padding: 20px; background-color: #f4f4f4;">
-                    <div style="background: linear-gradient(135deg, 
-                                #0F2A44 0%, #1D4ED8 100%); 
-                                padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">
-                            ✅ Application Submitted
-                        </h1>
-                    </div>
-                    
-                    <div style="background-color: white; 
-                                padding: 30px; margin-top: 20px;">
-                        <p style="font-size: 16px;">
-                            Dear <strong>
-                                {application.first_name} 
-                                {application.last_name}
-                            </strong>,
-                        </p>
-                        
-                        <div style="background-color: #10b98115; 
-                                    padding: 20px; border-radius: 8px; 
-                                    margin: 25px 0; 
-                                    border-left: 4px solid #10b981;">
-                            <h3 style="color: #10b981; margin-top: 0;">
-                                Application Successfully Submitted!
-                            </h3>
-                            <p style="font-size: 16px;">
-                                Your application for <strong>
-                                    {program_name}
-                                </strong> has been received.
-                            </p>
-                            <p>
-                                <strong>Application ID:</strong> 
-                                {application.application_id}
-                            </p>
-                            <p>
-                                <strong>Submission Date:</strong> 
-                                {timezone.now().strftime('%B %d, %Y')}
-                            </p>
-                        </div>
-                        
-                        <h4>What Happens Next?</h4>
-                        <ol>
-                            <li>
-                                Our admissions team will review 
-                                your application
-                            </li>
-                            <li>
-                                You will receive an email with 
-                                the decision within 5-7 business days
-                            </li>
-                            <li>
-                                You can track your application status 
-                                in your account
-                            </li>
-                        </ol>
-                        
-                        <p style="margin-top: 30px;">
-                            Best regards,<br>
-                            <strong style="color: #0F2A44;">
-                                The MIU Admissions Team
-                            </strong>
-                        </p>
-                    </div>
-                </div>
-            </body>
-        </html>
-        """
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=f"Application Submitted - {application.application_id}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[application.email],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        return True
-        
-    except Exception:
-        logger.exception('Error sending submission email for application %s', application.application_id)
-        return False
-
 def send_decision_email(application):
     """Send admission decision email to applicant"""
     try:
@@ -1024,6 +937,9 @@ def _faculty_ctx(form=None, edit_pk=None):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def faculties_list(request):
+    if not _has_permission(request, 'academics', 'can_view'):
+        messages.error(request, 'You do not have permission to view academic structure.')
+        return redirect('management:dashboard')
     return render(request, 'management/faculties_list.html', _faculty_ctx())
  
  
@@ -1094,6 +1010,10 @@ def faculty_delete(request, pk):
 @user_passes_test(is_admin)
 def blog_posts_list(request):
     """List all blog posts"""
+    if not _has_permission(request, 'blog', 'can_view'):
+        messages.error(request, 'You do not have permission to view blog posts.')
+        return redirect('management:dashboard')
+
     posts = BlogPost.objects.select_related('category', 'author').all().order_by('-publish_date')
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
@@ -1198,6 +1118,10 @@ def blog_post_delete(request, pk):
 @user_passes_test(is_admin)
 def blog_categories_list(request):
     """List all blog categories"""
+    if not _has_permission(request, 'blog', 'can_view'):
+        messages.error(request, 'You do not have permission to view blog categories.')
+        return redirect('management:dashboard')
+
     categories = BlogCategory.objects.all().order_by('display_order', 'name')
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
@@ -1331,7 +1255,11 @@ def users_list(request):
     # ── Bulk action (POST from modal-less bulk bar) ──────────────────────────
     if request.method == 'POST':
         return _handle_bulk_action(request)
- 
+
+    if not _has_permission(request, 'user_management', 'can_view'):
+        messages.error(request, 'You do not have permission to view user management.')
+        return redirect('management:dashboard')
+
     # ── Queryset + filters ───────────────────────────────────────────────────
     search_form = UserSearchForm(request.GET or None)
     qs = User.objects.select_related('profile').all()
@@ -1640,12 +1568,19 @@ def user_change_role(request, pk):
  
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
- 
+
+    # Non-AJAX fallback — the only real caller (role_assign.html) always sends
+    # the AJAX header, so this path is dead in practice today, but it should
+    # still surface *something* rather than silently redirecting on a
+    # rejected role change if some future caller ever hits it without XHR.
+    first_error = next((e for errs in form.errors.values() for e in errs), 'Invalid role selection.')
+    messages.error(request, first_error)
     return redirect('management:users_list')
- 
- 
+
+
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('user_management', 'can_view', redirect_to='management:users_list', skip_get=False)
 def user_quick_info(request, pk):
     """AJAX GET — returns JSON snapshot for view/edit modals."""
     user = get_object_or_404(User.objects.select_related('profile'), pk=pk)
@@ -1689,6 +1624,10 @@ def role_assign(request):
     GET  → render page (optionally pre-select user via ?user_id=<pk>)
     POST → handled via AJAX to existing user_change_role / user_permissions endpoints.
     """
+    if not _has_permission(request, 'user_management', 'can_view'):
+        messages.error(request, 'You do not have permission to view role/permission assignment.')
+        return redirect('management:dashboard')
+
     selected_user = None
     user_id = request.GET.get('user_id')
     if user_id:
@@ -1727,6 +1666,8 @@ def user_permissions(request, pk):
     target = get_object_or_404(User.objects.select_related('profile'), pk=pk)
 
     if request.method == 'GET':
+        if not _has_permission(request, 'user_management', 'can_view'):
+            return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
         modules, actions, result = _effective_permissions_for_user(target)
         return JsonResponse({'success': True, 'permissions': result, 'modules': modules, 'actions': actions})
 
@@ -2193,6 +2134,10 @@ def lms_courses_list(request):
     POST here is no longer used for creates (lms_course_save handles both
     create and update), but the create_form is still rendered for the modal.
     """
+    if not _has_permission(request, 'lms_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view LMS courses.')
+        return redirect('management:dashboard')
+
     # ── Base queryset ─────────────────────────────────────────────────────────
     courses = (
         LMSCourse.objects
@@ -2252,6 +2197,7 @@ def lms_courses_list(request):
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('lms_courses', 'can_view', redirect_to='management:lms_courses_list', skip_get=False)
 def lms_academic_course_data(request, pk):
     """
     AJAX — returns session, term, level for a given academic Course pk.
@@ -2370,6 +2316,7 @@ def lms_course_save(request):
  
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
+@require_permission('lms_courses', 'can_view', redirect_to='management:lms_courses_list', skip_get=False)
 def lms_course_detail(request, pk):
     """
     GET ?_modal=1 or XHR → JsonResponse (used by both detail AND edit modals).
@@ -2527,6 +2474,10 @@ def lms_course_delete(request, pk):
 @user_passes_test(is_admin)
 def audit_logs_list(request):
     """List all audit logs with filtering"""
+    if not _has_permission(request, 'security_audit', 'can_view'):
+        messages.error(request, 'You do not have permission to view audit logs.')
+        return redirect('management:dashboard')
+
     logs = AuditLog.objects.select_related('user').order_by('-timestamp')
     
     # Apply filters
@@ -2576,6 +2527,10 @@ def audit_logs_list(request):
 @user_passes_test(is_admin)
 def audit_log_detail(request, pk):
     """View detailed audit log entry"""
+    if not _has_permission(request, 'security_audit', 'can_view'):
+        messages.error(request, 'You do not have permission to view audit logs.')
+        return redirect('management:dashboard')
+
     log = get_object_or_404(AuditLog, pk=pk)
     
     # Get related logs (same object)
@@ -2637,6 +2592,10 @@ def audit_logs_export(request):
 @user_passes_test(is_admin)
 def security_dashboard(request):
     """Security overview dashboard"""
+    if not _has_permission(request, 'security_audit', 'can_view'):
+        messages.error(request, 'You do not have permission to view the security dashboard.')
+        return redirect('management:dashboard')
+
     # Recent security events
     security_logs = AuditLog.objects.filter(
         action__in=['login', 'logout', 'password_reset', 'permission_change']
@@ -2672,6 +2631,10 @@ def security_dashboard(request):
 )
 def broadcast_center(request):
     """List all broadcasts with status counts"""
+    if not _has_permission(request, 'communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view broadcasts.')
+        return redirect('management:dashboard')
+
     broadcasts = BroadcastMessage.objects.select_related('created_by').all()
     
     # Calculate status counts
@@ -2770,6 +2733,10 @@ def broadcast_create(request):
 @require_permission('communications', 'can_edit', redirect_to='management:broadcast_center')
 def broadcast_edit(request, slug):
     """Edit draft broadcast"""
+    if not _has_permission(request, 'communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view broadcasts.')
+        return redirect('management:broadcast_center')
+
     broadcast = get_object_or_404(BroadcastMessage, slug=slug)
 
     # Only allow editing drafts
@@ -3173,14 +3140,6 @@ def send_department_approval_email(application):
         return False
 
 
-    Department, Program, AcademicSession, CourseIntake,
-    CourseCategory, SupportTicket, TicketReply,
-    ContactMessage, Announcement, Faculty
-
-
-# ── Helper: restrict to admin/staff ─────────────────────────────────────────
-
-
 # ===========================================================================
 # DEPARTMENTS
 # ===========================================================================
@@ -3188,6 +3147,10 @@ def send_department_approval_email(application):
 @login_required
 @user_passes_test(is_admin)
 def departments_list(request):
+    if not _has_permission(request, 'academics', 'can_view'):
+        messages.error(request, 'You do not have permission to view academic structure.')
+        return redirect('management:dashboard')
+
     qs = Department.objects.select_related('faculty').prefetch_related('programs')
 
     search = request.GET.get('search', '').strip()
@@ -3291,6 +3254,10 @@ def department_delete(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def programs_list(request):
+    if not _has_permission(request, 'academics', 'can_view'):
+        messages.error(request, 'You do not have permission to view academic structure.')
+        return redirect('management:dashboard')
+
     qs = Program.objects.select_related('department__faculty').order_by('name')
 
     search = request.GET.get('search', '').strip()
@@ -3321,6 +3288,78 @@ def programs_list(request):
     return render(request, 'management/programs_list.html', context)
 
 
+def _sync_program_session_credit_caps(request, program):
+    """
+    Parses POST fields named session_cap_<session_id>_<term> — one per term
+    each AcademicSession actually defines in its own term_dates, rendered by
+    program_form.html's per-session section — and upserts/clears the
+    matching ProgramSessionCreditCap rows for this program. A blank input
+    means no override for that (session, term): deletes the row if one
+    existed, rather than writing a 0/None value.
+    """
+    for key, raw_value in request.POST.items():
+        if not key.startswith('session_cap_'):
+            continue
+        try:
+            _, _, session_id, term = key.split('_', 3)
+        except ValueError:
+            continue
+
+        raw_value = raw_value.strip()
+        if not raw_value:
+            ProgramSessionCreditCap.objects.filter(
+                program=program, session_id=session_id, term=term,
+            ).delete()
+            continue
+
+        try:
+            value = int(raw_value)
+        except ValueError:
+            continue
+        if not (1 <= value <= 30):
+            continue
+
+        ProgramSessionCreditCap.objects.update_or_create(
+            program=program, session_id=session_id, term=term,
+            defaults={'max_credit_units': value, 'updated_by': request.user},
+        )
+
+
+def _program_sessions_credit_cap_context(program):
+    """
+    One entry per AcademicSession, each carrying only the terms that
+    session's own term_dates actually defines (so the form shows however
+    many rows a session really has — 2 terms one year, 3 or 4 another —
+    not a fixed set), prefilled with any existing ProgramSessionCreditCap
+    override for this program.
+    """
+    term_labels = dict(AcademicSession.TERM_CHOICES)
+    existing_caps = {}
+    if program and program.pk:
+        existing_caps = {
+            (c.session_id, c.term): c.max_credit_units
+            for c in ProgramSessionCreditCap.objects.filter(program=program)
+        }
+
+    sessions_with_terms = []
+    for session in AcademicSession.objects.all().order_by('-name'):
+        terms = [entry.get('term') for entry in (session.term_dates or []) if entry.get('term')]
+        if not terms:
+            continue
+        sessions_with_terms.append({
+            'session': session,
+            'terms': [
+                {
+                    'term': t,
+                    'label': term_labels.get(t, t.title()),
+                    'value': existing_caps.get((session.id, t), ''),
+                }
+                for t in terms
+            ],
+        })
+    return sessions_with_terms
+
+
 @login_required
 @user_passes_test(is_admin)
 def program_create(request):
@@ -3331,12 +3370,21 @@ def program_create(request):
 
         form = ProgramForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                program = form.save()
+                # Session-specific caps need a real program PK, which only
+                # exists after this save — a brand-new program has none yet,
+                # but syncing here means a resubmitted create form (rare,
+                # but the template is shared with program_edit) still works.
+                _sync_program_session_credit_caps(request, program)
             messages.success(request, 'Program created.')
             return redirect('management:programs_list')
     else:
         form = ProgramForm()
-    return render(request, 'management/program_form.html', {'form': form})
+    return render(request, 'management/program_form.html', {
+        'form': form,
+        'sessions_with_terms': _program_sessions_credit_cap_context(None),
+    })
 
 
 @login_required
@@ -3350,17 +3398,27 @@ def program_edit(request, pk):
 
         form = ProgramForm(request.POST, request.FILES, instance=program)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
+                _sync_program_session_credit_caps(request, program)
             messages.success(request, 'Program updated.')
             return redirect('management:programs_list')
     else:
         form = ProgramForm(instance=program)
-    return render(request, 'management/program_form.html', {'form': form, 'program': program})
+    return render(request, 'management/program_form.html', {
+        'form': form,
+        'program': program,
+        'sessions_with_terms': _program_sessions_credit_cap_context(program),
+    })
 
 
 @login_required
 @user_passes_test(is_admin)
 def program_detail(request, pk):
+    if not _has_permission(request, 'academics', 'can_view'):
+        messages.error(request, 'You do not have permission to view academic structure.')
+        return redirect('management:dashboard')
+
     program = get_object_or_404(Program.objects.select_related('department__faculty'), pk=pk)
     intakes = program.intakes.all()
     applications = program.applications.all()[:10]
@@ -3433,6 +3491,10 @@ def academic_sessions_list(request):
         return redirect('management:academic_sessions_list')
 
     # GET logic
+    if not _has_permission(request, 'academics', 'can_view'):
+        messages.error(request, 'You do not have permission to view academic sessions.')
+        return redirect('management:dashboard')
+
     sessions = AcademicSession.objects.all().order_by('-name')
     current_session = AcademicSession.get_current()
     form = AcademicSessionForm() # Empty form for the Modal
@@ -3502,8 +3564,39 @@ def academic_session_set_current(request, pk):
                 new_status = 'closed'  # It's in range but we just made another session current
 
             if s.status != new_status:
+                old_status = s.status
                 s.status = new_status
                 s.save(update_fields=['status'])
+
+                # Guard, not a lock: session activation and academic
+                # progression are two independently-triggered admin
+                # actions with no enforced ordering between them — nothing
+                # stops this session closing (and the new one going live,
+                # opening registration for it immediately) before every
+                # student in the outgoing session has actually been
+                # progressed. An un-progressed student would then see and
+                # register for their OLD level's courses in what's meant
+                # to be their new session. Surfaced as a warning, not
+                # blocked outright, since real exceptions (a student under
+                # appeal, a manual override still pending) are legitimate.
+                if new_status == 'closed' and old_status != 'closed':
+                    registered_student_ids = set(
+                        CourseRegistration.objects.filter(session=s)
+                        .values_list('student_id', flat=True).distinct()
+                    )
+                    processed_student_ids = set(
+                        ProgressionDecisionLog.objects.filter(session=s)
+                        .values_list('student_id', flat=True)
+                    )
+                    unprocessed_count = len(registered_student_ids - processed_student_ids)
+                    if unprocessed_count:
+                        messages.warning(
+                            request,
+                            f'"{s.name}" just closed with {unprocessed_count} student(s) registered in it who '
+                            f'don\'t appear to have a progression decision for that session yet. Run Academic '
+                            f'Progression for "{s.name}" before students rely on {session.name} reflecting '
+                            f'their correct level.'
+                        )
 
     if auto_opened:
         messages.info(
@@ -3608,6 +3701,26 @@ def academic_progression(request):
             messages.error(request, 'Automatic progression can only be run against a closed session.')
             return redirect(redirect_url)
 
+        # Guard, not a lock: "session is closed" and "every grade in it has
+        # actually been released" are two independent flags with nothing
+        # enforcing they agree — running progression while some grades are
+        # still pending/withheld silently treats those courses as "not
+        # passed" (an unreleased pass doesn't count), which can wrongly
+        # repeat/fail a student whose real result — once released — would
+        # have cleared them. Warned here rather than blocked, since a
+        # deliberately withheld grade (a discipline hold, e.g.) may be
+        # exactly why an admin is choosing to run progression anyway.
+        unreleased_count = CourseGrade.objects.filter(
+            session=session, course__program=program, result_status__in=['pending', 'withheld'],
+        ).count()
+        if unreleased_count:
+            messages.warning(
+                request,
+                f'{unreleased_count} result(s) for this program/session are still pending or withheld '
+                f'release — those courses will count as "not passed" for anyone affected until you '
+                f'release them and re-run progression.'
+            )
+
         student_ids_raw = request.POST.get('student_ids', '')
         try:
             student_ids = [int(pid) for pid in student_ids_raw.split(',') if pid.strip()]
@@ -3670,6 +3783,13 @@ def academic_progression(request):
         status_labels = [dict(UserProfile.PROGRESSION_STATUS_CHOICES).get(s, s.title()) for s in status_order if status_counts.get(s)]
         status_data = [status_counts[s] for s in status_order if status_counts.get(s)]
 
+        # Surfaced on the preview too, not just at confirm time — an admin
+        # should see this before they even select students, not discover it
+        # only after submitting. See the matching comment on the POST branch.
+        unreleased_grades_count = CourseGrade.objects.filter(
+            session=session, course__program=program, result_status__in=['pending', 'withheld'],
+        ).count()
+
         analytics = {
             'total': total,
             'qualified': qualified,
@@ -3680,6 +3800,7 @@ def academic_progression(request):
             'cgpa_fail_count': sum(1 for r in preview_rows if not r['cgpa_ok']),
             'status_labels': status_labels,
             'status_data': status_data,
+            'unreleased_grades_count': unreleased_grades_count,
         }
 
     return render(request, 'management/academic_progression.html', {
@@ -3709,8 +3830,26 @@ def carry_over_list(request):
         messages.success(request, f'Marked {record.course.code} cleared for {record.student.username}.')
         return redirect('management:carry_over_list')
 
+    if not _has_permission(request, 'academic_progression', 'can_view'):
+        messages.error(request, 'You do not have permission to view carry-over records.')
+        return redirect('management:dashboard')
+
     program_id = request.GET.get('program_id', '').strip()
     status_filter = request.GET.get('status', 'open')
+
+    # Reconcile before listing — a student's is_cleared flag only updates
+    # when this reconciliation runs (see CourseCarryOver.sync_cleared_for_
+    # student), so an admin filtering to "Open" shouldn't see a record
+    # that's actually already covered by a released passing grade just
+    # because no progression run has processed that student yet.
+    open_student_ids = CourseCarryOver.objects.filter(
+        is_cleared=False,
+    ).values_list('student_id', flat=True).distinct()
+    for student_id in open_student_ids:
+        # student=<id> works the same as student=<User instance> in every
+        # filter inside sync_cleared_for_student — no need for an extra
+        # User.objects.get() per row just to satisfy a type expectation.
+        CourseCarryOver.sync_cleared_for_student(student_id)
 
     records = CourseCarryOver.objects.select_related('student', 'course', 'course__program', 'first_failed_session')
     if program_id:
@@ -3951,8 +4090,12 @@ def courses_list(request):
             messages.success(request, f'Course "{code}" deleted successfully.')
  
         return redirect('management:courses_list')
- 
+
     # ── GET ─────────────────────────────────────────────────────────────────
+    if not _has_permission(request, 'academics', 'can_view'):
+        messages.error(request, 'You do not have permission to view courses.')
+        return redirect('management:dashboard')
+
     courses = (
         Course.objects
         .select_related('program__department__faculty')
@@ -3974,6 +4117,10 @@ def courses_list(request):
 @login_required
 @user_passes_test(is_admin)
 def intakes_list(request):
+    if not _has_permission(request, 'academics', 'can_view'):
+        messages.error(request, 'You do not have permission to view course intakes.')
+        return redirect('management:dashboard')
+
     qs = CourseIntake.objects.select_related('program__department__faculty').prefetch_related('applications')
 
     program_id = request.GET.get('program', '')
@@ -4053,6 +4200,8 @@ def intake_edit(request, pk):
 
     # GET — return JSON so the modal can pre-fill fields
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        if not _has_permission(request, 'academics', 'can_view'):
+            return JsonResponse({'error': 'Permission denied.'}, status=403)
         return JsonResponse({
             'id': intake.pk,
             'program': intake.program_id,
@@ -4097,6 +4246,10 @@ def intake_delete(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def course_categories_list(request):
+    if not _has_permission(request, 'academics', 'can_view'):
+        messages.error(request, 'You do not have permission to view course categories.')
+        return redirect('management:dashboard')
+
     categories = CourseCategory.objects.prefetch_related(
         'subcategories'
     ).select_related('parent').order_by('display_order', 'name')
@@ -4200,6 +4353,10 @@ def course_category_delete(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def contact_messages_list(request):
+    if not _has_permission(request, 'communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view contact messages.')
+        return redirect('management:dashboard')
+
     qs = ContactMessage.objects.select_related('user', 'responded_by').order_by('-created_at')
 
     search = request.GET.get('search', '').strip()
@@ -4239,6 +4396,10 @@ def contact_messages_list(request):
 @login_required
 @user_passes_test(is_admin)
 def contact_message_detail(request, pk):
+    if not _has_permission(request, 'communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view contact messages.')
+        return redirect('management:dashboard')
+
     msg = get_object_or_404(ContactMessage, pk=pk)
     # Auto-mark as read on open
     if not msg.is_read:
@@ -4307,6 +4468,10 @@ def contact_message_respond(request, pk):
 @login_required
 @user_passes_test(is_admin)
 def announcements_list(request):
+    if not _has_permission(request, 'communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view announcements.')
+        return redirect('management:dashboard')
+
     qs = Announcement.objects.select_related('course', 'category', 'created_by').order_by('-priority', '-publish_date')
 
     search = request.GET.get('search', '').strip()
@@ -4423,7 +4588,11 @@ def announcement_delete(request, pk):
 @user_passes_test(is_admin)
 def enrollments_list(request):
     """List all student enrollments"""
-    
+
+    if not _has_permission(request, 'enrollments', 'can_view'):
+        messages.error(request, 'You do not have permission to view enrollments.')
+        return redirect('management:dashboard')
+
     qs = Enrollment.objects.select_related(
         'student', 'course'
     ).order_by('-enrolled_at')
@@ -4566,6 +4735,10 @@ def enrollment_delete(request, pk):
 @user_passes_test(is_admin)
 def certificates_list(request):
     """List all certificates with search + pagination."""
+    if not _has_permission(request, 'enrollments', 'can_view'):
+        messages.error(request, 'You do not have permission to view certificates.')
+        return redirect('management:dashboard')
+
     qs = Certificate.objects.select_related('student', 'course').order_by('-issued_date')
     search = request.GET.get('search', '').strip()
     if search:
@@ -4655,6 +4828,10 @@ def certificate_delete(request, certificate_id):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def reviews_list(request):
+
+    if not _has_permission(request, 'enrollments', 'can_view'):
+        messages.error(request, 'You do not have permission to view reviews.')
+        return redirect('management:dashboard')
 
     qs = Review.objects.select_related('student', 'course').order_by('-created_at')
 
@@ -4757,6 +4934,10 @@ def review_delete(request, pk):
 @user_passes_test(is_admin)
 def badges_list(request):
 
+    if not _has_permission(request, 'enrollments', 'can_view'):
+        messages.error(request, 'You do not have permission to view badges.')
+        return redirect('management:dashboard')
+
     qs = Badge.objects.order_by('name')
 
     search = request.GET.get('search', '').strip()
@@ -4841,6 +5022,10 @@ def badge_delete(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def student_badges_list(request):
+
+    if not _has_permission(request, 'enrollments', 'can_view'):
+        messages.error(request, 'You do not have permission to view student badges.')
+        return redirect('management:dashboard')
 
     qs = StudentBadge.objects.select_related(
         'student', 'student__profile', 'badge', 'awarded_by'
@@ -5044,6 +5229,10 @@ def payment_gateway_delete(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def transactions_list(request):
+    if not _has_permission(request, 'finance', 'can_view'):
+        messages.error(request, 'You do not have permission to view transactions.')
+        return redirect('management:dashboard')
+
     qs = Transaction.objects.select_related('user', 'gateway').order_by('-created_at')
 
     search = request.GET.get('search', '').strip()
@@ -5112,6 +5301,10 @@ def transactions_list(request):
 @user_passes_test(is_admin)
 def transaction_detail(request, transaction_id):
 
+    if not _has_permission(request, 'finance', 'can_view'):
+        messages.error(request, 'You do not have permission to view transactions.')
+        return redirect('management:dashboard')
+
     txn = get_object_or_404(
         Transaction.objects.select_related('user', 'gateway', 'course'),
         transaction_id=transaction_id
@@ -5148,6 +5341,10 @@ def required_payments_list(request):
 @user_passes_test(is_admin)
 def financial_analytics(request):
     """Financial analytics — all student payment records."""
+
+    if not _has_permission(request, 'finance', 'can_view'):
+        messages.error(request, 'You do not have permission to view financial analytics.')
+        return redirect('management:dashboard')
 
     _zero = Value(0, output_field=DecimalField())
 
@@ -5317,6 +5514,10 @@ def financial_analytics(request):
 @user_passes_test(is_admin)
 def staff_payroll_list(request):
 
+    if not _has_permission(request, 'finance_payroll', 'can_view'):
+        messages.error(request, 'You do not have permission to view staff payroll.')
+        return redirect('management:dashboard')
+
     STAFF_ROLES = ['instructor', 'support', 'admin', 'finance']
 
     qs = StaffPayroll.objects.select_related('staff').order_by('-year', '-month')
@@ -5455,6 +5656,10 @@ def staff_payroll_delete(request, payroll_reference):
 @require_permission('site_content', 'can_edit', redirect_to='management:site_config_general')
 def site_config_general(request):
     """Edit base.html / global fields: identity, logos, SEO, footer, social, contact."""
+    if request.method == 'GET' and not _has_permission(request, 'site_content', 'can_view'):
+        messages.error(request, 'You do not have permission to view site content settings.')
+        return redirect('management:dashboard')
+
     site = SiteConfig.objects.first()
     if request.method == 'POST':
         form = SiteConfigGeneralForm(request.POST, request.FILES, instance=site)
@@ -5477,6 +5682,10 @@ def site_config_general(request):
 @require_permission('site_content', 'can_edit', redirect_to='management:site_config_index')
 def site_config_index(request):
     """Edit index.html fields: hero slides, promo video, campus map."""
+    if request.method == 'GET' and not _has_permission(request, 'site_content', 'can_view'):
+        messages.error(request, 'You do not have permission to view site content settings.')
+        return redirect('management:dashboard')
+
     site = SiteConfig.objects.first()
     if request.method == 'POST':
         form = SiteConfigIndexForm(request.POST, request.FILES, instance=site)
@@ -5499,6 +5708,10 @@ def site_config_index(request):
 @require_permission('site_content', 'can_edit', redirect_to='management:site_config_about')
 def site_config_about(request):
     """Edit about.html fields: mission, vision, values, virtual tour."""
+    if request.method == 'GET' and not _has_permission(request, 'site_content', 'can_view'):
+        messages.error(request, 'You do not have permission to view site content settings.')
+        return redirect('management:dashboard')
+
     site = SiteConfig.objects.first()
     if request.method == 'POST':
         form = SiteConfigAboutForm(request.POST, request.FILES, instance=site)
@@ -5520,6 +5733,10 @@ def site_config_about(request):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def site_milestones_list(request):
+    if not _has_permission(request, 'site_content', 'can_view'):
+        messages.error(request, 'You do not have permission to view site history milestones.')
+        return redirect('management:dashboard')
+
     milestones = SiteHistoryMilestone.objects.all().order_by('display_order', 'year')
     return render(request, 'management/site_config/milestones_list.html', {
         'milestones': milestones,
@@ -5590,6 +5807,10 @@ def site_milestone_delete(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def testimonials_list(request):
+    if not _has_permission(request, 'site_content', 'can_view'):
+        messages.error(request, 'You do not have permission to view testimonials.')
+        return redirect('management:dashboard')
+
     testimonials = Testimonial.objects.all().order_by('order')
     return render(request, 'management/site_config/testimonials_list.html', {
         'testimonials': testimonials,
@@ -5658,6 +5879,10 @@ def testimonial_delete(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def institution_members_list(request):
+    if not _has_permission(request, 'site_content', 'can_view'):
+        messages.error(request, 'You do not have permission to view institution members.')
+        return redirect('management:dashboard')
+
     members = InstitutionMember.objects.all().order_by('member_type', 'display_order')
     return render(request, 'management/site_config/members_list.html', {
         'members': members,
@@ -5740,6 +5965,10 @@ def library_items_list(request):
     Paginated, filterable list of all LibraryItems.
     Filters: q (search), category, access, status (active/inactive).
     """
+    if not _has_permission(request, 'library', 'can_view'):
+        messages.error(request, 'You do not have permission to view library items.')
+        return redirect('management:dashboard')
+
     qs = LibraryItem.objects.all().order_by('category', 'subcategory', 'order', 'title')
  
     q          = request.GET.get('q', '').strip()
@@ -5827,6 +6056,10 @@ def library_item_create(request):
 @user_passes_test(is_admin)
 def library_item_edit(request, pk):
     """Edit an existing LibraryItem. pk is a UUID."""
+    if request.method == 'GET' and not _has_permission(request, 'library', 'can_view'):
+        messages.error(request, 'You do not have permission to view library items.')
+        return redirect('management:library_items_list')
+
     item = get_object_or_404(LibraryItem, pk=pk)
 
     if request.method == 'POST':
@@ -5903,6 +6136,10 @@ def library_item_toggle_active(request, pk):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def admin_exam_list(request):
+    if not _has_permission(request, 'exams', 'can_view'):
+        messages.error(request, 'You do not have permission to view exams.')
+        return redirect('management:dashboard')
+
     STATUS_CHOICES = Exam.STATUS_CHOICES
     status_filter = request.GET.get('status', '')
     search = request.GET.get('q', '')
@@ -5959,6 +6196,10 @@ def admin_exam_toggle_active(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def admin_exam_detail(request, slug):
+    if not _has_permission(request, 'exams', 'can_view'):
+        messages.error(request, 'You do not have permission to view exams.')
+        return redirect('management:admin_exam_list')
+
     exam = get_object_or_404(
         Exam.objects.select_related('course', 'course__academic_course', 'instructor', 'submitted_by', 'approved_by', 'rejected_by', 'published_by'),
         slug=slug
@@ -6111,6 +6352,10 @@ def admin_question_moderation(request, slug):
             messages.warning(request, f'Question deactivated.')
         return redirect('management:admin_question_moderation', slug=slug)
 
+    if not _has_permission(request, 'exams', 'can_view'):
+        messages.error(request, 'You do not have permission to view exam questions.')
+        return redirect('management:admin_exam_list')
+
     return render(request, 'management/question_moderation.html', {
         'exam': exam,
         'questions': questions,
@@ -6121,6 +6366,10 @@ def admin_question_moderation(request, slug):
 @user_passes_test(is_admin)
 def admin_exam_timetable_update(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
+
+    if request.method == 'GET' and not _has_permission(request, 'exams', 'can_view'):
+        messages.error(request, 'You do not have permission to view exam timetables.')
+        return redirect('management:admin_exam_detail', slug=slug)
 
     if request.method == 'POST':
         if not _has_permission(request, 'exams', 'can_edit'):
@@ -6178,6 +6427,10 @@ def admin_exam_timetable_update(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @user_passes_test(is_admin)
 def admin_exam_responses(request, slug):
+    if not _has_permission(request, 'exams', 'can_view'):
+        messages.error(request, 'You do not have permission to view exam responses.')
+        return redirect('management:admin_exam_list')
+
     exam = get_object_or_404(Exam, slug=slug)
     ATTEMPT_STATUS_CHOICES = StudentExamResponse.ATTEMPT_STATUS_CHOICES
     status_filter = request.GET.get('status', '')

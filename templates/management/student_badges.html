@@ -75,7 +75,7 @@
               </td>
 
               <td class="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell whitespace-nowrap">
-                {{ sb.awarded_by.get_full_name|default:sb.awarded_by.username }}
+                {% if sb.awarded_by %}{{ sb.awarded_by.get_full_name|default:sb.awarded_by.username }}{% else %}System{% endif %}
               </td>
 
               <td class="px-4 py-3 text-xs text-gray-500 hidden md:table-cell whitespace-nowrap">

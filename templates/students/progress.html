@@ -99,8 +99,8 @@
                         </div>
                     </div>
                     
-                    {% if enrollment.course.lessons.first %}
-                    <a href="{% url 'students:lesson_view' enrollment.course.slug enrollment.course.lessons.first.slug %}" 
+                    {% if enrollment.first_lesson %}
+                    <a href="{% url 'students:lesson_view' enrollment.course.slug enrollment.first_lesson.slug %}"
                        class="px-4 md:px-6 py-2 md:py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm md:text-base whitespace-nowrap text-center">
                         Continue Learning
                     </a>
@@ -128,7 +128,7 @@
                     </div>
                     <div class="flex items-center justify-between mt-2 text-xs md:text-sm text-gray-600">
                         <span>
-                            {{ enrollment.completed_lessons }} of {{ enrollment.course.lessons.count }} lessons completed
+                            {{ enrollment.completed_lessons }} of {{ enrollment.total_lesson_count }} lessons completed
                         </span>
                         {% if enrollment.progress_percentage == 100 %}
                         <span class="text-green-600 font-semibold">

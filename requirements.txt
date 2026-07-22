@@ -23,7 +23,7 @@ phonenumbers==9.0.30
 pillow==10.2.0
 pluggy==1.5.0
 psycopg2-binary==2.9.10
-pycountry==22.3.5
+pycountry==26.2.16
 pycparser==2.22
 pydyf==0.11.0
 pyphen==0.17.2

@@ -96,7 +96,11 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-sm text-gray-900 max-w-xs truncate">
-                                {{ config.value|truncatewords:5 }}
+                                {% if 'password' in config.key|lower or 'secret' in config.key|lower or 'api_key' in config.key|lower or 'token' in config.key|lower %}
+                                    &bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;
+                                {% else %}
+                                    {{ config.value|truncatewords:5 }}
+                                {% endif %}
                             </div>
                         </td>
                         <td class="px-6 py-4">

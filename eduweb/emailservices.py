@@ -34,6 +34,7 @@ def _get_category_connection(category):
         username=username,
         password=decrypt_secret(keys.get(f'{prefix}smtp_password', '')),
         use_tls=settings.EMAIL_USE_TLS,
+        use_ssl=settings.EMAIL_USE_SSL,
         timeout=settings.EMAIL_TIMEOUT,
     )
     from_name = keys.get(f'{prefix}from_name')

@@ -77,7 +77,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='exam',
-            constraint=models.CheckConstraint(check=models.Q(('end_datetime__gt', models.F('start_datetime'))), name='exam_end_after_start'),
+            constraint=models.CheckConstraint(condition=models.Q(('end_datetime__gt', models.F('start_datetime'))), name='exam_end_after_start'),
         ),
         migrations.RemoveField(
             model_name='exam',

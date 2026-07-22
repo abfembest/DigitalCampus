@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Staff Permissions Matrix Row',
                 'verbose_name_plural': 'Staff Permissions Matrix',
                 'ordering': ['role', 'user', 'module'],
-                'constraints': [models.UniqueConstraint(condition=models.Q(('user', None)), fields=('role', 'module'), name='unique_staff_role_module'), models.UniqueConstraint(condition=models.Q(('role', None)), fields=('user', 'module'), name='unique_staff_user_module'), models.CheckConstraint(check=models.Q(models.Q(('role__isnull', False), ('user__isnull', True)), models.Q(('role__isnull', True), ('user__isnull', False)), _connector='OR'), name='staff_matrix_role_xor_user')],
+                'constraints': [models.UniqueConstraint(condition=models.Q(('user', None)), fields=('role', 'module'), name='unique_staff_role_module'), models.UniqueConstraint(condition=models.Q(('role', None)), fields=('user', 'module'), name='unique_staff_user_module'), models.CheckConstraint(condition=models.Q(models.Q(('role__isnull', False), ('user__isnull', True)), models.Q(('role__isnull', True), ('user__isnull', False)), _connector='OR'), name='staff_matrix_role_xor_user')],
             },
         ),
     ]

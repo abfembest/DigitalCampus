@@ -11,11 +11,13 @@
             <h1 class="text-3xl font-bold text-gray-900 font-display">User Management</h1>
             <p class="text-gray-600 mt-1">Manage system users and their roles</p>
         </div>
-        <a href="{% url 'management:user_create' %}" 
+        {% if permissions.user_management.can_create %}
+        <a href="{% url 'management:user_create' %}"
            class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg flex items-center">
             <i class="fas fa-user-plus mr-2"></i>
             Add New User
         </a>
+        {% endif %}
     </div>
 
     <!-- Statistics Cards -->
@@ -106,19 +108,20 @@
     </div>
 
     <!-- Bulk Actions -->
+    {% if permissions.user_management.can_edit %}
     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
         <form method="post" action="{% url 'management:bulk_user_action' %}" id="bulkActionForm">
             {% csrf_token %}
             <div class="flex items-center gap-4">
                 <label class="text-sm font-medium text-gray-700">Bulk Actions:</label>
-                <select name="action" 
+                <select name="action"
                         class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
                     <option value="">Select action...</option>
                     <option value="activate">Activate Selected</option>
                     <option value="deactivate">Deactivate Selected</option>
                 </select>
                 <input type="hidden" name="user_ids" id="bulkUserIds">
-                <button type="submit" 
+                <button type="submit"
                         class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50"
                         id="bulkActionBtn"
                         disabled>
@@ -128,6 +131,7 @@
             </div>
         </form>
     </div>
+    {% endif %}
 
     <!-- Users Table -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -179,7 +183,8 @@
                             <p class="text-gray-900">{{ user.email }}</p>
                         </td>
                         <td class="px-6 py-4">
-                            <button type="button" 
+                            {% if permissions.user_management.can_edit %}
+                            <button type="button"
                                     onclick="openRoleModal({{ user.id }}, '{{ user.profile.role }}')"
                                     class="px-3 py-1 rounded-full text-sm font-medium cursor-pointer hover:opacity-80 transition
                                         {% if user.profile.role == 'admin' %}bg-purple-100 text-purple-700
@@ -193,6 +198,19 @@
                                 {{ user.profile.get_role_display }}
                                 <i class="fas fa-edit ml-1 text-xs"></i>
                             </button>
+                            {% else %}
+                            <span class="px-3 py-1 rounded-full text-sm font-medium
+                                        {% if user.profile.role == 'admin' %}bg-purple-100 text-purple-700
+                                        {% elif user.profile.role == 'instructor' %}bg-blue-100 text-blue-700
+                                        {% elif user.profile.role == 'student' %}bg-green-100 text-green-700
+                                        {% elif user.profile.role == 'content_manager' %}bg-yellow-100 text-yellow-700
+                                        {% elif user.profile.role == 'support' %}bg-teal-100 text-teal-700
+                                        {% elif user.profile.role == 'qa' %}bg-indigo-100 text-indigo-700
+                                        {% elif user.profile.role == 'finance' %}bg-pink-100 text-pink-700
+                                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ user.profile.get_role_display }}
+                            </span>
+                            {% endif %}
                         </td>
                         <td class="px-6 py-4">
                             {% if user.is_active %}
@@ -210,17 +228,19 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
-                                <a href="{% url 'management:user_detail' user.id %}" 
+                                <a href="{% url 'management:user_detail' user.id %}"
                                    class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                                    title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="{% url 'management:user_edit' user.id %}" 
+                                {% if permissions.user_management.can_edit %}
+                                <a href="{% url 'management:user_edit' user.id %}"
                                    class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
                                    title="Edit User">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                {% if user.id != request.user.id %}
+                                {% endif %}
+                                {% if user.id != request.user.id and permissions.user_management.can_edit %}
                                 <button type="button"
                                         onclick="toggleUserStatus({{ user.id }}, {{ user.is_active|lower }})"
                                         class="p-2 {% if user.is_active %}text-orange-600 hover:bg-orange-50{% else %}text-green-600 hover:bg-green-50{% endif %} rounded-lg transition-all"

@@ -1,34 +1,81 @@
-from django import forms
-from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
-from django.core.exceptions import ValidationError
-from eduweb.models import (
-    Faculty,
-    Department,
-    Program,
-    Course,
-    BlogPost,
-    BlogCategory,
-    BroadcastMessage,
-    LMSCourse,
-    CourseApplication,
-    Enrollment,
-    UserProfile,
-    SystemConfiguration,
-    CourseCategory,
-    StaffPayroll,
-    Review,
-    Certificate,
-    Badge,
-    StudentBadge,
-    PaymentGateway,
-    Transaction,
-    Invoice,
-    AllRequiredPayments,
-    Announcement,
-    SiteConfig, SiteHistoryMilestone, Testimonial, InstitutionMember, LibraryItem
-)
 import json
+
+from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+
+from eduweb.models import (
+    AcademicSession,
+    Announcement,
+    Badge,
+    BlogCategory,
+    BlogPost,
+    BroadcastMessage,
+    Certificate,
+    Course,
+    CourseApplication,
+    CourseCategory,
+    CourseIntake,
+    Department,
+    Enrollment,
+    Faculty,
+    InstitutionMember,
+    Invoice,
+    LMSCourse,
+    LibraryItem,
+    PaymentGateway,
+    Program,
+    Review,
+    SiteConfig,
+    SiteHistoryMilestone,
+    StaffPayroll,
+    StudentBadge,
+    SystemConfiguration,
+    Testimonial,
+    Transaction,
+    UserProfile,
+    validate_file_size,
+)
+
+
+def _clean_unique_email(email, instance=None, message='This email is already registered.'):
+    """Shared clean_email body for UserCreateForm/UserEditForm — normalizes
+    to lowercase and checks uniqueness, excluding `instance` itself on edit."""
+    email = (email or '').lower()
+    qs = User.objects.filter(email=email)
+    if instance is not None and instance.pk:
+        qs = qs.exclude(pk=instance.pk)
+    if qs.exists():
+        raise ValidationError(message)
+    return email
+
+
+def _clean_code_field(code):
+    """Shared clean_code body for DepartmentForm/ProgramForm."""
+    return (code or '').strip().upper()
+
+
+IMAGE_EXTENSIONS = ('jpg', 'jpeg', 'png', 'webp', 'gif')
+DOCUMENT_EXTENSIONS = ('pdf', 'jpg', 'jpeg', 'png')
+
+
+def _validate_upload(file, extensions, max_size_mb=10):
+    """
+    Server-side backstop for upload fields whose templates only hint at
+    allowed types via `accept=` (client-side, trivially bypassed): enforces
+    an extension whitelist and a size cap. No-op if no file was submitted,
+    so it's safe to use on optional fields.
+    """
+    if not file:
+        return file
+    ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
+    if ext not in extensions:
+        raise ValidationError(
+            f'Unsupported file type ".{ext}". Allowed: {", ".join(extensions)}.'
+        )
+    validate_file_size(file, max_size_mb=max_size_mb)
+    return file
 
 
 # ==============================================================================
@@ -219,6 +266,12 @@ class FacultyForm(forms.ModelForm):
                         description = feature.get('description', '')
                         lines.append(f"{icon}|{title}|{description}")
                 self.fields['special_features_text'].initial = '\n'.join(lines)
+
+    def clean_hero_image(self):
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS)
+
+    def clean_about_image(self):
+        return _validate_upload(self.cleaned_data.get('about_image'), IMAGE_EXTENSIONS)
 
     def clean_special_features_text(self):
         text = self.cleaned_data.get('special_features_text', '').strip()
@@ -529,6 +582,9 @@ class BlogPostForm(forms.ModelForm):
             raise forms.ValidationError('Excerpt must be 500 characters or less.')
         return excerpt
 
+    def clean_featured_image(self):
+        return _validate_upload(self.cleaned_data.get('featured_image'), IMAGE_EXTENSIONS)
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.tags = self.cleaned_data.get('tags_text', [])
@@ -610,10 +666,21 @@ class UserCreateForm(forms.ModelForm):
         }),
         help_text='User can log in immediately after creation.'
     )
- 
+    is_staff = forms.BooleanField(
+        required=False, initial=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500',
+        }),
+        help_text=(
+            'Full unrestricted access to every admin-portal module, '
+            'independent of role permissions. Does not grant access to the '
+            'Instructor, Finance, or Support portals.'
+        )
+    )
+
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff')
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-md',
@@ -622,11 +689,8 @@ class UserCreateForm(forms.ModelForm):
         }
  
     def clean_email(self):
-        email = self.cleaned_data.get('email', '').lower()
-        if User.objects.filter(email=email).exists():
-            raise ValidationError('This email is already registered.')
-        return email
- 
+        return _clean_unique_email(self.cleaned_data.get('email', ''))
+
     def save(self, commit=True, raw_password=None):
         """
         Save the User instance.
@@ -642,12 +706,26 @@ class UserCreateForm(forms.ModelForm):
 
 class UserEditForm(forms.ModelForm):
     """
-    Edit basic User fields. is_staff is NOT included — the view derives
-    it from UserProfile.role to enforce the admin-only staff rule.
+    Edit basic User fields, including is_staff — an independent,
+    admin-managed flag (not derived from role) granting unrestricted
+    access to every admin-portal module. See StaffPermissionsMatrix.
+    ADMIN_PORTAL_MODULES for exactly which modules that covers.
     """
+    is_staff = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500',
+        }),
+        help_text=(
+            'Full unrestricted access to every admin-portal module, '
+            'independent of role permissions. Does not grant access to the '
+            'Instructor, Finance, or Support portals.'
+        )
+    )
+
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'is_active')
+        fields = ('username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff')
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-md text-gray-500 cursor-not-allowed',
@@ -671,10 +749,11 @@ class UserEditForm(forms.ModelForm):
         }
  
     def clean_email(self):
-        email = self.cleaned_data.get('email', '').lower()
-        if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
-            raise ValidationError('This email is already in use.')
-        return email
+        return _clean_unique_email(
+            self.cleaned_data.get('email', ''),
+            instance=self.instance,
+            message='This email is already in use.',
+        )
 
 
 class UserProfileForm(forms.ModelForm):
@@ -735,14 +814,42 @@ class UserProfileForm(forms.ModelForm):
             })
         }
 
+    def clean_avatar(self):
+        return _validate_upload(self.cleaned_data.get('avatar'), IMAGE_EXTENSIONS)
+
 
 class QuickRoleChangeForm(forms.Form):
+    # 'student' excluded server-side, not just in the role_assign.html dropdown —
+    # this endpoint only ever targets existing staff accounts (students are
+    # excluded from the picker queryset in views.role_assign), so a raw POST
+    # must not be able to demote a staff user into a student role either.
     role = forms.ChoiceField(
-        choices=UserProfile.ROLE_CHOICES,
+        choices=[c for c in UserProfile.ROLE_CHOICES if c[0] != 'student'],
         widget=forms.Select(attrs={
             'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white'
         })
     )
+
+
+class UserPermissionsForm(forms.ModelForm):
+    """
+    One form per module row in StaffPermissionsMatrix.
+    Used in a formset for the permissions modal.
+    """
+    class Meta:
+        from eduweb.models import StaffPermissionsMatrix
+        model = StaffPermissionsMatrix
+        fields = ['module', 'can_view', 'can_create', 'can_edit',
+                  'can_delete', 'can_approve', 'can_export']
+        widgets = {
+            'module': forms.HiddenInput(),
+            'can_view':    forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_create':  forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_edit':    forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_delete':  forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_approve': forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+            'can_export':  forms.CheckboxInput(attrs={'class': 'perm-cb w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500'}),
+        }
 
 
 # ==============================================================================
@@ -857,6 +964,18 @@ class SiteConfigGeneralForm(forms.ModelForm):
             'tiktok':                forms.URLInput(attrs=_SC_I),
         }
 
+    def clean_logo(self):
+        return _validate_upload(self.cleaned_data.get('logo'), IMAGE_EXTENSIONS)
+
+    def clean_logo_dark(self):
+        return _validate_upload(self.cleaned_data.get('logo_dark'), IMAGE_EXTENSIONS)
+
+    def clean_favicon(self):
+        return _validate_upload(self.cleaned_data.get('favicon'), IMAGE_EXTENSIONS)
+
+    def clean_og_image(self):
+        return _validate_upload(self.cleaned_data.get('og_image'), IMAGE_EXTENSIONS)
+
 
 class SiteConfigIndexForm(forms.ModelForm):
     """
@@ -963,6 +1082,9 @@ class TestimonialForm(forms.ModelForm):
             'order':       forms.NumberInput(attrs=_SC_I),
         }
 
+    def clean_avatar(self):
+        return _validate_upload(self.cleaned_data.get('avatar'), IMAGE_EXTENSIONS)
+
 
 class InstitutionMemberForm(forms.ModelForm):
     class Meta:
@@ -975,6 +1097,10 @@ class InstitutionMemberForm(forms.ModelForm):
             'bio':           forms.Textarea(attrs={**_SC_T, 'rows': 4}),
             'display_order': forms.NumberInput(attrs=_SC_I),
         }
+
+    def clean_photo(self):
+        return _validate_upload(self.cleaned_data.get('photo'), IMAGE_EXTENSIONS)
+
 
 class BrandingConfigForm(forms.Form):
     site_name = forms.CharField(
@@ -1013,8 +1139,15 @@ class BrandingConfigForm(forms.Form):
         })
     )
 
+    def clean_logo(self):
+        return _validate_upload(self.cleaned_data.get('logo'), IMAGE_EXTENSIONS)
 
-class EmailConfigForm(forms.Form):
+    def clean_favicon(self):
+        return _validate_upload(self.cleaned_data.get('favicon'), IMAGE_EXTENSIONS)
+
+
+class EmailServerForm(forms.Form):
+    """Shared SMTP server settings (host/port), used by both outbound-email accounts."""
     smtp_host = forms.CharField(
         max_length=200,
         widget=forms.TextInput(attrs={
@@ -1028,6 +1161,10 @@ class EmailConfigForm(forms.Form):
             'placeholder': '587'
         })
     )
+
+
+class EmailAccountForm(forms.Form):
+    """Per-account credentials + sender identity (default or admissions)."""
     smtp_username = forms.CharField(
         max_length=200,
         widget=forms.TextInput(attrs={
@@ -1036,9 +1173,10 @@ class EmailConfigForm(forms.Form):
         })
     )
     smtp_password = forms.CharField(
+        required=False,
         widget=forms.PasswordInput(attrs={
             'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'placeholder': '••••••••'
+            'placeholder': 'Leave blank to keep the current password'
         })
     )
     from_email = forms.EmailField(
@@ -1270,12 +1408,6 @@ class BroadcastMessageForm(forms.ModelForm):
 
         return cleaned_data
 
-from django import forms
-from eduweb.models import (
-    Department, Program, AcademicSession, CourseIntake,
-    Announcement, LMSCourse, CourseCategory
-)
-
 
 class DepartmentForm(forms.ModelForm):
     class Meta:
@@ -1283,16 +1415,42 @@ class DepartmentForm(forms.ModelForm):
         fields = ['faculty', 'name', 'code', 'description', 'display_order', 'is_active']
 
     def clean_code(self):
-        code = self.cleaned_data.get('code', '').strip().upper()
-        return code
+        return _clean_code_field(self.cleaned_data.get('code', ''))
 
 
 class ProgramForm(forms.ModelForm):
+    # Not model fields — a friendly front for Program.credit_caps_by_term
+    # (a JSONField) so the admin gets three plain number inputs instead of
+    # hand-editing raw JSON. __init__ populates them from the instance on
+    # edit; save() writes them back into the dict. Blank = no override for
+    # that term, falls back to max_credits_per_semester.
+    cu_first = forms.IntegerField(
+        required=False, min_value=1, max_value=30, label='Max CU — First Semester',
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+            'placeholder': 'Same as default',
+        }),
+    )
+    cu_second = forms.IntegerField(
+        required=False, min_value=1, max_value=30, label='Max CU — Second Semester',
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+            'placeholder': 'Same as default',
+        }),
+    )
+    cu_annual = forms.IntegerField(
+        required=False, min_value=1, max_value=30, label='Max CU — Annual',
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+            'placeholder': 'Same as default',
+        }),
+    )
+
     class Meta:
         model = Program
         fields = [
             'department', 'name', 'code', 'degree_level',
-            'duration_years', 'credits_required', 'max_students',
+            'duration_years', 'credits_required', 'max_credits_per_semester', 'max_students',
             'tagline', 'overview', 'description',
             'application_fee', 'tuition_fee', 'avg_starting_salary',
             'job_placement_rate',
@@ -1320,6 +1478,11 @@ class ProgramForm(forms.ModelForm):
             'credits_required': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'min': '0'
+            }),
+            'max_credits_per_semester': forms.NumberInput(attrs={
+                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'min': '1',
+                'max': '30'
             }),
             'max_students': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
@@ -1383,8 +1546,30 @@ class ProgramForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and isinstance(self.instance.credit_caps_by_term, dict):
+            caps = self.instance.credit_caps_by_term
+            self.fields['cu_first'].initial = caps.get('first')
+            self.fields['cu_second'].initial = caps.get('second')
+            self.fields['cu_annual'].initial = caps.get('annual')
+
     def clean_code(self):
-        return self.cleaned_data.get('code', '').strip().upper()
+        return _clean_code_field(self.cleaned_data.get('code', ''))
+
+    def save(self, commit=True):
+        program = super().save(commit=False)
+        caps = {}
+        if self.cleaned_data.get('cu_first') is not None:
+            caps['first'] = self.cleaned_data['cu_first']
+        if self.cleaned_data.get('cu_second') is not None:
+            caps['second'] = self.cleaned_data['cu_second']
+        if self.cleaned_data.get('cu_annual') is not None:
+            caps['annual'] = self.cleaned_data['cu_annual']
+        program.credit_caps_by_term = caps
+        if commit:
+            program.save()
+        return program
 
 
 class AcademicSessionForm(forms.ModelForm):
@@ -1654,6 +1839,12 @@ class LMSCourseForm(forms.ModelForm):
             instance.save()
         return instance
 
+    def clean_hero_image(self):
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS)
+
+    def clean_thumbnail(self):
+        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS)
+
 
 # ==============================================================================
 # ENROLLMENT FORM
@@ -1835,6 +2026,9 @@ class CertificateForm(forms.ModelForm):
                 'class': 'w-5 h-5 text-primary-600 rounded cursor-pointer',
             }),
         }
+
+    def clean_certificate_file(self):
+        return _validate_upload(self.cleaned_data.get('certificate_file'), DOCUMENT_EXTENSIONS)
 
 
 # ==============================================================================
@@ -2065,66 +2259,9 @@ class TransactionForm(forms.ModelForm):
         self.fields['gateway'].required = False
 
 
-# ==============================================================================
-# ALL REQUIRED PAYMENTS FORM
-# ==============================================================================
-
-class AllRequiredPaymentsForm(forms.ModelForm):
-    """Form for managing required payments"""
-    
-    class Meta:
-        model = AllRequiredPayments
-        fields = [
-            'program', 'course', 'academic_session', 'semester',
-            'purpose', 'who_to_pay', 'amount', 'currency', 'due_date', 'is_active'
-        ]
-        widgets = {
-            'program': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'course': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'list': 'course-list',
-            }),
-            'academic_session': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'semester': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'purpose': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'placeholder': 'e.g., Tuition, Library Fees, Registration'
-            }),
-            'who_to_pay': forms.Select(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
-            }),
-            'amount': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'currency': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 uppercase',
-                'placeholder': 'e.g. USD, GBP, EUR',
-                'maxlength': '3',
-            }),
-            'due_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-            }),
-            'is_active': forms.CheckboxInput(attrs={
-                'class': 'w-5 h-5 text-primary-600 rounded'
-            }),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['program'].empty_label = '— Select Program —'
-        self.fields['course'].empty_label = '— Select Course (Optional) —'
-        self.fields['academic_session'].empty_label = '— Select Session (Optional) —'
-        self.fields['course'].required = False
-        self.fields['academic_session'].required = False
+# AllRequiredPaymentsForm removed — required-payments CRUD collapsed into
+# payment.forms.RequiredPaymentForm (payment/views.py), the one canonical
+# surface both admins and finance staff now use.
 
 class LibraryItemForm(forms.ModelForm):
     """
@@ -2307,6 +2444,17 @@ class LibraryItemForm(forms.ModelForm):
             'Button label shown on the front-end, default: "Read / Download".'
         )
 
+    def clean_cover_image(self):
+        return _validate_upload(self.cleaned_data.get('cover_image'), IMAGE_EXTENSIONS)
+
+    def clean_file(self):
+        """Extension is already whitelisted at the model level
+        (FileExtensionValidator) — this only adds the missing size cap."""
+        file = self.cleaned_data.get('file')
+        if file:
+            validate_file_size(file, max_size_mb=25)
+        return file
+
 
 # ==================== ADMIN MESSAGING FORMS ====================
 class AdminMessageComposeForm(forms.ModelForm):
@@ -2315,8 +2463,6 @@ class AdminMessageComposeForm(forms.ModelForm):
     Unlike the student version, recipient is a visible dropdown
     covering all active users.
     """
-    from eduweb.models import Message as _Msg
-
     recipient = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True)
             .select_related('profile')

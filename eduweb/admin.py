@@ -1750,13 +1750,13 @@ class SystemConfigurationAdmin(admin.ModelAdmin):
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'role', 'faculty', 'department', 'program', 'year_of_study', 'progression_status', 'email_verified', 'is_logged_in')
-    list_filter = ('role', 'faculty', 'department', 'email_verified', 'progression_status', 'is_logged_in')
+    list_filter = ('role', 'faculty', 'department', 'email_verified', 'progression_status', 'is_logged_in', 'must_change_password')
     search_fields = ('user__username', 'user__email', 'phone')
-    readonly_fields = ('verification_token', 'active_session_key', 'created_at', 'updated_at')
+    readonly_fields = ('verification_token', 'active_session_key', 'otp_code', 'created_at', 'updated_at')
 
     fieldsets = (
         ('Identity', {
-            'fields': ('user', 'role', 'faculty', 'department', 'program')
+            'fields': ('user', 'role', 'faculty', 'department', 'must_change_password')
         }),
         ('Academic Progression', {
             'fields': ('year_of_study', 'progression_status', 'admission_session')
@@ -1769,7 +1769,7 @@ class UserProfileAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Preferences', {
-            'fields': ('email_notifications', 'marketing_emails')
+            'fields': ('email_notifications', 'marketing_emails', 'otp_created_at', 'otp_attempts')
         }),
         ('Verification & Security', {
             'fields': ('email_verified', 'verification_token', 'is_logged_in', 'active_session_key'),
@@ -2400,6 +2400,103 @@ class ExamStatusLogAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+
+
+from django.contrib import admin
+from .models import StaffPermissionsMatrix
+
+
+@admin.register(StaffPermissionsMatrix)
+class StaffPermissionsMatrixAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "module",
+        "can_view",
+        "can_create",
+        "can_edit",
+        "can_delete",
+        "can_approve",
+        "can_export",
+        "updated_at",
+        "updated_by",
+    )
+
+    list_filter = (
+        "role",
+        "module",
+        "can_view",
+        "can_create",
+        "can_edit",
+        "can_delete",
+        "can_approve",
+        "can_export",
+    )
+
+    search_fields = (
+        "user__username",
+        "user__first_name",
+        "user__last_name",
+        "user__email",
+        "module",
+    )
+
+    readonly_fields = (
+        "updated_at",
+    )
+
+    autocomplete_fields = (
+        "user",
+        "updated_by",
+    )
+
+    ordering = (
+        "role",
+        "module",
+        "user",
+    )
+
+    fieldsets = (
+        (
+            "Permission Target",
+            {
+                "fields": (
+                    "role",
+                    "user",
+                    "module",
+                )
+            },
+        ),
+        (
+            "Permissions",
+            {
+                "fields": (
+                    (
+                        "can_view",
+                        "can_create",
+                        "can_edit",
+                    ),
+                    (
+                        "can_delete",
+                        "can_approve",
+                        "can_export",
+                    ),
+                )
+            },
+        ),
+        (
+            "Audit",
+            {
+                "fields": (
+                    "updated_at",
+                    "updated_by",
+                )
+            },
+        ),
+    )
+
+    def save_model(self, request, obj, form, change):
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)
 
 # ==================== ADMIN SITE BRANDING ====================
 admin.site.site_header = "LMS Administration"

@@ -66,12 +66,14 @@
                 {{ enrollments.count }} student{{ enrollments.count|pluralize }} in <span class="font-medium">{{ course.title }}</span>
             </p>
         </div>
+        {% if permissions.instructor_courses.can_create %}
         <button onclick="openEnrollModal()"
                 class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-600
                        text-white text-sm font-medium rounded-lg hover:bg-primary-700
                        shadow-sm hover:shadow-md transition-all w-full sm:w-auto">
             <i class="fas fa-user-plus mr-2"></i>Enroll Student
         </button>
+        {% endif %}
     </div>
 
     <!-- Statistics Cards -->
@@ -224,10 +226,12 @@
             </div>
             <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">No Students Yet</h3>
             <p class="text-gray-600 mb-5 sm:mb-6 text-sm sm:text-base">Start by enrolling students in this course.</p>
+            {% if permissions.instructor_courses.can_create %}
             <button onclick="openEnrollModal()"
                     class="inline-flex items-center px-5 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 shadow-sm transition-all text-sm sm:text-base">
                 <i class="fas fa-user-plus mr-2"></i>Enroll First Student
             </button>
+            {% endif %}
         </div>
     </div>
     {% endif %}

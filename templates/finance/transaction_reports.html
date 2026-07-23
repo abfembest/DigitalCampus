@@ -3,6 +3,8 @@
 
 {% block title %}Transaction Reports — Finance Portal{% endblock %}
 {% block meta_description %}Comprehensive transaction reports with advanced filtering and export options{% endblock %}
+{% block breadcrumb %}Finance › Payments › Transaction Reports{% endblock %}
+{% block breadcrumb_title %}Transaction Reports{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -437,7 +439,7 @@
                      aria-label="View {{ payment.payment_reference }}">
                     <i class="fas fa-eye" aria-hidden="true"></i>
                   </a>
-                  {% if payment.status == 'success' %}
+                  {% if payment.status == 'success' and permissions.finance_payments.can_export %}
                   <a href="{% url 'payments:generate_invoice_pdf' payment.payment_reference %}"
                      class="text-green-600 hover:text-green-800 text-xs font-medium
                             focus:outline-none focus:underline"
@@ -485,7 +487,7 @@ $(document).ready(function () {
     responsive: true,
     pageLength: 25,
     order: [[1, 'desc']],
-    dom: 'Bfrtip',
+    dom: '{% if permissions.finance_payments.can_export %}Bfrtip{% else %}frtip{% endif %}',
     buttons: [
       {
         extend: 'copy',

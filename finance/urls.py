@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path
 from . import views
 
 app_name = 'finance'
@@ -8,15 +8,20 @@ urlpatterns = [
     # Dashboard
     path('', views.finance_dashboard, name='dashboard'),
 
-    # Payments — delegated to the payments app
-    # All payment URLs are now under payments/ namespace
-    path('payments/', include('payment.urls', namespace='payment')),
+    # Payments live under the top-level /payment/ prefix (DigitalCampus/urls.py,
+    # namespace 'payments') — the sidebar's {% url 'payments:...' %} links resolve
+    # there, not here. Nothing reverses the 'finance' namespace for payment URLs.
 
-    # Subscriptions
+    # Subscriptions (institutional — superuser-only)
     path(
         'subscriptions/',
         views.subscription_list,
         name='subscription_list',
+    ),
+    path(
+        'subscriptions/add/',
+        views.subscription_create,
+        name='subscription_create',
     ),
 
     # Payroll

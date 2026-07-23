@@ -6,6 +6,9 @@
 {% block content %}
 <div class="max-w-12xl mx-auto px-3 sm:px-4">
 
+                <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
+
     {# ── Header ──────────────────────────────────────────────────────── #}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
         <div>
@@ -107,7 +110,11 @@
                 <div>
                     <h3 class="font-bold text-gray-900 text-sm sm:text-base leading-snug line-clamp-2
                                hover:text-primary-600 transition-colors mb-0.5">
+                        {% if permissions.instructor_courses.can_edit %}
                         <a href="{% url 'instructor:course_edit' course.slug %}">{{ course.title }}</a>
+                        {% else %}
+                        {{ course.title }}
+                        {% endif %}
                     </h3>
                     <p class="text-xs text-gray-400 font-mono">{{ course.code }}</p>
                     {% if course.academic_course %}
@@ -135,12 +142,14 @@
 
                 {# Actions #}
                 <div class="grid grid-cols-3 gap-1.5">
+                    {% if permissions.instructor_courses.can_edit %}
                     <a href="{% url 'instructor:course_edit' course.slug %}"
                        class="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium
                               bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors"
                        title="Edit">
                         <i class="fas fa-edit"></i><span class="hidden sm:inline">Edit</span>
                     </a>
+                    {% endif %}
                     <a href="{% url 'instructor:course_manage' course.slug %}"
                        class="flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium
                               bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"

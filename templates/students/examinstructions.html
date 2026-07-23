@@ -38,6 +38,9 @@
 {% block content %}
 <div class="w-full max-w-full anim-in">
 
+                <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
+
     <!-- ── Breadcrumb ── -->
     <nav class="text-xs text-gray-400 mb-2 flex items-center gap-1.5 flex-wrap">
         <a href="{% url 'students:exam_list' %}" class="hover:text-primary-600 transition flex items-center gap-1 font-medium">

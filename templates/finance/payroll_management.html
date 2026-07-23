@@ -2,6 +2,8 @@
 {% load static humanize %}
 
 {% block title %}Payroll Management | Finance Portal{% endblock %}
+{% block breadcrumb %}Finance › Payroll{% endblock %}
+{% block breadcrumb_title %}Payroll Management{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
@@ -12,6 +14,7 @@
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Payroll Management</h1>
       <p class="text-sm text-gray-500 mt-1">Manage staff salary records and disbursements</p>
     </div>
+    {% if permissions.finance_payroll.can_create %}
     <button onclick="openCreateModal()"
             aria-label="Create new payroll record"
             class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white
@@ -21,6 +24,7 @@
       <i class="fas fa-plus" aria-hidden="true"></i>
       Create Payroll
     </button>
+    {% endif %}
   </div>
 
   {# ── Django messages ── #}
@@ -435,11 +439,7 @@
 </div>
 
 
-{# ── DataTables CDN ── #}
-<link rel="stylesheet"
-      href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+{# jQuery and DataTables core are already loaded by management/base.html #}
 
 <style>
 /* Minimal DataTables + Tailwind glue */

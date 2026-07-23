@@ -10,13 +10,16 @@
   {# ─── Page Header ─────────────────────────────────────────────────────────── #}
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
+      <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
       <h1 class="text-2xl md:text-3xl font-bold text-gray-800 font-display">Academic Sessions</h1>
       <p class="text-gray-500 mt-1">Manage academic years and semester schedules</p>
     </div>
+    {% if permissions.academics.can_create %}
     <button type="button" onclick="openSessionModal('create')"
        class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-sm focus:outline-none">
       <i class="fas fa-plus" aria-hidden="true"></i> New Session
     </button>
+    {% endif %}
   </div>
 
   {# ─── Current Session Banner ───────────────────────────────────────────────── #}
@@ -87,6 +90,11 @@
             {# Registration Window — 3 weeks from each term's start date #}
             <td class="py-4 px-5 text-xs">
               <div class="space-y-1">
+                {% if session.registration_override == 'open' %}
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 mb-1">FORCED OPEN</span>
+                {% elif session.registration_override == 'closed' %}
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 mb-1">FORCED CLOSED</span>
+                {% endif %}
                 {% for td in session.term_dates %}
                   {% if session.is_registration_open and session.get_current_term == td.term %}
                   <div class="whitespace-nowrap text-green-600 font-semibold">
@@ -141,6 +149,7 @@
             {# Actions #}
             <td class="py-4 px-5">
               <div class="flex items-center gap-2">
+                {% if permissions.academics.can_edit %}
                 {% if not session.is_current %}
                 <form method="post" action="{% url 'management:academic_session_set_current' session.pk %}">
                   {% csrf_token %}
@@ -152,6 +161,17 @@
                 </form>
                 {% endif %}
 
+                <form method="post" action="{% url 'management:academic_session_registration_override' session.pk %}" class="inline">
+                  {% csrf_token %}
+                  <select name="registration_override" onchange="this.form.submit()"
+                          title="Override the automatic 3-week registration window"
+                          class="px-2 py-1.5 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary-500">
+                    <option value="auto"   {% if session.registration_override == 'auto' %}selected{% endif %}>Auto window</option>
+                    <option value="open"   {% if session.registration_override == 'open' %}selected{% endif %}>Force Open</option>
+                    <option value="closed" {% if session.registration_override == 'closed' %}selected{% endif %}>Force Closed</option>
+                  </select>
+                </form>
+
                 <button type="button"
                         onclick="openSessionModal('edit', this)"
                         data-id="{{ session.id }}"
@@ -162,6 +182,7 @@
                         title="Edit">
                   <i class="fas fa-edit text-sm" aria-hidden="true"></i>
                 </button>
+                {% endif %}
               </div>
             </td>
 

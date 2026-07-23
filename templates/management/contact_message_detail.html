@@ -6,6 +6,7 @@
 {% block content %}
 <div class="max-w-full mx-auto">
 
+  <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
   <nav class="flex items-center gap-2 text-sm text-gray-500 mb-6" aria-label="Breadcrumb">
     <a href="{% url 'management:contact_messages_list' %}" class="hover:text-primary-600">Contact Messages</a>
     <i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
@@ -46,7 +47,7 @@
         {% if contact_message.user %}
         <div class="sm:col-span-2">
           <label class="text-xs text-gray-400 font-medium uppercase tracking-wide block mb-1">Linked Account</label>
-          <a href="{% url 'management:user_detail' contact_message.user.pk %}" class="text-primary-600 hover:underline">
+          <a href="{% url 'management:user_edit' contact_message.user.pk %}" class="text-primary-600 hover:underline">
             {{ contact_message.user.get_full_name|default:contact_message.user.username }} (@{{ contact_message.user.username }})
           </a>
         </div>
@@ -88,10 +89,12 @@
           </form>
           {% endif %}
         </div>
+        {% if permissions.communications.can_create %}
         <button type="submit"
                 class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm">
           <i class="fas fa-paper-plane mr-1.5" aria-hidden="true"></i>Send Response
         </button>
+        {% endif %}
       </div>
     </form>
   </div>

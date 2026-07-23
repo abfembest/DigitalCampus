@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Admission Requirements - MIU{% endblock %}
 
 {% block content %}
 
 <!-- ================= HERO SECTION ================= -->
-<section class="relative bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 text-white py-16 lg:py-20">
+<section class="relative bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 text-white py-12 sm:py-16 lg:py-20">
     <div class="absolute inset-0 opacity-10">
         <div class="absolute inset-0" style="background-image: url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80'); background-size: cover; background-position: center;"></div>
     </div>
@@ -23,26 +23,30 @@
         <div class="grid lg:grid-cols-3 gap-8 items-start">
             <div class="lg:col-span-2">
                 <div class="flex flex-wrap gap-2 mb-4">
-                    <span class="bg-accent-400 text-primary-950 px-3 py-1 rounded-full text-sm font-semibold font-['Inter']">Diplomas</span>
-                    <span class="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-['Inter']">Bachelor of Science</span>
-                    <span class="bg-accent-400 text-primary-950 px-3 py-1 rounded-full text-sm font-semibold font-['Inter']">Masters</span>
-                    <span class="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-['Inter']">PhD</span>
+                    {% for level in active_degree_levels %}
+                        <span class="{% cycle 'bg-accent-400 text-primary-950' 'bg-white/20 backdrop-blur-sm' %} px-3 py-1 rounded-full text-sm font-semibold font-['Inter']">{{ level }}</span>
+                    {% empty %}
+                        <span class="bg-accent-400 text-primary-950 px-3 py-1 rounded-full text-sm font-semibold font-['Inter']">Diplomas</span>
+                        <span class="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-['Inter']">Bachelor of Science</span>
+                        <span class="bg-accent-400 text-primary-950 px-3 py-1 rounded-full text-sm font-semibold font-['Inter']">Masters</span>
+                        <span class="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-['Inter']">PhD</span>
+                    {% endfor %}
                 </div>
 
-                <h1 class="text-3xl lg:text-5xl font-bold mb-4 font-['Poppins']">Admission Requirements</h1>
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 font-['Poppins']">Admission Requirements</h1>
 
-                <p class="text-lg text-blue-100 mb-6 leading-relaxed font-['Inter']">
+                <p class="text-base sm:text-lg text-blue-100 mb-6 leading-relaxed font-['Inter']">
                     Start your journey to becoming a leader. Our programs combine rigorous academics with hands-on experience in AI, IT, Theology, and engineering.
                 </p>
 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="flex items-center gap-2">
                         <i data-lucide="graduation-cap" class="w-5 h-5 text-accent-400"></i>
                         <span class="text-sm font-['Inter']">Multiple Degrees</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <i data-lucide="clock" class="w-5 h-5 text-accent-400"></i>
-                        <span class="text-sm font-['Inter']">4 Years</span>
+                        <span class="text-sm font-['Inter']">{% if featured_intake %}{{ featured_intake.program.duration_years|floatformat:"-1" }} Years{% else %}4 Years{% endif %}</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <i data-lucide="map-pin" class="w-5 h-5 text-accent-400"></i>
@@ -50,7 +54,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <i data-lucide="calendar" class="w-5 h-5 text-accent-400"></i>
-                        <span class="text-sm font-['Inter']">Fall 2025</span>
+                        <span class="text-sm font-['Inter']">{% if featured_intake %}{{ featured_intake.get_intake_period_display }} {{ featured_intake.year }}{% else %}Fall 2025{% endif %}</span>
                     </div>
                 </div>
             </div>
@@ -62,33 +66,37 @@
                 </h3>
 
                 <div class="space-y-3 mb-6">
-                    <div class="flex justify-between items-center py-2 border-b border-white/10">
+                    <div class="flex flex-wrap justify-between items-center gap-x-2 gap-y-0.5 py-2 border-b border-white/10">
                         <span class="text-sm text-blue-100 font-['Inter']">Application Deadline</span>
-                        <span class="font-semibold font-['Inter']">June 15, 2025</span>
+                        <span class="font-semibold text-sm sm:text-base font-['Inter']">{% if featured_intake %}{{ featured_intake.application_deadline|date:"F j, Y" }}{% else %}TBA{% endif %}</span>
                     </div>
-                    <div class="flex justify-between items-center py-2 border-b border-white/10">
+                    <div class="flex flex-wrap justify-between items-center gap-x-2 gap-y-0.5 py-2 border-b border-white/10">
                         <span class="text-sm text-blue-100 font-['Inter']">Program Start</span>
-                        <span class="font-semibold font-['Inter']">August 25, 2025</span>
+                        <span class="font-semibold text-sm sm:text-base font-['Inter']">{% if featured_intake %}{{ featured_intake.start_date|date:"F j, Y" }}{% else %}TBA{% endif %}</span>
                     </div>
-                    <div class="flex justify-between items-center py-2 border-b border-white/10">
+                    <div class="flex flex-wrap justify-between items-center gap-x-2 gap-y-0.5 py-2 border-b border-white/10">
                         <span class="text-sm text-blue-100 font-['Inter']">Tuition (Annual)</span>
-                        <span class="font-semibold font-['Inter']">$32,500</span>
+                        <span class="font-semibold text-sm sm:text-base font-['Inter']">{% if featured_intake %}${{ featured_intake.program.tuition_fee|floatformat:0|intcomma }}{% else %}Varies by program{% endif %}</span>
                     </div>
-                    <div class="flex justify-between items-center py-2">
+                    {% if scholarship_deadline %}
+                    <div class="flex flex-wrap justify-between items-center gap-x-2 gap-y-0.5 py-2">
                         <span class="text-sm text-blue-100 font-['Inter']">Scholarship Deadline</span>
-                        <span class="font-semibold font-['Inter']">March 31, 2025</span>
+                        <span class="font-semibold text-sm sm:text-base font-['Inter']">{{ scholarship_deadline }}</span>
                     </div>
+                    {% endif %}
                 </div>
 
+                {% if featured_intake and featured_intake.available_slots %}
                 <div class="mb-6">
                     <div class="flex justify-between text-sm mb-2 font-['Inter']">
                         <span>Spots Available</span>
-                        <span class="font-semibold">150 of 200</span>
+                        <span class="font-semibold">{{ featured_intake.remaining_slots }} of {{ featured_intake.available_slots }}</span>
                     </div>
                     <div class="w-full bg-white/20 rounded-full h-2">
-                        <div class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 75%"></div>
+                        <div class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: {{ spots_percent }}%"></div>
                     </div>
                 </div>
+                {% endif %}
 
                 <a href="{% url 'eduweb:apply' %}" class="block w-full bg-accent-400 hover:bg-accent-500 text-primary-950 py-3 rounded-lg font-bold text-center transition-all shadow-lg hover:shadow-xl hover:scale-105 font-['Inter']">
                     Start Application →
@@ -271,7 +279,7 @@
                         Need More Time?
                     </h4>
                     <p class="mb-4 text-blue-100 text-sm font-['Inter']">Contact our admissions office if you need an extension or have special circumstances.</p>
-                    <button class="bg-white text-primary-950 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors font-semibold text-sm font-['Inter']">
+                    <button class="w-full sm:w-auto bg-white text-primary-950 px-5 py-3 rounded-lg hover:bg-gray-100 transition-colors font-semibold text-sm font-['Inter']">
                         Request Extension
                     </button>
                 </div>
@@ -341,27 +349,27 @@
                 </div>
                 <h3 class="font-bold text-xl mb-4 text-primary-950 font-['Poppins']">Required Documents</h3>
                 <div class="space-y-3">
-                    <label class="flex items-center gap-3 cursor-pointer group">
+                    <label class="flex items-center gap-3 py-1.5 cursor-pointer group">
                         <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                         <span class="text-gray-700 group-hover:text-primary-700 transition-colors font-['Inter']">Completed application form</span>
                     </label>
-                    <label class="flex items-center gap-3 cursor-pointer group">
+                    <label class="flex items-center gap-3 py-1.5 cursor-pointer group">
                         <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                         <span class="text-gray-700 group-hover:text-primary-700 transition-colors font-['Inter']">Official transcripts</span>
                     </label>
-                    <label class="flex items-center gap-3 cursor-pointer group">
+                    <label class="flex items-center gap-3 py-1.5 cursor-pointer group">
                         <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                         <span class="text-gray-700 group-hover:text-primary-700 transition-colors font-['Inter']">Standardized test scores</span>
                     </label>
-                    <label class="flex items-center gap-3 cursor-pointer group">
+                    <label class="flex items-center gap-3 py-1.5 cursor-pointer group">
                         <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                         <span class="text-gray-700 group-hover:text-primary-700 transition-colors font-['Inter']">Personal statement (500 words)</span>
                     </label>
-                    <label class="flex items-center gap-3 cursor-pointer group">
+                    <label class="flex items-center gap-3 py-1.5 cursor-pointer group">
                         <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                         <span class="text-gray-700 group-hover:text-primary-700 transition-colors font-['Inter']">Two letters of recommendation</span>
                     </label>
-                    <label class="flex items-center gap-3 cursor-pointer group">
+                    <label class="flex items-center gap-3 py-1.5 cursor-pointer group">
                         <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                         <span class="text-gray-700 group-hover:text-primary-700 transition-colors font-['Inter']">Resume/CV (for transfer students)</span>
                     </label>
@@ -523,12 +531,12 @@
                 </div>
 
                 <div class="mt-8 pt-6 border-t-2 border-gray-200">
-                    <div class="flex items-center justify-between gap-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
                             <h4 class="font-bold text-lg text-gray-900 font-['Poppins']">Net Price Calculator</h4>
                             <p class="text-sm text-gray-600 font-['Inter']">Estimate your actual cost after financial aid</p>
                         </div>
-                        <button class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-lg transition-colors font-semibold text-sm whitespace-nowrap font-['Inter']">
+                        <button class="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-lg transition-colors font-semibold text-sm whitespace-nowrap font-['Inter']">
                             Calculate Now
                         </button>
                     </div>
@@ -641,13 +649,13 @@
             <p class="text-gray-600 max-w-3xl mx-auto font-['Inter']">Our admissions team is here to help you through every step of the application process</p>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div class="bg-white p-8 rounded-2xl shadow-lg text-center hover:shadow-xl transition-shadow border border-gray-100">
                 <div class="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
                     <i data-lucide="phone" class="w-8 h-8 text-blue-600"></i>
                 </div>
                 <h3 class="font-bold text-lg mb-3 text-gray-900 font-['Poppins']">Phone Support</h3>
-                <p class="text-primary-600 font-semibold mb-2 font-['Inter']">+1 (555) 123-4567</p>
+                <p class="text-primary-600 font-semibold mb-2 font-['Inter']"><a href="tel:+15551234567" class="hover:text-primary-700 transition-colors">+1 (555) 123-4567</a></p>
                 <p class="text-sm text-gray-600 font-['Inter']">Mon-Fri: 9AM-6PM EST</p>
             </div>
 
@@ -656,7 +664,7 @@
                     <i data-lucide="mail" class="w-8 h-8 text-green-600"></i>
                 </div>
                 <h3 class="font-bold text-lg mb-3 text-gray-900 font-['Poppins']">Email</h3>
-                <p class="text-primary-600 font-semibold mb-2 font-['Inter']">admissions@miu.edu</p>
+                <p class="text-primary-600 font-semibold mb-2 font-['Inter'] break-words px-2"><a href="mailto:admissions@miuedu.com" class="hover:text-primary-700 transition-colors">admissions@miuedu.com</a></p>
                 <p class="text-sm text-gray-600 font-['Inter']">Response within 24 hours</p>
             </div>
 

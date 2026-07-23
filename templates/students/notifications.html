@@ -6,6 +6,9 @@
 {% block content %}
 <div class="max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
 
+                <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
+
     <!-- Header -->
     <div class="mb-4 sm:mb-6 lg:mb-8 flex items-center justify-between gap-3">
         <div>
@@ -36,7 +39,8 @@
                 role="button"
                 tabindex="0"
                 onkeydown="if(event.key==='Enter'||event.key===' ')markRead({{ notif.id }})"
-                class="border-l-4 cursor-pointer select-none transition-all duration-200 outline-none
+                class="border-l-4 cursor-pointer select-none transition-all duration-200
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset
                        {% if not notif.is_read %}bg-gray-50 border-l-primary-500 hover:bg-gray-100
                        {% else %}bg-white border-l-transparent hover:bg-gray-50{% endif %}">
 

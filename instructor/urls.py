@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 app_name = 'instructor'
@@ -7,13 +8,12 @@ urlpatterns = [
     # Dashboard
     path('', views.dashboard, name='dashboard'),
     
-    # Course Management
+    # Course Management — create/delete are admin-only (management's courses_list
+    # CRUD); instructors only edit courses already assigned to them.
     path('courses/', views.course_list, name='course_list'),
-    # path('courses/create/', views.course_create, name='course_create'),
     path('courses/<slug:slug>/edit/', views.course_edit, name='course_edit'),
     path('courses/<slug:slug>/objectives/', views.course_objectives, name='course_objectives'),
-    path('courses/<slug:slug>/delete/', views.course_delete, name='course_delete'),
-    
+
     # Section Management
     path('courses/<slug:course_slug>/sections/create/', views.section_create, name='section_create'),
     path('courses/<slug:course_slug>/sections/<int:section_id>/edit/', views.section_edit, name='section_edit'),
@@ -80,9 +80,12 @@ urlpatterns = [
     path('resources/', views.resources, name='resources'),
 
     # ==================== PROFILE & SETTINGS ====================
-    path('profile/', views.instructor_profile, name='profile'),
-    path('settings/', views.instructor_settings, name='settings'),
-    path('help-support/', views.help_support, name='help_support'),
+    # "My Profile", "Settings" and "Help & Support" are now single shared
+    # pages for every role — these old URLs redirect there so nothing that
+    # still links here breaks.
+    path('profile/', RedirectView.as_view(pattern_name='eduweb:profile', permanent=False), name='profile'),
+    path('settings/', RedirectView.as_view(pattern_name='eduweb:settings', permanent=False), name='settings'),
+    path('help-support/', RedirectView.as_view(pattern_name='support:submit_ticket', permanent=False), name='help_support'),
 
     # ------------------------------------------------------------------
     # ANNOUNCEMENTS  (list / edit / delete — create already exists)

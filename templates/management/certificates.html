@@ -6,6 +6,7 @@
 
   <div class="flex items-center justify-between mb-6">
     <div>
+      <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
       <h1 class="text-2xl font-bold text-gray-800">Certificates</h1>
       <p class="text-sm text-gray-500 mt-0.5">Issue and manage student completion certificates</p>
     </div>
@@ -80,6 +81,7 @@
                 {% endif %}
               </td>
               <td class="px-4 py-3 text-right whitespace-nowrap">
+                {% if permissions.enrollments.can_edit %}
                 <button type="button"
                         class="btn-edit inline-flex items-center gap-1 px-2.5 py-1.5 text-xs
                                font-medium text-primary-600 hover:bg-primary-50 rounded-lg
@@ -96,6 +98,8 @@
                   <i class="fas fa-pen-to-square" aria-hidden="true"></i>
                   <span class="hidden sm:inline">Edit</span>
                 </button>
+                {% endif %}
+                {% if permissions.enrollments.can_delete %}
                 <form method="post"
                       action="{% url 'management:certificate_delete' cert.certificate_id %}"
                       class="inline"
@@ -110,6 +114,7 @@
                     <span class="hidden sm:inline">Delete</span>
                   </button>
                 </form>
+                {% endif %}
               </td>
             </tr>
             {% empty %}
@@ -158,6 +163,7 @@
     </div>
 
     {% comment %} FORM COLUMN — stacks below table on mobile, sits right on desktop {% endcomment %}
+    {% if permissions.enrollments.can_create or permissions.enrollments.can_edit %}
     <div class="w-full lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-4">
       <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
 
@@ -294,6 +300,7 @@
         </form>
       </div>
     </div>
+    {% endif %}
 
   </div>
 </div>

@@ -1,39 +1,88 @@
 import json
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Count, Avg, Sum, Q, F
-from django.contrib.auth.models import User
-from django.utils import timezone
-from datetime import timedelta
-from django.db.models.functions import TruncDate, TruncMonth
-from django.contrib.auth import update_session_auth_hash
-from django.core.mail import send_mail
+import logging
+import re
+import uuid
+from datetime import date, datetime, timedelta
+from decimal import Decimal, InvalidOperation
+from functools import wraps
+from io import BytesIO
+
 from django.conf import settings
-from django.core.exceptions import PermissionDenied
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.mail import send_mail
 from django.core.paginator import Paginator
-from django.views.decorators.http import require_POST
+from django.db import transaction
+from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models.functions import TruncDate, TruncMonth
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from django.views.decorators.http import require_POST
 
-from eduweb.models import (
-    LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
-    QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
-    Announcement, Review, Notification, Course, CourseGrade, ExamQuestion
-)
-from .forms import (
-    CourseForm, CourseObjectivesForm, LessonForm, SectionForm,
-    QuizForm, QuizQuestionForm, QuizAnswerForm, AssignmentForm,
-    AnnouncementForm, InstructorProfileForm, InstructorSettingsForm, PasswordChangeForm, SupportTicketForm, ExamForm
-)
 from eduweb.decorators import instructor_required
-
-from eduweb.models import (
-    LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
-    QuizAnswer, Assignment, AssignmentSubmission, Enrollment,
-    Announcement, Review, Notification,
-    QuizAttempt, QuizResponse, Message, Discussion, DiscussionReply, Exam
+from eduweb.emailservices import (
+    send_assignment_graded_email, send_course_enrollment_email, send_new_message_email,
 )
+from eduweb.models import (
+    Announcement, Assignment, AssignmentSubmission, Course, CourseGrade,
+    Discussion, DiscussionReply, Enrollment, Exam, ExamQuestion, ExamStatusLog,
+    LMSCourse, Lesson, LessonSection, Message, Notification, Quiz,
+    QuizAnswer, QuizAttempt, QuizQuestion, QuizResponse, Review,
+    StudentExamResponse,
+)
+
+from .forms import (
+    AnnouncementForm, AssignmentForm, CourseForm, CourseObjectivesForm,
+    ExamForm, LessonForm, MessageForm, QuizAnswerForm, QuizForm, QuizQuestionForm,
+    SectionForm,
+)
+
+logger = logging.getLogger(__name__)
+
+
+# ── Permission helper ──────────────────────────────────────────────────────
+# Mirrors management/finance/payment/support's helper of the same name —
+# instructor_required only checks role, not the per-module StaffPermissionsMatrix
+# flags, so mutating views must check this too or a narrowed-down instructor
+# account (e.g. can_delete revoked as a disciplinary/probation measure) can
+# still bypass the restriction with a direct POST.
+def _has_permission(request, module, action):
+    if request.user.is_superuser:
+        return True
+    return getattr(request, 'permissions', {}).get(module, {}).get(action, False)
+
+
+def require_permission(module, action, redirect_to='instructor:dashboard', skip_get=True):
+    """
+    Decorator for instructor views that mutate state — denies the request
+    unless _has_permission(request, module, action) is True. Only guards
+    non-GET requests by default (GET still renders the page/form); pass
+    skip_get=False for a view whose privileged action runs on GET itself
+    (e.g. a plain-link export/download with no separate POST step).
+    `redirect_to` is a URL name with no required args, or a callable
+    `(request, *args, **kwargs) -> HttpResponse` for targets that need the
+    view's own URL kwargs (e.g. a detail page keyed by pk/slug).
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            guarded = not skip_get or request.method != 'GET'
+            if guarded and not _has_permission(request, module, action):
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+                messages.error(request, 'You do not have permission to perform this action.')
+                if callable(redirect_to):
+                    return redirect_to(request, *args, **kwargs)
+                return redirect(redirect_to)
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator
+
 
 # ── Notification helper ────────────────────────────────────────────────────
 def _notify_instructor(instructor, title, message, notif_type='system', link=''):
@@ -60,7 +109,7 @@ def _notify_instructor(instructor, title, message, notif_type='system', link='')
         if old_ids:
             Notification.objects.filter(id__in=list(old_ids)).delete()
     except Exception:
-        pass
+        logger.exception('Failed to notify instructor=%s (%s)', instructor.pk, title)
 
 # ==================== DASHBOARD ====================
 @login_required(login_url='eduweb:auth_page')
@@ -116,6 +165,10 @@ def dashboard(request):
 @instructor_required
 def course_list(request):
     """List all instructor courses with statistics"""
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view your courses.')
+        return redirect('instructor:dashboard')
+
     courses = LMSCourse.objects.filter(
         instructor=request.user
     ).annotate(
@@ -157,6 +210,10 @@ def course_manage(request, slug=None):
     All forms POST to their existing dedicated URLs — this view only
     serves the GET and passes all the data needed to render every tab.
     """
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view course management.')
+        return redirect('instructor:dashboard')
+
     # Support ?course=<id> switcher from the dropdown on the manage page
     course_id = request.GET.get('course')
     if course_id:
@@ -263,7 +320,6 @@ def course_manage(request, slug=None):
     discussions_count = discussions_qs.count()
  
     # ── Today's date for enrol-student modal default ───────────────────────
-    from datetime import date
     today = date.today().isoformat()
  
     context = {
@@ -314,22 +370,19 @@ def course_manage(request, slug=None):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
-def course_create(request):
-    """Course creation is reserved for admins only."""
-    messages.error(request, "Courses are created and assigned by the administration. Contact an admin to have a course assigned to you.")
-    return redirect('instructor:course_list')
-
-
-@login_required(login_url='eduweb:auth_page')
-@instructor_required
+@require_permission('instructor_courses', 'can_edit')
 def course_edit(request, slug):
     """Edit course using slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view this course.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=slug,
         instructor=request.user
     )
-    
+
     if request.method == 'POST':
         form = CourseForm(
             request.POST,
@@ -366,8 +419,13 @@ def course_edit(request, slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_edit')
 def course_objectives(request, slug):
     """Manage course objectives using slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view this course.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=slug,
@@ -409,16 +467,10 @@ def course_objectives(request, slug):
     })
 
 
-@login_required(login_url='eduweb:auth_page')
-@instructor_required
-def course_delete(request, slug):
-    """Course deletion is not permitted for instructors."""
-    raise PermissionDenied
-
-
 # ==================== SECTION MANAGEMENT ====================
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_create')
 def section_create(request, course_slug):
     """Create section using course slug"""
     course = get_object_or_404(
@@ -449,6 +501,7 @@ def section_create(request, course_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_edit')
 def section_edit(request, course_slug, section_id):
     """Edit section using course slug"""
     course = get_object_or_404(
@@ -483,6 +536,8 @@ def section_edit(request, course_slug, section_id):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_POST
+@require_permission('instructor_courses', 'can_delete', redirect_to=lambda request, course_slug, **kw: redirect('instructor:lesson_list', course_slug=course_slug))
 def section_delete(request, course_slug, section_id):
     """Delete section using course slug"""
     course = get_object_or_404(
@@ -495,7 +550,7 @@ def section_delete(request, course_slug, section_id):
         id=section_id,
         course=course
     )
-    
+
     section_title = section.title
     section.delete()
     messages.success(request, f'Section "{section_title}" deleted successfully!')
@@ -507,6 +562,10 @@ def section_delete(request, course_slug, section_id):
 @instructor_required
 def lesson_list(request, course_slug):
     """List lessons using course slug"""
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view course content.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -534,8 +593,13 @@ def lesson_list(request, course_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_create')
 def lesson_create(request, course_slug):
     """Create lesson using course slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view course content.')
+        return redirect('instructor:lesson_list', course_slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -578,8 +642,13 @@ def lesson_create(request, course_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_edit')
 def lesson_edit(request, course_slug, lesson_slug):
     """Edit lesson using course slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view course content.')
+        return redirect('instructor:lesson_list', course_slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -617,8 +686,15 @@ def lesson_edit(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_POST
+@require_permission('instructor_courses', 'can_delete', redirect_to=lambda request, course_slug, **kw: redirect('instructor:lesson_list', course_slug=course_slug))
 def lesson_delete(request, course_slug, lesson_slug):
-    """Delete lesson using course slug"""
+    """
+    Delete lesson using course slug — blocked once any student has
+    interacted with it (progress, quiz attempts, assignment submissions),
+    since Lesson/Quiz/Assignment all cascade-delete on their FKs and would
+    silently destroy that student history otherwise.
+    """
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -629,7 +705,21 @@ def lesson_delete(request, course_slug, lesson_slug):
         slug=lesson_slug,
         course=course
     )
-    
+
+    has_dependents = (
+        lesson.student_progress.exists()
+        or QuizAttempt.objects.filter(quiz__lesson=lesson).exists()
+        or AssignmentSubmission.objects.filter(assignment__lesson=lesson).exists()
+    )
+    if has_dependents:
+        messages.error(
+            request,
+            f'"{lesson.title}" has student progress, quiz attempts, or assignment '
+            f'submissions attached and cannot be deleted. Uncheck "Active" instead '
+            f'to hide it from students.'
+        )
+        return redirect('instructor:lesson_list', course_slug=course.slug)
+
     lesson_title = lesson.title
     lesson.delete()
     messages.success(request, f'Lesson "{lesson_title}" deleted successfully!')
@@ -641,6 +731,10 @@ def lesson_delete(request, course_slug, lesson_slug):
 @instructor_required
 def quiz_list(request, course_slug, lesson_slug):
     """List quizzes using slugs"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:lesson_list', course_slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -665,8 +759,13 @@ def quiz_list(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def quiz_create(request, course_slug, lesson_slug):
     """Create quiz using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -716,8 +815,13 @@ def quiz_create(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
     """Edit quiz using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -760,6 +864,10 @@ def quiz_edit(request, course_slug, lesson_slug, quiz_slug):
 @instructor_required
 def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
     """Manage quiz questions using slugs"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -791,8 +899,13 @@ def quiz_questions(request, course_slug, lesson_slug, quiz_slug):
 # ==================== QUESTION MANAGEMENT ====================
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def question_create(request, course_slug, lesson_slug, quiz_slug):
     """Create question using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_questions', course_slug=course_slug, lesson_slug=lesson_slug, quiz_slug=quiz_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -844,8 +957,13 @@ def question_create(request, course_slug, lesson_slug, quiz_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
     """Manage question answers using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:quiz_questions', course_slug=course_slug, lesson_slug=lesson_slug, quiz_slug=quiz_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -901,6 +1019,10 @@ def question_answers(request, course_slug, lesson_slug, quiz_slug, question_id):
 @instructor_required
 def assignment_list(request, course_slug, lesson_slug):
     """List assignments using slugs"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:lesson_list', course_slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -923,8 +1045,13 @@ def assignment_list(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def assignment_create(request, course_slug, lesson_slug):
     """Create assignment using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:assignment_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -974,8 +1101,13 @@ def assignment_create(request, course_slug, lesson_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
     """Edit assignment using slugs"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:assignment_list', course_slug=course_slug, lesson_slug=lesson_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1021,6 +1153,10 @@ def assignment_edit(request, course_slug, lesson_slug, assignment_slug):
 @instructor_required
 def assignment_submissions(request, course_slug, assignment_slug):
     """View submissions using slugs"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1052,8 +1188,13 @@ def assignment_submissions(request, course_slug, assignment_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def grade_submission(request, course_slug, submission_id):
     """Grade submission using course slug and submission ID"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:course_list')
+
     # Get the submission first
     submission = get_object_or_404(AssignmentSubmission, id=submission_id)
     
@@ -1072,16 +1213,48 @@ def grade_submission(request, course_slug, submission_id):
         raise PermissionDenied("This submission does not belong to your course.")
     
     if request.method == 'POST':
-        score = request.POST.get('score')
+        raw_score = request.POST.get('score', '').strip()
         feedback = request.POST.get('feedback', '')
-        
+
+        try:
+            score = Decimal(raw_score)
+        except (InvalidOperation, ValueError):
+            score = None
+
+        if score is None or score < 0 or score > assignment.max_score:
+            messages.error(
+                request,
+                f'Enter a valid score between 0 and {assignment.max_score}.'
+            )
+            return render(request, 'instructor/grade_submission.html', {
+                'course': course,
+                'assignment': assignment,
+                'submission': submission,
+            })
+
         submission.score = score
         submission.feedback = feedback
         submission.status = 'graded'
         submission.graded_by = request.user
         submission.graded_at = timezone.now()
         submission.save()
-        
+
+        # Keep the student's unified CourseGrade in sync the moment an
+        # instructor grades an assignment — otherwise this score is invisible
+        # to Grades & Performance / Academic Records / progression until the
+        # student happens to trigger a recompute themselves (e.g. completing
+        # another lesson), which may never happen for a course they're done with.
+        academic_course = course.academic_course
+        session = course.session
+        if academic_course and session:
+            try:
+                CourseGrade.recompute_for_student_course(submission.student, academic_course, session)
+            except Exception:
+                logger.exception(
+                    'Failed to recompute CourseGrade after grading assignment=%s student=%s',
+                    assignment.pk, submission.student.pk,
+                )
+
         messages.success(request, 'Submission graded successfully!')
         # Notify the student that their submission was graded
         _notify_instructor(
@@ -1091,7 +1264,6 @@ def grade_submission(request, course_slug, submission_id):
             notif_type='grade',
             link=f'/student/courses/{course.slug}/assignments/{assignment.slug}/',
         )
-        from eduweb.emailservices import send_assignment_graded_email
         send_assignment_graded_email(submission.student, submission)
         return redirect(
             'instructor:assignment_submissions',
@@ -1111,6 +1283,10 @@ def grade_submission(request, course_slug, submission_id):
 @instructor_required
 def students_list(request, course_slug):
     """List students using course slug"""
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view students.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1131,6 +1307,10 @@ def students_list(request, course_slug):
 @instructor_required
 def student_progress(request, course_slug, student_id):
     """View student progress using course slug"""
+    if not _has_permission(request, 'instructor_courses', 'can_view'):
+        messages.error(request, 'You do not have permission to view students.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1155,6 +1335,7 @@ def student_progress(request, course_slug, student_id):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_courses', 'can_create')
 def enroll_student(request, course_slug):
     """Manually enroll a student in a course"""
     course = get_object_or_404(
@@ -1182,7 +1363,6 @@ def enroll_student(request, course_slug):
                 )
             else:
                 # Create enrollment
-                from datetime import datetime
                 parsed_date = None
                 if enrollment_date:
                     try:
@@ -1198,8 +1378,7 @@ def enroll_student(request, course_slug):
                 
                 # Send welcome email if requested
                 if send_welcome:
-                    # TODO: Implement email sending functionality
-                    pass
+                    send_course_enrollment_email(student, course)
                 
                 messages.success(
                     request,
@@ -1228,8 +1407,13 @@ def enroll_student(request, course_slug):
 # ==================== ANNOUNCEMENTS ====================
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_create')
 def announcement_create(request, course_slug):
     """Create announcement using course slug"""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view announcements.')
+        return redirect('instructor:course_edit', slug=course_slug)
+
     course = get_object_or_404(
         LMSCourse,
         slug=course_slug,
@@ -1279,6 +1463,10 @@ def announcement_create(request, course_slug):
 @instructor_required
 def all_quizzes(request):
     """View all quizzes across all instructor's courses"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:dashboard')
+
     courses = LMSCourse.objects.filter(instructor=request.user)
     quizzes = Quiz.objects.filter(
         lesson__course__in=courses
@@ -1297,6 +1485,10 @@ def all_quizzes(request):
 @instructor_required
 def all_assignments(request):
     """View all assignments across all instructor's courses"""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:dashboard')
+
     courses = LMSCourse.objects.filter(instructor=request.user)
     assignments = Assignment.objects.filter(
         lesson__course__in=courses
@@ -1313,39 +1505,59 @@ def all_assignments(request):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_delete')
 def delete_answer(request, course_slug, lesson_slug, quiz_slug, question_id, answer_id):
-    """Delete a quiz answer"""
+    """Delete a quiz answer — blocked once a student has actually picked it."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
     question = get_object_or_404(QuizQuestion, id=question_id, quiz=quiz)
     answer = get_object_or_404(QuizAnswer, id=answer_id, question=question)
-    
-    answer.delete()
-    messages.success(request, 'Answer deleted successfully!')
-    
-    return redirect('instructor:question_answers', 
-                    course_slug=course.slug, 
-                    lesson_slug=lesson.slug, 
-                    quiz_slug=quiz.slug, 
+
+    # QuizResponse.selected_answer cascades on delete — removing an answer a
+    # student already chose would silently erase their submitted response.
+    if answer.selected_in_responses.exists():
+        messages.error(
+            request,
+            'This answer has already been selected by a student and cannot be deleted. '
+            'Deactivate the question instead if it needs to be retired.'
+        )
+    else:
+        answer.delete()
+        messages.success(request, 'Answer deleted successfully!')
+
+    return redirect('instructor:question_answers',
+                    course_slug=course.slug,
+                    lesson_slug=lesson.slug,
+                    quiz_slug=quiz.slug,
                     question_id=question.id)
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_delete')
 def delete_question(request, course_slug, lesson_slug, quiz_slug, question_id):
-    """Delete a quiz question"""
+    """Delete a quiz question — blocked once a student has answered it."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
     question = get_object_or_404(QuizQuestion, id=question_id, quiz=quiz)
-    
-    question.delete()
-    messages.success(request, 'Question deleted successfully!')
-    
-    return redirect('instructor:quiz_questions', 
-                    course_slug=course.slug, 
-                    lesson_slug=lesson.slug, 
+
+    # QuizResponse cascades on delete — removing an answered question would
+    # silently erase every student's response and points for it.
+    if question.responses.exists():
+        messages.error(
+            request,
+            'This question already has student responses and cannot be deleted. '
+            'Uncheck "Active" instead to hide it from future attempts.'
+        )
+    else:
+        question.delete()
+        messages.success(request, 'Question deleted successfully!')
+
+    return redirect('instructor:quiz_questions',
+                    course_slug=course.slug,
+                    lesson_slug=lesson.slug,
                     quiz_slug=quiz.slug)
 
 @login_required(login_url='eduweb:auth_page')
@@ -1355,17 +1567,38 @@ def course_statistics(request):
     Course statistics overview
     Shows enrollment trends, completion rates, and performance metrics
     """
-    courses = LMSCourse.objects.filter(
-        instructor=request.user
-    ).annotate(
-        enrollment_count=Count('enrollments'),
-        avg_rating=Avg('reviews__rating'),
-        completion_count=Count(
-            'enrollments',
-            filter=Q(enrollments__status='completed')
-        )
-    ).order_by('-created_at')
-    
+    if not _has_permission(request, 'instructor_analytics', 'can_view'):
+        messages.error(request, 'You do not have permission to view analytics.')
+        return redirect('instructor:dashboard')
+
+    # enrollments and reviews are two independent reverse relations off
+    # LMSCourse — annotating Count('enrollments') and Avg('reviews__rating')
+    # in the same call joins both tables first, so each enrollment row gets
+    # cross-multiplied by every review row (and vice versa), inflating the
+    # counts for any course that has more than one of each. distinct=True
+    # fixes the two Count()s (they dedupe by enrollment pk regardless of the
+    # review join); the average needs a genuinely separate query since
+    # Avg(distinct=True) would dedupe by rating *value*, not by row.
+    courses = list(
+        LMSCourse.objects.filter(
+            instructor=request.user
+        ).annotate(
+            enrollment_count=Count('enrollments', distinct=True),
+            completion_count=Count(
+                'enrollments',
+                filter=Q(enrollments__status='completed'),
+                distinct=True,
+            ),
+        ).order_by('-created_at')
+    )
+    avg_rating_by_course = dict(
+        Review.objects.filter(course__instructor=request.user, is_approved=True)
+        .values_list('course_id')
+        .annotate(avg=Avg('rating'))
+    )
+    for course in courses:
+        course.avg_rating = avg_rating_by_course.get(course.id)
+
     # Overall statistics
     total_enrollments = Enrollment.objects.filter(
         course__instructor=request.user
@@ -1428,6 +1661,10 @@ def student_analytics_progress(request):
     Student progress tracking
     Shows individual student performance across all courses
     """
+    if not _has_permission(request, 'instructor_analytics', 'can_view'):
+        messages.error(request, 'You do not have permission to view analytics.')
+        return redirect('instructor:dashboard')
+
     # Get all courses taught by instructor
     instructor_courses = LMSCourse.objects.filter(
         instructor=request.user
@@ -1495,6 +1732,10 @@ def reviews_ratings(request):
     Course reviews and ratings analysis
     Shows detailed feedback and rating trends
     """
+    if not _has_permission(request, 'instructor_analytics', 'can_view'):
+        messages.error(request, 'You do not have permission to view analytics.')
+        return redirect('instructor:dashboard')
+
     # Get all reviews for instructor's courses
     reviews = Review.objects.filter(
         course__instructor=request.user,
@@ -1588,7 +1829,9 @@ def resources(request):
     that already have content (lessons) created for them.
     Supports tab-based pagination via ?videos_page=, ?docs_page=, ?assignments_page=
     """
-    import re
+    if not _has_permission(request, 'instructor_resources', 'can_view'):
+        messages.error(request, 'You do not have permission to view resources.')
+        return redirect('instructor:dashboard')
 
     ITEMS_PER_PAGE = 10
 
@@ -1684,273 +1927,19 @@ def resources(request):
 
     return render(request, 'instructor/resources.html', context)
 
-# ==================== PROFILE VIEW ====================
-@login_required(login_url='eduweb:auth_page')
-@instructor_required
-def instructor_profile(request):
-    """View and edit instructor profile"""
-    
-    # Get instructor statistics
-    total_courses = LMSCourse.objects.filter(
-        instructor=request.user
-    ).count()
-    
-    total_students = Enrollment.objects.filter(
-        course__instructor=request.user
-    ).values('student').distinct().count()
-    
-    avg_rating = LMSCourse.objects.filter(
-        instructor=request.user
-    ).aggregate(avg_rating=Avg('average_rating'))['avg_rating'] or 0
-    
-    total_reviews = LMSCourse.objects.filter(
-        instructor=request.user
-    ).aggregate(
-        total=Count('reviews')
-    )['total']
-    
-    if request.method == 'POST':
-        form = InstructorProfileForm(
-            request.POST,
-            request.FILES,
-            instance=request.user.profile,
-            user=request.user
-        )
-        
-        if form.is_valid():
-            # Update User model fields
-            user = request.user
-            user.first_name = form.cleaned_data['first_name']
-            user.last_name = form.cleaned_data['last_name']
-            user.email = form.cleaned_data['email']
-            user.save()
-            
-            # Update Profile model fields
-            form.save()
-            
-            messages.success(
-                request,
-                'Your profile has been updated successfully!'
-            )
-            return redirect('instructor:profile')
-    else:
-        form = InstructorProfileForm(
-            instance=request.user.profile,
-            user=request.user
-        )
-    
-    context = {
-        'form': form,
-        'page_title': 'My Profile',
-        'total_courses': total_courses,
-        'total_students': total_students,
-        'avg_rating': round(avg_rating, 1),
-        'total_reviews': total_reviews,
-    }
-    return render(request, 'instructor/profile.html', context)
+# NOTE: "My Profile" is now a single shared page for every role — see
+# eduweb.views.profile (templates/account/profile.html), routed at
+# eduweb:profile. There is no per-app instructor:profile view any more.
 
 
-# ==================== SETTINGS VIEW ====================
-@login_required(login_url='eduweb:auth_page')
-@instructor_required
-def instructor_settings(request):
-    """Manage instructor account settings"""
-    
-    settings_form = InstructorSettingsForm(
-        instance=request.user.profile
-    )
-    password_form = PasswordChangeForm(user=request.user)
-    
-    if request.method == 'POST':
-        if 'update_settings' in request.POST:
-            settings_form = InstructorSettingsForm(
-                request.POST,
-                instance=request.user.profile
-            )
-            
-            if settings_form.is_valid():
-                settings_form.save()
-                messages.success(
-                    request,
-                    'Settings updated successfully!'
-                )
-                return redirect('instructor:settings')
-        
-        elif 'change_password' in request.POST:
-            password_form = PasswordChangeForm(
-                user=request.user,
-                data=request.POST
-            )
-            
-            if password_form.is_valid():
-                # Change password
-                new_password = password_form.cleaned_data['new_password']
-                request.user.set_password(new_password)
-                request.user.save()
-                
-                # Keep user logged in
-                update_session_auth_hash(request, request.user)
-                
-                messages.success(
-                    request,
-                    'Your password has been changed successfully!'
-                )
-                return redirect('instructor:settings')
-    
-    context = {
-        'settings_form': settings_form,
-        'password_form': password_form,
-        'page_title': 'Settings',
-    }
-    return render(request, 'instructor/settings.html', context)
+# NOTE: "Settings" is now a single shared page for every role — see
+# eduweb.views.settings (templates/account/settings.html), routed at
+# eduweb:settings. There is no per-app instructor:settings view any more.
 
 
-# ==================== HELP & SUPPORT VIEW ====================
-@login_required(login_url='eduweb:auth_page')
-@instructor_required
-def help_support(request):
-    """Help and support page with FAQs and ticket submission"""
-    
-    if request.method == 'POST':
-        form = SupportTicketForm(request.POST, request.FILES)
-        
-        if form.is_valid():
-            # Send email to support team
-            subject = f"[{form.cleaned_data['priority'].upper()}] {form.cleaned_data['subject']}"
-            message = f"""
-New Support Ticket from Instructor
-
-From: {request.user.get_full_name()} ({request.user.email})
-Category: {form.cleaned_data['category']}
-Priority: {form.cleaned_data['priority']}
-
-Message:
-{form.cleaned_data['message']}
-
----
-User ID: {request.user.id}
-Role: Instructor
-            """
-            
-            try:
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [settings.SUPPORT_EMAIL],
-                    fail_silently=False,
-                )
-                
-                messages.success(
-                    request,
-                    'Your support ticket has been submitted successfully! '
-                    'Our team will get back to you within 24-48 hours.'
-                )
-                _notify_instructor(
-                    instructor=request.user,
-                    title='Support Ticket Submitted',
-                    message=f'Your ticket "{form.cleaned_data["subject"]}" has been received. We will respond within 24-48 hours.',
-                    notif_type='system',
-                    link='/instructor/help-support/',
-                )
-                return redirect('instructor:help_support')
-            
-            except Exception as e:
-                messages.error(
-                    request,
-                    'An error occurred while submitting your ticket. '
-                    'Please try again later.'
-                )
-    else:
-        form = SupportTicketForm()
-    
-    # FAQs data
-    faqs = [
-        {
-            'question': 'How do I create a new course?',
-            'answer': 'Navigate to Courses > Create Course from the sidebar menu. '
-                     'Fill in the course details, upload a thumbnail, and click Save. '
-                     'You can then add sections, lessons, and assessments.'
-        },
-        {
-            'question': 'How do I upload course materials?',
-            'answer': 'When creating or editing a lesson, you can upload videos, '
-                     'documents, and other materials. Supported formats include '
-                     'PDF, DOCX, MP4, and more.'
-        },
-        {
-            'question': 'How do I grade student assignments?',
-            'answer': 'Go to Assessments > All Assignments and click on any assignment. '
-                     'You\'ll see all submissions. Click on a submission to view, '
-                     'provide feedback, and assign a grade.'
-        },
-        {
-            'question': 'Can I track student progress?',
-            'answer': 'Yes! Go to Analytics > Student Progress to view detailed '
-                     'reports on each student\'s performance, completion rates, '
-                     'and engagement metrics.'
-        },
-        {
-            'question': 'How do I communicate with students?',
-            'answer': 'You can create announcements for your courses, respond to '
-                     'discussion forum posts, and provide feedback on assignments. '
-                     'Students can also message you directly.'
-        },
-        {
-            'question': 'What payment methods are supported?',
-            'answer': 'We support credit/debit cards, bank transfers, and various '
-                     'mobile payment options. Payments are processed securely and '
-                     'you receive monthly payouts.'
-        },
-        {
-            'question': 'How do I issue certificates?',
-            'answer': 'Certificates are automatically generated when students complete '
-                     'all course requirements. You can customize certificate templates '
-                     'in your course settings.'
-        },
-        {
-            'question': 'What are the video upload limits?',
-            'answer': 'Video files should not exceed 2GB per file. We recommend '
-                     'using MP4 format at 1080p resolution for best quality and '
-                     'compatibility.'
-        },
-    ]
-    
-    # Quick links
-    quick_links = [
-        {
-            'title': 'Getting Started Guide',
-            'icon': 'fa-book-open',
-            'url': '#',
-            'description': 'Learn the basics of creating and managing courses'
-        },
-        {
-            'title': 'Video Tutorials',
-            'icon': 'fa-video',
-            'url': '#',
-            'description': 'Watch step-by-step video guides'
-        },
-        {
-            'title': 'Best Practices',
-            'icon': 'fa-lightbulb',
-            'url': '#',
-            'description': 'Tips for creating engaging course content'
-        },
-        {
-            'title': 'Community Forum',
-            'icon': 'fa-users',
-            'url': '#',
-            'description': 'Connect with other instructors'
-        },
-    ]
-    
-    context = {
-        'form': form,
-        'faqs': faqs,
-        'quick_links': quick_links,
-        'page_title': 'Help & Support',
-    }
-    return render(request, 'instructor/help_support.html', context)
+# NOTE: "Help & Support" is now a single shared page for every role — see
+# support.views.submit_ticket (templates/support/submit_ticket.html), routed
+# at support:submit_ticket. There is no per-app instructor:help_support view any more.
 
 # ============================================================
 # 1.  ANNOUNCEMENT LIST / EDIT / DELETE
@@ -1960,6 +1949,10 @@ Role: Instructor
 @instructor_required
 def announcement_list(request, course_slug):
     """List all announcements for a course."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view announcements.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     announcements_qs = course.announcements.all().order_by('-publish_date')
 
@@ -1975,8 +1968,13 @@ def announcement_list(request, course_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_edit')
 def announcement_edit(request, course_slug, announcement_slug):
     """Edit an existing announcement."""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view announcements.')
+        return redirect('instructor:announcement_list', course_slug=course_slug)
+
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     announcement = get_object_or_404(Announcement, slug=announcement_slug, course=course)
 
@@ -2006,6 +2004,7 @@ def announcement_edit(request, course_slug, announcement_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_delete', redirect_to=lambda request, course_slug, **kw: redirect('instructor:announcement_list', course_slug=course_slug))
 def announcement_delete(request, course_slug, announcement_slug):
     """Delete an announcement (POST only)."""
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2025,7 +2024,10 @@ def announcement_delete(request, course_slug, announcement_slug):
 @instructor_required
 def quiz_results(request, course_slug, lesson_slug, quiz_slug):
     """Show all student attempts for a quiz."""
-    from eduweb.models import Lesson, Quiz
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:course_list')
+
     course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
@@ -2055,13 +2057,86 @@ def quiz_results(request, course_slug, lesson_slug, quiz_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id):
-    """Detailed breakdown of a single student's quiz attempt."""
-    from eduweb.models import Lesson, Quiz
+    """
+    Detailed breakdown of a single student's quiz attempt. Also handles
+    manually grading any short-answer/essay QuizResponse rows (needs_grading
+    =True) — those are never auto-scored at submission time since there's no
+    "correct answer" concept for free text.
+    """
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:course_list')
+
     course  = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     lesson  = get_object_or_404(Lesson, slug=lesson_slug, course=course)
     quiz    = get_object_or_404(Quiz, slug=quiz_slug, lesson=lesson)
     attempt = get_object_or_404(QuizAttempt, id=attempt_id, quiz=quiz)
+
+    if request.method == 'POST':
+        pending_responses = attempt.responses.filter(needs_grading=True).select_related('question')
+        with transaction.atomic():
+            for response in pending_responses:
+                raw_score = request.POST.get(f'points_{response.id}', '').strip()
+                if not raw_score:
+                    continue
+                try:
+                    awarded = Decimal(raw_score)
+                except InvalidOperation:
+                    messages.error(request, f'Invalid score entered for one question — skipped.')
+                    continue
+                awarded = max(Decimal('0.00'), min(awarded, response.question.points))
+                response.points_earned = awarded
+                response.is_correct = awarded > 0
+                response.needs_grading = False
+                response.graded_by = request.user
+                response.graded_at = timezone.now()
+                response.save(update_fields=['points_earned', 'is_correct', 'needs_grading', 'graded_by', 'graded_at'])
+
+            # Recompute the attempt's totals now that some responses may have
+            # just been scored — mirrors the same score/max_score/percentage
+            # fields quiz_submit sets, so this attempt is never left showing
+            # a stale provisional score once grading is done.
+            all_responses = list(attempt.responses.select_related('question'))
+            attempt.score = sum((r.points_earned for r in all_responses), Decimal('0.00'))
+            attempt.max_score = sum((r.question.points for r in all_responses), Decimal('0.00'))
+            attempt.percentage = (
+                (attempt.score / attempt.max_score * 100) if attempt.max_score > 0 else Decimal('0.00')
+            )
+            attempt.passed = attempt.percentage >= quiz.passing_score
+            attempt.pending_manual_grading = any(r.needs_grading for r in all_responses)
+            attempt.save(update_fields=['score', 'max_score', 'percentage', 'passed', 'pending_manual_grading'])
+
+        # This attempt's percentage feeds the quiz component of the
+        # student's unified CourseGrade — recompute now so a just-graded
+        # essay/short-answer response is reflected immediately rather than
+        # waiting on some unrelated future trigger.
+        academic_course = course.academic_course
+        session = course.session
+        if academic_course and session:
+            try:
+                CourseGrade.recompute_for_student_course(attempt.student, academic_course, session)
+            except Exception:
+                logger.exception(
+                    'Failed to recompute CourseGrade after grading quiz attempt=%s student=%s',
+                    attempt.pk, attempt.student.pk,
+                )
+
+        if not attempt.pending_manual_grading:
+            _notify_instructor(
+                instructor=attempt.student,
+                title=f'Quiz Fully Graded: {quiz.title}',
+                message=f'Your quiz "{quiz.title}" has been fully graded. Final score: {attempt.percentage:.1f}%.',
+                notif_type='grade',
+                link=f'/student/quizzes/attempt/{attempt.id}/result/',
+            )
+
+        messages.success(request, 'Grades saved.')
+        return redirect(
+            'instructor:quiz_attempt_detail',
+            course_slug=course.slug, lesson_slug=lesson.slug, quiz_slug=quiz.slug, attempt_id=attempt.id,
+        )
 
     responses       = attempt.responses.select_related(
         'question', 'selected_answer'
@@ -2088,6 +2163,10 @@ def quiz_attempt_detail(request, course_slug, lesson_slug, quiz_slug, attempt_id
 @instructor_required
 def messages_inbox(request):
     """Show received messages (most recent per thread)."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view messages.')
+        return redirect('instructor:dashboard')
+
     received = Message.objects.filter(
         recipient=request.user, parent__isnull=True
     ).select_related('sender').order_by('-created_at')
@@ -2105,6 +2184,10 @@ def messages_inbox(request):
 @instructor_required
 def messages_sent(request):
     """Show sent messages."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view messages.')
+        return redirect('instructor:dashboard')
+
     sent = Message.objects.filter(
         sender=request.user, parent__isnull=True
     ).select_related('recipient').order_by('-created_at')
@@ -2120,6 +2203,10 @@ def messages_sent(request):
 @instructor_required
 def message_thread(request, message_id):
     """Display a full conversation thread."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view messages.')
+        return redirect('instructor:dashboard')
+
     root = get_object_or_404(
         Message, id=message_id
     )
@@ -2194,19 +2281,22 @@ def instructor_notification_read(request, notif_id):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_create')
 def message_compose(request):
     """Compose and send a new message."""
-    from .forms import MessageForm
+    if request.method == 'GET' and not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view messages.')
+        return redirect('instructor:messages_inbox')
+
     initial = {}
 
     # Pre-fill if coming from a student profile link: ?recipient=<id>&subject=...
     recipient_id = request.GET.get('recipient')
     subject      = request.GET.get('subject', '')
     if recipient_id:
-        from django.contrib.auth.models import User as AuthUser
         try:
-            initial['recipient'] = AuthUser.objects.get(pk=recipient_id)
-        except AuthUser.DoesNotExist:
+            initial['recipient'] = User.objects.get(pk=recipient_id)
+        except User.DoesNotExist:
             pass
     if subject:
         initial['subject'] = subject
@@ -2225,15 +2315,13 @@ def message_compose(request):
                 notif_type='message',
                 link='/instructor/messages/',
             )
-            from eduweb.emailservices import send_new_message_email
             send_new_message_email(msg.recipient, request.user, msg)
             return redirect('instructor:messages_inbox')
     else:
         form = MessageForm(initial=initial)
 
     # Build recipients list for the searchable UI (all active users except self)
-    from django.contrib.auth.models import User as AuthUser
-    recipients = AuthUser.objects.filter(
+    recipients = User.objects.filter(
         is_active=True
     ).exclude(
         id=request.user.id
@@ -2248,6 +2336,7 @@ def message_compose(request):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_create')
 def message_reply(request, message_id):
     """Post a reply to an existing thread (POST only)."""
     root = get_object_or_404(Message, id=message_id)
@@ -2274,7 +2363,6 @@ def message_reply(request, message_id):
                 notif_type='message',
                 link=f'/instructor/messages/{root.id}/',
             )
-            from eduweb.emailservices import send_new_message_email
             send_new_message_email(other, request.user, root)
         else:
             messages.error(request, 'Reply cannot be empty.')
@@ -2301,6 +2389,10 @@ def messages_mark_all_read(request):
 @instructor_required
 def discussions(request, course_slug):
     """List all discussion threads for a course."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view discussions.')
+        return redirect('instructor:course_list')
+
     course = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     discussions_qs = Discussion.objects.filter(course=course).select_related(
         'author'
@@ -2316,6 +2408,10 @@ def discussions(request, course_slug):
 @instructor_required
 def discussion_detail(request, course_slug, discussion_slug):
     """View a single discussion thread and its replies."""
+    if not _has_permission(request, 'instructor_communications', 'can_view'):
+        messages.error(request, 'You do not have permission to view discussions.')
+        return redirect('instructor:course_list')
+
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
     discussion = get_object_or_404(Discussion, slug=discussion_slug, course=course)
 
@@ -2334,6 +2430,7 @@ def discussion_detail(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_create', redirect_to=lambda request, course_slug, discussion_slug, **kw: redirect('instructor:discussion_detail', course_slug=course_slug, discussion_slug=discussion_slug))
 def discussion_reply(request, course_slug, discussion_slug):
     """Instructor posts a reply to a discussion (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2366,6 +2463,7 @@ def discussion_reply(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_edit', redirect_to=lambda request, course_slug, **kw: redirect('instructor:discussions', course_slug=course_slug))
 def discussion_toggle_pin(request, course_slug, discussion_slug):
     """Toggle pinned status (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2382,6 +2480,7 @@ def discussion_toggle_pin(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_edit', redirect_to=lambda request, course_slug, **kw: redirect('instructor:discussions', course_slug=course_slug))
 def discussion_toggle_lock(request, course_slug, discussion_slug):
     """Toggle locked status (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2398,6 +2497,7 @@ def discussion_toggle_lock(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_delete', redirect_to=lambda request, course_slug, **kw: redirect('instructor:discussions', course_slug=course_slug))
 def discussion_delete(request, course_slug, discussion_slug):
     """Delete a discussion and all replies (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2412,6 +2512,7 @@ def discussion_delete(request, course_slug, discussion_slug):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_edit', redirect_to=lambda request, course_slug, discussion_slug, **kw: redirect('instructor:discussion_detail', course_slug=course_slug, discussion_slug=discussion_slug))
 def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
     """Mark / unmark a reply as the solution (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2438,6 +2539,7 @@ def reply_toggle_solution(request, course_slug, discussion_slug, reply_id):
 
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_communications', 'can_delete', redirect_to=lambda request, course_slug, discussion_slug, **kw: redirect('instructor:discussion_detail', course_slug=course_slug, discussion_slug=discussion_slug))
 def reply_delete(request, course_slug, discussion_slug, reply_id):
     """Delete a specific reply (POST only)."""
     course     = get_object_or_404(LMSCourse, slug=course_slug, instructor=request.user)
@@ -2451,10 +2553,7 @@ def reply_delete(request, course_slug, discussion_slug, reply_id):
     return redirect('instructor:discussion_detail',
                     course_slug=course.slug, discussion_slug=discussion.slug)
 
-# ── JSON helper ───────────────────────────────────────────────────────────────
-from django.http import JsonResponse
- 
- 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AJAX: return course details (code, academic session) for a given course pk
 # Used by the Create Assessment page to auto-populate locked fields.
@@ -2467,6 +2566,9 @@ def ajax_course_details(request):
     Returns JSON {code, academic_session_id, academic_session_name}
     for the instructor's own course only.
     """
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        return JsonResponse({'error': 'Permission denied.'}, status=403)
+
     course_id = request.GET.get('course_id')
     if not course_id:
         return JsonResponse({'error': 'No course_id provided'}, status=400)
@@ -2510,6 +2612,7 @@ def ajax_course_details(request):
 # ─────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create')
 def create_assessment(request):
     """
     Unified page that lets an instructor create a Quiz, Assignment, or Exam.
@@ -2527,6 +2630,10 @@ def create_assessment(request):
     hidden fields (questions_data) so the instructor can add/remove them
     dynamically without a page reload, leveraging the existing jQuery on the page.
     """
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:dashboard')
+
     instructor_courses = LMSCourse.objects.filter(
         instructor=request.user
     ).select_related('academic_course').order_by('title')
@@ -2550,10 +2657,9 @@ def create_assessment(request):
                 quiz.lesson = lesson
                 quiz.save()
 
-                import json as _json
                 questions_raw = request.POST.get('questions_data', '[]')
                 try:
-                    questions_list = _json.loads(questions_raw)
+                    questions_list = json.loads(questions_raw)
                 except ValueError:
                     questions_list = []
 
@@ -2659,27 +2765,25 @@ def create_assessment(request):
                 exam.save()
 
                 # ── Save manually entered exam questions from JSON ─────────────
-                import json as _json
-                from eduweb.models import ExamQuestion
                 eq_raw = request.POST.get('exam_questions_data', '[]')
                 try:
-                    eq_list = _json.loads(eq_raw)
+                    eq_list = json.loads(eq_raw)
                 except (ValueError, TypeError):
                     eq_list = []
 
-                for idx, eq_data in enumerate(eq_list):
+                for eq_data in eq_list:
                     q_text = (eq_data.get('question_text') or '').strip()
                     if not q_text:
                         continue
-                    import uuid as _uuid
                     raw_options = eq_data.get('options', [])
-                    options_with_ids = []
-                    for opt in raw_options:
-                        options_with_ids.append({
-                            'id':         f'opt-{_uuid.uuid4().hex[:8]}',
+                    options_with_ids = [
+                        {
+                            'id':         f'opt-{uuid.uuid4().hex[:8]}',
                             'text':       opt.get('text', ''),
                             'is_correct': bool(opt.get('is_correct', False)),
-                        })
+                        }
+                        for opt in raw_options
+                    ]
                     ExamQuestion.objects.create(
                         exam          = exam,
                         question_text = q_text,
@@ -2690,10 +2794,23 @@ def create_assessment(request):
                         created_by    = request.user,
                     )
 
-                # ── Parse uploaded question file (docx / xlsx) ────────────────
+                # ── Parse uploaded question file (docx / xlsx) ─────────────────
+                # Same try/except the standalone exam_import_questions view uses —
+                # a bad file must not crash exam creation after the exam row (and
+                # any manually entered questions above) are already committed.
                 import_file = request.FILES.get('question_import_file')
                 if import_file:
-                    _parse_exam_questions_from_file(import_file, exam, request.user)
+                    try:
+                        _parse_exam_questions_from_file(import_file, exam, request.user)
+                    except Exception as e:
+                        logger.exception(
+                            'Question-file import failed during create_assessment for exam %s',
+                            exam.pk,
+                        )
+                        messages.warning(
+                            request,
+                            f'Exam "{exam.title}" was created, but the question file import failed: {e}'
+                        )
 
                 messages.success(
                     request,
@@ -2746,6 +2863,9 @@ def ajax_course_lessons(request):
     GET /instructor/assessments/course-lessons/?course_id=<pk>
     Returns JSON list of lessons for the instructor's course.
     """
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        return JsonResponse({'error': 'Permission denied.'}, status=403)
+
     course_id = request.GET.get('course_id')
     if not course_id:
         return JsonResponse({'lessons': []})
@@ -2758,10 +2878,7 @@ def ajax_course_lessons(request):
     )
     return JsonResponse({'lessons': lessons})
 
-import json as _json
-import uuid as _uuid
- 
- 
+
 # ──────────────────────────────────────────────────────────────────────────────
 # EXAM LIST
 # ──────────────────────────────────────────────────────────────────────────────
@@ -2769,6 +2886,10 @@ import uuid as _uuid
 @instructor_required
 def exam_list(request):
     """List all exams created by this instructor with filtering & search."""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:dashboard')
+
     qs = Exam.objects.filter(instructor=request.user).order_by('-created_at')
  
     active_status = request.GET.get('status', 'all')
@@ -2811,6 +2932,10 @@ def exam_list(request):
 @instructor_required
 def exam_detail(request, slug):
     """Single exam — tabbed view: overview, edit, questions, results."""
+    if not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:exam_list')
+
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
  
     questions    = exam.questions.filter(is_active=True).order_by('created_at')
@@ -2845,6 +2970,7 @@ def exam_detail(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_update(request, slug):
     """Handle POST from the Edit Details tab on exam_detail."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2895,7 +3021,6 @@ def exam_update(request, slug):
  
     # Combined datetime fields — replace the old exam_date / start_time / end_time split
     # REMOVED: separate 'exam_date', 'start_time', 'end_time' parsing
-    from django.utils.dateparse import parse_datetime
     raw_start = request.POST.get('start_datetime', '').strip()
     raw_end   = request.POST.get('end_datetime',   '').strip()
     if raw_start:
@@ -2910,8 +3035,7 @@ def exam_update(request, slug):
     # show_answers_after
     raw_saa = request.POST.get('show_answers_after', '').strip()
     if raw_saa:
-        from django.utils.dateparse import parse_datetime as _pd
-        parsed_saa = _pd(raw_saa)
+        parsed_saa = parse_datetime(raw_saa)
         if parsed_saa:
             exam.show_answers_after = parsed_saa
     elif 'show_answers_after' in request.POST and not raw_saa:
@@ -2923,10 +3047,17 @@ def exam_update(request, slug):
     try:
         exam.save()
         messages.success(request, f'Exam "{exam.title}" updated successfully.')
-    except Exception as e:
-        messages.error(request, f'Could not save changes: {e}')
- 
-    from django.urls import reverse
+    except ValidationError as e:
+        # exam.save() runs full_clean() internally (e.g. pass_mark <= total_marks,
+        # end_datetime after start_datetime) — surface the actual reason instead
+        # of a generic message so the instructor knows what to fix.
+        for field_errors in e.message_dict.values():
+            for msg in field_errors:
+                messages.error(request, msg)
+    except Exception:
+        logger.exception('Failed to save exam %s during edit', exam.pk)
+        messages.error(request, 'Could not save changes — please check your input and try again.')
+
     return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=edit')
  
  
@@ -2936,6 +3067,7 @@ def exam_update(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_submit(request, slug):
     """Submit an exam for admin approval."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2946,7 +3078,6 @@ def exam_submit(request, slug):
  
     if exam.active_question_count == 0:
         messages.error(request, 'Please add at least one question before submitting.')
-        from django.urls import reverse
         return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     old_status           = exam.status
@@ -2969,6 +3100,7 @@ def exam_submit(request, slug):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_publish(request, slug):
     """Publish an approved exam so students can see it."""
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -2994,8 +3126,13 @@ def exam_publish(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_create', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_question_create(request, slug):
     """Add a new question to the exam question pool."""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:exam_detail', slug=slug)
+
     exam = get_object_or_404(Exam, slug=slug, instructor=request.user)
 
     if exam.status == Exam.PUBLISHED:
@@ -3008,7 +3145,6 @@ def exam_question_create(request, slug):
             messages.error(request, error)
             return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': None})
         messages.success(request, 'Question added successfully.')
-        from django.urls import reverse
         if request.POST.get('_save_back'):
             return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
         return redirect(reverse('instructor:exam_question_create', kwargs={'slug': exam.slug}))
@@ -3021,8 +3157,13 @@ def exam_question_create(request, slug):
 # ──────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_question_edit(request, slug, question_id):
     """Edit an existing exam question."""
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:exam_detail', slug=slug)
+
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
     question = get_object_or_404(ExamQuestion, pk=question_id, exam=exam)
 
@@ -3036,7 +3177,6 @@ def exam_question_edit(request, slug, question_id):
             messages.error(request, error)
             return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': question})
         messages.success(request, 'Question updated successfully.')
-        from django.urls import reverse
         return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     return render(request, 'instructor/exam_question_form.html', {'exam': exam, 'question': question})
@@ -3048,6 +3188,7 @@ def exam_question_edit(request, slug, question_id):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_delete', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_question_delete(request, slug, question_id):
     """Soft-delete (deactivate) an exam question."""
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -3060,7 +3201,6 @@ def exam_question_delete(request, slug, question_id):
     question.is_active = False
     question.save(update_fields=['is_active'])
     messages.success(request, 'Question removed from the active pool.')
-    from django.urls import reverse
     return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
  
@@ -3070,6 +3210,7 @@ def exam_question_delete(request, slug, question_id):
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
 @require_POST
+@require_permission('instructor_assessments', 'can_create', redirect_to=lambda request, slug, **kw: redirect('instructor:exam_detail', slug=slug))
 def exam_import_questions(request, slug):
     """Accept a .docx or .xlsx upload and parse questions into the DB."""
     exam        = get_object_or_404(Exam, slug=slug, instructor=request.user)
@@ -3082,7 +3223,6 @@ def exam_import_questions(request, slug):
  
     if not import_file:
         messages.error(request, 'Please select a file to upload.')
-        from django.urls import reverse
         return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
     try:
@@ -3094,7 +3234,6 @@ def exam_import_questions(request, slug):
         exam.save(update_fields=['import_status', 'import_error_log'])
         messages.error(request, f'Import failed: {e}')
  
-    from django.urls import reverse
     return redirect(reverse('instructor:exam_detail', kwargs={'slug': exam.slug}) + '?tab=questions')
  
  
@@ -3104,7 +3243,6 @@ def exam_import_questions(request, slug):
  
 def _write_exam_log(exam, from_status, to_status, changed_by, note=''):
     """Write an immutable ExamStatusLog entry."""
-    from eduweb.models import ExamStatusLog
     try:
         ExamStatusLog.objects.create(
             exam        = exam,
@@ -3114,7 +3252,7 @@ def _write_exam_log(exam, from_status, to_status, changed_by, note=''):
             note        = note,
         )
     except Exception:
-        pass  # Never crash the main action
+        logger.exception('Failed to write exam status log for exam=%s (%s -> %s)', exam.pk, from_status, to_status)
  
  
 def _save_exam_question(request, exam, question=None):
@@ -3138,14 +3276,16 @@ def _save_exam_question(request, exam, question=None):
         marks = float(marks_raw)
     except ValueError:
         marks = 1.0
- 
+    if marks < 0:
+        return 'Marks cannot be negative.'
+
     # Build options list
     options = []
     if q_type == 'true_false':
         correct_val = request.POST.get('tf_correct', 'true')
         options = [
-            {'id': f'opt-{_uuid.uuid4().hex[:8]}', 'text': 'True',  'is_correct': correct_val == 'true'},
-            {'id': f'opt-{_uuid.uuid4().hex[:8]}', 'text': 'False', 'is_correct': correct_val == 'false'},
+            {'id': f'opt-{uuid.uuid4().hex[:8]}', 'text': 'True',  'is_correct': correct_val == 'true'},
+            {'id': f'opt-{uuid.uuid4().hex[:8]}', 'text': 'False', 'is_correct': correct_val == 'false'},
         ]
     elif q_type in ('mcq', 'multi_select'):
         options_count_raw = request.POST.get('options_count', '0').strip()
@@ -3163,7 +3303,7 @@ def _save_exam_question(request, exam, question=None):
             # Try to keep existing option IDs intact
             opt_id = (request.POST.get(f'option_id_{i}') or '').strip()
             if not opt_id:
-                opt_id = f'opt-{_uuid.uuid4().hex[:8]}'
+                opt_id = f'opt-{uuid.uuid4().hex[:8]}'
  
             if q_type == 'multi_select':
                 is_correct = f'option_correct_{i}' in request.POST
@@ -3241,7 +3381,6 @@ def _parse_exam_questions_from_file(import_file, exam, user):
     Parse uploaded .docx or .xlsx file into ExamQuestion rows.
     This is a minimal implementation — extend as needed.
     """
-    import os
     name = import_file.name.lower()
  
     exam.import_status    = Exam.IMPORT_PROCESSING
@@ -3268,7 +3407,8 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                     continue
                 q_type = str(row[1]).strip().lower() if len(row) > 1 and row[1] else 'mcq'
                 marks  = float(row[2]) if len(row) > 2 and row[2] else 1.0
-                diff   = str(row[3]).strip().lower() if len(row) > 3 and row[3] else 'medium'
+                # Column D (row[3]) was historically "difficulty" — field removed from
+                # the model (see ExamQuestion), column position kept for template compat.
                 # Options in columns E–J (index 4–9), correct answer column K (index 10)
                 raw_opts = [str(row[i]).strip() for i in range(4, 9) if i < len(row) and row[i]]
                 correct_idx_raw = str(row[9]).strip() if len(row) > 9 and row[9] else '1'
@@ -3278,7 +3418,7 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                     correct_idx = 0
                 options = [
                     {
-                        'id': f'opt-{_uuid.uuid4().hex[:8]}',
+                        'id': f'opt-{uuid.uuid4().hex[:8]}',
                         'text': opt,
                         'is_correct': i == correct_idx,
                     }
@@ -3286,9 +3426,8 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                 ]
                 ExamQuestion.objects.create(
                     exam=exam, question_text=q_text, question_type=q_type,
-                    difficulty=diff, marks=marks, options=options,
-                    order=idx, created_by=user, imported_from_file=import_file.name,
-                    import_row_number=idx,
+                    marks=marks, options=options,
+                    created_by=user, imported_from_file=import_file.name,
                 )
                 created += 1
  
@@ -3297,20 +3436,16 @@ def _parse_exam_questions_from_file(import_file, exam, user):
                 import docx as python_docx
             except ImportError:
                 raise RuntimeError('python-docx is not installed. Run: pip install python-docx')
-            from io import BytesIO
             doc = python_docx.Document(BytesIO(import_file.read()))
-            order = 0
             for para in doc.paragraphs:
                 text = para.text.strip()
                 if not text:
                     continue
                 ExamQuestion.objects.create(
                     exam=exam, question_text=text, question_type='essay',
-                    difficulty='medium', marks=1, options=[],
-                    order=order, created_by=user, imported_from_file=import_file.name,
-                    import_row_number=order,
+                    marks=1, options=[],
+                    created_by=user, imported_from_file=import_file.name,
                 )
-                order += 1
                 created += 1
         else:
             raise RuntimeError(f'Unsupported file type: {name}')
@@ -3329,8 +3464,12 @@ def _parse_exam_questions_from_file(import_file, exam, user):
 # ──────────────────────────────────────────────────────────────────────────────
 @login_required(login_url='eduweb:auth_page')
 @instructor_required
+@require_permission('instructor_assessments', 'can_edit')
 def exam_grade_response(request, slug, response_id):
-    from eduweb.models import StudentExamResponse
+    if request.method == 'GET' and not _has_permission(request, 'instructor_assessments', 'can_view'):
+        messages.error(request, 'You do not have permission to view assessments.')
+        return redirect('instructor:exam_detail', slug=slug)
+
     exam     = get_object_or_404(Exam, slug=slug, instructor=request.user)
     response = get_object_or_404(StudentExamResponse, pk=response_id, exam=exam)
 
@@ -3384,6 +3523,25 @@ def exam_grade_response(request, slug, response_id):
         ])
 
         if pending_manual == 0:
+            academic_course = exam.course.academic_course
+            session = exam.course.session
+            if academic_course and session:
+                try:
+                    CourseGrade.recompute_for_student_course(response.student, academic_course, session)
+                except Exception:
+                    logger.exception(
+                        'Failed to recompute CourseGrade after manual exam grading for student=%s exam=%s',
+                        response.student.pk, exam.pk,
+                    )
+
+        if pending_manual == 0:
+            _notify_instructor(
+                instructor=response.student,
+                title=f'Exam Graded: {exam.title}',
+                message=f'Your exam "{exam.title}" has been fully graded. You scored {score_pct}%.',
+                notif_type='grade',
+                link='/student/exam/',
+            )
             messages.success(request, f"Fully graded — {response.student.get_full_name() or response.student.username} scored {score_pct}%.")
         else:
             messages.success(request, f"Saved. {pending_manual} question(s) still awaiting marks.")

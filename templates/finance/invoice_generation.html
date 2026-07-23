@@ -3,6 +3,8 @@
 
 {% block title %}Invoice Generation — Finance Portal{% endblock %}
 {% block meta_description %}Generate and download PDF invoices for successful payments{% endblock %}
+{% block breadcrumb %}Finance › Invoices{% endblock %}
+{% block breadcrumb_title %}Invoice Generation{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -22,7 +24,7 @@
             Generate and download PDF invoices for successful payments
           </p>
         </div>
-        <a href="{% url 'finance:payment_management' %}"
+        <a href="{% url 'payments:payment_management' %}"
            class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-white
                   border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50
                   transition-colors font-medium text-sm focus:outline-none
@@ -169,6 +171,7 @@
               <input type="hidden" id="payment_ref_hidden">
             </div>
 
+            {% if permissions.finance_payments.can_export %}
             <button type="button"
                     onclick="generateInvoice()"
                     id="generateBtn"
@@ -181,6 +184,7 @@
               <i class="fas fa-download" aria-hidden="true"></i>
               Generate PDF Invoice
             </button>
+            {% endif %}
           </div>
 
           <div class="mt-5 p-3 sm:p-4 bg-indigo-50 rounded-lg border border-indigo-200
@@ -289,6 +293,7 @@
 
                   {# Invoice download button #}
                   <td>
+                    {% if permissions.finance_payments.can_export %}
                     <a href="{% url 'payments:generate_invoice_pdf' payment.payment_reference %}"
                        target="_blank"
                        rel="noopener noreferrer"
@@ -301,6 +306,7 @@
                       <i class="fas fa-file-pdf" aria-hidden="true"></i>
                       <span class="hidden xs:inline">PDF</span>
                     </a>
+                    {% endif %}
                   </td>
 
                 </tr>

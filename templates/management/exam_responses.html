@@ -544,6 +544,7 @@
             </div>
 
             <!-- Right: action button -->
+            {% if permissions.exams.can_approve %}
             <form method="post" action="{% url 'management:admin_exam_release_results' exam.slug %}">
                 {% csrf_token %}
                 {% if exam.show_result_immediately %}
@@ -567,6 +568,7 @@
                 </button>
                 {% endif %}
             </form>
+            {% endif %}
         </div>
 
         <!-- Grading summary bar at bottom of panel -->

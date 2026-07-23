@@ -239,7 +239,7 @@ def category(request, category_slug):
 
 def detail(request, slug):
     """Single item detail — metadata, PDF viewer, download button."""
-    qs   = LibraryItem.objects.filter(is_active=True)
+    qs   = _base_qs(request.user)
     item = get_object_or_404(qs, slug=slug)
 
     item.increment_views()

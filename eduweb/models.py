@@ -1,15 +1,49 @@
+from asyncio import Condition
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from django.core.exceptions import ValidationError
-from django.db.models import Avg
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Avg, Max, F, FloatField, ExpressionWrapper
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.text import slugify
+from django.utils.functional import cached_property
+from cryptography.fernet import Fernet, InvalidToken
+from functools import lru_cache
 import uuid
 import os
-from decimal import Decimal
+import base64
+import hashlib
+from decimal import Decimal, ROUND_HALF_UP
+
+
+@lru_cache(maxsize=1)
+def _fernet() -> Fernet:
+    """Fernet cipher keyed off SECRET_KEY. Cached — the key can't change within
+    a running process, so re-deriving it on every call is wasted work."""
+    key = base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest())
+    return Fernet(key)
+
+
+def encrypt_secret(plain: str) -> str:
+    """Encrypts a credential for storage. Key is derived from SECRET_KEY."""
+    if not plain:
+        return ''
+    return _fernet().encrypt(plain.encode()).decode()
+
+
+def decrypt_secret(token: str) -> str:
+    """Decrypts a value stored via encrypt_secret(). Returns '' if blank or
+    undecryptable (e.g. SECRET_KEY rotated since it was encrypted)."""
+    if not token:
+        return ''
+    try:
+        return _fernet().decrypt(token.encode()).decode()
+    except InvalidToken:
+        return ''
 
 
 DEGREE_LEVEL_CHOICES = [
@@ -141,6 +175,33 @@ def blog_image_upload_path(instance, filename):
     name, ext = os.path.splitext(filename)
     safe_filename = f"{slugify(name)}{ext}"
     return f'blog/{instance.slug}/{safe_filename}'
+
+
+# Maps international/alias term keys → the canonical semester keys used on
+# Course.semester. AcademicSession stores term_dates with keys from
+# AcademicSession.TERM_CHOICES (first/second/third/fall/spring/summer/
+# annual); Course.semester only uses first/second/annual. This is the only
+# place that relationship is defined — previously duplicated as a local
+# `term_normalisation_map` inside student/views.py; that copy now imports
+# this one instead of hand-rolling its own, since Program.max_credits_for_term
+# below needs the exact same mapping and a model can't import from a view
+# module. Used only for the *fallback* tier of the credit-cap lookup — the
+# most specific tier (ProgramSessionCreditCap) intentionally does NOT
+# normalise, since it's keyed by whatever raw term a session actually uses
+# (e.g. a real 'third' term gets its own cap there, not second's).
+TERM_NORMALISATION_MAP = {
+    # nigerian semester terms (already canonical — map to themselves)
+    'first':  'first',
+    'second': 'second',
+    'third':  'second',   # third semester/harmattan treated as second semester
+    'annual': 'annual',
+    # international semester equivalents
+    'fall':   'first',
+    'spring': 'second',
+    'summer': 'annual',
+    'autumn': 'first',    # autumn = fall = first semester
+}
+
 
 class SiteConfig(models.Model):
     """
@@ -917,8 +978,8 @@ class BlogPost(models.Model):
     
     def increment_views(self):
         """Increment view count"""
-        self.views_count += 1
-        self.save(update_fields=['views_count'])
+        BlogPost.objects.filter(pk=self.pk).update(views_count=models.F('views_count') + 1)
+        self.refresh_from_db(fields=['views_count'])
     
     def get_related_posts(self, limit=3):
         """Get related posts from same category"""
@@ -1249,7 +1310,23 @@ class Program(models.Model):
     max_credits_per_semester = models.PositiveIntegerField(
         default=24,
         validators=[MinValueValidator(1), MaxValueValidator(30)],
-        help_text="Maximum total credit units a student can register in ONE semester for this program"
+        help_text="Default maximum credit units per term — used for any term not overridden in credit_caps_by_term below."
+    )
+    credit_caps_by_term = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Optional per-term overrides, e.g. {'first': 21, 'second': 18}. "
+            "A term key not present here falls back to max_credits_per_semester. "
+            "Use max_credits_for_term(term) rather than reading either field directly."
+        ),
+    )
+    min_cgpa_to_progress = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=1.00,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        help_text="Minimum cumulative GPA (5-point scale) required to advance to the next year of study"
     )
     available_study_modes = models.JSONField(
         default=list,
@@ -1397,6 +1474,47 @@ class Program(models.Model):
             total=models.Sum('credit_units')
         )['total'] or 0
 
+    def max_credits_for_term(self, term, session=None):
+        """
+        The credit-unit cap for one (term[, session]) pair — the single
+        source of truth every registration-cap check should call instead of
+        reading max_credits_per_semester/credit_caps_by_term/
+        ProgramSessionCreditCap directly. Three-tier fallback, most specific
+        first:
+
+          1. ProgramSessionCreditCap for this exact (program, session, term)
+             — pass `term` RAW here, exactly as the session itself names it
+             (e.g. a session that defines a real 'third' term must be looked
+             up as 'third', not pre-collapsed to 'second' — otherwise a cap
+             set for that specific session/term could never be found).
+          2. credit_caps_by_term[term] — a program-wide default for that
+             *canonical* term name (first/second/annual), shared across
+             every session that uses it. `term` is normalised via
+             TERM_NORMALISATION_MAP for this tier only, since that dict was
+             only ever keyed by the three canonical names.
+          3. max_credits_per_semester — the final fallback.
+
+        `session=None` skips tier 1 entirely (e.g. no specific session in
+        context yet) and falls straight to tiers 2/3.
+        """
+        if session is not None and term:
+            override = (
+                self.session_credit_caps
+                .filter(session=session, term=str(term).strip().lower())
+                .values_list('max_credit_units', flat=True)
+                .first()
+            )
+            if override is not None:
+                return override
+
+        if term and isinstance(self.credit_caps_by_term, dict):
+            normalised = TERM_NORMALISATION_MAP.get(str(term).strip().lower(), str(term).strip().lower())
+            fallback = self.credit_caps_by_term.get(normalised)
+            if fallback is not None:
+                return fallback
+
+        return self.max_credits_per_semester
+
 # ==============================================================================
 # ACADEMIC SESSION
 # Represents a single academic year and its semester breakdown.
@@ -1450,6 +1568,22 @@ class AcademicSession(models.Model):
     is_current = models.BooleanField(
         default=False,
         help_text="Mark this as the current running session"
+    )
+
+    REGISTRATION_OVERRIDE_CHOICES = [
+        ('auto',   'Automatic (3-week window from term start)'),
+        ('open',   'Force Open'),
+        ('closed', 'Force Closed'),
+    ]
+    registration_override = models.CharField(
+        max_length=10,
+        choices=REGISTRATION_OVERRIDE_CHOICES,
+        default='auto',
+        help_text=(
+            "Overrides the automatic 3-week registration window. Use 'Force Open' "
+            "when a session is activated after its term's computed window has "
+            "already elapsed (e.g. after end-of-session progression runs late)."
+        )
     )
 
     # ── Timestamps ─────────────────────────────────────────────────────────
@@ -1526,18 +1660,29 @@ class AcademicSession(models.Model):
     @property
     def is_registration_open(self):
         """
-        True when today falls inside the 3-week registration window
-        of whichever term is currently running.
+        True when today falls inside the 3-week registration window of
+        whichever term is currently running, unless an admin has set an
+        explicit `registration_override`.
 
-        The window is computed from term_dates — no separate DB fields
-        required.  Works for any term key the admin configures
-        (first, second, third, fall, spring, summer, …).
+        The computed window alone has a real operational gap: a session
+        is often activated (`is_current=True`) some time after its
+        term_dates were originally configured — e.g. right after an
+        end-of-session progression run — by which point the computed
+        3-week window may have already elapsed, permanently locking out
+        registration for the whole term with no way to recover short of
+        editing term_dates. `registration_override` gives admins (and
+        `academic_session_set_current`, which auto-opens it when needed)
+        an explicit escape hatch that takes precedence over the date math.
         """
-        from datetime import date
-        today = timezone.now().date()
+        if self.registration_override == 'open':
+            return True
+        if self.registration_override == 'closed':
+            return False
+
         reg_open, reg_close = self.get_registration_window()
         if reg_open is None:
             return False
+        today = timezone.now().date()
         return reg_open <= today <= reg_close
 
     def registration_window_for_term(self, term):
@@ -1550,6 +1695,53 @@ class AcademicSession(models.Model):
         if reg_open and reg_close:
             return f"{reg_open.strftime('%d %b %Y')} – {reg_close.strftime('%d %b %Y')}"
         return "—"
+
+
+class ProgramSessionCreditCap(models.Model):
+    """
+    The most specific tier of the credit-unit cap hierarchy — one row per
+    (program, session, term), letting an admin set a genuinely different
+    cap for the same program in different academic sessions (e.g. a
+    curriculum that allows more CU per term starting a given year), and
+    following whatever term structure that particular session actually
+    has (two terms one year, three the next — the number of rows for a
+    session is however many terms its own `term_dates` defines, not a
+    fixed enum).
+
+    Lookup order (see Program.max_credits_for_term):
+      1. This model — most specific, per (program, session, term).
+      2. Program.credit_caps_by_term[term] — a program-wide default for
+         that term name, shared across every session that uses it.
+      3. Program.max_credits_per_semester — the final fallback.
+    """
+    program = models.ForeignKey(
+        'Program', on_delete=models.CASCADE, related_name='session_credit_caps',
+    )
+    session = models.ForeignKey(
+        'AcademicSession', on_delete=models.CASCADE, related_name='program_credit_caps',
+    )
+    term = models.CharField(
+        max_length=20,
+        help_text="Term key matching one of this session's term_dates entries (e.g. 'first', 'second', 'third').",
+    )
+    max_credit_units = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+    )
+
+    class Meta:
+        unique_together = [['program', 'session', 'term']]
+        ordering = ['session__name', 'term']
+        verbose_name = 'Program Session Credit Cap'
+        verbose_name_plural = 'Program Session Credit Caps'
+
+    def __str__(self):
+        return f"{self.program.code} — {self.session} — {self.term}: {self.max_credit_units} CU"
+
 
 class Course(models.Model):
 
@@ -1591,6 +1783,28 @@ class Course(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(12)],
         help_text="Credit units this course carries"
     )
+
+    # ── Assessment weighting ───────────────────────────────────────────────────
+    # Used to blend exam/quiz/assignment scores into one CourseGrade. Weights
+    # of assessment types with no recorded data for a student are dropped and
+    # the remaining weights re-normalized, so an exam-only course still grades
+    # out of 100% from its exam component alone.
+    exam_weight_pct = models.PositiveSmallIntegerField(
+        default=70,
+        validators=[MaxValueValidator(100)],
+        help_text="Weight of the end-of-semester exam in the final course grade (%)"
+    )
+    quiz_weight_pct = models.PositiveSmallIntegerField(
+        default=15,
+        validators=[MaxValueValidator(100)],
+        help_text="Weight of quiz scores in the final course grade (%)"
+    )
+    assignment_weight_pct = models.PositiveSmallIntegerField(
+        default=15,
+        validators=[MaxValueValidator(100)],
+        help_text="Weight of assignment scores in the final course grade (%)"
+    )
+
     year_of_study = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(8)],
         help_text="Which year of the program this course is taught in (e.g., 1, 2, 3)"
@@ -1797,9 +2011,20 @@ class CourseIntake(models.Model):
         verbose_name_plural = 'Course Intakes'
         unique_together = [['program', 'intake_period', 'year']]
     
-    @property
+    @cached_property
     def accepted_count(self):
-        """number of approved applications for this intake."""
+        """
+        Number of approved applications for this intake. cached_property,
+        not plain @property: remaining_slots and is_full each read this too,
+        and intakes_list.html calls is_full twice per row — without caching
+        that's 4 separate COUNT queries per intake (measured: 80 queries for
+        a 20-row page). A filtered .count() also can't use the view's
+        .prefetch_related('applications') — that only helps a plain
+        .all() iteration, not an aggregate — so caching on the instance is
+        the fix here, not prefetching harder. Safe within a request: nothing
+        in this codebase creates an application against an intake and then
+        re-checks these on that same already-loaded instance.
+        """
         return self.applications.filter(status='approved').count()
 
     @property
@@ -1845,6 +2070,10 @@ class CourseApplication(models.Model):
     # Course & Session & Level
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='applications')
     academic_session = models.ForeignKey('AcademicSession', on_delete=models.SET_NULL, null=True, blank=True, related_name='applications')
+    intake = models.ForeignKey(
+        'CourseIntake', on_delete=models.SET_NULL, null=True, blank=True, related_name='applications',
+        help_text="Which intake period this application is for, if known."
+    )
     entry_level = models.IntegerField(
         null=True, blank=True,
         help_text="Entry level e.g. 100, 200, 300 etc."
@@ -1971,6 +2200,21 @@ class CourseApplication(models.Model):
         null=True, blank=True,
         help_text="When the transcript was issued"
     )
+    transcript_issued_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='transcripts_issued',
+        help_text="Staff member who issued this transcript"
+    )
+    transcript_snapshot = models.JSONField(
+        null=True, blank=True, encoder=DjangoJSONEncoder,
+        help_text=(
+            "Frozen copy of the student's grade record, captured the moment "
+            "transcript_requested is set. Once requested, the transcript view "
+            "renders this locked snapshot instead of live CourseGrade data, so "
+            "results recorded afterwards can't silently change an already-"
+            "requested transcript."
+        )
+    )
 
     class Meta:
         ordering = ['-created_at']
@@ -1980,6 +2224,9 @@ class CourseApplication(models.Model):
             models.Index(fields=['application_id']),
             models.Index(fields=['email']),
             models.Index(fields=['status']),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['email', 'program'], name='unique_application_email_per_program'),
         ]
     
     def __str__(self):
@@ -1992,8 +2239,8 @@ class CourseApplication(models.Model):
         This property is kept for backward compatibility with templates.
         """
         # Free flow: draft and above are all "unlocked"
-        #if self.status in ['draft', 'payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
-         #   return True
+        if self.status in ['draft', 'payment_complete', 'documents_uploaded', 'under_review', 'approved', 'rejected']:
+            return True
         # Legacy fallback: check actual payment record if status is pending_payment
         try:
             return self.payment_status == 'success'
@@ -2046,13 +2293,62 @@ class CourseApplication(models.Model):
             return True
         return False
 
+    # ── Matric number format — CHANGE THE FORMAT HERE, NOWHERE ELSE ─────────
+    # Computed on the fly from admission_number (never stored), so editing
+    # these two constants + the matric_number property below instantly
+    # changes what every student sees, with no migration/backfill needed.
+    MATRIC_NUMBER_MAX_LENGTH = 15
+    MATRIC_NUMBER_MIN_UNIQUE_CHARS = 4  # never shrink the unique tail below this
+
+    @property
+    def matric_number(self):
+        """
+        Student matriculation number: '{DEPT_CODE}-{YEAR}-{UNIQUE}', derived
+        from admission_number (e.g. 'ADM-2026-10DEBA33') by swapping the
+        'ADM' prefix for the student's department code, capped at
+        MATRIC_NUMBER_MAX_LENGTH characters total.
+
+        Reuses the year and unique hex tail already embedded in
+        admission_number rather than generating new ones, so this always
+        matches the admission record it's derived from and never needs its
+        own DB column. Returns None until admission_number exists.
+
+        An unusually long department code eats into the unique tail first
+        down to MATRIC_NUMBER_MIN_UNIQUE_CHARS (keeping numbers readable),
+        and only truncates the whole string as a last-resort safety net.
+        """
+        if not self.admission_number:
+            return None
+
+        department = self.program.department if self.program_id else None
+        dept_code = ((department.code if department else '') or 'GEN').strip().upper()
+
+        parts = self.admission_number.split('-')
+        if len(parts) >= 3:
+            year, unique = parts[1], parts[-1]
+        else:
+            # Unexpected admission_number shape — fall back gracefully
+            # rather than raising.
+            year, unique = str(timezone.now().year), self.admission_number[-8:]
+
+        fixed_length = len(dept_code) + len(year) + 2  # +2 for the two hyphens
+        unique_budget = max(
+            self.MATRIC_NUMBER_MIN_UNIQUE_CHARS,
+            self.MATRIC_NUMBER_MAX_LENGTH - fixed_length,
+        )
+        unique = unique[:unique_budget]
+
+        matric = f"{dept_code}-{year}-{unique}"
+        return matric[:self.MATRIC_NUMBER_MAX_LENGTH]
+
     def can_access_student_portal(self):
         """Check if student can access student dashboard"""
         return (
             self.status == 'approved' and
             self.admission_accepted and
             self.admission_number and
-            self.department_approved
+            self.department_approved and
+            self.is_paid
         )
 
     def get_full_name(self):
@@ -2068,10 +2364,14 @@ class CourseApplication(models.Model):
         if not required_courses.exists():
             return False
 
+        # result_status='released' — an unpublished pass shouldn't be able to
+        # auto-graduate a student (and issue a Certificate) before the
+        # registrar has actually approved that result. See publish_results().
         passed_course_ids = CourseGrade.objects.filter(
             student=self.user,
             course__program=self.program,
             is_passed=True,
+            result_status='released',
         ).values_list('course_id', flat=True)
 
         return all(c.id in passed_course_ids for c in required_courses)
@@ -3071,7 +3371,11 @@ class QuizAttempt(models.Model):
     # Status
     is_completed = models.BooleanField(default=False)
     passed = models.BooleanField(default=False)
-    
+    pending_manual_grading = models.BooleanField(
+        default=False,
+        help_text="True while this attempt has short-answer/essay responses an instructor hasn't graded yet."
+    )
+
     # Timestamps
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -3116,6 +3420,12 @@ class QuizResponse(models.Model):
     text_response = models.TextField(blank=True)
     is_correct = models.BooleanField(default=False)
     points_earned = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    needs_grading = models.BooleanField(
+        default=False,
+        help_text="True for short-answer/essay responses awaiting an instructor's manual score."
+    )
+    graded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='quiz_responses_graded')
+    graded_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         verbose_name = 'Quiz Response'
@@ -3243,6 +3553,32 @@ class Subscription(models.Model):
         return self.status == 'active' and self.end_date >= timezone.now().date()
 
 
+class InstitutionalSubscription(models.Model):
+    """
+    A third-party/organizational subscription the institution itself pays
+    for (software licenses, hosting, tools, etc.) — unrelated to the
+    student-facing SubscriptionPlan/Subscription pair above. Superuser-only.
+    """
+    purpose = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    start_date = models.DateField()
+    expiry_date = models.DateField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-start_date']
+        verbose_name = 'Institutional Subscription'
+        verbose_name_plural = 'Institutional Subscriptions'
+
+    def __str__(self):
+        return self.purpose
+
+    @property
+    def is_active(self):
+        return self.expiry_date >= timezone.now().date()
+
+
 # ==================== SYSTEM CONFIGURATION ====================
 class SystemConfiguration(models.Model):
     """System-wide configuration settings"""
@@ -3265,9 +3601,24 @@ class SystemConfiguration(models.Model):
         verbose_name = 'System Configuration'
         verbose_name_plural = 'System Configurations'
         ordering = ['key']
-    
+
     def __str__(self):
         return self.key
+
+    @classmethod
+    def get_value(cls, key: str, default: str = '') -> str:
+        val = cls.objects.filter(key=key).values_list('value', flat=True).first()
+        return val if val else default
+
+    @classmethod
+    def get_values(cls, keys) -> dict:
+        """Batch lookup — one query for many keys, instead of one query per key.
+        Returns a dict of only the keys that exist; missing keys are simply absent."""
+        return dict(cls.objects.filter(key__in=keys).values_list('key', 'value'))
+
+    @classmethod
+    def get_secret(cls, key: str, default: str = '') -> str:
+        return decrypt_secret(cls.get_value(key)) or default
 
 
 # ==================== USER PROFILE ====================
@@ -3275,12 +3626,12 @@ class UserProfile(models.Model):
     """Extended user profile"""
     ROLE_CHOICES = [
         ('student', 'Student'),
-        ('instructor', 'Instructor'),
-        ('admin', 'Administrator'),
-        ('content_manager', 'Content Manager'),
-        ('support', 'Support Staff'),
-        ('qa', 'QA Reviewer'),
-        ('finance', 'Finance Manager'),
+        ('instructor', 'Lecturers'),
+        ('admin', 'Admin'),
+        # ('content_manager', 'Content Manager'),
+        ('support', 'Support'),
+        # ('qa', 'QA Reviewer'),
+        ('finance', 'Finance'),
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -3338,10 +3689,17 @@ class UserProfile(models.Model):
     # Verification
     email_verified = models.BooleanField(default=False)
     verification_token = models.UUIDField(default=uuid.uuid4, editable=False)
+    verification_token_created = models.DateTimeField(default=timezone.now)
 
     # Password Reset
     password_reset_token = models.UUIDField(null=True, blank=True, editable=False)
     password_reset_token_created = models.DateTimeField(null=True, blank=True)
+
+    # Force password change on first login (set for admin-created accounts)
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text="If True, user is redirected to change password immediately after login."
+    )
     
     # Timestamps
     created_at = models.DateTimeField(default=timezone.now)
@@ -3358,13 +3716,55 @@ class UserProfile(models.Model):
         default='',
         help_text="Django session key of the current active session."
     )
+
+    # ── OTP / Two-Step Verification ───────────────────────────────────────────
+    # otp_code is encrypted at rest using Django signing to prevent DB exposure.
+    # Always use get_otp_code() / set_otp_code() — never access _otp_code directly.
+    _otp_code = models.CharField(
+        max_length=128,  # signed string is longer than raw 6 digits
+        blank=True,
+        default='',
+        db_column='otp_code',
+        help_text="Encrypted one-time password (6 digits)."
+    )
+    otp_created_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the OTP was last generated. Expires after 10 minutes."
+    )
+    otp_attempts = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Failed OTP attempts for current code. Locked after 5."
+    )
+
+    @property
+    def otp_code(self):
+        """Decrypt and return the OTP, or empty string if unset/invalid."""
+        from django.core.signing import Signer, BadSignature
+        if not self._otp_code:
+            return ''
+        try:
+            return Signer().unsign(self._otp_code)
+        except BadSignature:
+            return ''
+
+    @otp_code.setter
+    def otp_code(self, raw_value):
+        """Encrypt and store the OTP. Pass empty string to clear."""
+        from django.core.signing import Signer
+        if not raw_value:
+            self._otp_code = ''
+        else:
+            self._otp_code = Signer().sign(raw_value)
     
     class Meta:
         verbose_name = 'User Profile'
         verbose_name_plural = 'User Profiles'
-    
+
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
     @property
     def current_level(self):
@@ -3393,9 +3793,24 @@ class UserProfile(models.Model):
     
     def generate_verification_token(self):
         self.verification_token = uuid.uuid4()
-        self.save()
+        self.verification_token_created = timezone.now()
+        self.save(update_fields=['verification_token', 'verification_token_created'])
         return self.verification_token
-    
+
+    def is_verification_token_valid(self):
+        """
+        Token expires after 7 days. Deliberately far longer than the 1-hour
+        password-reset window: there's currently no self-service "resend"
+        entry point for a user who isn't active yet (resend_verification
+        requires login, which an unverified/inactive account can't do), so
+        an expired link is a real dead-end requiring manual support — a
+        generous window keeps that rare rather than routine.
+        """
+        from datetime import timedelta
+        if not self.verification_token_created:
+            return False
+        return timezone.now() < self.verification_token_created + timedelta(days=7)
+
     def generate_password_reset_token(self):
         import uuid
         from django.utils import timezone
@@ -3417,10 +3832,263 @@ class UserProfile(models.Model):
         self.password_reset_token_created = None
         self.save(update_fields=['password_reset_token', 'password_reset_token_created'])
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PERMISSIONS MATRIX  (internal staff only — student/instructor excluded)
+# ─────────────────────────────────────────────────────────────────────────────
 
-   
+class StaffPermissionsMatrix(models.Model):
+    """
+    Flat permission table — one row per (role OR user) × module.
+    Applies to internal staff roles (admin, support, finance) and to
+    instructors. Students are never looked up here.
 
+    role set, user null  → role-level default
+    user set, role null  → user-level override (supersedes role row)
+    """
 
+    STAFF_ROLES = [
+        ('admin',           'Administrator'),
+        # ('content_manager', 'Content Manager'),
+        ('support',         'Support Staff'),
+        # ('qa',              'QA Reviewer'),
+        ('finance',         'Finance Manager'),
+        ('instructor',      'Instructor'),
+    ]
+
+    MODULE_CHOICES = [
+        ('dashboard',        'Dashboard'),
+        ('user_management',  'User Management'),
+        ('academics',        'Academics'),
+        ('lms_courses',      'LMS Courses'),
+        ('applications',     'Applications'),
+        ('exams',            'Exams'),
+        ('enrollments',      'Enrollments'),
+        ('finance',          'Finance'),
+        ('communications',   'Communications'),
+        ('blog',             'Blog'),
+        ('library',          'Library'),
+        ('site_content',     'Site Content'),
+        ('security_audit',   'Security & Audit'),
+        ('instructor_courses',        'My Courses'),
+        ('instructor_assessments',    'Assessments'),
+        ('instructor_analytics',     'Analytics'),
+        ('instructor_resources',     'Resources'),
+        ('instructor_communications', 'Communications'),
+        ('finance_payments',      'Payments'),
+        ('finance_subscriptions', 'Subscriptions'),
+        ('finance_payroll',       'Payroll'),
+        ('support_tickets',         'Tickets'),
+        ('support_knowledge_base',  'Knowledge Base'),
+        ('support_communications',  'Communications'),
+        ('support_analytics',       'Analytics'),
+        ('support_config',          'Support Config'),
+        ('academic_progression',    'Academic Progression'),
+        ('results_publish',         'Results Publishing'),
+        ('role_permissions',        'Roles & Permissions'),
+    ]
+
+    # Role-level defaults — mirrors sidebar sections visible per role
+    ROLE_DEFAULT_PERMISSIONS = {
+    'admin': {
+        # 'dashboard':     {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
+        'user_management': {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'academics':       {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'lms_courses':     {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'applications':    {'can_view': True, 'can_edit': True},
+        'exams':           {'can_view': True, 'can_edit': True, 'can_approve': True},
+        'enrollments':     {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'finance':         {'can_view': True, 'can_edit': True, 'can_export': True},
+        'communications':  {'can_view': True, 'can_create': True, 'can_delete': True},
+        'blog':            {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'library':         {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'site_content':    {'can_view': True, 'can_edit': True},
+        'security_audit':  {'can_view': True},
+        'support_config':  {'can_view': True, 'can_create': True, 'can_edit': True},
+        'academic_progression': {'can_view': True, 'can_edit': True, 'can_approve': True},
+        # Kept separate from 'academic_progression' on purpose: releasing
+        # results to the whole student body is a distinct, higher-blast-
+        # radius action than running level-progression decisions, so a
+        # staff member granted one shouldn't automatically get the other.
+        'results_publish': {'can_view': True, 'can_edit': True, 'can_approve': True},
+        # Deliberately its own module rather than riding on 'user_management':
+        # a staff member can be granted the user list (user_management) without
+        # also being able to reassign roles or edit the permission matrix itself.
+        'role_permissions': {'can_view': True, 'can_edit': True},
+    },
+    'support': {
+        # 'dashboard':    {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
+        'user_management':{'can_view': True},
+        'enrollments':    {'can_view': True},
+        'applications':   {'can_view': True},
+        'communications': {'can_view': True, 'can_create': True},
+        'exams':          {'can_view': True},
+        'support_tickets':        {'can_view': True, 'can_create': True, 'can_edit': True},
+        'support_knowledge_base': {'can_view': True, 'can_create': True, 'can_edit': True},
+        'support_communications': {'can_view': True, 'can_create': True},
+        'support_analytics':      {'can_view': True},
+    },
+    'finance': {
+        # 'dashboard':    {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
+        'finance':        {'can_view': True, 'can_edit': True, 'can_export': True},
+        'enrollments':    {'can_view': True},
+        'user_management':{'can_view': True},
+        'finance_payments':      {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True, 'can_export': True},
+        'finance_subscriptions': {'can_view': True},
+        'finance_payroll':       {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+    },
+    'instructor': {
+        # 'dashboard':               {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
+        'instructor_courses':        {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'instructor_assessments':    {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'instructor_analytics':      {'can_view': True, 'can_export': True},
+        'instructor_resources':      {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+        'instructor_communications': {'can_view': True, 'can_create': True, 'can_edit': True, 'can_delete': True},
+    },
+}
+
+    ALL_ACTION_FIELDS = [
+        'can_view', 'can_create', 'can_edit', 'can_delete',
+        'can_approve', 'can_export',
+    ]
+
+    # Core admin/management-portal modules — as opposed to the role-specific
+    # instructor_*/finance_*/support_* modules, which belong to those roles'
+    # own portals. Used by is_staff's full-bypass tier: is_staff unlocks every
+    # module here unconditionally, but never the other roles' portal modules.
+    ADMIN_PORTAL_MODULES = {
+        'dashboard', 'user_management', 'academics', 'lms_courses',
+        'applications', 'exams', 'enrollments', 'finance', 'communications',
+        'blog', 'library', 'site_content', 'security_audit', 'support_config',
+        'academic_progression', 'results_publish', 'role_permissions',
+    }
+
+    # Mirrors ADMIN_PORTAL_MODULES for the other three staff portals — used by
+    # the view-level role gates (eduweb.decorators.is_finance_manager/
+    # instructor_required, management.views.is_admin, support.permissions.
+    # is_support_staff) so a user granted can_view on any module here via a
+    # StaffPermissionsMatrix user-level override can actually open that
+    # portal's views, not just see the link in the sidebar.
+    INSTRUCTOR_PORTAL_MODULES = {
+        'instructor_courses', 'instructor_assessments', 'instructor_analytics',
+        'instructor_resources', 'instructor_communications',
+    }
+    FINANCE_PORTAL_MODULES = {'finance_payments', 'finance_subscriptions', 'finance_payroll'}
+    SUPPORT_PORTAL_MODULES = {
+        'support_tickets', 'support_knowledge_base', 'support_communications',
+        'support_analytics', 'support_config',
+    }
+
+    role   = models.CharField(max_length=30, choices=STAFF_ROLES, null=True, blank=True)
+    user   = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.CASCADE, related_name='permission_matrix_rows'
+    )
+    module = models.CharField(max_length=40, choices=MODULE_CHOICES)
+
+    can_view    = models.BooleanField(default=False)
+    can_create  = models.BooleanField(default=False)
+    can_edit    = models.BooleanField(default=False)
+    can_delete  = models.BooleanField(default=False)
+    can_approve = models.BooleanField(default=False)
+    can_export  = models.BooleanField(default=False)
+
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='permission_matrix_changes'
+    )
+
+    @classmethod
+    def seed_defaults_for_role(cls, role_name):
+        """
+        Upsert role-default rows from ROLE_DEFAULT_PERMISSIONS.
+        Safe to call multiple times — never overwrites user overrides.
+        """
+        module_defaults = cls.ROLE_DEFAULT_PERMISSIONS.get(role_name, {})
+        for module_key, true_flags in module_defaults.items():
+            field_values = {f: False for f in cls.ALL_ACTION_FIELDS}
+            field_values.update(true_flags)
+            cls.objects.update_or_create(
+                role=role_name, module=module_key, user=None,
+                defaults=field_values,
+            )
+
+    @classmethod
+    def user_can_view_any(cls, user, modules):
+        """
+        True if `user` has can_view=True on at least one module in `modules`
+        — checking a user-level override row first, else their role's row,
+        else the hardcoded ROLE_DEFAULT_PERMISSIONS. Does NOT special-case
+        is_superuser/is_staff — callers check those bypasses themselves
+        first. Used by the coarse per-portal view gates (is_admin,
+        is_finance_manager, instructor_required, is_support_staff) so a
+        cross-department grant made via /management/role-assign/ actually
+        unlocks that portal's views, not just its sidebar link.
+        """
+        if not modules or not getattr(user, 'is_authenticated', False):
+            return False
+        profile = getattr(user, 'profile', None)
+        role = getattr(profile, 'role', None)
+
+        # 'student' can never use this bypass, no matter what override rows
+        # exist for them — this is the single choke point all four portal
+        # gates (is_admin, is_finance_manager, instructor_required,
+        # is_support_staff) route through, so this is enough to keep a
+        # student account out of every staff portal even if a permissions
+        # modal is ever used to grant them a module by mistake. Students are
+        # still shown in the user-management/role-assignment picker (they're
+        # ordinary accounts worth being able to view/manage there); this
+        # only stops a grant from ever being *effective*.
+        if role == 'student':
+            return False
+
+        user_rows = {
+            r.module: r.can_view
+            for r in cls.objects.filter(user=user, module__in=modules)
+        }
+        role_rows = {
+            r.module: r.can_view
+            for r in cls.objects.filter(role=role, user__isnull=True, module__in=modules)
+        } if role else {}
+
+        for m in modules:
+            if m in user_rows:
+                if user_rows[m]:
+                    return True
+            elif m in role_rows:
+                if role_rows[m]:
+                    return True
+            elif cls.ROLE_DEFAULT_PERMISSIONS.get(role, {}).get(m, {}).get('can_view'):
+                return True
+        return False
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['role', 'module'],
+                condition=models.Q(user=None),
+                name='unique_staff_role_module'
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'module'],
+                condition=models.Q(role=None),
+                name='unique_staff_user_module'
+            ),
+            models.CheckConstraint(
+                check=(
+                    models.Q(role__isnull=False, user__isnull=True) |
+                    models.Q(user__isnull=False, role__isnull=True)
+                ),
+                name='staff_matrix_role_xor_user'
+            ),
+        ]
+        ordering = ['role', 'user', 'module']
+        verbose_name        = 'Staff Permissions Matrix Row'
+        verbose_name_plural = 'Staff Permissions Matrix'
+
+    def __str__(self):
+        target = f"Role:{self.role}" if self.role else f"User:{self.user_id}"
+        return f"{target} | {self.get_module_display()}"
 
 # ==================== VENDOR MANAGEMENT ====================
 class Vendor(models.Model):
@@ -3647,6 +4315,7 @@ class BroadcastMessage(models.Model):
     
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('sending', 'Sending'),
         ('sent', 'Sent'),
         ('failed', 'Failed'),
     ]
@@ -3771,7 +4440,6 @@ class StaffPayroll(models.Model):
                 'instructor',
                 'support',
                 'admin',
-                'content_manager',
                 'finance'
             ]
         },
@@ -4501,6 +5169,15 @@ class CourseRegistration(models.Model):
         return f"{self.student.username} | {self.course.code} | {self.session} {self.term}"
 
 
+def _score_to_grade(percentage):
+    """Convert a numeric percentage to a Nigerian-scale letter grade."""
+    if percentage >= 70:   return 'A'
+    elif percentage >= 60: return 'B'
+    elif percentage >= 50: return 'C'
+    elif percentage >= 45: return 'D'
+    else:                  return 'F'
+
+
 class CourseGrade(models.Model):
     GRADE_CHOICES = [
         ('A', 'A'), ('B', 'B'), ('C', 'C'),
@@ -4554,6 +5231,437 @@ class CourseGrade(models.Model):
     @property
     def weighted_points(self):
         return self.grade_points * self.credit_units
+
+    @classmethod
+    def compute_cgpa(cls, student):
+        """
+        Cumulative GPA (Nigerian 5-point scale) across every graded,
+        non-withdrawn, *released* CourseGrade row for this student.
+
+        This is the single canonical CGPA computation — the dashboard,
+        Academic Records, and the end-of-session progression decision
+        must all call this rather than each hand-rolling the same sum,
+        so they can never silently disagree (e.g. via different rounding
+        rules). Returns None if the student has no gradable records yet.
+
+        Only `result_status='released'` rows count: a grade the registrar
+        hasn't published yet must not move a student's CGPA, trigger
+        progression/graduation, or appear on a transcript. See
+        `publish_results()` for the admin-side release workflow.
+        """
+        grades = cls.objects.filter(
+            student=student, result_status='released',
+        ).exclude(grade='').exclude(grade='W')
+        total_units = sum(g.credit_units for g in grades)
+        if not total_units:
+            return None
+        weighted_sum = sum(g.weighted_points for g in grades)
+        return (Decimal(weighted_sum) / Decimal(total_units)).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
+
+    @classmethod
+    def build_transcript_snapshot(cls, student):
+        """
+        Compute this student's full grade transcript from live CourseGrade
+        rows: per-session/semester GPA summaries plus cumulative GPA/class.
+        Returns a plain-dict, JSON-safe structure so the exact same shape can
+        either be rendered live or frozen verbatim into
+        CourseApplication.transcript_snapshot once a student requests their
+        transcript — shared between `student` (renders it, freezes it on
+        request) and `management` (issues it) so neither app hand-rolls its
+        own copy of this logic.
+
+        Only `result_status='released'` rows are included — a course a
+        student has completed but whose result the registrar hasn't
+        published yet must not appear on a live view, a locked transcript
+        snapshot, or an issued transcript. See `publish_results()`.
+        """
+        grades_qs = list(
+            cls.objects
+            .filter(student=student, result_status='released')
+            .select_related('course', 'course__program', 'session')
+            .order_by('-session__name', 'course__semester', 'course__year_of_study')
+        )
+
+        sessions_raw = {}
+        for g in grades_qs:
+            sess_key = g.session.name if g.session else 'Unassigned'
+            # Grouped by level + semester, not semester alone — a session can
+            # legitimately contain a lower-level carry-over course registered
+            # alongside the student's current-level courses, and merging them
+            # under one bare "First Semester" label would misrepresent which
+            # level each grade actually belongs to.
+            sem_key = f'Level {g.course.level} — {g.course.get_semester_display()}'
+            sessions_raw.setdefault(sess_key, {}).setdefault(sem_key, []).append(g)
+
+        session_summaries = []
+        for sess_name, semesters in sorted(sessions_raw.items(), reverse=True):
+            semester_blocks = []
+            sess_total_weighted = 0.0
+            sess_total_units    = 0
+            sess_credits_earned = 0
+
+            for sem_label, grades_list in semesters.items():
+                sem_weighted = sum(g.grade_points * g.credit_units for g in grades_list if g.grade)
+                sem_units    = sum(g.credit_units for g in grades_list if g.grade and g.grade != 'W')
+                sem_gpa      = round(sem_weighted / sem_units, 2) if sem_units > 0 else None
+                sem_credits  = sum(g.credit_units for g in grades_list if g.is_passed)
+
+                semester_blocks.append({
+                    'label':          sem_label,
+                    'gpa':            sem_gpa,
+                    'credits':        sem_credits,
+                    'total_cu':       sem_units,
+                    'total_weighted': round(sem_weighted, 0),
+                    'grades': [
+                        {
+                            'display_code':    g.course.code,
+                            'display_name':    g.course.name,
+                            'credit_units':    g.credit_units,
+                            # Cast Decimal -> float so this matches what comes
+                            # back out of JSONField after a DB round-trip
+                            # (Decimal isn't JSON-native; storing it raw would
+                            # make a *live* score a Decimal but a *locked
+                            # snapshot* score a string, subtly changing
+                            # {% if g.score %} truthiness for 0.00).
+                            'score':           float(g.score) if g.score is not None else None,
+                            'grade':           g.grade,
+                            'grade_points':    g.grade_points,
+                            'weighted_points': g.weighted_points,
+                            'is_passed':       g.is_passed,
+                        }
+                        for g in grades_list
+                    ],
+                })
+                sess_total_weighted += sem_weighted
+                sess_total_units    += sem_units
+                sess_credits_earned += sem_credits
+
+            sess_gpa = round(sess_total_weighted / sess_total_units, 2) if sess_total_units > 0 else None
+            session_summaries.append({
+                'name':      sess_name,
+                'semesters': semester_blocks,
+                'gpa':       sess_gpa,
+                'credits':   sess_credits_earned,
+            })
+
+        gpa = cls.compute_cgpa(student)
+        if gpa is None:               gpa_class = None
+        elif gpa >= Decimal('4.5'):   gpa_class = 'First Class'
+        elif gpa >= Decimal('3.5'):   gpa_class = 'Second Class Upper'
+        elif gpa >= Decimal('2.4'):   gpa_class = 'Second Class Lower'
+        elif gpa >= Decimal('1.5'):   gpa_class = 'Third Class'
+        else:                         gpa_class = 'Pass'
+
+        return {
+            'generated_at':      timezone.now().isoformat(),
+            'session_summaries': session_summaries,
+            'gpa':               float(gpa) if gpa is not None else None,
+            'gpa_class':         gpa_class,
+            'credits_earned':    sum(g.credit_units for g in grades_qs if g.is_passed),
+            'grade_count':       len(grades_qs),
+        }
+
+    EXAM_COMPONENT = 'exam'
+    QUIZ_COMPONENT = 'quiz'
+    ASSIGNMENT_COMPONENT = 'assignment'
+
+    @classmethod
+    def recompute_for_student_course(cls, student, course, session, term=''):
+        """
+        Recompute and persist this student's grade for `course` in `session`,
+        blending exam/quiz/assignment scores using the course's configured
+        weights (Course.exam_weight_pct/quiz_weight_pct/assignment_weight_pct).
+
+        Assessment types with no recorded data for this student are dropped
+        and the remaining weights re-normalized to sum to 100%, so e.g. an
+        exam-only course grades entirely off its exam component. Safe to call
+        repeatedly from any grading trigger point (lesson completion, exam
+        grading, assignment grading) — always upserts a single row per
+        (student, course, session, term).
+
+        Returns the CourseGrade row, or None if the student has no active/
+        completed enrollment in a delivery of this course for this session.
+        """
+        enrollment = (
+            Enrollment.objects
+            .filter(
+                student=student,
+                course__academic_course=course,
+                course__session=session,
+                status__in=['active', 'completed'],
+            )
+            .select_related('course')
+            .first()
+        )
+        if not enrollment:
+            return None
+
+        lms_course = enrollment.course
+        components = {}
+
+        # ── Exam component: average of graded end-of-semester exam scores ──────
+        exam_avg = (
+            StudentExamResponse.objects
+            .filter(
+                student=student,
+                exam__course=lms_course,
+                exam__exam_type=Exam.END_OF_SEMESTER,
+                status=StudentExamResponse.GRADED,
+                score_percentage__isnull=False,
+            )
+            .aggregate(avg=Avg('score_percentage'))['avg']
+        )
+        if exam_avg is not None:
+            components[cls.EXAM_COMPONENT] = float(exam_avg)
+
+        # ── Quiz component: best attempt percentage per quiz, averaged ─────────
+        quiz_attempts = (
+            QuizAttempt.objects
+            .filter(student=student, quiz__lesson__course=lms_course, is_completed=True)
+            .values('quiz_id')
+            .annotate(best=Max('percentage'))
+        )
+        quiz_scores = [float(row['best']) for row in quiz_attempts]
+        if quiz_scores:
+            components[cls.QUIZ_COMPONENT] = sum(quiz_scores) / len(quiz_scores)
+
+        # ── Assignment component: graded submissions as % of max_score ─────────
+        assignment_scores_qs = (
+            AssignmentSubmission.objects
+            .filter(
+                student=student,
+                assignment__lesson__course=lms_course,
+                status='graded',
+                score__isnull=False,
+            )
+            .annotate(
+                pct=ExpressionWrapper(
+                    F('score') * 100.0 / F('assignment__max_score'),
+                    output_field=FloatField(),
+                )
+            )
+            .values_list('pct', flat=True)
+        )
+        assignment_scores = [float(s) for s in assignment_scores_qs]
+        if assignment_scores:
+            components[cls.ASSIGNMENT_COMPONENT] = sum(assignment_scores) / len(assignment_scores)
+
+        # ── Weighted blend, re-normalized over whichever components exist ──────
+        if components:
+            raw_weights = {
+                cls.EXAM_COMPONENT: course.exam_weight_pct,
+                cls.QUIZ_COMPONENT: course.quiz_weight_pct,
+                cls.ASSIGNMENT_COMPONENT: course.assignment_weight_pct,
+            }
+            present_weight_sum = sum(raw_weights[c] for c in components)
+            if present_weight_sum > 0:
+                avg_score = sum(
+                    components[c] * (raw_weights[c] / present_weight_sum)
+                    for c in components
+                )
+            else:
+                # Present components are all weighted 0 — split evenly instead.
+                avg_score = sum(components.values()) / len(components)
+        else:
+            # No assessments graded yet — use lesson completion as a proxy.
+            avg_score = float(enrollment.progress_percentage)
+
+        letter_grade = _score_to_grade(avg_score)
+        is_passed = avg_score >= 50  # configurable threshold
+
+        application = (
+            CourseApplication.objects
+            .filter(user=student, program=course.program)
+            .first()
+        )
+
+        row_exists = cls.objects.filter(
+            student=student, course=course, session=session, term=term
+        ).exists()
+
+        defaults = {
+            'score': round(avg_score, 2),
+            'grade': letter_grade,
+            'credit_units': course.credit_units,
+            'is_passed': is_passed,
+            'application': application,
+            'lms_course': lms_course,
+        }
+        if not row_exists:
+            # Only stamp recorded_by on first creation — never clobber a
+            # human-recorded grade's ownership on subsequent auto-recomputes.
+            defaults['recorded_by'] = None
+
+        grade, _ = cls.objects.update_or_create(
+            student=student, course=course, session=session, term=term,
+            defaults=defaults,
+        )
+
+        if application:
+            application.award_program_certificate()
+
+        return grade
+
+    @classmethod
+    def publish_results(cls, session, term='', program=None, status='released', by=None):
+        """
+        Bulk-set result_status for every CourseGrade matching (session, term
+        [, program]) — the admin "compile & approve results" action.
+
+        `term` is always an exact match, including `''` (blank) — the
+        results_publish admin page lists one row per distinct (session, term)
+        pair, blank term included as its own row, so "release this row" must
+        only ever touch that exact term value. It must NEVER silently expand
+        to "every term in this session": CourseGrade.term is frequently blank
+        in this dataset, and treating blank as a wildcard would release an
+        entire session's results in one click regardless of what the admin
+        actually selected on the page.
+
+        Returns the number of rows updated. Deliberately a plain `.update()`
+        (no per-row recompute) — publishing is a visibility/approval action,
+        not a re-grading one; scores themselves are unaffected.
+        """
+        if status not in dict(cls.RESULT_STATUS_CHOICES):
+            raise ValueError(f'Invalid result_status: {status!r}')
+
+        qs = cls.objects.filter(session=session, term=term)
+        if program:
+            qs = qs.filter(course__program=program)
+
+        return qs.update(result_status=status)
+
+
+class CourseCarryOver(models.Model):
+    """
+    One row per student per course currently owed as a carry-over.
+    Re-evaluated by the end-of-session progression run each time it
+    executes — cleared automatically once a passing CourseGrade exists,
+    rather than being hooked into every grade-writing code path.
+    """
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carry_overs')
+    course  = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='carry_over_records')
+    first_failed_session = models.ForeignKey(
+        'AcademicSession', on_delete=models.SET_NULL, null=True, related_name='+',
+        help_text="Session in which this course was first failed."
+    )
+    first_failed_term = models.CharField(max_length=20, blank=True)
+    attempts = models.PositiveSmallIntegerField(
+        default=1, help_text="Number of times this course has been attempted and failed."
+    )
+    is_cleared = models.BooleanField(default=False)
+    cleared_session = models.ForeignKey(
+        'AcademicSession', on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+        help_text="Session in which a passing grade finally cleared this carry-over."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['student', 'course']]
+        ordering = ['-updated_at']
+        verbose_name = 'Course Carry-Over'
+        verbose_name_plural = 'Course Carry-Overs'
+        indexes = [
+            models.Index(fields=['student', 'is_cleared']),
+        ]
+
+    def __str__(self):
+        status = 'cleared' if self.is_cleared else f'open (attempt {self.attempts})'
+        return f"{self.student.username} | {self.course.code} | {status}"
+
+    @classmethod
+    def sync_cleared_for_student(cls, student):
+        """
+        Live reconciliation — clears any open carry-over the student
+        already has a released passing grade for, right now, rather than
+        waiting for the next progression batch run to notice.
+
+        Before this existed, `is_cleared` was a stored snapshot only ever
+        updated inside management.progression.apply_progression_decision —
+        so a student could already have a real, released passing grade for
+        a carry-over course and still see it as open/locked on their own
+        registration page (my_courses, register_semester_course) until an
+        admin next happened to run progression for them. The stored flag
+        and the live grade data it's supposed to reflect could silently
+        drift apart with no reconciliation between them.
+
+        Call this from every read path that checks is_cleared before using
+        it. apply_progression_decision now calls this too instead of
+        hand-rolling the same clearing condition a second time.
+
+        Returns the number of rows cleared.
+        """
+        open_recs = list(
+            cls.objects.filter(student=student, is_cleared=False).only('id', 'course_id')
+        )
+        if not open_recs:
+            return 0
+
+        passing_grade_sessions = {
+            g['course_id']: g['session_id']
+            for g in CourseGrade.objects.filter(
+                student=student,
+                course_id__in=[r.course_id for r in open_recs],
+                is_passed=True, result_status='released',
+            ).values('course_id', 'session_id')
+        }
+
+        cleared = 0
+        for rec in open_recs:
+            session_id = passing_grade_sessions.get(rec.course_id)
+            if session_id is not None:
+                cls.objects.filter(pk=rec.pk).update(
+                    is_cleared=True, cleared_session_id=session_id, updated_at=timezone.now(),
+                )
+                cleared += 1
+        return cleared
+
+
+class ProgressionDecisionLog(ImmutableMixin, models.Model):
+    """
+    Immutable audit trail — one row per student per end-of-session
+    progression run. Mirrors ExamStatusLog's ImmutableMixin pattern.
+    """
+    slug = models.SlugField(unique=True, max_length=220)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='progression_logs')
+    session = models.ForeignKey('AcademicSession', on_delete=models.CASCADE, related_name='progression_logs')
+
+    previous_year_of_study = models.PositiveSmallIntegerField()
+    new_year_of_study       = models.PositiveSmallIntegerField()
+    previous_status = models.CharField(max_length=20)
+    new_status      = models.CharField(max_length=20)
+
+    cgpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    core_courses_passed = models.BooleanField(default=False)
+
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='progression_decisions_made')
+    note = models.TextField(blank=True, help_text="Carried-over courses, attempt counts, and other decision context.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Progression Decision Log'
+        verbose_name_plural = 'Progression Decision Logs'
+        indexes = [
+            models.Index(fields=['student', 'session']),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.student.username} | {self.session} | "
+            f"{self.previous_status}→{self.new_status} "
+            f"({self.previous_year_of_study}L→{self.new_year_of_study}L)"
+        )
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = unique_slug(
+                ProgressionDecisionLog,
+                f"pdl-{self.student_id}-{secrets.token_hex(4)}",
+            )
+        super().save(*args, **kwargs)
 
 # =============================================================================
 # EXAM MODULE — append to the bottom of eduweb/models.py

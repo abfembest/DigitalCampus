@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -16,6 +17,8 @@ urlpatterns = [
     path('applications/<int:pk>/make-decision/', views.make_decision, name='make_decision'),
     path('applications/<int:pk>/approve-department/', views.approve_department, name='approve_department'),
     path('applications/<int:pk>/issue-transcript/', views.issue_transcript, name='issue_transcript'),
+
+    path('users/<int:pk>/permissions/', views.user_permissions, name='user_permissions'),
 
     # Faculties
     path('faculties/', views.faculties_list, name='faculties_list'),
@@ -39,6 +42,13 @@ urlpatterns = [
     # Academic Sessions
     path('academic-sessions/', views.academic_sessions_list, name='academic_sessions_list'),
     path('academic-sessions/<int:pk>/set-current/', views.academic_session_set_current, name='academic_session_set_current'),
+    path('academic-sessions/<int:pk>/registration-override/', views.academic_session_registration_override, name='academic_session_registration_override'),
+
+    # Academic Progression / Carry-Over
+    path('progression/', views.academic_progression, name='academic_progression'),
+    path('progression/carry-overs/', views.carry_over_list, name='carry_over_list'),
+    path('progression/results/', views.results_publish, name='results_publish'),
+    path('progression/results/<int:session_id>/', views.results_publish_detail, name='results_publish_detail'),
 
     path('courses/', views.courses_list, name='courses_list'),
     path('exams/<slug:slug>/toggle-active/', views.admin_exam_toggle_active, name='admin_exam_toggle_active'),
@@ -49,18 +59,11 @@ urlpatterns = [
     path('intakes/<int:pk>/edit/', views.intake_edit, name='intake_edit'),
     path('intakes/<int:pk>/delete/', views.intake_delete, name='intake_delete'),
 
-    # Courses (academic)
-    # path('courses/', views.courses, name='courses'),
-    # path('courses/create/', views.course_create, name='course_create'),
-    # path('courses/<int:pk>/', views.course_detail, name='course_detail'),
-    # path('courses/<int:pk>/edit/', views.course_edit, name='course_edit'),
-    # path('courses/<int:pk>/delete/', views.course_delete, name='course_delete'),
-
     # Course categories
     path('categories/', views.course_categories_list, name='course_categories_list'),
-    # path('categories/create/', views.course_category_create, name='course_category_create'),
-    # path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
-    # path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
+    path('categories/create/', views.course_category_create, name='course_category_create'),
+    path('categories/<int:pk>/edit/', views.course_category_edit, name='course_category_edit'),
+    path('categories/<int:pk>/delete/', views.course_category_delete, name='course_category_delete'),
 
     path('lms-courses/', views.lms_courses_list, name='lms_courses_list'),
     path('lms-courses/save/', views.lms_course_save, name='lms_course_save'),
@@ -87,6 +90,7 @@ urlpatterns = [
     path('users/<int:pk>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
     path('users/<int:pk>/change-role/', views.user_change_role, name='user_change_role'),
     path('users/<int:pk>/quick-info/', views.user_quick_info, name='user_quick_info'),
+    path('users/role-assign/', views.role_assign, name='role_assign'),
 
     # System Config
     path('config/', views.system_config_list, name='system_config_list'),
@@ -119,12 +123,9 @@ urlpatterns = [
     path('broadcast/<slug:slug>/send/', views.broadcast_send, name='broadcast_send'),
     path('broadcast/<slug:slug>/delete/', views.broadcast_delete, name='broadcast_delete'),
 
-    # Tickets
-    path('tickets/', views.tickets_list, name='tickets_list'),
-    path('tickets/<int:pk>/', views.ticket_detail, name='ticket_detail'),
-    path('tickets/<int:pk>/reply/', views.ticket_reply, name='ticket_reply'),
-    path('tickets/<int:pk>/change-status/', views.ticket_change_status, name='ticket_change_status'),
-    path('tickets/<int:pk>/assign/', views.ticket_assign, name='ticket_assign'),
+    # Tickets — the real ticket console lives in the `support` app now;
+    # this used to be a thinner, buggier duplicate (support:ticket_list).
+    path('tickets/', RedirectView.as_view(pattern_name='support:ticket_list', permanent=False), name='tickets_list'),
 
     # Contact Messages
     path('contact-messages/', views.contact_messages_list, name='contact_messages_list'),
@@ -180,11 +181,9 @@ urlpatterns = [
     path('transactions/<str:transaction_id>/', views.transaction_detail, name='transaction_detail'),
 
     # Required Payments — pk kept (no natural unique identifier on model)
+    # Collapsed into payments:required_payments_list (see management/views.py) —
+    # this one route stays as a redirect for any existing bookmark/link.
     path('required-payments/', views.required_payments_list, name='required_payments_list'),
-    path('required-payments/create/', views.required_payment_create, name='required_payment_create'),
-    path('required-payments/<int:pk>/edit/', views.required_payment_edit, name='required_payment_edit'),
-    path('required-payments/<int:pk>/delete/', views.required_payment_delete, name='required_payment_delete'),
-    path('required-payments/send-overdue-reminders/', views.send_overdue_payment_reminders, name='send_overdue_payment_reminders'),
 
     # Financial Analytics Dashboard
     path('analytics/financial/', views.financial_analytics, name='financial_analytics'),

@@ -1,11 +1,37 @@
+import uuid
+
 from django import forms
-from django.core.validators import FileExtensionValidator
-from eduweb.models import (
-    LMSCourse, Lesson, LessonSection, Quiz, QuizQuestion,
-    QuizAnswer, Assignment, Announcement
-)
 from django.contrib.auth.models import User
-from eduweb.models import UserProfile, Exam
+from django.core.validators import FileExtensionValidator
+
+from eduweb.models import (
+    Announcement, Assignment, DiscussionReply, Exam, LMSCourse,
+    Lesson, LessonSection, Message, Quiz, QuizAnswer, QuizQuestion,
+    UserProfile, validate_file_size,
+)
+
+
+IMAGE_EXTENSIONS = ('jpg', 'jpeg', 'png', 'webp', 'gif')
+VIDEO_EXTENSIONS = ('mp4', 'webm', 'ogg', 'avi', 'mov')
+DOCUMENT_EXTENSIONS = ('pdf', 'doc', 'docx', 'txt', 'zip')
+
+
+def _validate_upload(file, extensions, max_size_mb=10):
+    """
+    Server-side backstop for upload fields whose templates only hint at
+    allowed types via `accept=` (client-side, trivially bypassed): enforces
+    an extension whitelist and a size cap. No-op if no file was submitted,
+    so it's safe to use on optional fields.
+    """
+    if not file:
+        return file
+    ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
+    if ext not in extensions:
+        raise forms.ValidationError(
+            f'Unsupported file type ".{ext}". Allowed: {", ".join(extensions)}.'
+        )
+    validate_file_size(file, max_size_mb=max_size_mb)
+    return file
 
 
 class CourseForm(forms.ModelForm):
@@ -109,6 +135,22 @@ class CourseForm(forms.ModelForm):
         # # certificate_fee has a model default of 0.00 — never block submission on it
         # self.fields['certificate_fee'].required = False
 
+    def clean_academic_course(self):
+        # The edit template re-submits the existing academic_course as a
+        # hidden, non-editable field once it's set (see course_form.html) —
+        # under normal use the posted value always matches what's already
+        # saved. Enforcing that here server-side closes the gap where a
+        # raw POST could relink an already-provisioned LMSCourse to a
+        # different Course the instructor has no relationship to.
+        new_value = self.cleaned_data.get('academic_course')
+        current_value = getattr(self.instance, 'academic_course_id', None)
+        if current_value and new_value and new_value.pk != current_value:
+            raise forms.ValidationError(
+                'This course is already linked to an academic course and cannot be relinked. '
+                'Contact an administrator if this needs to change.'
+            )
+        return new_value
+
     def clean(self):
         cleaned = super().clean()
         academic_course = cleaned.get('academic_course')
@@ -123,15 +165,17 @@ class CourseForm(forms.ModelForm):
 
         return cleaned
 
+    def clean_thumbnail(self):
+        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS)
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         # Auto-generate a unique course code if the instructor left it blank
         if not instance.code:
-            import uuid as _uuid
-            base = _uuid.uuid4().hex[:8].upper()
+            base = uuid.uuid4().hex[:8].upper()
             candidate = f'LMS-{base}'
             while LMSCourse.objects.filter(code=candidate).exclude(pk=instance.pk).exists():
-                candidate = f'LMS-{_uuid.uuid4().hex[:8].upper()}'
+                candidate = f'LMS-{uuid.uuid4().hex[:8].upper()}'
             instance.code = candidate
         if commit:
             instance.save()
@@ -253,6 +297,12 @@ class LessonForm(forms.ModelForm):
         # Section is required — a lesson must belong to a section to appear correctly
         self.fields['section'].required = True
         self.fields['section'].empty_label = '— Select a section —'
+
+    def clean_video_file(self):
+        return _validate_upload(self.cleaned_data.get('video_file'), VIDEO_EXTENSIONS, max_size_mb=200)
+
+    def clean_file(self):
+        return _validate_upload(self.cleaned_data.get('file'), DOCUMENT_EXTENSIONS, max_size_mb=25)
 
 
 # ==================== QUIZ FORMS ====================
@@ -567,6 +617,9 @@ class InstructorProfileForm(forms.ModelForm):
             raise forms.ValidationError('Email already in use.')
         return email
 
+    def clean_avatar(self):
+        return _validate_upload(self.cleaned_data.get('avatar'), IMAGE_EXTENSIONS)
+
 
 # ==================== SETTINGS FORM ====================
 class InstructorSettingsForm(forms.ModelForm):
@@ -706,9 +759,13 @@ class SupportTicketForm(forms.Form):
         help_text='Upload screenshot or document (Max 5MB)'
     )
 
-from django import forms
-from django.contrib.auth.models import User
-from eduweb.models import Message, DiscussionReply
+    def clean_attachment(self):
+        # FileExtensionValidator on the field already whitelists the extension;
+        # this enforces the "Max 5MB" the help text above already promises.
+        attachment = self.cleaned_data.get('attachment')
+        if attachment:
+            validate_file_size(attachment, max_size_mb=5)
+        return attachment
 
 
 # ==================== MESSAGE FORM ====================
@@ -924,7 +981,12 @@ class ExamForm(forms.ModelForm):
         if start and end and end <= start:
             self.add_error('end_datetime', 'End date/time must be after start date/time.')
         return cleaned
- 
+
+    def clean_question_import_file(self):
+        return _validate_upload(
+            self.cleaned_data.get('question_import_file'), ('docx', 'xlsx'), max_size_mb=15
+        )
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.title = self.cleaned_data.get('title', '')

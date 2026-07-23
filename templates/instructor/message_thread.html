@@ -5,6 +5,8 @@
 
 {% block content %}
 
+<button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
 <!-- Breadcrumb -->
 <nav class="flex items-center space-x-2 text-xs sm:text-sm text-gray-500 mb-5 sm:mb-8 overflow-x-auto whitespace-nowrap">
     <a href="{% url 'instructor:messages_inbox' %}" class="hover:text-primary-600 transition-colors flex-shrink-0">
@@ -147,6 +149,7 @@
     {% endfor %}
 
     <!-- Reply Box -->
+    {% if permissions.instructor_communications.can_create %}
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-5">
         <h3 class="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
             <i class="fas fa-reply mr-1 sm:mr-1.5 text-gray-400"></i>Reply
@@ -163,6 +166,7 @@
             </div>
         </form>
     </div>
+    {% endif %}
 
 </div>
 {% endif %}

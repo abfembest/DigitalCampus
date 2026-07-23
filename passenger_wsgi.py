@@ -4,16 +4,19 @@ import sys
 # ==============================
 # PROJECT ROOT
 # ==============================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(__file__)
 sys.path.insert(0, BASE_DIR)
 
 # ==============================
 # VIRTUALENV SITE-PACKAGES
+# (this replaces "source venv/bin/activate")
 # ==============================
-VENV_SITE_PACKAGES = "/home/miuenecd/virtualenv/theology/DigitalCampus/3.12/lib/python3.12/site-packages"
+VENV_SITE_PACKAGES = (
+    "/home/miuenecd/virtualenv/DigitalCampus/3.12/"
+    "lib/python3.12/site-packages"
+)
 
-if VENV_SITE_PACKAGES not in sys.path:
-    sys.path.insert(0, VENV_SITE_PACKAGES)
+sys.path.insert(0, VENV_SITE_PACKAGES)
 
 # ==============================
 # DJANGO SETTINGS

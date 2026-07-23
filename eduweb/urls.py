@@ -8,8 +8,11 @@ app_name = 'eduweb'
 urlpatterns = [
     path('contact', views.contact, name='contact'),
     path('activities/', views.activities, name='activities'),
+    path('my-profile/', views.profile, name='profile'),
+    path('my-settings/', views.account_settings, name='settings'),
     path('auth/', views.auth_page, name='auth_page'),
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
+    path('account/change-password/', views.force_change_password, name='force_change_password'),
     path('logout/', views.user_logout, name='logout'),
     path('resend-verification/', views.resend_verification, name='resend_verification'),
 
@@ -19,14 +22,14 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('about-us/', views.about, name='about'),
     path('admission/apply/', views.apply, name='apply'),
-    path('admission/course/', views.admission_course, name='admission_course'),
     path('admission/requirements/', views.admission_requirement, name='admission_requirement'),
-    path('admission/detail/', views.detail, name='detail'),
     path('contact/submit/', views.contact_submit, name='contact_submit'),
     path('application_status/', views.application_status, name='application_status'),
 
 
     path('admission-letter/<str:application_id>/', views.admission_letter, name='admission_letter'),
+
+    path('verify-otp/', views.otp_verify, name='otp_verify'),
 
     # Faculty Pages
     path('faculty/<slug:slug>/', views.faculty_detail, name='faculty_detail'),

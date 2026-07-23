@@ -81,15 +81,7 @@
     <link rel="apple-touch-icon"                     href="{% static 'apple-touch-icon.png' %}">
     {% endif %}
 
-    <!-- Preload critical resources -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://unpkg.com">
-
-    <!-- Google Fonts - Inter & Poppins -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&display=swap"
-          rel="stylesheet">
-
+    <!-- Fonts (Inter & Poppins) are bundled into styles.css via @import — see static/src/styles.css -->
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
     <!-- Font override: forces Inter/Poppins directly in the browser without depending on Tailwind compilation.
@@ -128,11 +120,11 @@
         img, video, iframe { max-width: 100%; }
     </style>
 
-    <!-- SweetAlert2 CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SweetAlert2 (vendored) -->
+    <script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>
 
-    <!-- Lucide Icons CDN -->
-    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <!-- Lucide Icons (vendored) -->
+    <script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
 
     <!-- Structured Data -->
     {% block structured_data %}{% endblock %}
@@ -664,7 +656,7 @@
             <div class="border-t border-purple-700 pt-8">
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
                     <p class="text-purple-300 text-sm font-['Inter']">
-                        &copy; {{ site_config.copyright_year|default:"2025" }} {{ site_config.school_name|default:"Melchisedec International University" }} ({{ site_config.school_short_name|default:"MIU" }}). All rights reserved.
+                        &copy; {% now "Y" %} {{ site_config.school_name|default:"Melchisedec International University" }} ({{ site_config.school_short_name|default:"MIU" }}). All rights reserved.
                     </p>
                     <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2 text-purple-300 text-sm font-['Inter']">
                         {% if site_config.phone_primary %}

@@ -1,6 +1,6 @@
 ﻿from django import forms
 from .models import (
-    ContactMessage, CourseApplication, CourseIntake,
+    ContactMessage, CourseApplication,
     ListOfCountry, ApplicationDocument
 )
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -52,12 +52,6 @@ class SignUpForm(UserCreationForm):
         self.fields['password1'].widget.attrs.update({'class': _INPUT, 'placeholder': 'Create a strong password', 'autocomplete': 'new-password'})
         self.fields['password2'].widget.attrs.update({'class': _INPUT, 'placeholder': 'Confirm your password', 'autocomplete': 'new-password'})
 
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        if User.objects.filter(email=email).exists():
-            raise ValidationError('This email address is already registered.')
-        return email
-
     def clean_captcha(self):
         captcha = self.cleaned_data.get('captcha')
         if self.captcha_answer is None:
@@ -68,6 +62,38 @@ class SignUpForm(UserCreationForm):
         except (ValueError, TypeError):
             raise ValidationError('Invalid captcha answer format.')
         return captcha
+    
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1', '')
+        import re
+        errors = []
+        if len(password) < 8:
+            errors.append('At least 8 characters.')
+        if not re.search(r'[A-Z]', password):
+            errors.append('At least one uppercase letter.')
+        if not re.search(r'[a-z]', password):
+            errors.append('At least one lowercase letter.')
+        if not re.search(r'\d', password):
+            errors.append('At least one number.')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            errors.append('At least one special character (!@#$% etc).')
+        if errors:
+            from django.core.exceptions import ValidationError
+            raise ValidationError(errors)
+        return password
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+        if password1 and password2 and password1 != password2:
+            raise ValidationError('Passwords do not match.')
+        return password2
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email already exists.")
+        return email
 
 
 class LoginForm(AuthenticationForm):
@@ -112,6 +138,8 @@ class ContactForm(forms.ModelForm):
             'message': forms.Textarea(attrs={'class': _AREA, 'placeholder': "I'm interested in learning more about...", 'rows': 4}),
         }
 
+
+# ─────────────────────────────────────────────────────────────────────────────
 class DisabledEmptySelect(forms.Select):
     """Renders the blank option as selected+disabled so it acts as a true placeholder."""
     def __init__(self, *args, empty_label="-- Select --", **kwargs):
@@ -125,7 +153,7 @@ class DisabledEmptySelect(forms.Select):
             option['selected'] = True
         return option
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # COURSE APPLICATION FORM  — all model fields included
 # ─────────────────────────────────────────────────────────────────────────────
 class CourseApplicationForm(forms.ModelForm):
@@ -351,13 +379,14 @@ class PasswordResetRequestForm(forms.Form):
     )
 
     def clean_email(self):
-        email = self.cleaned_data.get('email', '').strip().lower()
-        if not User.objects.filter(email=email, is_active=True).exists():
-            # Deliberate vague error — don't reveal if email exists
-            raise ValidationError(
-                'If this email is registered, you will receive a reset link shortly.'
-            )
-        return email
+        # Deliberately does NOT check whether the email exists. It used to,
+        # raising a ValidationError (and so failing form.is_valid()) only
+        # for unregistered emails — which let anyone enumerate real accounts
+        # simply by watching whether the "check your email" success screen
+        # appeared or a field error did. The view (forgot_password) already
+        # does the existence check itself and always renders the same
+        # success screen either way; this form must stay silent on it.
+        return self.cleaned_data.get('email', '').strip().lower()
 
 
 class SetNewPasswordForm(forms.Form):
@@ -378,12 +407,29 @@ class SetNewPasswordForm(forms.Form):
         })
     )
 
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1', '')
+        import re
+        errors = []
+        if len(password) < 8:
+            errors.append('At least 8 characters.')
+        if not re.search(r'[A-Z]', password):
+            errors.append('At least one uppercase letter.')
+        if not re.search(r'[a-z]', password):
+            errors.append('At least one lowercase letter.')
+        if not re.search(r'\d', password):
+            errors.append('At least one number.')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            errors.append('At least one special character (!@#$% etc).')
+        if errors:
+            from django.core.exceptions import ValidationError
+            raise ValidationError(errors)
+        return password
+
     def clean(self):
         cleaned = super().clean()
         p1 = cleaned.get('password1')
         p2 = cleaned.get('password2')
         if p1 and p2 and p1 != p2:
             raise ValidationError({'password2': 'Passwords do not match.'})
-        if p1 and len(p1) < 8:
-            raise ValidationError({'password1': 'Password must be at least 8 characters.'})
         return cleaned

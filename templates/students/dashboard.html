@@ -10,9 +10,6 @@ View your student dashboard, track course progress,
 check assignments, and stay updated with announcements.
 {% endblock %}
 
-{% block extra_head %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-{% endblock %}
 
 {% block content %}
 <div class="max-w-12xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6">
@@ -67,6 +64,35 @@ check assignments, and stay updated with announcements.
         </p>
         {% endif %}
     </header>
+
+    {# ── Progression snapshot ── #}
+    {% if profile.progression_status != 'active' or open_carry_overs %}
+    <div class="mb-4 sm:mb-6 rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center gap-3
+        {% if profile.progression_status == 'withdrawn' %}bg-red-50 border-red-200
+        {% elif profile.progression_status == 'probation' %}bg-orange-50 border-orange-200
+        {% else %}bg-amber-50 border-amber-200{% endif %}">
+        <div class="flex-1">
+            <div class="flex items-center gap-2 text-sm font-semibold
+                {% if profile.progression_status == 'withdrawn' %}text-red-700
+                {% elif profile.progression_status == 'probation' %}text-orange-700
+                {% else %}text-amber-700{% endif %}">
+                <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+                {{ profile.get_progression_status_display }} — {{ profile.current_level }}L
+                {% if cgpa %}<span class="font-normal text-xs opacity-75">· CGPA {{ cgpa }}</span>{% endif %}
+            </div>
+            {% if open_carry_overs %}
+            <p class="text-xs text-gray-600 mt-1">
+                Carry-over course{{ open_carry_overs|length|pluralize }}:
+                {% for co in open_carry_overs %}{{ co.course.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                — register {% if open_carry_overs|length > 1 %}them{% else %}it{% endif %} alongside your current courses.
+            </p>
+            {% endif %}
+        </div>
+        <a href="{% url 'students:my_courses' %}" class="flex-shrink-0 text-xs font-semibold text-primary-600 hover:underline whitespace-nowrap">
+            Go to Course Registration →
+        </a>
+    </div>
+    {% endif %}
 
     <style>
     @keyframes pulse-ring {

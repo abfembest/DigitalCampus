@@ -11,6 +11,9 @@
 {% block content %}
 <div class="max-w-12xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-5 lg:py-6">
 
+              <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
+
   <!-- Breadcrumb (page-level, below topbar) -->
   <nav class="mb-3 sm:mb-4" aria-label="Breadcrumb">
     <ol class="flex items-center flex-wrap gap-x-1.5 gap-y-1 text-xs sm:text-sm"
@@ -66,7 +69,7 @@
     },
     "instructor": {
       "@type": "Person",
-      "name": "{{ course.instructor_name|escapejs }}"
+      "name": "{% if course.instructor %}{{ course.instructor.get_full_name|default:course.instructor.username|escapejs }}{% else %}To be announced{% endif %}"
     }
     {% if course.average_rating %}
     ,"aggregateRating": {
@@ -178,7 +181,7 @@
                         mr-3 flex-shrink-0 overflow-hidden border border-gray-200">
               {% if course.instructor.profile.avatar %}
               <img src="{{ course.instructor.profile.avatar.url }}"
-                   alt="{{ course.instructor_name }}"
+                   alt="{{ course.instructor.get_full_name|default:course.instructor.username }}"
                    itemprop="image"
                    class="w-full h-full object-cover"
                    loading="lazy">
@@ -190,7 +193,7 @@
               <p class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Instructor</p>
               <p class="font-semibold text-sm sm:text-base text-gray-900 truncate"
                  itemprop="name">
-                {{ course.instructor_name }}
+                {% if course.instructor %}{{ course.instructor.get_full_name|default:course.instructor.username }}{% else %}To be announced{% endif %}
               </p>
             </div>
           </div>

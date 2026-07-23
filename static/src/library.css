@@ -1,0 +1,350 @@
+@import "../vendor/fonts/montserrat/montserrat.css";
+@import "../vendor/fonts/source-sans-3/source-sans-3.css";
+@import "../vendor/fonts/outfit/outfit.css";
+
+@import "tailwindcss";
+
+@source "../templates/library/**/*.html";
+
+/* ═══════════════════════════════════════════════════════════════════
+   DESIGN TOKENS  (CSS custom properties — consumed by Tailwind arbitrary
+   values and the handful of rules below that Tailwind can't express)
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  /* Brand */
+  --mb-primary:        #840384;
+  --mb-primary-dark:   #6a0268;
+  --mb-primary-light:  #f5e0ff;
+  --mb-primary-xlight: #fdf4ff;
+  --mb-gold:           #f0b800;
+  --mb-gold-light:     #fff8e1;
+  --mb-gold-dark:      #a37000;
+
+  /* Section backgrounds */
+  --mb-bg-s2:    #fdf8ff;
+  --mb-bg-s4:    #fffbf0;
+  --mb-bg-s5:    #f9f5ff;
+  --mb-bg-footer:#2d0035;
+
+  /* Typography — bold display stack */
+  --mb-font-heading: 'Montserrat', system-ui, sans-serif;
+  --mb-font-body:    'Source Sans 3', system-ui, sans-serif;
+  --mb-font-ui:      'Outfit', system-ui, sans-serif;
+  --mb-text-heading: #1a1a2e;
+  --mb-text-body:    #424242;
+  --mb-text-muted:   #757575;
+
+  /* Cards */
+  --mb-card-bg:           #ffffff;
+  --mb-card-border:       #e8e8e8;
+  --mb-card-radius:       12px;
+  --mb-card-shadow:       0 2px 12px rgba(0,0,0,0.06);
+  --mb-card-shadow-hover: 0 8px 32px rgba(132,3,132,0.12);
+
+  /* Buttons */
+  --mb-btn-radius: 8px;
+
+  /* Divider */
+  --mb-divider-color: #840384;
+  --mb-divider-w:     80px;
+  --mb-divider-h:     3px;
+
+  /* Footer */
+  --mb-footer-max-width: 1400px;
+
+  /* Library-specific */
+  --lib-viewer-height: min(80vh, 800px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TAILWIND THEME  (colour scale used in templates via bg-gospel-* etc.)
+   ═══════════════════════════════════════════════════════════════════ */
+@theme {
+  --color-gospel-50:  #fdf4ff;
+  --color-gospel-100: #f5e0ff;
+  --color-gospel-200: #ebbdff;
+  --color-gospel-300: #d974f8;
+  --color-gospel-400: #c048e8;
+  --color-gospel-500: #a028cc;
+  --color-gospel-600: #840384;
+  --color-gospel-700: #6a0268;
+  --color-gospel-800: #4e014e;
+  --color-gospel-900: #350035;
+
+  --color-gold-100: #fff8e1;
+  --color-gold-200: #ffecb3;
+  --color-gold-300: #ffd54f;
+  --color-gold-400: #ffca28;
+  --color-gold-500: #f0b800;
+  --color-gold-600: #cc9400;
+  --color-gold-700: #a37000;
+
+  --color-neutral-50:  #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #eeeeee;
+  --color-neutral-300: #e0e0e0;
+  --color-neutral-400: #bdbdbd;
+  --color-neutral-500: #9e9e9e;
+  --color-neutral-600: #757575;
+  --color-neutral-700: #616161;
+  --color-neutral-800: #424242;
+  --color-neutral-900: #212121;
+
+  --font-serif: 'Montserrat', system-ui, sans-serif;
+  --font-body:  'Source Sans 3', system-ui, sans-serif;
+  --font-sans:  'Outfit', system-ui, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes mb-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BASE RESETS
+   ═══════════════════════════════════════════════════════════════════ */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    min-width: 250px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  *, *::before, *::after {
+    font-family: var(--mb-font-ui);
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--mb-font-heading);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--mb-text-heading);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    overflow: visible;
+  }
+
+  p, blockquote, li, cite, address {
+    font-family: var(--mb-font-body);
+    font-size: 1.05rem;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+  }
+
+  body {
+    background: #ffffff;
+    color: var(--mb-text-body);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--mb-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  img, video, svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Header scroll-shadow state (toggled by JS) */
+  #mb-header { transition: box-shadow 0.3s ease, background 0.3s ease; }
+  #mb-header.scrolled {
+    box-shadow: 0 2px 20px rgba(0,0,0,0.10);
+    background: rgba(255,255,255,0.98);
+  }
+
+  /* Scroll-reveal */
+  .mb-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22,1,0.36,1);
+  }
+  .mb-reveal.visible { opacity: 1; transform: translateY(0); }
+  .mb-reveal.d1 { transition-delay: 0.10s; }
+  .mb-reveal.d2 { transition-delay: 0.20s; }
+  .mb-reveal.d3 { transition-delay: 0.30s; }
+  .mb-reveal.d4 { transition-delay: 0.40s; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UTILITIES  (only those classes actively used in library templates)
+   ═══════════════════════════════════════════════════════════════════ */
+@layer utilities {
+
+  /* Accessibility */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
+  }
+
+  /* ── Font helpers ── */
+  .mb-font-heading { font-family: var(--mb-font-heading); font-weight: 800; letter-spacing: -0.02em; }
+  .mb-font-body    { font-family: var(--mb-font-body); }
+  .mb-font-ui      { font-family: var(--mb-font-ui); }
+
+  /* ── Container ── */
+  .mb-container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left:  clamp(16px, 5vw, 100px);
+    padding-right: clamp(16px, 5vw, 100px);
+    width: 100%;
+  }
+
+  /* ── Footer container (wider) ── */
+  .mb-footer-container {
+    max-width: var(--mb-footer-max-width);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left:  clamp(16px, 5vw, 100px);
+    padding-right: clamp(16px, 5vw, 100px);
+    width: 100%;
+  }
+
+  /* ── Section backgrounds ── */
+  .mb-bg-s2  { background-color: var(--mb-bg-s2); }
+  .mb-bg-s4  { background-color: var(--mb-bg-s4); }
+  .mb-bg-s5  { background-color: var(--mb-bg-s5); }
+
+  /* ── Divider bar (decorative underline below section headings) ── */
+  .mb-divider {
+    display: block;
+    width: var(--mb-divider-w);
+    height: var(--mb-divider-h);
+    background: var(--mb-divider-color);
+    border-radius: 9999px;
+    margin: 12px 0 0;
+  }
+
+  /* ── Gradient heading text ── */
+  .mb-text-primary {
+    background: linear-gradient(135deg, var(--mb-primary) 0%, #b34ab3 50%, var(--mb-primary-dark) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline;
+    line-height: inherit;
+    padding-bottom: 0.22em;
+    padding-right: 0.06em;
+    background-size: 100% 130%;
+    background-position: center;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  /* ── Generic card ── */
+  .mb-card {
+    background:    var(--mb-card-bg);
+    border:        1px solid var(--mb-card-border);
+    border-radius: var(--mb-card-radius);
+    box-shadow:    var(--mb-card-shadow);
+    transition:    box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .mb-card:hover {
+    box-shadow: var(--mb-card-shadow-hover);
+    transform:  translateY(-2px);
+  }
+
+  /* ── Buttons ── */
+  .mb-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--mb-font-ui); font-size: 0.875rem; font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    padding: 0.7rem 1.6rem;
+    border-radius: var(--mb-btn-radius);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
+    text-decoration: none; white-space: nowrap;
+  }
+  .mb-btn:hover  { transform: translateY(-1px); }
+  .mb-btn:active { transform: translateY(0); }
+
+  .mb-btn-primary { background: var(--mb-primary); color: #fff; border-color: var(--mb-primary); }
+  .mb-btn-primary:hover { background: var(--mb-primary-dark); border-color: var(--mb-primary-dark); }
+
+  .mb-btn-outline { background: transparent; color: var(--mb-primary); border-color: var(--mb-primary); }
+  .mb-btn-outline:hover { background: var(--mb-primary-xlight); }
+
+  .mb-btn-gold { background: var(--mb-gold); color: #1a1a2e; border-color: var(--mb-gold); }
+  .mb-btn-gold:hover { background: #d4a000; border-color: #d4a000; }
+
+  /* ── Badge ── */
+  .mb-badge {
+    display: inline-block;
+    font-family: var(--mb-font-ui); font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 0.2em 0.65em; border-radius: 9999px; line-height: 1.4;
+  }
+  .mb-badge-primary { background: var(--mb-primary-light); color: var(--mb-primary-dark); }
+  .mb-badge-gold    { background: var(--mb-gold-light); color: var(--mb-gold-dark); }
+  .mb-badge-neutral { background: #f5f5f5; color: #616161; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LIBRARY-SPECIFIC  (only 3 rules Tailwind can't express cleanly)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* PDF viewer height — clamp() value can't be used in Tailwind style= */
+.lib-pdf-iframe {
+  width: 100%;
+  height: var(--lib-viewer-height);
+  display: block;
+  border: none;
+}
+
+/* Subcategory tab row — hide scrollbar visually, keep functional */
+.lib-tab-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.lib-tab-scroll::-webkit-scrollbar { display: none; }
+
+/* Line-clamp (Tailwind v3 includes these but v4 may still need explicit) */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FOOTER LOGO SIZING
+   ═══════════════════════════════════════════════════════════════════ */
+.mb-footer-logo-img-el  { height: 88px; width: auto; }
+.mb-footer-top { padding-top: 48px; padding-bottom: 48px; }
+
+@media (max-width: 768px) {
+  .mb-footer-top { padding-top: 40px; padding-bottom: 36px; }
+  .mb-footer-logo-img-el { height: 72px; }
+}
+@media (max-width: 640px) {
+  .mb-footer-top { padding-top: 32px; padding-bottom: 28px; }
+  .mb-footer-logo-img-el { height: 60px; }
+}
+@media (max-width: 480px) {
+  .mb-footer-logo-img-el { height: 52px; }
+}

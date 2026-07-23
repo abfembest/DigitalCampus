@@ -14,7 +14,7 @@ import logging
 import random
 from datetime import datetime
 from decimal import Decimal
-from threading import Thread
+from functools import lru_cache
 
 # ─── Third-party ─────────────────────────────────────────────────────────────
 import stripe
@@ -50,6 +50,7 @@ from .emailservices import (
     send_admission_offer_accepted_email,
     send_document_upload_confirmation,
     send_document_upload_admin_notification,
+    send_otp_email,
     send_password_reset_email,
     send_user_confirmation_email,
     send_verification_email,
@@ -77,13 +78,17 @@ from .models import (
     Course,
     CourseApplication,
     CourseIntake,
+    DEGREE_LEVEL_CHOICES,
     Department,
     Faculty,
     FeePayment,
     ListOfCountry,
     AllRequiredPayments,
+    PaymentGateway,
     Program,
+    SystemConfiguration,
     UserProfile,
+    decrypt_secret,
 )
 
 # ─── Location libs ────────────────────────────────────────────────────────────
@@ -97,10 +102,30 @@ except ImportError:
     GEONAMES_AVAILABLE = False
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Module-level logger & Stripe initialisation
+# Module-level logger & Stripe key resolution
 # ─────────────────────────────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
-stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+def _active_stripe_gateway() -> "PaymentGateway | None":
+    return PaymentGateway.objects.filter(gateway_type='stripe', is_active=True).first()
+
+
+def get_stripe_secret_key() -> str:
+    gw = _active_stripe_gateway()
+    decrypted = decrypt_secret(gw.api_secret) if gw else ''
+    return decrypted or settings.STRIPE_SECRET_KEY
+
+
+def get_stripe_public_key() -> str:
+    gw = _active_stripe_gateway()
+    return (gw.api_key if gw and gw.api_key else settings.STRIPE_PUBLIC_KEY)
+
+
+def get_stripe_webhook_secret() -> str:
+    gw = _active_stripe_gateway()
+    decrypted = decrypt_secret(gw.webhook_secret) if gw else ''
+    return decrypted or settings.STRIPE_WEBHOOK_SECRET
 
 
 # =============================================================================
@@ -138,27 +163,6 @@ def application_status_context(request):
     return {'has_pending_application': has_pending}
 
 
-def redirect_after_login(user):
-    """Return the correct redirect response based on the user's role/status."""
-    if user.is_staff or user.is_superuser:
-        return redirect('management:dashboard')
-
-    accepted = CourseApplication.objects.filter(
-        user=user,
-        status='approved',
-        admission_accepted=True,
-        admission_number__isnull=False,
-        department_approved=True,
-    ).first()
-    if accepted:
-        return redirect('student:dashboard')
-
-    if CourseApplication.objects.filter(user=user).exists():
-        return redirect('eduweb:application_status')
-
-    return redirect('eduweb:index')
-
-
 def generate_captcha():
     """Return a (question_str, answer_int) math captcha pair."""
     num1 = random.randint(1, 10)
@@ -180,24 +184,130 @@ def generate_captcha():
 def verify_email(request, token):
     """Verify a user's email address via the one-time token link."""
     try:
-        profile = UserProfile.objects.get(verification_token=token)
-        user = profile.user
-
-        if not user.is_active:
-            user.is_active = True
-            user.save()
-            profile.email_verified = True
-            profile.save()
-            messages.success(request, 'Your email has been verified! You can now log in.')
-            send_verification_success_email(user)
-        else:
-            messages.info(request, 'Your email is already verified.')
-
-        return redirect('eduweb:auth_page')
-
+        profile = UserProfile.objects.select_related('user').get(verification_token=token)
     except UserProfile.DoesNotExist:
         messages.error(request, 'Invalid verification link.')
         return redirect('eduweb:auth_page')
+
+    user = profile.user
+
+    if user.is_active:
+        messages.info(request, 'Your email is already verified.')
+        return redirect('eduweb:auth_page')
+
+    if not profile.is_verification_token_valid():
+        messages.error(
+            request,
+            'This verification link has expired. Please request a new one below.',
+        )
+        return redirect('eduweb:auth_page')
+
+    user.is_active = True
+    user.save(update_fields=['is_active'])
+    profile.email_verified = True
+    profile.save(update_fields=['email_verified'])
+    messages.success(request, 'Your email has been verified! You can now log in.')
+    send_verification_success_email(user)
+
+    return redirect('eduweb:auth_page')
+
+@login_required(login_url='eduweb:auth_page')
+def force_change_password(request):
+    """
+    AJAX POST — submitted by the force-password modal (force_password_modal.html).
+    Uses PasswordChangeForm so the user must supply their temporary password
+    before setting a new one. Clears must_change_password flag on success.
+    Returns JSON { success, message }.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    from django.contrib.auth.forms import PasswordChangeForm
+
+    form = PasswordChangeForm(request.user, request.POST)
+
+    if form.is_valid():
+        form.save()
+        # Keep the user logged in after password change
+        from django.contrib.auth import update_session_auth_hash
+        update_session_auth_hash(request, form.user)
+
+        profile = request.user.profile
+        profile.must_change_password = False
+        profile.save(update_fields=['must_change_password'])
+
+        # Non-fatal — send confirmation email
+        try:
+            from eduweb.emailservices import send_password_changed_email
+            send_password_changed_email(request.user)
+        except Exception:
+            pass
+
+        return JsonResponse({'success': True, 'message': 'Password updated successfully.'})
+
+    errors = ' '.join(
+        str(e)
+        for field_errors in form.errors.values()
+        for e in field_errors
+    )
+    return JsonResponse({'success': False, 'message': errors}, status=400)
+
+
+def _get_first_permitted_url(user):
+    """
+    Return the first management URL the user has can_view on.
+    Only called for admin role and superusers.
+    Falls back to management:dashboard for superusers (full access).
+    Falls back to eduweb:apply if no module is permitted (misconfigured role).
+    """
+    from eduweb.models import StaffPermissionsMatrix as _SPM
+
+    if user.is_superuser:
+        return reverse('management:dashboard')
+
+    role = getattr(getattr(user, 'profile', None), 'role', None)
+    if not role:
+        return reverse('eduweb:apply')
+
+    # finance has its own portal — always send there
+    if role == 'finance':
+        return reverse('finance:dashboard')
+
+    _MODULE_URL_MAP = [
+        ('dashboard',       'management:dashboard'),
+        ('applications',    'management:applications_list'),
+        ('user_management', 'management:users_list'),
+        ('academics',       'management:faculties_list'),
+        ('lms_courses',     'management:lms_courses_list'),
+        ('exams',           'management:admin_exam_list'),
+        ('enrollments',     'management:enrollments_list'),
+        ('finance',         'management:transactions_list'),
+        ('communications',  'management:broadcast_center'),
+        ('blog',            'management:blog_posts_list'),
+        ('library',         'management:library_items_list'),
+        ('site_content',    'management:site_config_general'),
+        ('security_audit',  'management:audit_logs_list'),
+        ('ticket_management', 'management:ticket_list'),
+    ]
+
+    # Role-level defaults
+    permitted = set(
+        _SPM.objects.filter(role=role, user__isnull=True, can_view=True)
+        .values_list('module', flat=True)
+    )
+    # User-level overrides (can grant or revoke individually)
+    for row in _SPM.objects.filter(user=user):
+        if row.can_view:
+            permitted.add(row.module)
+        else:
+            permitted.discard(row.module)
+
+    for module, url_name in _MODULE_URL_MAP:
+        if module in permitted:
+            return reverse(url_name)
+
+    # No permitted module found — role misconfigured in StaffPermissionsMatrix
+    return reverse('eduweb:apply')
 
 
 def auth_page(request):
@@ -219,11 +329,13 @@ def auth_page(request):
             messages.info(request, 'You are already logged in.')
             role = request.user.profile.role
             if role == 'admin' or request.user.is_superuser:
-                return redirect('management:dashboard')
+                return redirect(_get_first_permitted_url(request.user))
             elif role == 'instructor':
                 return redirect('instructor:dashboard')
             elif role == 'finance':
                 return redirect('finance:dashboard')
+            elif role == 'support':
+                return redirect('support:dashboard')
             else:
                 return redirect('eduweb:apply')
 
@@ -351,34 +463,36 @@ def auth_page(request):
                     profile.active_session_key = ''
                     profile.save(update_fields=['is_logged_in', 'active_session_key'])
 
-            login(request, user)
+            # ── OTP: generate, email, then hold login until verified ──────────
+            otp = str(random.randint(100000, 999999))
+            profile.otp_code       = otp      # encrypted via setter
+            profile.otp_created_at = timezone.now()
+            profile.otp_attempts   = 0
+            profile.save(update_fields=['_otp_code', 'otp_created_at', 'otp_attempts'])
 
-            if request.POST.get('remember_me') == 'on':
-                request.session.set_expiry(1209600)  # 14 days
-            else:
-                request.session.set_expiry(900)      # 15 min — inactivity middleware handles logout
+            if not send_otp_email(user, otp):
+                # Don't claim success and strand the user on a page waiting for
+                # a code that was never sent — send_otp_email already logged
+                # the underlying SMTP error. Sent synchronously (not
+                # backgrounded) so we know for certain before responding —
+                # EMAIL_TIMEOUT bounds the worst case instead of hanging.
+                return _fresh_captcha_error(
+                    'username',
+                    'Could not send your verification code right now. Please try again shortly.',
+                )
 
+            # Store pending user in session — actual login() fires after OTP
+            # Checkbox is named "remember" in auth.html (not "remember_me") —
+            # this was reading the wrong POST key, so "Remember me" silently
+            # never took effect; every login got the short 15-minute session.
+            request.session['otp_user_id']     = user.pk
+            request.session['otp_remember_me'] = request.POST.get('remember') == 'on'
             request.session.pop('captcha_answer', None)
-
-            # Mark user as logged in with this session key
-            profile.is_logged_in = True
-            profile.active_session_key = request.session.session_key
-            profile.save(update_fields=['is_logged_in', 'active_session_key'])
-
-            role = user.profile.role
-            if role == 'admin' or user.is_superuser:
-                redirect_url = 'management:dashboard'
-            elif role == 'instructor':
-                redirect_url = 'instructor:dashboard'
-            elif role == 'finance':
-                redirect_url = 'finance:dashboard'
-            else:
-                redirect_url = 'eduweb:apply'
 
             return JsonResponse({
                 'success': True,
-                'message': 'Login successful!',
-                'redirect_url': reverse(redirect_url),
+                'message': f'A 6-digit code has been sent to {user.email}',
+                'redirect_url': reverse('eduweb:otp_verify'),
             })
 
     # ── GET — render page ─────────────────────────────────────────────────────
@@ -388,6 +502,149 @@ def auth_page(request):
         'captcha_question': captcha_question,
     })
 
+from django.http import JsonResponse as jsonresponse
+
+def otp_verify(request):
+    """
+    intermediate otp verification step.
+    session must contain 'otp_user_id' set by the login flow.
+    """
+    user_id = request.session.get('otp_user_id')
+    if not user_id:
+        return redirect('eduweb:auth_page')
+
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return redirect('eduweb:auth_page')
+
+    # ── resend (GET ?resend=1) ────────────────────────────────────────────────
+    if request.method == 'GET' and request.GET.get('resend') == '1':
+        otp = str(random.randint(100000, 999999))
+        profile = user.profile
+        previous_code, previous_created_at = profile.otp_code, profile.otp_created_at
+        profile.otp_code       = otp      # encrypted via setter
+        profile.otp_created_at = timezone.now()
+        profile.otp_attempts   = 0
+        profile.save(update_fields=['_otp_code', 'otp_created_at', 'otp_attempts'])
+
+        if not send_otp_email(user, otp):
+            # Roll back to the previous code rather than leaving the DB
+            # pointing at one the user was never actually sent.
+            profile.otp_code       = previous_code
+            profile.otp_created_at = previous_created_at
+            profile.save(update_fields=['_otp_code', 'otp_created_at'])
+            return JsonResponse({
+                'success': False,
+                'message': 'Could not send a new code right now. Please try again shortly.',
+            }, status=502)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'new code sent to your email.'
+        })
+
+    # ── POST: validate submitted otp ──────────────────────────────────────────
+    if request.method == 'POST':
+        entered_otp = request.POST.get('otp', '').strip()
+        profile = user.profile
+
+        # rate-limit: max 5 attempts
+        if profile.otp_attempts >= 5:
+            request.session.pop('otp_user_id', None)
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'otp': ['too many failed attempts. please log in again.']
+                },
+                'redirect_login': True,
+            }, status=429)
+
+        # expiry: 10 minutes
+        if not profile.otp_created_at or (
+            timezone.now() - profile.otp_created_at
+        ).total_seconds() > 600:
+            request.session.pop('otp_user_id', None)
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'otp': ['your code has expired. please log in again.']
+                },
+                'redirect_login': True,
+            }, status=400)
+
+        # wrong code  (profile.otp_code decrypts automatically)
+        if entered_otp != profile.otp_code:
+            profile.otp_attempts += 1
+            profile.save(update_fields=['otp_attempts'])
+
+            remaining = 5 - profile.otp_attempts
+
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'otp': [
+                        f'incorrect code. {remaining} attempt(s) remaining.'
+                    ]
+                },
+            }, status=400)
+
+        # ── correct — complete login ──────────────────────────────────────────
+        profile.otp_code = ''             # setter encrypts empty string
+        profile.otp_created_at = None
+        profile.otp_attempts = 0
+
+        login(request, user)
+
+        remember_me = request.session.pop('otp_remember_me', False)
+        request.session.pop('otp_user_id', None)
+
+        if remember_me:
+            request.session.set_expiry(1209600)
+        else:
+            request.session.set_expiry(900)
+
+        profile.is_logged_in = True
+        profile.active_session_key = request.session.session_key
+
+        profile.save(update_fields=[
+            '_otp_code',
+            'otp_created_at',
+            'otp_attempts',
+            'is_logged_in',
+            'active_session_key',
+        ])
+
+        role = user.profile.role
+
+        if role == 'admin' or user.is_superuser:
+            redirect_url = _get_first_permitted_url(user)
+        elif role == 'instructor':
+            redirect_url = reverse('instructor:dashboard')
+        elif role == 'finance':
+            redirect_url = reverse('finance:dashboard')
+        elif role == 'support':
+            redirect_url = reverse('support:dashboard')
+        else:
+            redirect_url = reverse('eduweb:apply')
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Verification Successful!',
+            'redirect_url': redirect_url,
+        })
+
+    # ── GET: render otp page ──────────────────────────────────────────────────
+    email = user.email or ''
+
+    if '@' in email:
+        masked = email[:3] + '****' + email[email.index('@'):]
+    else:
+        masked = email
+
+    return render(request, 'otp_verify.html', {
+        'masked_email': masked,
+    })
 
 def user_logout(request):
     user = request.user
@@ -481,6 +738,41 @@ def reset_password(request, token):
     return render(request, 'reset_password.html', {
         'form': SetNewPasswordForm(), 'token': token,
     })
+
+
+# =============================================================================
+# ERROR HANDLERS
+# =============================================================================
+
+def custom_404(request, exception=None):
+    """
+    handler404 — registered in DigitalCampus/urls.py, used for any request
+    path that doesn't match a URL pattern.
+
+    A logged-in user hitting a stray/broken link (internal or external) is
+    far more likely to want their own dashboard than the public 404 page —
+    so they're redirected straight there, using the same role → dashboard
+    mapping already used by the portal sidebar/breadcrumb's "Home" link
+    (management/base.html). Anonymous visitors still get the normal
+    templates/404.html page.
+    """
+    if request.user.is_authenticated:
+        profile = getattr(request.user, 'profile', None)
+        role = getattr(profile, 'role', None)
+
+        if role == 'student':
+            return redirect('students:dashboard')
+        if role == 'instructor':
+            return redirect('instructor:dashboard')
+        if role == 'finance':
+            return redirect('finance:dashboard')
+        if role == 'support':
+            return redirect('support:dashboard')
+        # admin role, is_staff, is_superuser, or any other/unrecognised
+        # role — same fallback the sidebar's own "Home" link uses.
+        return redirect('management:dashboard')
+
+    return render(request, '404.html', status=404)
 
 
 # =============================================================================
@@ -580,6 +872,81 @@ def activities(request):
     return render(request, 'activities.html')
 
 
+@login_required
+def profile(request):
+    """
+    Central 'My Profile' page shared by every role (student, instructor,
+    finance, admin, support) — one page, one URL, instead of a per-app copy.
+    """
+    from student.forms import ProfileUpdateForm
+
+    user = request.user
+    user_profile = user.profile
+
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=user_profile)
+        if form.is_valid():
+            user.first_name = form.cleaned_data.get('first_name', '')
+            user.last_name = form.cleaned_data.get('last_name', '')
+            user.email = form.cleaned_data.get('email', '')
+            user.save()
+            form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('eduweb:profile')
+    else:
+        form = ProfileUpdateForm(
+            instance=user_profile,
+            initial={'first_name': user.first_name, 'last_name': user.last_name, 'email': user.email},
+        )
+
+    return render(request, 'account/profile.html', {'form': form, 'page_title': 'My Profile'})
+
+
+@login_required
+def account_settings(request):
+    """
+    Central 'Settings' page shared by every role — notification preferences
+    and password change, one page instead of a per-app copy.
+
+    Named account_settings, not settings — a view literally named `settings`
+    shadows the `from django.conf import settings` import for the rest of
+    this module (Python resolves module globals at call time, not def time,
+    so every settings.SOMETHING reference anywhere else in this file —
+    regardless of source position — silently broke once this function
+    existed: Stripe key/webhook-secret lookups included). URL name stays
+    'settings' (see eduweb/urls.py) so `{% url 'eduweb:settings' %}` is
+    unaffected.
+    """
+    from django.contrib.auth import update_session_auth_hash
+    from student.forms import SettingsForm
+    from instructor.forms import PasswordChangeForm
+
+    settings_form = SettingsForm(instance=request.user.profile)
+    password_form = PasswordChangeForm(user=request.user)
+
+    if request.method == 'POST':
+        if 'update_settings' in request.POST:
+            settings_form = SettingsForm(request.POST, instance=request.user.profile)
+            if settings_form.is_valid():
+                settings_form.save()
+                messages.success(request, 'Settings updated successfully!')
+                return redirect('eduweb:settings')
+        elif 'change_password' in request.POST:
+            password_form = PasswordChangeForm(user=request.user, data=request.POST)
+            if password_form.is_valid():
+                request.user.set_password(password_form.cleaned_data['new_password'])
+                request.user.save()
+                update_session_auth_hash(request, request.user)
+                messages.success(request, 'Your password has been changed successfully!')
+                return redirect('eduweb:settings')
+
+    return render(request, 'account/settings.html', {
+        'settings_form': settings_form,
+        'password_form': password_form,
+        'page_title': 'Settings',
+    })
+
+
 @check_for_auth
 def research(request):
     return render(request, 'research.html')
@@ -591,18 +958,44 @@ def campus_life(request):
 
 
 @check_for_auth
-def detail(request):
-    return render(request, 'detail.html')
-
-
-@check_for_auth
-def admission_course(request):
-    return render(request, 'course.html')
-
-
-@check_for_auth
 def admission_requirement(request):
-    return render(request, 'admission_requirement.html')
+    degree_level_labels = dict(DEGREE_LEVEL_CHOICES)
+    featured_intake = (
+        CourseIntake.objects
+        .filter(
+            is_active=True,
+            program__is_active=True,
+            application_deadline__gte=timezone.now().date(),
+        )
+        .select_related('program')
+        .order_by('application_deadline')
+        .first()
+    )
+    active_degree_levels = [
+        degree_level_labels.get(level, level)
+        for level in (
+            Program.objects
+            .filter(is_active=True)
+            .exclude(degree_level='')
+            .order_by('degree_level')
+            .values_list('degree_level', flat=True)
+            .distinct()
+        )
+    ]
+
+    spots_percent = None
+    if featured_intake and featured_intake.available_slots:
+        spots_percent = min(
+            100,
+            round(featured_intake.accepted_count / featured_intake.available_slots * 100),
+        )
+
+    return render(request, 'admission_requirement.html', {
+        'featured_intake': featured_intake,
+        'active_degree_levels': active_degree_levels,
+        'spots_percent': spots_percent,
+        'scholarship_deadline': SystemConfiguration.get_value('admissions_scholarship_deadline'),
+    })
 
 
 @check_for_auth
@@ -696,8 +1089,9 @@ def blog_category(request, slug):
 @check_for_auth
 def contact_submit(request):
     if request.method != 'POST':
-        return redirect('index')
+        return redirect('eduweb:index')
 
+    referer = request.POST.get('next') or request.META.get('HTTP_REFERER', '/')
     # ── CAPTCHA verification ──────────────────────────────────────────────────
     session_answer = request.session.get('contact_captcha_answer')
     user_answer    = request.POST.get('captcha', '').strip()
@@ -706,10 +1100,7 @@ def contact_submit(request):
         new_question, new_answer = generate_captcha()
         request.session['contact_captcha_answer'] = new_answer
         messages.error(request, msg)
-        return render(request, 'contact.html', {
-            'form': ContactForm(request.POST),
-            'captcha_question': new_question,
-        })
+        return redirect(referer)
 
     try:
         if int(user_answer) != int(session_answer):
@@ -737,13 +1128,13 @@ def contact_submit(request):
                 request,
                 'Thank you for contacting us! We have received your message and will get back to you soon.',
             )
-        return redirect('eduweb:contact')
+        return redirect(referer)
 
     # Re-generate captcha on form validation failure too
     new_question, new_answer = generate_captcha()
     request.session['contact_captcha_answer'] = new_answer
     messages.error(request, 'Please correct the errors below.')
-    return render(request, 'contact.html', {'form': form, 'captcha_question': new_question})
+    return redirect(referer)
 
 
 # =============================================================================
@@ -807,6 +1198,10 @@ def program_detail(request, slug):
 
 
 # =============================================================================
+# APPLICATION — FORM
+# =============================================================================
+
+# =============================================================================
 # LOCATION HELPERS  (used only by the apply view)
 # =============================================================================
 
@@ -819,10 +1214,15 @@ EXCLUDED_TERRITORIES = {
     'VG', 'VI', 'WF', 'IM', 'BL',  # IM=Isle of Man, BL=Saint Barthélemy
 }
 
+@lru_cache(maxsize=1)
 def _build_countries_list():
     """
     Returns a list of dicts: {code, name, phone_code, nationality}
     Sorted by name. pycountry → country list; phonenumbers → dial code.
+
+    Cached (pure function, no arguments, static reference data — safe to
+    compute once per process) since the `apply` page was rebuilding this
+    ~200-entry list, phone codes included, from scratch on every single GET.
     
     FILTERS OUT: Territories and dependencies (GG, JE, IM, etc.) to prevent
     duplicate phone codes. Only returns independent sovereign countries.
@@ -892,6 +1292,7 @@ def _get_states(country_code):
         pass
 
     return states
+
 
 # =============================================================================
 # APPLICATION — FORM
@@ -1042,10 +1443,15 @@ def apply(request):
                             file_size=f.size,
                         )
 
-                def _send_emails():
-                    send_application_confirmation_email(application)
-                    send_application_admin_notification(application)
-                Thread(target=_send_emails, daemon=True).start()
+                # Was backgrounded via a daemon Thread — matches the same
+                # failure mode already hit in production for other emails on
+                # Passenger/shared hosting (the worker process can be
+                # recycled before a detached thread finishes sending, so the
+                # email silently never goes out). Sent synchronously instead,
+                # same as every other email in this file; EMAIL_TIMEOUT (see
+                # settings.py) bounds the worst-case wait to 15s.
+                send_application_confirmation_email(application)
+                send_application_admin_notification(application)
 
                 if is_ajax:
                     return JsonResponse({
@@ -1060,11 +1466,15 @@ def apply(request):
                 )
                 return redirect('eduweb:application_status')
 
-            except Exception as exc:
+            except Exception:
+                # Log the real exception server-side; never echo it back —
+                # it can leak internal details (field/table names, file
+                # paths) and previously showed up verbatim in the UI.
                 logger.exception("apply view — error saving application")
+                generic_message = 'Something went wrong while saving your application. Please try again.'
                 if is_ajax:
-                    return JsonResponse({'success': False, 'error': str(exc)}, status=500)
-                messages.error(request, f'An error occurred: {exc}')
+                    return JsonResponse({'success': False, 'error': generic_message}, status=500)
+                messages.error(request, generic_message)
 
         else:
             if is_ajax:
@@ -1184,36 +1594,45 @@ def accept_admission(request, application_id):
         messages.error(request, 'Application not found or you do not have permission to access it.')
         return redirect('eduweb:application_status')
 
-    if application.status != 'approved':
-        messages.error(request, 'Only approved applications can be accepted.')
-        return redirect('eduweb:application_status')
+    # Re-check under a row lock inside the transaction — the plain checks
+    # above are just a fast-path for the common case; without this, two
+    # near-simultaneous submits (double-click, double tab) could both pass
+    # the admission_accepted check above and both issue an admission number.
+    with transaction.atomic():
+        application = CourseApplication.objects.select_for_update().get(pk=application.pk)
 
-    if application.admission_accepted:
-        messages.info(request, 'You have already accepted this admission offer.')
-        return redirect('eduweb:application_status')
+        if application.status != 'approved':
+            messages.error(request, 'Only approved applications can be accepted.')
+            return redirect('eduweb:application_status')
 
-    if application.accept_admission():
-        application.issue_admission_number()
+        if application.admission_accepted:
+            messages.info(request, 'You have already accepted this admission offer.')
+            return redirect('eduweb:application_status')
 
-        # Sync academic session and entry level to the student's UserProfile
-        try:
-            profile = application.user.profile
-            if application.academic_session:
-                profile.admission_session = application.academic_session
-            if application.entry_level:
-                # entry_level is e.g. 100, 200 ... convert to year_of_study (1, 2 ...)
-                profile.year_of_study = application.entry_level // 100
-            if application.program:
-                profile.program    = application.program
-                profile.department = application.program.department
-                profile.faculty    = application.program.department.faculty
-            profile.save(update_fields=[
-                'admission_session', 'year_of_study',
-                'program', 'department', 'faculty',
-            ])
-        except Exception:
-            logger.exception("accept_admission — failed to sync profile fields")
+        accepted = application.accept_admission()
+        if accepted:
+            application.issue_admission_number()
 
+            # Sync academic session and entry level to the student's UserProfile
+            try:
+                profile = application.user.profile
+                if application.academic_session:
+                    profile.admission_session = application.academic_session
+                if application.entry_level:
+                    # entry_level is e.g. 100, 200 ... convert to year_of_study (1, 2 ...)
+                    profile.year_of_study = application.entry_level // 100
+                if application.program:
+                    profile.program    = application.program
+                    profile.department = application.program.department
+                    profile.faculty    = application.program.department.faculty
+                profile.save(update_fields=[
+                    'admission_session', 'year_of_study',
+                    'program', 'department', 'faculty',
+                ])
+            except Exception:
+                logger.exception("accept_admission — failed to sync profile fields")
+
+    if accepted:
         send_admission_offer_accepted_email(application)
         messages.success(
             request,
@@ -1384,11 +1803,12 @@ def save_application_draft(request):
 
         return redirect('eduweb:application_status')
 
-    except Exception as exc:
+    except Exception:
         logger.exception("save_application_draft failed")
+        generic_message = 'Could not save your application right now. Please try again.'
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
-        messages.error(request, f'Could not save your application: {exc}')
+            return JsonResponse({'success': False, 'error': generic_message}, status=400)
+        messages.error(request, generic_message)
         return redirect('eduweb:apply')
 
 
@@ -1501,7 +1921,7 @@ def get_payment_summary(request, application_id=None, student_fee_id=None):
                 'purpose':          fee.purpose,
                 'description':      fee.purpose,
                 'student_fee_id':   fee.id,
-                'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+                'stripe_public_key': get_stripe_public_key(),
             }
 
         elif application_id:
@@ -1514,7 +1934,7 @@ def get_payment_summary(request, application_id=None, student_fee_id=None):
                 'amount':           float(application.program.application_fee) if application.program else 0,
                 'currency':         'USD',
                 'description':      'Application Processing Fee',
-                'stripe_public_key': settings.STRIPE_PUBLIC_KEY,
+                'stripe_public_key': get_stripe_public_key(),
             }
 
         else:
@@ -1534,7 +1954,7 @@ def get_student_fee_summary(request, fee_pk):
     """Return JSON summary for a single student fee (used by the payment modal)."""
     try:
         fee = AllRequiredPayments.objects.select_related(
-            'faculty', 'department'
+            'program__department__faculty'
         ).get(pk=fee_pk, is_active=True)
     except AllRequiredPayments.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Fee not found'}, status=404)
@@ -1545,8 +1965,8 @@ def get_student_fee_summary(request, fee_pk):
             'full_name':         request.user.get_full_name() or request.user.username,
             'purpose':           fee.purpose,
             'amount':            float(fee.amount),
-            'currency':          'NGN',
-            'stripe_public_key': settings.STRIPE_PUBLISHABLE_KEY,
+            'currency':          fee.currency,
+            'stripe_public_key': get_stripe_public_key(),
         },
     })
 
@@ -1556,6 +1976,7 @@ def get_student_fee_summary(request, fee_pk):
 def create_payment_intent(request):
     """Create a Stripe PaymentIntent for either a student fee or an application."""
     try:
+        stripe.api_key = get_stripe_secret_key()
         payload = request.body.decode('utf-8')
         if not payload:
             return JsonResponse({'success': False, 'error': 'Empty request body'}, status=400)
@@ -1639,8 +2060,22 @@ def create_payment_intent(request):
 
                 intent = stripe.PaymentIntent.create(
                     amount=amount_pence,
-                    currency='gbp',
+                    # Was 'gbp' while the ApplicationPayment row below always
+                    # recorded currency='USD' — a real mismatch between what
+                    # Stripe actually charged and what got recorded, which
+                    # would corrupt any future refund/reporting math. Aligned
+                    # to 'usd' to match both the recorded currency and the
+                    # student-fee branch above.
+                    currency='usd',
                     metadata={
+                        # Required for the Stripe webhook (stripe_webhook
+                        # below) to recognize this as an application payment —
+                        # without it, 'type' is never set and the webhook's
+                        # `elif payment_type == 'application':` branch can
+                        # never match, so a payment confirmed by Stripe but
+                        # never confirmed by confirm_payment (e.g. the user
+                        # closes the tab right after paying) has no fallback.
+                        'type':           'application',
                         'application_id': application.application_id,
                         'user_id':        request.user.id,
                     },
@@ -1682,6 +2117,7 @@ def confirm_payment(request):
         return JsonResponse({'success': False, 'error': 'Missing payment_intent_id'}, status=400)
 
     try:
+        stripe.api_key = get_stripe_secret_key()
         intent = stripe.PaymentIntent.retrieve(payment_intent_id)
     except stripe.error.StripeError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
@@ -1848,7 +2284,7 @@ def stripe_webhook(request):
 
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+            payload, sig_header, get_stripe_webhook_secret()
         )
     except Exception as e:
         logger.warning("Stripe webhook verification failed: %s", e)

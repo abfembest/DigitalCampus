@@ -5,6 +5,9 @@
 
 {% block content %}
 <div class="max-w-12xl mx-auto px-4 sm:px-6 lg:px-8">
+                <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
+                
     <!-- Page Header -->
     <div class="mb-8">
         <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
@@ -80,7 +83,7 @@
                             {% endif %}
                         </div>
                         <p class="text-gray-600 mb-2">
-                            {{ enrollment.course.instructor_name|default:"MIU Staff" }}
+                            {{ enrollment.course.instructor.get_full_name|default:"MIU Staff" }}
                         </p>
                         <div class="flex flex-wrap items-center gap-4 text-xs md:text-sm text-gray-500">
                             <span>
@@ -96,8 +99,8 @@
                         </div>
                     </div>
                     
-                    {% if enrollment.course.lessons.first %}
-                    <a href="{% url 'students:lesson_view' enrollment.course.slug enrollment.course.lessons.first.slug %}" 
+                    {% if enrollment.first_lesson %}
+                    <a href="{% url 'students:lesson_view' enrollment.course.slug enrollment.first_lesson.slug %}"
                        class="px-4 md:px-6 py-2 md:py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm md:text-base whitespace-nowrap text-center">
                         Continue Learning
                     </a>
@@ -125,7 +128,7 @@
                     </div>
                     <div class="flex items-center justify-between mt-2 text-xs md:text-sm text-gray-600">
                         <span>
-                            {{ enrollment.completed_lessons }} of {{ enrollment.course.lessons.count }} lessons completed
+                            {{ enrollment.completed_lessons }} of {{ enrollment.total_lesson_count }} lessons completed
                         </span>
                         {% if enrollment.progress_percentage == 100 %}
                         <span class="text-green-600 font-semibold">

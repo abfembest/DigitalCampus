@@ -8,14 +8,17 @@
   {# ── Header ── #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div>
+      <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 font-heading">LMS Courses</h1>
       <p class="text-gray-500 text-sm mt-0.5">Manage LMS delivery — sessions, instructors &amp; content</p>
     </div>
+    {% if permissions.lms_courses.can_create %}
     <button onclick="openCreateModal()"
             class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700
                    text-white text-sm font-semibold rounded-lg shadow transition-all whitespace-nowrap self-start sm:self-auto">
       <i class="fas fa-plus"></i> New LMS Course
     </button>
+    {% endif %}
   </div>
 
   {# ── Stat Cards ── #}
@@ -174,9 +177,13 @@
             <td class="px-4 py-3">
               <div class="flex items-center justify-end gap-1">
                 <button onclick="openDetailModal({{ course.pk }})" class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="View"><i class="fas fa-eye text-xs"></i></button>
+                {% if permissions.lms_courses.can_edit %}
                 <button onclick="openEditModal({{ course.pk }})" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Edit"><i class="fas fa-edit text-xs"></i></button>
+                {% endif %}
+                {% if permissions.lms_courses.can_delete %}
                 <button onclick="openDeleteModal({{ course.pk }},'{{ course.title|escapejs }}',{{ course.total_enrollments }},{{ course.lesson_count }})"
                         class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><i class="fas fa-trash text-xs"></i></button>
+                {% endif %}
               </div>
             </td>
           </tr>
@@ -186,9 +193,11 @@
               <i class="fas fa-book-open text-4xl opacity-30"></i>
               <p class="font-medium text-gray-500">No LMS courses found</p>
               <p class="text-sm">Try adjusting your filters or create a new LMS course.</p>
+              {% if permissions.lms_courses.can_create %}
               <button onclick="openCreateModal()" class="mt-2 px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-all">
                 <i class="fas fa-plus mr-1"></i> Create First Course
               </button>
+              {% endif %}
             </div>
           </td></tr>
           {% endfor %}
@@ -665,9 +674,11 @@
 
       <div class="flex justify-between items-center px-5 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
         <button onclick="closeModal('detailModal')" class="px-5 py-2 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Close</button>
+        {% if permissions.lms_courses.can_edit %}
         <button id="detailEditBtn" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all">
           <i class="fas fa-edit mr-1.5"></i> Edit
         </button>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -998,10 +1009,14 @@ function openEditModal(pk) {
     wireDatalist('edit-instr-search', 'edit-instr-pk', 'dl-instructors');
   })
   .catch(() => {
+    // No standalone full-page editor exists for LMS courses — the modal is
+    // the only edit surface (see lms_course_detail's own docstring). A link
+    // to '.../<pk>/edit/' 404s since that route doesn't exist; point back
+    // at the list instead, where the edit modal can be retried.
     loading.innerHTML = `
       <div class="text-center py-6">
         <i class="fas fa-exclamation-circle text-red-400 text-2xl mb-2"></i>
-        <p class="text-sm text-red-500">Failed to load course. <a href="/management/lms-courses/${pk}/edit/" class="underline">Open full-page editor</a></p>
+        <p class="text-sm text-red-500">Failed to load course details. Please close this dialog and try again.</p>
       </div>`;
   });
 }
@@ -1060,7 +1075,8 @@ function openDetailModal(pk) {
       vidWrap.classList.remove('hidden');
     } else { vidWrap.classList.add('hidden'); }
 
-    document.getElementById('detailEditBtn').onclick = () => { closeModal('detailModal'); openEditModal(pk); };
+    const detailEditBtn = document.getElementById('detailEditBtn');
+    if (detailEditBtn) { detailEditBtn.onclick = () => { closeModal('detailModal'); openEditModal(pk); }; }
 
     loading.classList.add('hidden');
     body.classList.remove('hidden');

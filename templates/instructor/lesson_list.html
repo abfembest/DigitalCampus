@@ -5,6 +5,8 @@
 {% block content %}
 <div class="max-w-12xl mx-auto px-2 sm:px-0">
 
+    <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
     <!-- Breadcrumb -->
     <nav class="flex mb-4 sm:mb-6 overflow-x-auto" aria-label="Breadcrumb">
         <ol class="inline-flex items-center whitespace-nowrap text-xs sm:text-sm space-x-1">
@@ -26,6 +28,7 @@
                    class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-50 border-2 border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-100 transition-all">
                     <i class="fas fa-lightbulb mr-2"></i>Quick Tips
                 </button>
+                {% if permissions.instructor_courses.can_create %}
                 <a href="{% url 'instructor:section_create' course.slug %}"
                    class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-white border-2 border-primary-600 text-primary-600 text-sm font-medium rounded-lg hover:bg-primary-50 transition-all">
                     <i class="fas fa-folder-plus mr-2"></i>Add Section
@@ -34,6 +37,7 @@
                    class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
                     <i class="fas fa-plus-circle mr-2"></i>Add Lesson
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -109,14 +113,18 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
+                        {% if permissions.instructor_courses.can_edit %}
                         <a href="{% url 'instructor:section_edit' course.slug section.id %}"
                            class="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm">
                             <i class="fas fa-edit mr-1 sm:mr-2"></i>Edit
                         </a>
+                        {% endif %}
+                        {% if permissions.instructor_courses.can_delete %}
                         <a href="#" onclick="confirmDelete('section', {{ section.id }}, '{{ section.title|escapejs }}'); return false;"
                            class="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors text-xs sm:text-sm">
                             <i class="fas fa-trash mr-1 sm:mr-2"></i>Delete
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -150,10 +158,12 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 flex-wrap">
+                            {% if permissions.instructor_courses.can_edit %}
                             <a href="{% url 'instructor:lesson_edit' course.slug lesson.slug %}"
                                class="inline-flex items-center px-2.5 sm:px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-xs sm:text-sm font-medium">
                                 <i class="fas fa-edit mr-1"></i>Edit
                             </a>
+                            {% endif %}
                             {% if lesson.lesson_type == 'quiz' %}
                             <a href="{% url 'instructor:quiz_list' course.slug lesson.slug %}"
                                class="inline-flex items-center px-2.5 sm:px-3 py-1.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-xs sm:text-sm font-medium">
@@ -166,10 +176,12 @@
                                 <i class="fas fa-tasks mr-1"></i>Assignments
                             </a>
                             {% endif %}
+                            {% if permissions.instructor_courses.can_delete %}
                             <a href="#" onclick="confirmDelete('lesson', '{{ lesson.slug }}', '{{ lesson.title|escapejs }}'); return false;"
                                class="inline-flex items-center px-2.5 sm:px-3 py-1.5 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-xs sm:text-sm font-medium">
                                 <i class="fas fa-trash mr-1"></i>Delete
                             </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -178,10 +190,12 @@
             {% else %}
             <div class="p-6 sm:p-8 text-center">
                 <p class="text-xs sm:text-sm text-gray-400 mb-3">No lessons in this section yet.</p>
+                {% if permissions.instructor_courses.can_create %}
                 <a href="{% url 'instructor:lesson_create' course.slug %}"
                    class="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-xs sm:text-sm font-medium">
                     <i class="fas fa-plus-circle mr-1.5"></i>Add Lesson
                 </a>
+                {% endif %}
             </div>
             {% endif %}
 
@@ -198,6 +212,7 @@
             <h3 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">No Course Content Yet</h3>
             <p class="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Start building your course by creating sections to organize your lessons, or add lessons directly.</p>
             <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
+                {% if permissions.instructor_courses.can_create %}
                 <a href="{% url 'instructor:section_create' course.slug %}"
                    class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-white border-2 border-primary-600 text-primary-600 text-sm font-medium rounded-lg hover:bg-primary-50 transition-all">
                     <i class="fas fa-folder-plus mr-2"></i>Create First Section
@@ -206,6 +221,7 @@
                    class="inline-flex items-center justify-center px-4 sm:px-6 py-2.5 sm:py-3 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
                     <i class="fas fa-plus-circle mr-2"></i>Add First Lesson
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>

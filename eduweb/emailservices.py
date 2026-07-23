@@ -1,13 +1,113 @@
 import logging
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives, send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail, get_connection
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 
-from .models import SiteConfig
+from .models import SiteConfig, SystemConfiguration, decrypt_secret
 
 logger = logging.getLogger(__name__)
+
+
+def _get_category_connection(category):
+    """category: 'default' or 'admissions'. SMTP host/port are shared between both
+    accounts (stored under 'email_smtp_host'/'email_smtp_port'); username/password/
+    from-identity are per-account. Returns (connection, from_header), or (None, None)
+    if this account's username isn't configured in the DB yet."""
+    prefix = 'email_' if category == 'default' else f'email_{category}_'
+    keys = SystemConfiguration.get_values([
+        'email_smtp_host', 'email_smtp_port',
+        f'{prefix}smtp_username', f'{prefix}smtp_password',
+        f'{prefix}from_name', f'{prefix}from_email',
+    ])
+
+    host = keys.get('email_smtp_host')
+    username = keys.get(f'{prefix}smtp_username')
+    if not host or not username:
+        return None, None
+
+    connection = get_connection(
+        backend=settings.EMAIL_BACKEND,
+        host=host,
+        port=int(keys.get('email_smtp_port') or settings.EMAIL_PORT),
+        username=username,
+        password=decrypt_secret(keys.get(f'{prefix}smtp_password', '')),
+        use_tls=settings.EMAIL_USE_TLS,
+        use_ssl=settings.EMAIL_USE_SSL,
+        timeout=settings.EMAIL_TIMEOUT,
+    )
+    from_name = keys.get(f'{prefix}from_name')
+    from_email = keys.get(f'{prefix}from_email') or username
+    return connection, (f'{from_name} <{from_email}>' if from_name else from_email)
+
+
+def _resolve_sender(category):
+    """Returns (connection, from_email) for a mail category, falling back
+    admissions -> default -> settings.DEFAULT_FROM_EMAIL/.env connection."""
+    connection, from_email = _get_category_connection(category)
+    if connection is None and category != 'default':
+        connection, from_email = _get_category_connection('default')
+    return connection, from_email or settings.DEFAULT_FROM_EMAIL
+
+
+def send_test_email(account, to_email):
+    """Send a minimal test email using the resolved connection for `account`
+    ('default' or 'admissions') — lets the email-config admin page confirm an
+    account actually sends mail, without needing to trigger a real signup/
+    reset/application flow. Does the same admissions -> default -> .env
+    fallback as real sends, and reports whether that fallback was used so the
+    admin isn't misled into thinking the admissions account itself is working.
+
+    Returns (success: bool, detail: str, used_fallback: bool, diagnostics: dict).
+    On success, `detail` is the from-address the email was actually sent from;
+    on failure, it's the error message. `diagnostics` reports the actual
+    host/port/username the connection authenticated with (read back off the
+    connection object itself, not re-derived), so a caller can tell whether
+    the DB values for this account were really picked up — this matters
+    because some SMTP hosts (common on shared cPanel hosting) silently rewrite
+    the message's From header to match the authenticated mailbox, which looks
+    identical to "fell back to the wrong account" unless you can see what
+    username actually authenticated.
+    """
+    used_fallback = False
+    diagnostics = {}
+    try:
+        connection, from_email = _get_category_connection(account)
+        if connection is None:
+            if account != 'default':
+                connection, from_email = _get_category_connection('default')
+                used_fallback = connection is not None
+            if connection is None:
+                # No DB override for this account (or its fallback) — fall back
+                # to the plain settings.EMAIL_*/.env connection, same as a bare
+                # django.core.mail.send_mail() call would use.
+                connection = get_connection(timeout=settings.EMAIL_TIMEOUT)
+                from_email = settings.DEFAULT_FROM_EMAIL
+
+        diagnostics = {
+            'host': getattr(connection, 'host', None),
+            'port': getattr(connection, 'port', None),
+            'username': getattr(connection, 'username', None),
+        }
+
+        account_label = 'Admissions' if account == 'admissions' else 'Default'
+        email = EmailMultiAlternatives(
+            subject=f'MIU Test Email — {account_label} Account',
+            body=(
+                f"This is a test email confirming the {account_label.lower()} "
+                f"account can send outbound mail.\n\nSent from: {from_email}\n"
+                f"Authenticated as: {diagnostics['username']}"
+            ),
+            from_email=from_email,
+            to=[to_email],
+            connection=connection,
+        )
+        email.send(fail_silently=False)
+        return True, from_email, used_fallback, diagnostics
+    except Exception as e:
+        logger.error("Test email failed for account=%s: %s", account, e, exc_info=True)
+        return False, str(e), used_fallback, diagnostics
 
 
 def _site():
@@ -177,11 +277,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -298,11 +400,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -416,11 +520,13 @@ def send_application_confirmation_email(application):
             f"Best regards,\nThe {site.school_short_name} Admissions Team"
         )
 
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -486,8 +592,7 @@ def send_application_admin_notification(application):
                 </p>
                 <p>
                     <strong>Intake:</strong>
-                    {application.intake.get_intake_period_display()}
-                    {application.intake.year}
+                    {f"{application.intake.get_intake_period_display()} {application.intake.year}" if application.intake else "Not yet assigned"}
                 </p>
                 <p>
                     <strong>Study Mode:</strong>
@@ -502,11 +607,13 @@ def send_application_admin_notification(application):
         </html>
         """
 
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=f"New application from {application.get_full_name()}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[contact],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -655,11 +762,13 @@ Best regards,
 The {site.school_short_name} Admissions Team
         """
 
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -841,11 +950,13 @@ def send_document_upload_admin_notification(application, documents):
             f"for application {application.application_id}"
         )
 
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[contact],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -950,11 +1061,13 @@ Submitted at: {contact_message.created_at.strftime('%Y-%m-%d %H:%M:%S')}
         </html>
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[contact],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1054,11 +1167,13 @@ The {site.school_short_name} Admissions Team
         </html>
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[contact_message.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1327,11 +1442,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1475,11 +1592,13 @@ Best regards,
 The {site.school_short_name} Admissions Team
         """
  
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1648,11 +1767,13 @@ Best regards,
 The {site.school_short_name} Admissions Team
         """
  
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[application.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1983,11 +2104,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -1996,6 +2119,107 @@ The {site.school_short_name} Team
     except Exception as e:
         logger.error(
             "Assignment graded email failed for %s: %s",
+            user.email, e, exc_info=True,
+        )
+        return False
+
+
+def send_course_enrollment_email(user, course):
+    """
+    Sent when an instructor manually enrolls a student in an LMS course
+    (the "send welcome email" checkbox on the Enroll Student form).
+
+    Trigger: Call after Enrollment.objects.create(...) in
+             instructor.views.enroll_student, when the instructor opted in.
+    Recipients: Student
+    """
+    try:
+        site = _site()
+        contact = _contact_email(site)
+
+        subject = f'Welcome to {course.title} — {site.school_short_name}'
+
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                body       {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container  {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header    {{ background: linear-gradient(135deg, #840384 0%, #a855f7 100%);
+                              color: white; padding: 30px; text-align: center;
+                              border-radius: 10px 10px 0 0; }}
+                .content   {{ background: #f9fafb; padding: 30px;
+                              border-radius: 0 0 10px 10px; }}
+                .course-box {{ background: #DBEAFE; padding: 15px;
+                              border-left: 4px solid #3B82F6;
+                              margin: 20px 0; border-radius: 5px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎓 You're Enrolled!</h1>
+                </div>
+                <div class="content">
+                    <p>Dear <strong>{user.get_full_name() or user.username}</strong>,</p>
+                    <p>
+                        You have been enrolled in a new course on the {site.school_short_name}
+                        learning portal.
+                    </p>
+                    <div class="course-box">
+                        <strong>Course:</strong> {course.title}<br>
+                        {f'<strong>Code:</strong> {course.code}<br>' if course.code else ''}
+                    </div>
+                    <p>
+                        Log in to your student portal to start learning right away.
+                    </p>
+                    <p style="font-size:13px; color:#666;">
+                        Questions? Contact us at
+                        <a href="mailto:{contact}">{contact}</a>.
+                    </p>
+                    <p>
+                        Best regards,<br>
+                        <strong>The {site.school_short_name} Team</strong>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+Welcome to {course.title} — {site.school_name}
+
+Dear {user.get_full_name() or user.username},
+
+You have been enrolled in a new course on the {site.school_short_name} learning portal.
+
+Course: {course.title}
+{f'Code: {course.code}' if course.code else ''}
+
+Log in to your student portal to start learning right away.
+
+Questions? Contact us at {contact}
+
+Best regards,
+The {site.school_short_name} Team
+        """
+
+        connection, from_email = _resolve_sender('default')
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=from_email,
+            to=[user.email],
+            connection=connection,
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        return True
+
+    except Exception as e:
+        logger.error(
+            "Course enrollment email failed for %s: %s",
             user.email, e, exc_info=True,
         )
         return False
@@ -2088,11 +2312,13 @@ Best regards,
 The {site.school_short_name} Team
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[recipient.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2195,11 +2421,13 @@ Best regards,
 The {site.school_short_name} Team
         """
         
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2310,11 +2538,13 @@ Best regards,
 The {site.school_short_name} Team
         """
         
+        connection, from_email = _resolve_sender('admissions')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2428,11 +2658,13 @@ Best regards,
 The {site.school_short_name} Team
         """
         
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2543,11 +2775,13 @@ Best regards,
 The {site.school_short_name} Team
         """
         
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
@@ -2676,11 +2910,13 @@ def send_admin_created_user_email(request, user, raw_password):
         </div>
         """
 
+        connection, from_email = _resolve_sender('default')
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_body,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@portal.edu'),
+            from_email=from_email,
             to=[user.email],
+            connection=connection,
         )
         msg.attach_alternative(html_body, 'text/html')
         msg.send(fail_silently=False)
@@ -2691,4 +2927,125 @@ def send_admin_created_user_email(request, user, raw_password):
             "Admin-created user email failed for %s: %s", user.email, e,
             exc_info=True,
         )
+        return False
+
+
+def send_otp_email(user, otp_code):
+    """Send a 6-digit OTP to the user for login verification."""
+    subject = "Your Login Verification Code"
+    html_message = f"""
+    <div style="font-family: Inter, sans-serif; max-width: 480px; margin: 0 auto; 
+                background: #fff; border-radius: 12px; overflow: hidden; 
+                box-shadow: 0 4px 24px rgba(132,3,132,0.12);">
+        <div style="background: linear-gradient(135deg, #840384 0%, #a855f7 100%); 
+                    padding: 32px; text-align: center;">
+            <h1 style="color: #fff; margin: 0; font-size: 22px; font-weight: 700;">
+                Login Verification
+            </h1>
+        </div>
+        <div style="padding: 32px; text-align: center;">
+            <p style="color: #374151; font-size: 15px; margin-bottom: 24px;">
+                Hi <strong>{user.first_name or user.username}</strong>, use the code below to complete your sign in.
+                It expires in <strong>10 minutes</strong>.
+            </p>
+            <div style="background: linear-gradient(135deg, #f5f3ff, #faf5ff);
+                        border: 2px dashed #a855f7; border-radius: 12px;
+                        padding: 24px; display: inline-block; margin-bottom: 24px;">
+                <span style="font-size: 40px; font-weight: 800; letter-spacing: 12px; 
+                             color: #840384;">{otp_code}</span>
+            </div>
+            <p style="color: #6b7280; font-size: 13px;">
+                If you didn't request this, you can safely ignore this email.
+            </p>
+        </div>
+    </div>
+    """
+    try:
+        connection, from_email = _resolve_sender('default')
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=f"Your login verification code is: {otp_code}. It expires in 10 minutes.",
+            from_email=from_email,
+            to=[user.email],
+            connection=connection,
+        )
+        msg.attach_alternative(html_message, "text/html")
+        msg.send(fail_silently=False)
+        return True
+    except Exception as e:
+        logger.error("OTP email failed for %s: %s", user.email, e)
+        return False
+
+def send_password_changed_email(user):
+    """
+    Triggered after a user successfully changes their temporary password
+    via the force-change-password modal.
+    """
+    from django.utils import timezone
+
+    try:
+        site = SiteConfig.get()
+        school_name = site.school_name
+    except Exception:
+        school_name = 'Portal'
+
+    full_name = user.get_full_name() or user.username
+    changed_at = timezone.localtime(timezone.now()).strftime('%d %b %Y, %I:%M %p')
+
+    subject = f'Password Changed Successfully — {school_name}'
+
+    text_body = (
+        f'Hi {full_name},\n\n'
+        f'Your password was changed successfully on {changed_at}.\n\n'
+        f'You can now log in with your new password.\n\n'
+        f'If you did not make this change, please contact support immediately.\n\n'
+        f'— {school_name}'
+    )
+
+    html_body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <div style="background:#16a34a;padding:28px 32px;text-align:center;">
+            <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;">{school_name}</h1>
+        </div>
+        <div style="padding:32px;">
+            <h2 style="font-size:18px;color:#111827;margin:0 0 8px;">Password Changed ✓</h2>
+            <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Hi {full_name},</p>
+            <p style="color:#374151;font-size:14px;line-height:1.6;margin:0 0 16px;">
+                Your password was changed successfully on <strong>{changed_at}</strong>.
+                You can now log in to the portal using your new password.
+            </p>
+            <table role="presentation" width="100%" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin:0 0 24px;">
+                <tr>
+                    <td style="padding:14px 16px;">
+                        <span style="font-size:13px;color:#15803d;">
+                            ✓ &nbsp;Your account is secure and active.
+                        </span>
+                    </td>
+                </tr>
+            </table>
+            <table role="presentation" width="100%" style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;margin:0 0 24px;">
+                <tr>
+                    <td style="padding:14px 16px;">
+                        <span style="font-size:13px;color:#dc2626;">
+                            ⚠ &nbsp;If you did not make this change, contact support immediately.
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+            <p style="color:#9ca3af;font-size:12px;margin:0;">
+                © {school_name}. This is an automated security notification.
+            </p>
+        </div>
+    </div>
+    """
+
+    try:
+        connection, from_email = _resolve_sender('default')
+        msg = EmailMultiAlternatives(subject, text_body, from_email, [user.email], connection=connection)
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send()
+        return True
+    except Exception:
         return False

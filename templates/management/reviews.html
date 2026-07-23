@@ -5,6 +5,7 @@
 <div class="max-w-full">
 
   <div class="mb-6">
+    <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
     <h1 class="text-2xl font-bold text-gray-800">Reviews</h1>
     <p class="text-sm text-gray-500 mt-0.5">Manage course reviews and ratings</p>
   </div>
@@ -108,6 +109,7 @@
               </td>
 
               <td class="px-4 py-3 text-right whitespace-nowrap">
+                {% if permissions.enrollments.can_edit %}
                 <button type="button"
                         class="btn-edit inline-flex items-center gap-1 px-2.5 py-1.5 text-xs
                                font-medium text-primary-600 hover:bg-primary-50 rounded-lg
@@ -124,6 +126,8 @@
                   <i class="fas fa-pen-to-square" aria-hidden="true"></i>
                   <span class="hidden sm:inline">Edit</span>
                 </button>
+                {% endif %}
+                {% if permissions.enrollments.can_delete %}
                 <form method="post"
                       action="{% url 'management:review_delete' review.pk %}"
                       class="inline"
@@ -138,6 +142,7 @@
                     <span class="hidden sm:inline">Delete</span>
                   </button>
                 </form>
+                {% endif %}
               </td>
 
             </tr>
@@ -183,6 +188,7 @@
 
     </div>
 
+    {% if permissions.enrollments.can_create or permissions.enrollments.can_edit %}
     <div class="w-full lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-4">
       <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
 
@@ -310,6 +316,7 @@
         </form>
       </div>
     </div>
+    {% endif %}
 
   </div>
 </div>
@@ -334,6 +341,7 @@
 
   /* Resolve datalist text input → hidden id on change */
   function wireDatalist(textInput, hiddenInput, datalistId) {
+    if (!textInput || !hiddenInput) return;
     textInput.addEventListener('change', function () {
       var list = document.getElementById(datalistId);
       var val  = textInput.value.trim();
@@ -392,7 +400,8 @@
     });
   });
 
-  document.getElementById('btn-reset').addEventListener('click', resetForm);
+  var resetBtn = document.getElementById('btn-reset');
+  if (resetBtn) { resetBtn.addEventListener('click', resetForm); }
 
 }());
 </script>

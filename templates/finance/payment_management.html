@@ -3,6 +3,8 @@
 
 {% block title %}Payment Management — Finance Portal{% endblock %}
 {% block meta_description %}Manage and track all application and fee payment transactions{% endblock %}
+{% block breadcrumb %}Finance › Payments{% endblock %}
+{% block breadcrumb_title %}Payment Management{% endblock %}
 
 {% block content %}
 
@@ -402,7 +404,7 @@
                 </td>
 
                 <td class="px-3 sm:px-4 py-3 sm:py-3.5 text-right">
-                  <a href="{% url 'finance:payment_detail' p.payment_reference %}"
+                  <a href="{% url 'payments:payment_detail' p.payment_reference %}"
                      class="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5
                             text-xs font-medium text-indigo-600 bg-indigo-50
                             rounded-lg hover:bg-indigo-100 focus:outline-none
@@ -640,7 +642,7 @@
                 </td>
 
                 <td class="px-3 sm:px-4 py-3 sm:py-3.5 text-right">
-                  <a href="{% url 'finance:payment_detail' p.payment_reference %}"
+                  <a href="{% url 'payments:payment_detail' p.payment_reference %}"
                      class="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5
                             text-xs font-medium text-emerald-600 bg-emerald-50
                             rounded-lg hover:bg-emerald-100 focus:outline-none
@@ -724,7 +726,7 @@
 {# AlpineJS — guard against double-load #}
 {% if not alpine_loaded %}
 <script defer
-        src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        src="{% static 'vendor/alpinejs/cdn.min.js' %}"></script>
 {% endif %}
 
 <style>

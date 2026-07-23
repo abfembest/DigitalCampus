@@ -6,6 +6,9 @@
 {% block content %}
 <div class="max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
 
+                <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
+
     <!-- Page Header -->
     <header class="mb-4 sm:mb-6 lg:mb-8">
         <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
@@ -93,7 +96,7 @@
                             </span>
                             {% endif %}
                         {% else %}
-                            {% if assignment.is_overdue %}
+                            {% if assignment.overdue_status %}
                             <span class="flex-shrink-0 inline-flex items-center gap-1 px-2 sm:px-3 py-0.5 sm:py-1
                                          bg-red-100 text-red-700 rounded-full text-xs font-semibold whitespace-nowrap">
                                 <i class="fas fa-exclamation-circle" aria-hidden="true"></i>Overdue
@@ -130,7 +133,7 @@
 
                     <!-- Due date + score meta -->
                     <div class="flex flex-wrap items-center gap-3 sm:gap-5 text-xs sm:text-sm">
-                        <span class="flex items-center gap-1.5 {% if assignment.is_overdue %}text-red-600 font-medium{% else %}text-gray-500{% endif %}">
+                        <span class="flex items-center gap-1.5 {% if assignment.overdue_status %}text-red-600 font-medium{% else %}text-gray-500{% endif %}">
                             <i class="fas fa-calendar-alt flex-shrink-0" aria-hidden="true"></i>
                             Due: {{ assignment.due_date|date:"M d, Y" }}
                         </span>

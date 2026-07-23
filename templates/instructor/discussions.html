@@ -6,6 +6,8 @@
 {% block content %}
 <div class="px-2 sm:px-0">
 
+    <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
+
 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
     <div>
         <nav class="flex items-center flex-wrap gap-1 text-xs sm:text-sm text-gray-500 mb-1.5 sm:mb-2">
@@ -53,6 +55,7 @@
 
                 <!-- Action Buttons -->
                 <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 flex-wrap">
+                    {% if permissions.instructor_communications.can_edit %}
                     <form method="post" action="{% url 'instructor:discussion_toggle_pin' course.slug d.slug %}">
                         {% csrf_token %}
                         <button type="submit" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-colors {% if d.is_pinned %}bg-primary-100 text-primary-700 hover:bg-primary-200{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
@@ -65,6 +68,7 @@
                             <i class="fas fa-{% if d.is_locked %}unlock{% else %}lock{% endif %} mr-1"></i>{% if d.is_locked %}Unlock{% else %}Lock{% endif %}
                         </button>
                     </form>
+                    {% endif %}
                     <a href="{% url 'instructor:discussion_detail' course.slug d.slug %}" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors">
                         <i class="fas fa-arrow-right mr-1"></i>Open
                     </a>

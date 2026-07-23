@@ -726,7 +726,7 @@
 {# AlpineJS — guard against double-load #}
 {% if not alpine_loaded %}
 <script defer
-        src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        src="{% static 'vendor/alpinejs/cdn.min.js' %}"></script>
 {% endif %}
 
 <style>

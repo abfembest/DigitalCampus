@@ -4,7 +4,7 @@
 {% block title %}Manage — {{ course.title }}{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<link href="{% static 'vendor/select2/select2.min.css' %}" rel="stylesheet"/>
 <style>
 /* ── CSS Variables ─────────────────────────────────────────────── */
 :root {
@@ -1777,7 +1777,7 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
 <form id="deleteSectionForm" method="POST" class="hidden">{% csrf_token %}</form>
 <form id="deleteLessonForm" method="POST" class="hidden">{% csrf_token %}</form>
 
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{% static 'vendor/select2/select2.min.js' %}"></script>
 
 {% endblock %}
 

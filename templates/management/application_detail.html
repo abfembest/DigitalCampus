@@ -723,9 +723,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="{% static 'vendor/pdfjs/pdf.min.js' %}"></script>
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '{% static "vendor/pdfjs/pdf.worker.min.js" %}';
 
 /* ── Accept / Reject panels ── */
 function showAcceptPanel() {

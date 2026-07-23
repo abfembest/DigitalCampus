@@ -31,13 +31,10 @@
   <link rel="icon" href="{{ site_config.favicon.url }}" type="image/x-icon">
   {% endif %}
 
-  {# Fonts — preconnect first for speed #}
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  {# Fonts (Playfair Display, Crimson Pro, Outfit) are bundled into library.css via @import — see static/src/library.css #}
 
-  {# Main compiled CSS (Tailwind + melbac tokens) #}
-  <link rel="stylesheet" href="{% static 'css/melbac.css' %}">
+  {# Main compiled CSS (Tailwind + library design tokens) #}
+  <link rel="stylesheet" href="{% static 'css/library.css' %}">
 
   {% block extra_head %}{% endblock %}
 </head>

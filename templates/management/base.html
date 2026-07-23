@@ -30,39 +30,34 @@
         .font-heading, h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', system-ui, -apple-system, sans-serif; }
     </style>
 
-    <!-- Preconnect for performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts (Inter & Poppins) are bundled into styles.css via @import — see static/src/styles.css -->
 
     <!-- Tailwind CSS - Local build (compiled from src/styles.css) -->
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font Awesome (vendored) -->
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js (vendored) -->
+    <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
 
-    <!-- DataTables CSS & JS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+    <!-- DataTables CSS & JS (vendored) -->
+    <link rel="stylesheet" href="{% static 'vendor/datatables/jquery.dataTables.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/datatables/buttons/buttons.dataTables.min.css' %}">
+    <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables/buttons/dataTables.buttons.min.js' %}"></script>
+    <script src="{% static 'vendor/jszip/jszip.min.js' %}"></script>
+    <script src="{% static 'vendor/pdfmake/pdfmake.min.js' %}"></script>
+    <script src="{% static 'vendor/pdfmake/vfs_fonts.js' %}"></script>
+    <script src="{% static 'vendor/datatables/buttons/buttons.html5.min.js' %}"></script>
+    <script src="{% static 'vendor/datatables/buttons/buttons.print.min.js' %}"></script>
 
-    <!-- SweetAlert2 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+    <!-- SweetAlert2 (vendored) -->
+    <link rel="stylesheet" href="{% static 'vendor/sweetalert2/sweetalert2.min.css' %}">
+    <script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>
 
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
 
     <style>
         /* ==================== MANAGEMENT DASHBOARD COLOR OVERRIDE ==================== */
@@ -469,7 +464,7 @@
                 <!-- Navigation Menu - Scrollable -->
                 <nav class="flex-1 overflow-y-auto py-4 px-3" role="navigation" aria-label="Main navigation">
 
-                    {% if request.user.is_superuser or request.user.is_staff or permissions.user_management.can_view or permissions.academics.can_view or permissions.lms_courses.can_view or permissions.applications.can_view or permissions.exams.can_view or permissions.enrollments.can_view or permissions.finance.can_view or permissions.communications.can_view or permissions.blog.can_view or permissions.library.can_view or permissions.site_content.can_view or permissions.security_audit.can_view or permissions.support_config.can_view or permissions.academic_progression.can_view %}
+                    {% if request.user.is_superuser or request.user.is_staff or permissions.user_management.can_view or permissions.academics.can_view or permissions.lms_courses.can_view or permissions.applications.can_view or permissions.exams.can_view or permissions.enrollments.can_view or permissions.finance.can_view or permissions.communications.can_view or permissions.blog.can_view or permissions.library.can_view or permissions.site_content.can_view or permissions.security_audit.can_view or permissions.support_config.can_view or permissions.academic_progression.can_view or permissions.role_permissions.can_view %}
                     {% comment %}
                         Gate is "does this user have can_view on ANY module
                         that belongs to this portal" rather than a role check
@@ -497,7 +492,7 @@
                     {% endif %}
 
                     <!-- 2. User Management -->
-                    {% if permissions.user_management.can_view %}
+                    {% if permissions.user_management.can_view or permissions.role_permissions.can_view %}
                     <div class="border-t border-white/10 my-3"></div>
                     <div class="sidebar-section-label py-1 px-4 text-base uppercase font-bold text-white/50 tracking-widest">User Management</div>
                     <div class="mb-1">
@@ -509,6 +504,7 @@
                             <i class="fas fa-chevron-down menu-arrow transition-transform {% if 'users' in request.path %}rotate-180{% endif %}" aria-hidden="true"></i>
                         </button>
                         <div id="userManagementMenu" class="mt-1 space-y-1 {% if 'users' not in request.path %}hidden{% endif %} bg-white/5 rounded-lg py-2 px-2 border-l-2 border-white/20">
+                            {% if permissions.user_management.can_view %}
                             <a href="{% url 'management:users_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'users_list' and not request.GET.role %}bg-white/20{% endif %}">
                                 <i class="fas fa-list mr-2" aria-hidden="true"></i>All Users
@@ -529,9 +525,12 @@
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.GET.role == 'finance' %}bg-white/20{% endif %}">
                                 <i class="fas fa-dollar-sign mr-2" aria-hidden="true"></i>Finance Staff
                             </a>
+                            {% endif %}
+                            {% if permissions.role_permissions.can_view %}
                             <a href="{% url 'management:role_assign' %}" class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if request.resolver_match.url_name == 'role_assign' %}bg-white/20{% endif %}">
                                 <i class="fas fa-user-shield mr-2"></i>Roles & Permissions
                             </a>
+                            {% endif %}
                             {% if permissions.user_management.can_create %}
                             <div class="border-t border-white/10 my-1"></div>
                             <a href="{% url 'management:users_list' %}?open_modal=create"

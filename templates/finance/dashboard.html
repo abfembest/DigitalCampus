@@ -8,9 +8,8 @@
 {% block breadcrumb_title %}Finance Dashboard{% endblock %}
 
 {% block extra_css %}
-<!-- DataTables CSS -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<!-- DataTables core CSS is already loaded by management/base.html; only the Responsive extension is needed here -->
+<link rel="stylesheet" href="{% static 'vendor/datatables/responsive/responsive.dataTables.min.css' %}">
 <style>
     /* ── DataTables overrides ───────────────────────────── */
     .dataTables_wrapper .dataTables_filter input {
@@ -844,11 +843,8 @@
 
 
 {% block extra_js %}
-<!-- jQuery (required by DataTables) -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- DataTables JS -->
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<!-- jQuery and DataTables core are already loaded by management/base.html; only the Responsive extension is needed here -->
+<script src="{% static 'vendor/datatables/responsive/dataTables.responsive.min.js' %}"></script>
 
 <script>
 // ── Currency symbol (passed from Django context) ──────────────────────────

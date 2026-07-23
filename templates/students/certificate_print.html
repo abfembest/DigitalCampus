@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,58 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificate — {{ cert.display_title }}</title>
 
-    <!-- Fonts: Poppins (headings) + Inter (body) matching base.html -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
-
-    <!-- Font Awesome (matching base.html) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Tailwind CDN (standalone for this page — no sidebar/nav needed) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'cinzel':    ['Cinzel', 'serif'],
-                        'cormorant': ['Cormorant Garamond', 'Georgia', 'serif'],
-                        'poppins':   ['Poppins', 'system-ui', 'sans-serif'],
-                        'inter':     ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        gold: {
-                            50:  '#fffdf0',
-                            100: '#fef9d7',
-                            200: '#fef0a0',
-                            300: '#fde165',
-                            400: '#f9c930',
-                            500: '#d4af37',
-                            600: '#b7962e',
-                            700: '#967a20',
-                            800: '#7a6010',
-                            900: '#5c470a',
-                        },
-                        parchment: '#fdf8ef',
-                    },
-                    animation: {
-                        'fade-in':    'fadeIn 0.8s ease forwards',
-                        'slide-up':   'slideUp 0.6s ease forwards',
-                        'shimmer':    'shimmer 3s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        fadeIn:  { from: { opacity: '0' },              to: { opacity: '1' } },
-                        slideUp: { from: { opacity: '0', transform: 'translateY(20px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
-                        shimmer: {
-                            '0%, 100%': { opacity: '0.6' },
-                            '50%':      { opacity: '1' },
-                        },
-                    },
-                }
-            }
-        }
-    </script>
+    <!-- Fonts (Cinzel, Inter, Poppins, Cormorant Garamond), Font Awesome, and the gold/parchment
+         palette are bundled into certificate-print.css — see static/src/certificate-print.css -->
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/certificate-print.css' %}">
 
     <style>
         /* ─── Base reset ──────────────────────────────────────────────── */

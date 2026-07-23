@@ -7,45 +7,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MIU – Modern International University</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS + this page's miu.* color/gradient theme are bundled into
+         blank-page.css — see static/src/blank-page.css -->
+    <link rel="stylesheet" href="{% static 'css/blank-page.css' %}">
 
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/home.css' %}">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
 
     {% block style %} {% endblock %}
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        miu: {
-                            primary: "#0F2A44",
-                            secondary: "#1D4ED8",
-                            accent: "#FACC15",
-                            light: "#F0F7FF",
-                            gradientStart: "#0F2A44",
-                            gradientEnd: "#1D4ED8"
-                        }
-                    },
-                    fontFamily: {
-                        'serif': ['Georgia', 'Times New Roman', 'serif'],
-                    },
-                    backgroundImage: {
-                        'gradient-miu': 'linear-gradient(135deg, #0F2A44 0%, #1D4ED8 100%)',
-                        'gradient-light': 'linear-gradient(135deg, #F0F7FF 0%, #E6F0FF 100%)',
-                        'gradient-card-1': 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)',
-                        'gradient-card-2': 'linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%)',
-                        'gradient-card-3': 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
-                        'gradient-card-hover': 'linear-gradient(135deg, #FFECB3 0%, #FFE082 100%)',
-                        'gradient-mobile': 'linear-gradient(135deg, #0F2A44 0%, #1E40AF 50%, #3B82F6 100%)'
-                    }
-                }
-            }
-        }
-    </script>
 
 </head>
 

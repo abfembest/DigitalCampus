@@ -697,7 +697,7 @@
             <div class="border-t border-purple-700 pt-8">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
                     <p class="text-purple-300 text-sm font-['Inter']">
-                        &copy; {{ site_config.copyright_year|default:"2025" }} {{ site_config.school_name|default:"Melchisedec International University" }} ({{ site_config.school_short_name|default:"MIU" }}). All rights reserved.
+                        &copy; {% now "Y" %} {{ site_config.school_name|default:"Melchisedec International University" }} ({{ site_config.school_short_name|default:"MIU" }}). All rights reserved.
                     </p>
                     <div class="flex flex-wrap items-center justify-center gap-2 text-purple-300 text-sm font-['Inter']">
                         {% if site_config.phone_primary %}

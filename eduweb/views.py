@@ -812,6 +812,13 @@ def about(request):
     from .models import InstitutionMember, SiteConfig, SiteHistoryMilestone, InstitutionPartner
     partners_qs = InstitutionPartner.objects.filter(is_active=True)
     return render(request, 'about.html', {
+        'default_core_values': [
+            'Sound Biblical Foundation',
+            'Personal Relationship with the Lord Jesus',
+            'Non-Denominational Service to the Christian Family',
+            'Free & Accessible Ministerial Training',
+            'End-time Readiness & Gospel Excellence',
+        ],
         'faculties': Faculty.objects.filter(is_active=True).order_by('name'),
         'admin_board_members': (
             InstitutionMember.objects.filter(member_type='admin_board', is_active=True)

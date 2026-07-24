@@ -223,3 +223,19 @@ OTP email failed for abfembest@gmail.com: Connection unexpectedly closed: timed 
   import pkg_resources
 /home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/pycountry/__init__.py:10: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
   import pkg_resources
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno
+io.UnsupportedOperation: fileno

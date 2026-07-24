@@ -80,8 +80,12 @@ def _load_permissions(user) -> dict:
     }
 
     # Superuser bypass — full access on every known module, unconditionally.
+    # Must use the canonical MODULE_CHOICES list, not whichever modules
+    # happen to already have a StaffPermissionsMatrix row: a module with
+    # zero rows would otherwise be silently dropped from this dict, hiding
+    # its sidebar section even from superusers.
     if user.is_superuser:
-        modules = StaffPermissionsMatrix.objects.values_list('module', flat=True).distinct()
+        modules = [m[0] for m in StaffPermissionsMatrix.MODULE_CHOICES]
         return {m: full.copy() for m in modules}
 
     # Initialize all known modules with False permissions

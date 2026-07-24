@@ -1153,7 +1153,13 @@ class Faculty(models.Model):
     # Media
     hero_image = models.ImageField(upload_to='faculties/heroes/', blank=True, null=True)
     about_image = models.ImageField(upload_to='faculties/about/', blank=True, null=True)
-    
+
+    # Gallery (carousel on faculty_detail page) — optional, up to 3 images + 1 video
+    gallery_image_1 = models.ImageField(upload_to='faculties/gallery/images/', blank=True, null=True, help_text="Gallery image 1 (max 3MB)")
+    gallery_image_2 = models.ImageField(upload_to='faculties/gallery/images/', blank=True, null=True, help_text="Gallery image 2 (max 3MB)")
+    gallery_image_3 = models.ImageField(upload_to='faculties/gallery/images/', blank=True, null=True, help_text="Gallery image 3 (max 3MB)")
+    gallery_video = models.FileField(upload_to='faculties/gallery/videos/', blank=True, null=True, help_text="Gallery video (shown first in carousel if present)")
+
     # Statistics
     student_count = models.IntegerField(default=0, help_text="Number of students")
     placement_rate = models.IntegerField(default=0, help_text="Career placement rate (0-100)")
@@ -1414,6 +1420,12 @@ class Program(models.Model):
         null=True,
         help_text="Hero/banner image for the program detail page"
     )
+
+    # Gallery (carousel on program_detail page) — optional, up to 3 images + 1 video
+    gallery_image_1 = models.ImageField(upload_to='programs/gallery/images/', blank=True, null=True, help_text="Gallery image 1 (max 3MB)")
+    gallery_image_2 = models.ImageField(upload_to='programs/gallery/images/', blank=True, null=True, help_text="Gallery image 2 (max 3MB)")
+    gallery_image_3 = models.ImageField(upload_to='programs/gallery/images/', blank=True, null=True, help_text="Gallery image 3 (max 3MB)")
+    gallery_video = models.FileField(upload_to='programs/gallery/videos/', blank=True, null=True, help_text="Gallery video (shown first in carousel if present)")
 
     # ── SEO ────────────────────────────────────────────────────────────────────
     meta_description = models.CharField(

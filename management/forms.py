@@ -58,6 +58,7 @@ def _clean_code_field(code):
 
 IMAGE_EXTENSIONS = ('jpg', 'jpeg', 'png', 'webp', 'gif')
 DOCUMENT_EXTENSIONS = ('pdf', 'jpg', 'jpeg', 'png')
+VIDEO_EXTENSIONS = ('mp4', 'webm', 'ogg', 'mov')
 
 
 def _validate_upload(file, extensions, max_size_mb=10):
@@ -159,6 +160,7 @@ class FacultyForm(forms.ModelForm):
             'tagline', 'description', 'mission', 'vision',
             'student_count', 'placement_rate', 'partner_count', 'international_faculty',
             'accreditation', 'hero_image', 'about_image',
+            'gallery_image_1', 'gallery_image_2', 'gallery_image_3', 'gallery_video',
             'meta_description', 'meta_keywords',
             'is_active', 'display_order'
         ]
@@ -237,6 +239,22 @@ class FacultyForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'accept': 'image/*'
             }),
+            'gallery_image_1': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-1'
+            }),
+            'gallery_image_2': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-2'
+            }),
+            'gallery_image_3': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-3'
+            }),
+            'gallery_video': forms.FileInput(attrs={
+                'class': 'gallery-video-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'video/*', 'data-preview-target': 'gallery-preview-video'
+            }),
             'meta_description': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'placeholder': 'SEO description (160 characters max)', 'maxlength': 160
@@ -272,6 +290,18 @@ class FacultyForm(forms.ModelForm):
 
     def clean_about_image(self):
         return _validate_upload(self.cleaned_data.get('about_image'), IMAGE_EXTENSIONS)
+
+    def clean_gallery_image_1(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_1'), IMAGE_EXTENSIONS, max_size_mb=3)
+
+    def clean_gallery_image_2(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_2'), IMAGE_EXTENSIONS, max_size_mb=3)
+
+    def clean_gallery_image_3(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_3'), IMAGE_EXTENSIONS, max_size_mb=3)
+
+    def clean_gallery_video(self):
+        return _validate_upload(self.cleaned_data.get('gallery_video'), VIDEO_EXTENSIONS, max_size_mb=50)
 
     def clean_special_features_text(self):
         text = self.cleaned_data.get('special_features_text', '').strip()
@@ -1455,7 +1485,8 @@ class ProgramForm(forms.ModelForm):
             'application_fee', 'tuition_fee', 'avg_starting_salary',
             'job_placement_rate',
             'is_active', 'is_featured', 'display_order',
-            'hero_image', 'meta_description', 'meta_keywords',
+            'hero_image', 'gallery_image_1', 'gallery_image_2', 'gallery_image_3', 'gallery_video',
+            'meta_description', 'meta_keywords',
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -1534,6 +1565,22 @@ class ProgramForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'accept': 'image/*'
             }),
+            'gallery_image_1': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-1'
+            }),
+            'gallery_image_2': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-2'
+            }),
+            'gallery_image_3': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-3'
+            }),
+            'gallery_video': forms.FileInput(attrs={
+                'class': 'gallery-video-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'video/*', 'data-preview-target': 'gallery-preview-video'
+            }),
             'meta_description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none',
                 'rows': '2',
@@ -1556,6 +1603,18 @@ class ProgramForm(forms.ModelForm):
 
     def clean_code(self):
         return _clean_code_field(self.cleaned_data.get('code', ''))
+
+    def clean_gallery_image_1(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_1'), IMAGE_EXTENSIONS, max_size_mb=3)
+
+    def clean_gallery_image_2(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_2'), IMAGE_EXTENSIONS, max_size_mb=3)
+
+    def clean_gallery_image_3(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_3'), IMAGE_EXTENSIONS, max_size_mb=3)
+
+    def clean_gallery_video(self):
+        return _validate_upload(self.cleaned_data.get('gallery_video'), VIDEO_EXTENSIONS, max_size_mb=50)
 
     def save(self, commit=True):
         program = super().save(commit=False)

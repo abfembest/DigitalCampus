@@ -288,6 +288,55 @@
           {{ form.hero_image }}
           <p class="text-xs text-gray-500 mt-1">Recommended size: 1200x400px</p>
         </div>
+
+        <div class="border-t border-gray-100 pt-5">
+          <p class="text-sm font-medium text-gray-700 mb-0.5">Gallery Images &amp; Video</p>
+          <p class="text-xs text-gray-500 mb-3">Optional. Up to 3 images (max 3MB each) and 1 video — shown in a gallery carousel on the program page.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1.5">Gallery Image 1</label>
+              {% if form.gallery_image_1.value %}
+              <img src="{{ form.gallery_image_1.value.url }}" alt="Gallery image 1" class="h-24 w-full object-cover rounded-lg border border-gray-300 mb-2">
+              {% endif %}
+              <div id="programGalleryPreview1" class="hidden mb-2">
+                <img id="programGalleryPreviewImg1" src="" alt="Gallery image 1 preview" class="h-24 w-full object-cover rounded-lg border border-gray-300">
+              </div>
+              {{ form.gallery_image_1 }}
+              {% if form.gallery_image_1.errors %}<p class="text-xs text-red-500 mt-1">{{ form.gallery_image_1.errors.0 }}</p>{% endif %}
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1.5">Gallery Image 2</label>
+              {% if form.gallery_image_2.value %}
+              <img src="{{ form.gallery_image_2.value.url }}" alt="Gallery image 2" class="h-24 w-full object-cover rounded-lg border border-gray-300 mb-2">
+              {% endif %}
+              <div id="programGalleryPreview2" class="hidden mb-2">
+                <img id="programGalleryPreviewImg2" src="" alt="Gallery image 2 preview" class="h-24 w-full object-cover rounded-lg border border-gray-300">
+              </div>
+              {{ form.gallery_image_2 }}
+              {% if form.gallery_image_2.errors %}<p class="text-xs text-red-500 mt-1">{{ form.gallery_image_2.errors.0 }}</p>{% endif %}
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1.5">Gallery Image 3</label>
+              {% if form.gallery_image_3.value %}
+              <img src="{{ form.gallery_image_3.value.url }}" alt="Gallery image 3" class="h-24 w-full object-cover rounded-lg border border-gray-300 mb-2">
+              {% endif %}
+              <div id="programGalleryPreview3" class="hidden mb-2">
+                <img id="programGalleryPreviewImg3" src="" alt="Gallery image 3 preview" class="h-24 w-full object-cover rounded-lg border border-gray-300">
+              </div>
+              {{ form.gallery_image_3 }}
+              {% if form.gallery_image_3.errors %}<p class="text-xs text-red-500 mt-1">{{ form.gallery_image_3.errors.0 }}</p>{% endif %}
+            </div>
+          </div>
+          <div class="mt-5">
+            <label class="block text-xs font-medium text-gray-600 mb-1.5">Gallery Video</label>
+            {% if form.gallery_video.value %}
+            <p class="text-xs text-gray-500 mb-2">Current file: <a href="{{ form.gallery_video.value.url }}" target="_blank" class="text-primary-600 hover:underline">{{ form.gallery_video.value.name }}</a></p>
+            {% endif %}
+            {{ form.gallery_video }}
+            <p class="text-xs text-gray-500 mt-1" id="programGalleryVideoFileName"></p>
+            {% if form.gallery_video.errors %}<p class="text-xs text-red-500 mt-1">{{ form.gallery_video.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -353,4 +402,46 @@
 
   </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function setupGalleryPreview(inputId, previewWrapId, previewImgId, maxSizeMB) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.addEventListener('change', function () {
+      if (!this.files || !this.files[0]) return;
+      const file = this.files[0];
+      if (maxSizeMB && file.size > maxSizeMB * 1024 * 1024) {
+        if (window.Swal) {
+          Swal.fire({ icon: 'warning', title: 'File too large', text: 'Please choose a file under ' + maxSizeMB + 'MB.' });
+        } else {
+          alert('Please choose a file under ' + maxSizeMB + 'MB.');
+        }
+        this.value = '';
+        document.getElementById(previewWrapId).classList.add('hidden');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = document.getElementById(previewImgId);
+        if (img) img.src = e.target.result;
+        document.getElementById(previewWrapId).classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  setupGalleryPreview('id_gallery_image_1', 'programGalleryPreview1', 'programGalleryPreviewImg1', 3);
+  setupGalleryPreview('id_gallery_image_2', 'programGalleryPreview2', 'programGalleryPreviewImg2', 3);
+  setupGalleryPreview('id_gallery_image_3', 'programGalleryPreview3', 'programGalleryPreviewImg3', 3);
+
+  // Video upload: filename label only, no preview player.
+  const videoInput = document.getElementById('id_gallery_video');
+  if (videoInput) {
+    videoInput.addEventListener('change', function () {
+      const label = document.getElementById('programGalleryVideoFileName');
+      if (label) label.textContent = (this.files && this.files[0]) ? this.files[0].name : '';
+    });
+  }
+});
+</script>
 {% endblock %}

@@ -360,6 +360,67 @@
                             {% if form.about_image.errors %}<p class="field-error">{{ form.about_image.errors.0 }}</p>{% endif %}
                         </div>
                     </div>
+
+                    <div class="border-t border-gray-100 pt-3 space-y-3">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider"><i class="fas fa-photo-video mr-1"></i>Faculty Images &amp; Video</p>
+                        <p class="text-[11px] text-gray-400 -mt-1">Optional. Up to 3 images (max 3MB each) and 1 video — shown in a gallery carousel on the faculty page.</p>
+                        <div class="grid sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="field-label">Gallery Image 1</label>
+                                <div class="file-drop">
+                                    <div class="flex items-center gap-2 pointer-events-none">
+                                        <i class="fas fa-image text-gray-400 text-sm"></i>
+                                        <span class="text-xs text-gray-500 truncate" id="galleryFileName1">Choose image…</span>
+                                    </div>
+                                    {{ form.gallery_image_1 }}
+                                </div>
+                                <div id="gallery-preview-1" class="mt-2 hidden">
+                                    <img id="galleryPreviewImg1" src="" alt="Gallery image 1" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                </div>
+                                {% if form.gallery_image_1.errors %}<p class="field-error">{{ form.gallery_image_1.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="field-label">Gallery Image 2</label>
+                                <div class="file-drop">
+                                    <div class="flex items-center gap-2 pointer-events-none">
+                                        <i class="fas fa-image text-gray-400 text-sm"></i>
+                                        <span class="text-xs text-gray-500 truncate" id="galleryFileName2">Choose image…</span>
+                                    </div>
+                                    {{ form.gallery_image_2 }}
+                                </div>
+                                <div id="gallery-preview-2" class="mt-2 hidden">
+                                    <img id="galleryPreviewImg2" src="" alt="Gallery image 2" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                </div>
+                                {% if form.gallery_image_2.errors %}<p class="field-error">{{ form.gallery_image_2.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="field-label">Gallery Image 3</label>
+                                <div class="file-drop">
+                                    <div class="flex items-center gap-2 pointer-events-none">
+                                        <i class="fas fa-image text-gray-400 text-sm"></i>
+                                        <span class="text-xs text-gray-500 truncate" id="galleryFileName3">Choose image…</span>
+                                    </div>
+                                    {{ form.gallery_image_3 }}
+                                </div>
+                                <div id="gallery-preview-3" class="mt-2 hidden">
+                                    <img id="galleryPreviewImg3" src="" alt="Gallery image 3" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                </div>
+                                {% if form.gallery_image_3.errors %}<p class="field-error">{{ form.gallery_image_3.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label">Gallery Video</label>
+                            <div class="file-drop">
+                                <div class="flex items-center gap-2 pointer-events-none">
+                                    <i class="fas fa-video text-gray-400 text-sm"></i>
+                                    <span class="text-xs text-gray-500 truncate" id="galleryVideoFileName">Choose video…</span>
+                                </div>
+                                {{ form.gallery_video }}
+                            </div>
+                            {% if form.gallery_video.errors %}<p class="field-error">{{ form.gallery_video.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+
                     <div class="border-t border-gray-100 pt-3 space-y-3">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider"><i class="fas fa-search mr-1"></i>SEO & Settings</p>
                         <div>
@@ -426,6 +487,10 @@ const FACULTY_DATA = {
         is_active:{{ f.is_active|yesno:"true,false" }}, display_order:{{ f.display_order|default:0 }},
         hero_image_url:"{% if f.hero_image %}{{ f.hero_image.url }}{% endif %}",
         about_image_url:"{% if f.about_image %}{{ f.about_image.url }}{% endif %}",
+        gallery_image_1_url:"{% if f.gallery_image_1 %}{{ f.gallery_image_1.url }}{% endif %}",
+        gallery_image_2_url:"{% if f.gallery_image_2 %}{{ f.gallery_image_2.url }}{% endif %}",
+        gallery_image_3_url:"{% if f.gallery_image_3 %}{{ f.gallery_image_3.url }}{% endif %}",
+        gallery_video_url:"{% if f.gallery_video %}{{ f.gallery_video.url }}{% endif %}",
         special_features:{{ f.special_features|default:"[]"|safe }},
         edit_url:"{% url 'management:faculty_edit' f.pk %}"
     }{% if not forloop.last %},{% endif %}
@@ -493,8 +558,14 @@ const COLOR_BG = {
         form.reset();
         switchTab(1);
         hidePreview('heroPreviewWrap'); hidePreview('aboutPreviewWrap');
+        hidePreview('gallery-preview-1'); hidePreview('gallery-preview-2');
+        hidePreview('gallery-preview-3');
         document.getElementById('heroFileName').textContent  = 'Choose hero image…';
         document.getElementById('aboutFileName').textContent = 'Choose about image…';
+        document.getElementById('galleryFileName1').textContent = 'Choose image…';
+        document.getElementById('galleryFileName2').textContent = 'Choose image…';
+        document.getElementById('galleryFileName3').textContent = 'Choose image…';
+        document.getElementById('galleryVideoFileName').textContent = 'Choose video…';
 
         if (pk != null) {
             const d = FACULTY_DATA[String(pk)];
@@ -529,6 +600,9 @@ const COLOR_BG = {
 
             if (d.hero_image_url)  showPreview('heroPreviewImg',  'heroPreviewWrap',  d.hero_image_url);
             if (d.about_image_url) showPreview('aboutPreviewImg', 'aboutPreviewWrap', d.about_image_url);
+            if (d.gallery_image_1_url) showPreview('galleryPreviewImg1', 'gallery-preview-1', d.gallery_image_1_url);
+            if (d.gallery_image_2_url) showPreview('galleryPreviewImg2', 'gallery-preview-2', d.gallery_image_2_url);
+            if (d.gallery_image_3_url) showPreview('galleryPreviewImg3', 'gallery-preview-3', d.gallery_image_3_url);
 
         } else {
             document.getElementById('modalTitle').textContent    = 'Add New Faculty';
@@ -570,20 +644,45 @@ const COLOR_BG = {
         });
     };
 
-    function setupFilePreview(inputId, imgId, wrapId, labelId) {
+    function setupFilePreview(inputId, imgId, wrapId, labelId, maxSizeMB, emptyLabel) {
         const input = document.getElementById(inputId);
         if (!input) return;
         input.addEventListener('change', function () {
             if (this.files && this.files[0]) {
-                document.getElementById(labelId).textContent = this.files[0].name;
+                const file = this.files[0];
+                if (maxSizeMB && file.size > maxSizeMB * 1024 * 1024) {
+                    if (window.Swal) {
+                        Swal.fire({ icon: 'warning', title: 'File too large', text: 'Please choose a file under ' + maxSizeMB + 'MB.' });
+                    } else {
+                        alert('Please choose a file under ' + maxSizeMB + 'MB.');
+                    }
+                    this.value = '';
+                    document.getElementById(labelId).textContent = emptyLabel || 'Choose file…';
+                    hidePreview(wrapId);
+                    return;
+                }
+                document.getElementById(labelId).textContent = file.name;
                 const r = new FileReader();
                 r.onload = e => showPreview(imgId, wrapId, e.target.result);
-                r.readAsDataURL(this.files[0]);
+                r.readAsDataURL(file);
             }
         });
     }
     setupFilePreview('id_hero_image',  'heroPreviewImg',  'heroPreviewWrap',  'heroFileName');
     setupFilePreview('id_about_image', 'aboutPreviewImg', 'aboutPreviewWrap', 'aboutFileName');
+    setupFilePreview('id_gallery_image_1', 'galleryPreviewImg1', 'gallery-preview-1', 'galleryFileName1', 3, 'Choose image…');
+    setupFilePreview('id_gallery_image_2', 'galleryPreviewImg2', 'gallery-preview-2', 'galleryFileName2', 3, 'Choose image…');
+    setupFilePreview('id_gallery_image_3', 'galleryPreviewImg3', 'gallery-preview-3', 'galleryFileName3', 3, 'Choose image…');
+
+    // Video upload: filename label only, no preview player.
+    (function () {
+        const input = document.getElementById('id_gallery_video');
+        if (!input) return;
+        input.addEventListener('change', function () {
+            document.getElementById('galleryVideoFileName').textContent =
+                (this.files && this.files[0]) ? this.files[0].name : 'Choose video…';
+        });
+    })();
 
     {% if form.errors %}
     document.addEventListener('DOMContentLoaded', function () {

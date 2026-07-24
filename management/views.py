@@ -1661,7 +1661,7 @@ def role_assign(request):
     GET  → render page (optionally pre-select user via ?user_id=<pk>)
     POST → handled via AJAX to existing user_change_role / user_permissions endpoints.
     """
-    if not _has_permission(request, 'user_management', 'can_view'):
+    if not _has_permission(request, 'role_permissions', 'can_view'):
         messages.error(request, 'You do not have permission to view role/permission assignment.')
         return redirect('management:dashboard')
 

@@ -3896,6 +3896,7 @@ class StaffPermissionsMatrix(models.Model):
         ('support_config',          'Support Config'),
         ('academic_progression',    'Academic Progression'),
         ('results_publish',         'Results Publishing'),
+        ('role_permissions',        'Roles & Permissions'),
     ]
 
     # Role-level defaults — mirrors sidebar sections visible per role
@@ -3921,6 +3922,10 @@ class StaffPermissionsMatrix(models.Model):
         # radius action than running level-progression decisions, so a
         # staff member granted one shouldn't automatically get the other.
         'results_publish': {'can_view': True, 'can_edit': True, 'can_approve': True},
+        # Deliberately its own module rather than riding on 'user_management':
+        # a staff member can be granted the user list (user_management) without
+        # also being able to reassign roles or edit the permission matrix itself.
+        'role_permissions': {'can_view': True, 'can_edit': True},
     },
     'support': {
         # 'dashboard':    {'can_view': True},  # dashboard access isn't matrix-gated — always default; only inner-page actions are
@@ -3966,7 +3971,7 @@ class StaffPermissionsMatrix(models.Model):
         'dashboard', 'user_management', 'academics', 'lms_courses',
         'applications', 'exams', 'enrollments', 'finance', 'communications',
         'blog', 'library', 'site_content', 'security_audit', 'support_config',
-        'academic_progression', 'results_publish',
+        'academic_progression', 'results_publish', 'role_permissions',
     }
 
     # Mirrors ADMIN_PORTAL_MODULES for the other three staff portals — used by

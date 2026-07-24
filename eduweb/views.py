@@ -79,6 +79,7 @@ from .models import (
     Course,
     CourseApplication,
     CourseIntake,
+    DEGREE_LEVEL_CHOICES,
     Department,
     Faculty,
     FeePayment,
@@ -86,6 +87,7 @@ from .models import (
     AllRequiredPayments,
     PaymentGateway,
     Program,
+    SystemConfiguration,
     UserProfile,
     decrypt_secret,
 )
@@ -811,6 +813,13 @@ def about(request):
     from .models import InstitutionMember, SiteConfig, SiteHistoryMilestone, InstitutionPartner
     partners_qs = InstitutionPartner.objects.filter(is_active=True)
     return render(request, 'about.html', {
+        'default_core_values': [
+            'Sound Biblical Foundation',
+            'Personal Relationship with the Lord Jesus',
+            'Non-Denominational Service to the Christian Family',
+            'Free & Accessible Ministerial Training',
+            'End-time Readiness & Gospel Excellence',
+        ],
         'faculties': Faculty.objects.filter(is_active=True).order_by('name'),
         'admin_board_members': (
             InstitutionMember.objects.filter(member_type='admin_board', is_active=True)
@@ -957,18 +966,44 @@ def campus_life(request):
 
 
 @check_for_auth
-def detail(request):
-    return render(request, 'detail.html')
-
-
-@check_for_auth
-def admission_course(request):
-    return render(request, 'course.html')
-
-
-@check_for_auth
 def admission_requirement(request):
-    return render(request, 'admission_requirement.html')
+    degree_level_labels = dict(DEGREE_LEVEL_CHOICES)
+    featured_intake = (
+        CourseIntake.objects
+        .filter(
+            is_active=True,
+            program__is_active=True,
+            application_deadline__gte=timezone.now().date(),
+        )
+        .select_related('program')
+        .order_by('application_deadline')
+        .first()
+    )
+    active_degree_levels = [
+        degree_level_labels.get(level, level)
+        for level in (
+            Program.objects
+            .filter(is_active=True)
+            .exclude(degree_level='')
+            .order_by('degree_level')
+            .values_list('degree_level', flat=True)
+            .distinct()
+        )
+    ]
+
+    spots_percent = None
+    if featured_intake and featured_intake.available_slots:
+        spots_percent = min(
+            100,
+            round(featured_intake.accepted_count / featured_intake.available_slots * 100),
+        )
+
+    return render(request, 'admission_requirement.html', {
+        'featured_intake': featured_intake,
+        'active_degree_levels': active_degree_levels,
+        'spots_percent': spots_percent,
+        'scholarship_deadline': SystemConfiguration.get_value('admissions_scholarship_deadline'),
+    })
 
 
 @check_for_auth

@@ -123,7 +123,7 @@
       {% endif %}
 
       {% if site_config.email_admissions or site_config.email %}
-      <a href="mailto:{{ site_config.email_admissions|default:site_config.email|default:'inquiry@melbac.org' }}"
+      <a href="mailto:{{ site_config.email_admissions|default:site_config.email|default:'admin@miuedu.com' }}"
          class="inline-flex items-center gap-2 bg-accent-50 hover:bg-accent-100 text-accent-800 border border-accent-200 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accent-400">
         <i data-lucide="mail" class="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true"></i>
         Email Admissions
@@ -393,7 +393,7 @@
                 <p><a href="mailto:{{ site_config.email }}" class="hover:text-primary-600 transition-colors break-all">{{ site_config.email }}</a></p>
                 {% endif %}
                 {% if not site_config.email_admissions and not site_config.email_info and not site_config.email_international and not site_config.email %}
-                <p><a href="mailto:inquiry@melbac.org" class="hover:text-primary-600 transition-colors">inquiry@melbac.org</a></p>
+                <p><a href="mailto:admin@miuedu.com" class="hover:text-primary-600 transition-colors">admin@miuedu.com</a></p>
                 {% endif %}
               </div>
             </div>
@@ -408,7 +408,7 @@
             <div>
               <h4 class="font-bold text-base sm:text-lg text-primary-950 mb-1.5 sm:mb-2 font-['Poppins']">Email Us</h4>
               <p class="text-xs sm:text-sm text-gray-600">
-                <a href="mailto:inquiry@melbac.org" class="hover:text-primary-600 transition-colors">inquiry@melbac.org</a>
+                <a href="mailto:admin@miuedu.com" class="hover:text-primary-600 transition-colors">admin@miuedu.com</a>
               </p>
             </div>
           </div>

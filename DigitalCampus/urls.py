@@ -18,7 +18,11 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+
 from django.views.static import serve as serve_static_file
+
+from django.views.static import serve as serve_static
+
 
 handler404 = 'eduweb.views.custom_404'
 
@@ -33,12 +37,13 @@ urlpatterns = [
     path('payment/', include('payment.urls')),
     path('chatbot/', include('chatbot.urls')),
 
-    path('melbac/', include('melbac.urls')),
+    # path('melbac/', include('melbac.urls')),
     path('library/', include('library.urls')),
 
     path('support/', include('support.urls', namespace='support')),
 
 ]
+
 
 # Serve media files (user uploads — hero images, gallery photos/videos, dean
 # photos, etc.) via Django unconditionally, in both dev and production.
@@ -60,6 +65,16 @@ urlpatterns += [
 # Static files (CSS/JS/images bundled with the app) are already served via
 # WhiteNoise in production regardless of DEBUG — this extra dev-only route
 # is just a harmless fallback for local `runserver` use.
+
+# User-uploaded media (avatars, etc.) has no dedicated web server in front of it in this
+# deployment (WhiteNoise only serves STATIC_ROOT), so it's served regardless of DEBUG.
+# static() itself no-ops when DEBUG is off, so this hits django.views.static.serve directly.
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve_static, {'document_root': settings.MEDIA_ROOT}),
+]
+
+# Static files are served by WhiteNoise in production; only add the dev route here.
+
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

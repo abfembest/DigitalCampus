@@ -43,6 +43,16 @@
 <section class="relative overflow-hidden bg-gradient-to-br from-[#6b026b] via-purple-800 to-fuchsia-800"
          aria-labelledby="faculty-heading">
 
+  <!-- Responsive hero background image (behind all hero content).
+       Falls back to a static campus photo when no hero_image is set, so
+       the hero always has a backdrop instead of plain gradient only. -->
+  <div class="absolute inset-0 z-0" aria-hidden="true">
+    <img src="{% if faculty.hero_image %}{{ faculty.hero_image.url }}{% else %}{% static 'images/hero.webp' %}{% endif %}"
+         alt="" class="w-full h-full object-cover">
+    <div class="absolute inset-0 bg-gradient-to-br from-[#6b026b]/80 via-purple-900/75 to-fuchsia-900/80"></div>
+    <div class="absolute inset-0 bg-black/25"></div>
+  </div>
+
   <!-- Orbs -->
   <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
     <div class="absolute top-0 right-0 w-48 h-48 sm:w-80 sm:h-80 lg:w-[500px] lg:h-[500px] bg-fuchsia-600 rounded-full opacity-10 blur-3xl"></div>
@@ -438,6 +448,11 @@
   </div>
 </section>
 {% endif %}
+
+<!-- ════════════════════════════════════════════
+     MEDIA CAROUSEL (video/images from Faculty gallery fields)
+════════════════════════════════════════════ -->
+{% include 'includes/media_carousel.html' with gallery_items=gallery_items obj=faculty %}
 
 <!-- ════════════════════════════════════════════
      CTA

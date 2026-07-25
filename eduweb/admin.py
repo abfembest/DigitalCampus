@@ -705,17 +705,17 @@ class DepartmentAdmin(admin.ModelAdmin):
 class ProgramAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'code', 'department', 'degree_level', 'duration_years',
-        'application_fee', 'tuition_fee', 'is_active', 'is_featured', 'display_order'
+        'application_fee', 'tuition_fee', 'is_active', 'is_featured'
     )
     list_filter = ('department__faculty', 'department', 'degree_level', 'is_active', 'is_featured')
     search_fields = ('name', 'code', 'description', 'tagline')
     prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('is_active', 'is_featured', 'display_order')
+    list_editable = ('is_active', 'is_featured')
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'code', 'department', 'degree_level', 'is_active', 'is_featured', 'display_order')
+            'fields': ('name', 'slug', 'code', 'department', 'degree_level', 'is_active', 'is_featured')
         }),
         ('Program Details', {
             'fields': ('duration_years', 'credits_required', 'max_students', 'available_study_modes')
@@ -731,7 +731,7 @@ class ProgramAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Outcomes & Career', {
-            'fields': ('learning_outcomes', 'career_paths', 'avg_starting_salary', 'job_placement_rate'),
+            'fields': ('learning_outcomes', 'career_paths'),
             'classes': ('collapse',)
         }),
         ('Media', {

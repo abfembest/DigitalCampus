@@ -35,6 +35,7 @@ from django.http import (
     HttpResponse, HttpResponseForbidden, JsonResponse, Http404,
 )
 from django.shortcuts import get_object_or_404, redirect, render
+from django.templatetags.static import static as static_asset_url
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
@@ -1140,6 +1141,40 @@ def contact_submit(request):
 # =============================================================================
 # FACULTY & PROGRAM PAGES
 # =============================================================================
+
+# Used only when a Faculty/Program has no gallery_video/gallery_image_*
+# uploaded — keeps the carousel section a genuine 2-slide carousel (with
+# working prev/next + indicators) instead of a single static placeholder.
+# Distinct from the hero's own fallback (images/hero.webp) so the two
+# sections don't show the exact same photo back-to-back.
+FALLBACK_GALLERY_IMAGES = ['images/hero2.webp', 'images/hero3.webp']
+
+
+def _build_gallery_items(obj, max_items=4):
+    """
+    Shared by faculty_detail/program_detail: builds an ordered list of media
+    items (video first if present, then images) from an object's
+    gallery_video/gallery_image_1/2/3 fields, capped at max_items. If the
+    object has none of these fields set, falls back to two static campus
+    photos (FALLBACK_GALLERY_IMAGES) so the carousel section always has
+    something to show instead of disappearing entirely.
+    """
+    items = []
+    video = getattr(obj, 'gallery_video', None)
+    if video:
+        items.append({'type': 'video', 'url': video.url})
+    for field_name in ('gallery_image_1', 'gallery_image_2', 'gallery_image_3'):
+        image = getattr(obj, field_name, None)
+        if image:
+            items.append({'type': 'image', 'url': image.url})
+    if not items:
+        items = [
+            {'type': 'image', 'url': static_asset_url(path), 'is_fallback': True}
+            for path in FALLBACK_GALLERY_IMAGES
+        ]
+    return items[:max_items]
+
+
 @check_for_auth
 def faculty_detail(request, slug):
     """
@@ -1168,6 +1203,7 @@ def faculty_detail(request, slug):
     return render(request, 'faculty_detail.html', {
         'faculty':     faculty,
         'departments': departments,
+        'gallery_items': _build_gallery_items(faculty),
     })
 
 
@@ -1194,6 +1230,7 @@ def program_detail(request, slug):
         ),
         'department': program.department,
         'faculty':    program.department.faculty,
+        'gallery_items': _build_gallery_items(program),
     })
 
 

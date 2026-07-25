@@ -976,7 +976,7 @@ class Command(BaseCommand):
                 degree_level=degree, duration_years=dur,
                 credits_required=cred, application_fee=app_fee,
                 tuition_fee=tuit, max_students=max_stu,
-                is_featured=feat, is_active=True, display_order=order,
+                is_featured=feat, is_active=True,
                 tagline=f"Train as a minister of God — {name}",
                 overview=(
                     f"The {name} program at MELBAC is offered completely free of charge to all "
@@ -1020,8 +1020,6 @@ class Command(BaseCommand):
                     f"{base_name} Lecturer or Academic",
                     "Church Administrator or Ministry Leader",
                 ],
-                avg_starting_salary="Ministry-based (not salary-driven)",
-                job_placement_rate=98,
                 meta_description=f"Study {name} at MELBAC — free of charge, accredited, biblically grounded.",
                 meta_keywords=f"{name}, {code}, MELBAC, Bible degree Nigeria, theology, free seminary",
             )

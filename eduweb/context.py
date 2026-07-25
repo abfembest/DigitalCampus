@@ -99,7 +99,7 @@ def navigation_data(request):
             Program.objects
             .filter(is_active=True)
             .select_related('department__faculty')
-            .order_by('display_order', 'name')[:11]
+            .order_by('name')[:11]
         )
     except Exception:
         logger.exception('navigation_data: failed to fetch programs')

@@ -5,6 +5,32 @@
 {% block meta_description %}Manage academic programs{% endblock %}
 
 {% block content %}
+<link href="{% static 'vendor/select2/select2.min.css' %}" rel="stylesheet">
+<style>
+  .select2-container { width: 100% !important; }
+  .select2-container--default .select2-selection--single {
+    height: 42px; border: 1px solid #d1d5db; border-radius: .5rem;
+    display: flex; align-items: center; padding: 0 .75rem;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 42px; color: #111827; font-size: .875rem; padding: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 28px);
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow { height: 42px; right: 10px; }
+  .select2-container--default.select2-container--focus .select2-selection--single,
+  .select2-container--default.select2-container--open  .select2-selection--single {
+    border-color: #3a56d4; box-shadow: 0 0 0 2px rgba(58,86,212,.15); outline: none;
+  }
+  .select2-dropdown {
+    border: 1px solid #d1d5db; border-radius: .5rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); font-size: .875rem;
+  }
+  .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: #3a56d4; }
+  .select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid #d1d5db; border-radius: .375rem;
+    padding: .375rem .75rem; font-size: .875rem; outline: none; width: 100%; box-sizing: border-box;
+  }
+</style>
 <div class="max-w-full">
 
   <!-- Header -->
@@ -15,8 +41,8 @@
       <p class="text-gray-500 mt-1">Manage all academic programs across departments</p>
     </div>
     {% if permissions.academics.can_create %}
-    <a href="{% url 'management:program_create' %}"
-       class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-sm">
+    <a href="{% url 'management:program_create' %}" id="newProgramBtn"
+       class="js-open-program-modal inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-sm">
       <i class="fas fa-plus" aria-hidden="true"></i>New Program
     </a>
     {% endif %}
@@ -32,42 +58,29 @@
     {% endfor %}
   </div>
 
-  <!-- Filters -->
+  <!-- Filters — wired straight into the DataTable below, no submit needed -->
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
-    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-      <div class="lg:col-span-2">
-        <input type="search" name="search" value="{{ request.GET.search }}"
-               placeholder="Search by name or code…"
-               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
-      </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div>
-        <select name="faculty" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+        <select id="facultyFilterSelect" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
           <option value="">All Faculties</option>
           {% for faculty in faculties %}
-          <option value="{{ faculty.id }}" {% if request.GET.faculty == faculty.id|stringformat:"s" %}selected{% endif %}>{{ faculty.name }}</option>
+          <option value="{{ faculty.name }}">{{ faculty.name }}</option>
           {% endfor %}
         </select>
       </div>
       <div>
-        <select name="degree_level" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+        <select id="levelFilterSelect" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
           <option value="">All Levels</option>
-          <option value="certificate" {% if request.GET.degree_level == 'certificate' %}selected{% endif %}>Certificate</option>
-          <option value="diploma" {% if request.GET.degree_level == 'diploma' %}selected{% endif %}>Diploma</option>
-          <option value="undergraduate" {% if request.GET.degree_level == 'undergraduate' %}selected{% endif %}>Undergraduate</option>
-          <option value="postgraduate" {% if request.GET.degree_level == 'postgraduate' %}selected{% endif %}>Postgraduate</option>
-          <option value="masters" {% if request.GET.degree_level == 'masters' %}selected{% endif %}>Masters</option>
-          <option value="phd" {% if request.GET.degree_level == 'phd' %}selected{% endif %}>PhD</option>
+          <option value="Certificate">Certificate</option>
+          <option value="Diploma">Diploma</option>
+          <option value="Undergraduate">Undergraduate</option>
+          <option value="Postgraduate">Postgraduate</option>
+          <option value="Masters">Masters</option>
+          <option value="PhD">PhD</option>
         </select>
       </div>
-      <div class="flex gap-2">
-        <button type="submit" class="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
-          <i class="fas fa-search mr-1" aria-hidden="true"></i>Filter
-        </button>
-        <a href="{% url 'management:programs_list' %}" class="px-3 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm">
-          <i class="fas fa-redo" aria-hidden="true"></i>
-        </a>
-      </div>
-    </form>
+    </div>
   </div>
 
   <!-- Table -->
@@ -75,12 +88,12 @@
     <div class="p-5 border-b border-gray-100">
       <h2 class="font-semibold text-gray-800">
         All Programs
-        <span class="text-sm font-normal text-gray-400 ml-1">({{ programs.paginator.count }} total)</span>
+        <span class="text-sm font-normal text-gray-400 ml-1">({{ programs.count }} total)</span>
       </h2>
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <div class="overflow-x-auto p-5 pt-0">
+      <table id="programsDataTable" class="w-full text-sm">
         <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
           <tr>
             <th class="py-3 px-5 text-left font-semibold">Program</th>
@@ -125,15 +138,22 @@
             <td class="py-4 px-5 text-gray-600">{{ program.duration_years }} yrs</td>
             <td class="py-4 px-5 text-gray-700">${{ program.tuition_fee|floatformat:0 }}/yr</td>
             <td class="py-4 px-5">
-              {% if program.is_active %}
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
-              </span>
-              {% else %}
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
-                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Inactive
-              </span>
-              {% endif %}
+              <div class="flex items-center gap-1.5 flex-wrap">
+                {% if program.is_active %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
+                  <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>Inactive
+                </span>
+                {% endif %}
+                {% if program.is_featured %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                  <i class="fas fa-star text-[10px]" aria-hidden="true"></i>Featured
+                </span>
+                {% endif %}
+              </div>
             </td>
             <td class="py-4 px-5">
               <div class="flex items-center gap-2">
@@ -165,7 +185,7 @@
                 <p class="font-medium text-gray-600">No programs found</p>
                 {% if permissions.academics.can_create %}
                 <p class="text-sm mt-1">
-                  <a href="{% url 'management:program_create' %}" class="text-primary-600 hover:underline">Add the first program</a>
+                  <a href="{% url 'management:program_create' %}" class="js-open-program-modal text-primary-600 hover:underline">Add the first program</a>
                 </p>
                 {% endif %}
               </div>
@@ -176,41 +196,45 @@
       </table>
     </div>
 
-    <!-- Pagination -->
-    {% if programs.has_other_pages %}
-    <div class="p-5 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-3">
-      <p class="text-sm text-gray-500">Showing {{ programs.start_index }}–{{ programs.end_index }} of {{ programs.paginator.count }}</p>
-      <nav class="flex gap-1" aria-label="Pagination">
-        {% if programs.has_previous %}
-        <a href="?page={{ programs.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
-           class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-          <i class="fas fa-chevron-left" aria-hidden="true"></i>
-        </a>
-        {% endif %}
-        {% for num in programs.paginator.page_range %}
-          {% if programs.number == num %}
-          <span class="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium">{{ num }}</span>
-          {% elif num > programs.number|add:"-3" and num < programs.number|add:"3" %}
-          <a href="?page={{ num }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
-             class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">{{ num }}</a>
-          {% endif %}
-        {% endfor %}
-        {% if programs.has_next %}
-        <a href="?page={{ programs.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}"
-           class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-          <i class="fas fa-chevron-right" aria-hidden="true"></i>
-        </a>
-        {% endif %}
-      </nav>
-    </div>
-    {% endif %}
   </div>
 </div>
 
 <form id="deleteForm" method="post" action="" style="display:none;">{% csrf_token %}</form>
+
+<!-- ═══════════════════ New Program modal ═══════════════════ -->
+<div id="programCreateModal" class="fixed inset-0 z-50 hidden items-center justify-center p-3" style="background: rgba(15,23,42,.55);">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[97vh] flex flex-col">
+    <div class="px-5 py-2.5 border-b border-gray-100 flex items-center justify-between shrink-0">
+      <h2 class="text-base font-semibold text-gray-800 font-display">New Program</h2>
+      <button type="button" id="programModalCloseBtn" class="text-gray-400 hover:text-gray-600" aria-label="Close">
+        <i class="fas fa-times text-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="px-5 py-3 overflow-y-auto flex-1" id="programModalBody">
+      <form method="post" action="{% url 'management:program_create' %}" enctype="multipart/form-data" id="programModalForm">
+        {% csrf_token %}
+        {% include 'management/_program_form_fields.html' %}
+      </form>
+    </div>
+    <div class="px-5 py-2.5 border-t border-gray-100 flex justify-end gap-3 shrink-0">
+      <button type="button" id="programModalCancelBtn"
+              class="px-5 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm font-medium">
+        Cancel
+      </button>
+      <button type="submit" form="programModalForm" id="programModalSubmitBtn"
+              class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+        <i class="fas fa-save mr-1.5" aria-hidden="true"></i>
+        <span id="programModalSubmitLabel">Create Program</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'vendor/select2/select2.min.js' %}"></script>
+<script src="{% static 'js/program_form_admin.js' %}"></script>
 <script>
 function confirmDelete(url, name) {
   Swal.fire({
@@ -229,5 +253,95 @@ function confirmDelete(url, name) {
     }
   });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  const programsTable = $('#programsDataTable').DataTable({
+    pageLength: 10,
+    order: [[0, 'asc']],
+    responsive: true,
+    columnDefs: [{ orderable: false, searchable: false, targets: [7] }],
+    dom: '<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4"lf>rt<"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4 pt-4 border-t"ip>',
+    language: {
+      search: '_INPUT_', searchPlaceholder: 'Search by name or code…',
+      lengthMenu: 'Show _MENU_', info: '_START_–_END_ of _TOTAL_',
+      paginate: { previous: '<i class="fas fa-chevron-left"></i>', next: '<i class="fas fa-chevron-right"></i>' },
+      emptyTable: 'No programs found',
+    },
+  });
+
+  document.getElementById('facultyFilterSelect').addEventListener('change', function () {
+    programsTable.column(2).search(this.value, false, false).draw();
+  });
+  document.getElementById('levelFilterSelect').addEventListener('change', function () {
+    programsTable.column(3).search(this.value, false, false).draw();
+  });
+
+  const modal = document.getElementById('programCreateModal');
+  const modalBody = document.getElementById('programModalBody');
+  const modalForm = document.getElementById('programModalForm');
+  const submitBtn = document.getElementById('programModalSubmitBtn');
+  const submitLabel = document.getElementById('programModalSubmitLabel');
+  let initialized = false;
+
+  function openModal() {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+    if (!initialized) {
+      initProgramFormUI(modal);
+      initialized = true;
+    }
+  }
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  document.querySelectorAll('.js-open-program-modal').forEach(function (trigger) {
+    trigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      openModal();
+    });
+  });
+  document.getElementById('programModalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('programModalCancelBtn').addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeModal();
+  });
+
+  modalForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (submitBtn.disabled) return;
+    submitBtn.disabled = true;
+    submitLabel.textContent = 'Saving…';
+    try {
+      const resp = await fetch(modalForm.action, { method: 'POST', body: new FormData(modalForm) });
+      if (resp.redirected) {
+        window.location.href = resp.url;
+        return;
+      }
+      const html = await resp.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const newFields = doc.getElementById('programFormFieldsPartial');
+      const oldFields = modalForm.querySelector('#programFormFieldsPartial');
+      if (newFields && oldFields) {
+        oldFields.replaceWith(newFields);
+        initProgramFormUI(modal);
+        modalBody.scrollTop = 0;
+      } else {
+        window.location.href = modalForm.action;
+        return;
+      }
+    } catch (err) {
+      if (window.Swal) {
+        Swal.fire({ icon: 'error', title: 'Something went wrong', text: 'Please try again.' });
+      }
+    } finally {
+      submitBtn.disabled = false;
+      submitLabel.textContent = 'Create Program';
+    }
+  });
+});
 </script>
 {% endblock %}

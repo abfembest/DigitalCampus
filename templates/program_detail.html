@@ -44,6 +44,16 @@
 <section class="relative overflow-hidden bg-gradient-to-br from-[#6b026b] via-purple-800 to-fuchsia-800"
          aria-labelledby="program-heading">
 
+  <!-- Responsive hero background image (behind all hero content).
+       Falls back to a static campus photo when no hero_image is set, so
+       the hero always has a backdrop instead of plain gradient only. -->
+  <div class="absolute inset-0 z-0" aria-hidden="true">
+    <img src="{% if program.hero_image %}{{ program.hero_image.url }}{% else %}{% static 'images/hero.webp' %}{% endif %}"
+         alt="" class="w-full h-full object-cover">
+    <div class="absolute inset-0 bg-gradient-to-br from-[#6b026b]/80 via-purple-900/75 to-fuchsia-900/80"></div>
+    <div class="absolute inset-0 bg-black/25"></div>
+  </div>
+
   <!-- Orbs + dot texture -->
   <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
     <div class="absolute inset-0 opacity-[0.04]"
@@ -143,63 +153,47 @@
 
       <!-- Right: At-a-glance card -->
       <div class="w-full xl:w-96 xl:flex-shrink-0 xl:order-none fu fu3">
-        <div class="bg-white/10 border border-white/15 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-7 space-y-3 sm:space-y-4">
-          <h2 class="font-['Poppins'] text-xs font-bold text-white/60 uppercase tracking-widest flex items-center gap-2">
+        <div class="bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-7 space-y-3 sm:space-y-4 shadow-2xl">
+          <h2 class="font-['Poppins'] text-xs font-bold text-[#840384] uppercase tracking-widest flex items-center gap-2">
             <i data-lucide="info" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i>
             Program At a Glance
           </h2>
           <dl class="space-y-3 sm:space-y-3.5">
             {% if program.duration_years %}
-            <div class="flex items-center justify-between border-b border-white/10 pb-3 sm:pb-3.5">
-              <dt class="flex items-center gap-2 sm:gap-3 text-white/60 text-xs sm:text-sm">
-                <i data-lucide="calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i> Duration
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3 sm:pb-3.5">
+              <dt class="flex items-center gap-2 sm:gap-3 text-gray-500 text-xs sm:text-sm">
+                <i data-lucide="calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#840384]" aria-hidden="true"></i> Duration
               </dt>
-              <dd class="font-['Poppins'] text-white font-bold text-sm sm:text-base">{{ program.duration_years }} Year{% if program.duration_years > 1 %}s{% endif %}</dd>
+              <dd class="font-['Poppins'] text-gray-900 font-bold text-sm sm:text-base">{{ program.duration_years }} Year{% if program.duration_years > 1 %}s{% endif %}</dd>
             </div>
             {% endif %}
             {% if program.credits_required %}
-            <div class="flex items-center justify-between border-b border-white/10 pb-3 sm:pb-3.5">
-              <dt class="flex items-center gap-2 sm:gap-3 text-white/60 text-xs sm:text-sm">
-                <i data-lucide="award" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i> Credits
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3 sm:pb-3.5">
+              <dt class="flex items-center gap-2 sm:gap-3 text-gray-500 text-xs sm:text-sm">
+                <i data-lucide="award" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#840384]" aria-hidden="true"></i> Credits
               </dt>
-              <dd class="font-['Poppins'] text-white font-bold text-sm sm:text-base">{{ program.credits_required }}</dd>
+              <dd class="font-['Poppins'] text-gray-900 font-bold text-sm sm:text-base">{{ program.credits_required }}</dd>
             </div>
             {% endif %}
             {% if program.tuition_fee %}
-            <div class="flex items-center justify-between border-b border-white/10 pb-3 sm:pb-3.5">
-              <dt class="flex items-center gap-2 sm:gap-3 text-white/60 text-xs sm:text-sm">
-                <i data-lucide="dollar-sign" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i> Tuition / yr
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3 sm:pb-3.5">
+              <dt class="flex items-center gap-2 sm:gap-3 text-gray-500 text-xs sm:text-sm">
+                <i data-lucide="dollar-sign" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#840384]" aria-hidden="true"></i> Tuition / yr
               </dt>
-              <dd class="font-['Poppins'] text-white font-bold text-sm sm:text-base">${{ program.tuition_fee|floatformat:"0" }}</dd>
+              <dd class="font-['Poppins'] text-gray-900 font-bold text-sm sm:text-base">${{ program.tuition_fee|floatformat:"0" }}</dd>
             </div>
             {% endif %}
             {% if program.application_fee %}
-            <div class="flex items-center justify-between border-b border-white/10 pb-3 sm:pb-3.5">
-              <dt class="flex items-center gap-2 sm:gap-3 text-white/60 text-xs sm:text-sm">
-                <i data-lucide="receipt" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i> App. Fee
-              </dt>
-              <dd class="font-['Poppins'] text-white font-bold text-sm sm:text-base">${{ program.application_fee|floatformat:"0" }}</dd>
-            </div>
-            {% endif %}
-            {% if program.job_placement_rate %}
-            <div class="flex items-center justify-between border-b border-white/10 pb-3 sm:pb-3.5">
-              <dt class="flex items-center gap-2 sm:gap-3 text-white/60 text-xs sm:text-sm">
-                <i data-lucide="trending-up" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i> Placement
-              </dt>
-              <dd class="font-['Poppins'] text-white font-bold text-sm sm:text-base">{{ program.job_placement_rate }}%</dd>
-            </div>
-            {% endif %}
-            {% if program.avg_starting_salary %}
             <div class="flex items-center justify-between">
-              <dt class="flex items-center gap-2 sm:gap-3 text-white/60 text-xs sm:text-sm">
-                <i data-lucide="banknote" class="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden="true"></i> Avg. Salary
+              <dt class="flex items-center gap-2 sm:gap-3 text-gray-500 text-xs sm:text-sm">
+                <i data-lucide="receipt" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#840384]" aria-hidden="true"></i> App. Fee
               </dt>
-              <dd class="font-['Poppins'] text-white font-bold text-xs sm:text-sm">{{ program.avg_starting_salary }}</dd>
+              <dd class="font-['Poppins'] text-gray-900 font-bold text-sm sm:text-base">${{ program.application_fee|floatformat:"0" }}</dd>
             </div>
             {% endif %}
           </dl>
           <a href="{% url 'eduweb:apply' %}"
-             class="block text-center bg-white text-[#840384] hover:bg-yellow-300 hover:text-gray-900 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-bold text-sm transition-all shadow-xl mt-2 focus:outline-none focus:ring-2 focus:ring-yellow-300">
+             class="block text-center bg-[#840384] text-white hover:bg-purple-900 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-bold text-sm transition-all shadow-lg mt-2 focus:outline-none focus:ring-2 focus:ring-purple-300">
             Start Application →
           </a>
         </div>
@@ -469,11 +463,6 @@
     <div class="text-center mb-10 sm:mb-12 lg:mb-14">
       <p class="text-[#840384] font-semibold text-xs sm:text-sm tracking-widest uppercase mb-2">After Graduation</p>
       <h2 id="careers-heading" class="font-['Poppins'] text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-gray-900">Career Opportunities</h2>
-      {% if program.avg_starting_salary %}
-      <p class="text-gray-500 mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg">
-        Average starting salary: <span class="font-bold text-[#840384]">{{ program.avg_starting_salary }}</span>
-      </p>
-      {% endif %}
     </div>
     <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
       {% for path in program.career_paths %}
@@ -488,6 +477,11 @@
   </div>
 </section>
 {% endif %}
+
+<!-- ════════════════════════════════════════════
+     MEDIA CAROUSEL (video/images from Program gallery fields)
+════════════════════════════════════════════ -->
+{% include 'includes/media_carousel.html' with gallery_items=gallery_items obj=program %}
 
 <!-- ════════════════════════════════════════════
      INTAKES + CTA

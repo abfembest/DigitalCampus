@@ -1446,15 +1446,49 @@ class ProgramForm(forms.ModelForm):
         }),
     )
 
+    available_study_modes = forms.MultipleChoiceField(
+        required=False, choices=Program.STUDY_MODE_CHOICES, label='Study Modes', initial=list,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'flex flex-wrap gap-x-5 gap-y-2'}),
+    )
+
+    # ── JSON-list textarea helpers ──────────────────────────────────────────
+    # Same "one item per line" convention as CourseForm.learning_outcomes_text —
+    # friendlier than hand-editing the underlying JSONField.
+    _list_widget = lambda placeholder: forms.Textarea(attrs={
+        'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none',
+        'rows': 3, 'placeholder': placeholder,
+    })
+    entry_requirements_text = forms.CharField(
+        required=False, label='Entry Requirements', help_text='One requirement per line',
+        widget=_list_widget('e.g.\nMinimum 5 O-Level credits including Maths & English\nUTME score of 180+'),
+    )
+    core_courses_text = forms.CharField(
+        required=False, label='Core Courses', help_text='One course name/code per line',
+        widget=_list_widget('e.g.\nCS101 - Introduction to Programming\nMTH101 - Calculus I'),
+    )
+    specialization_tracks_text = forms.CharField(
+        required=False, label='Specialization Tracks', help_text='One track per line',
+        widget=_list_widget('e.g.\nArtificial Intelligence\nSoftware Engineering'),
+    )
+    learning_outcomes_text = forms.CharField(
+        required=False, label='Learning Outcomes', help_text='One outcome per line',
+        widget=_list_widget('e.g.\nDesign and implement software systems\nApply statistical methods to real data'),
+    )
+    career_paths_text = forms.CharField(
+        required=False, label='Career Paths', help_text='One career per line',
+        widget=_list_widget('e.g.\nSoftware Engineer\nData Analyst'),
+    )
+    del _list_widget
+
     class Meta:
         model = Program
         fields = [
             'department', 'name', 'code', 'degree_level',
             'duration_years', 'credits_required', 'max_credits_per_semester', 'max_students',
             'tagline', 'overview', 'description',
-            'application_fee', 'tuition_fee', 'avg_starting_salary',
-            'job_placement_rate',
-            'is_active', 'is_featured', 'display_order',
+            'application_fee', 'tuition_fee',
+            'min_cgpa_to_progress',
+            'is_active', 'is_featured',
             'hero_image', 'meta_description', 'meta_keywords',
         ]
         widgets = {
@@ -1511,14 +1545,9 @@ class ProgramForm(forms.ModelForm):
                 'step': '0.01',
                 'min': '0'
             }),
-            'avg_starting_salary': forms.TextInput(attrs={
+            'min_cgpa_to_progress': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
-                'placeholder': 'e.g., $45,000 - $60,000'
-            }),
-            'job_placement_rate': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
-                'min': '0',
-                'max': '100'
+                'step': '0.01', 'min': '0', 'max': '5'
             }),
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 rounded text-primary-600 border-gray-300 focus:ring-primary-500'
@@ -1526,11 +1555,7 @@ class ProgramForm(forms.ModelForm):
             'is_featured': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 rounded text-primary-600 border-gray-300 focus:ring-primary-500'
             }),
-            'display_order': forms.NumberInput(attrs={
-                'class': 'w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
-                'min': '0'
-            }),
-            'hero_image': forms.FileInput(attrs={
+            'hero_image': forms.ClearableFileInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'accept': 'image/*'
             }),
@@ -1546,16 +1571,34 @@ class ProgramForm(forms.ModelForm):
             }),
         }
 
+    _LIST_FIELDS = (
+        ('entry_requirements', 'entry_requirements_text'),
+        ('core_courses', 'core_courses_text'),
+        ('specialization_tracks', 'specialization_tracks_text'),
+        ('learning_outcomes', 'learning_outcomes_text'),
+        ('career_paths', 'career_paths_text'),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['department'].queryset = Department.objects.select_related('faculty').order_by('faculty__name', 'name')
         if self.instance and self.instance.pk and isinstance(self.instance.credit_caps_by_term, dict):
             caps = self.instance.credit_caps_by_term
             self.fields['cu_first'].initial = caps.get('first')
             self.fields['cu_second'].initial = caps.get('second')
             self.fields['cu_annual'].initial = caps.get('annual')
+        if self.instance and self.instance.pk:
+            self.fields['available_study_modes'].initial = self.instance.available_study_modes
+            for model_field, text_field in self._LIST_FIELDS:
+                values = getattr(self.instance, model_field)
+                if values and isinstance(values, list):
+                    self.fields[text_field].initial = '\n'.join(values)
 
     def clean_code(self):
         return _clean_code_field(self.cleaned_data.get('code', ''))
+
+    def clean_hero_image(self):
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=5)
 
     def save(self, commit=True):
         program = super().save(commit=False)
@@ -1567,6 +1610,10 @@ class ProgramForm(forms.ModelForm):
         if self.cleaned_data.get('cu_annual') is not None:
             caps['annual'] = self.cleaned_data['cu_annual']
         program.credit_caps_by_term = caps
+        program.available_study_modes = self.cleaned_data.get('available_study_modes') or []
+        for model_field, text_field in self._LIST_FIELDS:
+            raw = self.cleaned_data.get(text_field, '')
+            setattr(program, model_field, [line.strip() for line in raw.splitlines() if line.strip()])
         if commit:
             program.save()
         return program

@@ -1153,7 +1153,11 @@ class Faculty(models.Model):
     # Media
     hero_image = models.ImageField(upload_to='faculties/heroes/', blank=True, null=True)
     about_image = models.ImageField(upload_to='faculties/about/', blank=True, null=True)
-    
+    gallery_image_1 = models.ImageField(upload_to='faculties/gallery/images/', blank=True, null=True, help_text="Gallery image 1 (max 3MB)")
+    gallery_image_2 = models.ImageField(upload_to='faculties/gallery/images/', blank=True, null=True, help_text="Gallery image 2 (max 3MB)")
+    gallery_image_3 = models.ImageField(upload_to='faculties/gallery/images/', blank=True, null=True, help_text="Gallery image 3 (max 3MB)")
+    gallery_video = models.FileField(upload_to='faculties/gallery/videos/', blank=True, null=True, help_text="Gallery video (shown first in carousel if present)")
+
     # Statistics
     student_count = models.IntegerField(default=0, help_text="Number of students")
     placement_rate = models.IntegerField(default=0, help_text="Career placement rate (0-100)")
@@ -1382,16 +1386,6 @@ class Program(models.Model):
         blank=True,
         help_text="Typical careers graduates pursue"
     )
-    avg_starting_salary = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="Average starting salary for graduates (e.g., '$45,000 - $60,000')"
-    )
-    job_placement_rate = models.IntegerField(
-        default=0,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
-        help_text="Graduate job placement rate as a percentage (0–100)"
-    )
 
     # ── Financial ──────────────────────────────────────────────────────────────
     application_fee = models.DecimalField(
@@ -1414,6 +1408,10 @@ class Program(models.Model):
         null=True,
         help_text="Hero/banner image for the program detail page"
     )
+    gallery_image_1 = models.ImageField(upload_to='programs/gallery/images/', blank=True, null=True, help_text="Gallery image 1 (max 3MB)")
+    gallery_image_2 = models.ImageField(upload_to='programs/gallery/images/', blank=True, null=True, help_text="Gallery image 2 (max 3MB)")
+    gallery_image_3 = models.ImageField(upload_to='programs/gallery/images/', blank=True, null=True, help_text="Gallery image 3 (max 3MB)")
+    gallery_video = models.FileField(upload_to='programs/gallery/videos/', blank=True, null=True, help_text="Gallery video (shown first in carousel if present)")
 
     # ── SEO ────────────────────────────────────────────────────────────────────
     meta_description = models.CharField(
@@ -1430,13 +1428,12 @@ class Program(models.Model):
     # ── Status & Display ───────────────────────────────────────────────────────
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
-    display_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ("department", "code")
-        ordering = ["display_order", "name"]
+        ordering = ["created_at"]  # as uploaded — oldest first
         verbose_name = "Program"
         verbose_name_plural = "Programs"
         indexes = [

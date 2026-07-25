@@ -1586,23 +1586,23 @@ class ProgramForm(forms.ModelForm):
             'is_featured': forms.CheckboxInput(attrs={
                 'class': 'w-4 h-4 rounded text-primary-600 border-gray-300 focus:ring-primary-500'
             }),
-            'hero_image': forms.FileInput(attrs={
+            'hero_image': forms.ClearableFileInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'accept': 'image/*'
             }),
-            'gallery_image_1': forms.FileInput(attrs={
+            'gallery_image_1': forms.ClearableFileInput(attrs={
                 'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'accept': 'image/*', 'data-preview-target': 'gallery-preview-1'
             }),
-            'gallery_image_2': forms.FileInput(attrs={
+            'gallery_image_2': forms.ClearableFileInput(attrs={
                 'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'accept': 'image/*', 'data-preview-target': 'gallery-preview-2'
             }),
-            'gallery_image_3': forms.FileInput(attrs={
+            'gallery_image_3': forms.ClearableFileInput(attrs={
                 'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'accept': 'image/*', 'data-preview-target': 'gallery-preview-3'
             }),
-            'gallery_video': forms.FileInput(attrs={
+            'gallery_video': forms.ClearableFileInput(attrs={
                 'class': 'gallery-video-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'accept': 'video/*', 'data-preview-target': 'gallery-preview-video'
             }),

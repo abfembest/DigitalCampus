@@ -1388,16 +1388,6 @@ class Program(models.Model):
         blank=True,
         help_text="Typical careers graduates pursue"
     )
-    avg_starting_salary = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="Average starting salary for graduates (e.g., '$45,000 - $60,000')"
-    )
-    job_placement_rate = models.IntegerField(
-        default=0,
-        validators=[MinValueValidator(0), MaxValueValidator(100)],
-        help_text="Graduate job placement rate as a percentage (0–100)"
-    )
 
     # ── Financial ──────────────────────────────────────────────────────────────
     application_fee = models.DecimalField(
@@ -1442,13 +1432,12 @@ class Program(models.Model):
     # ── Status & Display ───────────────────────────────────────────────────────
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
-    display_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ("department", "code")
-        ordering = ["display_order", "name"]
+        ordering = ["created_at"]  # as uploaded — oldest first
         verbose_name = "Program"
         verbose_name_plural = "Programs"
         indexes = [

@@ -3333,25 +3333,12 @@ def programs_list(request):
         messages.error(request, 'You do not have permission to view academic structure.')
         return redirect('management:dashboard')
 
+    # Filtering/search/pagination all happen client-side in the DataTable now
+    # (instant, no page reload) — the view just hands over every row.
     qs = Program.objects.select_related('department__faculty').order_by('name')
 
-    search = request.GET.get('search', '').strip()
-    if search:
-        qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search))
-
-    faculty_id = request.GET.get('faculty', '')
-    if faculty_id:
-        qs = qs.filter(department__faculty_id=faculty_id)
-
-    degree_level = request.GET.get('degree_level', '')
-    if degree_level:
-        qs = qs.filter(degree_level=degree_level)
-
-    paginator = Paginator(qs, 20)
-    page_obj = paginator.get_page(request.GET.get('page'))
-
     context = {
-        'programs': page_obj,
+        'programs': qs,
         'faculties': Faculty.objects.all(),
         'stats': [
             {'label': 'Total Programs', 'value': Program.objects.count(), 'color': 'text-primary-600'},
@@ -3359,6 +3346,10 @@ def programs_list(request):
             {'label': 'Featured', 'value': Program.objects.filter(is_featured=True).count(), 'color': 'text-yellow-600'},
             {'label': 'Departments', 'value': Department.objects.count(), 'color': 'text-blue-600'},
         ],
+        # The "New Program" modal on this page posts straight to program_create;
+        # this is just the blank form + session rows for its first paint.
+        'form': ProgramForm(),
+        'sessions_with_terms': _program_sessions_credit_cap_context(None),
     }
     return render(request, 'management/programs_list.html', context)
 
@@ -3367,11 +3358,17 @@ def _sync_program_session_credit_caps(request, program):
     """
     Parses POST fields named session_cap_<session_id>_<term> — one per term
     each AcademicSession actually defines in its own term_dates, rendered by
-    program_form.html's per-session section — and upserts/clears the
+    _program_form_fields.html's per-session section — and upserts/clears the
     matching ProgramSessionCreditCap rows for this program. A blank input
     means no override for that (session, term): deletes the row if one
     existed, rather than writing a 0/None value.
+
+    Returns a list of human-readable error strings for any row that couldn't
+    be saved (bad number, out of range) — the browser's own min="1" max="30"
+    on these inputs blocks this in normal use, so this is a defense-in-depth
+    backstop, not the primary validation path.
     """
+    errors = []
     for key, raw_value in request.POST.items():
         if not key.startswith('session_cap_'):
             continue
@@ -3390,14 +3387,17 @@ def _sync_program_session_credit_caps(request, program):
         try:
             value = int(raw_value)
         except ValueError:
+            errors.append(f"Credit cap for term '{term}' must be a whole number — was not saved.")
             continue
         if not (1 <= value <= 30):
+            errors.append(f"Credit cap for term '{term}' must be between 1 and 30 — was not saved.")
             continue
 
         ProgramSessionCreditCap.objects.update_or_create(
             program=program, session_id=session_id, term=term,
             defaults={'max_credit_units': value, 'updated_by': request.user},
         )
+    return errors
 
 
 def _program_sessions_credit_cap_context(program):
@@ -3438,25 +3438,35 @@ def _program_sessions_credit_cap_context(program):
 @login_required
 @user_passes_test(is_admin)
 def program_create(request):
-    if request.method == 'POST':
-        if not _has_permission(request, 'academics', 'can_create'):
-            messages.error(request, 'You do not have permission to create programs.')
-            return redirect('management:programs_list')
+    """
+    "New Program" is a modal on programs_list.html now, not a standalone
+    page — this view exists purely to handle that modal's POST. On success
+    it redirects to programs_list as before; the modal's JS detects the
+    redirect and reloads. On validation failure it re-renders just the
+    fields partial (no page chrome), which the modal's JS swaps in without
+    a full navigation. A direct GET (no modal, e.g. a stale bookmark) just
+    bounces to the list — there's no dedicated create page to show.
+    """
+    if request.method != 'POST':
+        return redirect('management:programs_list')
 
-        form = ProgramForm(request.POST, request.FILES)
-        if form.is_valid():
-            with transaction.atomic():
-                program = form.save()
-                # Session-specific caps need a real program PK, which only
-                # exists after this save — a brand-new program has none yet,
-                # but syncing here means a resubmitted create form (rare,
-                # but the template is shared with program_edit) still works.
-                _sync_program_session_credit_caps(request, program)
-            messages.success(request, 'Program created.')
-            return redirect('management:programs_list')
-    else:
-        form = ProgramForm()
-    return render(request, 'management/program_form.html', {
+    if not _has_permission(request, 'academics', 'can_create'):
+        messages.error(request, 'You do not have permission to create programs.')
+        return redirect('management:programs_list')
+
+    form = ProgramForm(request.POST, request.FILES)
+    if form.is_valid():
+        with transaction.atomic():
+            program = form.save()
+            # Session-specific caps need a real program PK, which only
+            # exists after this save.
+            cap_errors = _sync_program_session_credit_caps(request, program)
+        messages.success(request, 'Program created.')
+        for err in cap_errors:
+            messages.error(request, err)
+        return redirect('management:programs_list')
+
+    return render(request, 'management/_program_form_fields.html', {
         'form': form,
         'sessions_with_terms': _program_sessions_credit_cap_context(None),
     })
@@ -3475,8 +3485,10 @@ def program_edit(request, pk):
         if form.is_valid():
             with transaction.atomic():
                 form.save()
-                _sync_program_session_credit_caps(request, program)
+                cap_errors = _sync_program_session_credit_caps(request, program)
             messages.success(request, 'Program updated.')
+            for err in cap_errors:
+                messages.error(request, err)
             return redirect('management:programs_list')
     else:
         form = ProgramForm(instance=program)

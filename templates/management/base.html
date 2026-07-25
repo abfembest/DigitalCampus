@@ -1565,9 +1565,11 @@
             <!-- Top Header Bar -->
             <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
                 <div class="relative flex items-center justify-between px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 gap-2">
-                    <!-- Center: Brand Name -->
-                    <div class="flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center pointer-events-none select-none max-w-[40vw] sm:max-w-none">
-                        <span class="font-heading font-bold tracking-tight text-xs sm:text-base md:text-lg lg:text-xl bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent whitespace-nowrap truncate">
+                    <!-- Center: Brand Name — hidden below lg (sidebar already carries the brand there; up
+                         through md the header is tight with hamburger/collapse + breadcrumbs + bell + avatar
+                         and centered text just clutters it) -->
+                    <div class="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center pointer-events-none select-none max-w-none">
+                        <span class="font-heading font-bold tracking-tight text-lg xl:text-xl bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent whitespace-nowrap truncate">
                             MIU University
                         </span>
                     </div>

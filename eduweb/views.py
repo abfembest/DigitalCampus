@@ -361,6 +361,16 @@ def auth_page(request):
     if request.method == 'POST':
         action = request.POST.get('action')
 
+        # auth.html's login/signup forms submit via fetch() with this header
+        # so the page can redirect/show errors without a full reload. If that
+        # JS doesn't run for any reason (blocked, errored, JS disabled), the
+        # browser falls back to a plain form POST — in that case we must not
+        # hand back raw JSON as the page body, so success paths below redirect
+        # for real instead. Error paths still return JSON status=400, which
+        # is an acceptable (if inelegant) fallback since the user can just
+        # retry from the page they're already on.
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
         # ── SIGNUP ────────────────────────────────────────────────────────────
         if action == 'signup':
             signup_form = SignUpForm(
@@ -373,6 +383,12 @@ def auth_page(request):
                 user.is_active = False
                 user.save()
                 send_verification_email(request, user)
+                if not is_ajax:
+                    messages.success(
+                        request,
+                        'Account created! Check your email to verify your account before logging in.',
+                    )
+                    return redirect('eduweb:auth_page')
                 return JsonResponse({
                     'success': True,
                     'message': (
@@ -489,6 +505,10 @@ def auth_page(request):
             request.session['otp_user_id']     = user.pk
             request.session['otp_remember_me'] = request.POST.get('remember') == 'on'
             request.session.pop('captcha_answer', None)
+
+            if not is_ajax:
+                messages.success(request, f'A 6-digit code has been sent to {user.email}')
+                return redirect('eduweb:otp_verify')
 
             return JsonResponse({
                 'success': True,

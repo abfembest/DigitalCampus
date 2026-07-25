@@ -427,9 +427,27 @@
 </div>
 
 <script>
+// Guards every lucide.createIcons() call below: if the lucide CDN script is
+// slow, blocked (ad-blocker/network), or fails to load for any reason, a
+// bare `lucide.createIcons()` throws a ReferenceError — and since the very
+// first call used to sit at the top of the DOMContentLoaded handler, that
+// exception silently aborted the ENTIRE callback, including the login/signup
+// form addEventListener wiring further down. That left the forms as plain,
+// non-intercepted HTML forms: submitting them did a real page navigation to
+// this same URL, and the JSON the view returns got rendered as raw text
+// instead of triggering the intended redirect. Icons are cosmetic; form
+// submission isn't, so a missing icon library must never take it down too.
+function safeLucideIcons() {
+    try {
+        if (window.lucide) lucide.createIcons();
+    } catch (e) {
+        console.warn('lucide icon render failed:', e);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    lucide.createIcons();
-    
+    safeLucideIcons();
+
     // ========== TAB SWITCHING ==========
     const tabs = document.querySelectorAll('.auth-tab');
     const forms = document.querySelectorAll('.form-container');
@@ -450,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             clearAllErrors();
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => safeLucideIcons(), 50);
         });
     });
     
@@ -472,21 +490,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update the icon
                 toggle.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
-                lucide.createIcons();
+                safeLucideIcons();
             }
         }
     });
-    
+
     // ========== LOGIN FORM ==========
     document.getElementById('loginFormElement').addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+
         clearAllErrors();
         const submitBtn = document.getElementById('loginSubmitBtn');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<span>Signing In...</span><i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
         submitBtn.disabled = true;
-        lucide.createIcons();
+        safeLucideIcons();
         
         try {
             const formData = new FormData(this);
@@ -509,16 +527,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
-                lucide.createIcons();
+                safeLucideIcons();
             }
         } catch (error) {
             showMessage('error', 'An error occurred. Please try again.');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
-            lucide.createIcons();
+            safeLucideIcons();
         }
     });
-    
+
     // ========== SIGNUP FORM ==========
     document.getElementById('signupFormElement').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -528,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<span>Creating Account...</span><i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
         submitBtn.disabled = true;
-        lucide.createIcons();
+        safeLucideIcons();
         
         try {
             const formData = new FormData(this);
@@ -553,15 +571,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
-            lucide.createIcons();
+            safeLucideIcons();
         } catch (error) {
             showMessage('error', 'An error occurred. Please try again.');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
-            lucide.createIcons();
+            safeLucideIcons();
         }
     });
-    
+
     // ========== HELPER FUNCTIONS ==========
     function handleFormErrors(formType, errors) {
         for (const [field, messages] of Object.entries(errors)) {

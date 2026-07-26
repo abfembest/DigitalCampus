@@ -342,7 +342,7 @@
                                         class="inline-flex items-center gap-1.5 px-3.5 py-2 text-base font-medium
                                                bg-red-50 text-red-600 border border-red-200 rounded-xl
                                                hover:bg-red-100 transition-colors whitespace-nowrap"
-                                        onclick="return confirm('Deactivate this question? It will be excluded from student draws but stay in the bank.')">
+                                        onclick="return swalConfirmSubmit(this, {title: 'Deactivate this question?', text: 'It will be excluded from student draws but stay in the bank.', confirmButtonText: 'Yes, deactivate'})">
                                     <i class="fas fa-eye-slash text-xs"></i> Deactivate
                                 </button>
                                 {% else %}

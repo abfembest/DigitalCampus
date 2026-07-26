@@ -103,7 +103,7 @@
                 <form method="post"
                       action="{% url 'management:certificate_delete' cert.certificate_id %}"
                       class="inline"
-                      onsubmit="return confirm('Delete this certificate? This cannot be undone.');">
+                      onsubmit="return swalConfirmSubmit(this, {title: 'Delete this certificate?'});">
                   {% csrf_token %}
                   <button type="submit"
                           class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs

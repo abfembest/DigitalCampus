@@ -62,17 +62,6 @@
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                Display Order
-            </label>
-            {{ form.display_order }}
-            <p class="text-sm text-gray-500 mt-1">Lower numbers appear first</p>
-            {% if form.display_order.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.display_order.errors.0 }}</p>
-            {% endif %}
-        </div>
-
-        <div>
             <label class="flex items-center gap-3">
                 {{ form.is_active }}
                 <span class="text-sm font-semibold text-gray-700">

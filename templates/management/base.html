@@ -56,6 +56,7 @@
     <!-- SweetAlert2 (vendored) -->
     <link rel="stylesheet" href="{% static 'vendor/sweetalert2/sweetalert2.min.css' %}">
     <script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>
+    <script src="{% static 'js/confirm-submit.js' %}"></script>
 
     <script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
 
@@ -595,7 +596,7 @@
                             {% endif %}
                             <a href="{% url 'management:intakes_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'intakes' in request.path %}bg-white/20{% endif %}">
-                                <i class="fas fa-door-open mr-2" aria-hidden="true"></i>Course Intakes
+                                <i class="fas fa-door-open mr-2" aria-hidden="true"></i>Open Applications
                             </a>
                             <a href="{% url 'management:course_categories_list' %}"
                                class="block py-2 px-4 rounded-lg hover:bg-white/10 transition-all text-[15px] font-medium {% if 'categories' in request.path and 'blog' not in request.path %}bg-white/20{% endif %}">

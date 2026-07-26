@@ -176,7 +176,7 @@
               <form method="post"
                     action="{% url 'management:enrollment_delete' e.pk %}"
                     class="inline"
-                    onsubmit="return confirm('Delete this enrollment ({{ e.student.get_full_name|default:e.student.username|escapejs }} — {{ e.course.title|escapejs }})? This cannot be undone.');">
+                    onsubmit="return swalConfirmSubmit(this, {title: 'Delete this enrollment?', text: '{{ e.student.get_full_name|default:e.student.username|escapejs }} — {{ e.course.title|escapejs }}'});">
                 {% csrf_token %}
                 <button type="submit"
                         class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs

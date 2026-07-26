@@ -182,19 +182,11 @@
             </div>
             {% endif %}
             {% if program.tuition_fee %}
-            <div class="flex items-center justify-between border-b border-gray-100 pb-3 sm:pb-3.5">
+            <div class="flex items-center justify-between {% if program.max_students %}border-b border-gray-100 pb-3 sm:pb-3.5{% endif %}">
               <dt class="flex items-center gap-2 sm:gap-3 text-gray-500 text-xs sm:text-sm">
                 <i data-lucide="dollar-sign" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#840384]" aria-hidden="true"></i> Tuition / yr
               </dt>
               <dd class="font-['Poppins'] text-gray-900 font-bold text-sm sm:text-base">${{ program.tuition_fee|floatformat:"0" }}</dd>
-            </div>
-            {% endif %}
-            {% if program.application_fee %}
-            <div class="flex items-center justify-between {% if program.max_students %}border-b border-gray-100 pb-3 sm:pb-3.5{% endif %}">
-              <dt class="flex items-center gap-2 sm:gap-3 text-gray-500 text-xs sm:text-sm">
-                <i data-lucide="receipt" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#840384]" aria-hidden="true"></i> App. Fee
-              </dt>
-              <dd class="font-['Poppins'] text-gray-900 font-bold text-sm sm:text-base">${{ program.application_fee|floatformat:"0" }}</dd>
             </div>
             {% endif %}
             {% if program.max_students %}
@@ -524,19 +516,35 @@
               <span class="text-xs text-green-700 bg-green-50 border border-green-200 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full font-bold">Open</span>
             </div>
             <dl class="space-y-3 sm:space-y-3.5">
+              {% if intake.application_start_date %}
               <div class="flex items-center justify-between text-xs sm:text-sm">
                 <dt class="text-gray-500 flex items-center gap-1.5 sm:gap-2">
+                  <i data-lucide="calendar-clock" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#840384]" aria-hidden="true"></i>
+                  Applications Open
+                </dt>
+                <dd class="font-semibold text-gray-800">{{ intake.application_start_date|date:"d M Y" }}</dd>
+              </div>
+              {% endif %}
+              <div class="flex items-center justify-between text-xs sm:text-sm {% if intake.application_start_date %}border-t border-gray-100 pt-3 sm:pt-3.5{% endif %}">
+                <dt class="text-gray-500 flex items-center gap-1.5 sm:gap-2">
+                  <i data-lucide="clock" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-500" aria-hidden="true"></i>
+                  Application Deadline
+                </dt>
+                <dd class="font-semibold text-red-600">{{ intake.application_deadline|date:"d M Y" }}</dd>
+              </div>
+              <div class="flex items-center justify-between text-xs sm:text-sm border-t border-gray-100 pt-3 sm:pt-3.5">
+                <dt class="text-gray-500 flex items-center gap-1.5 sm:gap-2">
                   <i data-lucide="calendar" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#840384]" aria-hidden="true"></i>
-                  Start Date
+                  Program Start
                 </dt>
                 <dd class="font-semibold text-gray-800">{{ intake.start_date|date:"d M Y" }}</dd>
               </div>
               <div class="flex items-center justify-between text-xs sm:text-sm border-t border-gray-100 pt-3 sm:pt-3.5">
                 <dt class="text-gray-500 flex items-center gap-1.5 sm:gap-2">
-                  <i data-lucide="clock" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-500" aria-hidden="true"></i>
-                  Deadline
+                  <i data-lucide="receipt" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#840384]" aria-hidden="true"></i>
+                  Application Fee
                 </dt>
-                <dd class="font-semibold text-red-600">{{ intake.application_deadline|date:"d M Y" }}</dd>
+                <dd class="font-semibold text-gray-800">${{ intake.application_fee|floatformat:"0" }}</dd>
               </div>
               <div class="flex items-center justify-between text-xs sm:text-sm border-t border-gray-100 pt-3 sm:pt-3.5">
                 <dt class="text-gray-500 flex items-center gap-1.5 sm:gap-2">

@@ -87,7 +87,7 @@
                 <form method="post"
                       action="{% url 'management:student_badge_delete' sb.pk %}"
                       class="inline"
-                      onsubmit="return confirm('Revoke {{ sb.badge.name|escapejs }} from {{ sb.student.get_full_name|default:sb.student.username|escapejs }}?');">
+                      onsubmit="return swalConfirmSubmit(this, {title: 'Revoke {{ sb.badge.name|escapejs }} from {{ sb.student.get_full_name|default:sb.student.username|escapejs }}?', confirmButtonText: 'Yes, revoke'});">
                   {% csrf_token %}
                   <button type="submit"
                           class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs

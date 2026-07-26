@@ -131,7 +131,7 @@
                 <form method="post"
                       action="{% url 'management:review_delete' review.pk %}"
                       class="inline"
-                      onsubmit="return confirm('Delete this review? This cannot be undone.');">
+                      onsubmit="return swalConfirmSubmit(this, {title: 'Delete this review?'});">
                   {% csrf_token %}
                   <button type="submit"
                           class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs

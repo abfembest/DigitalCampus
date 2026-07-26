@@ -65,6 +65,7 @@ with the new root element to enhance just that subtree.
         flex-direction: column;
     }
     .ss-panel.ss-open { display: flex; }
+    .ss-panel.ss-panel-up { top: auto; bottom: calc(100% + 4px); }
     .ss-search {
         border: none;
         border-bottom: 1px solid #e5e7eb;
@@ -199,8 +200,34 @@ with the new root element to enhance just that subtree.
             });
         }
 
+        // Nearest ancestor that actually clips overflow (e.g. a modal's
+        // scrollable body) — position:absolute content extending past it
+        // gets cut off just like it would past the viewport, so bottom-space
+        // must be measured against this boundary, not window.innerHeight.
+        function scrollClipParent(el) {
+            var node = el.parentElement;
+            while (node && node !== document.body) {
+                var style = getComputedStyle(node);
+                if (/(auto|scroll|hidden)/.test(style.overflowY)) return node;
+                node = node.parentElement;
+            }
+            return null;
+        }
+
         function openPanel() {
             if (select.disabled) return;
+            // Flip the panel above the trigger when there isn't enough room
+            // below within whichever container actually clips it (viewport,
+            // or a scrollable modal body) — otherwise it renders
+            // off-screen/clipped and options become impossible to see or
+            // click.
+            var triggerRect = trigger.getBoundingClientRect();
+            var clipParent = scrollClipParent(wrap);
+            var boundaryBottom = clipParent ? clipParent.getBoundingClientRect().bottom : window.innerHeight;
+            var spaceBelow = boundaryBottom - triggerRect.bottom;
+            var spaceAbove = triggerRect.top;
+            var panelMaxHeight = window.innerWidth <= 480 ? window.innerHeight * 0.6 : 280;
+            panel.classList.toggle('ss-panel-up', spaceBelow < panelMaxHeight && spaceAbove > spaceBelow);
             panel.classList.add('ss-open');
             trigger.setAttribute('aria-expanded', 'true');
             search.value = '';

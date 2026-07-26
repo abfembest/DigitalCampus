@@ -506,12 +506,11 @@ class InstitutionPartner(models.Model):
                         help_text="Partner logo image (PNG/SVG recommended, transparent background)"
                     )
     is_active     = models.BooleanField(default=True)
-    display_order = models.PositiveSmallIntegerField(default=0, help_text="Lower = shown first")
 
     class Meta:
         verbose_name        = 'Institution Partner / Affiliation'
         verbose_name_plural = 'Institution Partners & Affiliations'
-        ordering            = ['display_order', 'name']
+        ordering            = ['name']
 
     def __str__(self):
         return f"{self.name} ({self.get_category_display()})"
@@ -537,16 +536,12 @@ class SiteHistoryMilestone(models.Model):
     description = models.TextField(
         help_text="One or two sentences describing what happened that year"
     )
-    display_order = models.PositiveSmallIntegerField(
-        default=0,
-        help_text="Lower numbers appear first. Leave 0 to sort by year instead."
-    )
     is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'History Milestone'
         verbose_name_plural = 'History Milestones'
-        ordering = ['display_order', 'year']
+        ordering = ['year']
 
     def __str__(self):
         return f"{self.year} – {self.title}"
@@ -563,10 +558,9 @@ class Testimonial(models.Model):
         help_text="Author photo. If left blank, initials will be shown instead."
     )
     is_active   = models.BooleanField(default=True)
-    order       = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
-        ordering = ['order']
+        ordering = ['author_name']
         verbose_name = 'Testimonial'
         verbose_name_plural = 'Testimonials'
 
@@ -878,13 +872,12 @@ class BlogCategory(models.Model):
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=50, default='folder')
     color = models.CharField(max_length=20, default='blue')
-    display_order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
-    
+
     class Meta:
         verbose_name = 'Blog Category'
         verbose_name_plural = 'Blog Categories'
-        ordering = ['display_order', 'name']
+        ordering = ['name']
     
     def __str__(self):
         return self.name
@@ -1176,14 +1169,13 @@ class Faculty(models.Model):
     
     # Status
     is_active = models.BooleanField(default=True)
-    display_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Faculty'
         verbose_name_plural = 'Faculties'
-        ordering = ['display_order', 'name']
+        ordering = ['name']
     
     def __str__(self):
         return self.name
@@ -1206,11 +1198,10 @@ class InstitutionMember(models.Model):
     role          = models.CharField(max_length=200)
     photo         = models.ImageField(upload_to='institution/members/', blank=True, null=True)
     bio           = models.TextField(blank=True)
-    display_order = models.PositiveIntegerField(default=0)
     is_active     = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ['display_order', 'name']
+        ordering = ['name']
         verbose_name = 'Institution Member'
         verbose_name_plural = 'Institution Members'
 
@@ -1238,14 +1229,13 @@ class Department(models.Model):
 
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
-    display_order = models.IntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ("faculty", "code")
-        ordering = ["display_order", "name"]
+        ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} ({self.faculty.code})"
@@ -1390,12 +1380,8 @@ class Program(models.Model):
     )
 
     # ── Financial ──────────────────────────────────────────────────────────────
-    application_fee = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0.00,
-        help_text="Fee to apply for this program"
-    )
+    # application_fee lives on CourseIntake now — it varies per intake period,
+    # not per program.
     tuition_fee = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -1515,6 +1501,27 @@ class Program(models.Model):
                 return fallback
 
         return self.max_credits_per_semester
+
+    def get_current_intake(self):
+        """
+        The CourseIntake a new application against this program should be
+        attributed to — and therefore whose application_fee it should be
+        charged. Prefers the active intake whose application window hasn't
+        closed yet (earliest deadline first, so the intake that's actually
+        closing soonest wins over one further out); falls back to the most
+        recent intake overall so payment isn't left with nothing to charge
+        just because staff forgot to keep deadlines current.
+        """
+        today = timezone.now().date()
+        open_intake = (
+            self.intakes
+            .filter(is_active=True, application_deadline__gte=today)
+            .order_by('application_deadline')
+            .first()
+        )
+        if open_intake:
+            return open_intake
+        return self.intakes.filter(is_active=True).order_by('-year', 'intake_period').first()
 
 # ==============================================================================
 # ACADEMIC SESSION
@@ -2001,8 +2008,18 @@ class CourseIntake(models.Model):
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='intakes')
     intake_period = models.CharField(max_length=20, choices=INTAKE_PERIOD_CHOICES)
     year = models.IntegerField()
-    start_date = models.DateField()
-    application_deadline = models.DateField()
+    application_start_date = models.DateField(
+        null=True, blank=True,
+        help_text="When applications open for this intake"
+    )
+    start_date = models.DateField(help_text="Program start date for this intake")
+    application_deadline = models.DateField(help_text="Application closing date for this intake")
+    application_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Fee to apply for this specific intake"
+    )
     available_slots = models.IntegerField(default=50, validators=[MinValueValidator(1)])
     is_active = models.BooleanField(default=True)
     
@@ -2232,6 +2249,36 @@ class CourseApplication(models.Model):
     
     def __str__(self):
         return f"{self.application_id} - {self.first_name} {self.last_name}"
+
+    def resolve_intake(self):
+        """
+        Attribute this application to a CourseIntake, and return it. Set at
+        the point `program` is assigned/changed (see eduweb.views.apply) so
+        that everything downstream — the fee charged, the deadline shown —
+        is pinned to one specific intake instead of drifting with whichever
+        intake happens to look "current" whenever it's next read. Safe to
+        call again later; it's a no-op once `intake` is already set.
+        """
+        if self.intake_id:
+            return self.intake
+        if not self.program_id:
+            return None
+        intake = self.program.get_current_intake()
+        if intake:
+            self.intake = intake
+        return intake
+
+    @property
+    def application_fee(self):
+        """
+        The fee this application should be charged — from its resolved
+        intake, not the program (fees vary per intake period). Falls back
+        to 0 rather than raising if somehow no intake could be resolved,
+        since callers computing a payment amount should treat that as "not
+        chargeable yet" rather than crash.
+        """
+        intake = self.intake or self.resolve_intake()
+        return intake.application_fee if intake else Decimal('0.00')
 
     @property
     def is_paid(self):
@@ -2499,7 +2546,7 @@ class ApplicationPayment(models.Model):
             self.payment_reference = f"PAY-{uuid.uuid4().hex[:12].upper()}"
         
         if not self.amount:
-            self.amount = self.application.program.application_fee
+            self.amount = self.application.application_fee
         
         if self.status == 'success' and not self.paid_at:
             self.paid_at = timezone.now()
@@ -2521,15 +2568,14 @@ class CourseCategory(models.Model):
     icon = models.CharField(max_length=50, default='folder')
     color = models.CharField(max_length=20, default='blue')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
-    display_order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = 'Course Category'
         verbose_name_plural = 'Course Categories'
-        ordering = ['display_order', 'name']
+        ordering = ['name']
     
     def __str__(self):
         return self.name
@@ -2855,7 +2901,7 @@ class LMSCourse(models.Model):
     
     # Content
     short_description = models.TextField(max_length=500)
-    description = models.TextField()
+    description = models.TextField(blank=True)
     learning_objectives = models.JSONField(default=list)
     prerequisites = models.JSONField(default=list)
 

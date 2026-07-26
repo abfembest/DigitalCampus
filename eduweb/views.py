@@ -818,7 +818,7 @@ def index(request):
             .prefetch_related('departments')
             .order_by('name')[:6]
         ),
-        'testimonials': Testimonial.objects.filter(is_active=True).order_by('order'),
+        'testimonials': Testimonial.objects.filter(is_active=True).order_by('author_name'),
         'recent_posts': (
             BlogPost.objects
             .filter(status='published')
@@ -1458,7 +1458,6 @@ def apply(request):
             'code':                  prog.code,
             'degree_level':          prog.degree_level,
             'available_study_modes': prog.available_study_modes,
-            'application_fee':       str(prog.application_fee),
             'tuition_fee':           str(prog.tuition_fee),
         })
     courses_json = json.dumps(courses_by_faculty, cls=DjangoJSONEncoder)
@@ -1469,6 +1468,7 @@ def apply(request):
             try:
                 application = form.save(commit=False)
                 application.user = request.user
+                application.resolve_intake()
 
                 academic_history = []
                 entry_count = 1
@@ -1746,7 +1746,11 @@ def save_application_draft(request):
         program_id = data.get('program')
         if program_id:
             try:
-                application.program = Program.objects.get(id=program_id, is_active=True)
+                new_program = Program.objects.get(id=program_id, is_active=True)
+                if new_program.pk != application.program_id:
+                    application.program = new_program
+                    application.intake = None  # re-resolve for the newly chosen program
+                application.resolve_intake()
             except Program.DoesNotExist:
                 pass
 
@@ -1995,7 +1999,7 @@ def get_payment_summary(request, application_id=None, student_fee_id=None):
             data = {
                 'full_name':        f"{application.first_name} {application.last_name}",
                 'application_id':   application.application_id,
-                'amount':           float(application.program.application_fee) if application.program else 0,
+                'amount':           float(application.application_fee),
                 'currency':         'USD',
                 'description':      'Application Processing Fee',
                 'stripe_public_key': get_stripe_public_key(),
@@ -2109,7 +2113,10 @@ def create_payment_intent(request):
                 if application.is_paid:
                     return JsonResponse({'success': False, 'error': 'Application already paid'}, status=400)
 
-                amount_pence = int(application.program.application_fee * Decimal('100'))
+                if not application.intake_id and application.resolve_intake():
+                    application.save(update_fields=['intake'])
+                fee = application.application_fee
+                amount_pence = int(fee * Decimal('100'))
 
                 existing = ApplicationPayment.objects.filter(
                     application=application
@@ -2148,7 +2155,7 @@ def create_payment_intent(request):
                 ApplicationPayment.objects.create(
                     application=application,
                     gateway_payment_id=intent.id,
-                    amount=application.program.application_fee,
+                    amount=fee,
                     currency='USD',
                     status='pending',
                 )

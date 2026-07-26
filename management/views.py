@@ -100,6 +100,7 @@ from management.forms import (
     EnrollmentForm,
     FacultyForm,
     InstitutionMemberForm,
+    IntakeCreateFormSet,
     LMSCourseForm,
     LibraryItemForm,
     NotificationConfigForm,
@@ -937,7 +938,7 @@ def send_decision_email(application):
 
 def _faculty_ctx(form=None, edit_pk=None):
     """Shared context for all faculty list views."""
-    qs = Faculty.objects.prefetch_related('departments').order_by('display_order', 'name')
+    qs = Faculty.objects.prefetch_related('departments').order_by('name')
     return {
         'faculties':         qs,
         'form':              form or FacultyForm(),
@@ -1136,7 +1137,7 @@ def blog_categories_list(request):
         messages.error(request, 'You do not have permission to view blog categories.')
         return redirect('management:dashboard')
 
-    categories = BlogCategory.objects.all().order_by('display_order', 'name')
+    categories = BlogCategory.objects.all().order_by('name')
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
@@ -4236,11 +4237,16 @@ def intakes_list(request):
 
     years = CourseIntake.objects.values_list('year', flat=True).distinct().order_by('-year')
 
+    current_year = timezone.now().year
+    year_options = sorted(set(range(current_year - 3, current_year + 11)) | set(years))
+
     context = {
         'intakes': page_obj,
         'programs': Program.objects.filter(is_active=True).order_by('name'),
         'years': years,
+        'year_options': year_options,
         'today': timezone.now().date(),
+        'intake_formset': IntakeCreateFormSet(queryset=CourseIntake.objects.none(), prefix='intake'),
     }
     return render(request, 'management/intakes_list.html', context)
 
@@ -4248,20 +4254,39 @@ def intakes_list(request):
 @login_required
 @user_passes_test(is_admin)
 def intake_create(request):
-    """AJAX-only: create a new intake, redirect back to list."""
+    """
+    Bulk-create endpoint backing the "Add Another Intake" formset — one POST
+    can contain several intake rows (program/period/year/etc each suffixed
+    `intake-0-`, `intake-1-`, ...). Rows the admin never touched (extra blank
+    rows left over from clicking "Add" and not filling them in) are silently
+    skipped rather than saved as empty/invalid records.
+    """
     if request.method == 'POST':
         if not _has_permission(request, 'academics', 'can_create'):
             messages.error(request, 'You do not have permission to create intakes.')
             return redirect('management:intakes_list')
 
-        form = CourseIntakeForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Intake created.')
+        formset = IntakeCreateFormSet(request.POST, queryset=CourseIntake.objects.none(), prefix='intake')
+        if formset.is_valid():
+            created = 0
+            with transaction.atomic():
+                for form in formset:
+                    if not form.has_changed():
+                        continue
+                    form.save()
+                    created += 1
+            if created:
+                messages.success(request, f'{created} intake{"s" if created != 1 else ""} created.')
+            else:
+                messages.error(request, 'No intake data was submitted.')
         else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
+            for i, form in enumerate(formset, start=1):
+                for field, errors in form.errors.items():
+                    label = form.fields[field].label if field in form.fields else field
+                    for error in errors:
+                        messages.error(request, f'Intake #{i} — {label}: {error}')
+            for error in formset.non_form_errors():
+                messages.error(request, error)
     return redirect('management:intakes_list')
 
 
@@ -4294,8 +4319,10 @@ def intake_edit(request, pk):
             'program': intake.program_id,
             'intake_period': intake.intake_period,
             'year': intake.year,
-            'start_date': str(intake.start_date),
+            'application_start_date': str(intake.application_start_date) if intake.application_start_date else '',
             'application_deadline': str(intake.application_deadline),
+            'start_date': str(intake.start_date),
+            'application_fee': str(intake.application_fee),
             'available_slots': intake.available_slots,
             'is_active': intake.is_active,
         })
@@ -4339,7 +4366,7 @@ def course_categories_list(request):
 
     categories = CourseCategory.objects.prefetch_related(
         'subcategories'
-    ).select_related('parent').order_by('display_order', 'name')
+    ).select_related('parent').order_by('name')
     return render(request, 'management/course_categories_list.html', {'categories': categories})
 
 
@@ -5824,7 +5851,7 @@ def site_milestones_list(request):
         messages.error(request, 'You do not have permission to view site history milestones.')
         return redirect('management:dashboard')
 
-    milestones = SiteHistoryMilestone.objects.all().order_by('display_order', 'year')
+    milestones = SiteHistoryMilestone.objects.all().order_by('year')
     return render(request, 'management/site_config/milestones_list.html', {
         'milestones': milestones,
         'active_count': milestones.filter(is_active=True).count(),
@@ -5898,7 +5925,7 @@ def testimonials_list(request):
         messages.error(request, 'You do not have permission to view testimonials.')
         return redirect('management:dashboard')
 
-    testimonials = Testimonial.objects.all().order_by('order')
+    testimonials = Testimonial.objects.all().order_by('author_name')
     return render(request, 'management/site_config/testimonials_list.html', {
         'testimonials': testimonials,
         'active_count': testimonials.filter(is_active=True).count(),
@@ -5970,7 +5997,7 @@ def institution_members_list(request):
         messages.error(request, 'You do not have permission to view institution members.')
         return redirect('management:dashboard')
 
-    members = InstitutionMember.objects.all().order_by('member_type', 'display_order')
+    members = InstitutionMember.objects.all().order_by('member_type', 'name')
     return render(request, 'management/site_config/members_list.html', {
         'members': members,
         'admin_board_count':      members.filter(member_type='admin_board', is_active=True).count(),

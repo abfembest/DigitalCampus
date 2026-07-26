@@ -19,7 +19,7 @@ def index(request):
         Faculty.objects
         .filter(slug__in=MELBAC_FACULTY_SLUGS, is_active=True)
         .prefetch_related('departments__programs')
-        .order_by('display_order')
+        .order_by('name')
     )
     recent_posts = (
         BlogPost.objects
@@ -45,7 +45,7 @@ def academics(request):
         Faculty.objects
         .filter(slug__in=MELBAC_FACULTY_SLUGS, is_active=True)
         .prefetch_related('departments', 'departments__programs')
-        .order_by('display_order')
+        .order_by('name')
     )
     return render(request, 'melbac/academics.html', {'faculties': faculties})
 

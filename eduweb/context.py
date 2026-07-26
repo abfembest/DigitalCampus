@@ -86,7 +86,7 @@ def navigation_data(request):
         faculties = list(
             Faculty.objects
             .filter(is_active=True)
-            .order_by('display_order', 'name')
+            .order_by('name')
         )
     except Exception:
         logger.exception('navigation_data: failed to fetch faculties')

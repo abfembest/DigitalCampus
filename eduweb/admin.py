@@ -63,8 +63,8 @@ class SiteConfigForm(forms.ModelForm):
 class SiteHistoryMilestoneInline(admin.TabularInline):
     model = SiteHistoryMilestone
     extra = 1
-    fields = ('year', 'title', 'description', 'display_order', 'is_active')
-    ordering = ('display_order', 'year')
+    fields = ('year', 'title', 'description', 'is_active')
+    ordering = ('year',)
 
 @admin.register(SiteConfig)
 class SiteConfigAdmin(admin.ModelAdmin):
@@ -171,17 +171,17 @@ class SiteConfigAdmin(admin.ModelAdmin):
 # ==================== TESTIMONIALS ====================
 @admin.register(Testimonial)
 class TestimonialAdmin(admin.ModelAdmin):
-    list_display  = ('author_name', 'author_role', 'is_active', 'order')
+    list_display  = ('author_name', 'author_role', 'is_active')
     list_filter   = ('is_active',)
     search_fields = ('author_name', 'author_role', 'quote')
-    list_editable = ('is_active', 'order')
+    list_editable = ('is_active',)
 
     fieldsets = (
         ('Testimonial', {
             'fields': ('quote', 'author_name', 'author_role', 'avatar')
         }),
         ('Display', {
-            'fields': ('is_active', 'order')
+            'fields': ('is_active',)
         }),
     )
 
@@ -433,18 +433,18 @@ class StudentBadgeAdmin(admin.ModelAdmin):
 # ==================== BLOG ====================
 @admin.register(BlogCategory)
 class BlogCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'get_post_count', 'icon', 'color', 'display_order', 'is_active')
+    list_display = ('name', 'slug', 'get_post_count', 'icon', 'color', 'is_active')
     list_filter = ('is_active', 'color')
     search_fields = ('name', 'description')
     prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('display_order', 'is_active')
+    list_editable = ('is_active',)
 
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'description')
         }),
         ('Display Settings', {
-            'fields': ('icon', 'color', 'display_order', 'is_active')
+            'fields': ('icon', 'color', 'is_active')
         }),
     )
 
@@ -577,17 +577,17 @@ from .models import InstitutionPartner
 
 @admin.register(InstitutionPartner)
 class InstitutionPartnerAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'location', 'display_order', 'is_active')
+    list_display = ('name', 'category', 'location', 'is_active')
     list_filter = ('category', 'is_active')
     search_fields = ('name', 'location')
-    list_editable = ('display_order', 'is_active')
+    list_editable = ('is_active',)
 
     fieldsets = (
         ('Partner Information', {
             'fields': ('name', 'category', 'location', 'logo')
         }),
         ('Display', {
-            'fields': ('display_order', 'is_active')
+            'fields': ('is_active',)
         }),
     )
 
@@ -618,16 +618,16 @@ class ContactMessageAdmin(admin.ModelAdmin):
 # ==================== ACADEMIC STRUCTURE ====================
 @admin.register(Faculty)
 class FacultyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'student_count', 'is_active', 'display_order', 'created_at')
+    list_display = ('name', 'code', 'student_count', 'is_active', 'created_at')
     list_filter = ('is_active', 'created_at')
     search_fields = ('name', 'code', 'description')
     prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('is_active', 'display_order')
+    list_editable = ('is_active',)
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'code', 'is_active', 'display_order')
+            'fields': ('name', 'slug', 'code', 'is_active')
         }),
         ('Display Settings', {
             'fields': ('icon', 'color_primary', 'color_secondary', 'tagline')
@@ -663,33 +663,33 @@ class FacultyAdmin(admin.ModelAdmin):
 
 @admin.register(InstitutionMember)
 class InstitutionMemberAdmin(admin.ModelAdmin):
-    list_display = ('name', 'role', 'member_type', 'display_order', 'is_active')
+    list_display = ('name', 'role', 'member_type', 'is_active')
     list_filter = ('member_type', 'is_active')
     search_fields = ('name', 'role', 'bio')
-    list_editable = ('display_order', 'is_active')
+    list_editable = ('is_active',)
 
     fieldsets = (
         ('Member Information', {
             'fields': ('member_type', 'name', 'role', 'photo', 'bio')
         }),
         ('Display', {
-            'fields': ('display_order', 'is_active')
+            'fields': ('is_active',)
         }),
     )
 
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'faculty', 'is_active', 'display_order', 'created_at')
+    list_display = ('name', 'code', 'faculty', 'is_active', 'created_at')
     list_filter = ('faculty', 'is_active', 'created_at')
     search_fields = ('name', 'code', 'description')
     prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('is_active', 'display_order')
+    list_editable = ('is_active',)
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'code', 'faculty', 'is_active', 'display_order')
+            'fields': ('name', 'slug', 'code', 'faculty', 'is_active')
         }),
         ('Content', {
             'fields': ('description',)
@@ -705,7 +705,7 @@ class DepartmentAdmin(admin.ModelAdmin):
 class ProgramAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'code', 'department', 'degree_level', 'duration_years',
-        'application_fee', 'tuition_fee', 'is_active', 'is_featured'
+        'tuition_fee', 'is_active', 'is_featured'
     )
     list_filter = ('department__faculty', 'department', 'degree_level', 'is_active', 'is_featured')
     search_fields = ('name', 'code', 'description', 'tagline')
@@ -724,7 +724,7 @@ class ProgramAdmin(admin.ModelAdmin):
             'fields': ('tagline', 'overview', 'description')
         }),
         ('Financial Information', {
-            'fields': ('application_fee', 'tuition_fee')
+            'fields': ('tuition_fee',)
         }),
         ('Curriculum', {
             'fields': ('entry_requirements', 'core_courses', 'specialization_tracks'),
@@ -869,7 +869,7 @@ class AllRequiredPaymentsAdmin(admin.ModelAdmin):
 class CourseIntakeAdmin(admin.ModelAdmin):
     list_display = (
         'program', 'intake_period', 'year', 'start_date',
-        'application_deadline', 'available_slots', 'is_active'
+        'application_deadline', 'application_fee', 'available_slots', 'is_active'
     )
     list_filter = ('intake_period', 'year', 'is_active', 'program__department__faculty')
     search_fields = ('program__name', 'program__code')
@@ -881,10 +881,10 @@ class CourseIntakeAdmin(admin.ModelAdmin):
             'fields': ('program', 'intake_period', 'year')
         }),
         ('Dates', {
-            'fields': ('start_date', 'application_deadline')
+            'fields': ('application_start_date', 'application_deadline', 'start_date')
         }),
-        ('Capacity', {
-            'fields': ('available_slots', 'is_active')
+        ('Capacity & Fee', {
+            'fields': ('available_slots', 'application_fee', 'is_active')
         }),
     )
 
@@ -1149,11 +1149,11 @@ class ApplicationPaymentAdmin(admin.ModelAdmin):
 # ==================== COURSE CATEGORIES ====================
 @admin.register(CourseCategory)
 class CourseCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'parent', 'icon', 'color', 'display_order', 'is_active')
+    list_display = ('name', 'slug', 'parent', 'icon', 'color', 'is_active')
     list_filter = ('is_active', 'parent')
     search_fields = ('name', 'description')
     prepopulated_fields = {'slug': ('name',)}
-    list_editable = ('display_order', 'is_active')
+    list_editable = ('is_active',)
     readonly_fields = ('created_at', 'updated_at')
 
     fieldsets = (
@@ -1161,7 +1161,7 @@ class CourseCategoryAdmin(admin.ModelAdmin):
             'fields': ('name', 'slug', 'description', 'parent')
         }),
         ('Display Settings', {
-            'fields': ('icon', 'color', 'display_order', 'is_active')
+            'fields': ('icon', 'color', 'is_active')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -2068,17 +2068,17 @@ class CourseRegistrationAdmin(admin.ModelAdmin):
 # ==================== SITE HISTORY MILESTONES (standalone) ====================
 @admin.register(SiteHistoryMilestone)
 class SiteHistoryMilestoneAdmin(admin.ModelAdmin):
-    list_display  = ('year', 'title', 'site', 'display_order', 'is_active')
+    list_display  = ('year', 'title', 'site', 'is_active')
     list_filter   = ('is_active',)
     search_fields = ('title', 'description')
-    list_editable = ('display_order', 'is_active')
+    list_editable = ('is_active',)
 
     fieldsets = (
         ('Milestone', {
             'fields': ('site', 'year', 'title', 'description')
         }),
         ('Display', {
-            'fields': ('display_order', 'is_active')
+            'fields': ('is_active',)
         }),
     )
 

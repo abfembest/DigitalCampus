@@ -59,7 +59,7 @@
         <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
             <i class="fas fa-check-circle text-green-600 text-sm"></i>
         </div>
-        <div><p class="text-xs text-gray-500 font-medium">Active</p><p class="text-2xl font-bold text-gray-900">{{ active_count|default:faculties|length }}</p></div>
+        <div><p class="text-xs text-gray-500 font-medium">Active</p><p class="text-2xl font-bold text-gray-900">{{ active_count }}</p></div>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
         <div class="w-10 h-10 rounded-lg bg-secondary-100 flex items-center justify-center flex-shrink-0">
@@ -97,7 +97,7 @@
                 {% for f in faculties %}
                 <tr class="hover:bg-gray-50/60 transition-colors">
                     <td class="px-4 py-3.5">
-                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-500">{{ f.display_order }}</span>
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-500">{{ forloop.counter }}</span>
                     </td>
                     <td class="px-4 py-3.5">
                         <div class="flex items-center gap-3">
@@ -246,9 +246,11 @@
                                             <option value="green">green</option><option value="purple">purple</option><option value="red">red</option>
                                             <option value="pink">pink</option><option value="indigo">indigo</option><option value="cyan">cyan</option>
                                         </select>
-                                        {# NOTE: options here must exactly match the restricted
-                                           `choices=` on ManagementFacultyForm.Meta.widgets['color_primary']
-                                           in management/forms.py — Django rejects anything else server-side. #}
+                                        {% comment %}
+                                        NOTE: options here must exactly match the restricted
+                                        `choices=` on ManagementFacultyForm.Meta.widgets['color_primary']
+                                        in management/forms.py — Django rejects anything else server-side.
+                                        {% endcomment %}
                                     </div>
                                 </div>
                                 {% if form.color_primary.errors %}<p class="field-error">{{ form.color_primary.errors.0 }}</p>{% endif %}
@@ -265,9 +267,11 @@
                                             <option value="lime">lime</option><option value="violet">violet</option><option value="rose">rose</option>
                                             <option value="fuchsia">fuchsia</option><option value="sky">sky</option><option value="yellow">yellow</option>
                                         </select>
-                                        {# NOTE: options here must exactly match the restricted
-                                           `choices=` on ManagementFacultyForm.Meta.widgets['color_secondary']
-                                           in management/forms.py — Django rejects anything else server-side. #}
+                                        {% comment %}
+                                        NOTE: options here must exactly match the restricted
+                                        `choices=` on ManagementFacultyForm.Meta.widgets['color_secondary']
+                                        in management/forms.py — Django rejects anything else server-side.
+                                        {% endcomment %}
                                     </div>
                                 </div>
                                 {% if form.color_secondary.errors %}<p class="field-error">{{ form.color_secondary.errors.0 }}</p>{% endif %}
@@ -444,11 +448,6 @@
                                 {{ form.is_active }}
                                 <span class="text-sm font-medium text-gray-700">Active (visible on website)</span>
                             </label>
-                            <div class="flex items-center gap-2">
-                                <label class="field-label mb-0 whitespace-nowrap">Display Order</label>
-                                <div class="w-20">{{ form.display_order }}</div>
-                                {% if form.display_order.errors %}<p class="field-error">{{ form.display_order.errors.0 }}</p>{% endif %}
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -490,7 +489,7 @@ const FACULTY_DATA = {
         student_count:{{ f.student_count|default:0 }}, placement_rate:{{ f.placement_rate|default:0 }},
         partner_count:{{ f.partner_count|default:0 }}, international_faculty:{{ f.international_faculty|default:0 }},
         meta_description:"{{ f.meta_description|escapejs }}", meta_keywords:"{{ f.meta_keywords|escapejs }}",
-        is_active:{{ f.is_active|yesno:"true,false" }}, display_order:{{ f.display_order|default:0 }},
+        is_active:{{ f.is_active|yesno:"true,false" }},
         hero_image_url:"{% if f.hero_image %}{{ f.hero_image.url }}{% endif %}",
         about_image_url:"{% if f.about_image %}{{ f.about_image.url }}{% endif %}",
         gallery_image_1_url:"{% if f.gallery_image_1 %}{{ f.gallery_image_1.url }}{% endif %}",
@@ -607,7 +606,6 @@ const COLOR_BG = {
             setVal('id_student_count', d.student_count); setVal('id_placement_rate', d.placement_rate);
             setVal('id_partner_count', d.partner_count); setVal('id_international_faculty', d.international_faculty);
             setVal('id_meta_description', d.meta_description); setVal('id_meta_keywords', d.meta_keywords);
-            setVal('id_display_order', d.display_order);
 
             const cb = document.getElementById('id_is_active');
             if (cb) cb.checked = !!d.is_active;

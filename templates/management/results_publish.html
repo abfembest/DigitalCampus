@@ -70,7 +70,7 @@
                   Review students
                 </a>
                 {% if permissions.results_publish.can_approve %}
-                <form method="post" class="inline" onsubmit="return confirm('Release all {{ g.total }} result(s) for {{ g.session__name }} ({{ g.term_label }}) to students?')">
+                <form method="post" class="inline" onsubmit="return swalConfirmSubmit(this, {title: 'Release all {{ g.total }} result(s)?', text: '{{ g.session__name }} ({{ g.term_label }}) — visible to students immediately.', confirmButtonColor: '#16a34a', confirmButtonText: 'Yes, release'})">
                   {% csrf_token %}
                   <input type="hidden" name="session_id" value="{{ g.session_id }}">
                   <input type="hidden" name="term" value="{{ g.term }}">
@@ -80,7 +80,7 @@
                     Release All
                   </button>
                 </form>
-                <form method="post" class="inline" onsubmit="return confirm('Withhold all {{ g.total }} result(s) for {{ g.session__name }} ({{ g.term_label }}) from students?')">
+                <form method="post" class="inline" onsubmit="return swalConfirmSubmit(this, {title: 'Withhold all {{ g.total }} result(s)?', text: '{{ g.session__name }} ({{ g.term_label }}) — hidden from students.', confirmButtonText: 'Yes, withhold'})">
                   {% csrf_token %}
                   <input type="hidden" name="session_id" value="{{ g.session_id }}">
                   <input type="hidden" name="term" value="{{ g.term }}">

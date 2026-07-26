@@ -84,57 +84,43 @@ def _validate_upload(file, extensions, max_size_mb=10):
 # ==============================================================================
 
 class DatalistWidget(forms.TextInput):
-    """Custom widget that renders a datalist for model selections"""
+    """
+    Not currently used anywhere in this codebase — kept only so nothing
+    importing it breaks. Deliberately NOT a real <datalist> anymore: a
+    <datalist> option's `value` attribute is what browsers write back into
+    the paired <input> when a suggestion is picked (never its label/text),
+    which caused live "This field is required" bugs elsewhere in this project
+    when that value didn't round-trip into whatever the form actually
+    expected. Left as a plain, safely-submitting text input instead.
+    """
     def __init__(self, datalist_id=None, attrs=None):
+        attrs = dict(attrs or {})
+        attrs.setdefault('class', 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500')
         super().__init__(attrs)
-        self.datalist_id = datalist_id or 'datalist-' + str(id(self))
-    
-    def render(self, name, value, attrs=None, renderer=None):
-        # Get the html_id
-        if attrs is None:
-            attrs = {}
-        attrs['list'] = self.datalist_id
-        attrs['class'] = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-        
-        html = super().render(name, value, attrs, renderer)
-        return html
 
 
-class ModelDatalistWidget(forms.Widget):
-    """Widget that renders input with datalist for model foreign keys"""
-    def __init__(self, queryset, label_func=None, attrs=None):
-        super().__init__(attrs)
+class ModelDatalistWidget(forms.Select):
+    """
+    Not currently used anywhere in this codebase — kept only so nothing
+    importing it breaks. Previously rendered a text input paired with a
+    <datalist> of model instances (value=pk, label=display text); since a
+    browser writes an <option>'s `value` back into the input on selection
+    but leaves it untouched (still the display label) if the user submits
+    without re-picking, this could submit a raw label string where a pk was
+    required — a real "field not saving" bug, not just a cosmetic one.
+    Rebuilt on top of forms.Select (a normal, always-correctly-submitting
+    <select>) with the `searchable-select` class so the shared
+    includes/searchable_select.html enhancer gives it the same
+    search-as-you-type UX the old widget was going for, without the bug.
+    """
+    def __init__(self, queryset, label_func=None, attrs=None, empty_label='Select…'):
         self.queryset = queryset
         self.label_func = label_func or (lambda obj: str(obj))
-        self.datalist_id = 'datalist-' + str(id(self))
-    
-    def render(self, name, value, attrs=None, renderer=None):
-        if attrs is None:
-            attrs = {}
-        attrs['class'] = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-        
-        # Get the selected label
-        selected_label = ''
-        if value:
-            try:
-                obj = self.queryset.get(pk=value)
-                selected_label = self.label_func(obj)
-            except:
-                selected_label = str(value)
-        
-        # Build the HTML
-        html = f'<input type="text" name="{name}" value="{selected_label}" list="{self.datalist_id}" '
-        for key, attr_value in attrs.items():
-            html += f'{key}="{attr_value}" '
-        html += '/>\n'
-        
-        # Add datalist
-        html += f'<datalist id="{self.datalist_id}">\n'
-        for obj in self.queryset:
-            html += f'  <option value="{obj.pk}">{self.label_func(obj)}</option>\n'
-        html += '</datalist>\n'
-        
-        return html
+        self.empty_label = empty_label
+        attrs = dict(attrs or {})
+        attrs['class'] = (attrs.get('class', '') + ' searchable-select w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500').strip()
+        choices = [('', empty_label)] + [(obj.pk, self.label_func(obj)) for obj in queryset]
+        super().__init__(attrs=attrs, choices=choices)
 
 
 # ==============================================================================
@@ -2403,13 +2389,11 @@ class LibraryItemForm(forms.ModelForm):
         ]
         widgets = {
             # ── taxonomy ──────────────────────────────────────────────────
-            'category': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+            'category': forms.Select(attrs={
+                'class': 'searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
-                         'text-sm transition-colors',
-                'placeholder': 'e.g. Books',
-                'list': 'category_datalist',
-            }),
+                         'text-sm transition-colors bg-white',
+            }, choices=_LI.CATEGORY_CHOICES),
             'subcategory': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
@@ -2456,13 +2440,11 @@ class LibraryItemForm(forms.ModelForm):
                          'text-sm font-mono transition-colors',
                 'placeholder': 'e.g. 978-0-310-28441-6',
             }),
-            'language': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+            'language': forms.Select(attrs={
+                'class': 'searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
-                         'text-sm transition-colors',
-                'placeholder': 'e.g. English',
-                'list': 'language_datalist',
-            }),
+                         'text-sm transition-colors bg-white',
+            }, choices=_LI.LANGUAGE_CHOICES),
             'description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
@@ -2490,13 +2472,11 @@ class LibraryItemForm(forms.ModelForm):
                 'placeholder': 'Read / Download',
             }),
             # ── access & ordering ─────────────────────────────────────────
-            'access': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+            'access': forms.Select(attrs={
+                'class': 'searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
-                         'text-sm transition-colors',
-                'placeholder': 'e.g. public',
-                'list': 'access_datalist',
-            }),
+                         'text-sm transition-colors bg-white',
+            }, choices=_LI.ACCESS_CHOICES),
             'order': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '

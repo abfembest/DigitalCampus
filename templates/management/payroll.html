@@ -286,28 +286,23 @@
           </div>
         {% endif %}
 
-        {# ── Staff datalist ── #}
+        {# ── Staff select ── #}
         <div>
-          <label for="py-staff-input"
+          <label for="py-staff-id"
                  class="block text-xs font-semibold text-gray-600
                         uppercase tracking-wide mb-1.5">
             Staff Member
             <span class="text-red-500" aria-hidden="true">*</span>
           </label>
-          <input id="py-staff-input"
-                 type="text" autocomplete="off"
-                 placeholder="Type staff name or username…"
-                 list="py-staff-list"
-                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg
-                        text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-          <input type="hidden" id="py-staff-id" name="staff">
-          <datalist id="py-staff-list">
+          <select id="py-staff-id" name="staff" required
+                  class="searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg
+                         text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                  data-ss-placeholder="Type staff name or username…">
+            <option value="">Type staff name or username…</option>
             {% for s in staff_members %}
-              <option data-id="{{ s.pk }}"
-                      value="{{ s.get_full_name|default:s.username }} — @{{ s.username }}">
-              </option>
+              <option value="{{ s.pk }}">{{ s.get_full_name|default:s.username }} — @{{ s.username }}</option>
             {% endfor %}
-          </datalist>
+          </select>
           {% if form.staff.errors %}
             <p class="mt-1 text-xs text-red-600" role="alert">
               {{ form.staff.errors.0 }}
@@ -478,21 +473,7 @@ var PY = (function () {
   var form       = document.getElementById('py-form');
   var title      = document.getElementById('py-modal-title');
   var submit     = document.getElementById('py-submit');
-  var staffInput = document.getElementById('py-staff-input');
   var staffId    = document.getElementById('py-staff-id');
-
-  /* Datalist → hidden pk */
-  staffInput.addEventListener('change', function () {
-    var list = document.getElementById('py-staff-list');
-    var val  = staffInput.value.trim();
-    staffId.value = '';
-    for (var i = 0; i < list.options.length; i++) {
-      if (list.options[i].value === val) {
-        staffId.value = list.options[i].getAttribute('data-id');
-        break;
-      }
-    }
-  });
 
   function f(n) { return form.querySelector('[name="' + n + '"]'); }
 
@@ -504,8 +485,8 @@ var PY = (function () {
       title.textContent  = 'Edit Payroll Record';
       submit.textContent = 'Update Record';
       form.action        = d.action;
-      staffInput.value   = d.staffLabel;
       staffId.value      = d.staffId;
+      staffId.dispatchEvent(new Event('change', { bubbles: true }));
       f('month').value             = d.month;
       f('year').value              = d.year;
       f('base_salary').value       = d.base;
@@ -523,20 +504,19 @@ var PY = (function () {
       submit.textContent = 'Save Record';
       form.action        = CREATE;
       form.reset();
-      staffInput.value = '';
       staffId.value    = '';
+      staffId.dispatchEvent(new Event('change', { bubbles: true }));
     }
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    staffInput.focus();
   }
 
   function close() {
     modal.classList.add('hidden');
     document.body.style.overflow = '';
     form.reset();
-    staffInput.value = '';
     staffId.value    = '';
+    staffId.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function confirmDelete(e, name) {

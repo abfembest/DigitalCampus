@@ -171,19 +171,15 @@
                    class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
               Student <span class="text-red-500">*</span>
             </label>
-            <input id="sb-student-input"
-                   type="text"
-                   autocomplete="off"
-                   placeholder="Type student name or username…"
-                   list="sb-student-datalist"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:outline-none">
-            <input type="hidden" id="sb-student-id" name="student">
-            <datalist id="sb-student-datalist">
+            <select id="sb-student-id" name="student" required
+                    class="searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                           focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    data-ss-placeholder="Type student name or username…">
+              <option value="">Type student name or username…</option>
               {% for s in students %}
-                <option data-id="{{ s.pk }}" value="{{ s.get_full_name|default:s.username }} — @{{ s.username }}"></option>
+                <option value="{{ s.pk }}">{{ s.get_full_name|default:s.username }} — @{{ s.username }}</option>
               {% endfor %}
-            </datalist>
+            </select>
             {% if form.student.errors %}
               <p class="mt-1 text-xs text-red-600" role="alert">{{ form.student.errors.0 }}</p>
             {% endif %}
@@ -195,19 +191,15 @@
                    class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
               Badge <span class="text-red-500">*</span>
             </label>
-            <input id="sb-badge-input"
-                   type="text"
-                   autocomplete="off"
-                   placeholder="Type badge name…"
-                   list="sb-badge-datalist"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:outline-none">
-            <input type="hidden" id="sb-badge-id" name="badge">
-            <datalist id="sb-badge-datalist">
+            <select id="sb-badge-id" name="badge" required
+                    class="searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                           focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    data-ss-placeholder="Type badge name…">
+              <option value="">Type badge name…</option>
               {% for b in badges %}
-                <option data-id="{{ b.pk }}" value="{{ b.name }}"></option>
+                <option value="{{ b.pk }}">{{ b.name }}</option>
               {% endfor %}
-            </datalist>
+            </select>
             {% if form.badge.errors %}
               <p class="mt-1 text-xs text-red-600" role="alert">{{ form.badge.errors.0 }}</p>
             {% endif %}
@@ -242,32 +234,4 @@
   </div>
 </div>
 
-<script>
-(function () {
-  'use strict';
-
-  function wireDatalist(textInputId, hiddenInputId, datalistId) {
-    var textInput   = document.getElementById(textInputId);
-    var hiddenInput = document.getElementById(hiddenInputId);
-    if (!textInput || !hiddenInput) return;
-    textInput.addEventListener('change', function () {
-      var list  = document.getElementById(datalistId);
-      var val   = textInput.value.trim();
-      var found = false;
-      for (var i = 0; i < list.options.length; i++) {
-        if (list.options[i].value === val) {
-          hiddenInput.value = list.options[i].getAttribute('data-id');
-          found = true;
-          break;
-        }
-      }
-      if (!found) hiddenInput.value = '';
-    });
-  }
-
-  wireDatalist('sb-student-input', 'sb-student-id', 'sb-student-datalist');
-  wireDatalist('sb-badge-input',   'sb-badge-id',   'sb-badge-datalist');
-
-}());
-</script>
 {% endblock %}

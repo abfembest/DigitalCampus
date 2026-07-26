@@ -239,13 +239,16 @@
                                 <div class="color-row">
                                     <span id="swatchPrimary" class="color-swatch bg-gray-200"></span>
                                     <div class="flex-1">
-                                        <input type="text" id="id_color_primary_dl" list="colorPrimaryList" placeholder="e.g. blue" autocomplete="off">
-                                        <input type="hidden" id="id_color_primary" name="color_primary">
-                                        <datalist id="colorPrimaryList">
-                                            <option value="orange"><option value="blue"><option value="teal">
-                                            <option value="green"><option value="purple"><option value="red">
-                                            <option value="pink"><option value="indigo"><option value="cyan">
-                                        </datalist>
+                                        <select id="id_color_primary" name="color_primary" required
+                                                class="searchable-select" data-ss-placeholder="e.g. blue">
+                                            <option value="">e.g. blue</option>
+                                            <option value="orange">orange</option><option value="blue">blue</option><option value="teal">teal</option>
+                                            <option value="green">green</option><option value="purple">purple</option><option value="red">red</option>
+                                            <option value="pink">pink</option><option value="indigo">indigo</option><option value="cyan">cyan</option>
+                                        </select>
+                                        {# NOTE: options here must exactly match the restricted
+                                           `choices=` on ManagementFacultyForm.Meta.widgets['color_primary']
+                                           in management/forms.py — Django rejects anything else server-side. #}
                                     </div>
                                 </div>
                                 {% if form.color_primary.errors %}<p class="field-error">{{ form.color_primary.errors.0 }}</p>{% endif %}
@@ -255,13 +258,16 @@
                                 <div class="color-row">
                                     <span id="swatchSecondary" class="color-swatch bg-gray-200"></span>
                                     <div class="flex-1">
-                                        <input type="text" id="id_color_secondary_dl" list="colorSecondaryList" placeholder="e.g. amber" autocomplete="off">
-                                        <input type="hidden" id="id_color_secondary" name="color_secondary">
-                                        <datalist id="colorSecondaryList">
-                                            <option value="amber"><option value="cyan"><option value="emerald">
-                                            <option value="lime"><option value="violet"><option value="rose">
-                                            <option value="fuchsia"><option value="sky"><option value="yellow">
-                                        </datalist>
+                                        <select id="id_color_secondary" name="color_secondary" required
+                                                class="searchable-select" data-ss-placeholder="e.g. amber">
+                                            <option value="">e.g. amber</option>
+                                            <option value="amber">amber</option><option value="cyan">cyan</option><option value="emerald">emerald</option>
+                                            <option value="lime">lime</option><option value="violet">violet</option><option value="rose">rose</option>
+                                            <option value="fuchsia">fuchsia</option><option value="sky">sky</option><option value="yellow">yellow</option>
+                                        </select>
+                                        {# NOTE: options here must exactly match the restricted
+                                           `choices=` on ManagementFacultyForm.Meta.widgets['color_secondary']
+                                           in management/forms.py — Django rejects anything else server-side. #}
                                     </div>
                                 </div>
                                 {% if form.color_secondary.errors %}<p class="field-error">{{ form.color_secondary.errors.0 }}</p>{% endif %}
@@ -528,15 +534,33 @@ const COLOR_BG = {
         if (!el) return;
         el.className = 'color-swatch ' + (COLOR_BG[(val||'').toLowerCase()] || 'bg-gray-200');
     }
-    function wireColor(dlId, hiddenId, swatchId) {
-        const dl = document.getElementById(dlId), hid = document.getElementById(hiddenId);
-        if (!dl || !hid) return;
-        const sync = () => { hid.value = dl.value.toLowerCase().trim(); updateSwatch(swatchId, hid.value); };
-        dl.addEventListener('input', sync);
-        dl.addEventListener('change', sync);
+    function wireColor(selectId, swatchId) {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        sel.addEventListener('change', () => updateSwatch(swatchId, sel.value));
     }
-    wireColor('id_color_primary_dl',   'id_color_primary',   'swatchPrimary');
-    wireColor('id_color_secondary_dl', 'id_color_secondary', 'swatchSecondary');
+    wireColor('id_color_primary',   'swatchPrimary');
+    wireColor('id_color_secondary', 'swatchSecondary');
+
+    /**
+     * Set a color <select>'s value, transparently adding an <option> for it
+     * first if it isn't one of the preset swatches — this guarantees an
+     * existing faculty's saved color is never silently dropped/blanked out
+     * just because it falls outside the suggested palette.
+     */
+    function setColorSelect(selectId, val) {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const value = (val || '').toLowerCase().trim();
+        if (value && !Array.prototype.some.call(sel.options, o => o.value === value)) {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            sel.appendChild(opt);
+        }
+        sel.value = value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 
     function setVal(id, val) {
         const el = document.getElementById(id);
@@ -588,9 +612,9 @@ const COLOR_BG = {
             const cb = document.getElementById('id_is_active');
             if (cb) cb.checked = !!d.is_active;
 
-            // Color datalist inputs
-            setVal('id_color_primary_dl', d.color_primary);   setVal('id_color_primary', d.color_primary);
-            setVal('id_color_secondary_dl', d.color_secondary); setVal('id_color_secondary', d.color_secondary);
+            // Color selects
+            setColorSelect('id_color_primary', d.color_primary);
+            setColorSelect('id_color_secondary', d.color_secondary);
             updateSwatch('swatchPrimary', d.color_primary);
             updateSwatch('swatchSecondary', d.color_secondary);
 
@@ -609,6 +633,8 @@ const COLOR_BG = {
             document.getElementById('modalSubtitle').textContent = 'Fill in the details below';
             document.getElementById('submitBtnText').textContent = 'Save Faculty';
             form.action = "{% url 'management:faculty_create' %}";
+            document.getElementById('id_color_primary').dispatchEvent(new Event('change', { bubbles: true }));
+            document.getElementById('id_color_secondary').dispatchEvent(new Event('change', { bubbles: true }));
             updateSwatch('swatchPrimary', ''); updateSwatch('swatchSecondary', '');
         }
 

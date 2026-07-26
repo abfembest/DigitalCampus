@@ -144,31 +144,20 @@
                 <span class="sr-only">(required)</span>
               </label>
 
-              {# Visible text input bound to the datalist #}
-              <input type="text"
-                     id="payment_display"
-                     list="payment_datalist"
-                     autocomplete="off"
-                     placeholder="Type reference or name…"
-                     class="w-full px-3 py-2.5 border border-gray-300 rounded-lg
-                            focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-                            focus:outline-none bg-white text-sm text-gray-900
-                            placeholder-gray-400"
-                     aria-describedby="payment-hint">
+              <select id="payment_display"
+                      class="searchable-select w-full px-3 py-2.5 border border-gray-300 rounded-lg
+                             focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+                             focus:outline-none bg-white text-sm text-gray-900"
+                      data-ss-placeholder="Type reference or name…"
+                      aria-describedby="payment-hint">
+                <option value="">Type reference or name…</option>
+                {% for payment in recent_payments %}
+                <option value="{{ payment.payment_reference }}">{{ payment.payment_reference }} — {{ payment.application.first_name }} {{ payment.application.last_name }} ({{ payment.currency }} {{ payment.amount|floatformat:2|intcomma }})</option>
+                {% endfor %}
+              </select>
               <p id="payment-hint" class="mt-1 text-xs text-gray-400">
                 Type to search, then click Generate
               </p>
-
-              <datalist id="payment_datalist">
-                {% for payment in recent_payments %}
-                <option value="{{ payment.payment_reference }} — {{ payment.application.first_name }} {{ payment.application.last_name }} ({{ payment.currency }} {{ payment.amount|floatformat:2|intcomma }})">
-                </option>
-                {% endfor %}
-              </datalist>
-
-              {# Hidden input carries the clean reference for the URL ── #}
-              {# JS extracts the ref segment before the first " — " #}
-              <input type="hidden" id="payment_ref_hidden">
             </div>
 
             {% if permissions.finance_payments.can_export %}
@@ -358,19 +347,11 @@ $(document).ready(function () {
   {% endif %}
 });
 
-/* ── Quick-generate: extract reference from the combo value ── */
+/* ── Quick-generate: the select's value IS the payment reference ── */
 function generateInvoice() {
-  var raw = document.getElementById('payment_display').value.trim();
-  if (!raw) {
-    alert('Please type or select a payment to generate an invoice.');
-    return;
-  }
-
-  // The datalist option format is:  "REF — Name (CCY amount)"
-  // We extract everything before the first " — "
-  var ref = raw.split(' — ')[0].trim();
+  var ref = document.getElementById('payment_display').value.trim();
   if (!ref) {
-    alert('Could not determine the payment reference. Please select a valid option.');
+    alert('Please select a payment to generate an invoice.');
     return;
   }
 

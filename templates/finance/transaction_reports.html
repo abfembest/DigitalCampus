@@ -241,44 +241,38 @@
                  class="block text-xs font-medium text-gray-600 mb-1">
             Status
           </label>
-          <input type="text"
-                 id="filter-status-input"
-                 list="status-options"
-                 autocomplete="off"
-                 placeholder="All statuses…"
-                 class="w-full px-3 py-2 border border-gray-300 rounded-lg
-                        focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                        text-sm bg-white focus:outline-none placeholder-gray-400"
-                 aria-label="Filter by status">
-          <datalist id="status-options">
-            <option value="Pending"></option>
-            <option value="Processing"></option>
-            <option value="Success"></option>
-            <option value="Failed"></option>
-            <option value="Refunded"></option>
-          </datalist>
+          <select id="filter-status-input"
+                  class="searchable-select w-full px-3 py-2 border border-gray-300 rounded-lg
+                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                         text-sm bg-white focus:outline-none"
+                  data-ss-placeholder="All statuses…"
+                  aria-label="Filter by status">
+            <option value="">All statuses…</option>
+            <option value="Pending">Pending</option>
+            <option value="Processing">Processing</option>
+            <option value="Success">Success</option>
+            <option value="Failed">Failed</option>
+            <option value="Refunded">Refunded</option>
+          </select>
         </div>
 
-        {# Method — datalist combo #}
+        {# Method — select combo #}
         <div>
           <label for="filter-method-input"
                  class="block text-xs font-medium text-gray-600 mb-1">
             Payment Method
           </label>
-          <input type="text"
-                 id="filter-method-input"
-                 list="method-options"
-                 autocomplete="off"
-                 placeholder="All methods…"
-                 class="w-full px-3 py-2 border border-gray-300 rounded-lg
-                        focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                        text-sm bg-white focus:outline-none placeholder-gray-400"
-                 aria-label="Filter by payment method">
-          <datalist id="method-options">
-            <option value="Credit/Debit Card"></option>
-            <option value="PayPal"></option>
-            <option value="Bank Transfer"></option>
-          </datalist>
+          <select id="filter-method-input"
+                  class="searchable-select w-full px-3 py-2 border border-gray-300 rounded-lg
+                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                         text-sm bg-white focus:outline-none"
+                  data-ss-placeholder="All methods…"
+                  aria-label="Filter by payment method">
+            <option value="">All methods…</option>
+            <option value="Credit/Debit Card">Credit/Debit Card</option>
+            <option value="PayPal">PayPal</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+          </select>
         </div>
 
       </div>
@@ -576,7 +570,9 @@ $(document).ready(function () {
 
   window.resetFilters = function () {
     $('#filter-date-from, #filter-date-to').val('');
-    $('#filter-status-input, #filter-method-input').val('');
+    $('#filter-status-input, #filter-method-input')
+      .val('')
+      .each(function () { this.dispatchEvent(new Event('change', { bubbles: true })); });
     $.fn.dataTable.ext.search = $.fn.dataTable.ext.search.filter(
       function (fn) { return fn._dateRange !== true; }
     );

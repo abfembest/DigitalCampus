@@ -142,23 +142,19 @@
                  class="block text-xs font-medium text-gray-600 mb-1.5">
             Status
           </label>
-          <input type="text"
-                 id="status-combo"
-                 name="status"
-                 list="status-datalist"
-                 autocomplete="off"
-                 value="{{ request.GET.status }}"
-                 placeholder="All statuses…"
-                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg
-                        focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-                        text-sm placeholder-gray-400 focus:outline-none bg-white">
-          <datalist id="status-datalist">
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="success">Successful</option>
-            <option value="failed">Failed</option>
-            <option value="refunded">Refunded</option>
-          </datalist>
+          <select id="status-combo"
+                  name="status"
+                  data-ss-placeholder="All statuses…"
+                  class="searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg
+                         focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+                         text-sm bg-white">
+            <option value=""{% if not request.GET.status %} selected{% endif %}>All statuses…</option>
+            <option value="pending"{% if request.GET.status == "pending" %} selected{% endif %}>Pending</option>
+            <option value="processing"{% if request.GET.status == "processing" %} selected{% endif %}>Processing</option>
+            <option value="success"{% if request.GET.status == "success" %} selected{% endif %}>Successful</option>
+            <option value="failed"{% if request.GET.status == "failed" %} selected{% endif %}>Failed</option>
+            <option value="refunded"{% if request.GET.status == "refunded" %} selected{% endif %}>Refunded</option>
+          </select>
         </div>
 
         {# Search #}

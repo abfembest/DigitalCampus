@@ -718,6 +718,8 @@
 
     <script src="{% static 'js/main.js' %}"></script>
 
+    {% include 'includes/searchable_select.html' %}
+
     {% block extra_js %}{% endblock %}
 
     {% if messages %}

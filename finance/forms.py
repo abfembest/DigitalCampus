@@ -295,14 +295,14 @@ class PayrollCreateForm(forms.ModelForm):
         widgets = {
             'staff': forms.Select(attrs={
                 'class': (
-                    'w-full px-4 py-2.5 border border-gray-300 '
+                    'searchable-select w-full px-4 py-2.5 border border-gray-300 '
                     'rounded-lg focus:ring-2 focus:ring-primary-500 '
                     'focus:border-primary-500 bg-white'
                 ),
             }),
             'month': forms.Select(attrs={
                 'class': (
-                    'w-full px-4 py-2.5 border border-gray-300 '
+                    'searchable-select w-full px-4 py-2.5 border border-gray-300 '
                     'rounded-lg focus:ring-2 focus:ring-primary-500 '
                     'focus:border-primary-500 bg-white'
                 ),
@@ -364,7 +364,7 @@ class PayrollCreateForm(forms.ModelForm):
             }),
             'payment_method': forms.Select(attrs={
                 'class': (
-                    'w-full px-4 py-2.5 border border-gray-300 '
+                    'searchable-select w-full px-4 py-2.5 border border-gray-300 '
                     'rounded-lg focus:ring-2 focus:ring-primary-500 '
                     'focus:border-primary-500 bg-white'
                 ),

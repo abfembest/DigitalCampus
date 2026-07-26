@@ -33,28 +33,16 @@
                         Recipient <span class="text-red-500">*</span>
                     </label>
 
-                    <!-- Visible search input -->
-                    <input type="text"
-                           id="recipient-search"
-                           list="recipient-list"
-                           placeholder="Search by name or role..."
-                           autocomplete="off"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg
-                                  focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                                  text-sm"
-                           oninput="syncRecipient(this.value)">
-
-                    <!-- Datalist options: value is display text, data holds the ID -->
-                    <datalist id="recipient-list">
+                    <select id="recipient-search" name="recipient" required
+                            class="searchable-select w-full px-4 py-3 border border-gray-300 rounded-lg
+                                   focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                                   text-sm"
+                            data-ss-placeholder="Search by name or role…">
+                        <option value="">Search by name or role…</option>
                         {% for user in form.recipient.field.queryset %}
-                        <option value="{{ user.get_full_name|default:user.username }} — {{ user.profile.get_role_display|default:user.profile.role|capfirst }}"
-                                data-id="{{ user.pk }}">
-                        </option>
+                        <option value="{{ user.pk }}">{{ user.get_full_name|default:user.username }} — {{ user.profile.get_role_display|default:user.profile.role|capfirst }}</option>
                         {% endfor %}
-                    </datalist>
-
-                    <!-- Hidden field that actually submits the user ID -->
-                    {{ form.recipient }}
+                    </select>
 
                     {% if form.recipient.errors %}
                     <p class="mt-1 text-xs text-red-600">{{ form.recipient.errors.0 }}</p>
@@ -142,17 +130,4 @@
     </div>
 </div>
 
-<script>
-function syncRecipient(selectedText) {
-    var options = document.querySelectorAll('#recipient-list option');
-    var hiddenInput = document.querySelector('input[name="recipient"]');
-    for (var i = 0; i < options.length; i++) {
-        if (options[i].value === selectedText) {
-            hiddenInput.value = options[i].dataset.id;
-            return;
-        }
-    }
-    hiddenInput.value = '';
-}
-</script>
 {% endblock %}

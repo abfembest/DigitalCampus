@@ -1384,24 +1384,14 @@ input[type="file"].fm-file      { font-size:.95rem; padding:.5rem; }
             {% csrf_token %}
             <div>
                 <label class="block text-base font-semibold text-gray-700 mb-1.5">Student <span class="text-red-500">*</span></label>
-                <input list="studentDatalist" id="studentSearch" name="student_name_search"
-                       class="fm-input" placeholder="Type name or email to search…" autocomplete="off">
-                <datalist id="studentDatalist">
+                <select name="student_id" id="selectedStudentId" required
+                        class="fm-input searchable-select">
+                    <option value="">Select student…</option>
                     {% for student in available_students %}
-                    <option data-id="{{ student.id }}" value="{{ student.get_full_name }} ({{ student.email }})"></option>
+                    <option value="{{ student.id }}">{{ student.get_full_name }} ({{ student.email }})</option>
                     {% endfor %}
-                </datalist>
-                <input type="hidden" name="student_id" id="selectedStudentId" required>
+                </select>
                 {% if not available_students %}<p class="mt-2 text-base text-orange-600"><i class="fas fa-info-circle mr-1"></i>All students are already enrolled.</p>{% endif %}
-                <script>
-                document.getElementById('studentSearch').addEventListener('change',function(){
-                    const val=this.value.trim();
-                    const opts=document.querySelectorAll('#studentDatalist option');
-                    let found=false;
-                    for(const opt of opts){if(opt.value===val){document.getElementById('selectedStudentId').value=opt.getAttribute('data-id');found=true;break;}}
-                    if(!found)document.getElementById('selectedStudentId').value='';
-                });
-                </script>
             </div>
             <div>
                 <label class="block text-base font-semibold text-gray-700 mb-1.5">Enrolment Date</label>

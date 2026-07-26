@@ -85,23 +85,20 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label for="courseInput" class="block text-md font-semibold text-gray-700 mb-1.5">Your Courses *</label>
-                <input
+                <select
                     id="courseInput"
-                    list="courseList"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-md"
-                    placeholder="Type to search your courses…"
-                    autocomplete="off"
+                    class="searchable-select w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-md"
+                    data-ss-placeholder="Type to search your courses…"
                 >
-                <datalist id="courseList">
+                    <option value="">Type to search your courses…</option>
                     {% for c in instructor_courses %}
                     <option
-                        value="{{ c.title }}{% if c.code %} ({{ c.code }}){% endif %}"
-                        data-id="{{ c.pk }}"
+                        value="{{ c.pk }}"
                         data-slug="{{ c.slug }}"
                         data-linked="{{ c.academic_course_id|yesno:'true,false' }}"
-                    ></option>
+                    >{{ c.title }}{% if c.code %} ({{ c.code }}){% endif %}</option>
                     {% endfor %}
-                </datalist>
+                </select>
                 <p class="text-md text-gray-400 mt-1">Start typing the course name or code</p>
             </div>
             <div id="courseInfoBox" class="hidden bg-gray-50 border border-gray-200 rounded-xl p-4 text-md space-y-1.5">
@@ -124,15 +121,14 @@
 
         <div id="lessonRow" class="hidden mt-4">
             <label for="lessonInput" class="block text-md font-semibold text-gray-700 mb-1.5">Lesson *</label>
-            <input
+            <select
                 id="lessonInput"
-                list="lessonList"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-md"
-                placeholder="Type to search lessons…"
-                autocomplete="off"
+                class="searchable-select w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-md"
+                data-ss-placeholder="Type to search lessons…"
                 disabled
             >
-            <datalist id="lessonList"></datalist>
+                <option value="">Type to search lessons…</option>
+            </select>
             <input type="hidden" id="selectedLessonId">
             <p class="text-md text-gray-400 mt-1">The quiz / assignment will be attached to this lesson.</p>
         </div>
@@ -728,16 +724,13 @@
     const $ = id => document.getElementById(id);
 
     // ─────────────────────────────────────────────────────────────────
-    // Build course lookup map
-    // ─────────────────────────────────────────────────────────────────
-    const courseMap = {};
-    document.querySelectorAll('#courseList option').forEach(opt => {
-        courseMap[opt.value] = {
-            id:     opt.dataset.id,
-            slug:   opt.dataset.slug,
-            linked: opt.dataset.linked === 'true',
-        };
-    });
+    // courseInput is now a real <select> whose value IS the course pk —
+    // read a selected option's data-slug/data-linked attributes directly
+    // instead of resolving them through a separate label→data lookup map.
+    function selectedCourseOption() {
+        const el = $('courseInput');
+        return el.options[el.selectedIndex] || null;
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // Step 1: type selection
@@ -784,32 +777,20 @@
         if (btn) btn.disabled = false;
     }
 
-    $('courseInput').addEventListener('input', function() {
-        const val = this.value.trim();
-        const match = courseMap[val];
-        if (match) {
-            selectedCourseId = match.id;
-            selectedCourseLinked = match.linked;
-            onCourseSelected(match.id);
-        } else {
-            if (!val) {
-                selectedCourseId = null;
-                selectedCourseLinked = false;
-                $('courseInfoBox').classList.add('hidden');
-                resetLessonInput();
-                ['panelQuiz','panelAssignment','panelExam'].forEach(id => $(id).classList.add('hidden'));
-                updateExamUnlinkedWarning();
-            }
-        }
-    });
-
     $('courseInput').addEventListener('change', function() {
         const val = this.value.trim();
-        const match = courseMap[val];
-        if (match) {
-            selectedCourseId = match.id;
-            selectedCourseLinked = match.linked;
-            onCourseSelected(match.id);
+        if (val) {
+            const opt = selectedCourseOption();
+            selectedCourseId = val;
+            selectedCourseLinked = opt ? (opt.dataset.linked === 'true') : false;
+            onCourseSelected(val);
+        } else {
+            selectedCourseId = null;
+            selectedCourseLinked = false;
+            $('courseInfoBox').classList.add('hidden');
+            resetLessonInput();
+            ['panelQuiz','panelAssignment','panelExam'].forEach(id => $(id).classList.add('hidden'));
+            updateExamUnlinkedWarning();
         }
     });
 
@@ -853,56 +834,41 @@
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Lesson datalist
+    // Lesson select — value IS the lesson id, no lookup map needed.
     // ─────────────────────────────────────────────────────────────────
-    let lessonMap = {};
 
     function resetLessonInput() {
-        $('lessonInput').value = '';
-        $('lessonInput').disabled = true;
-        $('lessonList').innerHTML = '';
+        const el = $('lessonInput');
+        el.innerHTML = '<option value="">Type to search lessons…</option>';
+        el.value = '';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.disabled = true;
         $('selectedLessonId').value = '';
-        lessonMap = {};
     }
 
     function loadLessons(courseId) {
         fetch(`{% url 'instructor:ajax_course_lessons' %}?course_id=${courseId}`)
             .then(r => r.json())
             .then(d => {
-                lessonMap = {};
-                const dl = $('lessonList');
-                dl.innerHTML = '';
+                const el = $('lessonInput');
+                el.innerHTML = '<option value="">Type to search lessons…</option>';
                 (d.lessons || []).forEach(l => {
                     const opt = document.createElement('option');
-                    opt.value = l.title;
-                    opt.dataset.id = l.id;
-                    dl.appendChild(opt);
-                    lessonMap[l.title] = l.id;
+                    opt.value = l.id;
+                    opt.textContent = l.title;
+                    el.appendChild(opt);
                 });
-                $('lessonInput').disabled = false;
+                el.disabled = false;
             })
             .catch(() => {});
     }
 
-    $('lessonInput').addEventListener('input', function() {
-        const val = this.value.trim();
-        const lid = lessonMap[val];
-        if (lid) {
-            $('selectedLessonId').value = lid;
-            ['hfLessonIdQuiz','hfLessonIdAssign'].forEach(id => {
-                const el = $(id); if (el) el.value = lid;
-            });
-        }
-    });
     $('lessonInput').addEventListener('change', function() {
-        const val = this.value.trim();
-        const lid = lessonMap[val];
-        if (lid) {
-            $('selectedLessonId').value = lid;
-            ['hfLessonIdQuiz','hfLessonIdAssign'].forEach(id => {
-                const el = $(id); if (el) el.value = lid;
-            });
-        }
+        const lid = this.value.trim();
+        $('selectedLessonId').value = lid;
+        ['hfLessonIdQuiz','hfLessonIdAssign'].forEach(id => {
+            const el = $(id); if (el) el.value = lid;
+        });
     });
 
     // ─────────────────────────────────────────────────────────────────
@@ -1136,11 +1102,14 @@
     if (serverTab && ['quiz','assignment','exam'].includes(serverTab)) {
         selectType(serverTab);
         if (serverCourseId) {
-            const matchEntry = Object.entries(courseMap).find(([, v]) => v.id === serverCourseId);
-            if (matchEntry) {
-                $('courseInput').value   = matchEntry[0];
-                selectedCourseId         = matchEntry[1].id;
-                selectedCourseLinked     = matchEntry[1].linked;
+            const courseSelectEl = $('courseInput');
+            const hasOption = Array.from(courseSelectEl.options).some(o => o.value === serverCourseId);
+            if (hasOption) {
+                courseSelectEl.value = serverCourseId;
+                courseSelectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                const opt = selectedCourseOption();
+                selectedCourseId         = serverCourseId;
+                selectedCourseLinked     = opt ? (opt.dataset.linked === 'true') : false;
                 ['hfCourseIdQuiz','hfCourseIdAssign','hfCourseIdExam'].forEach(id => {
                     const el = $(id); if (el) el.value = serverCourseId;
                 });

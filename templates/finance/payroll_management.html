@@ -226,54 +226,27 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
            <div class="sm:col-span-2 lg:col-span-1">
-            <label for="staff_input"
+            <label for="{{ form.staff.id_for_label }}"
                    class="block text-sm font-medium text-gray-700 mb-1.5">
               Staff Member <span class="text-red-500" aria-hidden="true">*</span>
             </label>
-            <input list="staff_list" id="staff_input" autocomplete="off"
-                   placeholder="Type to search staff…"
-                   required
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-            <datalist id="staff_list">
-              {% for u in form.fields.staff.queryset %}
-              <option value="{{ u.get_full_name|default:u.username }}" data-id="{{ u.pk }}">
-              {% endfor %}
-            </datalist>
-            <div class="hidden">{{ form.staff }}</div>
+            {{ form.staff }}
           </div>
 
-          {# Month — datalist #}
+          {# Month #}
           <div>
-            <label for="month_input" class="block text-sm font-medium text-gray-700 mb-1.5">
+            <label for="{{ form.month.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">
               Month <span class="text-red-500" aria-hidden="true">*</span>
             </label>
-            <input list="month_list" id="month_input" autocomplete="off"
-                   placeholder="e.g. January"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-            <datalist id="month_list">
-              <option value="January"><option value="February"><option value="March">
-              <option value="April"><option value="May"><option value="June">
-              <option value="July"><option value="August"><option value="September">
-              <option value="October"><option value="November"><option value="December">
-            </datalist>
-            <div class="hidden">{{ form.month }}</div>
+            {{ form.month }}
           </div>
 
-          {# Year — datalist #}
+          {# Year #}
           <div>
-            <label for="year_input" class="block text-sm font-medium text-gray-700 mb-1.5">
+            <label for="{{ form.year.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">
               Year <span class="text-red-500" aria-hidden="true">*</span>
             </label>
-            <input list="year_list" id="year_input" autocomplete="off"
-                   placeholder="e.g. 2025"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-            <datalist id="year_list">
-              {% for y in available_years %}<option value="{{ y }}">{% endfor %}
-            </datalist>
-            <div class="hidden">{{ form.year }}</div>
+            {{ form.year }}
           </div>
 
         </div>
@@ -328,22 +301,12 @@
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-          {# Payment method — datalist #}
+          {# Payment method #}
           <div>
-            <label for="method_input" class="block text-sm font-medium text-gray-700 mb-1.5">
+            <label for="{{ form.payment_method.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1.5">
               Payment Method
             </label>
-            <input list="method_list" id="method_input" autocomplete="off"
-                   placeholder="e.g. Bank Transfer"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-            <datalist id="method_list">
-              <option value="Bank Transfer">
-              <option value="Check">
-              <option value="Cash">
-              <option value="Mobile Money">
-            </datalist>
-            <div class="hidden">{{ form.payment_method }}</div>
+            {{ form.payment_method }}
           </div>
 
           <div>
@@ -502,34 +465,6 @@ document.addEventListener('DOMContentLoaded', function () {
       zeroRecords: 'No matching records.',
     },
     columnDefs: [{ orderable: false, targets: [8] }],
-  });
-
-  /* Datalist → hidden select: month */
-  const monthNames = {
-    january:1,february:2,march:3,april:4,may:5,june:6,
-    july:7,august:8,september:9,october:10,november:11,december:12,
-  };
-  document.getElementById('month_input')?.addEventListener('change', function () {
-    const sel = document.getElementById('id_month');
-    if (sel) sel.value = monthNames[this.value.toLowerCase().trim()] || '';
-  });
-
-  /* Datalist → hidden select: year */
-  document.getElementById('year_input')?.addEventListener('change', function () {
-    const sel = document.getElementById('id_year');
-    if (sel) sel.value = parseInt(this.value.trim(), 10) || '';
-  });
-
-  /* Datalist → hidden select: payment method */
-  const methodMap = {
-    'bank transfer': 'bank_transfer',
-    'check': 'check',
-    'cash': 'cash',
-    'mobile money': 'mobile_money',
-  };
-  document.getElementById('method_input')?.addEventListener('change', function () {
-    const sel = document.getElementById('id_payment_method');
-    if (sel) sel.value = methodMap[this.value.toLowerCase().trim()] || '';
   });
 
   /* Re-open modal if Django returned form errors */

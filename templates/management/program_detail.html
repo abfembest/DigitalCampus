@@ -174,9 +174,9 @@
                 <div>
                     <p class="text-sm text-gray-600 mb-2">Study Modes</p>
                     <div class="flex flex-wrap gap-2">
-                        {% for mode in program.available_study_modes %}
+                        {% for mode in program.available_study_modes_display %}
                         <span class="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
-                            {{ mode|title }}
+                            {{ mode }}
                         </span>
                         {% endfor %}
                     </div>

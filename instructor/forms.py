@@ -166,7 +166,7 @@ class CourseForm(forms.ModelForm):
         return cleaned
 
     def clean_thumbnail(self):
-        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -299,6 +299,10 @@ class LessonForm(forms.ModelForm):
         self.fields['section'].empty_label = '— Select a section —'
 
     def clean_video_file(self):
+        # Kept at 200MB (unlike the smaller media galleries elsewhere) —
+        # this is instructors uploading real lecture/course videos, which
+        # routinely exceed a few MB. Do not lower this to match the
+        # program/faculty gallery-clip limits.
         return _validate_upload(self.cleaned_data.get('video_file'), VIDEO_EXTENSIONS, max_size_mb=200)
 
     def clean_file(self):
@@ -618,7 +622,7 @@ class InstructorProfileForm(forms.ModelForm):
         return email
 
     def clean_avatar(self):
-        return _validate_upload(self.cleaned_data.get('avatar'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('avatar'), IMAGE_EXTENSIONS, max_size_mb=2)
 
 
 # ==================== SETTINGS FORM ====================

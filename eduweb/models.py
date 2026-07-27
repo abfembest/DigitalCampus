@@ -1263,8 +1263,8 @@ class Department(models.Model):
 class Program(models.Model):
 
     STUDY_MODE_CHOICES = [
-        ('full_time', 'Full Time'),
-        ('part_time', 'Part Time'),
+        ('full-time', 'Full Time'),
+        ('part-time', 'Part Time'),
         ('online', 'Online'),
         ('blended', 'Blended'),
     ]
@@ -1692,6 +1692,22 @@ class AcademicSession(models.Model):
             return False
         today = timezone.now().date()
         return reg_open <= today <= reg_close
+
+    @property
+    def available_study_modes_display(self):
+        """
+        Human-readable labels for available_study_modes.
+
+        available_study_modes is a JSONField storing a list of raw choice
+        keys (e.g. "full_time"), so Django's automatic get_FOO_display()
+        doesn't apply here the way it would for a plain CharField(choices=...)
+        — that only covers single-value fields. Templates were previously
+        piping the raw key through the |title filter, which produced
+        "Full_Time" instead of "Full Time" since |title doesn't treat
+        underscores as word breaks. Use this property instead.
+        """
+        labels = dict(self.STUDY_MODE_CHOICES)
+        return [labels.get(mode, mode.replace('_', ' ').title()) for mode in (self.available_study_modes or [])]
 
     def registration_window_for_term(self, term):
         """

@@ -392,8 +392,8 @@
                       {% endif %}
                       {% if program.available_study_modes %}
                       <span class="text-gray-300 text-xs" aria-hidden="true">·</span>
-                      {% for mode in program.available_study_modes %}
-                      <span class="text-gray-400 text-xs">{{ mode|title }}</span>{% if not forloop.last %}<span class="text-gray-300 text-xs" aria-hidden="true">/</span>{% endif %}
+                      {% for mode in program.available_study_modes_display %}
+                      <span class="text-gray-400 text-xs">{{ mode }}</span>{% if not forloop.last %}<span class="text-gray-300 text-xs" aria-hidden="true">/</span>{% endif %}
                       {% endfor %}
                       {% endif %}
                     </div>

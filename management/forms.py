@@ -269,22 +269,26 @@ class FacultyForm(forms.ModelForm):
                 self.fields['special_features_text'].initial = '\n'.join(lines)
 
     def clean_hero_image(self):
-        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_about_image(self):
-        return _validate_upload(self.cleaned_data.get('about_image'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('about_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_gallery_image_1(self):
-        return _validate_upload(self.cleaned_data.get('gallery_image_1'), IMAGE_EXTENSIONS, max_size_mb=3)
+        return _validate_upload(self.cleaned_data.get('gallery_image_1'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_gallery_image_2(self):
-        return _validate_upload(self.cleaned_data.get('gallery_image_2'), IMAGE_EXTENSIONS, max_size_mb=3)
+        return _validate_upload(self.cleaned_data.get('gallery_image_2'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_gallery_image_3(self):
-        return _validate_upload(self.cleaned_data.get('gallery_image_3'), IMAGE_EXTENSIONS, max_size_mb=3)
+        return _validate_upload(self.cleaned_data.get('gallery_image_3'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_gallery_video(self):
-        return _validate_upload(self.cleaned_data.get('gallery_video'), VIDEO_EXTENSIONS, max_size_mb=50)
+        # See ProgramForm.clean_gallery_video for why this was lowered from
+        # 50MB — a request that large risks being rejected by the web
+        # server itself (before Django/this validation ever runs), showing
+        # up as a raw host-level "Forbidden" page instead of a clean error.
+        return _validate_upload(self.cleaned_data.get('gallery_video'), VIDEO_EXTENSIONS, max_size_mb=3)
 
     def clean_special_features_text(self):
         text = self.cleaned_data.get('special_features_text', '').strip()
@@ -1607,19 +1611,30 @@ class ProgramForm(forms.ModelForm):
         return _clean_code_field(self.cleaned_data.get('code', ''))
 
     def clean_gallery_image_1(self):
-        return _validate_upload(self.cleaned_data.get('gallery_image_1'), IMAGE_EXTENSIONS, max_size_mb=3)
+        return _validate_upload(self.cleaned_data.get('gallery_image_1'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_gallery_image_2(self):
-        return _validate_upload(self.cleaned_data.get('gallery_image_2'), IMAGE_EXTENSIONS, max_size_mb=3)
+        return _validate_upload(self.cleaned_data.get('gallery_image_2'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_gallery_image_3(self):
-        return _validate_upload(self.cleaned_data.get('gallery_image_3'), IMAGE_EXTENSIONS, max_size_mb=3)
+        return _validate_upload(self.cleaned_data.get('gallery_image_3'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_gallery_video(self):
-        return _validate_upload(self.cleaned_data.get('gallery_video'), VIDEO_EXTENSIONS, max_size_mb=50)
+        # Was max_size_mb=50 — comfortably past what many shared-hosting/
+        # cPanel setups allow as a single request body (often 8-32MB at the
+        # Apache/LiteSpeed level, independent of and often *smaller* than
+        # Django's own DATA_UPLOAD_MAX_MEMORY_SIZE). A request that large
+        # gets rejected by the web server itself before Django ever sees
+        # it — the admin gets a raw host-level "Forbidden"/"denied" page
+        # instead of this form's normal validation error, because Django
+        # never got a chance to run this check at all. Lowered to a size
+        # this and the surrounding image caps can realistically stay under
+        # common hosting limits even combined in one submission (edit form
+        # can carry hero + 3 gallery images + this video all at once).
+        return _validate_upload(self.cleaned_data.get('gallery_video'), VIDEO_EXTENSIONS, max_size_mb=3)
 
     def clean_hero_image(self):
-        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=5)
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def save(self, commit=True):
         program = super().save(commit=False)
@@ -1959,10 +1974,10 @@ class LMSCourseForm(forms.ModelForm):
         return instance
 
     def clean_hero_image(self):
-        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_thumbnail(self):
-        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS, max_size_mb=2)
 
 
 # ==============================================================================
@@ -2556,7 +2571,7 @@ class LibraryItemForm(forms.ModelForm):
         )
 
     def clean_cover_image(self):
-        return _validate_upload(self.cleaned_data.get('cover_image'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('cover_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_file(self):
         """Extension is already whitelisted at the model level

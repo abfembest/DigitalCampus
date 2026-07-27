@@ -17,9 +17,10 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
+from django.core.exceptions import SuspiciousOperation
 from django.core.mail import EmailMultiAlternatives, send_mail, send_mass_mail
 from django.core.paginator import Paginator
-from django.db import transaction, connection
+from django.db import transaction, connection, IntegrityError
 from django.db.models import Q, Count, Sum, Avg, Value, DecimalField
 from django.db.models.functions import Coalesce, TruncMonth, TruncDate
 from django.http import HttpResponse, JsonResponse
@@ -3482,15 +3483,58 @@ def program_edit(request, pk):
             messages.error(request, 'You do not have permission to edit programs.')
             return redirect('management:programs_list')
 
-        form = ProgramForm(request.POST, request.FILES, instance=program)
-        if form.is_valid():
-            with transaction.atomic():
-                form.save()
-                cap_errors = _sync_program_session_credit_caps(request, program)
-            messages.success(request, 'Program updated.')
-            for err in cap_errors:
-                messages.error(request, err)
-            return redirect('management:programs_list')
+        try:
+            # Constructing the form is what triggers Django to actually
+            # parse request.POST/request.FILES — if the submitted request
+            # body is larger than Django's own DATA_UPLOAD_MAX_MEMORY_SIZE,
+            # that parsing raises SuspiciousOperation right here instead of
+            # letting it surface as an unhandled crash.
+            form = ProgramForm(request.POST, request.FILES, instance=program)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        form.save()
+                        cap_errors = _sync_program_session_credit_caps(request, program)
+                except IntegrityError:
+                    logger.exception(
+                        'program_edit: IntegrityError saving program pk=%s', pk
+                    )
+                    messages.error(
+                        request,
+                        'Could not save changes — that program code may already be '
+                        'in use by another program. Please use a different code.'
+                    )
+                else:
+                    messages.success(request, 'Program updated.')
+                    for err in cap_errors:
+                        messages.error(request, err)
+                    return redirect('management:programs_list')
+        except SuspiciousOperation:
+            # Most often an oversized upload (see ProgramForm.clean_gallery_video).
+            # A request this large can also be rejected by the web server
+            # itself before Django ever sees it, showing a raw host-level
+            # "Forbidden"/"denied" page instead of this message — if that's
+            # what's happening, the fix is a server-level upload limit
+            # increase, not anything in this view.
+            logger.warning('program_edit: oversized/suspicious upload for pk=%s', pk)
+            messages.error(
+                request,
+                'Your changes could not be saved — the files you uploaded were too '
+                'large for the server to accept. Please use a smaller image/video '
+                'and try again.'
+            )
+            form = ProgramForm(instance=program)
+        except Exception:
+            # Last-resort net: never let an unexpected error surface as a
+            # raw crash page — log it for diagnosis and show the admin a
+            # clean, actionable message on the same form instead.
+            logger.exception('program_edit: unexpected error saving program pk=%s', pk)
+            messages.error(
+                request,
+                'Something went wrong while saving your changes. Nothing was saved. '
+                'Please try again, and contact support if this keeps happening.'
+            )
+            form = ProgramForm(instance=program)
     else:
         form = ProgramForm(instance=program)
     return render(request, 'management/program_form.html', {

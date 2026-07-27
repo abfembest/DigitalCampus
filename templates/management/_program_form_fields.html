@@ -285,7 +285,7 @@
       </div>
       <div class="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Hero Image <span class="text-gray-400 font-normal">(1200x400px)</span></label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Hero Image <span class="text-gray-400 font-normal">(1200x400px, max 2MB)</span></label>
           <div class="program-hero-preview-wrap {% if not form.hero_image.value %}hidden{% endif %} mb-1.5">
             <img class="program-hero-preview-img h-16 w-full object-cover rounded-lg border border-gray-300" src="{% if form.hero_image.value %}{{ form.hero_image.value.url }}{% endif %}" alt="Hero preview">
           </div>
@@ -299,7 +299,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 1 <span class="text-gray-400 font-normal">(max 3MB)</span></label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 1 <span class="text-gray-400 font-normal">(max 2MB)</span></label>
           <div class="program-gallery-preview-wrap" data-slot="1">
             <div class="{% if not form.gallery_image_1.value %}hidden{% endif %} mb-1.5">
               <img class="program-gallery-preview-img h-16 w-full object-cover rounded-lg border border-gray-300" src="{% if form.gallery_image_1.value %}{{ form.gallery_image_1.value.url }}{% endif %}" alt="Gallery preview 1">
@@ -316,7 +316,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 2 <span class="text-gray-400 font-normal">(max 3MB)</span></label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 2 <span class="text-gray-400 font-normal">(max 2MB)</span></label>
           <div class="program-gallery-preview-wrap" data-slot="2">
             <div class="{% if not form.gallery_image_2.value %}hidden{% endif %} mb-1.5">
               <img class="program-gallery-preview-img h-16 w-full object-cover rounded-lg border border-gray-300" src="{% if form.gallery_image_2.value %}{{ form.gallery_image_2.value.url }}{% endif %}" alt="Gallery preview 2">
@@ -333,7 +333,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 3 <span class="text-gray-400 font-normal">(max 3MB)</span></label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 3 <span class="text-gray-400 font-normal">(max 2MB)</span></label>
           <div class="program-gallery-preview-wrap" data-slot="3">
             <div class="{% if not form.gallery_image_3.value %}hidden{% endif %} mb-1.5">
               <img class="program-gallery-preview-img h-16 w-full object-cover rounded-lg border border-gray-300" src="{% if form.gallery_image_3.value %}{{ form.gallery_image_3.value.url }}{% endif %}" alt="Gallery preview 3">
@@ -350,7 +350,7 @@
         </div>
 
         <div class="sm:col-span-2">
-          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Video <span class="text-gray-400 font-normal">(shown first if present)</span></label>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Video <span class="text-gray-400 font-normal">(shown first if present, max 3MB)</span></label>
           {% if form.gallery_video.value %}
           <p class="text-xs text-gray-500 mb-1">
             Current file: <a href="{{ form.gallery_video.value.url }}" target="_blank" class="text-primary-600 hover:underline">{{ form.gallery_video.value.name }}</a>

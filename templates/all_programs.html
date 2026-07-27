@@ -113,15 +113,6 @@
 .fpill:hover{background:rgba(255,255,255,.12);color:#fff}
 .fpill.on{background:#f59e0b;border-color:#f59e0b;color:#1c1917;font-weight:700}
 
-/* ── Sticky toolbar ──────────────────────────── */
-#toolbar{
-  position:sticky;top:0;z-index:40;
-  background:rgba(255,255,255,.97);
-  backdrop-filter:blur(12px);
-  border-bottom:1px solid #e5e7eb;
-  box-shadow:0 1px 4px rgba(0,0,0,.05);
-}
-
 /* ── View toggle ─────────────────────────────── */
 .vtbtn{
   width:1.875rem;height:1.875rem;border-radius:.4rem;
@@ -131,11 +122,42 @@
 .vtbtn:hover{background:#f3f4f6;color:#374151}
 .vtbtn.on{background:#840384;color:#fff}
 
-/* ── Faculty header ──────────────────────────── */
-.fac-hdr{background:linear-gradient(135deg,#0f0b1e 0%,#1d0540 55%,#35005a 100%)}
+/* ── Faculty header / accordion toggle ───────── */
+.fac-hdr{
+  background:linear-gradient(135deg,#0f0b1e 0%,#1d0540 55%,#35005a 100%);
+  cursor:pointer;
+}
+.fac-hdr:focus-visible{outline:2px solid #f59e0b;outline-offset:-2px}
+.fac-chevron{transition:transform .2s ease;flex-shrink:0}
+.fac-hdr[aria-expanded="true"] .fac-chevron{transform:rotate(180deg)}
 
-/* ── Scroll margin ───────────────────────────── */
-.fac-section{scroll-margin-top:56px}
+/* Animates open/closed via the grid-template-rows fr-unit trick — no JS
+   height measurement needed, and it degrades gracefully (instant show/hide)
+   on browsers that don't support animating grid track sizes. */
+.fac-body-wrap{
+  display:grid;
+  grid-template-rows:0fr;
+  transition:grid-template-rows .25s ease;
+}
+.fac-body-wrap.open{grid-template-rows:1fr}
+.fac-body-inner{overflow:hidden;min-height:0}
+
+/* ── Pagination ───────────────────────────────── */
+.pgbtn{
+  min-width:2rem;height:2rem;padding:0 .5rem;border-radius:.4rem;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;color:#4b5563;
+  background:#fff;border:1.5px solid #e5e7eb;
+  transition:all .15s;cursor:pointer;
+}
+.pgbtn:hover:not(:disabled){border-color:#840384;color:#840384}
+.pgbtn:disabled{opacity:.35;cursor:not-allowed}
+.pgbtn.on{background:#840384;border-color:#840384;color:#fff}
+
+/* ── Scroll margin — clears the fixed header + sticky toolbar stacked
+   above a faculty section when jumping to it via an anchor link ──── */
+.fac-section{scroll-margin-top:136px}
+@media(min-width:1024px){.fac-section{scroll-margin-top:152px}}
 
 /* ── Mobile sidebar ──────────────────────────── */
 #mob-overlay{
@@ -159,8 +181,14 @@
 
 <!-- ═══ HERO ══════════════════════════════════════ -->
 <header role="banner" aria-label="Programs directory"
-        class="relative overflow-hidden"
-        style="background:linear-gradient(135deg,#0f0b1e 0%,#2a0855 45%,#47005c 100%)">
+        class="relative overflow-hidden">
+
+  <!-- Background photo + overlay (same pattern as faculty/program hero) -->
+  <div class="absolute inset-0 z-0" aria-hidden="true">
+    <img src="{% static 'images/hero.webp' %}" alt="" class="w-full h-full object-cover">
+    <div class="absolute inset-0 bg-gradient-to-br from-[#6b026b]/80 via-purple-900/75 to-fuchsia-900/80"></div>
+    <div class="absolute inset-0 bg-black/25"></div>
+  </div>
 
   <!-- Ambient glow -->
   <div aria-hidden="true" class="pointer-events-none absolute inset-0">
@@ -223,9 +251,10 @@
 </header>
 
 <!-- ═══ TOOLBAR ═══════════════════════════════════ -->
-<div id="toolbar" role="toolbar" aria-label="Listing controls">
+<div id="toolbar" role="toolbar" aria-label="Listing controls"
+     class="sticky top-20 lg:top-24 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="h-[52px] flex items-center justify-between gap-4">
+    <div class="h-14 flex items-center justify-between gap-4">
 
       <div class="flex items-center gap-3 min-w-0">
         <!-- Mobile sidebar trigger -->
@@ -274,11 +303,6 @@
   </a>
   {% endfor %}
   <div class="mt-6 pt-5 border-t border-gray-100 space-y-2">
-    <a href="{% url 'eduweb:apply' %}"
-       class="flex items-center justify-center gap-2 w-full rounded-lg py-2.5 text-sm font-bold text-white hover:opacity-90 transition-all focus:outline-none focus:ring-2 focus:ring-purple-400"
-       style="background:#840384">
-      <i data-lucide="send" class="w-4 h-4" aria-hidden="true"></i> Apply Now
-    </a>
     <a href="{% url 'eduweb:admission_requirement' %}"
        class="flex items-center justify-center gap-2 w-full rounded-lg py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:text-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-gray-300">
       <i data-lucide="file-text" class="w-4 h-4" aria-hidden="true"></i> Requirements
@@ -289,11 +313,20 @@
 <!-- ═══ BODY ══════════════════════════════════════ -->
 <div class="bg-slate-50 min-h-screen">
 <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
-<div class="flex gap-8 items-start">
+<div class="flex gap-8 items-stretch">
 
-  <!-- ── Desktop sidebar ──────────────────────── -->
-  <aside class="hidden lg:flex w-52 xl:w-60 flex-shrink-0 flex-col sticky top-[56px] max-h-[calc(100vh-56px)] overflow-y-auto sb-hide"
+  <!-- ── Desktop sidebar ──────────────────────────────────────────────
+       The <aside> is stretched to match <main>'s full height (items-stretch
+       on the parent, above) — a plain flex item with items-start would only
+       be as tall as its own short content (a handful of nav links), which
+       caps how far a sticky child inside it can travel before running out
+       of box to stick within. Putting position:sticky on the INNER wrapper
+       instead gives it the full, stretched height to stay pinned across,
+       so it only stops sticking once <main>'s content (and so the whole
+       row) actually ends, right before the footer. ──────────────────── -->
+  <aside class="hidden lg:flex w-52 xl:w-60 flex-shrink-0"
          aria-label="Faculty navigation">
+    <div class="sticky top-38 max-h-[calc(100vh-9.5rem)] overflow-y-auto sb-hide flex flex-col w-full">
 
     <p class="text-[10px] font-black uppercase tracking-[.12em] text-gray-400 px-3 mb-2">Faculties</p>
 
@@ -325,17 +358,13 @@
           <dd class="text-xs font-bold text-purple-700" id="filteredCount">0</dd>
         </div>
       </dl>
-      <a href="{% url 'eduweb:apply' %}"
-         class="flex items-center justify-center gap-1.5 w-full rounded-lg py-2.5 text-xs font-bold text-white hover:opacity-90 transition-all mb-1.5 focus:outline-none focus:ring-2 focus:ring-purple-400"
-         style="background:#840384">
-        <i data-lucide="send" class="w-3.5 h-3.5" aria-hidden="true"></i> Apply Now
-      </a>
       <a href="{% url 'eduweb:admission_requirement' %}"
          class="flex items-center justify-center gap-1.5 w-full rounded-lg py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-primary-950 transition-all focus:outline-none focus:ring-2 focus:ring-gray-300">
         <i data-lucide="file-text" class="w-3.5 h-3.5" aria-hidden="true"></i> Requirements
       </a>
     </div>
 
+    </div>
   </aside>
 
   <!-- ── Main content ──────────────────────────── -->
@@ -371,14 +400,20 @@
       </div>
       {% endwith %}
 
-      <!-- Faculty header bar -->
-      <div class="fac-hdr px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div class="flex items-center gap-3.5">
+      <!-- Faculty header bar / accordion toggle. Plain div (not <button>) —
+           it contains a real <a> (Faculty Page link), and interactive
+           elements can't nest inside a <button>. The toggle JS ignores
+           clicks that originate from that link. -->
+      <div class="fac-hdr faculty-toggle px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+           role="button" tabindex="0"
+           aria-expanded="false"
+           aria-controls="faculty-body-{{ faculty.slug }}">
+        <div class="flex items-center gap-3.5 min-w-0">
           <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)">
             <i data-lucide="{{ faculty.icon }}" class="w-5 h-5 text-white" aria-hidden="true"></i>
           </div>
-          <div>
+          <div class="min-w-0">
             <h2 id="fh-{{ faculty.slug }}"
                 class="font-['Poppins',sans-serif] font-black text-white text-base sm:text-[1.05rem] leading-tight">
               {{ faculty.name }}
@@ -402,10 +437,14 @@
             <i data-lucide="external-link" class="w-3.5 h-3.5" aria-hidden="true"></i>
             Faculty Page
           </a>
+          <i data-lucide="chevron-down" class="fac-chevron w-4 h-4 text-white/70" aria-hidden="true"></i>
         </div>
       </div>
 
-      <!-- Departments -->
+      <!-- Collapsible body — closed by default; JS opens exactly one at a
+           time via the .open class (see accordion script below). -->
+      <div id="faculty-body-{{ faculty.slug }}" class="fac-body-wrap" aria-hidden="true">
+      <div class="fac-body-inner">
       <div class="rounded-b-xl border border-t-0 border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
 
         {% for department in faculty.departments.all %}
@@ -508,6 +547,8 @@
         {% endfor %}
 
       </div>
+      </div>
+      </div>
 
     </section>
     {% empty %}
@@ -516,6 +557,17 @@
       <h2 class="text-lg font-bold text-gray-400 font-['Poppins',sans-serif]">No faculties available yet.</h2>
     </div>
     {% endfor %}
+
+    <!-- ═══ PAGINATION (client-side; hidden if only 1 page) ══ -->
+    <nav id="pagination" class="hidden flex-wrap items-center justify-center gap-2 mt-8" aria-label="Faculty list pages">
+      <button id="pg-prev" type="button" class="pgbtn" aria-label="Previous page">
+        <i data-lucide="chevron-left" class="w-4 h-4" aria-hidden="true"></i>
+      </button>
+      <div id="pg-numbers" class="flex items-center gap-1"></div>
+      <button id="pg-next" type="button" class="pgbtn" aria-label="Next page">
+        <i data-lucide="chevron-right" class="w-4 h-4" aria-hidden="true"></i>
+      </button>
+    </nav>
 
   </main><!-- /main -->
 </div><!-- /flex -->
@@ -551,9 +603,19 @@ const mobOpenBtn   = document.getElementById('mob-open-btn');
 const mobPanel     = document.getElementById('mob-panel');
 const mobOverlay   = document.getElementById('mob-overlay');
 const mobCloseBtn  = document.getElementById('mob-close-btn');
+const allFaculties = document.querySelectorAll('.faculty-section');
+const pgNav        = document.getElementById('pagination');
+const pgPrev       = document.getElementById('pg-prev');
+const pgNext       = document.getElementById('pg-next');
+const pgNumbers    = document.getElementById('pg-numbers');
 
 let activeFilter = 'all';
 let searchTerm   = '';
+let currentPage  = 1;
+let hasOpenedDefault = false;
+const FACULTIES_PER_PAGE = 5;
+
+function isFiltering(){ return !!searchTerm || activeFilter !== 'all'; }
 
 /* ── Total count ──────────────────────────────── */
 const allCards = document.querySelectorAll('.program-card');
@@ -579,18 +641,25 @@ function run(){
   document.querySelectorAll('.department-block').forEach(d=>{
     d.style.display = d.querySelectorAll('.program-card:not(.hidden)').length ? '' : 'none';
   });
-  document.querySelectorAll('.faculty-section').forEach(s=>{
-    s.style.display = Array.from(s.querySelectorAll('.department-block'))
-      .some(d=>d.style.display!=='none') ? '' : 'none';
+
+  // Faculties that contain at least one visible program get data-match="1";
+  // paginate() is the single place that decides real display, so it can
+  // slice the matching set into pages instead of racing with this loop.
+  allFaculties.forEach(s=>{
+    const matches = Array.from(s.querySelectorAll('.department-block'))
+      .some(d=>d.style.display!=='none');
+    s.dataset.match = matches ? '1' : '0';
   });
 
-  const filtered = searchTerm || activeFilter !== 'all';
+  const filtered = isFiltering();
   countEl.textContent = filtered
     ? `${vis} of ${allCards.length} programs`
     : `${allCards.length} program${allCards.length!==1?'s':''}`;
   if(filteredRow) filteredRow.style.display = filtered ? '' : 'none';
   if(filteredEl)  filteredEl.textContent = vis;
   noResults.classList.toggle('hidden', vis>0);
+
+  paginate(true);
 }
 
 window.resetSearch = function(){
@@ -601,6 +670,115 @@ window.resetSearch = function(){
   filterBtns[0]?.classList.add('on');
   run();
 };
+
+/* ── Pagination — client-side, no reload. Paginates the faculty
+   sections that currently match the search/filter. ───────────── */
+function paginate(resetPage){
+  const matching = Array.from(allFaculties).filter(s=>s.dataset.match!=='0');
+  const totalPages = Math.max(1, Math.ceil(matching.length / FACULTIES_PER_PAGE));
+
+  if(resetPage) currentPage = 1;
+  if(currentPage > totalPages) currentPage = totalPages;
+
+  const start = (currentPage-1) * FACULTIES_PER_PAGE;
+  const pageSet = new Set(matching.slice(start, start+FACULTIES_PER_PAGE));
+
+  allFaculties.forEach(s=>{
+    const show = pageSet.has(s);
+    s.style.display = show ? '' : 'none';
+    if(!show) closeFacultyBody(s);
+  });
+
+  renderPaginationControls(totalPages);
+
+  // While actively searching/filtering, expand every result in view so
+  // matches aren't hidden behind a collapsed accordion the user has to
+  // click open one-by-one. Outside of that, normal single-open behaviour.
+  if(isFiltering()){
+    pageSet.forEach(s=>openFacultyBody(s, /*exclusive*/false));
+  } else if(!hasOpenedDefault && pageSet.size){
+    hasOpenedDefault = true;
+    openFacultyBody(matching[0], true);
+  }
+}
+
+function renderPaginationControls(totalPages){
+  if(totalPages <= 1){
+    pgNav.classList.add('hidden');
+    pgNav.classList.remove('flex');
+    return;
+  }
+  pgNav.classList.remove('hidden');
+  pgNav.classList.add('flex');
+
+  pgPrev.disabled = currentPage === 1;
+  pgNext.disabled = currentPage === totalPages;
+
+  pgNumbers.innerHTML = '';
+  for(let p=1; p<=totalPages; p++){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pgbtn' + (p===currentPage ? ' on' : '');
+    btn.textContent = String(p);
+    btn.setAttribute('aria-label', `Page ${p}`);
+    if(p===currentPage) btn.setAttribute('aria-current','page');
+    btn.addEventListener('click', ()=>goToPage(p));
+    pgNumbers.appendChild(btn);
+  }
+}
+
+function goToPage(p){
+  currentPage = p;
+  paginate(false);
+  document.getElementById('programs-content').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+pgPrev.addEventListener('click', ()=>{ if(currentPage>1) goToPage(currentPage-1); });
+pgNext.addEventListener('click', ()=>{
+  const matching = Array.from(allFaculties).filter(s=>s.dataset.match!=='0');
+  const totalPages = Math.max(1, Math.ceil(matching.length / FACULTIES_PER_PAGE));
+  if(currentPage<totalPages) goToPage(currentPage+1);
+});
+
+/* ── Accordion — one faculty body open at a time ─────────────── */
+function openFacultyBody(section, exclusive){
+  if(!section) return;
+  if(exclusive===undefined) exclusive = !isFiltering();
+  if(exclusive){
+    allFaculties.forEach(s=>{ if(s!==section) closeFacultyBody(s); });
+  }
+  const header = section.querySelector('.faculty-toggle');
+  const body   = section.querySelector('.fac-body-wrap');
+  if(header) header.setAttribute('aria-expanded','true');
+  if(body){ body.classList.add('open'); body.setAttribute('aria-hidden','false'); }
+}
+function closeFacultyBody(section){
+  if(!section) return;
+  const header = section.querySelector('.faculty-toggle');
+  const body   = section.querySelector('.fac-body-wrap');
+  if(header) header.setAttribute('aria-expanded','false');
+  if(body){ body.classList.remove('open'); body.setAttribute('aria-hidden','true'); }
+}
+function toggleFaculty(section){
+  const isOpen = section.querySelector('.fac-body-wrap')?.classList.contains('open');
+  if(isOpen) closeFacultyBody(section);
+  else openFacultyBody(section, !isFiltering());
+}
+
+document.querySelectorAll('.faculty-toggle').forEach(header=>{
+  const section = header.closest('.faculty-section');
+  header.addEventListener('click', e=>{
+    if(e.target.closest('a')) return; // let the "Faculty Page" link navigate normally
+    toggleFaculty(section);
+  });
+  header.addEventListener('keydown', e=>{
+    if(e.target.closest('a')) return;
+    if(e.key==='Enter' || e.key===' '){
+      e.preventDefault();
+      toggleFaculty(section);
+    }
+  });
+});
 
 /* ── Events: search ───────────────────────────── */
 search.addEventListener('input', function(){ searchTerm=this.value.toLowerCase().trim(); run(); });
@@ -651,7 +829,24 @@ document.querySelectorAll('.desk-snav, .mob-snav').forEach(link=>{
     e.preventDefault();
     closeMob();
     const t = document.querySelector(link.getAttribute('href'));
-    if(t) window.scrollTo({top: t.getBoundingClientRect().top + window.scrollY - 64, behavior:'smooth'});
+    if(!t) return;
+
+    // The target faculty may be on a different pagination page (hidden) —
+    // find it and switch pages first so the scroll has something to land on.
+    const matching = Array.from(allFaculties).filter(s=>s.dataset.match!=='0');
+    const idx = matching.indexOf(t);
+    if(idx !== -1){
+      const targetPage = Math.floor(idx / FACULTIES_PER_PAGE) + 1;
+      if(targetPage !== currentPage){
+        currentPage = targetPage;
+        paginate(false);
+      }
+    }
+    openFacultyBody(t, !isFiltering());
+
+    requestAnimationFrame(()=>{
+      window.scrollTo({top: t.getBoundingClientRect().top + window.scrollY - 64, behavior:'smooth'});
+    });
   });
 });
 

@@ -75,67 +75,6 @@
     <!-- Fonts (Inter & Poppins) are bundled into styles.css via @import — see static/src/styles.css -->
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
-    <!-- Font override: forces Inter/Poppins directly in the browser without depending on Tailwind compilation.
-         This guarantees fonts display correctly even if Tailwind hasn't rebuilt the stylesheet yet. -->
-    <style>
-        /* Base font for all body text */
-        *,
-        *::before,
-        *::after {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-
-        /* Headings use Poppins */
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6,
-        .font-heading,
-        .font-\[\'Poppins\'\] {
-            font-family: 'Poppins', system-ui, -apple-system, sans-serif;
-        }
-
-        /* Explicit Inter override for nav, body text, buttons */
-        body,
-        .font-\[\'Inter\'\] {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-
-        /* ── FIX: Mobile menu scrollability ─────────────────────────────────
-           The header is position:fixed, so the mobile menu panel must be
-           capped to the remaining viewport height and made scrollable.
-           We use 100dvh (dynamic viewport height) so it works correctly
-           on mobile browsers that have retractable address bars.
-           Fallback to 100vh for browsers that don't support dvh yet.
-        ──────────────────────────────────────────────────────────────────── */
-        #mobileMenu {
-            max-height: calc(100vh - 5rem);       /* fallback */
-            max-height: calc(100dvh - 5rem);      /* modern mobile browsers */
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;    /* smooth momentum scroll on iOS */
-        }
-
-        /* ── Brand icon SVGs used in place of removed Lucide brand icons ── */
-        .brand-icon {
-            display: inline-block;
-            width: 1.25rem;   /* w-5 */
-            height: 1.25rem;  /* h-5 */
-            fill: currentColor;
-            vertical-align: middle;
-            flex-shrink: 0;
-        }
-        .brand-icon-sm {
-            display: inline-block;
-            width: 1rem;   /* w-4 */
-            height: 1rem;  /* h-4 */
-            fill: currentColor;
-            vertical-align: middle;
-            flex-shrink: 0;
-        }
-    </style>
-
     <!-- SweetAlert2 (vendored) -->
     <script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>
 
@@ -149,9 +88,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 
-<!-- font-['Inter'] applied directly on body to guarantee Inter loads regardless of Tailwind config resolution -->
-
-<body class="font-['Inter'] text-gray-900 bg-gray-50 antialiased">
+<body class="text-gray-900 bg-gray-50 antialiased">
 
     <!-- Skip to main content for accessibility -->
     <a href="#main-content"
@@ -326,7 +263,7 @@
                         {% else %}
                         <a href="{% url 'eduweb:auth_page' %}"
                            class="px-6 py-2.5 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-semibold font-['Inter'] text-lg hover:shadow-xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
-                            Sign In / Apply
+                            Sign In
                             <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </a>
                         {% endif %}
@@ -478,7 +415,7 @@
                         {% else %}
                         <a href="{% url 'eduweb:auth_page' %}"
                            class="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-primary-950 to-purple-700 text-white rounded-lg font-bold font-['Inter'] hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-950 focus:ring-offset-2">
-                            Sign In / Apply
+                            Sign In
                             <i data-lucide="arrow-right" class="w-5 h-5"></i>
                         </a>
                         {% endif %}

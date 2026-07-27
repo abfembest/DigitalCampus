@@ -101,6 +101,39 @@
   --animate-scale-in: scale-in 0.3s ease-out;
 }
 
+/* Base element styles — fonts are controlled here so every page gets them
+   the moment styles.css loads, with no per-template overrides needed.
+
+   font-family goes on `body`, not a universal `*` selector: it's an
+   inherited CSS property, so body's value already reaches every descendant
+   on its own. A `*` rule instead sets font-family DIRECTLY on every
+   element — including icon-font glyphs like FontAwesome's `.fas`/`.far`/
+   `.fab`, which render a Unicode codepoint through their OWN special font
+   ("Font Awesome 6 Free"/etc). Since this file is shared by both the
+   public site (SVG-based Lucide icons — unaffected either way) and the
+   management dashboard (FontAwesome, font-based), a `*` override here
+   silently broke every dashboard icon: 'Inter' has no glyph for those
+   codepoints, so they rendered blank. Plain inheritance never has that
+   problem — FontAwesome's own explicit class rule still wins over an
+   inherited value regardless of load order. */
+@layer base {
+  body,
+  .font-\[\'Inter\'\] {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-heading,
+  .font-\[\'Poppins\'\] {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  }
+}
+
 /* Custom Keyframes */
 @keyframes fade-in {
   from { opacity: 0; }
@@ -381,6 +414,77 @@
   .btn-lg {
     padding: 0.625rem 1.5rem;
     font-size: 1rem;
+  }
+
+  /* ── Nav / mobile menu (relocated from base.html's inline <style>) ── */
+
+  /* The header is position:fixed, so the mobile menu panel must be capped
+     to the remaining viewport height and made scrollable. 100dvh (dynamic
+     viewport height) is used so it works correctly on mobile browsers with
+     retractable address bars; 100vh is the fallback for browsers without
+     dvh support. */
+  #mobileMenu {
+    max-height: calc(100vh - 5rem);
+    max-height: calc(100dvh - 5rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── SweetAlert2 toast (window.showToast, base.html) ──
+     A long unbroken string (e.g. a long email address in "A 6-digit code
+     has been sent to ...") has no spaces to wrap at, so the toast grows
+     past the viewport width and forces a horizontal scrollbar on mobile.
+     SweetAlert2 injects its own default styles at runtime, so !important
+     is needed to reliably win — same pattern already used for Select2
+     overrides elsewhere in this file. */
+  .swal2-toast {
+    max-width: min(24rem, calc(100vw - 2rem)) !important;
+  }
+
+  .swal2-toast .swal2-title,
+  .swal2-toast .swal2-html-container {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* ── Icon-prefixed form inputs (auth/signup pages) ──
+     Django form widgets set their own `class` via forms.py, so the input's
+     left-padding can't be added as a template-side utility class on the
+     <input> itself — it has to target it by descendant selector instead. */
+  .input-group {
+    position: relative;
+  }
+
+  .input-group .icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+  }
+
+  .input-group input {
+    padding-left: 2.75rem;
+  }
+
+  /* Brand icon SVGs used in place of removed Lucide brand icons */
+  .brand-icon {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: currentColor;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  .brand-icon-sm {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    fill: currentColor;
+    vertical-align: middle;
+    flex-shrink: 0;
   }
 }
 

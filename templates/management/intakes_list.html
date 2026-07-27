@@ -411,7 +411,9 @@ function openCreateIntakeModal() {
   // default correctly.
   const rows = container.querySelectorAll('.intake-row');
   rows.forEach((row, i) => { if (i > 0) row.remove(); });
-  document.getElementById('createIntakeForm').reset();
+  const createForm = document.getElementById('createIntakeForm');
+  createForm.reset();
+  clearFieldErrors(createForm);
 
   const programSelect = container.querySelector('.intake-row select[name$="-program"]');
   if (programSelect) programSelect.dispatchEvent(new Event('change', { bubbles: true }));
@@ -423,6 +425,86 @@ function openCreateIntakeModal() {
 function closeCreateIntakeModal() {
   document.getElementById('createIntakeModal').classList.add('hidden');
 }
+
+// ── Inline field-error helpers — shared by create + edit modals ──
+// Highlights the offending input and drops an error message right under
+// it, instead of relying on messages.error() + a redirect that would
+// reload the page and wipe whatever the admin had already typed.
+function clearFieldErrors(scopeEl) {
+  scopeEl.querySelectorAll('.field-error').forEach(el => el.remove());
+  scopeEl.querySelectorAll('.field-error-input').forEach(el => {
+    el.classList.remove('field-error-input', 'border-red-500', 'ring-2', 'ring-red-200');
+  });
+}
+
+function showFieldError(input, message) {
+  if (!input) return;
+  input.classList.add('field-error-input', 'border-red-500', 'ring-2', 'ring-red-200');
+  const p = document.createElement('p');
+  p.className = 'field-error text-xs text-red-600 mt-1';
+  p.textContent = message;
+  input.insertAdjacentElement('afterend', p);
+}
+
+function focusFirstError(scopeEl) {
+  const first = scopeEl.querySelector('.field-error-input');
+  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function showNonFieldErrors(container, messages) {
+  if (!messages || !messages.length) return;
+  const p = document.createElement('p');
+  p.className = 'field-error text-sm text-red-600 mt-3 font-medium';
+  p.textContent = messages.join(' ');
+  container.appendChild(p);
+}
+
+// ── Create modal — submit via fetch so per-row/per-field errors render
+//    inline and the modal keeps whatever the admin already entered ──
+document.getElementById('createIntakeForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const form = this;
+  clearFieldErrors(form);
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalHtml = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5" aria-hidden="true"></i>Saving...';
+
+  try {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      window.location.reload();
+      return;
+    }
+
+    const rows = form.querySelectorAll('#intakeRowsContainer .intake-row');
+    if (data.row_errors) {
+      Object.entries(data.row_errors).forEach(([rowIndex, fieldErrors]) => {
+        const row = rows[Number(rowIndex)];
+        if (!row) return;
+        Object.entries(fieldErrors).forEach(([field, errs]) => {
+          const input = row.querySelector(`[name="intake-${rowIndex}-${field}"]`);
+          if (input) showFieldError(input, errs.join(' '));
+          else showNonFieldErrors(row, errs); // e.g. __all__
+        });
+      });
+    }
+    showNonFieldErrors(form, data.non_form_errors);
+    focusFirstError(form);
+  } catch (err) {
+    showNonFieldErrors(form, ['Something went wrong submitting the form. Please try again.']);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalHtml;
+  }
+});
 
 function addIntakeRow() {
   const template = document.getElementById('intakeEmptyRowTemplate');
@@ -476,11 +558,27 @@ function updateRemoveButtons() {
 }
 
 // ── Edit modal — fetch data via AJAX then pre-fill ────────────
+// Edit modal field name -> input id (not a 1:1 "edit_{field}" pattern for
+// every field, so the mapping is explicit rather than guessed).
+const EDIT_FIELD_IDS = {
+  program: 'edit_program',
+  intake_period: 'edit_intake_period',
+  year: 'edit_year',
+  application_start_date: 'edit_application_start_date',
+  application_deadline: 'edit_deadline',
+  start_date: 'edit_start_date',
+  application_fee: 'edit_application_fee',
+  available_slots: 'edit_slots',
+  is_active: 'edit_is_active',
+};
+
 function openEditIntakeModal(pk, url) {
+  const editForm = document.getElementById('editIntakeForm');
+  clearFieldErrors(editForm);
   fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
     .then(r => r.json())
     .then(data => {
-      document.getElementById('editIntakeForm').action = url;
+      editForm.action = url;
       const programSelectEdit = document.getElementById('edit_program');
       programSelectEdit.value = data.program;
       programSelectEdit.dispatchEvent(new Event('change', { bubbles: true }));
@@ -500,6 +598,46 @@ function openEditIntakeModal(pk, url) {
 function closeEditIntakeModal() {
   document.getElementById('editIntakeModal').classList.add('hidden');
 }
+
+document.getElementById('editIntakeForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const form = this;
+  clearFieldErrors(form);
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalHtml = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5" aria-hidden="true"></i>Saving...';
+
+  try {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      window.location.reload();
+      return;
+    }
+
+    const generalErrors = [];
+    Object.entries(data.errors || {}).forEach(([field, errs]) => {
+      const inputId = EDIT_FIELD_IDS[field];
+      const input = inputId ? document.getElementById(inputId) : null;
+      if (input) showFieldError(input, errs.join(' '));
+      else generalErrors.push(...errs);
+    });
+    showNonFieldErrors(form, generalErrors);
+    focusFirstError(form);
+  } catch (err) {
+    showNonFieldErrors(form, ['Something went wrong submitting the form. Please try again.']);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalHtml;
+  }
+});
 
 // ── Delete modal ──────────────────────────────────────────────
 function openDeleteModal(url, name) {

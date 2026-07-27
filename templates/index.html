@@ -420,7 +420,7 @@
             </div>
             <!-- CTA buttons — inline on large, stacked on small -->
             <div class="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-2 lg:gap-2 flex-shrink-0">
-                <a href="{% url 'eduweb:apply' %}" class="inline-flex items-center justify-center gap-2 bg-white text-primary-950 hover:bg-yellow-300 hover:text-gray-900 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950">
+                <a href="{% url 'eduweb:all_programs' %}" class="inline-flex items-center justify-center gap-2 bg-white text-primary-950 hover:bg-yellow-300 hover:text-gray-900 px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary-950">
                     <i data-lucide="send" class="w-4 h-4" aria-hidden="true"></i> Apply Now
                 </a>
                 <a href="{% url 'eduweb:admission_requirement' %}" class="inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 border border-white/30 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-white/50">
@@ -772,7 +772,7 @@ function admTab(btn, panelId) {
                         <p class="text-sm text-gray-500 mb-3">
                             What is <strong class="text-primary-950 font-bold text-base">{{ captcha_question }}</strong>?
                         </p>
-                        <input id="contactCaptcha" name="captcha" required type="number"
+                        <input id="contactCaptcha" name="captcha" required type="text" inputmode="numeric" pattern="[0-9]*"
                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-950 focus:ring-4 focus:ring-purple-100 transition-all outline-none bg-white"
                                placeholder="Enter the answer" autocomplete="off" />
                     </div>

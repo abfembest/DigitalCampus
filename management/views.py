@@ -4262,8 +4262,19 @@ def intake_create(request):
     skipped rather than saved as empty/invalid records.
     """
     if request.method == 'POST':
+        # The create modal submits via fetch() so validation errors can be
+        # shown inline (per row, per field) without losing whatever the
+        # admin already typed into the other rows — a full-page redirect+
+        # messages round trip would wipe the in-progress form. Plain-POST
+        # fallback (JS blocked/failed) keeps the old redirect+messages
+        # behaviour so the endpoint still works without JS.
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         if not _has_permission(request, 'academics', 'can_create'):
-            messages.error(request, 'You do not have permission to create intakes.')
+            msg = 'You do not have permission to create intakes.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'non_form_errors': [msg]}, status=403)
+            messages.error(request, msg)
             return redirect('management:intakes_list')
 
         formset = IntakeCreateFormSet(request.POST, queryset=CourseIntake.objects.none(), prefix='intake')
@@ -4277,9 +4288,26 @@ def intake_create(request):
                     created += 1
             if created:
                 messages.success(request, f'{created} intake{"s" if created != 1 else ""} created.')
+                if is_ajax:
+                    return JsonResponse({'success': True})
             else:
-                messages.error(request, 'No intake data was submitted.')
+                msg = 'No intake data was submitted.'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'non_form_errors': [msg]})
+                messages.error(request, msg)
         else:
+            if is_ajax:
+                row_errors = {}
+                for i, form in enumerate(formset):
+                    if form.errors:
+                        row_errors[str(i)] = {
+                            field: [str(e) for e in errs] for field, errs in form.errors.items()
+                        }
+                return JsonResponse({
+                    'success': False,
+                    'row_errors': row_errors,
+                    'non_form_errors': formset.non_form_errors(),
+                })
             for i, form in enumerate(formset, start=1):
                 for field, errors in form.errors.items():
                     label = form.fields[field].label if field in form.fields else field
@@ -4296,15 +4324,31 @@ def intake_edit(request, pk):
     """AJAX GET returns JSON for the modal; POST saves changes."""
     intake = get_object_or_404(CourseIntake, pk=pk)
     if request.method == 'POST':
+        # Same rationale as intake_create: fetch()-submitted so an invalid
+        # save can highlight the offending field inline and keep the modal's
+        # data intact, instead of a redirect wiping it. Non-AJAX fallback
+        # keeps the old redirect+messages behaviour.
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         if not _has_permission(request, 'academics', 'can_edit'):
-            messages.error(request, 'You do not have permission to edit intakes.')
+            msg = 'You do not have permission to edit intakes.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [msg]}}, status=403)
+            messages.error(request, msg)
             return redirect('management:intakes_list')
 
         form = CourseIntakeForm(request.POST, instance=intake)
         if form.is_valid():
             form.save()
             messages.success(request, 'Intake updated.')
+            if is_ajax:
+                return JsonResponse({'success': True})
         else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {field: [str(e) for e in errs] for field, errs in form.errors.items()},
+                })
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')

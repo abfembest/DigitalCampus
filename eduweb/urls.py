@@ -22,6 +22,7 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('about-us/', views.about, name='about'),
     path('admission/apply/', views.apply, name='apply'),
+    path('admission/register/', views.signup_page, name='signup_page'),
     path('admission/requirements/', views.admission_requirement, name='admission_requirement'),
     path('contact/submit/', views.contact_submit, name='contact_submit'),
     path('application_status/', views.application_status, name='application_status'),

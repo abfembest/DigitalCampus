@@ -1,1 +1,1 @@
-restart triggered 2026-07-27 - revert lesson video_file cap to 200MB; add Program.available_study_modes_display to fix Full_Time display bug
+restart triggered 2026-07-27 - revert study-mode template changes back to raw |title display, was showing nothing

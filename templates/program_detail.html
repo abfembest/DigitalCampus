@@ -134,10 +134,10 @@
 
         {% if program.available_study_modes %}
         <div class="flex flex-wrap gap-2 mb-6 sm:mb-8">
-          {% for mode in program.available_study_modes_display %}
+          {% for mode in program.available_study_modes %}
           <span class="inline-flex items-center gap-1.5 bg-white/20 border border-white/30 text-white px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-medium backdrop-blur-sm">
             <i data-lucide="clock" class="w-2.5 h-2.5 sm:w-3 sm:h-3" aria-hidden="true"></i>
-            {{ mode }}
+            {{ mode|title }}
           </span>
           {% endfor %}
         </div>

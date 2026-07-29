@@ -255,10 +255,10 @@
 
         {% if program.description %}
         <div class="text-gray-600 leading-relaxed space-y-3 sm:space-y-4 text-sm sm:text-base lg:text-lg">
-          {{ program.description|linebreaksbr }}
+          <p class="text-justify">{{ program.description|linebreaksbr }}</p>
         </div>
         {% elif program.overview %}
-        <p class="text-gray-600 leading-relaxed text-sm sm:text-base lg:text-lg">{{ program.overview }}</p>
+        <p class="text-gray-600 leading-relaxed text-sm sm:text-base lg:text-lg text-justify">{{ program.overview }}</p>
         {% endif %}
 
         <div class="mt-6 sm:mt-8 space-y-3 sm:space-y-4">

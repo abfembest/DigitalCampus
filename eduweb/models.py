@@ -1263,10 +1263,10 @@ class Department(models.Model):
 class Program(models.Model):
 
     STUDY_MODE_CHOICES = [
-        ('full-time', 'Full Time'),
-        ('part-time', 'Part Time'),
-        ('online', 'Online'),
-        ('blended', 'Blended'),
+        ('Full Time', 'Full Time'),
+        ('Part Time', 'Part Time'),
+        ('Online', 'Online'),
+        ('Blended', 'Blended'),
     ]
 
     # ── Hierarchy ──────────────────────────────────────────────────────────────

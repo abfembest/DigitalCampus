@@ -6,9 +6,17 @@
 
 {% block extra_css %}
 <style>
-    .modal-tab { padding: .6rem 1rem; font-size: .75rem; font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s; background: transparent; flex-shrink: 0; }
+    .modal-tab { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding: .6rem .8rem; font-size: .7rem; font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s ease; background: transparent; flex-shrink: 0; border-radius: .75rem .75rem 0 0; min-height: 2.5rem; }
+    .modal-tab i { flex-shrink: 0; }
     .modal-tab:hover { color: #3a56d4; background: #f9fafb; }
     .modal-tab.active-tab { color: #3a56d4; border-bottom-color: #3a56d4; background: white; }
+    .modal-tab:focus-visible { outline: 2px solid #3a56d4; outline-offset: -2px; }
+    .modal-tabs-row { display: flex; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+    .modal-tabs-row::-webkit-scrollbar { display: none; }
+    .modal-tabs-row > .modal-tab { scroll-snap-align: start; }
+    .faculty-modal-shell { overscroll-behavior: contain; }
+    @media (min-width: 640px) { .modal-tab { padding: .7rem 1rem; font-size: .75rem; } }
+    @media (max-width: 639px) { .modal-tabs-row { padding: 0 .25rem .25rem; } .modal-tabs-row > .modal-tab { min-width: max-content; } }
     .field-label { display: block; font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; margin-bottom: .3rem; }
     .field-error { color: #ef4444; font-size: .75rem; margin-top: .2rem; }
     #facultyForm input[type=text], #facultyForm input[type=number],
@@ -164,34 +172,34 @@
 </div>
 
 <div id="facultyModal"
-     class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-5"
+     class="hidden fixed inset-0 z-[9999] items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-5"
      role="dialog" aria-modal="true">
 
-    <div class="relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh]">
+    <div class="faculty-modal-shell relative bg-white w-full max-w-2xl sm:max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
 
         {# Header #}
-        <div class="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-primary-600 to-secondary-500 rounded-t-2xl flex-shrink-0">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+        <div class="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 sm:py-4 bg-gradient-to-r from-primary-600 to-secondary-500 flex-shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-university text-white text-sm"></i>
                 </div>
-                <div>
-                    <h2 id="modalTitle" class="text-sm font-bold text-white">Add New Faculty</h2>
-                    <p id="modalSubtitle" class="text-xs text-white/70">Fill in the details below</p>
+                <div class="min-w-0">
+                    <h2 id="modalTitle" class="text-sm font-bold text-white truncate">Add New Faculty</h2>
+                    <p id="modalSubtitle" class="text-xs text-white/70 truncate">Fill in the details below</p>
                 </div>
             </div>
             <button type="button" onclick="closeFacultyModal()"
-                    class="w-7 h-7 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-all">
+                    class="w-7 h-7 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-all flex-shrink-0">
                 <i class="fas fa-times text-xs"></i>
             </button>
         </div>
 
         {# Tabs — 4 #}
-        <div class="flex border-b border-gray-200 bg-gray-50 flex-shrink-0">
-            <button type="button" onclick="switchTab(1)" id="tab-1" class="modal-tab active-tab"><i class="fas fa-info-circle mr-1.5"></i>Basic & Colors</button>
-            <button type="button" onclick="switchTab(2)" id="tab-2" class="modal-tab"><i class="fas fa-align-left mr-1.5"></i>Content</button>
-            <button type="button" onclick="switchTab(3)" id="tab-3" class="modal-tab"><i class="fas fa-chart-bar mr-1.5"></i>Stats & Features</button>
-            <button type="button" onclick="switchTab(4)" id="tab-4" class="modal-tab"><i class="fas fa-images mr-1.5"></i>Images & SEO</button>
+        <div class="modal-tabs-row border-b border-gray-200 bg-gray-50 flex-shrink-0" role="tablist" aria-label="Faculty form sections">
+            <button type="button" role="tab" aria-selected="true" aria-controls="tabContent-1" onclick="switchTab(1)" id="tab-1" class="modal-tab active-tab"><i class="fas fa-info-circle mr-1.5"></i>Basic & Colors</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="tabContent-2" onclick="switchTab(2)" id="tab-2" class="modal-tab"><i class="fas fa-align-left mr-1.5"></i>Content</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="tabContent-3" onclick="switchTab(3)" id="tab-3" class="modal-tab"><i class="fas fa-chart-bar mr-1.5"></i>Stats & Features</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="tabContent-4" onclick="switchTab(4)" id="tab-4" class="modal-tab"><i class="fas fa-images mr-1.5"></i>Images & SEO</button>
         </div>
 
         {# Form #}
@@ -204,7 +212,7 @@
             </div>
             {% endif %}
 
-            <div class="overflow-y-auto flex-1 px-5 py-4">
+            <div class="overflow-y-auto flex-1 min-h-0 px-4 py-4 sm:px-5">
 
                 {# TAB 1 — Basic + Colors #}
                 <div id="tabContent-1" class="tab-content space-y-4">
@@ -342,7 +350,7 @@
                 <div id="tabContent-4" class="tab-content hidden space-y-4">
                     <div class="grid sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="field-label">Hero Image</label>
+                            <label class="field-label">Hero Image <span class="text-gray-400 font-normal">(max 2MB)</span></label>
                             <div class="file-drop">
                                 <div class="flex items-center gap-2 pointer-events-none">
                                     <i class="fas fa-image text-gray-400 text-sm"></i>
@@ -356,7 +364,7 @@
                             {% if form.hero_image.errors %}<p class="field-error">{{ form.hero_image.errors.0 }}</p>{% endif %}
                         </div>
                         <div>
-                            <label class="field-label">About Image</label>
+                            <label class="field-label">About Image <span class="text-gray-400 font-normal">(max 2MB)</span></label>
                             <div class="file-drop">
                                 <div class="flex items-center gap-2 pointer-events-none">
                                     <i class="fas fa-image text-gray-400 text-sm"></i>
@@ -455,15 +463,15 @@
             </div>{# /scroll area #}
 
             {# Footer #}
-            <div class="flex items-center justify-between px-5 py-3.5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex-shrink-0">
+            <div class="flex flex-col-reverse gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex-shrink-0">
                 <button type="button" onclick="closeFacultyModal()"
-                        class="px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-all">
+                        class="w-full sm:w-auto px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-all">
                     Cancel
                 </button>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center justify-between gap-3 sm:justify-end">
                     <span id="tabProgress" class="text-xs text-gray-400 hidden sm:block">Step 1 of 4</span>
                     <button type="submit"
-                            class="inline-flex items-center gap-2 px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-all shadow">
+                            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-all shadow">
                         <i class="fas fa-save text-xs"></i>
                         <span id="submitBtnText">Save Faculty</span>
                     </button>
@@ -518,11 +526,26 @@ const COLOR_BG = {
 
     window.switchTab = function (n) {
         for (let i = 1; i <= TOTAL_TABS; i++) {
-            document.getElementById('tabContent-' + i).classList.add('hidden');
-            document.getElementById('tab-' + i).classList.remove('active-tab');
+            const tabContent = document.getElementById('tabContent-' + i);
+            const tabButton = document.getElementById('tab-' + i);
+            if (tabContent) tabContent.classList.add('hidden');
+            if (tabButton) {
+                tabButton.classList.remove('active-tab');
+                tabButton.setAttribute('aria-selected', 'false');
+            }
         }
-        document.getElementById('tabContent-' + n).classList.remove('hidden');
-        document.getElementById('tab-' + n).classList.add('active-tab');
+        const activeTab = document.getElementById('tab-' + n);
+        const activePanel = document.getElementById('tabContent-' + n);
+        if (activePanel) activePanel.classList.remove('hidden');
+        if (activeTab) {
+            activeTab.classList.add('active-tab');
+            activeTab.setAttribute('aria-selected', 'true');
+            const row = activeTab.parentElement;
+            if (row) {
+                const left = Math.max(0, activeTab.offsetLeft - 12);
+                row.scrollTo({ left, behavior: 'smooth' });
+            }
+        }
         const prog = document.getElementById('tabProgress');
         if (prog) prog.textContent = 'Step ' + n + ' of ' + TOTAL_TABS;
     };
@@ -637,11 +660,17 @@ const COLOR_BG = {
         }
 
         modal.classList.remove('hidden');
+        modal.classList.add('flex');
         document.body.style.overflow = 'hidden';
+        const contentPane = modal.querySelector('.overflow-y-auto');
+        if (contentPane) contentPane.scrollTop = 0;
+        requestAnimationFrame(() => switchTab(1));
     };
 
     window.closeFacultyModal = function () {
-        document.getElementById('facultyModal').classList.add('hidden');
+        const modal = document.getElementById('facultyModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
         document.body.style.overflow = '';
     };
     document.getElementById('facultyModal').addEventListener('click', function (e) {
@@ -692,19 +721,36 @@ const COLOR_BG = {
             }
         });
     }
-    setupFilePreview('id_hero_image',  'heroPreviewImg',  'heroPreviewWrap',  'heroFileName');
-    setupFilePreview('id_about_image', 'aboutPreviewImg', 'aboutPreviewWrap', 'aboutFileName');
-    setupFilePreview('id_gallery_image_1', 'galleryPreviewImg1', 'gallery-preview-1', 'galleryFileName1', 3, 'Choose image…');
-    setupFilePreview('id_gallery_image_2', 'galleryPreviewImg2', 'gallery-preview-2', 'galleryFileName2', 3, 'Choose image…');
-    setupFilePreview('id_gallery_image_3', 'galleryPreviewImg3', 'gallery-preview-3', 'galleryFileName3', 3, 'Choose image…');
+    setupFilePreview('id_hero_image',  'heroPreviewImg',  'heroPreviewWrap',  'heroFileName',  2, 'Choose hero image…');
+    setupFilePreview('id_about_image', 'aboutPreviewImg', 'aboutPreviewWrap', 'aboutFileName', 2, 'Choose about image…');
+    setupFilePreview('id_gallery_image_1', 'galleryPreviewImg1', 'gallery-preview-1', 'galleryFileName1', 2, 'Choose image…');
+    setupFilePreview('id_gallery_image_2', 'galleryPreviewImg2', 'gallery-preview-2', 'galleryFileName2', 2, 'Choose image…');
+    setupFilePreview('id_gallery_image_3', 'galleryPreviewImg3', 'gallery-preview-3', 'galleryFileName3', 2, 'Choose image…');
 
-    // Video upload: filename label only, no preview player.
+    // Video upload: filename label only, no preview player — but still enforce
+    // the same 3MB cap the server applies, so an oversized video is rejected
+    // here instead of only surfacing as a server error after a full upload.
     (function () {
         const input = document.getElementById('id_gallery_video');
         if (!input) return;
+        const maxSizeMB = 3;
         input.addEventListener('change', function () {
-            document.getElementById('galleryVideoFileName').textContent =
-                (this.files && this.files[0]) ? this.files[0].name : 'Choose video…';
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                if (file.size > maxSizeMB * 1024 * 1024) {
+                    if (window.Swal) {
+                        Swal.fire({ icon: 'warning', title: 'File too large', text: 'Please choose a video under ' + maxSizeMB + 'MB.' });
+                    } else {
+                        alert('Please choose a video under ' + maxSizeMB + 'MB.');
+                    }
+                    this.value = '';
+                    document.getElementById('galleryVideoFileName').textContent = 'Choose video…';
+                    return;
+                }
+                document.getElementById('galleryVideoFileName').textContent = file.name;
+            } else {
+                document.getElementById('galleryVideoFileName').textContent = 'Choose video…';
+            }
         });
     })();
 

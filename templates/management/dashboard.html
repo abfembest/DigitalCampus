@@ -12,66 +12,66 @@
 </div>
 
 <!-- Stats Cards -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
         <div class="flex justify-between items-start">
             <div>
-                <h3 class="text-3xl font-bold text-gray-800">{{ total_applications }}</h3>
-                <p class="text-gray-600">Total Applications</p>
+                <h3 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">{{ total_applications }}</h3>
+                <p class="text-xs sm:text-sm text-gray-600">Total Applications</p>
             </div>
-            <div class="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                <i class="fas fa-file-alt text-2xl" aria-hidden="true"></i>
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
+                <i class="fas fa-file-alt text-base sm:text-2xl" aria-hidden="true"></i>
             </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
         <div class="flex justify-between items-start">
             <div>
-                <h3 class="text-3xl font-bold text-gray-800">{{ pending_applications }}</h3>
-                <p class="text-gray-600">Pending Review</p>
+                <h3 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">{{ pending_applications }}</h3>
+                <p class="text-xs sm:text-sm text-gray-600">Pending Review</p>
             </div>
-            <div class="w-14 h-14 rounded-xl bg-yellow-50 flex items-center justify-center text-yellow-600">
-                <i class="fas fa-clock text-2xl" aria-hidden="true"></i>
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-yellow-50 flex items-center justify-center text-yellow-600 flex-shrink-0">
+                <i class="fas fa-clock text-base sm:text-2xl" aria-hidden="true"></i>
             </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
         <div class="flex justify-between items-start">
             <div>
-                <h3 class="text-3xl font-bold text-gray-800">{{ approved_applications }}</h3>
-                <p class="text-gray-600">Approved</p>
+                <h3 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">{{ approved_applications }}</h3>
+                <p class="text-xs sm:text-sm text-gray-600">Approved</p>
             </div>
-            <div class="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
-                <i class="fas fa-check-circle text-2xl" aria-hidden="true"></i>
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-green-50 flex items-center justify-center text-green-600 flex-shrink-0">
+                <i class="fas fa-check-circle text-base sm:text-2xl" aria-hidden="true"></i>
             </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
         <div class="flex justify-between items-start">
             <div>
-                <h3 class="text-3xl font-bold text-gray-800">{{ total_students }}</h3>
-                <p class="text-gray-600">Active Students</p>
+                <h3 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">{{ total_students }}</h3>
+                <p class="text-xs sm:text-sm text-gray-600">Active Students</p>
             </div>
-            <div class="w-14 h-14 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
-                <i class="fas fa-users text-2xl" aria-hidden="true"></i>
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 flex-shrink-0">
+                <i class="fas fa-users text-base sm:text-2xl" aria-hidden="true"></i>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Charts Section -->
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 mb-8">
     <!-- Applications Chart -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-2 sm:mb-0 font-display">Applications Overview</h3>
-            <div class="flex space-x-2">
-                <button class="chart-period-btn px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white transition-colors" data-period="week">This Week</button>
-                <button class="chart-period-btn px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" data-period="month">This Month</button>
-                <button class="chart-period-btn px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" data-period="year">This Year</button>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+            <h3 class="text-lg sm:text-xl font-bold text-gray-800 font-display">Applications Overview</h3>
+            <div class="flex flex-wrap gap-2">
+                <button class="chart-period-btn px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg bg-primary-600 text-white transition-colors" data-period="week">This Week</button>
+                <button class="chart-period-btn px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" data-period="month">This Month</button>
+                <button class="chart-period-btn px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors" data-period="year">This Year</button>
             </div>
         </div>
         <div class="min-h-[300px] lg:min-h-[350px]">
@@ -80,9 +80,9 @@
     </div>
 
     <!-- Program Distribution Chart -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-2 sm:mb-0 font-display">Program Distribution</h3>
+            <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-0 font-display">Program Distribution</h3>
         </div>
         <div class="min-h-[300px] lg:min-h-[350px]">
             <canvas id="programChart"></canvas>
@@ -92,9 +92,9 @@
 
 <!-- Recent Applications Table -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-    <div class="p-6 border-b border-gray-200">
-        <div class="flex flex-col md:flex-row md:items-center justify-between">
-            <h3 class="text-xl font-bold text-gray-800 mb-4 md:mb-0 font-display">Recent Applications</h3>
+    <div class="p-4 sm:p-6 border-b border-gray-200">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 class="text-lg sm:text-xl font-bold text-gray-800 font-display">Recent Applications</h3>
             {% if permissions.applications.can_view %}
             <a href="{% url 'management:applications_list' %}" class="text-primary-600 hover:text-primary-800 font-medium flex items-center transition-colors">
                 View All <i class="fas fa-arrow-right ml-2" aria-hidden="true"></i>

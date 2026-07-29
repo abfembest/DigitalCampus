@@ -28,6 +28,27 @@
         /* Font guarantee */
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
         .font-heading, h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', system-ui, -apple-system, sans-serif; }
+
+        /* Make management forms behave predictably on mobile */
+        *, *::before, *::after { box-sizing: border-box; }
+        #mainContent form input,
+        #mainContent form textarea,
+        #mainContent form select {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        #mainContent form input[type="checkbox"],
+        #mainContent form input[type="radio"] {
+            display: inline-block;
+            width: auto;
+            max-width: none;
+        }
+        #mainContent form label,
+        #mainContent form .field-label {
+            display: block;
+        }
     </style>
 
     <!-- Fonts (Inter & Poppins) are bundled into styles.css via @import — see static/src/styles.css -->

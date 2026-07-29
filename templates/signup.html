@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const formData = new FormData(this);
-            const response = await fetch(this.action, {
+            const response = await fetch(this.getAttribute('action'), {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }

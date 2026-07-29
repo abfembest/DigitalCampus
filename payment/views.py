@@ -15,6 +15,7 @@ from eduweb.models import (
     AcademicSession,
     AllRequiredPayments,
     ApplicationPayment,
+    AuditLog,
     Course,
     FeePayment,
     Program,
@@ -342,7 +343,15 @@ def required_payment_delete(request, pk):
 
     payment = get_object_or_404(AllRequiredPayments, pk=pk)
     purpose = payment.purpose
+    payment_pk = payment.pk
     payment.delete()
+    AuditLog.objects.create(
+        user=request.user,
+        action='delete',
+        model_name='AllRequiredPayments',
+        object_id=str(payment_pk),
+        description=f'Deleted required payment "{purpose}".',
+    )
     messages.success(request, f'Required payment "{purpose}" deleted.')
     return redirect('payments:required_payments_list')
 
@@ -467,6 +476,14 @@ def generate_invoice_pdf(request, payment_reference):
         messages.error(request, 'Error generating PDF invoice.')
         return redirect('payments:invoice_generation')
 
+    AuditLog.objects.create(
+        user=request.user,
+        action='export',
+        model_name='ApplicationPayment',
+        object_id=str(payment.pk),
+        description=f'Exported invoice PDF for payment {payment.payment_reference}.',
+    )
+
     return response
 
 # ==================== REFUND ====================
@@ -554,6 +571,18 @@ def refund_payment(request, payment_reference):
                 if application and application.payment_status == 'success':
                     application.payment_status = 'refunded'
                     application.save(update_fields=['payment_status'])
+
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='ApplicationPayment',
+                object_id=str(payment.pk),
+                description=(
+                    f'{request.user.username} refunded {refund_amount} for payment '
+                    f'{payment_reference}. Reason: {reason}.'
+                    + (f' Notes: {notes}' if notes else '')
+                ),
+            )
 
             messages.success(
                 request,

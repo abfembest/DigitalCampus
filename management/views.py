@@ -1418,6 +1418,17 @@ def user_create(request):
         user.profile.must_change_password = True
         user.profile.save(update_fields=['role', 'email_verified', 'must_change_password'])
 
+        AuditLog.objects.create(
+            user=request.user,
+            action='create',
+            model_name='User',
+            object_id=str(user.pk),
+            description=(
+                f'{request.user.username} created user {user.username} with role "{role}"'
+                + (' and staff (admin-portal) access' if user.is_staff else '') + '.'
+            ),
+        )
+
     # Delegate email entirely to the service module (non-fatal if it fails)
     email_sent = send_admin_created_user_email(request, user, raw_password)
 
@@ -1490,6 +1501,19 @@ def user_edit(request, pk):
         updated_user.save()
         updated_profile.save()
 
+        if updated_user.is_staff != original_is_staff:
+            AuditLog.objects.create(
+                user=request.user,
+                action='permission_change',
+                model_name='User',
+                object_id=str(updated_user.pk),
+                description=(
+                    f'{request.user.username} '
+                    f'{"granted" if updated_user.is_staff else "revoked"} admin-portal (is_staff) '
+                    f'access for {updated_user.username}.'
+                ),
+            )
+
         # Role can also change from this form's role dropdown, not just via
         # user_change_role — clear stale overrides here too so the user
         # starts clean on whatever role they were just switched to.
@@ -1538,10 +1562,21 @@ def user_toggle_active(request, pk):
 
     user.is_active = not user.is_active
     user.save(update_fields=['is_active'])
- 
+
+    AuditLog.objects.create(
+        user=request.user,
+        action='update',
+        model_name='User',
+        object_id=str(user.pk),
+        description=(
+            f'{request.user.username} {"activated" if user.is_active else "deactivated"} '
+            f'user {user.username}.'
+        ),
+    )
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True, 'is_active': user.is_active})
- 
+
     messages.success(request, f'User {user.username} {"activated" if user.is_active else "deactivated"}.')
     return redirect('management:users_list')
  
@@ -2661,7 +2696,14 @@ def audit_logs_export(request):
             log.description,
             log.ip_address or ''
         ])
-    
+
+    AuditLog.objects.create(
+        user=request.user,
+        action='export',
+        model_name='AuditLog',
+        description=f'{request.user.username} exported audit logs to CSV ({logs.count()} record(s)).',
+    )
+
     return response
 
 
@@ -5349,6 +5391,17 @@ def payment_gateway_create(request):
             if gw.is_active:
                 _deactivate_other_gateways(gw)
             gw.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='create',
+            model_name='PaymentGateway',
+            object_id=str(gw.pk),
+            description=(
+                f'{request.user.username} added payment gateway "{gw.name}" '
+                f'({gw.gateway_type}, {"active" if gw.is_active else "inactive"}). '
+                f'API secrets not recorded.'
+            ),
+        )
         messages.success(request, 'Gateway added.')
     else:
         msg = next(
@@ -5389,6 +5442,17 @@ def payment_gateway_edit(request, slug):
             if gw.is_active:
                 _deactivate_other_gateways(gw)
             gw.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='PaymentGateway',
+            object_id=str(gw.pk),
+            description=(
+                f'{request.user.username} updated payment gateway "{gw.name}" '
+                f'({"active" if gw.is_active else "inactive"})'
+                + (' — API secret rotated.' if request.POST.get('api_secret') else '.')
+            ),
+        )
         messages.success(request, 'Gateway updated.')
     else:
         msg = next(
@@ -5419,7 +5483,16 @@ def payment_gateway_delete(request, slug):
         )
         return redirect('management:payment_gateways_list')
 
+    gateway_pk = gateway.pk
+    gateway_name = gateway.name
     gateway.delete()
+    AuditLog.objects.create(
+        user=request.user,
+        action='delete',
+        model_name='PaymentGateway',
+        object_id=str(gateway_pk),
+        description=f'{request.user.username} deleted payment gateway "{gateway_name}".',
+    )
     messages.success(request, 'Gateway deleted.')
     return redirect('management:payment_gateways_list')
 
@@ -5772,6 +5845,16 @@ def staff_payroll_create(request):
     form = StaffPayrollForm(request.POST)
     if form.is_valid():
         payroll = form.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='create',
+            model_name='StaffPayroll',
+            object_id=str(payroll.pk),
+            description=(
+                f'{request.user.username} created payroll record {payroll.payroll_reference} '
+                f'for {payroll.staff} ({payroll.month}/{payroll.year}).'
+            ),
+        )
         messages.success(request, 'Payroll record created.')
         # Notify the staff member a payroll record has been created for them
         month_name = payroll.get_month_display()
@@ -5809,6 +5892,16 @@ def staff_payroll_edit(request, payroll_reference):
         old_status = payroll.payment_status
         
         updated_payroll = form.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='StaffPayroll',
+            object_id=str(updated_payroll.pk),
+            description=(
+                f'{request.user.username} updated payroll {updated_payroll.payroll_reference} '
+                f'for {updated_payroll.staff}, status "{old_status}" -> "{updated_payroll.payment_status}".'
+            ),
+        )
         messages.success(request, 'Payroll updated.')
         # Notify staff member their payroll record was updated
         month_name = updated_payroll.get_month_display()
@@ -5847,7 +5940,16 @@ def staff_payroll_delete(request, payroll_reference):
         return redirect('management:staff_payroll_list')
 
     payroll = get_object_or_404(StaffPayroll, payroll_reference=payroll_reference)
+    payroll_pk = payroll.pk
+    payroll_staff = str(payroll.staff)
     payroll.delete()
+    AuditLog.objects.create(
+        user=request.user,
+        action='delete',
+        model_name='StaffPayroll',
+        object_id=str(payroll_pk),
+        description=f'{request.user.username} deleted payroll record {payroll_reference} for {payroll_staff}.',
+    )
     messages.success(request, 'Payroll deleted.')
     return redirect('management:staff_payroll_list')
 

@@ -72,6 +72,7 @@ from .forms import (
 from .models import (
     ApplicationDocument,
     ApplicationPayment,
+    AuditLog,
     BlogCategory,
     BlogPost,
     Certificate,
@@ -106,6 +107,17 @@ except ImportError:
 # Module-level logger & Stripe key resolution
 # ─────────────────────────────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
+
+
+def _get_client_ip(request):
+    """Extract real client IP from request, respecting a reverse proxy's
+    X-Forwarded-For header when present. Used for security-critical audit
+    log entries (login/logout/password changes)."""
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        return x_forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
 
 
 def _active_stripe_gateway() -> "PaymentGateway | None":
@@ -241,6 +253,16 @@ def force_change_password(request):
         profile = request.user.profile
         profile.must_change_password = False
         profile.save(update_fields=['must_change_password'])
+
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='User',
+            object_id=str(request.user.pk),
+            description=f'{request.user.username} changed their password.',
+            ip_address=_get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
 
         # Non-fatal — send confirmation email
         try:
@@ -589,6 +611,15 @@ def signup_page(request):
             user = signup_form.save(commit=False)
             user.is_active = False
             user.save()
+            AuditLog.objects.create(
+                user=user,
+                action='create',
+                model_name='User',
+                object_id=str(user.pk),
+                description=f'New account created for {user.username} ({user.email}), pending email verification.',
+                ip_address=_get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            )
             send_verification_email(request, user)
             request.session['apply_program_id'] = program.id
             message = (
@@ -736,6 +767,16 @@ def otp_verify(request):
             'active_session_key',
         ])
 
+        AuditLog.objects.create(
+            user=user,
+            action='login',
+            model_name='User',
+            object_id=str(user.pk),
+            description=f'{user.username} logged in (OTP verified).',
+            ip_address=_get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
+
         role = user.profile.role
 
         if role == 'admin' or user.is_superuser:
@@ -777,6 +818,16 @@ def user_logout(request):
             profile.save(update_fields=['is_logged_in', 'active_session_key'])
         except Exception:
             pass
+
+        AuditLog.objects.create(
+            user=user,
+            action='logout',
+            model_name='User',
+            object_id=str(user.pk),
+            description=f'{user.username} logged out.',
+            ip_address=_get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
 
     logout(request)
     messages.success(request, 'You have been logged out.')
@@ -849,6 +900,15 @@ def reset_password(request, token):
             user.set_password(form.cleaned_data['password1'])
             user.save()
             profile.clear_reset_token()
+            AuditLog.objects.create(
+                user=user,
+                action='update',
+                model_name='User',
+                object_id=str(user.pk),
+                description=f'{user.username} reset their password via the forgot-password link.',
+                ip_address=_get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            )
             messages.success(
                 request,
                 'Your password has been reset successfully. You can now log in.',
@@ -1014,11 +1074,22 @@ def profile(request):
     if request.method == 'POST':
         form = ProfileUpdateForm(request.POST, request.FILES, instance=user_profile)
         if form.is_valid():
+            old_email = user.email
             user.first_name = form.cleaned_data.get('first_name', '')
             user.last_name = form.cleaned_data.get('last_name', '')
             user.email = form.cleaned_data.get('email', '')
             user.save()
             form.save()
+            if old_email != user.email:
+                AuditLog.objects.create(
+                    user=user,
+                    action='update',
+                    model_name='User',
+                    object_id=str(user.pk),
+                    description=f'{user.username} changed their account email from "{old_email}" to "{user.email}".',
+                    ip_address=_get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                )
             messages.success(request, 'Profile updated successfully!')
             return redirect('eduweb:profile')
     else:
@@ -1065,6 +1136,15 @@ def account_settings(request):
                 request.user.set_password(password_form.cleaned_data['new_password'])
                 request.user.save()
                 update_session_auth_hash(request, request.user)
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='update',
+                    model_name='User',
+                    object_id=str(request.user.pk),
+                    description=f'{request.user.username} changed their password via Account Settings.',
+                    ip_address=_get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
+                )
                 messages.success(request, 'Your password has been changed successfully!')
                 return redirect('eduweb:settings')
 
@@ -2335,7 +2415,20 @@ def confirm_payment(request):
                 payment.status  = 'success'
                 payment.paid_at = timezone.now()
                 payment.save(update_fields=['status', 'paid_at'])
-            
+
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='FeePayment',
+                object_id=str(payment.id),
+                description=(
+                    f'{request.user.username} paid {payment.currency} {payment.amount} '
+                    f'for "{fee.purpose}" (Stripe payment {intent.id}).'
+                ),
+                ip_address=_get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            )
+
             # ── EMAIL: Certificate fee paid ──────────────────────────────────
             if created and 'certificate' in fee.purpose.lower():
                 # Check if there are any pending-payment certificates for this user
@@ -2386,6 +2479,18 @@ def confirm_payment(request):
             application.status         = 'payment_complete'
             application.payment_status = 'success'
             application.save(update_fields=['status', 'payment_status'])
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='ApplicationPayment',
+                object_id=str(payment.id),
+                description=(
+                    f'{request.user.username} paid {payment.currency} {payment.amount} '
+                    f'application fee for {application.application_id} (Stripe payment {intent.id}).'
+                ),
+                ip_address=_get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            )
         return JsonResponse({
             'success':      True,
             'payment_id':   payment.id,
@@ -2412,6 +2517,19 @@ def confirm_payment(request):
         application.status         = 'payment_complete'
         application.payment_status = 'success'
         application.save(update_fields=['status', 'payment_status'])
+
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='ApplicationPayment',
+            object_id=str(payment.id),
+            description=(
+                f'{request.user.username} paid {payment.currency} {payment.amount} '
+                f'application fee for {application.application_id} (Stripe payment {intent.id}).'
+            ),
+            ip_address=_get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+        )
 
     return JsonResponse({
         'success':      True,
@@ -2501,6 +2619,17 @@ def stripe_webhook(request):
                 payment.paid_at = timezone.now()
                 payment.save()
 
+                AuditLog.objects.create(
+                    user_id=metadata.get('user_id'),
+                    action='update',
+                    model_name='FeePayment',
+                    object_id=str(payment.id),
+                    description=(
+                        f'Stripe webhook confirmed payment of {payment.currency} {payment.amount} '
+                        f'for "{fee.purpose}" (Stripe payment {intent["id"]}).'
+                    ),
+                )
+
         # ── Application payment ───────────────────────────────────────────────
         elif payment_type == 'application':
             application_id = metadata.get('application_id')
@@ -2532,5 +2661,16 @@ def stripe_webhook(request):
                 application.status         = 'payment_complete'
                 application.payment_status = 'success'
                 application.save(update_fields=['status', 'payment_status'])
+
+                AuditLog.objects.create(
+                    user=application.user,
+                    action='update',
+                    model_name='ApplicationPayment',
+                    object_id=str(payment.id),
+                    description=(
+                        f'Stripe webhook confirmed payment of {payment.currency} {payment.amount} '
+                        f'application fee for {application.application_id} (Stripe payment {intent["id"]}).'
+                    ),
+                )
 
     return HttpResponse(status=200)

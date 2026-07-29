@@ -15,6 +15,7 @@ from eduweb.decorators import is_finance_manager
 from eduweb.models import (
     AllRequiredPayments,
     ApplicationPayment,
+    AuditLog,
     CourseApplication,
     FeePayment,
     InstitutionalSubscription,
@@ -308,6 +309,13 @@ def subscription_create(request):
         subscription = form.save(commit=False)
         subscription.created_by = request.user
         subscription.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='create',
+            model_name='InstitutionalSubscription',
+            object_id=str(subscription.pk),
+            description=f'Added institutional subscription "{subscription.purpose}" ({subscription.amount}).',
+        )
         messages.success(request, f'Subscription "{subscription.purpose}" added.')
         return redirect('finance:subscription_list')
 
@@ -359,6 +367,16 @@ def payroll_management(request):
                     f'{form.cleaned_data["month"]}/{form.cleaned_data["year"]} already exists.'
                 )
             else:
+                AuditLog.objects.create(
+                    user=request.user,
+                    action='create',
+                    model_name='StaffPayroll',
+                    object_id=str(payroll.pk),
+                    description=(
+                        f'Created payroll record {payroll.payroll_reference} for '
+                        f'{payroll.staff} ({payroll.month}/{payroll.year}).'
+                    ),
+                )
                 messages.success(
                     request,
                     f'Payroll created: {payroll.payroll_reference}'
@@ -452,15 +470,28 @@ def payroll_detail(request, payroll_reference):
 
         status_form = PayrollStatusForm(request.POST, instance=payroll)
         if status_form.is_valid():
+            previous_status = payroll.payment_status
             with transaction.atomic():
                 updated = status_form.save(commit=False)
-                if (
+                just_approved = (
                     updated.payment_status == 'paid'
                     and payroll.payment_status != 'paid'
-                ):
+                )
+                if just_approved:
                     updated.approved_by = request.user
                     updated.approved_at = timezone.now()
                 updated.save()
+            AuditLog.objects.create(
+                user=request.user,
+                action='update',
+                model_name='StaffPayroll',
+                object_id=str(updated.pk),
+                description=(
+                    f'Updated payroll {updated.payroll_reference} status from '
+                    f'"{previous_status}" to "{updated.payment_status}" for {updated.staff}.'
+                    + (' Approved for payment.' if just_approved else '')
+                ),
+            )
             messages.success(request, 'Payroll status updated.')
             return redirect(
                 'finance:payroll_detail',
@@ -503,12 +534,21 @@ def payroll_delete(request, payroll_reference):
         )
 
     if request.method == 'POST':
+        payroll_pk = payroll.pk
+        payroll_staff = str(payroll.staff)
         with transaction.atomic():
             for i in range(1, 6):
                 f = getattr(payroll, f'attachment_{i}')
                 if f:
                     f.delete(save=False)
             payroll.delete()
+        AuditLog.objects.create(
+            user=request.user,
+            action='delete',
+            model_name='StaffPayroll',
+            object_id=str(payroll_pk),
+            description=f'Deleted payroll record {payroll_reference} for {payroll_staff}.',
+        )
         messages.success(
             request,
             f'Payroll {payroll_reference} deleted.'

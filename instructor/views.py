@@ -29,7 +29,7 @@ from eduweb.emailservices import (
     send_assignment_graded_email, send_course_enrollment_email, send_new_message_email,
 )
 from eduweb.models import (
-    Announcement, Assignment, AssignmentSubmission, Course, CourseGrade,
+    Announcement, Assignment, AssignmentSubmission, AuditLog, Course, CourseGrade,
     Discussion, DiscussionReply, Enrollment, Exam, ExamQuestion, ExamStatusLog,
     LMSCourse, Lesson, LessonSection, Message, Notification, Quiz,
     QuizAnswer, QuizAttempt, QuizQuestion, QuizResponse, Review,
@@ -1238,6 +1238,17 @@ def grade_submission(request, course_slug, submission_id):
         submission.graded_by = request.user
         submission.graded_at = timezone.now()
         submission.save()
+
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='AssignmentSubmission',
+            object_id=str(submission.pk),
+            description=(
+                f'{request.user.username} graded {submission.student.username}\'s '
+                f'submission for "{assignment.title}" ({course.title}): {score}/{assignment.max_score}.'
+            ),
+        )
 
         # Keep the student's unified CourseGrade in sync the moment an
         # instructor grades an assignment — otherwise this score is invisible
@@ -3521,6 +3532,18 @@ def exam_grade_response(request, slug, response_id):
             'question_scores', 'total_score', 'score_percentage',
             'pending_manual_count', 'status', 'passed', 'graded_at', 'graded_by',
         ])
+
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='StudentExamResponse',
+            object_id=str(response.pk),
+            description=(
+                f'{request.user.username} manually graded {response.student.username}\'s '
+                f'response for exam "{exam.title}": {score_pct}% '
+                f'({"fully graded" if pending_manual == 0 else f"{pending_manual} question(s) still pending"}).'
+            ),
+        )
 
         if pending_manual == 0:
             academic_course = exam.course.academic_course

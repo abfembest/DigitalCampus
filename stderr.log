@@ -419,3 +419,30 @@ Traceback (most recent call last):
 django.core.exceptions.DisallowedRedirect: Unsafe redirect to URL with protocol 'eduweb'
 Bad Request: /management/faculties/
 Not Found: /favicon.ico
+Not Found: /robots.txt
+Not Found: /library/item/commentary-on-the-whole-bible-matthew-henry/
+Not Found: /static/apple-touch-icon.png
+Not Found: /favicon.ico
+Not Found: /favicon.ico
+Not Found: /robots.txt
+Unsafe redirect to URL with protocol 'eduweb'
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/security_middleware.py", line 209, in process_request
+    return self._kill_expired(request, idle_seconds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/security_middleware.py", line 255, in _kill_expired
+    return redirect(f'{settings.LOGIN_URL}?next={next_url}')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/shortcuts.py", line 48, in redirect
+    return redirect_class(resolve_url(to, *args, **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/http/response.py", line 621, in __init__
+    raise DisallowedRedirect(
+django.core.exceptions.DisallowedRedirect: Unsafe redirect to URL with protocol 'eduweb'
+Bad Request: /management/programs/

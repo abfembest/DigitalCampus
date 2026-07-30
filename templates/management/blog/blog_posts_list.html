@@ -22,7 +22,7 @@
 </div>
 
 <!-- Stats Cards -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 mb-6">
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center justify-between">
             <div>
@@ -92,7 +92,7 @@
     </div>
 
     <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full min-w-[760px]">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Post</th>
@@ -182,7 +182,7 @@
                             {% endif %}
                             {% if permissions.blog.can_delete %}
                             <form method="POST" action="{% url 'management:blog_post_delete' post.pk %}"
-                                  onsubmit="return confirm('Are you sure you want to delete this post?');"
+                                  onsubmit="return swalConfirmSubmit(this, {title: 'Delete this post?'});"
                                   class="inline">
                                 {% csrf_token %}
                                 <button type="submit"

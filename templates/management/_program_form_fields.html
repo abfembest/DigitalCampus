@@ -2,7 +2,7 @@
 <div id="programFormFieldsPartial">
 
   {% if form.non_field_errors %}
-  <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 mb-3">
+  <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 mb-3">
     {% for error in form.non_field_errors %}{{ error }}{% endfor %}
   </div>
   {% endif %}
@@ -126,7 +126,6 @@
                  min="1" max="30"
                  class="w-full px-3 py-2 border {% if form.max_credits_per_semester.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
           {% if form.max_credits_per_semester.errors %}<p class="text-xs text-red-500 mt-1">{{ form.max_credits_per_semester.errors.0 }}</p>{% endif %}
-          <p class="text-xs text-gray-500 mt-1">Fallback for any term not overridden below.</p>
         </div>
         <div class="col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-1">Study Modes</label>
@@ -210,13 +209,6 @@
       </div>
       <div class="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Application Fee ($) <span class="text-red-500">*</span></label>
-          <input type="number" name="{{ form.application_fee.html_name }}" value="{{ form.application_fee.value|default:'0.00' }}" required
-                 step="0.01" min="0"
-                 class="w-full px-3 py-2 border {% if form.application_fee.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
-          {% if form.application_fee.errors %}<p class="text-xs text-red-500 mt-1">{{ form.application_fee.errors.0 }}</p>{% endif %}
-        </div>
-        <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Tuition Fee / Year ($) <span class="text-red-500">*</span></label>
           <input type="number" name="{{ form.tuition_fee.html_name }}" value="{{ form.tuition_fee.value|default:'0.00' }}" required
                  step="0.01" min="0"
@@ -291,18 +283,86 @@
       <div class="px-4 py-2 bg-gray-50 border-b border-gray-100">
         <h2 class="font-semibold text-gray-800 text-sm"><i class="fas fa-image text-blue-500 mr-2" aria-hidden="true"></i>Media</h2>
       </div>
-      <div class="p-3">
-        <label class="block text-xs font-medium text-gray-600 mb-1">Hero Image <span class="text-gray-400 font-normal">(1200x400px)</span></label>
-        <div class="program-hero-preview-wrap {% if not form.hero_image.value %}hidden{% endif %} mb-1.5">
-          <img class="program-hero-preview-img h-24 w-full object-cover rounded-lg border border-gray-300" src="{% if form.hero_image.value %}{{ form.hero_image.value.url }}{% endif %}" alt="Hero preview">
+      <div class="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Hero Image <span class="text-gray-400 font-normal">(1200x400px, max 2MB)</span></label>
+          <div class="program-hero-preview-wrap {% if not form.hero_image.value %}hidden{% endif %} mb-1.5">
+            <img class="program-hero-preview-img h-16 w-full object-cover rounded-lg border border-gray-300" src="{% if form.hero_image.value %}{{ form.hero_image.value.url }}{% endif %}" alt="Hero preview">
+          </div>
+          {% if form.hero_image.value %}
+          <label class="mb-1 inline-flex items-center gap-1.5 text-xs text-gray-600">
+            <input type="checkbox" name="hero_image-clear" class="w-3.5 h-3.5">Clear image
+          </label>
+          {% endif %}
+          <input type="file" name="{{ form.hero_image.html_name }}" accept="image/*" class="program-hero-input w-full text-xs border {% if form.hero_image.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg px-2.5 py-1.5">
+          {% if form.hero_image.errors %}<p class="text-xs text-red-500 mt-1">{{ form.hero_image.errors.0 }}</p>{% endif %}
         </div>
-        {% if form.hero_image.value %}
-        <label class="mb-1 inline-flex items-center gap-1.5 text-xs text-gray-600">
-          <input type="checkbox" name="hero_image-clear" class="w-3.5 h-3.5">Clear image
-        </label>
-        {% endif %}
-        <input type="file" name="{{ form.hero_image.html_name }}" accept="image/*" class="program-hero-input w-full text-sm border {% if form.hero_image.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg px-3 py-2">
-        {% if form.hero_image.errors %}<p class="text-xs text-red-500 mt-1">{{ form.hero_image.errors.0 }}</p>{% endif %}
+
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 1 <span class="text-gray-400 font-normal">(max 2MB)</span></label>
+          <div class="program-gallery-preview-wrap" data-slot="1">
+            <div class="{% if not form.gallery_image_1.value %}hidden{% endif %} mb-1.5">
+              <img class="program-gallery-preview-img h-16 w-full object-cover rounded-lg border border-gray-300" src="{% if form.gallery_image_1.value %}{{ form.gallery_image_1.value.url }}{% endif %}" alt="Gallery preview 1">
+            </div>
+          </div>
+          {% if form.gallery_image_1.value %}
+          <label class="mb-1 inline-flex items-center gap-1.5 text-xs text-gray-600">
+            <input type="checkbox" name="gallery_image_1-clear" class="w-3.5 h-3.5">Clear image
+          </label>
+          {% endif %}
+          <input type="file" name="{{ form.gallery_image_1.html_name }}" accept="image/*"
+                 class="program-gallery-input w-full text-xs border {% if form.gallery_image_1.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg px-2.5 py-1.5" data-slot="1">
+          {% if form.gallery_image_1.errors %}<p class="text-xs text-red-500 mt-1">{{ form.gallery_image_1.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 2 <span class="text-gray-400 font-normal">(max 2MB)</span></label>
+          <div class="program-gallery-preview-wrap" data-slot="2">
+            <div class="{% if not form.gallery_image_2.value %}hidden{% endif %} mb-1.5">
+              <img class="program-gallery-preview-img h-16 w-full object-cover rounded-lg border border-gray-300" src="{% if form.gallery_image_2.value %}{{ form.gallery_image_2.value.url }}{% endif %}" alt="Gallery preview 2">
+            </div>
+          </div>
+          {% if form.gallery_image_2.value %}
+          <label class="mb-1 inline-flex items-center gap-1.5 text-xs text-gray-600">
+            <input type="checkbox" name="gallery_image_2-clear" class="w-3.5 h-3.5">Clear image
+          </label>
+          {% endif %}
+          <input type="file" name="{{ form.gallery_image_2.html_name }}" accept="image/*"
+                 class="program-gallery-input w-full text-xs border {% if form.gallery_image_2.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg px-2.5 py-1.5" data-slot="2">
+          {% if form.gallery_image_2.errors %}<p class="text-xs text-red-500 mt-1">{{ form.gallery_image_2.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Image 3 <span class="text-gray-400 font-normal">(max 2MB)</span></label>
+          <div class="program-gallery-preview-wrap" data-slot="3">
+            <div class="{% if not form.gallery_image_3.value %}hidden{% endif %} mb-1.5">
+              <img class="program-gallery-preview-img h-16 w-full object-cover rounded-lg border border-gray-300" src="{% if form.gallery_image_3.value %}{{ form.gallery_image_3.value.url }}{% endif %}" alt="Gallery preview 3">
+            </div>
+          </div>
+          {% if form.gallery_image_3.value %}
+          <label class="mb-1 inline-flex items-center gap-1.5 text-xs text-gray-600">
+            <input type="checkbox" name="gallery_image_3-clear" class="w-3.5 h-3.5">Clear image
+          </label>
+          {% endif %}
+          <input type="file" name="{{ form.gallery_image_3.html_name }}" accept="image/*"
+                 class="program-gallery-input w-full text-xs border {% if form.gallery_image_3.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg px-2.5 py-1.5" data-slot="3">
+          {% if form.gallery_image_3.errors %}<p class="text-xs text-red-500 mt-1">{{ form.gallery_image_3.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Gallery Video <span class="text-gray-400 font-normal">(shown first if present, max 3MB)</span></label>
+          {% if form.gallery_video.value %}
+          <p class="text-xs text-gray-500 mb-1">
+            Current file: <a href="{{ form.gallery_video.value.url }}" target="_blank" class="text-primary-600 hover:underline">{{ form.gallery_video.value.name }}</a>
+            <label class="ml-3 inline-flex items-center gap-1.5">
+              <input type="checkbox" name="gallery_video-clear" class="w-3.5 h-3.5">Clear video
+            </label>
+          </p>
+          {% endif %}
+          <input type="file" name="{{ form.gallery_video.html_name }}" accept="video/*" class="program-video-input w-full text-xs border {% if form.gallery_video.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg px-2.5 py-1.5">
+          <p class="text-xs text-gray-500 mt-1 program-video-filename"></p>
+          {% if form.gallery_video.errors %}<p class="text-xs text-red-500 mt-1">{{ form.gallery_video.errors.0 }}</p>{% endif %}
+        </div>
       </div>
     </div>
 

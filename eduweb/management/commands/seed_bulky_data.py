@@ -974,7 +974,7 @@ class Command(BaseCommand):
             p = Program.objects.create(
                 department=dept, name=name, code=code,
                 degree_level=degree, duration_years=dur,
-                credits_required=cred, application_fee=app_fee,
+                credits_required=cred,
                 tuition_fee=tuit, max_students=max_stu,
                 is_featured=feat, is_active=True,
                 tagline=f"Train as a minister of God — {name}",

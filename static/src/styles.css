@@ -338,6 +338,40 @@
   .semester-group.show { display: block; }
 }
 
+/* ── Base font + layout safety rules (moved out of base.html's inline
+   <style> block) ──────────────────────────────────────────────────────
+   font-family is scoped to body/headings, not a universal *,*::before,*::after
+   selector — a universal selector sets the property directly on every
+   element rather than relying on inheritance, which breaks icon-font
+   libraries whose glyphs render via ::before{content:"\fXXX"} using a
+   dedicated icon font-family. This codebase's icons are SVG-based (Lucide),
+   not icon-font, so the failure mode doesn't currently bite here — but the
+   scoped version is strictly safer and costs nothing. */
+@layer base {
+  body,
+  .font-\[\'Inter\'\] {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6,
+  .font-heading,
+  .font-\[\'Poppins\'\] {
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Prevent horizontal scroll at any viewport width. html only, not body:
+     setting overflow-x on an element without overflow-y forces the browser
+     to compute overflow-y to auto (CSS spec quirk), which turns that
+     element into a scroll container — on body, that breaks position:sticky
+     for descendants (their containing block resolves to body's own
+     scrollport instead of the real page scroller). html already stops
+     horizontal overflow at the viewport level, which is all that's needed. */
+  html { overflow-x: hidden; }
+
+  /* Ensure media never breaks out of its container */
+  img, video, iframe { max-width: 100%; }
+}
+
 /* Reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

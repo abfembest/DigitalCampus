@@ -4,6 +4,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from eduweb.models import (
     AcademicSession,
@@ -58,6 +59,7 @@ def _clean_code_field(code):
 
 IMAGE_EXTENSIONS = ('jpg', 'jpeg', 'png', 'webp', 'gif')
 DOCUMENT_EXTENSIONS = ('pdf', 'jpg', 'jpeg', 'png')
+VIDEO_EXTENSIONS = ('mp4', 'webm', 'ogg', 'mov')
 
 
 def _validate_upload(file, extensions, max_size_mb=10):
@@ -83,57 +85,43 @@ def _validate_upload(file, extensions, max_size_mb=10):
 # ==============================================================================
 
 class DatalistWidget(forms.TextInput):
-    """Custom widget that renders a datalist for model selections"""
+    """
+    Not currently used anywhere in this codebase — kept only so nothing
+    importing it breaks. Deliberately NOT a real <datalist> anymore: a
+    <datalist> option's `value` attribute is what browsers write back into
+    the paired <input> when a suggestion is picked (never its label/text),
+    which caused live "This field is required" bugs elsewhere in this project
+    when that value didn't round-trip into whatever the form actually
+    expected. Left as a plain, safely-submitting text input instead.
+    """
     def __init__(self, datalist_id=None, attrs=None):
+        attrs = dict(attrs or {})
+        attrs.setdefault('class', 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500')
         super().__init__(attrs)
-        self.datalist_id = datalist_id or 'datalist-' + str(id(self))
-    
-    def render(self, name, value, attrs=None, renderer=None):
-        # Get the html_id
-        if attrs is None:
-            attrs = {}
-        attrs['list'] = self.datalist_id
-        attrs['class'] = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-        
-        html = super().render(name, value, attrs, renderer)
-        return html
 
 
-class ModelDatalistWidget(forms.Widget):
-    """Widget that renders input with datalist for model foreign keys"""
-    def __init__(self, queryset, label_func=None, attrs=None):
-        super().__init__(attrs)
+class ModelDatalistWidget(forms.Select):
+    """
+    Not currently used anywhere in this codebase — kept only so nothing
+    importing it breaks. Previously rendered a text input paired with a
+    <datalist> of model instances (value=pk, label=display text); since a
+    browser writes an <option>'s `value` back into the input on selection
+    but leaves it untouched (still the display label) if the user submits
+    without re-picking, this could submit a raw label string where a pk was
+    required — a real "field not saving" bug, not just a cosmetic one.
+    Rebuilt on top of forms.Select (a normal, always-correctly-submitting
+    <select>) with the `searchable-select` class so the shared
+    includes/searchable_select.html enhancer gives it the same
+    search-as-you-type UX the old widget was going for, without the bug.
+    """
+    def __init__(self, queryset, label_func=None, attrs=None, empty_label='Select…'):
         self.queryset = queryset
         self.label_func = label_func or (lambda obj: str(obj))
-        self.datalist_id = 'datalist-' + str(id(self))
-    
-    def render(self, name, value, attrs=None, renderer=None):
-        if attrs is None:
-            attrs = {}
-        attrs['class'] = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500'
-        
-        # Get the selected label
-        selected_label = ''
-        if value:
-            try:
-                obj = self.queryset.get(pk=value)
-                selected_label = self.label_func(obj)
-            except:
-                selected_label = str(value)
-        
-        # Build the HTML
-        html = f'<input type="text" name="{name}" value="{selected_label}" list="{self.datalist_id}" '
-        for key, attr_value in attrs.items():
-            html += f'{key}="{attr_value}" '
-        html += '/>\n'
-        
-        # Add datalist
-        html += f'<datalist id="{self.datalist_id}">\n'
-        for obj in self.queryset:
-            html += f'  <option value="{obj.pk}">{self.label_func(obj)}</option>\n'
-        html += '</datalist>\n'
-        
-        return html
+        self.empty_label = empty_label
+        attrs = dict(attrs or {})
+        attrs['class'] = (attrs.get('class', '') + ' searchable-select w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500').strip()
+        choices = [('', empty_label)] + [(obj.pk, self.label_func(obj)) for obj in queryset]
+        super().__init__(attrs=attrs, choices=choices)
 
 
 # ==============================================================================
@@ -159,8 +147,9 @@ class FacultyForm(forms.ModelForm):
             'tagline', 'description', 'mission', 'vision',
             'student_count', 'placement_rate', 'partner_count', 'international_faculty',
             'accreditation', 'hero_image', 'about_image',
+            'gallery_image_1', 'gallery_image_2', 'gallery_image_3', 'gallery_video',
             'meta_description', 'meta_keywords',
-            'is_active', 'display_order'
+            'is_active'
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -237,6 +226,22 @@ class FacultyForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'accept': 'image/*'
             }),
+            'gallery_image_1': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-1'
+            }),
+            'gallery_image_2': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-2'
+            }),
+            'gallery_image_3': forms.FileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-3'
+            }),
+            'gallery_video': forms.FileInput(attrs={
+                'class': 'gallery-video-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+                'accept': 'video/*', 'data-preview-target': 'gallery-preview-video'
+            }),
             'meta_description': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
                 'placeholder': 'SEO description (160 characters max)', 'maxlength': 160
@@ -247,10 +252,6 @@ class FacultyForm(forms.ModelForm):
             }),
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
-            }),
-            'display_order': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., 1 (lower numbers appear first)'
             }),
         }
 
@@ -268,10 +269,26 @@ class FacultyForm(forms.ModelForm):
                 self.fields['special_features_text'].initial = '\n'.join(lines)
 
     def clean_hero_image(self):
-        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_about_image(self):
-        return _validate_upload(self.cleaned_data.get('about_image'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('about_image'), IMAGE_EXTENSIONS, max_size_mb=2)
+
+    def clean_gallery_image_1(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_1'), IMAGE_EXTENSIONS, max_size_mb=2)
+
+    def clean_gallery_image_2(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_2'), IMAGE_EXTENSIONS, max_size_mb=2)
+
+    def clean_gallery_image_3(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_3'), IMAGE_EXTENSIONS, max_size_mb=2)
+
+    def clean_gallery_video(self):
+        # See ProgramForm.clean_gallery_video for why this was lowered from
+        # 50MB — a request that large risks being rejected by the web
+        # server itself (before Django/this validation ever runs), showing
+        # up as a raw host-level "Forbidden" page instead of a clean error.
+        return _validate_upload(self.cleaned_data.get('gallery_video'), VIDEO_EXTENSIONS, max_size_mb=3)
 
     def clean_special_features_text(self):
         text = self.cleaned_data.get('special_features_text', '').strip()
@@ -338,7 +355,6 @@ class CourseForm(forms.ModelForm):
             'program', 'name', 'code', 'course_type', 'credit_units',
             'year_of_study', 'semester',
             'description', 'learning_outcomes', 'is_active',
-            # 'icon', 'color_primary', 'color_secondary', 'display_order',
         ]
         widgets = {
             # ── Hierarchy ──────────────────────────────────────────────────
@@ -415,10 +431,6 @@ class CourseForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
-            # 'display_order': forms.NumberInput(attrs={
-            #     'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-            #     'placeholder': 'e.g., 1 (lower numbers appear first)'
-            # }),
         }
 
     def __init__(self, *args, **kwargs):
@@ -450,7 +462,7 @@ class CourseForm(forms.ModelForm):
 class BlogCategoryForm(forms.ModelForm):
     class Meta:
         model = BlogCategory
-        fields = ['name', 'description', 'icon', 'color', 'display_order', 'is_active']
+        fields = ['name', 'description', 'icon', 'color', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
@@ -472,10 +484,6 @@ class BlogCategoryForm(forms.ModelForm):
                 ('orange', 'Orange'), ('red', 'Red'), ('teal', 'Teal'),
                 ('pink', 'Pink'), ('indigo', 'Indigo'), ('rose', 'Rose')
             ]),
-            'display_order': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
-                'placeholder': 'e.g., 1 (lower numbers appear first)'
-            }),
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500'
             }),
@@ -1052,7 +1060,7 @@ class SiteConfigAboutForm(forms.ModelForm):
         if self.instance and self.instance.about_values:
             vals = self.instance.about_values
             if isinstance(vals, list):
-                self.fields['about_values'].initial = '\n'.join(vals)
+                self.initial['about_values'] = '\n'.join(vals)
 
     def clean_about_values(self):
         raw = self.cleaned_data.get('about_values', '')
@@ -1062,24 +1070,22 @@ class SiteConfigAboutForm(forms.ModelForm):
 class SiteHistoryMilestoneForm(forms.ModelForm):
     class Meta:
         model = SiteHistoryMilestone
-        fields = ['year', 'title', 'description', 'display_order', 'is_active']
+        fields = ['year', 'title', 'description', 'is_active']
         widgets = {
             'year':          forms.NumberInput(attrs={**_SC_I, 'placeholder': 'e.g. 1995'}),
             'title':         forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'Founding'"}),
             'description':   forms.Textarea(attrs={**_SC_T, 'rows': 3}),
-            'display_order': forms.NumberInput(attrs=_SC_I),
         }
 
 
 class TestimonialForm(forms.ModelForm):
     class Meta:
         model = Testimonial
-        fields = ['author_name', 'author_role', 'quote', 'avatar', 'order', 'is_active']
+        fields = ['author_name', 'author_role', 'quote', 'avatar', 'is_active']
         widgets = {
             'author_name': forms.TextInput(attrs=_SC_I),
             'author_role': forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'MBA Graduate, 2023'"}),
             'quote':       forms.Textarea(attrs={**_SC_T, 'rows': 4}),
-            'order':       forms.NumberInput(attrs=_SC_I),
         }
 
     def clean_avatar(self):
@@ -1089,13 +1095,12 @@ class TestimonialForm(forms.ModelForm):
 class InstitutionMemberForm(forms.ModelForm):
     class Meta:
         model = InstitutionMember
-        fields = ['member_type', 'name', 'role', 'photo', 'bio', 'display_order', 'is_active']
+        fields = ['member_type', 'name', 'role', 'photo', 'bio', 'is_active']
         widgets = {
             'member_type':   forms.Select(attrs={'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white'}),
             'name':          forms.TextInput(attrs=_SC_I),
             'role':          forms.TextInput(attrs={**_SC_I, 'placeholder': "e.g. 'Vice Chancellor'"}),
             'bio':           forms.Textarea(attrs={**_SC_T, 'rows': 4}),
-            'display_order': forms.NumberInput(attrs=_SC_I),
         }
 
     def clean_photo(self):
@@ -1228,7 +1233,7 @@ class NotificationConfigForm(forms.Form):
 class CourseCategoryForm(forms.ModelForm):
     class Meta:
         model = CourseCategory
-        fields = ('name', 'description', 'icon', 'color', 'is_active', 'display_order')
+        fields = ('name', 'description', 'icon', 'color', 'is_active')
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
@@ -1249,10 +1254,6 @@ class CourseCategoryForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500'
             }),
-            'display_order': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                'placeholder': '0'
-            })
         }
 
 
@@ -1412,7 +1413,7 @@ class BroadcastMessageForm(forms.ModelForm):
 class DepartmentForm(forms.ModelForm):
     class Meta:
         model = Department
-        fields = ['faculty', 'name', 'code', 'description', 'display_order', 'is_active']
+        fields = ['faculty', 'name', 'code', 'description', 'is_active']
 
     def clean_code(self):
         return _clean_code_field(self.cleaned_data.get('code', ''))
@@ -1486,10 +1487,11 @@ class ProgramForm(forms.ModelForm):
             'department', 'name', 'code', 'degree_level',
             'duration_years', 'credits_required', 'max_credits_per_semester', 'max_students',
             'tagline', 'overview', 'description',
-            'application_fee', 'tuition_fee',
+            'tuition_fee',
             'min_cgpa_to_progress',
             'is_active', 'is_featured',
-            'hero_image', 'meta_description', 'meta_keywords',
+            'hero_image', 'gallery_image_1', 'gallery_image_2', 'gallery_image_3', 'gallery_video',
+            'meta_description', 'meta_keywords',
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -1535,11 +1537,6 @@ class ProgramForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none',
                 'rows': '5'
             }),
-            'application_fee': forms.NumberInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
-                'step': '0.01',
-                'min': '0'
-            }),
             'tuition_fee': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'step': '0.01',
@@ -1558,6 +1555,22 @@ class ProgramForm(forms.ModelForm):
             'hero_image': forms.ClearableFileInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
                 'accept': 'image/*'
+            }),
+            'gallery_image_1': forms.ClearableFileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-1'
+            }),
+            'gallery_image_2': forms.ClearableFileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-2'
+            }),
+            'gallery_image_3': forms.ClearableFileInput(attrs={
+                'class': 'gallery-image-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'image/*', 'data-preview-target': 'gallery-preview-3'
+            }),
+            'gallery_video': forms.ClearableFileInput(attrs={
+                'class': 'gallery-video-input w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm',
+                'accept': 'video/*', 'data-preview-target': 'gallery-preview-video'
             }),
             'meta_description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none',
@@ -1597,8 +1610,31 @@ class ProgramForm(forms.ModelForm):
     def clean_code(self):
         return _clean_code_field(self.cleaned_data.get('code', ''))
 
+    def clean_gallery_image_1(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_1'), IMAGE_EXTENSIONS, max_size_mb=2)
+
+    def clean_gallery_image_2(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_2'), IMAGE_EXTENSIONS, max_size_mb=2)
+
+    def clean_gallery_image_3(self):
+        return _validate_upload(self.cleaned_data.get('gallery_image_3'), IMAGE_EXTENSIONS, max_size_mb=2)
+
+    def clean_gallery_video(self):
+        # Was max_size_mb=50 — comfortably past what many shared-hosting/
+        # cPanel setups allow as a single request body (often 8-32MB at the
+        # Apache/LiteSpeed level, independent of and often *smaller* than
+        # Django's own DATA_UPLOAD_MAX_MEMORY_SIZE). A request that large
+        # gets rejected by the web server itself before Django ever sees
+        # it — the admin gets a raw host-level "Forbidden"/"denied" page
+        # instead of this form's normal validation error, because Django
+        # never got a chance to run this check at all. Lowered to a size
+        # this and the surrounding image caps can realistically stay under
+        # common hosting limits even combined in one submission (edit form
+        # can carry hero + 3 gallery images + this video all at once).
+        return _validate_upload(self.cleaned_data.get('gallery_video'), VIDEO_EXTENSIONS, max_size_mb=3)
+
     def clean_hero_image(self):
-        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=5)
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def save(self, commit=True):
         program = super().save(commit=False)
@@ -1642,21 +1678,72 @@ class AcademicSessionForm(forms.ModelForm):
 
 
 class CourseIntakeForm(forms.ModelForm):
+    """
+    Also used unmodified as the row form inside IntakeCreateFormSet — every
+    widget/label here renders once per intake row when several are added via
+    the "Add Another Intake" button, so keep attrs generic (no per-row ids).
+    """
+    year = forms.TypedChoiceField(coerce=int, choices=[])
+
     class Meta:
         model = CourseIntake
-        fields = ['program', 'intake_period', 'year', 'start_date', 'application_deadline', 'available_slots', 'is_active']
+        fields = [
+            'program', 'intake_period', 'year',
+            'application_start_date', 'application_deadline', 'start_date',
+            'application_fee', 'available_slots', 'is_active',
+        ]
         widgets = {
-            'start_date': forms.DateInput(attrs={'type': 'date'}),
-            'application_deadline': forms.DateInput(attrs={'type': 'date'}),
+            'program': forms.Select(attrs={
+                **_SC_I, 'class': _SC_I['class'] + ' searchable-select',
+                'data-ss-placeholder': 'Type to search program…',
+            }),
+            'intake_period': forms.Select(attrs=_SC_I),
+            'application_start_date': forms.DateInput(attrs={**_SC_I, 'type': 'date'}),
+            'application_deadline': forms.DateInput(attrs={**_SC_I, 'type': 'date'}),
+            'start_date': forms.DateInput(attrs={**_SC_I, 'type': 'date'}),
+            'application_fee': forms.NumberInput(attrs={**_SC_I, 'step': '0.01', 'min': '0'}),
+            'available_slots': forms.NumberInput(attrs={**_SC_I, 'min': '1'}),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'w-4 h-4 rounded text-primary-600 border-gray-300 focus:ring-primary-500'
+            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['program'].queryset = Program.objects.filter(is_active=True).order_by('name')
+        self.fields['program'].label_from_instance = lambda obj: f'{obj.name} ({obj.code})'
+        self.fields['program'].empty_label = 'Type to search program…'
+
+        # Year as a picker (select), not free-typed text/number — widened
+        # a few years past what's on record so a new intake a year or two
+        # out doesn't require an "Other" fallback.
+        current_year = timezone.now().year
+        years = set(range(current_year - 3, current_year + 11))
+        if self.instance and self.instance.pk and self.instance.year:
+            years.add(self.instance.year)
+        self.fields['year'].choices = [(y, str(y)) for y in sorted(years)]
+        self.fields['year'].widget.attrs.update(_SC_I)
+        if not self.instance.pk:
+            self.fields['year'].initial = current_year
 
     def clean(self):
         cleaned = super().clean()
-        start = cleaned.get('start_date')
+        opens = cleaned.get('application_start_date')
         deadline = cleaned.get('application_deadline')
+        start = cleaned.get('start_date')
+        if opens and deadline and deadline <= opens:
+            raise forms.ValidationError('Application deadline must be after applications open.')
         if start and deadline and deadline >= start:
-            raise forms.ValidationError('Application deadline must be before the start date.')
+            raise forms.ValidationError('Application deadline must be before the program start date.')
         return cleaned
+
+
+IntakeCreateFormSet = forms.modelformset_factory(
+    CourseIntake,
+    form=CourseIntakeForm,
+    extra=1,
+    can_delete=False,
+)
 
 
 class AnnouncementForm(forms.ModelForm):
@@ -1887,10 +1974,10 @@ class LMSCourseForm(forms.ModelForm):
         return instance
 
     def clean_hero_image(self):
-        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('hero_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_thumbnail(self):
-        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('thumbnail'), IMAGE_EXTENSIONS, max_size_mb=2)
 
 
 # ==============================================================================
@@ -1911,9 +1998,8 @@ class EnrollmentForm(forms.ModelForm):
             'student': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'course': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'list': 'course-list',
+            'course': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
             'status': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
@@ -2284,9 +2370,8 @@ class TransactionForm(forms.ModelForm):
             'status': forms.Select(attrs={
                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
-            'course': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500',
-                'list': 'course-list',
+            'course': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white'
             }),
             'completed_at': forms.DateTimeInput(attrs={
                 'type': 'datetime-local',
@@ -2344,13 +2429,11 @@ class LibraryItemForm(forms.ModelForm):
         ]
         widgets = {
             # ── taxonomy ──────────────────────────────────────────────────
-            'category': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+            'category': forms.Select(attrs={
+                'class': 'searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
-                         'text-sm transition-colors',
-                'placeholder': 'e.g. Books',
-                'list': 'category_datalist',
-            }),
+                         'text-sm transition-colors bg-white',
+            }, choices=_LI.CATEGORY_CHOICES),
             'subcategory': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
@@ -2397,13 +2480,11 @@ class LibraryItemForm(forms.ModelForm):
                          'text-sm font-mono transition-colors',
                 'placeholder': 'e.g. 978-0-310-28441-6',
             }),
-            'language': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+            'language': forms.Select(attrs={
+                'class': 'searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
-                         'text-sm transition-colors',
-                'placeholder': 'e.g. English',
-                'list': 'language_datalist',
-            }),
+                         'text-sm transition-colors bg-white',
+            }, choices=_LI.LANGUAGE_CHOICES),
             'description': forms.Textarea(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
@@ -2431,13 +2512,11 @@ class LibraryItemForm(forms.ModelForm):
                 'placeholder': 'Read / Download',
             }),
             # ── access & ordering ─────────────────────────────────────────
-            'access': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
+            'access': forms.Select(attrs={
+                'class': 'searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
-                         'text-sm transition-colors',
-                'placeholder': 'e.g. public',
-                'list': 'access_datalist',
-            }),
+                         'text-sm transition-colors bg-white',
+            }, choices=_LI.ACCESS_CHOICES),
             'order': forms.NumberInput(attrs={
                 'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg '
                          'focus:ring-2 focus:ring-blue-500 focus:border-blue-500 '
@@ -2492,7 +2571,7 @@ class LibraryItemForm(forms.ModelForm):
         )
 
     def clean_cover_image(self):
-        return _validate_upload(self.cleaned_data.get('cover_image'), IMAGE_EXTENSIONS)
+        return _validate_upload(self.cleaned_data.get('cover_image'), IMAGE_EXTENSIONS, max_size_mb=2)
 
     def clean_file(self):
         """Extension is already whitelisted at the model level

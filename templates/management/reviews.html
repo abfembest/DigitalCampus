@@ -15,9 +15,9 @@
     <div class="w-full min-w-0 lg:flex-1">
 
       <form method="get" class="mb-4">
-        <div class="flex flex-wrap gap-2 max-w-xl">
+        <div class="flex flex-col sm:flex-row flex-wrap gap-2 max-w-xl">
           <label for="search" class="sr-only">Search reviews</label>
-          <div class="flex gap-2 flex-1 min-w-0">
+          <div class="flex gap-2 flex-1 min-w-0 w-full sm:w-auto">
             <input id="search" name="search" type="search"
                    value="{{ request.GET.search|default:'' }}"
                    placeholder="Search course or review text…"
@@ -52,7 +52,7 @@
       </form>
 
       <div class="bg-white rounded-xl shadow border border-gray-200 overflow-x-auto">
-        <table class="min-w-full text-sm">
+        <table class="min-w-[720px] text-sm">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Reviewer</th>
@@ -131,7 +131,7 @@
                 <form method="post"
                       action="{% url 'management:review_delete' review.pk %}"
                       class="inline"
-                      onsubmit="return confirm('Delete this review? This cannot be undone.');">
+                      onsubmit="return swalConfirmSubmit(this, {title: 'Delete this review?'});">
                   {% csrf_token %}
                   <button type="submit"
                           class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs
@@ -220,19 +220,15 @@
                    class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
               Course <span class="text-red-500">*</span>
             </label>
-            <input id="course-input"
-                   type="text"
-                   autocomplete="off"
-                   placeholder="Type to search courses…"
-                   list="course-datalist"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:outline-none">
-            <input type="hidden" id="course-id-field" name="course">
-            <datalist id="course-datalist">
+            <select id="course-id-field" name="course" required
+                    class="searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                           focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    data-ss-placeholder="Type to search courses…">
+              <option value="">Type to search courses…</option>
               {% for c in lms_courses %}
-                <option data-id="{{ c.pk }}" value="{{ c.title }} ({{ c.code }})"></option>
+                <option value="{{ c.pk }}">{{ c.title }} ({{ c.code }})</option>
               {% endfor %}
-            </datalist>
+            </select>
             {% if form.course.errors %}
               <p class="mt-1 text-xs text-red-600" role="alert">{{ form.course.errors.0 }}</p>
             {% endif %}
@@ -244,19 +240,15 @@
                    class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
               Student <span class="text-red-500">*</span>
             </label>
-            <input id="student-input"
-                   type="text"
-                   autocomplete="off"
-                   placeholder="Type to search students…"
-                   list="student-datalist"
-                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:outline-none">
-            <input type="hidden" id="student-id-field" name="student">
-            <datalist id="student-datalist">
+            <select id="student-id-field" name="student" required
+                    class="searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                           focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    data-ss-placeholder="Type to search students…">
+              <option value="">Type to search students…</option>
               {% for s in students %}
-                <option data-id="{{ s.pk }}" value="{{ s.get_full_name|default:s.username }} — @{{ s.username }}"></option>
+                <option value="{{ s.pk }}">{{ s.get_full_name|default:s.username }} — @{{ s.username }}</option>
               {% endfor %}
-            </datalist>
+            </select>
             {% if form.student.errors %}
               <p class="mt-1 text-xs text-red-600" role="alert">{{ form.student.errors.0 }}</p>
             {% endif %}
@@ -334,40 +326,17 @@
   var submitBtn  = document.getElementById('submit-btn');
   var pkField    = document.getElementById('review-pk-field');
 
-  var courseInput = document.getElementById('course-input');
   var courseId    = document.getElementById('course-id-field');
-  var studentInput = document.getElementById('student-input');
   var studentId   = document.getElementById('student-id-field');
-
-  /* Resolve datalist text input → hidden id on change */
-  function wireDatalist(textInput, hiddenInput, datalistId) {
-    if (!textInput || !hiddenInput) return;
-    textInput.addEventListener('change', function () {
-      var list = document.getElementById(datalistId);
-      var val  = textInput.value.trim();
-      var found = false;
-      for (var i = 0; i < list.options.length; i++) {
-        if (list.options[i].value === val) {
-          hiddenInput.value = list.options[i].getAttribute('data-id');
-          found = true;
-          break;
-        }
-      }
-      if (!found) hiddenInput.value = '';
-    });
-  }
-
-  wireDatalist(courseInput,  courseId,  'course-datalist');
-  wireDatalist(studentInput, studentId, 'student-datalist');
 
   function resetForm() {
     form.action           = CREATE_URL;
     form.reset();
     pkField.value         = '';
-    courseInput.value     = '';
     courseId.value        = '';
-    studentInput.value    = '';
     studentId.value       = '';
+    courseId.dispatchEvent(new Event('change', { bubbles: true }));
+    studentId.dispatchEvent(new Event('change', { bubbles: true }));
     heading.textContent   = 'New Review';
     submitBtn.textContent = 'Save Review';
     modeBadge.classList.add('hidden');
@@ -383,10 +352,10 @@
       submitBtn.textContent = 'Update Review';
       modeBadge.classList.remove('hidden');
 
-      courseInput.value  = d.courseLabel  || '';
-      courseId.value     = d.courseId     || '';
-      studentInput.value = d.studentLabel || '';
-      studentId.value    = d.studentId    || '';
+      courseId.value  = d.courseId  || '';
+      studentId.value = d.studentId || '';
+      courseId.dispatchEvent(new Event('change', { bubbles: true }));
+      studentId.dispatchEvent(new Event('change', { bubbles: true }));
 
       var ratingEl   = form.querySelector('[name="rating"]');
       var textEl     = form.querySelector('[name="review_text"]');

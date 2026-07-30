@@ -11,6 +11,7 @@ urlpatterns = [
     path('my-profile/', views.profile, name='profile'),
     path('my-settings/', views.account_settings, name='settings'),
     path('auth/', views.auth_page, name='auth_page'),
+    path('admission/register/', views.signup_page, name='signup_page'),
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
     path('account/change-password/', views.force_change_password, name='force_change_password'),
     path('logout/', views.user_logout, name='logout'),

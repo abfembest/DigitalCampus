@@ -111,14 +111,9 @@
           <p class="text-xs text-gray-400 mt-1.5">Short bio shown under the member's name.</p>
         </div>
 
-        {# Display Order + Active #}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1 border-t border-gray-100">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">Display Order</label>
-            {{ form.display_order }}
-            <p class="text-xs text-gray-400 mt-1.5">Lower numbers appear first within the group.</p>
-          </div>
-          <div class="flex items-center gap-3 sm:pt-6">
+        {# Active #}
+        <div class="pt-1 border-t border-gray-100">
+          <div class="flex items-center gap-3">
             <div class="relative inline-flex items-center cursor-pointer">
               {{ form.is_active }}
             </div>

@@ -6,9 +6,17 @@
 
 {% block extra_css %}
 <style>
-    .modal-tab { padding: .6rem 1rem; font-size: .75rem; font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s; background: transparent; flex-shrink: 0; }
+    .modal-tab { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; padding: .6rem .8rem; font-size: .7rem; font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s ease; background: transparent; flex-shrink: 0; border-radius: .75rem .75rem 0 0; min-height: 2.5rem; }
+    .modal-tab i { flex-shrink: 0; }
     .modal-tab:hover { color: #3a56d4; background: #f9fafb; }
     .modal-tab.active-tab { color: #3a56d4; border-bottom-color: #3a56d4; background: white; }
+    .modal-tab:focus-visible { outline: 2px solid #3a56d4; outline-offset: -2px; }
+    .modal-tabs-row { display: flex; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
+    .modal-tabs-row::-webkit-scrollbar { display: none; }
+    .modal-tabs-row > .modal-tab { scroll-snap-align: start; }
+    .faculty-modal-shell { overscroll-behavior: contain; }
+    @media (min-width: 640px) { .modal-tab { padding: .7rem 1rem; font-size: .75rem; } }
+    @media (max-width: 639px) { .modal-tabs-row { padding: 0 .25rem .25rem; } .modal-tabs-row > .modal-tab { min-width: max-content; } }
     .field-label { display: block; font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; margin-bottom: .3rem; }
     .field-error { color: #ef4444; font-size: .75rem; margin-top: .2rem; }
     #facultyForm input[type=text], #facultyForm input[type=number],
@@ -59,7 +67,7 @@
         <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
             <i class="fas fa-check-circle text-green-600 text-sm"></i>
         </div>
-        <div><p class="text-xs text-gray-500 font-medium">Active</p><p class="text-2xl font-bold text-gray-900">{{ active_count|default:faculties|length }}</p></div>
+        <div><p class="text-xs text-gray-500 font-medium">Active</p><p class="text-2xl font-bold text-gray-900">{{ active_count }}</p></div>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
         <div class="w-10 h-10 rounded-lg bg-secondary-100 flex items-center justify-center flex-shrink-0">
@@ -97,7 +105,7 @@
                 {% for f in faculties %}
                 <tr class="hover:bg-gray-50/60 transition-colors">
                     <td class="px-4 py-3.5">
-                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-500">{{ f.display_order }}</span>
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-500">{{ forloop.counter }}</span>
                     </td>
                     <td class="px-4 py-3.5">
                         <div class="flex items-center gap-3">
@@ -164,34 +172,34 @@
 </div>
 
 <div id="facultyModal"
-     class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-5"
+     class="hidden fixed inset-0 z-[9999] items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-5"
      role="dialog" aria-modal="true">
 
-    <div class="relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh]">
+    <div class="faculty-modal-shell relative bg-white w-full max-w-2xl sm:max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
 
         {# Header #}
-        <div class="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-primary-600 to-secondary-500 rounded-t-2xl flex-shrink-0">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+        <div class="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 sm:py-4 bg-gradient-to-r from-primary-600 to-secondary-500 flex-shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-university text-white text-sm"></i>
                 </div>
-                <div>
-                    <h2 id="modalTitle" class="text-sm font-bold text-white">Add New Faculty</h2>
-                    <p id="modalSubtitle" class="text-xs text-white/70">Fill in the details below</p>
+                <div class="min-w-0">
+                    <h2 id="modalTitle" class="text-sm font-bold text-white truncate">Add New Faculty</h2>
+                    <p id="modalSubtitle" class="text-xs text-white/70 truncate">Fill in the details below</p>
                 </div>
             </div>
             <button type="button" onclick="closeFacultyModal()"
-                    class="w-7 h-7 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-all">
+                    class="w-7 h-7 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-all flex-shrink-0">
                 <i class="fas fa-times text-xs"></i>
             </button>
         </div>
 
         {# Tabs — 4 #}
-        <div class="flex border-b border-gray-200 bg-gray-50 flex-shrink-0">
-            <button type="button" onclick="switchTab(1)" id="tab-1" class="modal-tab active-tab"><i class="fas fa-info-circle mr-1.5"></i>Basic & Colors</button>
-            <button type="button" onclick="switchTab(2)" id="tab-2" class="modal-tab"><i class="fas fa-align-left mr-1.5"></i>Content</button>
-            <button type="button" onclick="switchTab(3)" id="tab-3" class="modal-tab"><i class="fas fa-chart-bar mr-1.5"></i>Stats & Features</button>
-            <button type="button" onclick="switchTab(4)" id="tab-4" class="modal-tab"><i class="fas fa-images mr-1.5"></i>Images & SEO</button>
+        <div class="modal-tabs-row border-b border-gray-200 bg-gray-50 flex-shrink-0" role="tablist" aria-label="Faculty form sections">
+            <button type="button" role="tab" aria-selected="true" aria-controls="tabContent-1" onclick="switchTab(1)" id="tab-1" class="modal-tab active-tab"><i class="fas fa-info-circle mr-1.5"></i>Basic & Colors</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="tabContent-2" onclick="switchTab(2)" id="tab-2" class="modal-tab"><i class="fas fa-align-left mr-1.5"></i>Content</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="tabContent-3" onclick="switchTab(3)" id="tab-3" class="modal-tab"><i class="fas fa-chart-bar mr-1.5"></i>Stats & Features</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="tabContent-4" onclick="switchTab(4)" id="tab-4" class="modal-tab"><i class="fas fa-images mr-1.5"></i>Images & SEO</button>
         </div>
 
         {# Form #}
@@ -204,7 +212,7 @@
             </div>
             {% endif %}
 
-            <div class="overflow-y-auto flex-1 px-5 py-4">
+            <div class="overflow-y-auto flex-1 min-h-0 px-4 py-4 sm:px-5">
 
                 {# TAB 1 — Basic + Colors #}
                 <div id="tabContent-1" class="tab-content space-y-4">
@@ -239,13 +247,18 @@
                                 <div class="color-row">
                                     <span id="swatchPrimary" class="color-swatch bg-gray-200"></span>
                                     <div class="flex-1">
-                                        <input type="text" id="id_color_primary_dl" list="colorPrimaryList" placeholder="e.g. blue" autocomplete="off">
-                                        <input type="hidden" id="id_color_primary" name="color_primary">
-                                        <datalist id="colorPrimaryList">
-                                            <option value="orange"><option value="blue"><option value="teal">
-                                            <option value="green"><option value="purple"><option value="red">
-                                            <option value="pink"><option value="indigo"><option value="cyan">
-                                        </datalist>
+                                        <select id="id_color_primary" name="color_primary" required
+                                                class="searchable-select" data-ss-placeholder="e.g. blue">
+                                            <option value="">e.g. blue</option>
+                                            <option value="orange">orange</option><option value="blue">blue</option><option value="teal">teal</option>
+                                            <option value="green">green</option><option value="purple">purple</option><option value="red">red</option>
+                                            <option value="pink">pink</option><option value="indigo">indigo</option><option value="cyan">cyan</option>
+                                        </select>
+                                        {% comment %}
+                                        NOTE: options here must exactly match the restricted
+                                        `choices=` on ManagementFacultyForm.Meta.widgets['color_primary']
+                                        in management/forms.py — Django rejects anything else server-side.
+                                        {% endcomment %}
                                     </div>
                                 </div>
                                 {% if form.color_primary.errors %}<p class="field-error">{{ form.color_primary.errors.0 }}</p>{% endif %}
@@ -255,13 +268,18 @@
                                 <div class="color-row">
                                     <span id="swatchSecondary" class="color-swatch bg-gray-200"></span>
                                     <div class="flex-1">
-                                        <input type="text" id="id_color_secondary_dl" list="colorSecondaryList" placeholder="e.g. amber" autocomplete="off">
-                                        <input type="hidden" id="id_color_secondary" name="color_secondary">
-                                        <datalist id="colorSecondaryList">
-                                            <option value="amber"><option value="cyan"><option value="emerald">
-                                            <option value="lime"><option value="violet"><option value="rose">
-                                            <option value="fuchsia"><option value="sky"><option value="yellow">
-                                        </datalist>
+                                        <select id="id_color_secondary" name="color_secondary" required
+                                                class="searchable-select" data-ss-placeholder="e.g. amber">
+                                            <option value="">e.g. amber</option>
+                                            <option value="amber">amber</option><option value="cyan">cyan</option><option value="emerald">emerald</option>
+                                            <option value="lime">lime</option><option value="violet">violet</option><option value="rose">rose</option>
+                                            <option value="fuchsia">fuchsia</option><option value="sky">sky</option><option value="yellow">yellow</option>
+                                        </select>
+                                        {% comment %}
+                                        NOTE: options here must exactly match the restricted
+                                        `choices=` on ManagementFacultyForm.Meta.widgets['color_secondary']
+                                        in management/forms.py — Django rejects anything else server-side.
+                                        {% endcomment %}
                                     </div>
                                 </div>
                                 {% if form.color_secondary.errors %}<p class="field-error">{{ form.color_secondary.errors.0 }}</p>{% endif %}
@@ -332,7 +350,7 @@
                 <div id="tabContent-4" class="tab-content hidden space-y-4">
                     <div class="grid sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="field-label">Hero Image</label>
+                            <label class="field-label">Hero Image <span class="text-gray-400 font-normal">(max 2MB)</span></label>
                             <div class="file-drop">
                                 <div class="flex items-center gap-2 pointer-events-none">
                                     <i class="fas fa-image text-gray-400 text-sm"></i>
@@ -346,7 +364,7 @@
                             {% if form.hero_image.errors %}<p class="field-error">{{ form.hero_image.errors.0 }}</p>{% endif %}
                         </div>
                         <div>
-                            <label class="field-label">About Image</label>
+                            <label class="field-label">About Image <span class="text-gray-400 font-normal">(max 2MB)</span></label>
                             <div class="file-drop">
                                 <div class="flex items-center gap-2 pointer-events-none">
                                     <i class="fas fa-image text-gray-400 text-sm"></i>
@@ -360,6 +378,67 @@
                             {% if form.about_image.errors %}<p class="field-error">{{ form.about_image.errors.0 }}</p>{% endif %}
                         </div>
                     </div>
+
+                    <div class="border-t border-gray-100 pt-3 space-y-3">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider"><i class="fas fa-photo-video mr-1"></i>Faculty Images &amp; Video</p>
+                        <p class="text-[11px] text-gray-400 -mt-1">Optional. Up to 3 images (max 2MB each) and 1 video (max 3MB) — shown in a gallery carousel on the faculty page.</p>
+                        <div class="grid sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="field-label">Gallery Image 1</label>
+                                <div class="file-drop">
+                                    <div class="flex items-center gap-2 pointer-events-none">
+                                        <i class="fas fa-image text-gray-400 text-sm"></i>
+                                        <span class="text-xs text-gray-500 truncate" id="galleryFileName1">Choose image…</span>
+                                    </div>
+                                    {{ form.gallery_image_1 }}
+                                </div>
+                                <div id="gallery-preview-1" class="mt-2 hidden">
+                                    <img id="galleryPreviewImg1" src="" alt="Gallery image 1" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                </div>
+                                {% if form.gallery_image_1.errors %}<p class="field-error">{{ form.gallery_image_1.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="field-label">Gallery Image 2</label>
+                                <div class="file-drop">
+                                    <div class="flex items-center gap-2 pointer-events-none">
+                                        <i class="fas fa-image text-gray-400 text-sm"></i>
+                                        <span class="text-xs text-gray-500 truncate" id="galleryFileName2">Choose image…</span>
+                                    </div>
+                                    {{ form.gallery_image_2 }}
+                                </div>
+                                <div id="gallery-preview-2" class="mt-2 hidden">
+                                    <img id="galleryPreviewImg2" src="" alt="Gallery image 2" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                </div>
+                                {% if form.gallery_image_2.errors %}<p class="field-error">{{ form.gallery_image_2.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="field-label">Gallery Image 3</label>
+                                <div class="file-drop">
+                                    <div class="flex items-center gap-2 pointer-events-none">
+                                        <i class="fas fa-image text-gray-400 text-sm"></i>
+                                        <span class="text-xs text-gray-500 truncate" id="galleryFileName3">Choose image…</span>
+                                    </div>
+                                    {{ form.gallery_image_3 }}
+                                </div>
+                                <div id="gallery-preview-3" class="mt-2 hidden">
+                                    <img id="galleryPreviewImg3" src="" alt="Gallery image 3" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                </div>
+                                {% if form.gallery_image_3.errors %}<p class="field-error">{{ form.gallery_image_3.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label">Gallery Video</label>
+                            <div class="file-drop">
+                                <div class="flex items-center gap-2 pointer-events-none">
+                                    <i class="fas fa-video text-gray-400 text-sm"></i>
+                                    <span class="text-xs text-gray-500 truncate" id="galleryVideoFileName">Choose video…</span>
+                                </div>
+                                {{ form.gallery_video }}
+                            </div>
+                            {% if form.gallery_video.errors %}<p class="field-error">{{ form.gallery_video.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+
                     <div class="border-t border-gray-100 pt-3 space-y-3">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider"><i class="fas fa-search mr-1"></i>SEO & Settings</p>
                         <div>
@@ -377,11 +456,6 @@
                                 {{ form.is_active }}
                                 <span class="text-sm font-medium text-gray-700">Active (visible on website)</span>
                             </label>
-                            <div class="flex items-center gap-2">
-                                <label class="field-label mb-0 whitespace-nowrap">Display Order</label>
-                                <div class="w-20">{{ form.display_order }}</div>
-                                {% if form.display_order.errors %}<p class="field-error">{{ form.display_order.errors.0 }}</p>{% endif %}
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -389,15 +463,15 @@
             </div>{# /scroll area #}
 
             {# Footer #}
-            <div class="flex items-center justify-between px-5 py-3.5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex-shrink-0">
+            <div class="flex flex-col-reverse gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex-shrink-0">
                 <button type="button" onclick="closeFacultyModal()"
-                        class="px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-all">
+                        class="w-full sm:w-auto px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition-all">
                     Cancel
                 </button>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center justify-between gap-3 sm:justify-end">
                     <span id="tabProgress" class="text-xs text-gray-400 hidden sm:block">Step 1 of 4</span>
                     <button type="submit"
-                            class="inline-flex items-center gap-2 px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-all shadow">
+                            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-all shadow">
                         <i class="fas fa-save text-xs"></i>
                         <span id="submitBtnText">Save Faculty</span>
                     </button>
@@ -423,9 +497,13 @@ const FACULTY_DATA = {
         student_count:{{ f.student_count|default:0 }}, placement_rate:{{ f.placement_rate|default:0 }},
         partner_count:{{ f.partner_count|default:0 }}, international_faculty:{{ f.international_faculty|default:0 }},
         meta_description:"{{ f.meta_description|escapejs }}", meta_keywords:"{{ f.meta_keywords|escapejs }}",
-        is_active:{{ f.is_active|yesno:"true,false" }}, display_order:{{ f.display_order|default:0 }},
+        is_active:{{ f.is_active|yesno:"true,false" }},
         hero_image_url:"{% if f.hero_image %}{{ f.hero_image.url }}{% endif %}",
         about_image_url:"{% if f.about_image %}{{ f.about_image.url }}{% endif %}",
+        gallery_image_1_url:"{% if f.gallery_image_1 %}{{ f.gallery_image_1.url }}{% endif %}",
+        gallery_image_2_url:"{% if f.gallery_image_2 %}{{ f.gallery_image_2.url }}{% endif %}",
+        gallery_image_3_url:"{% if f.gallery_image_3 %}{{ f.gallery_image_3.url }}{% endif %}",
+        gallery_video_url:"{% if f.gallery_video %}{{ f.gallery_video.url }}{% endif %}",
         special_features:{{ f.special_features|default:"[]"|safe }},
         edit_url:"{% url 'management:faculty_edit' f.pk %}"
     }{% if not forloop.last %},{% endif %}
@@ -448,11 +526,26 @@ const COLOR_BG = {
 
     window.switchTab = function (n) {
         for (let i = 1; i <= TOTAL_TABS; i++) {
-            document.getElementById('tabContent-' + i).classList.add('hidden');
-            document.getElementById('tab-' + i).classList.remove('active-tab');
+            const tabContent = document.getElementById('tabContent-' + i);
+            const tabButton = document.getElementById('tab-' + i);
+            if (tabContent) tabContent.classList.add('hidden');
+            if (tabButton) {
+                tabButton.classList.remove('active-tab');
+                tabButton.setAttribute('aria-selected', 'false');
+            }
         }
-        document.getElementById('tabContent-' + n).classList.remove('hidden');
-        document.getElementById('tab-' + n).classList.add('active-tab');
+        const activeTab = document.getElementById('tab-' + n);
+        const activePanel = document.getElementById('tabContent-' + n);
+        if (activePanel) activePanel.classList.remove('hidden');
+        if (activeTab) {
+            activeTab.classList.add('active-tab');
+            activeTab.setAttribute('aria-selected', 'true');
+            const row = activeTab.parentElement;
+            if (row) {
+                const left = Math.max(0, activeTab.offsetLeft - 12);
+                row.scrollTo({ left, behavior: 'smooth' });
+            }
+        }
         const prog = document.getElementById('tabProgress');
         if (prog) prog.textContent = 'Step ' + n + ' of ' + TOTAL_TABS;
     };
@@ -463,15 +556,33 @@ const COLOR_BG = {
         if (!el) return;
         el.className = 'color-swatch ' + (COLOR_BG[(val||'').toLowerCase()] || 'bg-gray-200');
     }
-    function wireColor(dlId, hiddenId, swatchId) {
-        const dl = document.getElementById(dlId), hid = document.getElementById(hiddenId);
-        if (!dl || !hid) return;
-        const sync = () => { hid.value = dl.value.toLowerCase().trim(); updateSwatch(swatchId, hid.value); };
-        dl.addEventListener('input', sync);
-        dl.addEventListener('change', sync);
+    function wireColor(selectId, swatchId) {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        sel.addEventListener('change', () => updateSwatch(swatchId, sel.value));
     }
-    wireColor('id_color_primary_dl',   'id_color_primary',   'swatchPrimary');
-    wireColor('id_color_secondary_dl', 'id_color_secondary', 'swatchSecondary');
+    wireColor('id_color_primary',   'swatchPrimary');
+    wireColor('id_color_secondary', 'swatchSecondary');
+
+    /**
+     * Set a color <select>'s value, transparently adding an <option> for it
+     * first if it isn't one of the preset swatches — this guarantees an
+     * existing faculty's saved color is never silently dropped/blanked out
+     * just because it falls outside the suggested palette.
+     */
+    function setColorSelect(selectId, val) {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const value = (val || '').toLowerCase().trim();
+        if (value && !Array.prototype.some.call(sel.options, o => o.value === value)) {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            sel.appendChild(opt);
+        }
+        sel.value = value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 
     function setVal(id, val) {
         const el = document.getElementById(id);
@@ -493,8 +604,14 @@ const COLOR_BG = {
         form.reset();
         switchTab(1);
         hidePreview('heroPreviewWrap'); hidePreview('aboutPreviewWrap');
+        hidePreview('gallery-preview-1'); hidePreview('gallery-preview-2');
+        hidePreview('gallery-preview-3');
         document.getElementById('heroFileName').textContent  = 'Choose hero image…';
         document.getElementById('aboutFileName').textContent = 'Choose about image…';
+        document.getElementById('galleryFileName1').textContent = 'Choose image…';
+        document.getElementById('galleryFileName2').textContent = 'Choose image…';
+        document.getElementById('galleryFileName3').textContent = 'Choose image…';
+        document.getElementById('galleryVideoFileName').textContent = 'Choose video…';
 
         if (pk != null) {
             const d = FACULTY_DATA[String(pk)];
@@ -512,14 +629,13 @@ const COLOR_BG = {
             setVal('id_student_count', d.student_count); setVal('id_placement_rate', d.placement_rate);
             setVal('id_partner_count', d.partner_count); setVal('id_international_faculty', d.international_faculty);
             setVal('id_meta_description', d.meta_description); setVal('id_meta_keywords', d.meta_keywords);
-            setVal('id_display_order', d.display_order);
 
             const cb = document.getElementById('id_is_active');
             if (cb) cb.checked = !!d.is_active;
 
-            // Color datalist inputs
-            setVal('id_color_primary_dl', d.color_primary);   setVal('id_color_primary', d.color_primary);
-            setVal('id_color_secondary_dl', d.color_secondary); setVal('id_color_secondary', d.color_secondary);
+            // Color selects
+            setColorSelect('id_color_primary', d.color_primary);
+            setColorSelect('id_color_secondary', d.color_secondary);
             updateSwatch('swatchPrimary', d.color_primary);
             updateSwatch('swatchSecondary', d.color_secondary);
 
@@ -529,21 +645,32 @@ const COLOR_BG = {
 
             if (d.hero_image_url)  showPreview('heroPreviewImg',  'heroPreviewWrap',  d.hero_image_url);
             if (d.about_image_url) showPreview('aboutPreviewImg', 'aboutPreviewWrap', d.about_image_url);
+            if (d.gallery_image_1_url) showPreview('galleryPreviewImg1', 'gallery-preview-1', d.gallery_image_1_url);
+            if (d.gallery_image_2_url) showPreview('galleryPreviewImg2', 'gallery-preview-2', d.gallery_image_2_url);
+            if (d.gallery_image_3_url) showPreview('galleryPreviewImg3', 'gallery-preview-3', d.gallery_image_3_url);
 
         } else {
             document.getElementById('modalTitle').textContent    = 'Add New Faculty';
             document.getElementById('modalSubtitle').textContent = 'Fill in the details below';
             document.getElementById('submitBtnText').textContent = 'Save Faculty';
             form.action = "{% url 'management:faculty_create' %}";
+            document.getElementById('id_color_primary').dispatchEvent(new Event('change', { bubbles: true }));
+            document.getElementById('id_color_secondary').dispatchEvent(new Event('change', { bubbles: true }));
             updateSwatch('swatchPrimary', ''); updateSwatch('swatchSecondary', '');
         }
 
         modal.classList.remove('hidden');
+        modal.classList.add('flex');
         document.body.style.overflow = 'hidden';
+        const contentPane = modal.querySelector('.overflow-y-auto');
+        if (contentPane) contentPane.scrollTop = 0;
+        requestAnimationFrame(() => switchTab(1));
     };
 
     window.closeFacultyModal = function () {
-        document.getElementById('facultyModal').classList.add('hidden');
+        const modal = document.getElementById('facultyModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
         document.body.style.overflow = '';
     };
     document.getElementById('facultyModal').addEventListener('click', function (e) {
@@ -570,20 +697,62 @@ const COLOR_BG = {
         });
     };
 
-    function setupFilePreview(inputId, imgId, wrapId, labelId) {
+    function setupFilePreview(inputId, imgId, wrapId, labelId, maxSizeMB, emptyLabel) {
         const input = document.getElementById(inputId);
         if (!input) return;
         input.addEventListener('change', function () {
             if (this.files && this.files[0]) {
-                document.getElementById(labelId).textContent = this.files[0].name;
+                const file = this.files[0];
+                if (maxSizeMB && file.size > maxSizeMB * 1024 * 1024) {
+                    if (window.Swal) {
+                        Swal.fire({ icon: 'warning', title: 'File too large', text: 'Please choose a file under ' + maxSizeMB + 'MB.' });
+                    } else {
+                        alert('Please choose a file under ' + maxSizeMB + 'MB.');
+                    }
+                    this.value = '';
+                    document.getElementById(labelId).textContent = emptyLabel || 'Choose file…';
+                    hidePreview(wrapId);
+                    return;
+                }
+                document.getElementById(labelId).textContent = file.name;
                 const r = new FileReader();
                 r.onload = e => showPreview(imgId, wrapId, e.target.result);
-                r.readAsDataURL(this.files[0]);
+                r.readAsDataURL(file);
             }
         });
     }
-    setupFilePreview('id_hero_image',  'heroPreviewImg',  'heroPreviewWrap',  'heroFileName');
-    setupFilePreview('id_about_image', 'aboutPreviewImg', 'aboutPreviewWrap', 'aboutFileName');
+    setupFilePreview('id_hero_image',  'heroPreviewImg',  'heroPreviewWrap',  'heroFileName',  2, 'Choose hero image…');
+    setupFilePreview('id_about_image', 'aboutPreviewImg', 'aboutPreviewWrap', 'aboutFileName', 2, 'Choose about image…');
+    setupFilePreview('id_gallery_image_1', 'galleryPreviewImg1', 'gallery-preview-1', 'galleryFileName1', 2, 'Choose image…');
+    setupFilePreview('id_gallery_image_2', 'galleryPreviewImg2', 'gallery-preview-2', 'galleryFileName2', 2, 'Choose image…');
+    setupFilePreview('id_gallery_image_3', 'galleryPreviewImg3', 'gallery-preview-3', 'galleryFileName3', 2, 'Choose image…');
+
+    // Video upload: filename label only, no preview player — but still enforce
+    // the same 3MB cap the server applies, so an oversized video is rejected
+    // here instead of only surfacing as a server error after a full upload.
+    (function () {
+        const input = document.getElementById('id_gallery_video');
+        if (!input) return;
+        const maxSizeMB = 3;
+        input.addEventListener('change', function () {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                if (file.size > maxSizeMB * 1024 * 1024) {
+                    if (window.Swal) {
+                        Swal.fire({ icon: 'warning', title: 'File too large', text: 'Please choose a video under ' + maxSizeMB + 'MB.' });
+                    } else {
+                        alert('Please choose a video under ' + maxSizeMB + 'MB.');
+                    }
+                    this.value = '';
+                    document.getElementById('galleryVideoFileName').textContent = 'Choose video…';
+                    return;
+                }
+                document.getElementById('galleryVideoFileName').textContent = file.name;
+            } else {
+                document.getElementById('galleryVideoFileName').textContent = 'Choose video…';
+            }
+        });
+    })();
 
     {% if form.errors %}
     document.addEventListener('DOMContentLoaded', function () {

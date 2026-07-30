@@ -196,7 +196,7 @@
                                     {% if exam.is_active %}
                                     <button type="submit"
                                             class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg transition-colors whitespace-nowrap"
-                                            onclick="return confirm('Deactivate exam {{ exam.reference_code }}?')">
+                                            onclick="return swalConfirmSubmit(this, {title: 'Deactivate exam {{ exam.reference_code }}?', confirmButtonText: 'Yes, deactivate'})">
                                         <i class="fas fa-ban text-xs"></i> Deactivate
                                     </button>
                                     {% else %}

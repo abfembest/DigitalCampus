@@ -172,6 +172,11 @@ def generate_captcha():
     if op == '+':
         answer = num1 + num2
     elif op == '-':
+        # Keep the result non-negative — a negative answer needs a minus-sign
+        # key that many mobile numeric keypads don't expose, locking those
+        # users out of the captcha entirely.
+        if num2 > num1:
+            num1, num2 = num2, num1
         answer = num1 - num2
     else:
         answer = num1 * num2
@@ -311,44 +316,58 @@ def _get_first_permitted_url(user):
     return reverse('eduweb:apply')
 
 
+def _redirect_authenticated_user(request):
+    """
+    Bounce an already-authenticated visitor away from a public auth page
+    (sign-in or sign-up) to wherever their role belongs. Shared by
+    auth_page() and signup_page() so both land a logged-in user in the same
+    place instead of showing them an auth form.
+    """
+    if not request.user.is_active:
+        logout(request)
+        messages.warning(request, 'Your account is inactive. Please verify your email.')
+        return None
+    if not request.user.profile.email_verified:
+        logout(request)
+        messages.warning(
+            request,
+            'Please verify your email to continue. '
+            'Check your inbox for the verification link.',
+        )
+        return None
+
+    messages.info(request, 'You are already logged in.')
+    role = request.user.profile.role
+    if role == 'admin' or request.user.is_superuser:
+        return redirect(_get_first_permitted_url(request.user))
+    elif role == 'instructor':
+        return redirect('instructor:dashboard')
+    elif role == 'finance':
+        return redirect('finance:dashboard')
+    elif role == 'support':
+        return redirect('support:dashboard')
+    else:
+        return redirect('eduweb:apply')
+
+
 def auth_page(request):
-    """Combined login / signup page."""
+    """Sign-in page. Sign-up now lives at eduweb:signup_page (program-gated)."""
 
     # ── Already authenticated ─────────────────────────────────────────────────
     if request.user.is_authenticated:
-        if not request.user.is_active:
-            logout(request)
-            messages.warning(request, 'Your account is inactive. Please verify your email.')
-        elif not request.user.profile.email_verified:
-            logout(request)
-            messages.warning(
-                request,
-                'Please verify your email to continue. '
-                'Check your inbox for the verification link.',
-            )
-        else:
-            messages.info(request, 'You are already logged in.')
-            role = request.user.profile.role
-            if role == 'admin' or request.user.is_superuser:
-                return redirect(_get_first_permitted_url(request.user))
-            elif role == 'instructor':
-                return redirect('instructor:dashboard')
-            elif role == 'finance':
-                return redirect('finance:dashboard')
-            elif role == 'support':
-                return redirect('support:dashboard')
-            else:
-                return redirect('eduweb:apply')
+        redirect_response = _redirect_authenticated_user(request)
+        if redirect_response is not None:
+            return redirect_response
 
     # ── CAPTCHA setup ─────────────────────────────────────────────────────────
     if request.method == 'GET':
         captcha_question, captcha_answer = generate_captcha()
-        request.session['captcha_answer'] = captcha_answer
+        request.session['signin_captcha_answer'] = captcha_answer
     else:
-        captcha_answer = request.session.get('captcha_answer')
+        captcha_answer = request.session.get('signin_captcha_answer')
         if captcha_answer is None:
             captcha_question, captcha_answer = generate_captcha()
-            request.session['captcha_answer'] = captcha_answer
+            request.session['signin_captcha_answer'] = captcha_answer
             return JsonResponse({
                 'success': False,
                 'errors': {'captcha': ['Session expired. Please try again.']},
@@ -357,149 +376,242 @@ def auth_page(request):
         else:
             captcha_question = None
 
-    # ── POST ──────────────────────────────────────────────────────────────────
-    if request.method == 'POST':
-        action = request.POST.get('action')
+    # ── POST — LOGIN ──────────────────────────────────────────────────────────
+    if request.method == 'POST' and request.POST.get('action') == 'login':
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-        # ── SIGNUP ────────────────────────────────────────────────────────────
-        if action == 'signup':
-            signup_form = SignUpForm(
-                request.POST,
-                captcha_answer=request.session.get('captcha_answer'),
-            )
-            if signup_form.is_valid():
-                request.session.pop('captcha_answer', None)
-                user = signup_form.save(commit=False)
-                user.is_active = False
-                user.save()
-                send_verification_email(request, user)
-                return JsonResponse({
-                    'success': True,
-                    'message': (
-                        'Account created! Check your email '
-                        'to verify your account before logging in.'
-                    ),
-                    'email': user.email,
-                })
-            else:
-                new_question, new_answer = generate_captcha()
-                request.session['captcha_answer'] = new_answer
-                return JsonResponse({
-                    'success': False,
-                    'errors': {f: [str(e) for e in errs]
-                               for f, errs in signup_form.errors.items()},
-                    'captcha_question': new_question,
-                }, status=400)
+        username_or_email = request.POST.get('username', '').strip()
+        password          = request.POST.get('password', '')
+        captcha           = request.POST.get('captcha', '').strip()
 
-        # ── LOGIN ─────────────────────────────────────────────────────────────
-        elif action == 'login':
-            username_or_email = request.POST.get('username', '').strip()
-            password          = request.POST.get('password', '')
-            captcha           = request.POST.get('captcha', '').strip()
-
-            def _fresh_captcha_error(field, msg):
-                q, a = generate_captcha()
-                request.session['captcha_answer'] = a
-                return JsonResponse({
-                    'success': False,
-                    'errors': {field: [msg]},
-                    'captcha_question': q,
-                }, status=400)
-
-            if not username_or_email or not password:
-                return _fresh_captcha_error('username', 'Username/email and password required.')
-
-            # Verify captcha
-            session_answer = request.session.get('captcha_answer')
-            try:
-                if int(captcha) != int(session_answer):
-                    return _fresh_captcha_error('captcha', 'Incorrect answer. Try again.')
-            except (ValueError, TypeError):
-                return _fresh_captcha_error('captcha', 'Invalid answer. Enter a number.')
-
-            # Allow login by email
-            if '@' in username_or_email:
-                try:
-                    username_or_email = User.objects.get(
-                        email=username_or_email
-                    ).username
-                except User.DoesNotExist:
-                    pass
-
-            user = authenticate(request, username=username_or_email, password=password)
-
-            if user is None:
-                return _fresh_captcha_error('username', 'Invalid username/email or password.')
-
-            if not user.is_active:
-                return _fresh_captcha_error(
-                    'username', 'Account inactive. Please verify your email first.'
-                )
-
-            if not user.profile.email_verified:
-                return _fresh_captcha_error(
-                    'username', 'Email not verified. Check your inbox for verification link.'
-                )
-
-            # ── Single-device enforcement ─────────────────────────────────────────────────
-            profile = user.profile
-            if profile.is_logged_in and profile.active_session_key:
-                # Check if that session still physically exists in the DB
-                still_alive = Session.objects.filter(
-                    session_key=profile.active_session_key,
-                    expire_date__gte=timezone.now(),
-                ).exists()
-                if still_alive:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {
-                            'username': [
-                                'This account is already logged in on another terminal.'
-                            ]
-                        },
-                    }, status=403)
-                else:
-                    # Stale flag — previous session expired/browser closed; clear it
-                    profile.is_logged_in = False
-                    profile.active_session_key = ''
-                    profile.save(update_fields=['is_logged_in', 'active_session_key'])
-
-            # ── OTP: generate, email, then hold login until verified ──────────
-            otp = str(random.randint(100000, 999999))
-            profile.otp_code       = otp      # encrypted via setter
-            profile.otp_created_at = timezone.now()
-            profile.otp_attempts   = 0
-            profile.save(update_fields=['_otp_code', 'otp_created_at', 'otp_attempts'])
-
-            if not send_otp_email(user, otp):
-                # Don't claim success and strand the user on a page waiting for
-                # a code that was never sent — send_otp_email already logged
-                # the underlying SMTP error. Sent synchronously (not
-                # backgrounded) so we know for certain before responding —
-                # EMAIL_TIMEOUT bounds the worst case instead of hanging.
-                return _fresh_captcha_error(
-                    'username',
-                    'Could not send your verification code right now. Please try again shortly.',
-                )
-
-            # Store pending user in session — actual login() fires after OTP
-            # Checkbox is named "remember" in auth.html (not "remember_me") —
-            # this was reading the wrong POST key, so "Remember me" silently
-            # never took effect; every login got the short 15-minute session.
-            request.session['otp_user_id']     = user.pk
-            request.session['otp_remember_me'] = request.POST.get('remember') == 'on'
-            request.session.pop('captcha_answer', None)
-
+        def _fresh_captcha_error(field, msg):
+            q, a = generate_captcha()
+            request.session['signin_captcha_answer'] = a
             return JsonResponse({
-                'success': True,
-                'message': f'A 6-digit code has been sent to {user.email}',
-                'redirect_url': reverse('eduweb:otp_verify'),
-            })
+                'success': False,
+                'errors': {field: [msg]},
+                'captcha_question': q,
+            }, status=400)
+
+        if not username_or_email or not password:
+            return _fresh_captcha_error('username', 'Username/email and password required.')
+
+        # Verify captcha
+        session_answer = request.session.get('signin_captcha_answer')
+        try:
+            if int(captcha) != int(session_answer):
+                return _fresh_captcha_error('captcha', 'Incorrect answer. Try again.')
+        except (ValueError, TypeError):
+            return _fresh_captcha_error('captcha', 'Invalid answer. Enter a number.')
+
+        # Allow login by email
+        if '@' in username_or_email:
+            try:
+                username_or_email = User.objects.get(
+                    email=username_or_email
+                ).username
+            except User.DoesNotExist:
+                pass
+
+        user = authenticate(request, username=username_or_email, password=password)
+
+        if user is None:
+            return _fresh_captcha_error('username', 'Invalid username/email or password.')
+
+        if not user.is_active:
+            return _fresh_captcha_error(
+                'username', 'Account inactive. Please verify your email first.'
+            )
+
+        if not user.profile.email_verified:
+            return _fresh_captcha_error(
+                'username', 'Email not verified. Check your inbox for verification link.'
+            )
+
+        # ── Single-device enforcement ─────────────────────────────────────────────────
+        profile = user.profile
+        if profile.is_logged_in and profile.active_session_key:
+            # Check if that session still physically exists in the DB
+            still_alive = Session.objects.filter(
+                session_key=profile.active_session_key,
+                expire_date__gte=timezone.now(),
+            ).exists()
+            if still_alive:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'username': [
+                            'This account is already logged in on another terminal.'
+                        ]
+                    },
+                }, status=403)
+            else:
+                # Stale flag — previous session expired/browser closed; clear it
+                profile.is_logged_in = False
+                profile.active_session_key = ''
+                profile.save(update_fields=['is_logged_in', 'active_session_key'])
+
+        # ── OTP: generate, email, then hold login until verified ──────────
+        otp = str(random.randint(100000, 999999))
+        profile.otp_code       = otp      # encrypted via setter
+        profile.otp_created_at = timezone.now()
+        profile.otp_attempts   = 0
+        profile.save(update_fields=['_otp_code', 'otp_created_at', 'otp_attempts'])
+
+        if not send_otp_email(user, otp):
+            # Don't claim success and strand the user on a page waiting for
+            # a code that was never sent — send_otp_email already logged
+            # the underlying SMTP error. Sent synchronously (not
+            # backgrounded) so we know for certain before responding —
+            # EMAIL_TIMEOUT bounds the worst case instead of hanging.
+            return _fresh_captcha_error(
+                'username',
+                'Could not send your verification code right now. Please try again shortly.',
+            )
+
+        # Store pending user in session — actual login() fires after OTP
+        # Checkbox is named "remember" in auth.html (not "remember_me") —
+        # this was reading the wrong POST key, so "Remember me" silently
+        # never took effect; every login got the short 15-minute session.
+        request.session['otp_user_id']     = user.pk
+        request.session['otp_remember_me'] = request.POST.get('remember') == 'on'
+        request.session.pop('signin_captcha_answer', None)
+
+        if not is_ajax:
+            messages.success(request, f'A 6-digit code has been sent to {user.email}')
+            return redirect('eduweb:otp_verify')
+
+        return JsonResponse({
+            'success': True,
+            'message': f'A 6-digit code has been sent to {user.email}',
+            'redirect_url': reverse('eduweb:otp_verify'),
+        })
 
     # ── GET — render page ─────────────────────────────────────────────────────
     return render(request, 'auth.html', {
-        'signup_form':      SignUpForm(),
         'login_form':       LoginForm(),
+        'captcha_question': captcha_question,
+    })
+
+
+def _resolve_intake_eligibility(program, intake):
+    """
+    Return the reason applying to `program` via `intake` is blocked right
+    now ('no_intake' / 'closed' / 'not_open_yet' / 'deadline_passed' /
+    'full'), or None if applications are open. signup.html turns the
+    reason into user-facing copy. Shared by signup_page()'s GET and POST
+    handling so a forged POST is always re-checked against current state,
+    never trusted from an earlier GET.
+    """
+    if intake is None:
+        return 'no_intake'
+    if not intake.is_active:
+        return 'closed'
+    today = timezone.now().date()
+    if intake.application_start_date and today < intake.application_start_date:
+        return 'not_open_yet'
+    if today > intake.application_deadline:
+        return 'deadline_passed'
+    if intake.is_full:
+        return 'full'
+    return None
+
+
+def signup_page(request):
+    """
+    Program-gated sign-up. Only reachable via an Apply/Start-Application
+    link carrying ?program=<slug>[&intake=<id>] — a bare visit with no
+    ?program bounces to the program catalog, since sign-up with no
+    application intent isn't meant to be a directly-linkable page. Renders
+    either the real sign-up form or a read-only "not eligible" message
+    depending on the resolved intake's status, re-validated on every
+    request (GET and POST alike).
+    """
+    if request.user.is_authenticated:
+        redirect_response = _redirect_authenticated_user(request)
+        if redirect_response is not None:
+            return redirect_response
+
+    program_slug = request.GET.get('program') or request.POST.get('program')
+    if not program_slug:
+        return redirect('eduweb:all_programs')
+    program = get_object_or_404(Program, slug=program_slug, is_active=True)
+
+    intake_id = request.GET.get('intake') or request.POST.get('intake')
+    if intake_id and intake_id.isdigit():
+        intake = get_object_or_404(CourseIntake, pk=intake_id, program=program)
+    else:
+        intake = program.get_current_intake()
+
+    blocked_reason = _resolve_intake_eligibility(program, intake)
+    if blocked_reason:
+        return render(request, 'signup.html', {
+            'program': program,
+            'intake': intake,
+            'blocked_reason': blocked_reason,
+        })
+
+    # ── CAPTCHA setup — same convention as auth_page, own session key so a
+    #    sign-in tab and a sign-up tab open at once never stomp each other's
+    #    displayed number. ────────────────────────────────────────────────
+    if request.method == 'GET':
+        captcha_question, captcha_answer = generate_captcha()
+        request.session['signup_captcha_answer'] = captcha_answer
+    else:
+        captcha_answer = request.session.get('signup_captcha_answer')
+        if captcha_answer is None:
+            captcha_question, captcha_answer = generate_captcha()
+            request.session['signup_captcha_answer'] = captcha_answer
+            return JsonResponse({
+                'success': False,
+                'errors': {'captcha': ['Session expired. Please try again.']},
+                'captcha_question': captcha_question,
+            }, status=400)
+        else:
+            captcha_question = None
+
+    if request.method == 'POST' and request.POST.get('action') == 'signup':
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        signup_form = SignUpForm(
+            request.POST,
+            captcha_answer=request.session.get('signup_captcha_answer'),
+        )
+        if signup_form.is_valid():
+            request.session.pop('signup_captcha_answer', None)
+            user = signup_form.save(commit=False)
+            user.is_active = False
+            user.save()
+            send_verification_email(request, user)
+            request.session['apply_program_id'] = program.id
+            message = (
+                'Account created! Check your email to verify your account '
+                'before logging in.'
+            )
+            if not is_ajax:
+                messages.success(request, message)
+                return redirect('eduweb:auth_page')
+            return JsonResponse({
+                'success': True,
+                'message': message,
+                'email': user.email,
+                'redirect_url': reverse('eduweb:auth_page'),
+            })
+        else:
+            new_question, new_answer = generate_captcha()
+            request.session['signup_captcha_answer'] = new_answer
+            return JsonResponse({
+                'success': False,
+                'errors': {f: [str(e) for e in errs]
+                           for f, errs in signup_form.errors.items()},
+                'captcha_question': new_question,
+            }, status=400)
+
+    # ── GET, eligible ─────────────────────────────────────────────────────────
+    return render(request, 'signup.html', {
+        'program':          program,
+        'intake':           intake,
+        'blocked_reason':   None,
+        'signup_form':      SignUpForm(),
         'captcha_question': captcha_question,
     })
 
@@ -1231,6 +1343,7 @@ def program_detail(request, slug):
         'department': program.department,
         'faculty':    program.department.faculty,
         'gallery_items': _build_gallery_items(program),
+        'today': timezone.now().date(),
     })
 
 
@@ -1431,7 +1544,6 @@ def apply(request):
             'code':                  prog.code,
             'degree_level':          prog.degree_level,
             'available_study_modes': prog.available_study_modes,
-            'application_fee':       str(prog.application_fee),
             'tuition_fee':           str(prog.tuition_fee),
         })
     courses_json = json.dumps(courses_by_faculty, cls=DjangoJSONEncoder)
@@ -1519,9 +1631,14 @@ def apply(request):
             messages.error(request, 'Please correct the errors highlighted in the form.')
 
     else:
-        form = CourseApplicationForm(
-            initial={'email': request.user.email} if request.user.is_authenticated else {}
-        )
+        initial = {'email': request.user.email} if request.user.is_authenticated else {}
+        # One-time carry-over from the program-gated signup flow (see
+        # eduweb.views.signup_page) — popped so it doesn't leak into a
+        # later, unrelated application.
+        apply_program_id = request.session.pop('apply_program_id', None)
+        if apply_program_id:
+            initial['program'] = apply_program_id
+        form = CourseApplicationForm(initial=initial)
 
     from eduweb.models import AcademicSession
     academic_sessions = AcademicSession.objects.filter(
@@ -1968,7 +2085,7 @@ def get_payment_summary(request, application_id=None, student_fee_id=None):
             data = {
                 'full_name':        f"{application.first_name} {application.last_name}",
                 'application_id':   application.application_id,
-                'amount':           float(application.program.application_fee) if application.program else 0,
+                'amount':           float(application.application_fee) if application.program else 0,
                 'currency':         'USD',
                 'description':      'Application Processing Fee',
                 'stripe_public_key': get_stripe_public_key(),
@@ -2082,7 +2199,7 @@ def create_payment_intent(request):
                 if application.is_paid:
                     return JsonResponse({'success': False, 'error': 'Application already paid'}, status=400)
 
-                amount_pence = int(application.program.application_fee * Decimal('100'))
+                amount_pence = int(application.application_fee * Decimal('100'))
 
                 existing = ApplicationPayment.objects.filter(
                     application=application
@@ -2121,7 +2238,7 @@ def create_payment_intent(request):
                 ApplicationPayment.objects.create(
                     application=application,
                     gateway_payment_id=intent.id,
-                    amount=application.program.application_fee,
+                    amount=application.application_fee,
                     currency='USD',
                     status='pending',
                 )

@@ -1388,12 +1388,8 @@ class Program(models.Model):
     )
 
     # ── Financial ──────────────────────────────────────────────────────────────
-    application_fee = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0.00,
-        help_text="Fee to apply for this program"
-    )
+    # application_fee lives on CourseIntake now — it varies per intake period,
+    # not per program.
     tuition_fee = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -1511,6 +1507,27 @@ class Program(models.Model):
                 return fallback
 
         return self.max_credits_per_semester
+
+    def get_current_intake(self):
+        """
+        The CourseIntake a new application against this program should be
+        attributed to — and therefore whose application_fee it should be
+        charged. Prefers the active intake whose application window hasn't
+        closed yet (earliest deadline first, so the intake that's actually
+        closing soonest wins over one further out); falls back to the most
+        recent intake overall so payment isn't left with nothing to charge
+        just because staff forgot to keep deadlines current.
+        """
+        today = timezone.now().date()
+        open_intake = (
+            self.intakes
+            .filter(is_active=True, application_deadline__gte=today)
+            .order_by('application_deadline')
+            .first()
+        )
+        if open_intake:
+            return open_intake
+        return self.intakes.filter(is_active=True).order_by('-year', 'intake_period').first()
 
 # ==============================================================================
 # ACADEMIC SESSION
@@ -1997,8 +2014,18 @@ class CourseIntake(models.Model):
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='intakes')
     intake_period = models.CharField(max_length=20, choices=INTAKE_PERIOD_CHOICES)
     year = models.IntegerField()
+    application_start_date = models.DateField(
+        null=True, blank=True,
+        help_text="When applications open for this intake"
+    )
     start_date = models.DateField()
     application_deadline = models.DateField()
+    application_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Fee to apply for this specific intake"
+    )
     available_slots = models.IntegerField(default=50, validators=[MinValueValidator(1)])
     is_active = models.BooleanField(default=True)
     
@@ -2228,6 +2255,36 @@ class CourseApplication(models.Model):
     
     def __str__(self):
         return f"{self.application_id} - {self.first_name} {self.last_name}"
+
+    def resolve_intake(self):
+        """
+        Attribute this application to a CourseIntake, and return it. Set at
+        the point `program` is assigned/changed (see eduweb.views.apply) so
+        that everything downstream — the fee charged, the deadline shown —
+        is pinned to one specific intake instead of drifting with whichever
+        intake happens to look "current" whenever it's next read. Safe to
+        call again later; it's a no-op once `intake` is already set.
+        """
+        if self.intake_id:
+            return self.intake
+        if not self.program_id:
+            return None
+        intake = self.program.get_current_intake()
+        if intake:
+            self.intake = intake
+        return intake
+
+    @property
+    def application_fee(self):
+        """
+        The fee this application should be charged — from its resolved
+        intake, not the program (fees vary per intake period). Falls back
+        to 0 rather than raising if somehow no intake could be resolved,
+        since callers computing a payment amount should treat that as "not
+        chargeable yet" rather than crash.
+        """
+        intake = self.intake or self.resolve_intake()
+        return intake.application_fee if intake else Decimal('0.00')
 
     @property
     def is_paid(self):
@@ -2495,7 +2552,7 @@ class ApplicationPayment(models.Model):
             self.payment_reference = f"PAY-{uuid.uuid4().hex[:12].upper()}"
         
         if not self.amount:
-            self.amount = self.application.program.application_fee
+            self.amount = self.application.application_fee
         
         if self.status == 'success' and not self.paid_at:
             self.paid_at = timezone.now()

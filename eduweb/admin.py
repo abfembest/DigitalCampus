@@ -705,7 +705,7 @@ class DepartmentAdmin(admin.ModelAdmin):
 class ProgramAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'code', 'department', 'degree_level', 'duration_years',
-        'application_fee', 'tuition_fee', 'is_active', 'is_featured'
+        'tuition_fee', 'is_active', 'is_featured'
     )
     list_filter = ('department__faculty', 'department', 'degree_level', 'is_active', 'is_featured')
     search_fields = ('name', 'code', 'description', 'tagline')
@@ -724,7 +724,7 @@ class ProgramAdmin(admin.ModelAdmin):
             'fields': ('tagline', 'overview', 'description')
         }),
         ('Financial Information', {
-            'fields': ('application_fee', 'tuition_fee')
+            'fields': ('tuition_fee',)
         }),
         ('Curriculum', {
             'fields': ('entry_requirements', 'core_courses', 'specialization_tracks'),
@@ -869,7 +869,7 @@ class AllRequiredPaymentsAdmin(admin.ModelAdmin):
 class CourseIntakeAdmin(admin.ModelAdmin):
     list_display = (
         'program', 'intake_period', 'year', 'start_date',
-        'application_deadline', 'available_slots', 'is_active'
+        'application_deadline', 'application_fee', 'available_slots', 'is_active'
     )
     list_filter = ('intake_period', 'year', 'is_active', 'program__department__faculty')
     search_fields = ('program__name', 'program__code')
@@ -881,10 +881,10 @@ class CourseIntakeAdmin(admin.ModelAdmin):
             'fields': ('program', 'intake_period', 'year')
         }),
         ('Dates', {
-            'fields': ('start_date', 'application_deadline')
+            'fields': ('application_start_date', 'start_date', 'application_deadline')
         }),
         ('Capacity', {
-            'fields': ('available_slots', 'is_active')
+            'fields': ('application_fee', 'available_slots', 'is_active')
         }),
     )
 

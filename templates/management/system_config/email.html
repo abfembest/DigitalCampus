@@ -86,7 +86,7 @@
                         Save Server
                     </button>
                     <button type="submit" name="save" value="clear_server"
-                            onclick="return confirm('Clear the shared SMTP server settings? Both accounts will fall back to .env until reconfigured.');"
+                            onclick="return swalConfirmSubmit(this, {title: 'Clear the shared SMTP server settings?', text: 'Both accounts will fall back to .env until reconfigured.', confirmButtonText: 'Yes, clear'});"
                             class="w-full px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm">
                         <i class="fas fa-eraser mr-2"></i>
                         Clear
@@ -134,7 +134,7 @@
 
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
                     <button type="submit" name="save" value="clear_default"
-                            onclick="return confirm('Clear the default account? It will fall back to .env until reconfigured.');"
+                            onclick="return swalConfirmSubmit(this, {title: 'Clear the default account?', text: 'It will fall back to .env until reconfigured.', confirmButtonText: 'Yes, clear'});"
                             class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm">
                         <i class="fas fa-eraser mr-2"></i>
                         Clear
@@ -175,7 +175,7 @@
 
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
                     <button type="submit" name="save" value="clear_admissions"
-                            onclick="return confirm('Clear the admissions account? It will fall back to the default account until reconfigured.');"
+                            onclick="return swalConfirmSubmit(this, {title: 'Clear the admissions account?', text: 'It will fall back to the default account until reconfigured.', confirmButtonText: 'Yes, clear'});"
                             class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm">
                         <i class="fas fa-eraser mr-2"></i>
                         Clear

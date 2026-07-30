@@ -22,7 +22,7 @@
   </div>
 
   {# ── Stat Cards ── #}
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
     {% with total=enrollments.paginator.count %}
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
       <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1">Total</p>
@@ -176,7 +176,7 @@
               <form method="post"
                     action="{% url 'management:enrollment_delete' e.pk %}"
                     class="inline"
-                    onsubmit="return confirm('Delete this enrollment ({{ e.student.get_full_name|default:e.student.username|escapejs }} — {{ e.course.title|escapejs }})? This cannot be undone.');">
+                    onsubmit="return swalConfirmSubmit(this, {title: 'Delete this enrollment?', text: '{{ e.student.get_full_name|default:e.student.username|escapejs }} — {{ e.course.title|escapejs }}'});">
                 {% csrf_token %}
                 <button type="submit"
                         class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs

@@ -41,7 +41,7 @@
 
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[760px] text-sm">
         <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
           <tr>
             <th class="py-3 px-5 text-left font-semibold">Student</th>
@@ -74,7 +74,7 @@
               <form method="post" class="inline">
                 {% csrf_token %}
                 <input type="hidden" name="record_id" value="{{ rec.pk }}">
-                <button type="submit" class="text-xs text-primary-600 hover:underline" onclick="return confirm('Mark {{ rec.course.code }} cleared for {{ rec.student.username }}?')">
+                <button type="submit" class="text-xs text-primary-600 hover:underline" onclick="return swalConfirmSubmit(this, {title: 'Mark {{ rec.course.code }} cleared for {{ rec.student.username }}?', confirmButtonColor: '#16a34a', confirmButtonText: 'Yes, mark cleared'})">
                   Mark Cleared
                 </button>
               </form>

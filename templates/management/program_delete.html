@@ -116,7 +116,7 @@
         <a href="{% url 'management:programs_list' %}" class="px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors text-center">
             <i class="fas fa-times mr-2"></i>Cancel
         </a>
-        <button type="submit" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center" onclick="return confirm('Are you absolutely sure? This will affect ' + '{{ program.enrollments.count }}' + ' students.');">
+        <button type="submit" class="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center" onclick="return swalConfirmSubmit(this, {title: 'Delete program {{ program.name|escapejs }}?', text: 'This will affect {{ program.enrollments.count }} student(s) — this is your final confirmation.'});">
             <i class="fas fa-trash mr-2"></i>Delete Program Permanently
         </button>
     </div>

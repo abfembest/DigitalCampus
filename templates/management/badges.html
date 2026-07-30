@@ -16,7 +16,7 @@
     <div class="w-full min-w-0 lg:flex-1">
 
       <form method="get" class="mb-4">
-        <div class="flex gap-2 max-w-md">
+        <div class="flex flex-col sm:flex-row gap-2 max-w-md">
           <label for="search" class="sr-only">Search badges</label>
           <input id="search" name="search" type="search"
                  value="{{ request.GET.search|default:'' }}"
@@ -111,7 +111,7 @@
                 <form method="post"
                       action="{% url 'management:badge_delete' badge.slug %}"
                       class="inline"
-                      onsubmit="return confirm('Delete badge {{ badge.name|escapejs }}? This cannot be undone.');">
+                      onsubmit="return swalConfirmSubmit(this, {title: 'Delete badge {{ badge.name|escapejs }}?'});">
                   {% csrf_token %}
                   <button type="submit"
                           class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs

@@ -18,7 +18,7 @@
     <div class="w-full min-w-0 lg:flex-1">
 
       <form method="get" class="mb-4">
-        <div class="flex gap-2 max-w-md">
+        <div class="flex flex-col sm:flex-row gap-2 max-w-md">
           <label for="search" class="sr-only">Search certificates</label>
           <input id="search" name="search" type="search"
                  value="{{ request.GET.search|default:'' }}"
@@ -103,7 +103,7 @@
                 <form method="post"
                       action="{% url 'management:certificate_delete' cert.certificate_id %}"
                       class="inline"
-                      onsubmit="return confirm('Delete this certificate? This cannot be undone.');">
+                      onsubmit="return swalConfirmSubmit(this, {title: 'Delete this certificate?'});">
                   {% csrf_token %}
                   <button type="submit"
                           class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs
@@ -191,48 +191,40 @@
           {% endif %}
 
           <div>
-            <label for="id_student_search"
+            <label for="id_student"
                    class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
               Student <span class="text-red-500">*</span>
             </label>
-            <input id="id_student_search"
-                   type="text"
-                   list="student-list"
-                   placeholder="Type student name…"
-                   autocomplete="off"
-                   class="w-full px-3 py-2.5 border rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:outline-none transition-colors
-                          {% if form.student.errors %}border-red-400 bg-red-50{% else %}border-gray-300{% endif %}">
-            <datalist id="student-list">
+            <select id="id_student" name="student" required
+                    class="searchable-select w-full px-3 py-2.5 border rounded-lg text-sm
+                           focus:ring-2 focus:ring-primary-500 focus:outline-none transition-colors
+                           {% if form.student.errors %}border-red-400 bg-red-50{% else %}border-gray-300{% endif %}"
+                    data-ss-placeholder="Type student name…">
+              <option value="">Type student name…</option>
               {% for u in students %}
-                <option value="{{ u.get_full_name|default:u.username }} ({{ u.username }})" data-pk="{{ u.pk }}">
+                <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }} ({{ u.username }})</option>
               {% endfor %}
-            </datalist>
-            <input type="hidden" name="student" id="id_student" value="">
+            </select>
             {% if form.student.errors %}
               <p class="mt-1 text-xs text-red-600" role="alert">{{ form.student.errors.0 }}</p>
             {% endif %}
           </div>
 
           <div>
-            <label for="id_course_search"
+            <label for="id_course"
                    class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
               Course <span class="text-red-500">*</span>
             </label>
-            <input id="id_course_search"
-                   type="text"
-                   list="course-list"
-                   placeholder="Type course title…"
-                   autocomplete="off"
-                   class="w-full px-3 py-2.5 border rounded-lg text-sm
-                          focus:ring-2 focus:ring-primary-500 focus:outline-none transition-colors
-                          {% if form.course.errors %}border-red-400 bg-red-50{% else %}border-gray-300{% endif %}">
-            <datalist id="course-list">
+            <select id="id_course" name="course" required
+                    class="searchable-select w-full px-3 py-2.5 border rounded-lg text-sm
+                           focus:ring-2 focus:ring-primary-500 focus:outline-none transition-colors
+                           {% if form.course.errors %}border-red-400 bg-red-50{% else %}border-gray-300{% endif %}"
+                    data-ss-placeholder="Type course title…">
+              <option value="">Type course title…</option>
               {% for c in courses %}
-                <option value="{{ c.title }} ({{ c.code }})" data-pk="{{ c.pk }}">
+                <option value="{{ c.pk }}">{{ c.title }} ({{ c.code }})</option>
               {% endfor %}
-            </datalist>
-            <input type="hidden" name="course" id="id_course" value="">
+            </select>
             {% if form.course.errors %}
               <p class="mt-1 text-xs text-red-600" role="alert">{{ form.course.errors.0 }}</p>
             {% endif %}
@@ -312,29 +304,18 @@
   var CREATE_URL = '{% url "management:certificate_create" %}';
   var EDIT_BASE  = '/management/certificates/';
 
-  function linkDatalist(searchId, hiddenId, listId) {
-    var search = document.getElementById(searchId);
-    var hidden = document.getElementById(hiddenId);
-    var list   = document.getElementById(listId);
-    if (!search || !hidden || !list) return null;
+  function linkSelect(selectId) {
+    var select = document.getElementById(selectId);
+    if (!select) return null;
 
-    function sync() {
-      var val   = search.value.trim();
-      var match = Array.from(list.options).find(function (o) { return o.value === val; });
-      hidden.value = match ? (match.getAttribute('data-pk') || '') : '';
-    }
-
-    search.addEventListener('change', sync);
-    search.addEventListener('input', sync);
-
-    return function set(pk, label) {
-      search.value = label || '';
-      hidden.value = pk    || '';
+    return function set(pk) {
+      select.value = pk || '';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
     };
   }
 
-  var setStudent = linkDatalist('id_student_search', 'id_student', 'student-list');
-  var setCourse  = linkDatalist('id_course_search',  'id_course',  'course-list');
+  var setStudent = linkSelect('id_student');
+  var setCourse  = linkSelect('id_course');
 
   var form       = document.getElementById('cert-form');
   var heading    = document.getElementById('form-heading');
@@ -350,8 +331,8 @@
     heading.textContent = 'Issue Certificate';
     submitBtn.textContent = 'Issue Certificate';
     badge.classList.add('hidden');
-    if (setStudent) setStudent('', '');
-    if (setCourse)  setCourse('', '');
+    if (setStudent) setStudent('');
+    if (setCourse)  setCourse('');
   }
 
   document.querySelectorAll('.btn-edit').forEach(function (btn) {
@@ -364,8 +345,8 @@
       submitBtn.textContent = 'Update Certificate';
       badge.classList.remove('hidden');
 
-      if (setStudent) setStudent(d.studentId, d.studentName);
-      if (setCourse)  setCourse(d.courseId, d.courseName);
+      if (setStudent) setStudent(d.studentId);
+      if (setCourse)  setCourse(d.courseId);
 
       var dateEl     = form.querySelector('[name="completion_date"]');
       var gradeEl    = form.querySelector('[name="grade"]');

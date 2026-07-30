@@ -70,9 +70,6 @@
             {% else %}
             <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">Hidden</span>
             {% endif %}
-            <span class="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
-              <i class="fas fa-sort-numeric-up text-gray-300 mr-1"></i>Order: {{ t.order }}
-            </span>
           </div>
           <p class="text-sm text-gray-500 italic line-clamp-2 leading-relaxed">
             <i class="fas fa-quote-left text-primary-200 text-xs mr-1"></i>{{ t.quote|truncatechars:140 }}<i class="fas fa-quote-right text-primary-200 text-xs ml-1"></i>

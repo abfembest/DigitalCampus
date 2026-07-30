@@ -17,9 +17,10 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
+from django.core.exceptions import SuspiciousOperation
 from django.core.mail import EmailMultiAlternatives, send_mail, send_mass_mail
 from django.core.paginator import Paginator
-from django.db import transaction, connection
+from django.db import transaction, connection, IntegrityError
 from django.db.models import Q, Count, Sum, Avg, Value, DecimalField
 from django.db.models.functions import Coalesce, TruncMonth, TruncDate
 from django.http import HttpResponse, JsonResponse
@@ -100,6 +101,7 @@ from management.forms import (
     EnrollmentForm,
     FacultyForm,
     InstitutionMemberForm,
+    IntakeCreateFormSet,
     LMSCourseForm,
     LibraryItemForm,
     NotificationConfigForm,
@@ -937,7 +939,7 @@ def send_decision_email(application):
 
 def _faculty_ctx(form=None, edit_pk=None):
     """Shared context for all faculty list views."""
-    qs = Faculty.objects.prefetch_related('departments').order_by('display_order', 'name')
+    qs = Faculty.objects.prefetch_related('departments').order_by('name')
     return {
         'faculties':         qs,
         'form':              form or FacultyForm(),
@@ -1136,7 +1138,7 @@ def blog_categories_list(request):
         messages.error(request, 'You do not have permission to view blog categories.')
         return redirect('management:dashboard')
 
-    categories = BlogCategory.objects.all().order_by('display_order', 'name')
+    categories = BlogCategory.objects.all().order_by('name')
     pending_count = CourseApplication.objects.filter(status__in=['payment_complete', 'documents_uploaded', 'under_review']).count()
     
     context = {
@@ -1416,6 +1418,17 @@ def user_create(request):
         user.profile.must_change_password = True
         user.profile.save(update_fields=['role', 'email_verified', 'must_change_password'])
 
+        AuditLog.objects.create(
+            user=request.user,
+            action='create',
+            model_name='User',
+            object_id=str(user.pk),
+            description=(
+                f'{request.user.username} created user {user.username} with role "{role}"'
+                + (' and staff (admin-portal) access' if user.is_staff else '') + '.'
+            ),
+        )
+
     # Delegate email entirely to the service module (non-fatal if it fails)
     email_sent = send_admin_created_user_email(request, user, raw_password)
 
@@ -1488,6 +1501,19 @@ def user_edit(request, pk):
         updated_user.save()
         updated_profile.save()
 
+        if updated_user.is_staff != original_is_staff:
+            AuditLog.objects.create(
+                user=request.user,
+                action='permission_change',
+                model_name='User',
+                object_id=str(updated_user.pk),
+                description=(
+                    f'{request.user.username} '
+                    f'{"granted" if updated_user.is_staff else "revoked"} admin-portal (is_staff) '
+                    f'access for {updated_user.username}.'
+                ),
+            )
+
         # Role can also change from this form's role dropdown, not just via
         # user_change_role — clear stale overrides here too so the user
         # starts clean on whatever role they were just switched to.
@@ -1536,10 +1562,21 @@ def user_toggle_active(request, pk):
 
     user.is_active = not user.is_active
     user.save(update_fields=['is_active'])
- 
+
+    AuditLog.objects.create(
+        user=request.user,
+        action='update',
+        model_name='User',
+        object_id=str(user.pk),
+        description=(
+            f'{request.user.username} {"activated" if user.is_active else "deactivated"} '
+            f'user {user.username}.'
+        ),
+    )
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True, 'is_active': user.is_active})
- 
+
     messages.success(request, f'User {user.username} {"activated" if user.is_active else "deactivated"}.')
     return redirect('management:users_list')
  
@@ -2659,7 +2696,14 @@ def audit_logs_export(request):
             log.description,
             log.ip_address or ''
         ])
-    
+
+    AuditLog.objects.create(
+        user=request.user,
+        action='export',
+        model_name='AuditLog',
+        description=f'{request.user.username} exported audit logs to CSV ({logs.count()} record(s)).',
+    )
+
     return response
 
 
@@ -3481,15 +3525,58 @@ def program_edit(request, pk):
             messages.error(request, 'You do not have permission to edit programs.')
             return redirect('management:programs_list')
 
-        form = ProgramForm(request.POST, request.FILES, instance=program)
-        if form.is_valid():
-            with transaction.atomic():
-                form.save()
-                cap_errors = _sync_program_session_credit_caps(request, program)
-            messages.success(request, 'Program updated.')
-            for err in cap_errors:
-                messages.error(request, err)
-            return redirect('management:programs_list')
+        try:
+            # Constructing the form is what triggers Django to actually
+            # parse request.POST/request.FILES — if the submitted request
+            # body is larger than Django's own DATA_UPLOAD_MAX_MEMORY_SIZE,
+            # that parsing raises SuspiciousOperation right here instead of
+            # letting it surface as an unhandled crash.
+            form = ProgramForm(request.POST, request.FILES, instance=program)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        form.save()
+                        cap_errors = _sync_program_session_credit_caps(request, program)
+                except IntegrityError:
+                    logger.exception(
+                        'program_edit: IntegrityError saving program pk=%s', pk
+                    )
+                    messages.error(
+                        request,
+                        'Could not save changes — that program code may already be '
+                        'in use by another program. Please use a different code.'
+                    )
+                else:
+                    messages.success(request, 'Program updated.')
+                    for err in cap_errors:
+                        messages.error(request, err)
+                    return redirect('management:programs_list')
+        except SuspiciousOperation:
+            # Most often an oversized upload (see ProgramForm.clean_gallery_video).
+            # A request this large can also be rejected by the web server
+            # itself before Django ever sees it, showing a raw host-level
+            # "Forbidden"/"denied" page instead of this message — if that's
+            # what's happening, the fix is a server-level upload limit
+            # increase, not anything in this view.
+            logger.warning('program_edit: oversized/suspicious upload for pk=%s', pk)
+            messages.error(
+                request,
+                'Your changes could not be saved — the files you uploaded were too '
+                'large for the server to accept. Please use a smaller image/video '
+                'and try again.'
+            )
+            form = ProgramForm(instance=program)
+        except Exception:
+            # Last-resort net: never let an unexpected error surface as a
+            # raw crash page — log it for diagnosis and show the admin a
+            # clean, actionable message on the same form instead.
+            logger.exception('program_edit: unexpected error saving program pk=%s', pk)
+            messages.error(
+                request,
+                'Something went wrong while saving your changes. Nothing was saved. '
+                'Please try again, and contact support if this keeps happening.'
+            )
+            form = ProgramForm(instance=program)
     else:
         form = ProgramForm(instance=program)
     return render(request, 'management/program_form.html', {
@@ -4236,11 +4323,16 @@ def intakes_list(request):
 
     years = CourseIntake.objects.values_list('year', flat=True).distinct().order_by('-year')
 
+    current_year = timezone.now().year
+    year_options = sorted(set(range(current_year - 3, current_year + 11)) | set(years))
+
     context = {
         'intakes': page_obj,
         'programs': Program.objects.filter(is_active=True).order_by('name'),
         'years': years,
+        'year_options': year_options,
         'today': timezone.now().date(),
+        'intake_formset': IntakeCreateFormSet(queryset=CourseIntake.objects.none(), prefix='intake'),
     }
     return render(request, 'management/intakes_list.html', context)
 
@@ -4248,20 +4340,67 @@ def intakes_list(request):
 @login_required
 @user_passes_test(is_admin)
 def intake_create(request):
-    """AJAX-only: create a new intake, redirect back to list."""
+    """
+    Bulk-create endpoint backing the "Add Another Intake" formset — one POST
+    can contain several intake rows (program/period/year/etc each suffixed
+    `intake-0-`, `intake-1-`, ...). Rows the admin never touched (extra blank
+    rows left over from clicking "Add" and not filling them in) are silently
+    skipped rather than saved as empty/invalid records.
+    """
     if request.method == 'POST':
+        # The create modal submits via fetch() so validation errors can be
+        # shown inline (per row, per field) without losing whatever the
+        # admin already typed into the other rows — a full-page redirect+
+        # messages round trip would wipe the in-progress form. Plain-POST
+        # fallback (JS blocked/failed) keeps the old redirect+messages
+        # behaviour so the endpoint still works without JS.
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         if not _has_permission(request, 'academics', 'can_create'):
-            messages.error(request, 'You do not have permission to create intakes.')
+            msg = 'You do not have permission to create intakes.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'non_form_errors': [msg]}, status=403)
+            messages.error(request, msg)
             return redirect('management:intakes_list')
 
-        form = CourseIntakeForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Intake created.')
+        formset = IntakeCreateFormSet(request.POST, queryset=CourseIntake.objects.none(), prefix='intake')
+        if formset.is_valid():
+            created = 0
+            with transaction.atomic():
+                for form in formset:
+                    if not form.has_changed():
+                        continue
+                    form.save()
+                    created += 1
+            if created:
+                messages.success(request, f'{created} intake{"s" if created != 1 else ""} created.')
+                if is_ajax:
+                    return JsonResponse({'success': True})
+            else:
+                msg = 'No intake data was submitted.'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'non_form_errors': [msg]})
+                messages.error(request, msg)
         else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
+            if is_ajax:
+                row_errors = {}
+                for i, form in enumerate(formset):
+                    if form.errors:
+                        row_errors[str(i)] = {
+                            field: [str(e) for e in errs] for field, errs in form.errors.items()
+                        }
+                return JsonResponse({
+                    'success': False,
+                    'row_errors': row_errors,
+                    'non_form_errors': formset.non_form_errors(),
+                })
+            for i, form in enumerate(formset, start=1):
+                for field, errors in form.errors.items():
+                    label = form.fields[field].label if field in form.fields else field
+                    for error in errors:
+                        messages.error(request, f'Intake #{i} — {label}: {error}')
+            for error in formset.non_form_errors():
+                messages.error(request, error)
     return redirect('management:intakes_list')
 
 
@@ -4271,15 +4410,31 @@ def intake_edit(request, pk):
     """AJAX GET returns JSON for the modal; POST saves changes."""
     intake = get_object_or_404(CourseIntake, pk=pk)
     if request.method == 'POST':
+        # Same rationale as intake_create: fetch()-submitted so an invalid
+        # save can highlight the offending field inline and keep the modal's
+        # data intact, instead of a redirect wiping it. Non-AJAX fallback
+        # keeps the old redirect+messages behaviour.
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         if not _has_permission(request, 'academics', 'can_edit'):
-            messages.error(request, 'You do not have permission to edit intakes.')
+            msg = 'You do not have permission to edit intakes.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [msg]}}, status=403)
+            messages.error(request, msg)
             return redirect('management:intakes_list')
 
         form = CourseIntakeForm(request.POST, instance=intake)
         if form.is_valid():
             form.save()
             messages.success(request, 'Intake updated.')
+            if is_ajax:
+                return JsonResponse({'success': True})
         else:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {field: [str(e) for e in errs] for field, errs in form.errors.items()},
+                })
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
@@ -4294,8 +4449,10 @@ def intake_edit(request, pk):
             'program': intake.program_id,
             'intake_period': intake.intake_period,
             'year': intake.year,
-            'start_date': str(intake.start_date),
+            'application_start_date': str(intake.application_start_date) if intake.application_start_date else '',
             'application_deadline': str(intake.application_deadline),
+            'start_date': str(intake.start_date),
+            'application_fee': str(intake.application_fee),
             'available_slots': intake.available_slots,
             'is_active': intake.is_active,
         })
@@ -4339,7 +4496,7 @@ def course_categories_list(request):
 
     categories = CourseCategory.objects.prefetch_related(
         'subcategories'
-    ).select_related('parent').order_by('display_order', 'name')
+    ).select_related('parent').order_by('name')
     return render(request, 'management/course_categories_list.html', {'categories': categories})
 
 
@@ -5234,6 +5391,17 @@ def payment_gateway_create(request):
             if gw.is_active:
                 _deactivate_other_gateways(gw)
             gw.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='create',
+            model_name='PaymentGateway',
+            object_id=str(gw.pk),
+            description=(
+                f'{request.user.username} added payment gateway "{gw.name}" '
+                f'({gw.gateway_type}, {"active" if gw.is_active else "inactive"}). '
+                f'API secrets not recorded.'
+            ),
+        )
         messages.success(request, 'Gateway added.')
     else:
         msg = next(
@@ -5274,6 +5442,17 @@ def payment_gateway_edit(request, slug):
             if gw.is_active:
                 _deactivate_other_gateways(gw)
             gw.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='PaymentGateway',
+            object_id=str(gw.pk),
+            description=(
+                f'{request.user.username} updated payment gateway "{gw.name}" '
+                f'({"active" if gw.is_active else "inactive"})'
+                + (' — API secret rotated.' if request.POST.get('api_secret') else '.')
+            ),
+        )
         messages.success(request, 'Gateway updated.')
     else:
         msg = next(
@@ -5304,7 +5483,16 @@ def payment_gateway_delete(request, slug):
         )
         return redirect('management:payment_gateways_list')
 
+    gateway_pk = gateway.pk
+    gateway_name = gateway.name
     gateway.delete()
+    AuditLog.objects.create(
+        user=request.user,
+        action='delete',
+        model_name='PaymentGateway',
+        object_id=str(gateway_pk),
+        description=f'{request.user.username} deleted payment gateway "{gateway_name}".',
+    )
     messages.success(request, 'Gateway deleted.')
     return redirect('management:payment_gateways_list')
 
@@ -5657,6 +5845,16 @@ def staff_payroll_create(request):
     form = StaffPayrollForm(request.POST)
     if form.is_valid():
         payroll = form.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='create',
+            model_name='StaffPayroll',
+            object_id=str(payroll.pk),
+            description=(
+                f'{request.user.username} created payroll record {payroll.payroll_reference} '
+                f'for {payroll.staff} ({payroll.month}/{payroll.year}).'
+            ),
+        )
         messages.success(request, 'Payroll record created.')
         # Notify the staff member a payroll record has been created for them
         month_name = payroll.get_month_display()
@@ -5694,6 +5892,16 @@ def staff_payroll_edit(request, payroll_reference):
         old_status = payroll.payment_status
         
         updated_payroll = form.save()
+        AuditLog.objects.create(
+            user=request.user,
+            action='update',
+            model_name='StaffPayroll',
+            object_id=str(updated_payroll.pk),
+            description=(
+                f'{request.user.username} updated payroll {updated_payroll.payroll_reference} '
+                f'for {updated_payroll.staff}, status "{old_status}" -> "{updated_payroll.payment_status}".'
+            ),
+        )
         messages.success(request, 'Payroll updated.')
         # Notify staff member their payroll record was updated
         month_name = updated_payroll.get_month_display()
@@ -5732,7 +5940,16 @@ def staff_payroll_delete(request, payroll_reference):
         return redirect('management:staff_payroll_list')
 
     payroll = get_object_or_404(StaffPayroll, payroll_reference=payroll_reference)
+    payroll_pk = payroll.pk
+    payroll_staff = str(payroll.staff)
     payroll.delete()
+    AuditLog.objects.create(
+        user=request.user,
+        action='delete',
+        model_name='StaffPayroll',
+        object_id=str(payroll_pk),
+        description=f'{request.user.username} deleted payroll record {payroll_reference} for {payroll_staff}.',
+    )
     messages.success(request, 'Payroll deleted.')
     return redirect('management:staff_payroll_list')
 
@@ -5824,7 +6041,7 @@ def site_milestones_list(request):
         messages.error(request, 'You do not have permission to view site history milestones.')
         return redirect('management:dashboard')
 
-    milestones = SiteHistoryMilestone.objects.all().order_by('display_order', 'year')
+    milestones = SiteHistoryMilestone.objects.all().order_by('year')
     return render(request, 'management/site_config/milestones_list.html', {
         'milestones': milestones,
         'active_count': milestones.filter(is_active=True).count(),
@@ -5898,7 +6115,7 @@ def testimonials_list(request):
         messages.error(request, 'You do not have permission to view testimonials.')
         return redirect('management:dashboard')
 
-    testimonials = Testimonial.objects.all().order_by('order')
+    testimonials = Testimonial.objects.all().order_by('author_name')
     return render(request, 'management/site_config/testimonials_list.html', {
         'testimonials': testimonials,
         'active_count': testimonials.filter(is_active=True).count(),
@@ -5970,7 +6187,7 @@ def institution_members_list(request):
         messages.error(request, 'You do not have permission to view institution members.')
         return redirect('management:dashboard')
 
-    members = InstitutionMember.objects.all().order_by('member_type', 'display_order')
+    members = InstitutionMember.objects.all().order_by('member_type', 'name')
     return render(request, 'management/site_config/members_list.html', {
         'members': members,
         'admin_board_count':      members.filter(member_type='admin_board', is_active=True).count(),

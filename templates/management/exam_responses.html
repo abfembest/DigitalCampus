@@ -550,7 +550,7 @@
                 {% if exam.show_result_immediately %}
                 <input type="hidden" name="action" value="retract">
                 <button type="submit"
-                        onclick="return confirm('Hide results from students?')"
+                        onclick="return swalConfirmSubmit(this, {title: 'Hide results from students?', confirmButtonText: 'Yes, hide'})"
                         class="inline-flex items-center gap-2 px-5 py-2.5 text-base font-semibold
                                bg-red-50 text-red-700 border border-red-300 rounded-xl
                                hover:bg-red-100 transition-colors whitespace-nowrap shrink-0">
@@ -559,7 +559,7 @@
                 {% else %}
                 <input type="hidden" name="action" value="release">
                 <button type="submit"
-                        onclick="return confirm('Release results to all students for this exam?')"
+                        onclick="return swalConfirmSubmit(this, {title: 'Release results to all students?', confirmButtonColor: '#16a34a', confirmButtonText: 'Yes, release'})"
                         class="inline-flex items-center gap-2 px-5 py-2.5 text-base font-semibold
                                {% if all_graded %}bg-green-600 hover:bg-green-700 text-white border-green-600
                                {% else %}bg-primary-600 hover:bg-primary-700 text-white border-primary-600{% endif %}

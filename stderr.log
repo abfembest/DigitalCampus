@@ -223,3 +223,177 @@ OTP email failed for abfembest@gmail.com: Connection unexpectedly closed: timed 
   import pkg_resources
 /home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/pycountry/__init__.py:10: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
   import pkg_resources
+Internal Server Error: /
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 171, in render
+    return self._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 961, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 134, in render
+    compiled_parent = self.get_parent(context)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 131, in get_parent
+    return self.find_template(parent, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 109, in find_template
+    template, origin = context.template.engine.find_template(
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 161, in find_template
+    raise TemplateDoesNotExist(name, tried=tried)
+django.template.exceptions.TemplateDoesNotExist: base.html
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/decorators.py", line 33, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/eduweb/views.py", line 900, in index
+    return render(request, 'index.html', {
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 63, in render
+    reraise(exc, self.backend)
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 84, in reraise
+    raise new from exc
+django.template.exceptions.TemplateDoesNotExist: base.html
+Not Found: /static/apple-touch-icon.png
+Internal Server Error: /management/
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 171, in render
+    return self._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 961, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 159, in render
+    return compiled_parent._render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 163, in _render
+    return self.nodelist.render(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 1000, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/base.py", line 961, in render_annotated
+    return self.render(context)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader_tags.py", line 199, in render
+    template = context.template.engine.select_template(template_name)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/engine.py", line 212, in select_template
+    raise TemplateDoesNotExist(", ".join(not_found))
+django.template.exceptions.TemplateDoesNotExist: includes/searchable_select.html
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/contrib/auth/decorators.py", line 23, in _wrapper_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/theology/DigitalCampus/management/views.py", line 582, in dashboard
+    return render(request, 'management/dashboard.html', context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/loader.py", line 62, in render_to_string
+    return template.render(context, request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 63, in render
+    reraise(exc, self.backend)
+  File "/home/miuenecd/virtualenv/DigitalCampus/3.12/lib/python3.12/site-packages/django/template/backends/django.py", line 84, in reraise
+    raise new from exc
+django.template.exceptions.TemplateDoesNotExist: includes/searchable_select.html
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /favicon.ico
+Not Found: /static/js/confirm-submit.js
+Not Found: /favicon.ico
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /favicon.ico
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /favicon.ico
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /static/js/confirm-submit.js
+Not Found: /favicon.ico

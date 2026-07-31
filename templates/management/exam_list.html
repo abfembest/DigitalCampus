@@ -84,12 +84,12 @@
     {% comment %} Exams Table {% endcomment %}
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-base min-w-[640px]">
+            <table class="table-card w-full text-base min-w-[640px]">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-200">
                         <th class="text-left px-5 py-4 font-semibold text-gray-500 text-sm uppercase tracking-wider whitespace-nowrap">Ref / Title</th>
-                        <th class="text-left px-5 py-4 font-semibold text-gray-500 text-sm uppercase tracking-wider whitespace-nowrap hidden md:table-cell">LMS Course</th>
-                        <th class="text-left px-5 py-4 font-semibold text-gray-500 text-sm uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">Academic Link</th>
+                        <th class="text-left px-5 py-4 font-semibold text-gray-500 text-sm uppercase tracking-wider whitespace-nowrap">LMS Course</th>
+                        <th class="text-left px-5 py-4 font-semibold text-gray-500 text-sm uppercase tracking-wider whitespace-nowrap">Academic Link</th>
                         <th class="text-left px-5 py-4 font-semibold text-gray-500 text-sm uppercase tracking-wider whitespace-nowrap">Date / Time</th>
                         <th class="text-left px-5 py-4 font-semibold text-gray-500 text-sm uppercase tracking-wider whitespace-nowrap">Status</th>
                         <th class="text-right px-5 py-4 font-semibold text-gray-500 text-sm uppercase tracking-wider whitespace-nowrap">Actions</th>
@@ -100,7 +100,7 @@
                     <tr class="hover:bg-gray-50/60 transition-colors group {% if not exam.is_active %}opacity-60{% endif %}">
 
                         {% comment %} Ref / Title {% endcomment %}
-                        <td class="px-5 py-4 max-w-[240px]">
+                        <td class="px-5 py-4 max-w-[240px]" data-label="Ref / Title">
                             <div class="flex items-start gap-3">
                                 <div class="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-primary-100 transition-colors">
                                     <i class="fas fa-file-alt text-primary-500"></i>
@@ -119,7 +119,7 @@
                         </td>
 
                         {% comment %} LMS Course — exam.course is FK to LMSCourse {% endcomment %}
-                        <td class="px-5 py-4 hidden md:table-cell max-w-[180px]">
+                        <td class="px-5 py-4 max-w-[180px]" data-label="LMS Course">
                             <span class="text-base text-gray-700 font-medium truncate block">{{ exam.course.title }}</span>
                             {% if exam.course.session %}
                             <span class="text-xs text-gray-400 whitespace-nowrap">{{ exam.course.session.name }}</span>
@@ -127,7 +127,7 @@
                         </td>
 
                         {% comment %} Academic Link — derived via exam.course.academic_course (NOT exam.academic_session) {% endcomment %}
-                        <td class="px-5 py-4 hidden lg:table-cell">
+                        <td class="px-5 py-4" data-label="Academic Link">
                             {% if exam.course.academic_course %}
                             <span class="inline-flex items-center gap-1.5 text-sm px-2.5 py-1 bg-primary-50 text-primary-700 border border-primary-100 rounded-full font-semibold whitespace-nowrap">
                                 <i class="fas fa-link text-xs"></i>{{ exam.course.academic_course.code }}
@@ -138,7 +138,7 @@
                         </td>
 
                         {% comment %} Date / Time — uses start_datetime & end_datetime (DateTimeFields) {% endcomment %}
-                        <td class="px-5 py-4 whitespace-nowrap">
+                        <td class="px-5 py-4 whitespace-nowrap" data-label="Date / Time">
                             <div class="text-base font-semibold text-gray-800">{{ exam.start_datetime|date:"d M Y" }}</div>
                             <div class="text-sm text-gray-400 mt-0.5 tabular-nums">
                                 <i class="fas fa-clock mr-1 opacity-60"></i>{{ exam.start_datetime|time:"H:i" }} – {{ exam.end_datetime|time:"H:i" }}
@@ -147,7 +147,7 @@
                         </td>
 
                         {% comment %} Status {% endcomment %}
-                        <td class="px-5 py-4 whitespace-nowrap">
+                        <td class="px-5 py-4 whitespace-nowrap" data-label="Status">
                             <div class="flex flex-col gap-1.5">
                                 {% if exam.status == 'draft' %}
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold bg-gray-100 text-gray-600 rounded-full w-fit">
@@ -184,7 +184,7 @@
                         </td>
 
                         {% comment %} Actions {% endcomment %}
-                        <td class="px-5 py-4 text-right">
+                        <td class="px-5 py-4 text-right action-buttons" data-label="Actions">
                             <div class="flex items-center justify-end gap-2 flex-nowrap">
                                 <a href="{% url 'management:admin_exam_detail' exam.slug %}"
                                    class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors shadow-sm whitespace-nowrap">

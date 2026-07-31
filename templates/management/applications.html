@@ -77,7 +77,7 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table id="applicationsTable" class="w-full min-w-[760px]">
+      <table id="applicationsTable" class="table-card w-full min-w-[760px]">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
             <th scope="col" class="py-3.5 px-5 text-left w-10">
@@ -99,18 +99,18 @@
           <tr class="hover:bg-gray-50 transition-colors">
 
             {% comment %} Checkbox {% endcomment %}
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Select">
               <input type="checkbox" class="application-checkbox rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 value="{{ application.id }}" aria-label="Select application {{ application.application_id }}">
             </td>
 
             {% comment %} Application ID {% endcomment %}
-            <td class="py-4 px-5 whitespace-nowrap">
+            <td class="py-4 px-5 whitespace-nowrap" data-label="Application ID">
               <span class="font-mono text-md font-semibold text-primary-600">{{ application.application_id }}</span>
             </td>
 
             {% comment %} Applicant {% endcomment %}
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Applicant">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-primary-100 text-primary-600 font-bold flex items-center justify-center flex-shrink-0 text-md select-none">
                   {{ application.first_name|slice:":1" }}{{ application.last_name|slice:":1" }}
@@ -123,19 +123,19 @@
             </td>
 
             {% comment %} Program — correct fields: program.name and program.get_degree_level_display {% endcomment %}
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Program">
               <p class="text-md font-semibold text-gray-800 whitespace-nowrap">{{ application.program.name|default:"—" }}</p>
               <p class="text-md text-gray-500 whitespace-nowrap">{{ application.program.get_degree_level_display|default:"—" }}</p>
             </td>
 
             {% comment %} Date Applied {% endcomment %}
-            <td class="py-4 px-5 whitespace-nowrap">
+            <td class="py-4 px-5 whitespace-nowrap" data-label="Date Applied">
               <p class="text-md font-semibold text-gray-800">{{ application.created_at|date:"M d, Y" }}</p>
               <p class="text-md text-gray-500">{{ application.created_at|date:"g:i A" }}</p>
             </td>
 
             {% comment %} Status — all spans properly closed; correct status values from model {% endcomment %}
-            <td class="py-4 px-5 whitespace-nowrap">
+            <td class="py-4 px-5 whitespace-nowrap" data-label="Status">
               {% if application.status == 'approved' %}
                 {% if application.can_access_student_portal %}
                   <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-md font-medium bg-purple-100 text-purple-800">
@@ -178,7 +178,7 @@
             </td>
 
             {% comment %} Action {% endcomment %}
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Action">
               <a href="{% url 'management:application_detail' application.application_id %}"
                 class="inline-flex items-center gap-1.5 px-3 py-2 text-md text-primary-600 hover:text-primary-800 hover:bg-primary-50 rounded-lg transition-colors font-medium"
                 title="View details" aria-label="View application {{ application.application_id }}">

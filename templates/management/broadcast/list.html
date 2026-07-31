@@ -9,7 +9,7 @@
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
-            <h1 class="text-3xl font-bold text-gray-900 font-display">Broadcast Center</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 font-display">Broadcast Center</h1>
             <p class="text-gray-600 mt-1">Send bulk emails to filtered recipients</p>
         </div>
         {% if permissions.communications.can_create %}
@@ -176,6 +176,15 @@
                             </div>
                         </td>
                     </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-16 text-center">
+                            <div class="text-gray-400">
+                                <i class="fas fa-bullhorn text-5xl mb-3 block" aria-hidden="true"></i>
+                                <p class="font-medium text-gray-600">No broadcasts found</p>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -184,10 +193,10 @@
 </div>
 
 <!-- View Details Modal - Enhanced -->
-<div id="viewModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+<div id="viewModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-stretch sm:items-center justify-center sm:p-3">
+    <div class="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-6xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
         <!-- Modal Header -->
-        <div class="bg-gradient-to-r from-primary-500 to-secondary-500 p-6">
+        <div class="bg-gradient-to-r from-primary-500 to-secondary-500 p-4 sm:p-6 shrink-0">
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-2xl font-bold text-white flex items-center">
@@ -211,7 +220,7 @@
             </div>
         </div>
         
-        <div class="p-6 space-y-6">
+        <div class="p-4 sm:p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
             <!-- Quick Stats Bar -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
@@ -426,129 +435,130 @@
                 </div>
             </div>
 
-            <!-- Action Buttons Footer -->
-            <div class="flex items-center justify-between pt-4 border-t-2 border-gray-200">
-                <button onclick="closeViewModal()" 
-                        class="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium">
-                    <i class="fas fa-times mr-2"></i>
-                    Close
-                </button>
-                <div id="viewModalActions" class="flex space-x-3">
-                    <!-- Action buttons populated via JS -->
-                </div>
+        </div>
+
+        <!-- Action Buttons Footer -->
+        <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-t-2 border-gray-200 shrink-0">
+            <button onclick="closeViewModal()"
+                    class="w-full sm:w-auto px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium">
+                <i class="fas fa-times mr-2"></i>
+                Close
+            </button>
+            <div id="viewModalActions" class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <!-- Action buttons populated via JS -->
             </div>
         </div>
     </div>
 </div>
 
 <!-- Send Confirmation Modal -->
-<div id="sendModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="bg-gradient-to-r from-green-500 to-emerald-500 p-6">
+<div id="sendModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-stretch sm:items-center justify-center sm:p-3">
+    <div class="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+        <div class="bg-gradient-to-r from-green-500 to-emerald-500 p-4 sm:p-6 shrink-0">
             <h3 class="text-2xl font-bold text-white flex items-center">
                 <i class="fas fa-paper-plane mr-3"></i>
                 Send Broadcast
             </h3>
         </div>
-        
-        <div class="p-6">
-            <!-- Warning -->
-            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg mb-6">
-                <div class="flex items-start">
-                    <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3 mt-1"></i>
-                    <div>
-                        <p class="text-sm font-medium text-yellow-900">Important: Review Before Sending</p>
-                        <p class="text-sm text-yellow-700 mt-1">
-                            This will send emails to <strong id="sendRecipientCount"></strong> recipient(s). 
-                            This action cannot be undone.
-                        </p>
+
+        <form id="sendForm" class="flex flex-col flex-1 min-h-0">
+            {% csrf_token %}
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
+                <!-- Warning -->
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg mb-6">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3 mt-1"></i>
+                        <div>
+                            <p class="text-sm font-medium text-yellow-900">Important: Review Before Sending</p>
+                            <p class="text-sm text-yellow-700 mt-1">
+                                This will send emails to <strong id="sendRecipientCount"></strong> recipient(s).
+                                This action cannot be undone.
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Broadcast Info -->
-            <div class="mb-6">
-                <h4 class="font-semibold text-gray-900 mb-2">Subject:</h4>
-                <p id="sendSubject" class="text-gray-700 p-3 bg-gray-50 rounded-lg"></p>
-            </div>
-
-            <!-- Confirmation -->
-            <form id="sendForm">
-                {% csrf_token %}
+                <!-- Broadcast Info -->
                 <div class="mb-6">
+                    <h4 class="font-semibold text-gray-900 mb-2">Subject:</h4>
+                    <p id="sendSubject" class="text-gray-700 p-3 bg-gray-50 rounded-lg"></p>
+                </div>
+
+                <!-- Confirmation -->
+                <div class="mb-0">
                     <label class="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" id="confirmSend" 
+                        <input type="checkbox" id="confirmSend"
                                class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-2 focus:ring-green-500">
                         <span class="text-sm font-medium text-gray-700">
                             I confirm I want to send this broadcast to all recipients
                         </span>
                     </label>
                 </div>
+            </div>
 
-                <!-- Buttons -->
-                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <button type="button" 
-                            onclick="closeSendModal()"
-                            class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium">
-                        <i class="fas fa-times mr-2"></i>
-                        Cancel
-                    </button>
-                    <button type="button" 
-                            id="sendButton"
-                            onclick="submitSend()"
-                            disabled
-                            class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-paper-plane mr-2"></i>
-                        Send Now
-                    </button>
-                </div>
-            </form>
-        </div>
+            <!-- Buttons -->
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-200 shrink-0">
+                <button type="button"
+                        onclick="closeSendModal()"
+                        class="w-full sm:w-auto px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium">
+                    <i class="fas fa-times mr-2"></i>
+                    Cancel
+                </button>
+                <button type="button"
+                        id="sendButton"
+                        onclick="submitSend()"
+                        disabled
+                        class="w-full sm:w-auto px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Send Now
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="bg-gradient-to-r from-red-500 to-rose-500 p-6">
+<div id="deleteModal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-stretch sm:items-center justify-center sm:p-3">
+    <div class="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+        <div class="bg-gradient-to-r from-red-500 to-rose-500 p-4 sm:p-6 shrink-0">
             <h3 class="text-2xl font-bold text-white flex items-center">
                 <i class="fas fa-trash-alt mr-3"></i>
                 Delete Broadcast
             </h3>
         </div>
-        
-        <div class="p-6">
-            <!-- Warning -->
-            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-6">
-                <div class="flex items-start">
-                    <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3 mt-1"></i>
-                    <div>
-                        <p class="text-sm font-medium text-red-900">Warning: Permanent Action</p>
-                        <p class="text-sm text-red-700 mt-1">
-                            This will permanently delete the broadcast. This action cannot be undone.
-                        </p>
+
+        <form id="deleteForm" class="flex flex-col flex-1 min-h-0">
+            {% csrf_token %}
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
+                <!-- Warning -->
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-6">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3 mt-1"></i>
+                        <div>
+                            <p class="text-sm font-medium text-red-900">Warning: Permanent Action</p>
+                            <p class="text-sm text-red-700 mt-1">
+                                This will permanently delete the broadcast. This action cannot be undone.
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Broadcast Info -->
-            <div class="mb-6 space-y-3">
-                <div>
-                    <h4 class="font-semibold text-gray-900 text-sm">Subject:</h4>
-                    <p id="deleteSubject" class="text-gray-700 p-3 bg-gray-50 rounded-lg mt-1"></p>
+                <!-- Broadcast Info -->
+                <div class="mb-6 space-y-3">
+                    <div>
+                        <h4 class="font-semibold text-gray-900 text-sm">Subject:</h4>
+                        <p id="deleteSubject" class="text-gray-700 p-3 bg-gray-50 rounded-lg mt-1"></p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-900 text-sm">Recipients:</h4>
+                        <p id="deleteRecipientCount" class="text-gray-700 p-3 bg-gray-50 rounded-lg mt-1"></p>
+                    </div>
                 </div>
-                <div>
-                    <h4 class="font-semibold text-gray-900 text-sm">Recipients:</h4>
-                    <p id="deleteRecipientCount" class="text-gray-700 p-3 bg-gray-50 rounded-lg mt-1"></p>
-                </div>
-            </div>
 
-            <!-- Confirmation -->
-            <form id="deleteForm">
-                {% csrf_token %}
+                <!-- Confirmation -->
                 <div class="mb-6">
                     <label class="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" id="confirmDelete" 
+                        <input type="checkbox" id="confirmDelete"
                                class="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-2 focus:ring-red-500">
                         <span class="text-sm font-medium text-gray-700">
                             I understand this action cannot be undone
@@ -556,36 +566,36 @@
                     </label>
                 </div>
 
-                <div class="mb-6">
+                <div class="mb-0">
                     <label for="confirmText" class="block text-sm font-semibold text-gray-700 mb-2">
                         Type "DELETE" to confirm
                     </label>
-                    <input type="text" 
-                           id="confirmText" 
+                    <input type="text"
+                           id="confirmText"
                            required
                            placeholder="Type DELETE in capital letters"
                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
                 </div>
+            </div>
 
-                <!-- Buttons -->
-                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <button type="button" 
-                            onclick="closeDeleteModal()"
-                            class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium">
-                        <i class="fas fa-times mr-2"></i>
-                        Cancel
-                    </button>
-                    <button type="button" 
-                            id="deleteButton"
-                            onclick="submitDelete()"
-                            disabled
-                            class="px-8 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-trash-alt mr-2"></i>
-                        Delete Broadcast
-                    </button>
-                </div>
-            </form>
-        </div>
+            <!-- Buttons -->
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-4 border-t border-gray-200 shrink-0">
+                <button type="button"
+                        onclick="closeDeleteModal()"
+                        class="w-full sm:w-auto px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium">
+                    <i class="fas fa-times mr-2"></i>
+                    Cancel
+                </button>
+                <button type="button"
+                        id="deleteButton"
+                        onclick="submitDelete()"
+                        disabled
+                        class="w-full sm:w-auto px-8 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all shadow-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-trash-alt mr-2"></i>
+                    Delete Broadcast
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
@@ -623,7 +633,8 @@ $(document).ready(function() {
         order: [[4, 'desc']],
         language: {
             search: "_INPUT_",
-            searchPlaceholder: "Search broadcasts..."
+            searchPlaceholder: "Search broadcasts...",
+            emptyTable: "No broadcasts found"
         },
         dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-4"lf>rtip',
         buttons: ['copy', 'csv', 'excel', 'pdf', 'print']

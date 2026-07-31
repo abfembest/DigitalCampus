@@ -337,7 +337,7 @@
                     {% endif %}
                 </div>
                 <div class="p-5">
-                    <div class="grid grid-cols-3 gap-4 mb-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                         <div class="bg-primary-50 border border-primary-100 rounded-xl p-4 text-center">
                             {% comment %} active_question_count is a computed @property {% endcomment %}
                             <div class="text-2xl font-bold text-primary-700">{{ exam.active_question_count }}</div>
@@ -538,9 +538,9 @@
 {% comment %} ════ MODALS ════ {% endcomment %}
 
 {% comment %} Approve Modal {% endcomment %}
-<div id="approveModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay bg-black/50">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+<div id="approveModal" class="hidden fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-3 modal-overlay bg-black/50">
+    <div class="bg-white sm:rounded-2xl shadow-2xl w-full sm:max-w-md h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+        <div class="px-4 sm:px-6 py-5 border-b border-gray-100 flex items-center gap-3 shrink-0">
             <div class="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
                 <i class="fas fa-check-circle text-green-600"></i>
             </div>
@@ -549,18 +549,18 @@
                 <p class="text-xs text-gray-500 mt-0.5">This allows the exam to be published for students.</p>
             </div>
         </div>
-        <form method="post" action="{% url 'management:admin_exam_approve' exam.slug %}">
+        <form method="post" action="{% url 'management:admin_exam_approve' exam.slug %}" class="flex flex-col flex-1 min-h-0">
             {% csrf_token %}
-            <div class="px-6 py-5">
+            <div class="px-4 sm:px-6 py-5 overflow-y-auto flex-1 min-h-0">
                 <label class="block text-xs font-semibold text-gray-600 mb-2">Approval Note <span class="font-normal text-gray-400">(optional)</span></label>
                 <textarea name="note" rows="3" placeholder="Add a note to log with this approval…"
                           class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400 resize-none transition"></textarea>
             </div>
-            <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
+            <div class="px-4 sm:px-6 py-4 bg-gray-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-gray-100 shrink-0">
                 <button type="button" onclick="closeModal('approveModal')"
-                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
+                        class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
                 <button type="submit"
-                        class="px-5 py-2.5 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors shadow-sm">
+                        class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-check mr-1.5"></i> Confirm Approval
                 </button>
             </div>
@@ -569,9 +569,9 @@
 </div>
 
 {% comment %} Reject Modal {% endcomment %}
-<div id="rejectModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay bg-black/50">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+<div id="rejectModal" class="hidden fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-3 modal-overlay bg-black/50">
+    <div class="bg-white sm:rounded-2xl shadow-2xl w-full sm:max-w-md h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+        <div class="px-4 sm:px-6 py-5 border-b border-gray-100 flex items-center gap-3 shrink-0">
             <div class="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
                 <i class="fas fa-times-circle text-red-600"></i>
             </div>
@@ -580,19 +580,19 @@
                 <p class="text-xs text-gray-500 mt-0.5">The instructor will be notified to amend and resubmit.</p>
             </div>
         </div>
-        <form method="post" action="{% url 'management:admin_exam_reject' exam.slug %}">
+        <form method="post" action="{% url 'management:admin_exam_reject' exam.slug %}" class="flex flex-col flex-1 min-h-0">
             {% csrf_token %}
-            <div class="px-6 py-5">
+            <div class="px-4 sm:px-6 py-5 overflow-y-auto flex-1 min-h-0">
                 <label class="block text-xs font-semibold text-gray-700 mb-2">Rejection Reason <span class="text-red-500">*</span></label>
                 <textarea name="reason" rows="4" required
                           placeholder="Explain clearly what needs to be corrected before resubmission…"
                           class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none transition"></textarea>
             </div>
-            <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
+            <div class="px-4 sm:px-6 py-4 bg-gray-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-gray-100 shrink-0">
                 <button type="button" onclick="closeModal('rejectModal')"
-                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
+                        class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
                 <button type="submit"
-                        class="px-5 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors shadow-sm">
+                        class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-times mr-1.5"></i> Confirm Rejection
                 </button>
             </div>
@@ -605,9 +605,9 @@
   The admin_exam_publish view only changes exam.status = PUBLISHED.
   No inputs for visibility windows needed; they are auto-computed from start/end_datetime.
 {% endcomment %}
-<div id="publishModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay bg-black/50">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div class="px-6 py-5 border-b border-gray-100 flex items-center gap-3">
+<div id="publishModal" class="hidden fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-3 modal-overlay bg-black/50">
+    <div class="bg-white sm:rounded-2xl shadow-2xl w-full sm:max-w-md h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+        <div class="px-4 sm:px-6 py-5 border-b border-gray-100 flex items-center gap-3 shrink-0">
             <div class="w-9 h-9 rounded-xl bg-primary-100 flex items-center justify-center shrink-0">
                 <i class="fas fa-globe text-primary-600"></i>
             </div>
@@ -616,9 +616,9 @@
                 <p class="text-xs text-gray-500 mt-0.5">Students can see this exam within the auto-computed visibility window.</p>
             </div>
         </div>
-        <form method="post" action="{% url 'management:admin_exam_publish' exam.slug %}">
+        <form method="post" action="{% url 'management:admin_exam_publish' exam.slug %}" class="flex flex-col flex-1 min-h-0">
             {% csrf_token %}
-            <div class="px-6 py-5 space-y-4">
+            <div class="px-4 sm:px-6 py-5 space-y-4 overflow-y-auto flex-1 min-h-0">
                 {% comment %} Visibility window is auto-computed; show it for confirmation {% endcomment %}
                 <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 space-y-1">
                     <div class="font-semibold flex items-center gap-2"><i class="fas fa-info-circle"></i> Auto-computed Visibility Window</div>
@@ -632,11 +632,11 @@
                               class="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none transition"></textarea>
                 </div>
             </div>
-            <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
+            <div class="px-4 sm:px-6 py-4 bg-gray-50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 border-t border-gray-100 shrink-0">
                 <button type="button" onclick="closeModal('publishModal')"
-                        class="px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
+                        class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors">Cancel</button>
                 <button type="submit"
-                        class="px-5 py-2.5 text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors shadow-sm">
+                        class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors shadow-sm">
                     <i class="fas fa-globe mr-1.5"></i> Publish Now
                 </button>
             </div>

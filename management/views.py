@@ -3299,6 +3299,7 @@ def departments_list(request):
         'active_departments': Department.objects.filter(is_active=True).count(),
         'total_faculties': Faculty.objects.count(),
         'total_programs': Program.objects.count(),
+        'create_form': DepartmentForm(),
     }
     return render(request, 'management/departments_list.html', context)
 
@@ -3306,24 +3307,40 @@ def departments_list(request):
 @login_required
 @user_passes_test(is_admin)
 def department_create(request):
-    if request.method == 'POST':
-        if not _has_permission(request, 'academics', 'can_create'):
-            messages.error(request, 'You do not have permission to create departments.')
-            return redirect('management:departments_list')
+    """
+    "Add Department" is a modal on departments_list.html, not a standalone
+    page — this view exists purely to handle that modal's POST. On success
+    it redirects to departments_list as before; the modal's JS detects the
+    redirect and reloads. On validation failure it re-renders just the
+    fields partial (no page chrome), which the modal's JS swaps in without
+    a full navigation. A direct GET (no modal, e.g. a stale bookmark) just
+    bounces to the list — there's no dedicated create page to show.
+    """
+    if request.method != 'POST':
+        return redirect('management:departments_list')
 
-        form = DepartmentForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Department created successfully.')
-            return redirect('management:departments_list')
-    else:
-        form = DepartmentForm()
-    return render(request, 'management/department_form.html', {'form': form})
+    if not _has_permission(request, 'academics', 'can_create'):
+        messages.error(request, 'You do not have permission to create departments.')
+        return redirect('management:departments_list')
+
+    form = DepartmentForm(request.POST)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Department created successfully.')
+        return redirect('management:departments_list')
+
+    return render(request, 'management/_department_form_fields.html', {'form': form})
 
 
 @login_required
 @user_passes_test(is_admin)
 def department_edit(request, pk):
+    """
+    "Edit" is the same modal, populated by fetching this view's GET response
+    (the fields partial, pre-filled from the instance) and swapping it into
+    the modal body — mirroring department_create's POST-invalid partial
+    re-render. POST behaves like the old standalone-page view.
+    """
     dept = get_object_or_404(Department, pk=pk)
     if request.method == 'POST':
         if not _has_permission(request, 'academics', 'can_edit'):
@@ -3337,7 +3354,7 @@ def department_edit(request, pk):
             return redirect('management:departments_list')
     else:
         form = DepartmentForm(instance=dept)
-    return render(request, 'management/department_form.html', {'form': form, 'department': dept})
+    return render(request, 'management/_department_form_fields.html', {'form': form, 'department': dept})
 
 
 @login_required
@@ -3363,7 +3380,9 @@ def department_delete(request, pk):
         messages.success(request, f'Department "{dept_name}" deleted successfully.')
         return redirect('management:departments_list')
 
-    return render(request, 'management/department_delete.html', {'department': dept})
+    # No dedicated confirm page any more — deletion is confirmed via the
+    # SweetAlert dialog on departments_list.html, which POSTs directly here.
+    return redirect('management:departments_list')
 
 
 # ===========================================================================

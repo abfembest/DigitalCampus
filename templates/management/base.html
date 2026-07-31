@@ -1791,6 +1791,7 @@
 
             <!-- Main Content -->
             <main class="flex-1 p-3 sm:p-4 md:p-6">
+            <div class="max-w-7xl mx-auto w-full">
 
                 {# ── Student Academic Status Bar — students only ── #}
                 {% if request.user.is_authenticated and request.user.profile.role == 'student' %}
@@ -1906,6 +1907,7 @@
                 {# ── End Student Academic Status Bar ── #}
 
                 {% block content %}{% endblock %}
+            </div>
             </main>
             {% include 'force_password_modal.html' %}
 
@@ -1923,8 +1925,8 @@
     {% with cs=current_session %}
 
     <!-- Session Automation Reminder Modal -->
-    <div id="sessionReminderModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-[99999]">
-        <div class="bg-white rounded-3xl max-w-lg w-full mx-4 p-10 text-center shadow-2xl">
+    <div id="sessionReminderModal" class="hidden fixed inset-0 bg-black/70 flex items-stretch sm:items-center justify-center sm:p-4 z-[99999]">
+        <div class="bg-white sm:rounded-3xl w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto p-6 sm:p-10 text-center shadow-2xl">
             <i class="fas fa-calendar-check text-7xl text-amber-500 mb-6"></i>
             <h3 class="text-3xl font-bold mb-3">Time to update Academic Session?</h3>
 
@@ -1948,19 +1950,19 @@
 
             <p class="text-gray-500 mb-8 text-sm">Create a new session or update the current one's term dates.</p>
 
-            <div class="flex flex-wrap gap-4 justify-center">
+            <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 justify-center">
                 <a href="{% url 'management:academic_sessions_list' %}"
-                class="px-8 py-4 bg-primary-600 text-white rounded-2xl font-semibold text-base hover:bg-primary-700 transition-colors">
+                class="w-full sm:w-auto px-8 py-4 bg-primary-600 text-white rounded-2xl font-semibold text-base hover:bg-primary-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>Create New Session
                 </a>
                 {% if cs %}
                 <a href="{% url 'management:academic_sessions_list' %}"
-                class="px-8 py-4 bg-amber-500 text-white rounded-2xl font-semibold text-base hover:bg-amber-600 transition-colors">
+                class="w-full sm:w-auto px-8 py-4 bg-amber-500 text-white rounded-2xl font-semibold text-base hover:bg-amber-600 transition-colors">
                     <i class="fas fa-edit mr-2"></i>Edit Current Session
                 </a>
                 {% endif %}
                 <button onclick="dismissSessionReminder()"
-                        class="px-8 py-4 border-2 border-gray-300 rounded-2xl font-semibold text-base hover:bg-gray-50 transition-colors">
+                        class="w-full sm:w-auto px-8 py-4 border-2 border-gray-300 rounded-2xl font-semibold text-base hover:bg-gray-50 transition-colors">
                     Remind me later
                 </button>
             </div>

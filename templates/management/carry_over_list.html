@@ -22,7 +22,7 @@
   {# ─── Filters ─────────────────────────────────────────────────────────────── #}
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
     <form method="get" class="flex flex-col sm:flex-row gap-3">
-      <select name="program_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+      <select name="program_id" class="searchable-select border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none" data-ss-placeholder="All Programs">
         <option value="">All Programs</option>
         {% for p in programs %}
         <option value="{{ p.pk }}" {% if program_id == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.name }}</option>
@@ -41,7 +41,7 @@
 
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] text-sm">
+      <table class="table-card w-full min-w-[760px] text-sm">
         <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
           <tr>
             <th class="py-3 px-5 text-left font-semibold">Student</th>
@@ -55,21 +55,21 @@
         <tbody class="divide-y divide-gray-100">
           {% for rec in records %}
           <tr class="hover:bg-gray-50 transition-colors">
-            <td class="py-3 px-5">
+            <td class="py-3 px-5" data-label="Student">
               <div class="font-medium text-gray-800">{{ rec.student.get_full_name|default:rec.student.username }}</div>
               <div class="text-xs text-gray-400">{{ rec.student.username }}</div>
             </td>
-            <td class="py-3 px-5">{{ rec.course.code }} — {{ rec.course.name }}</td>
-            <td class="py-3 px-5 text-gray-500">{{ rec.first_failed_session|default:"—" }}</td>
-            <td class="py-3 px-5">{{ rec.attempts }}</td>
-            <td class="py-3 px-5">
+            <td class="py-3 px-5" data-label="Course">{{ rec.course.code }} — {{ rec.course.name }}</td>
+            <td class="py-3 px-5 text-gray-500" data-label="First Failed">{{ rec.first_failed_session|default:"—" }}</td>
+            <td class="py-3 px-5" data-label="Attempts">{{ rec.attempts }}</td>
+            <td class="py-3 px-5" data-label="Status">
               {% if rec.is_cleared %}
               <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Cleared</span>
               {% else %}
               <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">Open</span>
               {% endif %}
             </td>
-            <td class="py-3 px-5">
+            <td class="py-3 px-5" data-label="Actions">
               {% if not rec.is_cleared and permissions.academic_progression.can_edit %}
               <form method="post" class="inline">
                 {% csrf_token %}

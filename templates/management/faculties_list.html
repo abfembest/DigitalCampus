@@ -16,7 +16,19 @@
     .modal-tabs-row > .modal-tab { scroll-snap-align: start; }
     .faculty-modal-shell { overscroll-behavior: contain; }
     @media (min-width: 640px) { .modal-tab { padding: .7rem 1rem; font-size: .75rem; } }
-    @media (max-width: 639px) { .modal-tabs-row { padding: 0 .25rem .25rem; } .modal-tabs-row > .modal-tab { min-width: max-content; } }
+    @media (max-width: 639px) {
+        .modal-tabs-row { flex-direction: column; overflow-x: visible; overflow-y: visible; padding: .375rem; gap: .25rem; }
+        .modal-tabs-row > .modal-tab { width: 100%; justify-content: flex-start; border-radius: .5rem; border-bottom: none; }
+        .modal-tabs-row > .modal-tab.active-tab { background: #eef2ff; }
+    }
+    .img-preview-wrap { position: relative; }
+    .img-preview-remove {
+        position: absolute; top: .35rem; right: .35rem; width: 1.5rem; height: 1.5rem;
+        display: flex; align-items: center; justify-content: center; border-radius: 9999px;
+        background: rgba(17,24,39,.65); color: #fff; font-size: .7rem; border: none; cursor: pointer;
+        transition: background .15s;
+    }
+    .img-preview-remove:hover { background: rgba(220,38,38,.9); }
     .field-label { display: block; font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; margin-bottom: .3rem; }
     .field-error { color: #ef4444; font-size: .75rem; margin-top: .2rem; }
     #facultyForm input[type=text], #facultyForm input[type=number],
@@ -90,7 +102,7 @@
         <span class="text-xs text-gray-400">{{ faculties|length }} record{{ faculties|length|pluralize }}</span>
     </div>
     <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="table-card w-full text-sm">
             <thead>
                 <tr class="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     <th class="px-4 py-3 text-left w-12">#</th>
@@ -104,10 +116,10 @@
             <tbody class="divide-y divide-gray-100">
                 {% for f in faculties %}
                 <tr class="hover:bg-gray-50/60 transition-colors">
-                    <td class="px-4 py-3.5">
+                    <td class="px-4 py-3.5" data-label="#">
                         <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-500">{{ forloop.counter }}</span>
                     </td>
-                    <td class="px-4 py-3.5">
+                    <td class="px-4 py-3.5" data-label="Faculty">
                         <div class="flex items-center gap-3">
                             <div class="w-9 h-9 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center flex-shrink-0">
                                 <i data-lucide="{{ f.icon }}" class="w-4 h-4 text-primary-600"></i>
@@ -118,13 +130,13 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 py-3.5">
+                    <td class="px-4 py-3.5" data-label="Code">
                         <span class="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-mono font-semibold">{{ f.code }}</span>
                     </td>
-                    <td class="px-4 py-3.5 hidden md:table-cell text-gray-600">
+                    <td class="px-4 py-3.5 hidden md:table-cell text-gray-600" data-label="Depts">
                         {{ f.departments.count }} <span class="text-gray-400 text-xs">dept{{ f.departments.count|pluralize }}</span>
                     </td>
-                    <td class="px-4 py-3.5">
+                    <td class="px-4 py-3.5" data-label="Status">
                         {% if f.is_active %}
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-semibold border border-green-100">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
@@ -135,7 +147,7 @@
                         </span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-3.5">
+                    <td class="px-4 py-3.5" data-label="Actions">
                         <div class="flex items-center justify-end gap-1">
                             {% comment %}<a href="{% url 'eduweb:faculty_detail' f.slug %}" target="_blank" class="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all" title="View"><i class="fas fa-eye text-sm"></i></a>{% endcomment %}
                             {% if permissions.academics.can_edit %}
@@ -172,10 +184,11 @@
 </div>
 
 <div id="facultyModal"
-     class="hidden fixed inset-0 z-[9999] items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-5"
+     class="hidden fixed inset-0 z-[9999] items-stretch sm:items-center justify-center sm:p-3"
+     style="background: rgba(15,23,42,.55);"
      role="dialog" aria-modal="true">
 
-    <div class="faculty-modal-shell relative bg-white w-full max-w-2xl sm:max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+    <div class="faculty-modal-shell relative bg-white w-full max-w-2xl sm:max-w-3xl sm:rounded-2xl shadow-2xl flex flex-col h-full sm:h-auto sm:max-h-[97vh] overflow-hidden">
 
         {# Header #}
         <div class="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 sm:py-4 bg-gradient-to-r from-primary-600 to-secondary-500 flex-shrink-0">
@@ -203,7 +216,7 @@
         </div>
 
         {# Form #}
-        <form id="facultyForm" method="post" enctype="multipart/form-data" action="{% url 'management:faculty_create' %}">
+        <form id="facultyForm" method="post" enctype="multipart/form-data" action="{% url 'management:faculty_create' %}" class="flex flex-col flex-1 min-h-0">
             {% csrf_token %}
 
             {% if form.non_field_errors %}
@@ -358,8 +371,9 @@
                                 </div>
                                 {{ form.hero_image }}
                             </div>
-                            <div id="heroPreviewWrap" class="mt-2 hidden">
+                            <div id="heroPreviewWrap" class="img-preview-wrap mt-2 hidden">
                                 <img id="heroPreviewImg" src="" alt="Hero" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                <button type="button" class="img-preview-remove" aria-label="Remove hero image" onclick="clearFilePreview('id_hero_image','heroPreviewWrap','heroFileName','Choose hero image…')"><i class="fas fa-times"></i></button>
                             </div>
                             {% if form.hero_image.errors %}<p class="field-error">{{ form.hero_image.errors.0 }}</p>{% endif %}
                         </div>
@@ -372,8 +386,9 @@
                                 </div>
                                 {{ form.about_image }}
                             </div>
-                            <div id="aboutPreviewWrap" class="mt-2 hidden">
+                            <div id="aboutPreviewWrap" class="img-preview-wrap mt-2 hidden">
                                 <img id="aboutPreviewImg" src="" alt="About" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                <button type="button" class="img-preview-remove" aria-label="Remove about image" onclick="clearFilePreview('id_about_image','aboutPreviewWrap','aboutFileName','Choose about image…')"><i class="fas fa-times"></i></button>
                             </div>
                             {% if form.about_image.errors %}<p class="field-error">{{ form.about_image.errors.0 }}</p>{% endif %}
                         </div>
@@ -392,8 +407,9 @@
                                     </div>
                                     {{ form.gallery_image_1 }}
                                 </div>
-                                <div id="gallery-preview-1" class="mt-2 hidden">
+                                <div id="gallery-preview-1" class="img-preview-wrap mt-2 hidden">
                                     <img id="galleryPreviewImg1" src="" alt="Gallery image 1" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                    <button type="button" class="img-preview-remove" aria-label="Remove gallery image 1" onclick="clearFilePreview('id_gallery_image_1','gallery-preview-1','galleryFileName1','Choose image…')"><i class="fas fa-times"></i></button>
                                 </div>
                                 {% if form.gallery_image_1.errors %}<p class="field-error">{{ form.gallery_image_1.errors.0 }}</p>{% endif %}
                             </div>
@@ -406,8 +422,9 @@
                                     </div>
                                     {{ form.gallery_image_2 }}
                                 </div>
-                                <div id="gallery-preview-2" class="mt-2 hidden">
+                                <div id="gallery-preview-2" class="img-preview-wrap mt-2 hidden">
                                     <img id="galleryPreviewImg2" src="" alt="Gallery image 2" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                    <button type="button" class="img-preview-remove" aria-label="Remove gallery image 2" onclick="clearFilePreview('id_gallery_image_2','gallery-preview-2','galleryFileName2','Choose image…')"><i class="fas fa-times"></i></button>
                                 </div>
                                 {% if form.gallery_image_2.errors %}<p class="field-error">{{ form.gallery_image_2.errors.0 }}</p>{% endif %}
                             </div>
@@ -420,8 +437,9 @@
                                     </div>
                                     {{ form.gallery_image_3 }}
                                 </div>
-                                <div id="gallery-preview-3" class="mt-2 hidden">
+                                <div id="gallery-preview-3" class="img-preview-wrap mt-2 hidden">
                                     <img id="galleryPreviewImg3" src="" alt="Gallery image 3" class="w-full max-h-24 object-cover rounded-lg border border-gray-200">
+                                    <button type="button" class="img-preview-remove" aria-label="Remove gallery image 3" onclick="clearFilePreview('id_gallery_image_3','gallery-preview-3','galleryFileName3','Choose image…')"><i class="fas fa-times"></i></button>
                                 </div>
                                 {% if form.gallery_image_3.errors %}<p class="field-error">{{ form.gallery_image_3.errors.0 }}</p>{% endif %}
                             </div>
@@ -597,6 +615,13 @@ const COLOR_BG = {
         const w = document.getElementById(wrapId);
         if (w) w.classList.add('hidden');
     }
+    window.clearFilePreview = function (inputId, wrapId, labelId, emptyLabel) {
+        const input = document.getElementById(inputId);
+        if (input) input.value = '';
+        hidePreview(wrapId);
+        const label = document.getElementById(labelId);
+        if (label) label.textContent = emptyLabel || 'Choose file…';
+    };
 
     window.openFacultyModal = function (pk) {
         const modal = document.getElementById('facultyModal');

@@ -210,7 +210,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[700px]">
+            <table class="table-card w-full min-w-[700px]">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-200">
                         <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
@@ -219,22 +219,22 @@
                         <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Status
                         </th>
-                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
+                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Started
                         </th>
-                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
+                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Submitted
                         </th>
-                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
+                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Answered
                         </th>
                         <th class="text-right px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Score
                         </th>
-                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
+                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Correct / Missed
                         </th>
-                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden xl:table-cell">
+                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Flags
                         </th>
                     </tr>
@@ -244,7 +244,7 @@
                     <tr class="hover:bg-gray-50/60 transition-colors">
 
                         {% comment %} ── Student Column ── {% endcomment %}
-                        <td class="px-5 py-4">
+                        <td class="px-5 py-4" data-label="Student">
                             <div class="flex items-center gap-3 min-w-0">
                                 <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500
                                             flex items-center justify-center text-white text-base font-bold shrink-0 select-none">
@@ -265,7 +265,7 @@
                         </td>
 
                         {% comment %} ── Status Column ── {% endcomment %}
-                        <td class="px-5 py-4">
+                        <td class="px-5 py-4" data-label="Status">
                             <div class="flex flex-col gap-1 min-w-[110px]">
                                 {% comment %}
                                   r.status values (StudentExamResponse.ATTEMPT_STATUS_CHOICES):
@@ -320,7 +320,7 @@
                         </td>
 
                         {% comment %} ── Started Column ── {% endcomment %}
-                        <td class="px-5 py-4 hidden md:table-cell">
+                        <td class="px-5 py-4" data-label="Started">
                             {% comment %}
                               exam_started_at: DateTimeField — when questions were revealed
                               (countdown hit 0). May be null if still in instructions phase.
@@ -331,24 +331,26 @@
                         </td>
 
                         {% comment %} ── Submitted Column ── {% endcomment %}
-                        <td class="px-5 py-4 hidden md:table-cell">
+                        <td class="px-5 py-4" data-label="Submitted">
                             {% comment %}
                               submitted_at: DateTimeField — when student or server submitted.
                               time_spent_seconds: PositiveIntegerField (nullable)
                               Shows total exam duration in minutes for readability.
                             {% endcomment %}
-                            <div class="text-base text-gray-600 tabular-nums whitespace-nowrap">
-                                {{ r.submitted_at|date:"d M, H:i"|default:"—" }}
+                            <div>
+                                <div class="text-base text-gray-600 tabular-nums whitespace-nowrap">
+                                    {{ r.submitted_at|date:"d M, H:i"|default:"—" }}
+                                </div>
+                                {% if r.time_spent_seconds %}
+                                <div class="text-base text-gray-400 mt-0.5 whitespace-nowrap tabular-nums">
+                                    {% widthratio r.time_spent_seconds 60 1 %} min spent
+                                </div>
+                                {% endif %}
                             </div>
-                            {% if r.time_spent_seconds %}
-                            <div class="text-base text-gray-400 mt-0.5 whitespace-nowrap tabular-nums">
-                                {% widthratio r.time_spent_seconds 60 1 %} min spent
-                            </div>
-                            {% endif %}
                         </td>
 
                         {% comment %} ── Answered Column ── {% endcomment %}
-                        <td class="px-5 py-4 text-center hidden lg:table-cell">
+                        <td class="px-5 py-4 text-center" data-label="Answered">
                             {% comment %}
                               questions_answered: @property → len(self.answers) dict
                               assigned_question_ids: JSONField list of ExamQuestion PKs drawn for this student
@@ -361,29 +363,31 @@
                         </td>
 
                         {% comment %} ── Score Column ── {% endcomment %}
-                        <td class="px-5 py-4 text-right">
+                        <td class="px-5 py-4 text-right" data-label="Score">
                             {% if r.score_percentage is not None %}
-                            <div class="font-bold text-base whitespace-nowrap
-                                        {% if r.passed %}text-green-600
-                                        {% elif r.passed == False %}text-red-600
-                                        {% else %}text-gray-700{% endif %}">
-                                {{ r.score_percentage|floatformat:1 }}%
+                            <div>
+                                <div class="font-bold text-base whitespace-nowrap
+                                            {% if r.passed %}text-green-600
+                                            {% elif r.passed == False %}text-red-600
+                                            {% else %}text-gray-700{% endif %}">
+                                    {{ r.score_percentage|floatformat:1 }}%
+                                </div>
+                                <div class="text-base text-gray-400 mt-0.5 tabular-nums whitespace-nowrap">
+                                    {{ r.total_score|floatformat:1 }} / {{ exam.computed_total_marks }}
+                                </div>
+                                {% if r.passed is True %}
+                                <div class="text-base text-green-500 whitespace-nowrap"><i class="fas fa-check text-xs mr-0.5"></i>Passed</div>
+                                {% elif r.passed is False %}
+                                <div class="text-base text-red-400 whitespace-nowrap"><i class="fas fa-times text-xs mr-0.5"></i>Failed</div>
+                                {% endif %}
                             </div>
-                            <div class="text-base text-gray-400 mt-0.5 tabular-nums whitespace-nowrap">
-                                {{ r.total_score|floatformat:1 }} / {{ exam.computed_total_marks }}
-                            </div>
-                            {% if r.passed is True %}
-                            <div class="text-base text-green-500 whitespace-nowrap"><i class="fas fa-check text-xs mr-0.5"></i>Passed</div>
-                            {% elif r.passed is False %}
-                            <div class="text-base text-red-400 whitespace-nowrap"><i class="fas fa-times text-xs mr-0.5"></i>Failed</div>
-                            {% endif %}
                             {% else %}
                             <span class="text-base text-gray-300">—</span>
                             {% endif %}
                         </td>
 
                         {% comment %} ── Correct / Missed Column ── {% endcomment %}
-                        <td class="px-5 py-4 text-center hidden lg:table-cell">
+                        <td class="px-5 py-4 text-center" data-label="Correct / Missed">
                             {% if r.status == 'graded' or r.status == 'submitted' %}
                             <div class="inline-flex flex-col items-center gap-1">
                                 <div class="flex items-center gap-3 whitespace-nowrap">
@@ -417,7 +421,7 @@
                         </td>
 
                         {% comment %} ── Flags Column ── {% endcomment %}
-                        <td class="px-5 py-4 text-center hidden xl:table-cell">
+                        <td class="px-5 py-4 text-center" data-label="Flags">
                             {% comment %}
                               tab_switch_count: PositiveIntegerField on StudentExamResponse
                               Counts how many times the student switched away from the exam tab.

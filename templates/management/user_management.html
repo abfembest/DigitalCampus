@@ -52,7 +52,7 @@
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
       <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
-      <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-900">User Management</h1>
       <p class="text-gray-500 mt-1 text-md">Manage all portal users, roles, and permissions</p>
     </div>
     {% if permissions.user_management.can_create %}
@@ -181,7 +181,7 @@
   {% endcomment %}
   <div class="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200" id="usersTable">
+      <table class="table-card min-w-full divide-y divide-gray-200" id="usersTable">
 
         <thead class="bg-gray-50">
           <tr>
@@ -211,13 +211,13 @@
               data-id="{{ u.id }}">
 
             {% comment %} Checkbox {% endcomment %}
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" data-label="Select">
               <input type="checkbox" class="row-checkbox w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                      value="{{ u.id }}" onchange="updateBulkBar()">
             </td>
 
             {% comment %} Avatar + name + username {% endcomment %}
-            <td class="px-4 py-3 whitespace-nowrap">
+            <td class="px-4 py-3 whitespace-nowrap" data-label="User">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-primary-100 flex items-center justify-center">
                   {% if u.profile.avatar %}
@@ -236,12 +236,12 @@
             </td>
 
             {% comment %} Email {% endcomment %}
-            <td class="px-4 py-3 whitespace-nowrap text-md text-gray-600">
+            <td class="px-4 py-3 whitespace-nowrap text-md text-gray-600" data-label="Email">
               <span class="truncate block max-w-[200px]">{{ u.email }}</span>
             </td>
 
             {% comment %} Role badge — colour coded per role {% endcomment %}
-            <td class="px-4 py-3 whitespace-nowrap">
+            <td class="px-4 py-3 whitespace-nowrap" data-label="Role">
               <span class="inline-flex items-center px-2.5 py-1 rounded-full text-md font-medium
                 {% if u.profile.role == 'admin'           %}bg-red-100    text-red-700
                 {% elif u.profile.role == 'instructor'    %}bg-purple-100 text-purple-700
@@ -256,7 +256,7 @@
             </td>
 
             {% comment %} Active / Inactive pill {% endcomment %}
-            <td class="px-4 py-3 whitespace-nowrap">
+            <td class="px-4 py-3 whitespace-nowrap" data-label="Status">
               <span class="inline-flex items-center gap-1.5 text-md font-medium
                 {% if u.is_active %}text-green-700{% else %}text-red-600{% endif %}">
                 <span class="w-2 h-2 rounded-full {% if u.is_active %}bg-green-500{% else %}bg-red-400{% endif %}"></span>
@@ -264,14 +264,14 @@
               </span>
             </td>
 
-            <td class="px-4 py-3 whitespace-nowrap text-md text-gray-500">{{ u.date_joined|date:"M d, Y" }}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-md text-gray-500" data-label="Joined">{{ u.date_joined|date:"M d, Y" }}</td>
 
-            <td class="px-4 py-3 whitespace-nowrap text-md text-gray-500">
+            <td class="px-4 py-3 whitespace-nowrap text-md text-gray-500" data-label="Last Login">
               {% if u.last_login %}{{ u.last_login|date:"M d, Y" }}{% else %}Never{% endif %}
             </td>
 
             {% comment %} Action buttons: View · Edit · Permissions · Toggle active {% endcomment %}
-            <td class="px-4 py-3 whitespace-nowrap text-right">
+            <td class="px-4 py-3 whitespace-nowrap text-right action-buttons" data-label="Actions">
               <div class="inline-flex items-center gap-0.5">
 
                 <button onclick="openViewModal({{ u.id }})"
@@ -384,18 +384,17 @@
 ════════════════════════════════════════════════════════════════
 {% endcomment %}
 <div id="createModal"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     class="hidden fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-3"
      role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
 
   {% comment %} Backdrop {% endcomment %}
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('createModal')"></div>
 
   {% comment %} Dialog panel — constrained to viewport with internal scroll {% endcomment %}
-  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col"
-       style="max-height:90dvh;overflow:hidden;">
+  <div class="relative bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden">
 
     {% comment %} Sticky header {% endcomment %}
-    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+    <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <span class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
           <i class="fas fa-user-plus text-primary-600"></i>
@@ -498,13 +497,13 @@
     </div>
 
     {% comment %} Sticky footer {% endcomment %}
-    <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 flex-shrink-0">
+    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex-shrink-0">
       <button onclick="closeModal('createModal')"
-              class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-md">
+              class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-md">
         Cancel
       </button>
       <button id="createSubmitBtn" onclick="submitCreateForm()"
-              class="px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition shadow text-md font-semibold">
+              class="w-full sm:w-auto px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition shadow text-md font-semibold">
         <i class="fas fa-user-plus mr-2"></i>Create User
       </button>
     </div>
@@ -524,16 +523,15 @@
 ════════════════════════════════════════════════════════════════
 {% endcomment %}
 <div id="editModal"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     class="hidden fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-3"
      role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
 
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('editModal')"></div>
 
-  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl flex flex-col"
-       style="max-height:90dvh;overflow:hidden;">
+  <div class="relative bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-3xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden">
 
     {% comment %} ── Fixed header ── {% endcomment %}
-    <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200 flex-shrink-0">
+    <div class="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <span class="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
           <i class="fas fa-user-edit text-amber-600 text-sm"></i>
@@ -752,13 +750,13 @@
     </div>{% comment %} /scrollable body {% endcomment %}
 
     {% comment %} ── Fixed footer ── {% endcomment %}
-    <div class="flex justify-end gap-3 px-5 py-3 bg-gray-50 border-t border-gray-200 flex-shrink-0">
+    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-200 flex-shrink-0">
       <button onclick="closeModal('editModal')"
-              class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm">
+              class="w-full sm:w-auto px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm">
         Cancel
       </button>
       <button id="editSubmitBtn" onclick="submitEditForm()"
-              class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition shadow text-sm font-semibold">
+              class="w-full sm:w-auto px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition shadow text-sm font-semibold">
         <i class="fas fa-save mr-2"></i>Save Changes
       </button>
     </div>
@@ -777,15 +775,15 @@
 ════════════════════════════════════════════════════════════════
 {% endcomment %}
 <div id="viewModal"
-     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     class="hidden fixed inset-0 z-50 flex items-stretch sm:items-center justify-center sm:p-3"
      role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
 
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('viewModal')"></div>
 
-  <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
+  <div class="relative bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-lg h-full sm:h-auto flex flex-col sm:max-h-[calc(100vh-2rem)] overflow-hidden">
 
     {% comment %} Sticky header {% endcomment %}
-    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+    <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 flex-shrink-0">
       <h2 id="viewModalTitle" class="text-xl font-bold text-gray-900">User Details</h2>
       <button onclick="closeModal('viewModal')"
               class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
@@ -795,22 +793,22 @@
     </div>
 
     {% comment %} Scrollable body — content injected by JS {% endcomment %}
-    <div id="viewModalBody" class="flex-1 overflow-y-auto p-6">
+    <div id="viewModalBody" class="flex-1 overflow-y-auto p-4 sm:p-6">
       <div class="flex items-center justify-center py-10 text-gray-400">
         <i class="fas fa-spinner fa-spin text-3xl"></i>
       </div>
     </div>
 
     {% comment %} Sticky footer {% endcomment %}
-    <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 flex-shrink-0">
+    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-200 flex-shrink-0">
       {% if permissions.user_management.can_edit %}
       <button id="viewEditBtn"
-              class="px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition text-md font-semibold">
+              class="w-full sm:w-auto px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition text-md font-semibold">
         <i class="fas fa-pen mr-2"></i>Edit User
       </button>
       {% endif %}
       <button onclick="closeModal('viewModal')"
-              class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-md">
+              class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-md">
         Close
       </button>
     </div>
@@ -923,13 +921,13 @@
       </form>
     </div>
 
-    <div class="flex justify-end gap-2 sm:gap-3 px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-200 flex-shrink-0">
+    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-200 flex-shrink-0">
       <button onclick="closeModal('permissionsModal')"
-              class="px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-xs sm:text-sm">
+              class="w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition text-xs sm:text-sm">
         Cancel
       </button>
       <button id="permSubmitBtn" onclick="submitPermissions()"
-              class="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow text-xs sm:text-sm font-semibold">
+              class="w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow text-xs sm:text-sm font-semibold">
         <i class="fas fa-save mr-1 sm:mr-2"></i>Save Permissions
       </button>
     </div>

@@ -28,7 +28,7 @@
     <form method="get" class="flex flex-col sm:flex-row gap-3 items-end">
       <div class="flex-1">
         <label class="block text-sm font-semibold text-gray-700 mb-1.5">Program</label>
-        <select name="program_id" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+        <select name="program_id" required class="searchable-select w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none" data-ss-placeholder="— Select a program —">
           <option value="">— Select a program —</option>
           {% for p in programs %}
           <option value="{{ p.pk }}" {% if selected_program.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>
@@ -37,7 +37,7 @@
       </div>
       <div class="flex-1">
         <label class="block text-sm font-semibold text-gray-700 mb-1.5">Session</label>
-        <select name="session_id" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+        <select name="session_id" required class="searchable-select w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none" data-ss-placeholder="— Select a session —">
           <option value="">— Select a session —</option>
           {% for s in sessions %}
           <option value="{{ s.pk }}" {% if selected_session.pk == s.pk %}selected{% endif %}>{{ s.name }}</option>
@@ -94,7 +94,7 @@
 
       <div class="overflow-x-auto">
         <div id="progressionTableButtons" class="mb-3"></div>
-        <table id="progressionTable" class="w-full min-w-[760px] text-sm">
+        <table id="progressionTable" class="table-card w-full min-w-[760px] text-sm">
           <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
             <tr>
               <th class="py-3 px-5 text-left font-semibold">
@@ -111,31 +111,31 @@
           </thead>
           <tbody class="divide-y divide-gray-100">
             {% for row in preview_rows %}
-            <tr class="hover:bg-gray-50 transition-colors {% if row.already_processed %}opacity-50{% endif %}">
-              <td class="py-3 px-5">
+<tr class="hover:bg-gray-50 transition-colors {% if row.already_processed %}opacity-50{% endif %}">
+              <td class="py-3 px-5" data-label="Select">
                 {% if row.already_processed %}
                 <input type="checkbox" disabled title="Already processed for this session">
                 {% else %}
                 <input type="checkbox" class="row-checkbox" value="{{ row.profile.user_id }}" checked>
                 {% endif %}
               </td>
-              <td class="py-3 px-5">
+              <td class="py-3 px-5" data-label="Student">
                 <div class="font-medium text-gray-800">{{ row.profile.user.get_full_name|default:row.profile.user.username }}</div>
                 <div class="text-xs text-gray-400">{{ row.profile.user.username }}</div>
                 {% if row.already_processed %}
                 <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Already processed</span>
                 {% endif %}
               </td>
-              <td class="py-3 px-5">{% widthratio row.previous_year_of_study 1 100 %}L</td>
-              <td class="py-3 px-5">{{ row.cgpa|default:"—" }}</td>
-              <td class="py-3 px-5">
+              <td class="py-3 px-5" data-label="Level">{% widthratio row.previous_year_of_study 1 100 %}L</td>
+              <td class="py-3 px-5" data-label="CGPA">{{ row.cgpa|default:"—" }}</td>
+              <td class="py-3 px-5" data-label="Core Passed">
                 {% if row.core_passed %}
                 <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Yes</span>
                 {% else %}
                 <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">No</span>
                 {% endif %}
               </td>
-              <td class="py-3 px-5">
+              <td class="py-3 px-5" data-label="Carry-Over Courses">
                 {% if row.failed_courses %}
                 <span class="text-xs text-gray-600">
                   {% for c in row.failed_courses %}{{ c.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
@@ -144,17 +144,17 @@
                 <span class="text-xs text-gray-400">None</span>
                 {% endif %}
               </td>
-              <td class="py-3 px-5">
+              <td class="py-3 px-5" data-label="Decision">
                 <span class="px-2 py-0.5 rounded-full text-xs font-medium
                   {% if row.new_status == 'active' %}bg-green-100 text-green-700
                   {% elif row.new_status == 'graduated' %}bg-purple-100 text-purple-700
                   {% elif row.new_status == 'repeated' %}bg-yellow-100 text-yellow-700
                   {% elif row.new_status == 'probation' %}bg-orange-100 text-orange-700
                   {% else %}bg-red-100 text-red-700{% endif %}">
-                  {% if row.promote %}Promote to {% widthratio row.new_year_of_study 1 100 %}L{% else %}{{ row.new_status|title }}{% endif %}
+                    {% if row.promote %}Promote to {% widthratio row.new_year_of_study 1 100 %}L{% else %}{{ row.new_status|title }}{% endif %}
                 </span>
               </td>
-              <td class="py-3 px-5">
+              <td class="py-3 px-5" data-label="Override">
                 {% if permissions.academic_progression.can_approve %}
                 <button type="button" class="text-xs text-primary-600 hover:underline" onclick="openOverride({{ row.profile.user_id }}, '{{ row.profile.user.get_full_name|default:row.profile.user.username|escapejs }}', {{ row.new_year_of_study }}, '{{ row.new_status }}')">
                   Manual override
@@ -258,15 +258,14 @@
 
 {# ─── Manual Override Panel ───────────────────────────────────────────────── #}
 {% if permissions.academic_progression.can_approve %}
-<div id="overridePanel" class="fixed inset-0 z-50 hidden">
-  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeOverride()" aria-hidden="true"></div>
-  <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <h2 class="text-lg font-bold text-gray-800">Manual Override — <span id="overrideStudentName"></span></h2>
-        <button type="button" onclick="closeOverride()" class="text-gray-400 hover:text-gray-600">&times;</button>
-      </div>
-      <form method="post" class="px-6 py-4 space-y-4">
+<div id="overridePanel" class="fixed inset-0 z-50 hidden items-stretch sm:items-center justify-center sm:p-3" style="background: rgba(15,23,42,.55);" onclick="if (event.target === this) closeOverride()">
+  <div class="bg-white sm:rounded-2xl shadow-2xl w-full sm:max-w-md h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+    <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
+      <h2 class="text-lg font-bold text-gray-800">Manual Override — <span id="overrideStudentName"></span></h2>
+      <button type="button" onclick="closeOverride()" class="text-gray-400 hover:text-gray-600 p-1 -m-1" aria-label="Close">&times;</button>
+    </div>
+    <form method="post" class="flex flex-col flex-1 min-h-0">
+      <div class="px-4 sm:px-6 py-4 space-y-4 overflow-y-auto flex-1 min-h-0">
         {% csrf_token %}
         <input type="hidden" name="action" value="manual_override">
         <input type="hidden" name="program_id" value="{{ selected_program.pk }}">
@@ -297,13 +296,13 @@
           <label class="block text-sm font-semibold text-gray-700 mb-1.5">Reason <span class="text-red-500">*</span></label>
           <textarea name="override_reason" required rows="3" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Required — this is written to the permanent progression log."></textarea>
         </div>
+      </div>
 
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeOverride()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-          <button type="submit" onclick="return swalConfirmSubmit(this, {title: 'Apply this manual override?', confirmButtonText: 'Yes, apply'})" class="px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700">Apply Override</button>
-        </div>
-      </form>
-    </div>
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 shrink-0">
+        <button type="button" onclick="closeOverride()" class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-300">Cancel</button>
+        <button type="submit" onclick="return swalConfirmSubmit(this, {title: 'Apply this manual override?', confirmButtonText: 'Yes, apply'})" class="w-full sm:w-auto px-4 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700">Apply Override</button>
+      </div>
+    </form>
   </div>
 </div>
 {% endif %}

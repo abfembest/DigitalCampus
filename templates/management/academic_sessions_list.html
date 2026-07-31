@@ -58,7 +58,7 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] text-sm">
+      <table class="table-card w-full min-w-[760px] text-sm">
         <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
           <tr>
             <th class="py-3 px-5 text-left font-semibold">Session</th>
@@ -78,7 +78,7 @@
           <tr class="hover:bg-gray-50 transition-colors {% if session.is_current %}bg-primary-50/50{% endif %}">
 
             {# Session Name #}
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Session">
               <div class="flex items-center gap-2">
                 <span class="font-semibold text-gray-800">{{ session.name }}</span>
                 {% if session.is_current %}
@@ -88,7 +88,7 @@
             </td>
 
             {# Registration Window — 3 weeks from each term's start date #}
-            <td class="py-4 px-5 text-xs">
+            <td class="py-4 px-5 text-xs" data-label="Registration Window">
               <div class="space-y-1">
                 {% if session.registration_override == 'open' %}
                   <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 mb-1">FORCED OPEN</span>
@@ -117,7 +117,7 @@
             </td>
 
             {# Status Badge #}
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Status">
               {% if session.status == 'active' %}
                 <span class="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Active</span>
               {% elif session.status == 'upcoming' %}
@@ -128,12 +128,12 @@
             </td>
 
             {# Current Term #}
-            <td class="py-4 px-5 text-gray-600 text-xs font-medium">
+            <td class="py-4 px-5 text-gray-600 text-xs font-medium" data-label="Current Term">
               {{ session.get_current_term|default:"—"|title }}
             </td>
 
             {# Semester Chips — inline preview of term_dates #}
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Semesters">
               <div class="flex flex-wrap gap-1">
                 {% for td in session.term_dates %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded text-xs font-medium whitespace-nowrap">
@@ -147,7 +147,7 @@
             </td>
 
             {# Actions #}
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Actions">
               <div class="flex items-center gap-2">
                 {% if permissions.academics.can_edit %}
                 {% if not session.is_current %}
@@ -204,10 +204,10 @@
 </div>
 
 <div id="sessionModal"
-     class="hidden fixed inset-0 z-50 bg-black/50 items-start justify-center p-4 overflow-y-auto"
+     class="hidden fixed inset-0 z-50 bg-black/50 items-stretch sm:items-center justify-center sm:p-3"
      role="dialog" aria-modal="true" aria-labelledby="modalTitle">
 
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-auto my-8 relative flex flex-col max-h-[calc(100vh-4rem)]">
+  <div class="bg-white sm:rounded-xl shadow-xl w-full sm:max-w-2xl relative flex flex-col h-full sm:h-auto sm:max-h-[97vh]">
 
     <form id="sessionForm" method="POST" action="{% url 'management:academic_sessions_list' %}">
       {% csrf_token %}
@@ -217,17 +217,17 @@
       <input type="hidden" name="term_dates" id="modal_term_dates">
 
       {# ── Modal Header ──────────────────────────────────────────────────────── #}
-      <div class="flex items-center justify-between p-6 border-b border-gray-100">
+      <div class="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-100 shrink-0">
         <h3 id="modalTitle" class="text-xl font-bold text-gray-800">New Academic Session</h3>
         <button type="button" onclick="closeSessionModal()"
-                class="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
+                class="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors p-1 -m-1"
                 aria-label="Close">
           <i class="fas fa-times text-lg"></i>
         </button>
       </div>
 
       {# ── Modal Body ────────────────────────────────────────────────────────── #}
-      <div class="p-6 space-y-6 overflow-y-auto flex-1">
+      <div class="px-4 sm:px-6 py-6 space-y-6 overflow-y-auto flex-1 min-h-0">
 
         {# Row 1: Name + Status #}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -272,7 +272,7 @@
           </div>
 
           {# Column labels #}
-          <div class="grid grid-cols-[1fr_1fr_1fr_2rem] gap-2 px-4 pt-3 pb-1">
+          <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_2rem] gap-2 px-4 pt-3 pb-1">
             <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Term / Semester</span>
             <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Start Date</span>
             <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">End Date</span>
@@ -319,13 +319,13 @@
       </div>{# /modal body #}
 
       {# ── Modal Footer ──────────────────────────────────────────────────────── #}
-      <div class="p-5 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+      <div class="p-5 border-t border-gray-100 bg-gray-50 rounded-b-xl flex flex-col-reverse sm:flex-row justify-end gap-3">
         <button type="button" onclick="closeSessionModal()"
-                class="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors focus:outline-none">
+                class="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors focus:outline-none w-full sm:w-auto">
           Cancel
         </button>
         <button type="submit" id="modalSubmitBtn"
-                class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition-colors focus:outline-none">
+                class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition-colors focus:outline-none w-full sm:w-auto">
           Save Changes
         </button>
       </div>
@@ -366,7 +366,7 @@
     const empty     = document.getElementById('termRowsEmpty');
 
     const row = document.createElement('div');
-    row.className = 'term-row grid grid-cols-[1fr_1fr_1fr_2rem] gap-2 items-center';
+    row.className = 'term-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_2rem] gap-2 items-center';
     row.innerHTML = `
       <div>${buildTermSelect(term)}</div>
       <input type="date"

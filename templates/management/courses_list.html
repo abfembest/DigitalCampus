@@ -12,8 +12,8 @@
   .chip{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .8rem;border-radius:9999px;font-size:.72rem;font-weight:600;cursor:pointer;border:1.5px solid #e5e7eb;background:#fff;color:#6b7280;transition:.15s;white-space:nowrap}
   .chip:hover,.chip.on{border-color:var(--p);background:var(--pl);color:var(--p)}
   .chip.all.on{background:var(--p);color:#fff;border-color:var(--p)}
-  .tw{background:#fff;border:1px solid #e5e7eb;border-radius:var(--r);overflow:hidden}
-  .tw table{width:100%;border-collapse:collapse;font-size:.85rem}
+  .tw{background:#fff;border:1px solid #e5e7eb;border-radius:var(--r);overflow-x:auto}
+  .tw table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:760px}
   .tw thead{background:linear-gradient(to right,#f8fafc,#f1f5f9)}
   .tw th{padding:.8rem 1rem;font-size:.68rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer;user-select:none}
   .tw th:hover{background:#e5e7eb;color:var(--p)}
@@ -48,6 +48,12 @@
   .mdl{display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);align-items:center;justify-content:center;padding:1rem}
   .mdl.open{display:flex}
   .mi{background:#fff;border-radius:1.1rem;box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:40rem;max-height:92vh;overflow-y:auto;animation:mIn .22s cubic-bezier(.34,1.56,.64,1)}
+  @media (max-width:639.98px){
+    #cModal{align-items:stretch;padding:0}
+    #cModal .mi{height:100%;max-height:100vh;border-radius:0}
+    .mh{position:sticky;top:0;background:#fff;z-index:10}
+    .mf{position:sticky;bottom:0;background:#f9fafb;z-index:10}
+  }
   @keyframes mIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:none}}
   .mh{padding:1.35rem 1.6rem .9rem;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem}
   .mb{padding:1.1rem 1.6rem}
@@ -56,14 +62,6 @@
   .fc{width:100%;padding:.575rem .8rem;border:1.5px solid #e5e7eb;border-radius:.6rem;font-size:.85rem;color:#1f2937;outline:none;transition:.18s;background:#fff}
   .fc:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(74,107,255,.1)}
   select.fc{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .65rem center;background-size:1rem;padding-right:2.2rem}
-  @media(max-width:767px){
-    .tw thead{display:none}
-    .tw tbody tr{display:block;margin:.625rem;border:1px solid #e5e7eb;border-radius:.75rem;padding:.75rem .875rem;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-    .tw td{display:flex;align-items:center;justify-content:space-between;padding:.3rem 0;border-bottom:1px dashed #f3f4f6;font-size:.8rem}
-    .tw td:last-child{border-bottom:none;justify-content:flex-end;padding-top:.5rem}
-    .tw td::before{content:attr(data-label);font-size:.65rem;font-weight:700;color:#9ca3af;text-transform:uppercase;flex-shrink:0;margin-right:.5rem}
-    .td-a::before{content:''}
-  }
   #toast{position:fixed;bottom:1.25rem;right:1.25rem;z-index:999;display:flex;align-items:center;gap:.625rem;padding:.75rem 1.1rem;border-radius:.75rem;box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:.85rem;font-weight:600;transform:translateY(3rem);opacity:0;transition:.3s cubic-bezier(.34,1.56,.64,1);pointer-events:none}
   #toast.show{transform:none;opacity:1}
   #toast.success{background:#065f46;color:#ecfdf5}
@@ -117,7 +115,7 @@
 
 <!-- Table -->
 <div class="tw">
-  <table>
+  <table class="table-card">
     <thead><tr>
       <th data-c="0">Code ↕</th><th data-c="1">Course Title ↕</th><th>Program / Dept</th>
       <th data-c="3">Year ↕</th><th>Semester</th><th data-c="5">Units ↕</th>
@@ -134,7 +132,7 @@
         <td data-label="Units"><span class="text-sm font-bold text-gray-700">{{ c.credit_units }} <span class="text-gray-400 font-normal text-xs">CU</span></span></td>
         <td data-label="Type">{% if c.course_type == 'core' %}<span class="tb tc">Core</span>{% elif c.course_type == 'elective' %}<span class="tb te">Elective</span>{% elif c.course_type == 'general' %}<span class="tb tg">General</span>{% else %}<span class="tb tp">Prereq</span>{% endif %}</td>
         <td data-label="Status">{% if c.is_active %}<span class="sd sa"><span class="d"></span>Active</span>{% else %}<span class="sd sx"><span class="d"></span>Inactive</span>{% endif %}</td>
-        <td class="td-a text-right">
+        <td class="td-a text-right action-buttons" data-label="Actions">
           <div class="flex items-center justify-end gap-1">
             {% if permissions.academics.can_edit %}
             <button class="ab ae" title="Edit" onclick="openModal('edit',{id:'{{ c.pk }}',code:'{{ c.code|escapejs }}',name:'{{ c.name|escapejs }}',program:'{{ c.program.pk }}',units:'{{ c.credit_units }}',year:'{{ c.year_of_study }}',semester:'{{ c.semester }}',course_type:'{{ c.course_type }}',description:`{{ c.description|escapejs }}`,is_active:'{{ c.is_active|yesno:"true,false" }}'})"><i class="fas fa-pencil-alt"></i></button>

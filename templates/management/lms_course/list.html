@@ -54,7 +54,7 @@
     <form method="get" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
       <div>
         <label class="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Program</label>
-        <select name="program" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500">
+        <select name="program" class="searchable-select w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-primary-500" data-ss-placeholder="All Programs">
           <option value="">All Programs</option>
           {% for p in programs %}<option value="{{ p.id }}"{% if request.GET.program == p.id|stringformat:"s" %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
         </select>
@@ -104,15 +104,15 @@
       <i class="fas fa-search text-2xl mb-2 opacity-40 block"></i><p>No courses match your search.</p>
     </div>
     <div class="overflow-x-auto">
-      <table id="lmsCoursesTable" class="w-full text-sm">
+      <table id="lmsCoursesTable" class="table-card w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">LMS Course</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden sm:table-cell">Academic Course</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden md:table-cell">Program</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell">Session / Term</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell">Instructor</th>
-            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">Enrolments</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Academic Course</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Program</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Session / Term</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Instructor</th>
+            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Enrolments</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Status</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Actions</th>
           </tr>
@@ -122,44 +122,52 @@
           <tr class="hover:bg-gray-50 transition-colors course-row"
               data-search="{{ course.title|lower }} {{ course.code|lower }} {% if course.instructor %}{{ course.instructor.get_full_name|lower }}{% endif %} {% if course.academic_course %}{{ course.academic_course.code|lower }}{% endif %}">
 
-            <td class="px-4 py-3">
-              <p class="font-semibold text-gray-900 leading-tight line-clamp-1">{{ course.title|truncatechars:45 }}</p>
-              {% if course.code %}<p class="text-xs text-gray-400 mt-0.5 font-mono">{{ course.code }}</p>{% endif %}
+            <td class="px-4 py-3" data-label="LMS Course">
+              <div>
+                <p class="font-semibold text-gray-900 leading-tight line-clamp-1">{{ course.title|truncatechars:45 }}</p>
+                {% if course.code %}<p class="text-xs text-gray-400 mt-0.5 font-mono">{{ course.code }}</p>{% endif %}
+              </div>
             </td>
 
-            <td class="px-4 py-3 hidden sm:table-cell">
-              {% if course.academic_course %}
-              <span class="inline-block font-mono text-xs bg-primary-50 text-primary-700 border border-primary-200 rounded px-1.5 py-0.5">{{ course.academic_course.code }}</span>
-              <p class="text-xs text-gray-500 mt-0.5 max-w-[180px] truncate" title="{{ course.academic_course.name }}">{{ course.academic_course.name }}</p>
-              {% else %}
-              <span class="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-0.5">Standalone</span>
-              {% endif %}
+            <td class="px-4 py-3" data-label="Academic Course">
+              <div>
+                {% if course.academic_course %}
+                <span class="inline-block font-mono text-xs bg-primary-50 text-primary-700 border border-primary-200 rounded px-1.5 py-0.5">{{ course.academic_course.code }}</span>
+                <p class="text-xs text-gray-500 mt-0.5 max-w-[180px] truncate" title="{{ course.academic_course.name }}">{{ course.academic_course.name }}</p>
+                {% else %}
+                <span class="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-0.5">Standalone</span>
+                {% endif %}
+              </div>
             </td>
 
-            <td class="px-4 py-3 hidden md:table-cell">
-              {% if course.academic_course.program %}
-              <p class="text-xs text-gray-700 font-medium max-w-[160px] truncate">{{ course.academic_course.program.name }}</p>
-              <p class="text-xs text-gray-400 max-w-[160px] truncate">{{ course.academic_course.program.department.name|truncatechars:22 }}</p>
-              {% else %}<span class="text-gray-400 text-xs">—</span>{% endif %}
+            <td class="px-4 py-3" data-label="Program">
+              <div>
+                {% if course.academic_course.program %}
+                <p class="text-xs text-gray-700 font-medium max-w-[160px] truncate">{{ course.academic_course.program.name }}</p>
+                <p class="text-xs text-gray-400 max-w-[160px] truncate">{{ course.academic_course.program.department.name|truncatechars:22 }}</p>
+                {% else %}<span class="text-gray-400 text-xs">—</span>{% endif %}
+              </div>
             </td>
 
-            <td class="px-4 py-3 hidden lg:table-cell">
-              {% if course.session %}
-              <p class="text-xs font-medium text-gray-700">{{ course.session.name }}</p>
-              <p class="text-xs text-gray-400 capitalize">{{ course.get_term_display|default:course.term|default:"—" }}</p>
-              {% else %}<span class="text-gray-400 text-xs">—</span>{% endif %}
+            <td class="px-4 py-3" data-label="Session / Term">
+              <div>
+                {% if course.session %}
+                <p class="text-xs font-medium text-gray-700">{{ course.session.name }}</p>
+                <p class="text-xs text-gray-400 capitalize">{{ course.get_term_display|default:course.term|default:"—" }}</p>
+                {% else %}<span class="text-gray-400 text-xs">—</span>{% endif %}
+              </div>
             </td>
 
-            <td class="px-4 py-3 hidden lg:table-cell text-xs text-gray-700">
+            <td class="px-4 py-3 text-xs text-gray-700" data-label="Instructor">
               {% if course.instructor %}{{ course.instructor.get_full_name|default:course.instructor.username }}
               {% else %}<span class="text-gray-400 italic">Unassigned</span>{% endif %}
             </td>
 
-            <td class="px-4 py-3 hidden xl:table-cell text-center">
+            <td class="px-4 py-3 text-center" data-label="Enrolments">
               <span class="inline-block text-xs font-bold text-primary-700 bg-primary-50 border border-primary-200 rounded-full px-2.5 py-0.5 min-w-[28px] text-center">{{ course.total_enrollments }}</span>
             </td>
 
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" data-label="Status">
               <div class="flex flex-wrap items-center gap-1">
                 {% if course.is_published %}
                 <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full font-medium">
@@ -174,7 +182,7 @@
               </div>
             </td>
 
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 action-buttons" data-label="Actions">
               <div class="flex items-center justify-end gap-1">
                 <button onclick="openDetailModal({{ course.pk }})" class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="View"><i class="fas fa-eye text-xs"></i></button>
                 {% if permissions.lms_courses.can_edit %}
@@ -210,11 +218,11 @@
 
 {# ══════════════════════════ CREATE MODAL ══════════════════════════ #}
 <div id="createModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
-  <div class="flex min-h-full items-center justify-center p-3 sm:p-4">
+  <div class="flex min-h-full items-stretch sm:items-center justify-center p-0 sm:p-3">
     <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('createModal')"></div>
-    <div class="relative bg-white w-full max-w-3xl rounded-2xl shadow-2xl my-4 flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+    <div class="relative bg-white w-full max-w-3xl sm:rounded-2xl shadow-2xl h-full sm:h-auto sm:my-4 flex flex-col sm:max-h-[90vh]" onclick="event.stopPropagation()">
 
-      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-2xl z-10">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 bg-primary-100 rounded-xl flex items-center justify-center"><i class="fas fa-plus text-primary-600"></i></div>
           <div>
@@ -397,11 +405,11 @@
             </label>
           </div>
 
-          <div class="flex justify-between items-center px-5 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-100">
+          <div class="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 sm:gap-0 px-5 py-4 bg-gray-50 sm:rounded-b-2xl border-t border-gray-100 shrink-0">
             <button type="button" onclick="closeModal('createModal')"
-                    class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Cancel</button>
+                    class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Cancel</button>
             <button type="submit"
-                    class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg shadow transition-all">
+                    class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg shadow transition-all">
               <i class="fas fa-plus mr-2"></i> Create Course
             </button>
           </div>
@@ -414,11 +422,11 @@
 
 {# ══════════════════════════ EDIT MODAL ══════════════════════════ #}
 <div id="editModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
-  <div class="flex min-h-full items-center justify-center p-3 sm:p-4">
+  <div class="flex min-h-full items-stretch sm:items-center justify-center p-0 sm:p-3">
     <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('editModal')"></div>
-    <div class="relative bg-white w-full max-w-3xl rounded-2xl shadow-2xl my-4 flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+    <div class="relative bg-white w-full max-w-3xl sm:rounded-2xl shadow-2xl h-full sm:h-auto sm:my-4 flex flex-col sm:max-h-[90vh]" onclick="event.stopPropagation()">
 
-      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-2xl z-10">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-edit text-blue-600"></i></div>
           <div>
@@ -595,11 +603,11 @@
             </label>
           </div>
 
-          <div class="flex items-center justify-between px-5 py-4 bg-gray-50 rounded-b-2xl border-t border-gray-100">
+          <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 px-5 py-4 bg-gray-50 sm:rounded-b-2xl border-t border-gray-100 shrink-0">
             <button type="button" onclick="closeModal('editModal')"
-                    class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Cancel</button>
+                    class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Cancel</button>
             <button type="submit"
-                    class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow transition-all">
+                    class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow transition-all">
               <i class="fas fa-save mr-2"></i> Save Changes
             </button>
           </div>
@@ -612,11 +620,11 @@
 
 {# ══════════════════════════ DETAIL MODAL ══════════════════════════ #}
 <div id="detailModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
-  <div class="flex min-h-full items-center justify-center p-3 sm:p-4">
+  <div class="flex min-h-full items-stretch sm:items-center justify-center p-0 sm:p-3">
     <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('detailModal')"></div>
-    <div class="relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl my-4 flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+    <div class="relative bg-white w-full max-w-2xl sm:rounded-2xl shadow-2xl h-full sm:h-auto sm:my-4 flex flex-col sm:max-h-[90vh]" onclick="event.stopPropagation()">
 
-      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-2xl z-10">
         <div class="flex items-center gap-3 min-w-0">
           <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0"><i class="fas fa-eye text-indigo-600"></i></div>
           <div class="min-w-0">
@@ -658,10 +666,10 @@
         </div>
       </div>
 
-      <div class="flex justify-between items-center px-5 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-        <button onclick="closeModal('detailModal')" class="px-5 py-2 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Close</button>
+      <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 px-5 py-4 border-t border-gray-100 bg-gray-50 sm:rounded-b-2xl shrink-0">
+        <button onclick="closeModal('detailModal')" class="w-full sm:w-auto px-5 py-2 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Close</button>
         {% if permissions.lms_courses.can_edit %}
-        <button id="detailEditBtn" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all">
+        <button id="detailEditBtn" class="w-full sm:w-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all">
           <i class="fas fa-edit mr-1.5"></i> Edit
         </button>
         {% endif %}
@@ -673,9 +681,9 @@
 
 {# ══════════════════════════ DELETE MODAL ══════════════════════════ #}
 <div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
-  <div class="flex min-h-full items-center justify-center p-3 sm:p-4">
+  <div class="flex min-h-full items-stretch sm:items-center justify-center p-0 sm:p-3">
     <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('deleteModal')"></div>
-    <div class="relative bg-white w-full max-w-md rounded-2xl shadow-2xl my-4" onclick="event.stopPropagation()">
+    <div class="relative bg-white w-full max-w-md sm:rounded-2xl shadow-2xl sm:my-4" onclick="event.stopPropagation()">
       <div class="px-5 pt-6 pb-4">
         <div class="flex items-start gap-4">
           <div class="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center flex-shrink-0"><i class="fas fa-trash text-red-600 text-lg"></i></div>
@@ -711,11 +719,11 @@
       <form id="deleteForm" method="post" action="">
         {% csrf_token %}
         <input type="hidden" name="confirm" value="1">
-        <div class="flex justify-between items-center px-5 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+        <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 px-5 py-4 border-t border-gray-100 bg-gray-50 sm:rounded-b-2xl">
           <button type="button" onclick="closeModal('deleteModal')"
-                  class="px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Cancel</button>
+                  class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-all">Cancel</button>
           <button type="submit" id="deleteSubmitBtn" disabled
-                  class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  class="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed">
             <i class="fas fa-trash mr-2"></i> Confirm Delete
           </button>
         </div>

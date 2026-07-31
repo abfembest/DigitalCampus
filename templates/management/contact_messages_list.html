@@ -74,7 +74,7 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] text-sm">
+      <table class="table-card w-full min-w-[760px] text-sm">
         <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
           <tr>
             <th class="py-3 px-5 text-left font-semibold">Sender</th>
@@ -87,7 +87,7 @@
         <tbody class="divide-y divide-gray-100">
           {% for msg in messages_list %}
           <tr class="hover:bg-gray-50 transition-colors {% if not msg.is_read %}bg-blue-50/40{% endif %}">
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Sender">
               <div class="flex items-center gap-2">
                 {% if not msg.is_read %}
                 <span class="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title="Unread"></span>
@@ -100,12 +100,12 @@
                 </div>
               </div>
             </td>
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Subject">
               <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">{{ msg.get_subject_display }}</span>
               <div class="text-xs text-gray-500 mt-1 line-clamp-1 max-w-xs">{{ msg.message|truncatechars:80 }}</div>
             </td>
-            <td class="py-4 px-5 text-gray-500 text-sm">{{ msg.created_at|date:"M d, Y" }}</td>
-            <td class="py-4 px-5">
+            <td class="py-4 px-5 text-gray-500 text-sm" data-label="Date">{{ msg.created_at|date:"M d, Y" }}</td>
+            <td class="py-4 px-5" data-label="Status">
               <div class="flex flex-col gap-1">
                 {% if msg.is_read %}
                 <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Read</span>
@@ -117,7 +117,7 @@
                 {% endif %}
               </div>
             </td>
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Actions">
               <div class="flex items-center gap-2">
                 <a href="{% url 'management:contact_message_detail' msg.pk %}"
                    class="px-3 py-1.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors text-xs font-medium">

@@ -27,7 +27,7 @@
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="table-card w-full text-sm">
           <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
             <tr>
               <th class="py-3 px-5 text-left font-semibold">Student</th>
@@ -40,14 +40,14 @@
           <tbody class="divide-y divide-gray-100">
             {% for grade in grades %}
             <tr class="hover:bg-gray-50 transition-colors">
-              <td class="py-3 px-5">
+              <td class="py-3 px-5" data-label="Student">
                 <div class="font-medium text-gray-800">{{ grade.student.get_full_name|default:grade.student.username }}</div>
                 <div class="text-xs text-gray-400">{{ grade.student.username }}</div>
               </td>
-              <td class="py-3 px-5">{{ grade.course.code }} — {{ grade.course.name }}</td>
-              <td class="py-3 px-5 text-center">{{ grade.score|default:"—" }}</td>
-              <td class="py-3 px-5 text-center font-semibold">{{ grade.grade|default:"—" }}</td>
-              <td class="py-3 px-5">
+              <td class="py-3 px-5" data-label="Course">{{ grade.course.code }} — {{ grade.course.name }}</td>
+              <td class="py-3 px-5 text-center" data-label="Score">{{ grade.score|default:"—" }}</td>
+              <td class="py-3 px-5 text-center font-semibold" data-label="Grade">{{ grade.grade|default:"—" }}</td>
+              <td class="py-3 px-5" data-label="Result Status">
                 <select name="status_{{ grade.pk }}"
                         class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-primary-500 outline-none
                                {% if grade.result_status == 'released' %}bg-green-50 text-green-700

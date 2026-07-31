@@ -89,39 +89,41 @@
   {# Table #}
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] text-sm">
+      <table class="table-card w-full min-w-[760px] text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
             <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">ID</th>
             <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">User</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden sm:table-cell">Gateway</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">Type</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Gateway</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Type</th>
             <th class="px-5 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Amount</th>
             <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">Date</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Date</th>
             <th class="px-5 py-3 w-16"><span class="sr-only">View</span></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100" id="txnTableBody">
           {% for txn in transactions %}
           <tr class="hover:bg-gray-50/60 transition-colors">
-            <td class="px-5 py-3">
+            <td class="px-5 py-3" data-label="ID">
               <code class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono whitespace-nowrap">{{ txn.transaction_id }}</code>
             </td>
-            <td class="px-5 py-3">
-              <p class="font-medium text-gray-900">{{ txn.user.get_full_name|default:txn.user.username }}</p>
-              <p class="text-xs text-gray-400">@{{ txn.user.username }}</p>
+            <td class="px-5 py-3" data-label="User">
+              <div>
+                <p class="font-medium text-gray-900">{{ txn.user.get_full_name|default:txn.user.username }}</p>
+                <p class="text-xs text-gray-400">@{{ txn.user.username }}</p>
+              </div>
             </td>
-            <td class="px-5 py-3 text-sm text-gray-600 hidden sm:table-cell">
+            <td class="px-5 py-3 text-sm text-gray-600" data-label="Gateway">
               {{ txn.gateway.name|default:"—" }}
             </td>
-            <td class="px-5 py-3 text-sm text-gray-600 hidden md:table-cell">
+            <td class="px-5 py-3 text-sm text-gray-600" data-label="Type">
               {{ txn.get_transaction_type_display }}
             </td>
-            <td class="px-5 py-3 text-right whitespace-nowrap font-semibold text-gray-800">
+            <td class="px-5 py-3 text-right whitespace-nowrap font-semibold text-gray-800" data-label="Amount">
               {{ txn.currency }} {{ txn.amount|floatformat:2 }}
             </td>
-            <td class="px-5 py-3 whitespace-nowrap">
+            <td class="px-5 py-3 whitespace-nowrap" data-label="Status">
               <span class="px-2 py-0.5 rounded-full text-xs font-medium border
                 {% if txn.status == 'completed' %}bg-green-50 text-green-700 border-green-200
                 {% elif txn.status == 'failed' %}bg-red-50 text-red-700 border-red-200
@@ -131,10 +133,10 @@
                 {{ txn.get_status_display }}
               </span>
             </td>
-            <td class="px-5 py-3 text-xs text-gray-500 hidden lg:table-cell whitespace-nowrap">
+            <td class="px-5 py-3 text-xs text-gray-500 whitespace-nowrap" data-label="Date">
               <time datetime="{{ txn.created_at|date:'c' }}">{{ txn.created_at|date:"M d, Y H:i" }}</time>
             </td>
-            <td class="px-5 py-3 text-right">
+            <td class="px-5 py-3 text-right action-buttons" data-label="Actions">
               <a href="{% url 'management:transaction_detail' txn.transaction_id %}"
                  class="px-2.5 py-1.5 text-xs font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition inline-flex items-center gap-1"
                  aria-label="View {{ txn.transaction_id }}">

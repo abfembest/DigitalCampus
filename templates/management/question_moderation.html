@@ -176,7 +176,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[760px]" id="questionsTable">
+            <table class="table-card w-full min-w-[760px]" id="questionsTable">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-200">
                         <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap w-12">
@@ -185,13 +185,13 @@
                         <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider">
                             Question
                         </th>
-                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
+                        <th class="text-left px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Type
                         </th>
-                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
+                        <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Options
                         </th>
-                        <th class="text-right px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
+                        <th class="text-right px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
                             Marks
                         </th>
                         <th class="text-center px-5 py-3.5 font-semibold text-gray-500 text-base uppercase tracking-wider whitespace-nowrap">
@@ -213,12 +213,12 @@
                           Row number: forloop.counter — replaces the deleted q.order field.
                           ExamQuestion no longer has an 'order' field; ordering is by created_at.
                         {% endcomment %}
-                        <td class="px-5 py-4 text-base text-gray-400 font-mono whitespace-nowrap">
+                        <td class="px-5 py-4 text-base text-gray-400 font-mono whitespace-nowrap" data-label="#">
                             {{ forloop.counter }}
                         </td>
 
                         {% comment %} ── Question Text ── {% endcomment %}
-                        <td class="px-5 py-4">
+                        <td class="px-5 py-4" data-label="Question">
                             <p class="text-base text-gray-800 leading-snug line-clamp-2 max-w-sm lg:max-w-lg">
                                 {{ q.question_text|truncatechars:140 }}
                             </p>
@@ -261,7 +261,7 @@
                         </td>
 
                         {% comment %} ── Question Type ── {% endcomment %}
-                        <td class="px-5 py-4 hidden sm:table-cell whitespace-nowrap">
+                        <td class="px-5 py-4 whitespace-nowrap" data-label="Type">
                             {% comment %}
                               get_question_type_display — choices from ExamQuestion.QUESTION_TYPE_CHOICES:
                               mcq → "Multiple Choice (single answer)"
@@ -296,7 +296,7 @@
                         </td>
 
                         {% comment %} ── Options Count ── {% endcomment %}
-                        <td class="px-5 py-4 text-center hidden md:table-cell whitespace-nowrap">
+                        <td class="px-5 py-4 text-center whitespace-nowrap" data-label="Options">
                             {% comment %}
                               option_count: @property → len(self.options)
                               Meaningful for mcq, multi_select, true_false.
@@ -310,13 +310,13 @@
                         </td>
 
                         {% comment %} ── Marks ── {% endcomment %}
-                        <td class="px-5 py-4 text-right hidden md:table-cell whitespace-nowrap">
+                        <td class="px-5 py-4 text-right whitespace-nowrap" data-label="Marks">
                             {% comment %} marks: DecimalField — points per question {% endcomment %}
                             <span class="text-base font-bold text-gray-700 tabular-nums">{{ q.marks }}</span>
                         </td>
 
                         {% comment %} ── Status ── {% endcomment %}
-                        <td class="px-5 py-4 text-center whitespace-nowrap">
+                        <td class="px-5 py-4 text-center whitespace-nowrap" data-label="Status">
                             {% if q.is_active %}
                             <span class="inline-flex items-center gap-1.5 text-base bg-green-100 text-green-700
                                          px-3 py-1 rounded-full font-semibold whitespace-nowrap">
@@ -331,7 +331,7 @@
                         </td>
 
                         {% comment %} ── Action ── {% endcomment %}
-                        <td class="px-5 py-4 text-right whitespace-nowrap">
+                        <td class="px-5 py-4 text-right whitespace-nowrap action-buttons" data-label="Action">
                             {% if permissions.exams.can_edit %}
                             <form method="post" class="inline-block">
                                 {% csrf_token %}

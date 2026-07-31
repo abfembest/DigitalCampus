@@ -15,11 +15,11 @@
       <p class="text-gray-500 mt-1">Manage academic departments across all faculties</p>
     </div>
     {% if permissions.academics.can_create %}
-    <a href="{% url 'management:department_create' %}"
+    <button type="button" onclick="openDepartmentModal()"
        class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-sm">
       <i class="fas fa-plus" aria-hidden="true"></i>
       Add Department
-    </a>
+    </button>
     {% endif %}
   </div>
 
@@ -52,7 +52,7 @@
                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm">
       </div>
       <div class="sm:w-48">
-        <select name="faculty" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+        <select name="faculty" class="searchable-select w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm" data-ss-placeholder="All Faculties">
           <option value="">All Faculties</option>
           {% for faculty in faculties %}
           <option value="{{ faculty.id }}" {% if request.GET.faculty == faculty.id|stringformat:"s" %}selected{% endif %}>
@@ -89,7 +89,7 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+      <table class="table-card w-full text-sm">
         <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
           <tr>
             <th class="py-3 px-5 text-left font-semibold">Department</th>
@@ -103,23 +103,23 @@
         <tbody class="divide-y divide-gray-100">
           {% for dept in departments %}
           <tr class="hover:bg-gray-50 transition-colors">
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Department">
               <div class="font-medium text-gray-800">{{ dept.name }}</div>
               {% if dept.description %}
               <div class="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{{ dept.description|truncatechars:60 }}</div>
               {% endif %}
             </td>
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Code">
               <span class="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">{{ dept.code }}</span>
             </td>
-            <td class="py-4 px-5 text-gray-600">{{ dept.faculty.name }}</td>
-            <td class="py-4 px-5">
+            <td class="py-4 px-5 text-gray-600" data-label="Faculty">{{ dept.faculty.name }}</td>
+            <td class="py-4 px-5" data-label="Programs">
               <span class="inline-flex items-center gap-1 text-primary-600 font-medium">
                 <i class="fas fa-book-open text-xs" aria-hidden="true"></i>
                 {{ dept.programs.count }}
               </span>
             </td>
-            <td class="py-4 px-5">
+            <td class="py-4 px-5" data-label="Status">
               {% if dept.is_active %}
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
                 <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>Active
@@ -130,14 +130,13 @@
               </span>
               {% endif %}
             </td>
-            <td class="py-4 px-5">
-              <div class="flex items-center gap-2">
+            <td class="py-4 px-5" data-label="Actions">
                 {% if permissions.academics.can_edit %}
-                <a href="{% url 'management:department_edit' dept.pk %}"
+                <button type="button" onclick="openDepartmentModal('{{ dept.pk }}')"
                    class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                    title="Edit">
                   <i class="fas fa-edit text-sm" aria-hidden="true"></i>
-                </a>
+                </button>
                 {% endif %}
                 {% if permissions.academics.can_delete %}
                 <button type="button"
@@ -158,7 +157,7 @@
                 <p class="font-medium text-gray-600">No departments found</p>
                 <p class="text-sm mt-1">Try adjusting your filters
                   {% if permissions.academics.can_create %}or
-                  <a href="{% url 'management:department_create' %}" class="text-primary-600 hover:underline">add a department</a>{% endif %}.
+                  <button type="button" onclick="openDepartmentModal()" class="text-primary-600 hover:underline">add a department</button>{% endif %}.
                 </p>
               </div>
             </td>
@@ -206,6 +205,33 @@
 <form id="deleteForm" method="post" action="" style="display:none;">
   {% csrf_token %}
 </form>
+
+<!-- Add/Edit Department modal -->
+<div id="departmentModal" class="fixed inset-0 z-50 hidden items-stretch sm:items-center justify-center sm:p-3" style="background: rgba(15,23,42,.55);">
+  <div class="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+    <div class="px-4 sm:px-5 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
+      <h2 class="text-base font-semibold text-gray-800 font-display" id="departmentModalTitle">Add Department</h2>
+      <button type="button" id="departmentModalCloseBtn" class="text-gray-400 hover:text-gray-600 p-1 -m-1" aria-label="Close">
+        <i class="fas fa-times text-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+    <form method="post" action="{% url 'management:department_create' %}" id="departmentModalForm" class="flex flex-col flex-1 min-h-0">
+      {% csrf_token %}
+      <div class="px-4 sm:px-5 py-4 overflow-y-auto flex-1 min-h-0" id="departmentModalBody">
+        {% include 'management/_department_form_fields.html' with form=create_form %}
+      </div>
+      <div class="px-4 sm:px-5 py-3 border-t border-gray-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 shrink-0">
+        <button type="button" id="departmentModalCancelBtn"
+                class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm font-medium">Cancel</button>
+        <button type="submit" id="departmentModalSubmitBtn"
+                class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+          <i class="fas fa-save mr-1.5" aria-hidden="true"></i>
+          <span id="departmentModalSubmitLabel">Create Department</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -229,5 +255,92 @@ function confirmDelete(url, name) {
     }
   });
 }
+
+(function () {
+  var modal = document.getElementById('departmentModal');
+  var modalBody = document.getElementById('departmentModalBody');
+  var modalForm = document.getElementById('departmentModalForm');
+  var modalTitle = document.getElementById('departmentModalTitle');
+  var submitBtn = document.getElementById('departmentModalSubmitBtn');
+  var submitLabel = document.getElementById('departmentModalSubmitLabel');
+  var createUrl = '{% url "management:department_create" %}';
+
+  function openModal() {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+  }
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  window.openDepartmentModal = function (pk) {
+    if (!pk) {
+      modalTitle.textContent = 'Add Department';
+      submitLabel.textContent = 'Create Department';
+      modalForm.action = createUrl;
+      modalForm.reset();
+      window.enhanceSearchableSelects && window.enhanceSearchableSelects(modalBody);
+      openModal();
+      return;
+    }
+    var editUrl = '{% url "management:department_edit" 0 %}'.replace('0', pk);
+    modalTitle.textContent = 'Edit Department';
+    submitLabel.textContent = 'Save Changes';
+    modalForm.action = editUrl;
+    fetch(editUrl)
+      .then(function (resp) { return resp.text(); })
+      .then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var newFields = doc.getElementById('departmentFormFieldsPartial');
+        var oldFields = modalBody.querySelector('#departmentFormFieldsPartial');
+        if (newFields && oldFields) {
+          oldFields.replaceWith(newFields);
+          window.enhanceSearchableSelects && window.enhanceSearchableSelects(modalBody);
+        }
+        openModal();
+      })
+      .catch(function () {
+        if (window.Swal) Swal.fire({ icon: 'error', title: 'Could not load department', text: 'Please try again.' });
+      });
+  };
+
+  document.getElementById('departmentModalCloseBtn').addEventListener('click', closeModal);
+  document.getElementById('departmentModalCancelBtn').addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+  modalForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (submitBtn.disabled) return;
+    submitBtn.disabled = true;
+    var originalLabel = submitLabel.textContent;
+    submitLabel.textContent = 'Saving…';
+    try {
+      var resp = await fetch(modalForm.action, { method: 'POST', body: new FormData(modalForm) });
+      if (resp.redirected) {
+        window.location.href = resp.url;
+        return;
+      }
+      var html = await resp.text();
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var newFields = doc.getElementById('departmentFormFieldsPartial');
+      var oldFields = modalBody.querySelector('#departmentFormFieldsPartial');
+      if (newFields && oldFields) {
+        oldFields.replaceWith(newFields);
+        window.enhanceSearchableSelects && window.enhanceSearchableSelects(modalBody);
+        modalBody.scrollTop = 0;
+      } else {
+        window.location.href = modalForm.action;
+      }
+    } catch (err) {
+      if (window.Swal) Swal.fire({ icon: 'error', title: 'Something went wrong', text: 'Please try again.' });
+    } finally {
+      submitBtn.disabled = false;
+      submitLabel.textContent = originalLabel;
+    }
+  });
+})();
 </script>
 {% endblock %}

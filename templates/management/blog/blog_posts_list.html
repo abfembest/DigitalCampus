@@ -8,7 +8,7 @@
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <button onclick="history.back()" class="btn-secondary btn-sm mb-2">&#8592; Back</button>
-            <h1 class="text-3xl font-bold text-gray-900 font-display">Blog Posts</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 font-display">Blog Posts</h1>
             <p class="text-gray-600 mt-1">Manage all blog posts and articles</p>
         </div>
         {% if permissions.blog.can_create %}
@@ -92,7 +92,7 @@
     </div>
 
     <div class="overflow-x-auto">
-        <table class="w-full min-w-[760px]">
+        <table class="table-card w-full min-w-[760px]">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Post</th>
@@ -107,10 +107,10 @@
             <tbody class="divide-y divide-gray-200">
                 {% for post in posts %}
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4" data-label="Post">
                         <div class="flex items-center gap-4">
                             {% if post.featured_image %}
-                            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" 
+                            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}"
                                  class="w-16 h-16 rounded-lg object-cover">
                             {% else %}
                             <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -127,7 +127,7 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4" data-label="Category">
                         {% if post.category %}
                         <span class="px-3 py-1 bg-{{ post.category.color }}-100 text-{{ post.category.color }}-700 rounded-full text-sm font-semibold">
                             {{ post.category.name }}
@@ -136,13 +136,15 @@
                         <span class="text-gray-400">No category</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4">
-                        <p class="text-sm text-gray-900">{{ post.author_name }}</p>
-                        {% if post.author_title %}
-                        <p class="text-xs text-gray-500">{{ post.author_title }}</p>
-                        {% endif %}
+                    <td class="px-6 py-4" data-label="Author">
+                        <div>
+                            <p class="text-sm text-gray-900">{{ post.author_name }}</p>
+                            {% if post.author_title %}
+                            <p class="text-xs text-gray-500">{{ post.author_title }}</p>
+                            {% endif %}
+                        </div>
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4" data-label="Status">
                         {% if post.status == 'published' %}
                         <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
                             <i class="fas fa-check-circle"></i> Published
@@ -157,16 +159,16 @@
                         </span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4" data-label="Views">
                         <div class="flex items-center gap-2 text-gray-600">
                             <i class="fas fa-eye"></i>
                             <span class="font-semibold">{{ post.views_count }}</span>
                         </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-600">
+                    <td class="px-6 py-4 text-sm text-gray-600" data-label="Published">
                         {{ post.publish_date|date:"M d, Y" }}
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-6 py-4 action-buttons" data-label="Actions">
                         <div class="flex items-center gap-2">
                             <a href="{% url 'eduweb:blog_detail' post.slug %}" target="_blank"
                                class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 

@@ -12,7 +12,7 @@
             <i class="fas fa-arrow-left text-gray-600"></i>
         </a>
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 font-display">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 font-display">
                 <i class="fas fa-envelope text-primary-600 mr-3"></i>
                 Email Configuration
             </h1>
@@ -132,22 +132,22 @@
                     {% include 'management/system_config/_email_account_fields.html' with form=default_form %}
                 </div>
 
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <button type="submit" name="save" value="clear_default"
                             onclick="return swalConfirmSubmit(this, {title: 'Clear the default account?', text: 'It will fall back to .env until reconfigured.', confirmButtonText: 'Yes, clear'});"
-                            class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm">
+                            class="w-full sm:w-auto px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm">
                         <i class="fas fa-eraser mr-2"></i>
                         Clear
                     </button>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
                         <button type="submit" name="save" value="test_default"
                                 formnovalidate
-                                class="px-4 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-all">
+                                class="w-full sm:w-auto px-4 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-all">
                             <i class="fas fa-paper-plane mr-2"></i>
                             Send Test Email
                         </button>
                         <button type="submit" name="save" value="default"
-                                class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg">
+                                class="w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg">
                             <i class="fas fa-save mr-2"></i>
                             Save Default Account
                         </button>
@@ -173,22 +173,22 @@
                     {% include 'management/system_config/_email_account_fields.html' with form=admissions_form %}
                 </div>
 
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <button type="submit" name="save" value="clear_admissions"
                             onclick="return swalConfirmSubmit(this, {title: 'Clear the admissions account?', text: 'It will fall back to the default account until reconfigured.', confirmButtonText: 'Yes, clear'});"
-                            class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm">
+                            class="w-full sm:w-auto px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm">
                         <i class="fas fa-eraser mr-2"></i>
                         Clear
                     </button>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
                         <button type="submit" name="save" value="test_admissions"
                                 formnovalidate
-                                class="px-4 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-all">
+                                class="w-full sm:w-auto px-4 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-all">
                             <i class="fas fa-paper-plane mr-2"></i>
                             Send Test Email
                         </button>
                         <button type="submit" name="save" value="admissions"
-                                class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg">
+                                class="w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-md hover:shadow-lg">
                             <i class="fas fa-save mr-2"></i>
                             Save Admissions Account
                         </button>

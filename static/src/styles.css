@@ -99,6 +99,39 @@
   --animate-slide-up: slide-up 0.5s ease-out;
   --animate-slide-down: slide-down 0.3s ease-out;
   --animate-scale-in: scale-in 0.3s ease-out;
+
+  /* Design tokens for responsive spacing and sizing */
+  /* Container widths */
+  --container-max-width: 1400px;
+  --container-padding-x: clamp(1rem, 4vw, 2rem);
+  --container-padding-y: clamp(1.5rem, 4vw, 3rem);
+  
+  /* Section spacing */
+  --section-padding-y: clamp(2.5rem, 6vw, 6rem);
+  --section-padding-x: clamp(1rem, 4vw, 2rem);
+  
+  /* Touch targets */
+  --touch-target-min: 44px;
+  
+  /* Typography scale fluid clamps */
+  --text-display: clamp(1.875rem, 5vw, 4.5rem);
+  --text-h1: clamp(1.5rem, 4vw, 3rem);
+  --text-h2: clamp(1.25rem, 3vw, 2.25rem);
+  --text-h3: clamp(1.125rem, 2.5vw, 1.875rem);
+  --text-body: clamp(0.875rem, 1.5vw, 1.125rem);
+  
+  /* Border radius scale */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  
+  /* Shadow scale */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
 }
 
 /* Base element styles — fonts are controlled here so every page gets them
@@ -447,45 +480,291 @@
     word-break: break-word;
   }
 
-  /* ── Icon-prefixed form inputs (auth/signup pages) ──
-     Django form widgets set their own `class` via forms.py, so the input's
-     left-padding can't be added as a template-side utility class on the
-     <input> itself — it has to target it by descendant selector instead. */
-  .input-group {
-    position: relative;
-  }
+/* ── Icon-prefixed form inputs (auth/signup pages) ──
+      Django form widgets set their own `class` via forms.py, so the input's
+      left-padding can't be added as a template-side utility class on the
+      <input> itself — it has to target it by descendant selector instead. */
+   .input-group {
+     position: relative;
+   }
 
-  .input-group .icon {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
+   .input-group .icon {
+     position: absolute;
+     left: 0.75rem;
+     top: 50%;
+     transform: translateY(-50%);
+     color: #9ca3af;
+     pointer-events: none;
+   }
+
+   .input-group input {
+     padding-left: 2.75rem;
+   }
+
+   /* Brand icon SVGs used in place of removed Lucide brand icons */
+   .brand-icon {
+     display: inline-block;
+     width: 1.25rem;
+     height: 1.25rem;
+     fill: currentColor;
+     vertical-align: middle;
+     flex-shrink: 0;
+   }
+
+   .brand-icon-sm {
+     display: inline-block;
+     width: 1rem;
+     height: 1rem;
+     fill: currentColor;
+     vertical-align: middle;
+     flex-shrink: 0;
+   }
+
+   /* Touch target utility classes */
+   .touch-target {
+     min-height: var(--touch-target-min);
+     min-width: var(--touch-target-min);
+   }
+
+   /* Container utility classes using design tokens */
+   .container-responsive {
+     max-width: var(--container-max-width);
+     margin-left: auto;
+     margin-right: auto;
+     padding-left: var(--container-padding-x);
+     padding-right: var(--container-padding-x);
+   }
+
+   .section-responsive {
+     padding-top: var(--section-padding-y);
+     padding-bottom: var(--section-padding-y);
+     padding-left: var(--section-padding-x);
+     padding-right: var(--section-padding-x);
+   }
+
+   /* Responsive spacing utilities */
+   .responsive-padding {
+     padding: clamp(0.75rem, 3vw, 1.5rem) clamp(1rem, 4vw, 2rem);
+   }
+
+   .responsive-gap {
+     gap: clamp(0.75rem, 3vw, 1.5rem);
+   }
+
+   /* Responsive text sizing using fluid clamp */
+   .text-responsive-display {
+     font-size: var(--text-display);
+     line-height: 1.1;
+   }
+
+   .text-responsive-h1 {
+     font-size: var(--text-h1);
+     line-height: 1.15;
+   }
+
+   .text-responsive-h2 {
+     font-size: var(--text-h2);
+     line-height: 1.2;
+   }
+
+   .text-responsive-h3 {
+     font-size: var(--text-h3);
+     line-height: 1.25;
+   }
+
+   .text-responsive-body {
+     font-size: var(--text-body);
+     line-height: 1.6;
+   }
+
+   /* Responsive grid utilities */
+   .grid-responsive-2-3 {
+     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+   }
+
+   .grid-responsive-3-4 {
+     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+   }
+
+   /* Responsive card layout */
+   .card-stack {
+     display: flex;
+     flex-direction: column;
+     gap: clamp(1rem, 4vw, 2rem);
+   }
+
+   @media (min-width: 768px) {
+     .card-stack {
+       flex-direction: row;
+       align-items: stretch;
+     }
+   }
+
+   /* Responsive table utilities (enhanced version of .table-card) */
+   @media (max-width: 640px) {
+     .table-responsive {
+       thead { display: none; }
+       tbody { display: block; }
+     }
+
+     .table-responsive tr {
+       display: block;
+       margin-bottom: 1rem;
+       border: 1px solid #e5e7eb;
+       border-radius: 0.5rem;
+       background: #fff;
+       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+     }
+
+     .table-responsive td {
+       display: block;
+       padding: 0.75rem 1rem;
+       border-bottom: 1px dashed #f3f4f6;
+       text-align: left;
+     }
+
+     .table-responsive td::before {
+       content: attr(data-label);
+       font-weight: 600;
+       color: #6b7280;
+       text-transform: uppercase;
+       font-size: 0.75rem;
+       display: block;
+       margin-bottom: 0.25rem;
+     }
+
+     .table-responsive td:last-child {
+       border-bottom: none;
+     }
+
+     .table-responsive .action-buttons {
+       flex-direction: column;
+       align-items: stretch;
+     }
+
+     .table-responsive .action-buttons button,
+     .table-responsive .action-buttons a {
+       width: 100%;
+       justify-content: center;
+     }
+   }
+
+   /* Enhanced card grid for responsive layouts */
+   .card-grid-responsive {
+     display: grid;
+     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+     gap: clamp(1rem, 4vw, 2rem);
+   }
+
+   /* Responsive flex utilities for inline elements */
+   .flex-responsive-wrap {
+     display: flex;
+     flex-wrap: wrap;
+     gap: clamp(0.5rem, 2vw, 1rem);
+   }
+
+   .flex-responsive-stack {
+     display: flex;
+     flex-direction: column;
+     gap: clamp(0.75rem, 3vw, 1.5rem);
+   }
+
+   @media (min-width: 640px) {
+     .flex-responsive-stack {
+       flex-direction: row;
+       flex-wrap: wrap;
+     }
+   }
+
+   /* Responsive button sizing */
+   .btn-responsive {
+     padding: clamp(0.5rem, 2vw, 0.875rem) clamp(1rem, 4vw, 1.5rem);
+     font-size: clamp(0.875rem, 2vw, 1rem);
+     min-height: var(--touch-target-min);
+   }
+
+   /* Responsive image utilities */
+   .img-responsive {
+     width: 100%;
+     height: auto;
+     object-fit: cover;
+   }
+
+   /* Responsive text truncation */
+   .text-clamp-2 {
+     display: -webkit-box;
+     -webkit-line-clamp: 2;
+     -webkit-box-orient: vertical;
+     overflow: hidden;
+   }
+
+   .text-clamp-3 {
+     display: -webkit-box;
+     -webkit-line-clamp: 3;
+     -webkit-box-orient: vertical;
+     overflow: hidden;
+   }
+}
+
+/* ── Responsive table card utility (mobile ≤ 639px) ──
+    Add .table-card to any <table> to transform rows into cards on small screens.
+    Each <td> MUST have a data-label="Column Name" attribute for the card view. */
+@media (max-width: 639px) {
+  .table-card thead { display: none; }
+  .table-card tbody { display: block; }
+  .table-card tr {
+    display: block;
+    margin: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .table-card td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    border-bottom: 1px dashed #f3f4f6;
+    width: 100%;
+  }
+  .table-card td:last-child { border-bottom: none; }
+  .table-card td::before {
+    content: attr(data-label);
+    font-size: 0.65rem;
+    font-weight: 700;
     color: #9ca3af;
-    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
+  .table-card .action-buttons,
+  .table-card td:has(.action-buttons) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.375rem;
+  }
+  .table-card .action-buttons::before { display: none; }
+  .table-card .action-buttons .btn-sm,
+  .table-card .action-buttons .btn-md,
+  .table-card .action-buttons .btn-lg,
+  .table-card .action-buttons button,
+  .table-card .action-buttons a {
+    width: 100%;
+    justify-content: center;
+  }
+  .table-card .badge {
+    align-self: flex-start;
+  }
+  .table-card .badge::before { display: none; }
+}
 
-  .input-group input {
-    padding-left: 2.75rem;
-  }
-
-  /* Brand icon SVGs used in place of removed Lucide brand icons */
-  .brand-icon {
-    display: inline-block;
-    width: 1.25rem;
-    height: 1.25rem;
-    fill: currentColor;
-    vertical-align: middle;
-    flex-shrink: 0;
-  }
-
-  .brand-icon-sm {
-    display: inline-block;
-    width: 1rem;
-    height: 1rem;
-    fill: currentColor;
-    vertical-align: middle;
-    flex-shrink: 0;
-  }
+/* SweetAlert2 popups must always render above any app modal, however high
+   that modal's own z-index is set (management modals go up to z-[99999]) —
+   otherwise a Swal.fire() triggered from inside an open modal (e.g. an
+   oversized-file warning) renders behind it and looks broken. */
+.swal2-container {
+  z-index: 999999 !important;
 }
 
 /* Reduced motion preferences */

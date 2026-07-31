@@ -22,13 +22,15 @@
   {# ─── Filter ──────────────────────────────────────────────────────────────── #}
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
     <form method="get" class="flex flex-col sm:flex-row gap-3">
-      <select name="program_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
-        <option value="">All Programs</option>
-        {% for p in programs %}
-        <option value="{{ p.pk }}" {% if program_id == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.name }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit" class="px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors">
+      <div class="flex-1 sm:max-w-xs">
+        <select name="program_id" class="searchable-select w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none" data-ss-placeholder="All Programs">
+          <option value="">All Programs</option>
+          {% for p in programs %}
+          <option value="{{ p.pk }}" {% if program_id == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors">
         <i class="fas fa-filter mr-1" aria-hidden="true"></i> Filter
       </button>
     </form>
@@ -36,7 +38,7 @@
 
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[760px] text-sm">
+      <table class="table-card w-full min-w-[760px] text-sm">
         <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wide">
           <tr>
             <th class="py-3 px-5 text-left font-semibold">Session</th>
@@ -51,19 +53,19 @@
         <tbody class="divide-y divide-gray-100">
           {% for g in groups %}
           <tr class="hover:bg-gray-50 transition-colors">
-            <td class="py-3 px-5 font-medium text-gray-800">{{ g.session__name }}</td>
-            <td class="py-3 px-5 text-gray-600 capitalize">{{ g.term|default:"—" }}</td>
-            <td class="py-3 px-5 text-center">{{ g.total }}</td>
-            <td class="py-3 px-5 text-center">
+            <td class="py-3 px-5 font-medium text-gray-800" data-label="Session">{{ g.session__name }}</td>
+            <td class="py-3 px-5 text-gray-600 capitalize" data-label="Term">{{ g.term|default:"—" }}</td>
+            <td class="py-3 px-5 text-center" data-label="Total">{{ g.total }}</td>
+            <td class="py-3 px-5 text-center" data-label="Released">
               <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{{ g.released }}</span>
             </td>
-            <td class="py-3 px-5 text-center">
+            <td class="py-3 px-5 text-center" data-label="Pending">
               <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{{ g.pending }}</span>
             </td>
-            <td class="py-3 px-5 text-center">
+            <td class="py-3 px-5 text-center" data-label="Withheld">
               <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">{{ g.withheld }}</span>
             </td>
-            <td class="py-3 px-5">
+            <td class="py-3 px-5 action-buttons" data-label="Actions">
               <div class="flex items-center gap-2 flex-wrap">
                 <a href="{% url 'management:results_publish_detail' g.session_id %}?term={{ g.term }}&program_id={{ program_id }}"
                    class="text-xs text-primary-600 hover:underline">

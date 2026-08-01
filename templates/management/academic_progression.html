@@ -264,7 +264,7 @@
       <h2 class="text-lg font-bold text-gray-800">Manual Override — <span id="overrideStudentName"></span></h2>
       <button type="button" onclick="closeOverride()" class="text-gray-400 hover:text-gray-600 p-1 -m-1" aria-label="Close">&times;</button>
     </div>
-    <form method="post" class="flex flex-col flex-1 min-h-0">
+    <form method="post" id="overrideForm" class="flex flex-col flex-1 min-h-0">
       <div class="px-4 sm:px-6 py-4 space-y-4 overflow-y-auto flex-1 min-h-0">
         {% csrf_token %}
         <input type="hidden" name="action" value="manual_override">
@@ -272,6 +272,7 @@
         <input type="hidden" name="session_id" value="{{ selected_session.pk }}">
         <input type="hidden" name="override_student_id" id="overrideStudentId">
 
+        <div id="overrideFormErr" class="hidden p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700"></div>
         <p class="text-xs text-gray-500">Bypasses the computed decision for this student. Use for appeals or one-off corrections. Does not affect carry-over records — use "Manage Carry-Overs" for those.</p>
 
         <div>
@@ -300,7 +301,7 @@
 
       <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 shrink-0">
         <button type="button" onclick="closeOverride()" class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-300">Cancel</button>
-        <button type="submit" onclick="return swalConfirmSubmit(this, {title: 'Apply this manual override?', confirmButtonText: 'Yes, apply'})" class="w-full sm:w-auto px-4 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700">Apply Override</button>
+        <button type="submit" class="w-full sm:w-auto px-4 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700">Apply Override</button>
       </div>
     </form>
   </div>
@@ -371,15 +372,85 @@ function openOverride(studentId, studentName, suggestedYear, suggestedStatus) {
   document.getElementById('overrideStudentName').textContent = studentName;
   document.getElementById('overrideYear').value = suggestedYear;
   document.getElementById('overrideStatus').value = suggestedStatus;
-  document.getElementById('overridePanel').classList.remove('hidden');
+  // The panel's centering (items-stretch/sm:items-center + justify-center)
+  // only takes effect once display is actually flex — without also adding
+  // that class here, removing "hidden" alone leaves it at the default
+  // display:block, so it renders pinned to the top-left corner of the
+  // viewport instead of centered.
+  var panel = document.getElementById('overridePanel');
+  panel.classList.remove('hidden');
+  panel.classList.add('flex');
 }
 function closeOverride() {
-  document.getElementById('overridePanel').classList.add('hidden');
+  var panel = document.getElementById('overridePanel');
+  panel.classList.add('hidden');
+  panel.classList.remove('flex');
 }
+
+// Submitting this used to be a plain form POST (via swalConfirmSubmit,
+// which just calls form.submit() after confirming) — on a validation
+// error the whole page reloaded, discarding the level/status/reason the
+// admin had just filled in and the panel closed with only a generic
+// toast. This keeps the SweetAlert confirm step but sends the form via
+// fetch so an error re-opens the same panel with what was typed intact.
+(function () {
+  var form = document.getElementById('overrideForm');
+  if (!form) return;
+  var errBox = document.getElementById('overrideFormErr');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!window.Swal) { doSubmitOverride(); return; }
+    Swal.fire({
+      title: 'Apply this manual override?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, apply',
+    }).then(function (r) { if (r.isConfirmed) doSubmitOverride(); });
+  });
+  async function doSubmitOverride() {
+    errBox.classList.add('hidden');
+    errBox.textContent = '';
+    var btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    try {
+      // No action="" attribute on this form, and it has a field named
+      // "action" (shadowing form.action) — submit to the current page
+      // URL directly, which is what the browser's own default submission
+      // target would have been anyway.
+      var resp = await fetch(window.location.href, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      var data = await resp.json();
+      if (data.success) {
+        window.location.reload();
+        return;
+      }
+      var msgs = [];
+      Object.keys(data.errors || {}).forEach(function (f) {
+        (data.errors[f] || []).forEach(function (x) { msgs.push(x.message || x); });
+      });
+      errBox.textContent = msgs.join(' ') || 'Something went wrong. Please try again.';
+      errBox.classList.remove('hidden');
+    } catch (err) {
+      errBox.textContent = 'Something went wrong. Please try again.';
+      errBox.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+})();
 
 {% if analytics_json %}
 const progressionAnalytics = {{ analytics_json|safe }};
 
+// analytics_json can be a non-empty (but zero-valued) payload for a
+// program/session with no active students — in that case the canvas
+// elements below aren't rendered at all, and Chart.js throws trying to
+// acquire a 2D context from a null element. Guard each one individually
+// since they can be independently present/absent.
+if (document.getElementById('passFailChart'))
 new Chart(document.getElementById('passFailChart'), {
   type: 'doughnut',
   data: {
@@ -408,6 +479,7 @@ new Chart(document.getElementById('passFailChart'), {
   },
 });
 
+if (document.getElementById('statusBreakdownChart'))
 new Chart(document.getElementById('statusBreakdownChart'), {
   type: 'bar',
   data: {

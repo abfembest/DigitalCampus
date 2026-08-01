@@ -166,6 +166,7 @@
             class="p-6 space-y-5" novalidate>
         {% csrf_token %}
 
+        <div id="gw-err" role="alert" class="hidden px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
         {% if form.non_field_errors %}
           <div role="alert"
                class="px-3 py-2.5 bg-red-50 border border-red-200
@@ -289,7 +290,15 @@ var GW = (function () {
     });
   }
 
+  var errBox = document.getElementById('gw-err');
+
+  function clearError() {
+    errBox.classList.add('hidden');
+    errBox.textContent = '';
+  }
+
   function open(slug) {
+    clearError();
     if (slug) {
       var t = document.getElementById('gwd-' + slug);
       if (!t) return;
@@ -320,7 +329,46 @@ var GW = (function () {
     modal.classList.add('hidden');
     document.body.style.overflow = '';
     form.reset();
+    clearError();
   }
+
+  // Submitting this used to be a plain form POST — on a validation error
+  // the page reloaded and the user had to retype everything, including
+  // re-entering API keys/secrets they'd just pasted in. AJAX keeps the
+  // modal open with the error shown and nothing lost.
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearError();
+    submit.disabled = true;
+    try {
+      // Safe to read form.action directly here — this form has no field
+      // named "action" (unlike courses_list.html/academic_sessions_list.html),
+      // so there's no risk of it resolving to a form control instead of the URL.
+      var resp = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      var data = await resp.json();
+      if (data.success) {
+        window.location.reload();
+        return;
+      }
+      var msgs = [];
+      Object.keys(data.errors || {}).forEach(function (f) {
+        (data.errors[f] || []).forEach(function (x) {
+          msgs.push((f !== '__all__' ? f.replace(/_/g, ' ') + ': ' : '') + (x.message || x));
+        });
+      });
+      errBox.textContent = msgs.join(' ') || 'Something went wrong. Please try again.';
+      errBox.classList.remove('hidden');
+    } catch (err) {
+      errBox.textContent = 'Something went wrong. Please try again.';
+      errBox.classList.remove('hidden');
+    } finally {
+      submit.disabled = false;
+    }
+  });
 
   function confirmDelete(e, name) {
     e.preventDefault();

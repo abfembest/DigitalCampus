@@ -265,6 +265,15 @@ function confirmDelete(url, name) {
   var submitLabel = document.getElementById('departmentModalSubmitLabel');
   var createUrl = '{% url "management:department_create" %}';
 
+  // The fields partial as originally server-rendered for "create" (blank
+  // form) at page load. form.reset() alone can't restore this after an
+  // edit fetch has replaced the DOM with an instance's values — reset()
+  // only reverts to whatever is currently baked in as the "default", and
+  // by then that default IS the edited record's data.
+  var initialFieldsHTML = null;
+  var initialFieldsEl = modalBody.querySelector('#departmentFormFieldsPartial');
+  if (initialFieldsEl) initialFieldsHTML = initialFieldsEl.outerHTML;
+
   function openModal() {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -281,7 +290,14 @@ function confirmDelete(url, name) {
       modalTitle.textContent = 'Add Department';
       submitLabel.textContent = 'Create Department';
       modalForm.action = createUrl;
-      modalForm.reset();
+      if (initialFieldsHTML) {
+        var doc = new DOMParser().parseFromString(initialFieldsHTML, 'text/html');
+        var freshFields = doc.getElementById('departmentFormFieldsPartial');
+        var currentFields = modalBody.querySelector('#departmentFormFieldsPartial');
+        if (freshFields && currentFields) currentFields.replaceWith(freshFields);
+      } else {
+        modalForm.reset();
+      }
       window.enhanceSearchableSelects && window.enhanceSearchableSelects(modalBody);
       openModal();
       return;

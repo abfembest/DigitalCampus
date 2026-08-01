@@ -1,9 +1,8 @@
 // Shared behaviour for the Program create/edit fields partial
-// (_program_form_fields.html), used both by the standalone program_form.html
-// page and the "New Program" modal on programs_list.html. Re-run
-// initProgramFormUI(root) any time the partial's markup is replaced (e.g.
-// after an AJAX re-render on validation error) so listeners attach to the
-// fresh DOM.
+// (_program_form_fields.html), used by the create/edit modal on
+// programs_list.html. Re-run initProgramFormUI(root) any time the partial's
+// markup is replaced (e.g. after an AJAX re-render on validation error) so
+// listeners attach to the fresh DOM.
 function initProgramFormUI(root) {
   if (!root) return;
 
@@ -24,18 +23,11 @@ function initProgramFormUI(root) {
     });
   });
 
-  // ── Department select2 ──────────────────────────────────────────────
-  if (window.jQuery) {
-    const $select = jQuery(root).find('.program-department-select');
-    if ($select.length && !$select.hasClass('select2-hidden-accessible')) {
-      $select.select2({
-        placeholder: 'Search and select department…',
-        allowClear: true,
-        width: '100%',
-        dropdownParent: jQuery(root),
-      });
-    }
-  }
+  // ── Department dropdown ─────────────────────────────────────────────
+  // Enhanced to a searchable dropdown by the shared
+  // window.enhanceSearchableSelects() (templates/includes/searchable_select.html)
+  // via the .searchable-select class on this field — no page-specific init
+  // needed here.
 
   // ── Image preview helper ────────────────────────────────────────────
   function setupImagePreview(input, previewImg, previewWrap, maxSizeMB) {

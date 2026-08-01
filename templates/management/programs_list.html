@@ -5,33 +5,6 @@
 {% block meta_description %}Manage academic programs{% endblock %}
 
 {% block content %}
-<link href="{% static 'vendor/select2/select2.min.css' %}" rel="stylesheet">
-<style>
-  .select2-container { width: 100% !important; }
-  .select2-container--default .select2-selection--single {
-    height: 42px; border: 1px solid #d1d5db; border-radius: .5rem;
-    display: flex; align-items: center; padding: 0 .75rem;
-  }
-  .select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 42px; color: #111827; font-size: .875rem; padding: 0;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 28px);
-  }
-  .select2-container--default .select2-selection--single .select2-selection__arrow { height: 42px; right: 10px; }
-  .select2-container--default.select2-container--focus .select2-selection--single,
-  .select2-container--default.select2-container--open  .select2-selection--single {
-    border-color: #3a56d4; box-shadow: 0 0 0 2px rgba(58,86,212,.15); outline: none;
-  }
-  .select2-dropdown {
-    border: 1px solid #d1d5db; border-radius: .5rem;
-    box-shadow: 0 8px 24px rgba(0,0,0,.12); font-size: .875rem;
-  }
-  .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: #3a56d4; }
-  .select2-container--default .select2-search--dropdown .select2-search__field {
-    border: 1px solid #d1d5db; border-radius: .375rem;
-    padding: .375rem .75rem; font-size: .875rem; outline: none; width: 100%; box-sizing: border-box;
-  }
-</style>
-
 <div class="max-w-full">
 
   <!-- Header -->
@@ -165,14 +138,14 @@
                   <i class="fas fa-eye text-sm" aria-hidden="true"></i>
                 </a>
                 {% if permissions.academics.can_edit %}
-                <a href="{% url 'management:program_edit' program.pk %}"
-                   class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
+                <button type="button" onclick="programModal.openForEdit('{{ program.pk }}')"
+                        class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Edit">
                   <i class="fas fa-edit text-sm" aria-hidden="true"></i>
-                </a>
+                </button>
                 {% endif %}
                 {% if permissions.academics.can_delete %}
                 <button type="button"
-                        onclick="confirmDelete('{% url 'management:program_delete' program.pk %}', '{{ program.name|escapejs }}')"
+                        onclick="confirmProgramDelete('{% url 'management:program_delete' program.pk %}', '{{ program.name|escapejs }}', {{ program.application_count }}, {{ program.intake_count }}, {{ program.student_count }})"
                         class="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
                   <i class="fas fa-trash-alt text-sm" aria-hidden="true"></i>
                 </button>
@@ -208,8 +181,8 @@
 <div id="programCreateModal" class="fixed inset-0 z-50 hidden items-stretch sm:items-center justify-center sm:p-3" style="background: rgba(15,23,42,.55);">
   <div class="bg-white sm:rounded-xl shadow-2xl w-full sm:max-w-6xl h-full sm:h-auto sm:max-h-[97vh] flex flex-col">
     <div class="px-4 sm:px-5 py-2.5 border-b border-gray-100 flex items-center justify-between shrink-0">
-      <h2 class="text-base font-semibold text-gray-800 font-display">New Program</h2>
-      <button type="button" id="programModalCloseBtn" class="text-gray-400 hover:text-gray-600 p-1 -m-1" aria-label="Close">
+      <h2 class="text-base font-semibold text-gray-800 font-display" id="programModalTitle">New Program</h2>
+      <button type="button" id="programModalCloseBtn" data-modal-close class="text-gray-400 hover:text-gray-600 p-1 -m-1" aria-label="Close">
         <i class="fas fa-times text-lg" aria-hidden="true"></i>
       </button>
     </div>
@@ -220,7 +193,7 @@
       </form>
     </div>
     <div class="px-4 sm:px-5 py-2.5 border-t border-gray-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 shrink-0">
-      <button type="button" id="programModalCancelBtn"
+      <button type="button" id="programModalCancelBtn" data-modal-close
               class="w-full sm:w-auto px-5 py-2.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm font-medium">
         Cancel
       </button>
@@ -236,24 +209,21 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'vendor/select2/select2.min.js' %}"></script>
 <script src="{% static 'js/program_form_admin.js' %}"></script>
 <script>
-function confirmDelete(url, name) {
-  Swal.fire({
+function confirmProgramDelete(url, name, applicationCount, intakeCount, studentCount) {
+  var impactLines = '';
+  if (applicationCount || intakeCount || studentCount) {
+    impactLines = '<ul class="text-left text-sm mt-3 mb-1 space-y-0.5">'
+      + (intakeCount ? '<li>' + intakeCount + ' intake(s) will be deleted</li>' : '')
+      + (applicationCount ? '<li>' + applicationCount + ' application(s) will be deleted</li>' : '')
+      + (studentCount ? '<li>' + studentCount + ' enrolled student record(s) will be affected</li>' : '')
+      + '</ul>';
+  }
+  confirmAdminDelete({
+    url: url,
     title: 'Delete Program?',
-    html: 'Are you sure you want to delete <strong>' + name + '</strong>?',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#ef4444',
-    cancelButtonColor: '#6b7280',
-    confirmButtonText: 'Yes, Delete',
-  }).then(function (result) {
-    if (result.isConfirmed) {
-      var form = document.getElementById('deleteForm');
-      form.action = url;
-      form.submit();
-    }
+    html: 'Are you sure you want to delete <strong>' + name + '</strong>? This is permanent and cannot be undone.' + impactLines,
   });
 }
 
@@ -303,86 +273,43 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  setupModal();
 });
 
-function setupModal() {
-  var modal = document.getElementById('programCreateModal');
-  if (!modal) return;
+var programModal = createAjaxModal({
+  modalId: 'programCreateModal',
+  bodyId: 'programModalBody',
+  formId: 'programModalForm',
+  titleId: 'programModalTitle',
+  submitBtnId: 'programModalSubmitBtn',
+  submitLabelId: 'programModalSubmitLabel',
+  fieldsPartialId: 'programFormFieldsPartial',
+  createUrl: '{% url "management:program_create" %}',
+  editUrlTemplate: '{% url "management:program_edit" 0 %}',
+  createTitle: 'New Program',
+  createLabel: 'Create Program',
+  editTitle: 'Edit Program',
+  editLabel: 'Save Changes',
+  onEnhance: function (root) { initProgramFormUI(root); },
+});
 
-  var modalBody = document.getElementById('programModalBody');
-  var modalForm = document.getElementById('programModalForm');
-  var submitBtn = document.getElementById('programModalSubmitBtn');
-  var submitLabel = document.getElementById('programModalSubmitLabel');
-  var initialized = false;
-
-  function openModal() {
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    document.body.classList.add('overflow-hidden');
-    if (!initialized) {
-      initProgramFormUI(modal);
-      initialized = true;
-    }
-  }
-
-  function closeModal() {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    document.body.classList.remove('overflow-hidden');
-  }
-
-  document.querySelectorAll('.js-open-program-modal').forEach(function (trigger) {
-    trigger.addEventListener('click', function (e) {
-      e.preventDefault();
-      openModal();
-    });
-  });
-
-  document.getElementById('programModalCloseBtn').addEventListener('click', closeModal);
-  document.getElementById('programModalCancelBtn').addEventListener('click', closeModal);
-  modal.addEventListener('click', function (e) {
-    if (e.target === modal) closeModal();
-  });
-
-  modalForm.addEventListener('submit', async function (e) {
+document.querySelectorAll('.js-open-program-modal').forEach(function (trigger) {
+  trigger.addEventListener('click', function (e) {
     e.preventDefault();
-    if (submitBtn.disabled) return;
-    submitBtn.disabled = true;
-    submitLabel.textContent = 'Saving\u2026';
-    try {
-      var resp = await fetch(modalForm.action, {
-        method: 'POST',
-        body: new FormData(modalForm)
-      });
-      if (resp.redirected) {
-        window.location.href = resp.url;
-        return;
-      }
-      var html = await resp.text();
-      var doc = new DOMParser().parseFromString(html, 'text/html');
-      var newFields = doc.getElementById('programFormFieldsPartial');
-      var oldFields = modalForm.querySelector('#programFormFieldsPartial');
-      if (newFields && oldFields) {
-        oldFields.replaceWith(newFields);
-        initProgramFormUI(modal);
-        modalBody.scrollTop = 0;
-      } else {
-        window.location.href = modalForm.action;
-      }
-    } catch (err) {
-      if (window.Swal) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Something went wrong',
-          text: 'Please try again.'
-        });
-      }
-    } finally {
-      submitBtn.disabled = false;
-      submitLabel.textContent = 'Create Program';
-    }
+    programModal.openForCreate();
   });
-}
+});
+
+// Deep link from program_detail.html's "Edit Program" action, which
+// navigates here with ?edit=<pk> since edit is a modal on this page now,
+// not its own URL.
+(function () {
+  var editPk = new URLSearchParams(window.location.search).get('edit');
+  if (editPk) {
+    programModal.openForEdit(editPk);
+    var url = new URL(window.location);
+    url.searchParams.delete('edit');
+    history.replaceState({}, '', url);
+  }
+})();
 </script>
 {% endblock %}

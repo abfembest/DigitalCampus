@@ -275,6 +275,7 @@
             class="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 min-h-0" novalidate>
         {% csrf_token %}
 
+        <div id="py-err" role="alert" class="hidden px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
         {% if form.non_field_errors %}
           <div role="alert"
                class="px-3 py-2.5 bg-red-50 border border-red-200
@@ -473,7 +474,11 @@ var PY = (function () {
 
   function f(n) { return form.querySelector('[name="' + n + '"]'); }
 
+  var errBox = document.getElementById('py-err');
+  function clearError() { errBox.classList.add('hidden'); errBox.textContent = ''; }
+
   function open(ref) {
+    clearError();
     if (ref) {
       var t = document.getElementById('pyd-' + ref);
       if (!t) return;
@@ -513,7 +518,43 @@ var PY = (function () {
     form.reset();
     staffId.value    = '';
     staffId.dispatchEvent(new Event('change', { bubbles: true }));
+    clearError();
   }
+
+  // Submitting this used to be a plain form POST — on a validation error
+  // the page reloaded and every field (13 of them) had to be retyped, with
+  // only a generic toast to go on. AJAX keeps the modal open with the
+  // error shown and nothing lost.
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearError();
+    submit.disabled = true;
+    try {
+      var resp = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      var data = await resp.json();
+      if (data.success) {
+        window.location.reload();
+        return;
+      }
+      var msgs = [];
+      Object.keys(data.errors || {}).forEach(function (fld) {
+        (data.errors[fld] || []).forEach(function (x) {
+          msgs.push((fld !== '__all__' ? fld.replace(/_/g, ' ') + ': ' : '') + (x.message || x));
+        });
+      });
+      errBox.textContent = msgs.join(' ') || 'Something went wrong. Please try again.';
+      errBox.classList.remove('hidden');
+    } catch (err) {
+      errBox.textContent = 'Something went wrong. Please try again.';
+      errBox.classList.remove('hidden');
+    } finally {
+      submit.disabled = false;
+    }
+  });
 
   function confirmDelete(e, name) {
     e.preventDefault();

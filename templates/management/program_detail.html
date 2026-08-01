@@ -129,7 +129,7 @@
             <h2 class="text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
             <div class="space-y-2">
                 {% if permissions.academics.can_edit %}
-                <a href="{% url 'management:program_edit' program.id %}" class="block w-full px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-center font-medium">
+                <a href="{% url 'management:programs_list' %}?edit={{ program.id }}" class="block w-full px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-center font-medium">
                     <i class="fas fa-edit mr-2"></i>Edit Program
                 </a>
                 {% endif %}
@@ -139,9 +139,10 @@
                 </a>
                 {% endif %}
                 {% if permissions.academics.can_delete %}
-                <button onclick="if(confirm('Are you sure you want to delete this program?')) { window.location='{% url 'management:program_delete' program.id %}'; }" class="block w-full px-4 py-2.5 border-2 border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-center font-medium">
+                <button type="button" onclick="confirmAdminDelete({url: '{% url 'management:program_delete' program.id %}', title: 'Delete Program?', html: 'Are you sure you want to delete <strong>{{ program.name|escapejs }}</strong>? This is permanent and cannot be undone.'})" class="block w-full px-4 py-2.5 border-2 border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-center font-medium">
                     <i class="fas fa-trash mr-2"></i>Delete Program
                 </button>
+                <form id="deleteForm" method="post" action="" style="display:none;">{% csrf_token %}</form>
                 {% endif %}
             </div>
         </div>

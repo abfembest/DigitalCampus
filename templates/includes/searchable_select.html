@@ -216,18 +216,28 @@ with the new root element to enhance just that subtree.
 
         function openPanel() {
             if (select.disabled) return;
-            // Flip the panel above the trigger when there isn't enough room
-            // below within whichever container actually clips it (viewport,
-            // or a scrollable modal body) — otherwise it renders
-            // off-screen/clipped and options become impossible to see or
-            // click.
+            // Flip the panel above the trigger only when there genuinely
+            // isn't enough room below to show a useful list — not merely
+            // whenever there happens to be more empty space above. The
+            // panel already scrolls its own option list, so it doesn't
+            // need the full preferred height reserved; it only needs a
+            // minimum (search box + a couple of options) to be worth
+            // opening downward. Whichever direction it opens, its height
+            // is capped to the room actually available there, computed
+            // against whichever container clips it (viewport, or a
+            // scrollable modal body) so it never renders off-screen.
             var triggerRect = trigger.getBoundingClientRect();
             var clipParent = scrollClipParent(wrap);
             var boundaryBottom = clipParent ? clipParent.getBoundingClientRect().bottom : window.innerHeight;
+            var boundaryTop = clipParent ? clipParent.getBoundingClientRect().top : 0;
             var spaceBelow = boundaryBottom - triggerRect.bottom;
-            var spaceAbove = triggerRect.top;
-            var panelMaxHeight = window.innerWidth <= 480 ? window.innerHeight * 0.6 : 280;
-            panel.classList.toggle('ss-panel-up', spaceBelow < panelMaxHeight && spaceAbove > spaceBelow);
+            var spaceAbove = triggerRect.top - boundaryTop;
+            var preferredHeight = window.innerWidth <= 480 ? window.innerHeight * 0.6 : 280;
+            var minUsableHeight = 160;
+            var openUp = spaceBelow < minUsableHeight && spaceAbove > spaceBelow;
+            panel.classList.toggle('ss-panel-up', openUp);
+            var available = openUp ? spaceAbove : spaceBelow;
+            panel.style.maxHeight = Math.max(120, Math.min(preferredHeight, available - 8)) + 'px';
             panel.classList.add('ss-open');
             trigger.setAttribute('aria-expanded', 'true');
             search.value = '';

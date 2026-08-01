@@ -238,7 +238,7 @@
               id="createForm" class="divide-y divide-gray-100">
           {% csrf_token %}
           <input type="hidden" name="_mode" value="create">
-          {% if create_form.errors %}<script>document.addEventListener('DOMContentLoaded',()=>openCreateModal());</script>{% endif %}
+          <div id="createFormErr" class="hidden mx-5 mt-4 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700"></div>
 
           {# §1 Academic Course — datalist search #}
           <div class="px-5 py-5 space-y-3">
@@ -448,6 +448,7 @@
           {% csrf_token %}
           <input type="hidden" name="_mode" value="edit">
           <input type="hidden" name="course_id" id="editCourseId" value="">
+          <div id="editFormErr" class="hidden mx-5 mt-4 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700"></div>
 
           {# §1 Academic Course — datalist search #}
           <div class="px-5 py-5 space-y-3">
@@ -774,6 +775,55 @@ function _listSection(wrapId, listId, items) {
   } else { wrap.classList.add('hidden'); }
 }
 function _esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Both the create and edit forms used to submit as a plain full-page POST —
+// on a validation error the whole page reloaded and every field (including
+// any re-selected file uploads) had to be redone, with only a generic toast
+// to go on. This wires both up to submit via AJAX instead: on error the
+// modal stays open, the offending fields are named in an inline banner, and
+// nothing the user entered is lost.
+function wireAjaxFormSubmit(formId, errBoxId) {
+  const form = document.getElementById(formId);
+  const errBox = document.getElementById(errBoxId);
+  if (!form || form._ajaxWired) return;
+  form._ajaxWired = true;
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    errBox.classList.add('hidden');
+    errBox.textContent = '';
+    const btn = form.querySelector('button[type=submit]');
+    if (btn) btn.disabled = true;
+    try {
+      const resp = await fetch(form.getAttribute('action'), {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': CSRF_TOKEN },
+      });
+      const data = await resp.json();
+      if (data.success) {
+        window.location.reload();
+        return;
+      }
+      const msgs = [];
+      Object.keys(data.errors || {}).forEach(function (f) {
+        (data.errors[f] || []).forEach(function (x) {
+          msgs.push((f !== '__all__' ? f.replace(/_/g, ' ') + ': ' : '') + (x.message || x));
+        });
+      });
+      errBox.textContent = msgs.join(' ') || 'Something went wrong. Please try again.';
+      errBox.classList.remove('hidden');
+    } catch (err) {
+      errBox.textContent = 'Something went wrong. Please try again.';
+      errBox.classList.remove('hidden');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded', function () {
+  wireAjaxFormSubmit('createForm', 'createFormErr');
+  wireAjaxFormSubmit('editForm', 'editFormErr');
+});
 
 
 // ─────────────────────────────────────────────────────────────────

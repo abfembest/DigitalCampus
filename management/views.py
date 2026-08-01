@@ -2352,16 +2352,19 @@ def lms_course_save(request):
     """
     mode = request.POST.get('_mode', 'create')
     required_action = 'can_create' if mode == 'create' else 'can_edit'
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     if not _has_permission(request, 'lms_courses', required_action):
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'You do not have permission to save LMS courses.'}]}}, status=403)
         messages.error(request, 'You do not have permission to save LMS courses.')
         return redirect('management:lms_courses_list')
     course_id = request.POST.get('course_id', '').strip()
- 
+
     if mode == 'edit' and course_id.isdigit():
         # ── UPDATE ────────────────────────────────────────────────────────────
         course = get_object_or_404(LMSCourse, pk=int(course_id))
         form   = LMSCourseForm(request.POST, request.FILES, instance=course)
- 
+
         if form.is_valid():
             was_published = course.is_published
             course = form.save()
@@ -2398,13 +2401,17 @@ def lms_course_save(request):
                         notif_type='enrollment',
                         link=f'/courses/{course.slug}/',
                     )
+            if is_ajax:
+                return JsonResponse({'success': True})
         else:
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
             messages.error(request, 'Could not save — please check the form and try again.')
- 
+
     else:
         # ── CREATE ────────────────────────────────────────────────────────────
         form = LMSCourseForm(request.POST, request.FILES)
- 
+
         if form.is_valid():
             course = form.save()
             AuditLog.objects.create(
@@ -2415,10 +2422,14 @@ def lms_course_save(request):
                 description=f'Created LMS course: {course.title}',
             )
             _notify_instructor(course, request.user)
+            if is_ajax:
+                return JsonResponse({'success': True})
             messages.success(request, f'LMS course "{course.title}" created successfully.')
         else:
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
             messages.error(request, 'Please correct the errors in the form.')
- 
+
     return redirect('management:lms_courses_list')
  
  
@@ -3398,7 +3409,19 @@ def programs_list(request):
 
     # Filtering/search/pagination all happen client-side in the DataTable now
     # (instant, no page reload) — the view just hands over every row.
-    qs = Program.objects.select_related('department__faculty').order_by('name')
+    # The three counts are annotated so the delete confirmation (a SweetAlert
+    # on this page, not a standalone page any more) can warn about exactly
+    # what will cascade-delete without an extra request per click.
+    qs = (
+        Program.objects
+        .select_related('department__faculty')
+        .annotate(
+            application_count=Count('applications', distinct=True),
+            intake_count=Count('intakes', distinct=True),
+            student_count=Count('program_students', distinct=True),
+        )
+        .order_by('name')
+    )
 
     context = {
         'programs': qs,
@@ -3538,6 +3561,13 @@ def program_create(request):
 @login_required
 @user_passes_test(is_admin)
 def program_edit(request, pk):
+    """
+    "Edit" is the same modal as "New Program" on programs_list.html,
+    populated by fetching this view's GET response (the fields partial,
+    pre-filled from the instance) and swapping it into the modal body —
+    mirroring department_edit's pattern. POST-invalid re-renders the same
+    partial with errors; POST-valid redirects.
+    """
     program = get_object_or_404(Program, pk=pk)
     if request.method == 'POST':
         if not _has_permission(request, 'academics', 'can_edit'):
@@ -3598,7 +3628,7 @@ def program_edit(request, pk):
             form = ProgramForm(instance=program)
     else:
         form = ProgramForm(instance=program)
-    return render(request, 'management/program_form.html', {
+    return render(request, 'management/_program_form_fields.html', {
         'form': form,
         'program': program,
         'sessions_with_terms': _program_sessions_credit_cap_context(program),
@@ -3644,7 +3674,9 @@ def program_delete(request, pk):
         messages.success(request, f'Program "{program_name}" deleted successfully.')
         return redirect('management:programs_list')
 
-    return render(request, 'management/program_delete.html', {'program': program})
+    # No dedicated confirm page any more — deletion is confirmed via the
+    # SweetAlert dialog on programs_list.html, which POSTs directly here.
+    return redirect('management:programs_list')
 
 
 # ===========================================================================
@@ -3656,30 +3688,43 @@ def program_delete(request, pk):
 def academic_sessions_list(request):
     if request.method == 'POST':
         action = request.POST.get('action')
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+        def denied(message):
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [message]}}, status=403)
+            messages.error(request, message)
+            return redirect('management:academic_sessions_list')
 
         if action == 'create':
             if not _has_permission(request, 'academics', 'can_create'):
-                messages.error(request, 'You do not have permission to create academic sessions.')
-                return redirect('management:academic_sessions_list')
+                return denied('You do not have permission to create academic sessions.')
             form = AcademicSessionForm(request.POST)
             if form.is_valid():
                 form.save()
+                if is_ajax:
+                    return JsonResponse({'success': True})
                 messages.success(request, 'Academic session created successfully.')
-            else:
-                messages.error(request, 'Error creating session. Check form data.')
+                return redirect('management:academic_sessions_list')
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
+            messages.error(request, 'Error creating session. Check form data.')
 
         elif action == 'edit':
             if not _has_permission(request, 'academics', 'can_edit'):
-                messages.error(request, 'You do not have permission to edit academic sessions.')
-                return redirect('management:academic_sessions_list')
+                return denied('You do not have permission to edit academic sessions.')
             session_id = request.POST.get('session_id')
             session = get_object_or_404(AcademicSession, pk=session_id)
             form = AcademicSessionForm(request.POST, instance=session)
             if form.is_valid():
                 form.save()
+                if is_ajax:
+                    return JsonResponse({'success': True})
                 messages.success(request, 'Academic session updated.')
-            else:
-                messages.error(request, 'Error updating session.')
+                return redirect('management:academic_sessions_list')
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
+            messages.error(request, 'Error updating session.')
 
         return redirect('management:academic_sessions_list')
 
@@ -3844,7 +3889,10 @@ def academic_progression(request):
 
     if request.method == 'POST':
         action = request.POST.get('action', 'confirm')
+        is_ajax = action == 'manual_override' and request.headers.get('x-requested-with') == 'XMLHttpRequest'
         if not _has_permission(request, 'academic_progression', 'can_approve'):
+            if is_ajax:
+                return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'You do not have permission to confirm progression decisions.'}]}}, status=403)
             messages.error(request, 'You do not have permission to confirm progression decisions.')
             return redirect(f"{reverse('management:academic_progression')}?program_id={program_id}&session_id={session_id}")
 
@@ -3880,11 +3928,15 @@ def academic_progression(request):
             if not reason:
                 errors.append('A reason is required for a manual override.')
             if errors:
+                if is_ajax:
+                    return JsonResponse({'success': False, 'errors': {'__all__': [{'message': e} for e in errors]}}, status=400)
                 for e in errors:
                     messages.error(request, e)
                 return redirect(redirect_url)
 
             apply_manual_override(profile, program, session, new_year_of_study, new_status, reason, request.user)
+            if is_ajax:
+                return JsonResponse({'success': True})
             messages.success(request, f"Manually updated {profile.user.get_full_name() or profile.user.username}.")
             return redirect(redirect_url)
 
@@ -4224,17 +4276,24 @@ def results_publish_detail(request, session_id):
 def courses_list(request):
     if request.method == 'POST':
         action = request.POST.get('action')
- 
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         # ── CREATE ──────────────────────────────────────────────────────────
         if action == 'create':
             if not _has_permission(request, 'academics', 'can_create'):
+                if is_ajax:
+                    return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'You do not have permission to create courses.'}]}}, status=403)
                 messages.error(request, 'You do not have permission to create courses.')
                 return redirect('management:courses_list')
 
             form = CourseForm(request.POST)
             if form.is_valid():
                 form.save()
+                if is_ajax:
+                    return JsonResponse({'success': True})
                 messages.success(request, 'Course created successfully.')
+            elif is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
             else:
                 # Surface first field error so the user knows what went wrong
                 for field, errs in form.errors.items():
@@ -4243,6 +4302,8 @@ def courses_list(request):
         # ── EDIT ────────────────────────────────────────────────────────────
         elif action == 'edit':
             if not _has_permission(request, 'academics', 'can_edit'):
+                if is_ajax:
+                    return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'You do not have permission to edit courses.'}]}}, status=403)
                 messages.error(request, 'You do not have permission to edit courses.')
                 return redirect('management:courses_list')
 
@@ -4251,11 +4312,15 @@ def courses_list(request):
             form      = CourseForm(request.POST, instance=course)
             if form.is_valid():
                 form.save()
+                if is_ajax:
+                    return JsonResponse({'success': True})
                 messages.success(request, f'Course "{course.code}" updated successfully.')
+            elif is_ajax:
+                return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
             else:
                 for field, errs in form.errors.items():
                     messages.error(request, f'{field.replace("_"," ").title()}: {errs[0]}')
- 
+
         # ── DELETE ──────────────────────────────────────────────────────────
         elif action == 'delete':
             if not _has_permission(request, 'academics', 'can_delete'):
@@ -5397,7 +5462,11 @@ def payment_gateway_create(request):
     if request.method != 'POST':
         return redirect('management:payment_gateways_list')
 
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
     if not _has_permission(request, 'finance', 'can_create'):
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'You do not have permission to add payment gateways.'}]}}, status=403)
         messages.error(request, 'You do not have permission to add payment gateways.')
         return redirect('management:payment_gateways_list')
 
@@ -5421,8 +5490,12 @@ def payment_gateway_create(request):
                 f'API secrets not recorded.'
             ),
         )
+        if is_ajax:
+            return JsonResponse({'success': True})
         messages.success(request, 'Gateway added.')
     else:
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
         msg = next(
             (e for errs in form.errors.values() for e in errs),
             'Please fix the errors.'
@@ -5438,7 +5511,11 @@ def payment_gateway_edit(request, slug):
     if request.method != 'POST':
         return redirect('management:payment_gateways_list')
 
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
     if not _has_permission(request, 'finance', 'can_edit'):
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'You do not have permission to edit payment gateways.'}]}}, status=403)
         messages.error(request, 'You do not have permission to edit payment gateways.')
         return redirect('management:payment_gateways_list')
 
@@ -5472,8 +5549,12 @@ def payment_gateway_edit(request, slug):
                 + (' — API secret rotated.' if request.POST.get('api_secret') else '.')
             ),
         )
+        if is_ajax:
+            return JsonResponse({'success': True})
         messages.success(request, 'Gateway updated.')
     else:
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
         msg = next(
             (e for errs in form.errors.values() for e in errs),
             'Please fix the errors.'
@@ -5857,7 +5938,11 @@ def staff_payroll_create(request):
     if request.method != 'POST':
         return redirect('management:staff_payroll_list')
 
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
     if not _has_permission(request, 'finance_payroll', 'can_create'):
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'You do not have permission to create payroll records.'}]}}, status=403)
         messages.error(request, 'You do not have permission to create payroll records.')
         return redirect('management:staff_payroll_list')
 
@@ -5884,7 +5969,11 @@ def staff_payroll_create(request):
             notif_type='payroll',
             link='/dashboard/',
         )
+        if is_ajax:
+            return JsonResponse({'success': True})
     else:
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
         msg = next(
             (e for errs in form.errors.values() for e in errs),
             'Please fix the errors.'
@@ -5900,7 +5989,11 @@ def staff_payroll_edit(request, payroll_reference):
     if request.method != 'POST':
         return redirect('management:staff_payroll_list')
 
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
     if not _has_permission(request, 'finance_payroll', 'can_edit'):
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': {'__all__': [{'message': 'You do not have permission to edit payroll records.'}]}}, status=403)
         messages.error(request, 'You do not have permission to edit payroll records.')
         return redirect('management:staff_payroll_list')
 
@@ -5938,7 +6031,11 @@ def staff_payroll_edit(request, payroll_reference):
                 send_payroll_payment_notification_email(updated_payroll)
             except Exception as e:
                 logger.error(f'Failed to send payroll notification email for {updated_payroll.payroll_reference}: {str(e)}')
+        if is_ajax:
+            return JsonResponse({'success': True})
     else:
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=400)
         msg = next(
             (e for errs in form.errors.values() for e in errs),
             'Please fix the errors.'
@@ -6577,14 +6674,20 @@ def admin_exam_approve(request, slug):
 @require_permission('exams', 'can_approve', redirect_to=_redirect_to_exam_detail)
 def admin_exam_reject(request, slug):
     exam = get_object_or_404(Exam, slug=slug)
-    if exam.status != Exam.SUBMITTED:
-        messages.error(request, 'Only submitted exams can be rejected.')
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+    def fail(message):
+        if is_ajax:
+            return JsonResponse({'success': False, 'errors': {'reason': [{'message': message}]}}, status=400)
+        messages.error(request, message)
         return redirect('management:admin_exam_detail', slug=slug)
+
+    if exam.status != Exam.SUBMITTED:
+        return fail('Only submitted exams can be rejected.')
 
     reason = request.POST.get('reason', '').strip()
     if not reason:
-        messages.error(request, 'A rejection reason is required.')
-        return redirect('management:admin_exam_detail', slug=slug)
+        return fail('A rejection reason is required.')
 
     prev = exam.status
     with transaction.atomic():
@@ -6610,6 +6713,8 @@ def admin_exam_reject(request, slug):
             notif_type='system',
         )
 
+    if is_ajax:
+        return JsonResponse({'success': True})
     messages.warning(request, f'Exam {exam.reference_code} rejected.')
     return redirect('management:admin_exam_detail', slug=slug)
 

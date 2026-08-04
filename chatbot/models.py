@@ -3,8 +3,8 @@ from django.db import models
 from django.utils import timezone
 
 class ChatSession(models.Model):
-    first_name = models.CharField(max_length=100)
-    email = models.EmailField()
+    first_name = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(blank=True)
     started_at = models.DateTimeField(auto_now_add=True)
     last_activity = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)

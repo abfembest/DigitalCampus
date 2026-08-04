@@ -2,23 +2,15 @@
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 import json
+import random
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_protect
 from django.utils import timezone
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
 from django.views.decorators.cache import never_cache
-import re
-import json
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_protect
-from django.utils import timezone
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
-from django.views.decorators.cache import never_cache
-from django.views.decorators.debug import sensitive_post_parameters
+# from django.core.validators import validate_email
+# from django.core.exceptions import ValidationError
+# from django.views.decorators.debug import sensitive_post_parameters
 from .models import ChatSession, ChatMessage, IntentResponse
 from .services import IntentClassifier
 from django.conf import settings
@@ -33,6 +25,22 @@ def index(request):
 
 def sanitize_input(text):
     return text.strip()[:500]  # length limit
+
+
+def generate_captcha():
+    """Return a (question_str, answer_int) math captcha pair — gates guest chat sessions."""
+    num1 = random.randint(1, 10)
+    num2 = random.randint(1, 10)
+    op = random.choice(['+', '-', '*'])
+    if op == '+':
+        answer = num1 + num2
+    elif op == '-':
+        if num2 > num1:
+            num1, num2 = num2, num1
+        answer = num1 - num2
+    else:
+        answer = num1 * num2
+    return f"{num1} {op} {num2}", answer
 
 
 def rate_limit(key_prefix, limit=10, period=60):
@@ -65,25 +73,78 @@ def get_active_session(session_id):
 
 
 
-@sensitive_post_parameters('email')
+@require_GET
+@never_cache
+@rate_limit('chatbot_captcha', limit=20, period=60)
+def get_captcha(request):
+    """Issues a bot-check challenge for the guest pre-chat gate (see start_session)."""
+    question, answer = generate_captcha()
+    request.session['chatbot_captcha_answer'] = answer
+    return JsonResponse({'question': question})
+
+
+# --- Original guest-identification flow (name + email, no bot check) ---
+# Kept for reference in case we need to bring back name/email collection.
+# @sensitive_post_parameters('email')
+# @require_POST
+# @csrf_protect
+# @rate_limit('start_session', limit=5, period=60)
+# def start_session(request):
+#     data = json.loads(request.body)
+#     first_name = sanitize_input(data.get('first_name', ''))
+#     email = data.get('email', '')
+#
+#     if not first_name or not email:
+#         return JsonResponse({'error': 'Name and email required'}, status=400)
+#
+#     try:
+#         validate_email(email)
+#     except ValidationError:
+#         return JsonResponse({'error': 'Invalid email'}, status=400)
+#
+#     # close any existing active sessions for this email? (optional)
+#     # For simplicity, always create new
+#     session = ChatSession.objects.create(first_name=first_name, email=email)
+#
+#     # Add a welcome message from bot
+#     welcome = "Welcome! I'm your Student Life Assistant. How can I help you today?"
+#     ChatMessage.objects.create(session=session, sender='bot', content=welcome)
+#
+#     return JsonResponse({
+#         'session_id': session.id,
+#         'first_name': session.first_name,
+#         'messages': [{
+#             'sender': 'bot',
+#             'content': welcome,
+#             'timestamp': session.started_at.isoformat()
+#         }]
+#     })
+
+
 @require_POST
 @csrf_protect
 @rate_limit('start_session', limit=5, period=60)
 def start_session(request):
     data = json.loads(request.body)
-    first_name = sanitize_input(data.get('first_name', ''))
-    email = data.get('email', '')
 
-    if not first_name or not email:
-        return JsonResponse({'error': 'Name and email required'}, status=400)
+    if request.user.is_authenticated:
+        # Logged-in users are already verified — no bot check needed, and
+        # identity comes from the session, never from client-posted values.
+        first_name = request.user.first_name or request.user.username
+        email = request.user.email
+    else:
+        # Guests: bot check is the gate, not a name/email form.
+        session_answer = request.session.get('chatbot_captcha_answer')
+        user_answer = str(data.get('captcha', '')).strip()
+        try:
+            if int(user_answer) != int(session_answer):
+                return JsonResponse({'error': 'Incorrect answer. Please try the bot check again.'}, status=400)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid answer. Please enter a number.'}, status=400)
+        request.session.pop('chatbot_captcha_answer', None)
+        first_name = ''
+        email = ''
 
-    try:
-        validate_email(email)
-    except ValidationError:
-        return JsonResponse({'error': 'Invalid email'}, status=400)
-
-    # close any existing active sessions for this email? (optional)
-    # For simplicity, always create new
     session = ChatSession.objects.create(first_name=first_name, email=email)
 
     # Add a welcome message from bot

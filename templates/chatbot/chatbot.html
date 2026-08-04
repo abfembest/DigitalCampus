@@ -126,28 +126,50 @@ MOBILE LAYOUT NOTE:
         </div>
         <h3 class="font-semibold text-gray-800 text-base mb-1 shrink-0">Start a conversation</h3>
         <p class="text-xs text-gray-500 text-center mb-5 leading-relaxed max-w-[220px] shrink-0">
-            Tell us a bit about yourself so we can personalise your experience.
+            Quick check before we connect you — answer below to start chatting.
         </p>
+        {% comment %}
+        Original guest-identification flow (name + email, no bot check) — kept for reference
+        in case we need to bring back name/email collection instead of the bot check.
+        <div>
+            <label for="cbFirstName" class="block text-xs font-medium text-gray-600 mb-1">First name</label>
+            <input id="cbFirstName" type="text" name="first_name"
+                   placeholder="e.g. Amara" required maxlength="100" autocomplete="given-name"
+                   class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
+                          text-gray-800 placeholder-gray-400
+                          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                          transition-all duration-200">
+            <p id="cbFnErr" class="hidden text-[11px] text-red-500 mt-1 px-1" role="alert"></p>
+        </div>
+        <div>
+            <label for="cbEmail" class="block text-xs font-medium text-gray-600 mb-1">Email address</label>
+            <input id="cbEmail" type="email" name="email"
+                   placeholder="you@example.com" required maxlength="254" autocomplete="email"
+                   class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
+                          text-gray-800 placeholder-gray-400
+                          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                          transition-all duration-200">
+            <p id="cbEmErr" class="hidden text-[11px] text-red-500 mt-1 px-1" role="alert"></p>
+        </div>
+        {% endcomment %}
         <form id="cbPrechatForm" class="w-full space-y-3 shrink-0" novalidate>
-            <div>
-                <label for="cbFirstName" class="block text-xs font-medium text-gray-600 mb-1">First name</label>
-                <input id="cbFirstName" type="text" name="first_name"
-                       placeholder="e.g. Amara" required maxlength="100" autocomplete="given-name"
+            <div class="bg-primary-50 border-2 border-primary-100 rounded-xl p-3.5">
+                <label for="cbCaptchaAnswer" class="block text-xs font-medium text-gray-600 mb-1.5">
+                    <span class="inline-flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-primary-800" aria-hidden="true"></i>
+                        Bot check
+                    </span>
+                </label>
+                <p class="text-xs text-gray-500 mb-2">
+                    What is <strong id="cbCaptchaQ" class="text-primary-950">…</strong>?
+                </p>
+                <input id="cbCaptchaAnswer" type="text" name="captcha"
+                       placeholder="Enter the answer" required inputmode="numeric" pattern="[0-9]*" autocomplete="off"
                        class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
                               text-gray-800 placeholder-gray-400
                               focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
                               transition-all duration-200">
-                <p id="cbFnErr" class="hidden text-[11px] text-red-500 mt-1 px-1" role="alert"></p>
-            </div>
-            <div>
-                <label for="cbEmail" class="block text-xs font-medium text-gray-600 mb-1">Email address</label>
-                <input id="cbEmail" type="email" name="email"
-                       placeholder="you@example.com" required maxlength="254" autocomplete="email"
-                       class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-xl bg-white
-                              text-gray-800 placeholder-gray-400
-                              focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                              transition-all duration-200">
-                <p id="cbEmErr" class="hidden text-[11px] text-red-500 mt-1 px-1" role="alert"></p>
+                <p id="cbCaptchaErr" class="hidden text-[11px] text-red-500 mt-1 px-1" role="alert"></p>
             </div>
             <button type="submit" id="cbStartBtn"
                     class="w-full py-2.5 px-4 bg-gradient-to-r from-primary-700 to-primary-900
@@ -369,10 +391,11 @@ MOBILE LAYOUT NOTE:
         ? 'cb_u' + _cbUser.uid
         : 'cb_guest';
 
-    const URL_START  = "{% url 'chatbot:start_session' %}";
-    const URL_MSG    = "{% url 'chatbot:send_message' %}";
-    const URL_CLOSE  = "{% url 'chatbot:close_session' %}";
-    const URL_STATUS = "{% url 'chatbot:session_status' %}";
+    const URL_START   = "{% url 'chatbot:start_session' %}";
+    const URL_MSG     = "{% url 'chatbot:send_message' %}";
+    const URL_CLOSE   = "{% url 'chatbot:close_session' %}";
+    const URL_STATUS  = "{% url 'chatbot:session_status' %}";
+    const URL_CAPTCHA = "{% url 'chatbot:get_captcha' %}";
 
     /* ── Helpers ───────────────────────────────────────────── */
     const csrf = () => (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
@@ -451,7 +474,8 @@ MOBILE LAYOUT NOTE:
         sessionStorage.removeItem(SESSION_KEY);
         setStatus('Online');
         lucide();
-        setTimeout(() => $('cbFirstName')?.focus(), 80);
+        fetchCaptcha();
+        setTimeout(() => $('cbCaptchaAnswer')?.focus(), 80);
     }
 
     /* ── Inline end-chat confirm ───────────────────────────── */
@@ -535,15 +559,23 @@ MOBILE LAYOUT NOTE:
                 showChat();
             } else {
                 sessionStorage.removeItem(SESSION_KEY);
-                _cbUser.authed ? apiStart(_cbUser.firstName, _cbUser.email) : showPrechat();
+                _cbUser.authed ? apiStart({}) : showPrechat();
             }
         } catch {
             sessionStorage.removeItem(SESSION_KEY);
-            _cbUser.authed ? apiStart(_cbUser.firstName, _cbUser.email) : showPrechat();
+            _cbUser.authed ? apiStart({}) : showPrechat();
         }
     }
 
-    async function apiStart(firstName, email) {
+    /* Original signature was apiStart(firstName, email) — kept as reference:
+       async function apiStart(firstName, email) {
+           ...
+           body: JSON.stringify({ first_name: firstName, email })
+           ...
+       }
+       Now generic: apiStart({}) for authenticated auto-start (server reads
+       request.user), apiStart({ captcha }) for the guest bot-check gate. */
+    async function apiStart(payload) {
         const btn = $('cbStartBtn');
         if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
         setStatus('Connecting…', false);
@@ -551,7 +583,7 @@ MOBILE LAYOUT NOTE:
             const r = await fetch(URL_START, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
-                body: JSON.stringify({ first_name: firstName, email })
+                body: JSON.stringify(payload)
             });
             const d = await r.json();
             if (r.ok) {
@@ -561,17 +593,31 @@ MOBILE LAYOUT NOTE:
                 showChat();
             } else {
                 setStatus('Error', false);
-                setErr('cbFnErr', d.error || 'Could not start. Please try again.');
+                setErr('cbCaptchaErr', d.error || 'Could not start. Please try again.');
+                if ('captcha' in payload) fetchCaptcha();
             }
         } catch {
             setStatus('Offline', false);
-            setErr('cbFnErr', 'Network error. Please check your connection.');
+            setErr('cbCaptchaErr', 'Network error. Please check your connection.');
         } finally {
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '<i data-lucide="message-circle" class="w-4 h-4"></i> Start Chat';
                 lucide();
             }
+        }
+    }
+
+    async function fetchCaptcha() {
+        const q = $('cbCaptchaQ');
+        const a = $('cbCaptchaAnswer');
+        if (a) a.value = '';
+        try {
+            const r = await fetch(URL_CAPTCHA);
+            const d = await r.json();
+            if (q) q.textContent = r.ok ? d.question : '…';
+        } catch {
+            if (q) q.textContent = '…';
         }
     }
 
@@ -622,12 +668,14 @@ MOBILE LAYOUT NOTE:
     }
 
     function clearErrs() {
-        ['cbFnErr', 'cbEmErr'].forEach(id => {
+        ['cbCaptchaErr'].forEach(id => {
             const el = $(id);
             if (el) { el.textContent = ''; el.classList.add('hidden'); }
         });
     }
 
+    /* Original name/email validator — kept for reference in case we need to
+       bring back name/email collection instead of the bot check.
     function validatePrechat(fn, email) {
         clearErrs();
         let ok = true;
@@ -643,6 +691,17 @@ MOBILE LAYOUT NOTE:
         }
         return ok;
     }
+    */
+
+    function validateCaptcha(answer) {
+        clearErrs();
+        if (!answer) {
+            setErr('cbCaptchaErr', 'Please answer the bot check.');
+            $('cbCaptchaAnswer')?.focus();
+            return false;
+        }
+        return true;
+    }
 
     /* ── Events ────────────────────────────────────────────── */
     toggle.addEventListener('click', () => {
@@ -650,7 +709,7 @@ MOBILE LAYOUT NOTE:
             openWin();
             const stored = sessionStorage.getItem(SESSION_KEY);
             if (stored)              apiVerify(stored);
-            else if (_cbUser.authed) apiStart(_cbUser.firstName, _cbUser.email);
+            else if (_cbUser.authed) apiStart({});
             else                     showPrechat();
         } else {
             hideWin();
@@ -671,11 +730,18 @@ MOBILE LAYOUT NOTE:
         hideWin();
     });
 
+    /* Original submit handler — kept for reference:
     pcForm?.addEventListener('submit', async e => {
         e.preventDefault();
         const fn    = $('cbFirstName')?.value.trim() || '';
         const email = $('cbEmail')?.value.trim() || '';
         if (validatePrechat(fn, email)) await apiStart(fn, email);
+    });
+    */
+    pcForm?.addEventListener('submit', async e => {
+        e.preventDefault();
+        const answer = $('cbCaptchaAnswer')?.value.trim() || '';
+        if (validateCaptcha(answer)) await apiStart({ captcha: answer });
     });
 
     input.addEventListener('input', function () {
